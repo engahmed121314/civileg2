@@ -96,7 +96,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 | Aspect | Finding |
 |--------|---------|
 | Input code type | Nested UI `DesignCode {EGYPTIAN, ACI, SAUDI}`; `toDomain():49-53`; `fromDomain():56-60` unused. |
-| Real vs stub | Old report claimed 10 stubs; **several are now real-inline**. Example: `calculateSteelMember` (`:396`) computes φPn/φMn/φVn + KL/r **inline**, does **not** call the imported `AISCSteelDesignEngine`. `code` is used **only** for a `codeRef` label (`:449-454`). Numeric result is **identical across all 3 codes**. |
+| Real vs stub | Old report claimed 10 stubs; several are now real-inline. **`calculateSteelMember` (`:396`) now delegates to the code-specific domain engines** (ECP/AISC/SBC) via `designSteelMemberEcp/Aisc/Sbc` — results are code-differentiated (P0-2, §9.6). The old inline stub computed φPn/φMn/φVn + KL/r identically for all 3 codes and inflated KL/r by ×1000. |
 | InputGuard | Applied (e.g. `:398-401`), but duplicate of the engine's own guards. |
 | Architecture risk | Two sources of truth (facade inline math + domain engines) → drift, especially for code differentiation. |
 
@@ -183,7 +183,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 ## 8. Definition of Done (unchanged, non-negotiable)
 ```
 ☐ One DesignCode enum; all screens → CalculationFactory → code-correct engine
-☐ CalculatorEngine delegates to engines (no duplicated inline math)
+✅ CalculatorEngine steel member now delegates to engines (P0-2; other inline paths remain)
 ☐ Every engine: InputGuard + full result (codeNotes, warnings, safetyChecks, steps, diagram data)
 ☐ Every element PDF has a drawing that matches the on-screen drawing and the result (no stale/placeholder)
 ☐ PDF: single pipeline (ExportManager); DXF: AC1027 with layers/BBS; PDF+DXF exportable together
@@ -230,7 +230,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 ### 9.5 Tests
 - Added `EngineFixRegressionTest.kt` (5 tests): column α-inversion, SBC/ECP doubly K-balance decisions, ACI doubly capacity.
 - Updated `ACISlabTest` / `SBCSlabTest` cantilever expectations to `L/10`.
-- Full suite green: **57 suites / 1182 tests / 0 failures**.
+- Full suite green: **58 suites / 1185 tests / 0 failures**.
 
 ### 9.6 Resolved follow-ups (this pass)
 - `ecp/SteelDesignEngine.kt` — `checkBeamShear` now applies a web shear-buckling reduction
@@ -249,6 +249,16 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
   for ACI 318-19 and SBC 304-2018 (Ch 7 = one-way slabs). Remaining clause numbers
   reviewed but ECP 203-2020 / SBC 304-2018 exact sub-clauses remain unverified (no
   authoritative text available); refs are display-only and do not affect calculations.
+- **P0-2 — steel facade delegation** (`utils/CalculatorEngine.calculateSteelMember`): replaced
+  the inline stub with dispatch to the code-specific engines via
+  `designSteelMemberEcp` / `designSteelMemberAisc` / `designSteelMemberSbc`. ECP maps the
+  entity section onto `ecp.SteelDesignEngine.SectionProperties` and the grade onto the ECP
+  enum; ACI uses `AISCSteelDesignEngine`; SBC uses `SBCSteelDesignEngine`. Capacities are
+  recovered from each engine via `capacityFromRatio = refDemand / utilizationRatio` (probe
+  demand `max(demand, 1.0)` so zero-demand cases still yield a capacity), and combined
+  utilization uses each engine's interaction equation when both `Pu>0` and `Mu>0`
+  (else `max`). This removes the old `K·L·1000/r` unit bug (L already in mm) and makes the
+  numeric result **code-specific**. Added `SteelMemberCodeDivergenceTest.kt` (3 tests).
 
 ### 9.7 Still open
 - `CodeReference` ECP 203-2020 and SBC sub-clause numbers: pass an automated "every key

@@ -18,6 +18,8 @@ import com.civileg.app.domain.FlatSlabResult
 import com.civileg.app.domain.PileInput
 import com.civileg.app.domain.PileDesignResult
 import com.civileg.app.domain.calculations.ecp.SteelConnectionDesign
+import com.civileg.app.domain.calculations.ecp.SteelDesignEngine
+import com.civileg.app.domain.calculations.sbc.SBCSteelDesignEngine
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.calculations.base.FootingDesignResult
@@ -400,78 +402,236 @@ class CalculatorEngine @Inject constructor(
         InputGuard.notNull("inputs", inputs)
         InputGuard.notNull("code", code)
 
-        val area = section.area
-        // ── توسيع: حساب حقيقي حسب الكود (ACI/AISC/SBC) وليس stub ──
-        val fy = inputs.grade.fy  // استخدم مقاومة الخضوع الفعلية من الدرجة
-        val E = 200000.0  // MPa — معامل مرونة الصلب
-        val phi = 0.90     // معامل الاختزال (AISC 360 / SBC 306)
+        // P0-2: delegate to the code-specific domain engine so ECP / ACI / SBC produce
+        // distinct, code-correct results (previously identical inline math for all codes,
+        // with a KL/r unit bug injecting a spurious ×1000 factor).
+        val domain = code.toDomain()
+        val grade = inputs.grade
+        val Pu = inputs.axialLoad.coerceAtLeast(0.0)
+        val Mu = inputs.moment.coerceAtLeast(0.0)
+        val Vu = inputs.shear.coerceAtLeast(0.0)
+        val Lmm = inputs.length.coerceAtLeast(1.0)
+        val Lbmm = inputs.unbracedLength.coerceAtLeast(1.0)
 
-        // 1. القدرة المحورية: φPn = φ × fy × Ag (tension yielding per AISC D2)
-        val axialCapacity = (phi * fy * area) / 1000.0  // kN
-
-        // 2. القدرة الانحنائية: φMn = φ × fy × Sx (per AISC F2 / SBC 306)
-        val Sx = section.sx  // elastic section modulus (mm³)
-        val flexuralCapacity = if (Sx > 0) (phi * fy * Sx) / 1e6 else 0.0  // kN.m
-
-        // 3. قدرة القص: φVn = φ × 0.6 × fy × Aw (per AISC G2 / SBC 306)
-        val tw = section.webThickness
-        val h = section.depth
-        val Aw = h * tw  // مساحة النصل الوبية
-        val shearCapacity = if (Aw > 0) (phi * 0.6 * fy * Aw) / 1000.0 else 0.0  // kN
-
-        // 4. فحص الانبعاج (KL/r) — per AISC E3 / SBC 306
-        val L = inputs.unbracedLength.coerceAtLeast(1.0)
-        val K = 1.0  // effective length factor (default = 1.0 for braced)
-        val rx = section.rx.coerceAtLeast(1.0)
-        val KLOverR = K * L * 1000.0 / rx  // KL/r
-        val Fe = (PI * PI * E) / (KLOverR * KLOverR)  // Euler stress
-        val isSlender = KLOverR > 4.71 * sqrt(E / fy)
-        val Fcr = if (isSlender) 0.877 * Fe else fy * (1.0 - 0.375 * KLOverR * KLOverR * fy / (PI * PI * E))
-        val compressiveCapacity = (phi * Fcr * area) / 1000.0  // kN
-        val bucklingSafe = !isSlender || (compressiveCapacity > 0)
-
-        // 5. فحص الانحراف: L/250 للأعضاء الرئيسية
-        val deflectionLimit = L * 1000.0 / 250.0  // mm
-        val appliedDeflection = 0.0  // mm (no applied deflection input — skip check if 0)
-        val deflectionSafe = appliedDeflection <= 0 || appliedDeflection <= deflectionLimit
-
-        // 6. نسبة الاستغلال
-        val axialDemand = inputs.axialLoad.coerceAtLeast(0.0)
-        val flexDemand = inputs.moment.coerceAtLeast(0.0)
-        val shearDemand = inputs.shear.coerceAtLeast(0.0)
-        val axialRatio = if (axialCapacity > 0) axialDemand / axialCapacity else 0.0
-        val flexRatio = if (flexuralCapacity > 0) flexDemand / flexuralCapacity else 0.0
-        val shearRatio = if (shearCapacity > 0) shearDemand / shearCapacity else 0.0
-        val utilizationRatio = (axialRatio + flexRatio + shearRatio).coerceIn(0.0, 3.0)
-
-        val isSafe = utilizationRatio <= 1.0 && bucklingSafe && deflectionSafe
-
-        val codeRef = when (code) {
-            DesignCode.ACI -> "AISC 360-16"
-            DesignCode.SAUDI -> "SBC 306-2018"
-            DesignCode.EGYPTIAN -> "ECP 205-2007 (Steel)"
-            else -> "Unknown Code"
+        return when (domain) {
+            com.civileg.app.domain.entities.DesignCode.ECP ->
+                designSteelMemberEcp(section, memberType, grade, Pu, Mu, Vu, Lmm, Lbmm)
+            com.civileg.app.domain.entities.DesignCode.ACI ->
+                designSteelMemberAisc(section, memberType, grade, Pu, Mu, Vu, Lmm, Lbmm)
+            com.civileg.app.domain.entities.DesignCode.SBC ->
+                designSteelMemberSbc(section, memberType, grade, Pu, Mu, Vu, Lmm, Lbmm)
         }
+    }
+
+    /** Capacity = reference demand ÷ utilization ratio measured at that reference demand. */
+    private fun steelCapacityFromRatio(refDemand: Double, refRatio: Double): Double =
+        if (refRatio > 1e-12) refDemand / refRatio else 0.0
+
+    /** Map the entity grade onto the ECP engine's own 3-grade enum (nearest Fy). */
+    private fun ecpSteelGrade(grade: SteelGrade): SteelDesignEngine.SteelGrade = when (grade) {
+        SteelGrade.ST37 -> SteelDesignEngine.SteelGrade.ST37
+        SteelGrade.ST44 -> SteelDesignEngine.SteelGrade.ST44
+        SteelGrade.ST52 -> SteelDesignEngine.SteelGrade.ST52
+        SteelGrade.A36 -> SteelDesignEngine.SteelGrade.ST37
+        SteelGrade.A572_G50 -> SteelDesignEngine.SteelGrade.ST52
+        SteelGrade.A992 -> SteelDesignEngine.SteelGrade.ST52
+        SteelGrade.S275 -> SteelDesignEngine.SteelGrade.ST44
+        SteelGrade.S355 -> SteelDesignEngine.SteelGrade.ST52
+    }
+
+    /** Map the entity section onto the ECP engine's SectionProperties (single source of truth). */
+    private fun ecpSectionProperties(section: SteelSectionType): SteelDesignEngine.SectionProperties =
+        SteelDesignEngine.SectionProperties(
+            name = section.sectionName,
+            h = section.depth, b = section.width,
+            tw = section.webThickness, tf = section.flangeThickness,
+            Ix = section.ix, Iy = section.iy,
+            Zx = section.zx, Zy = section.zy,
+            Sx = section.sx, Sy = section.sy,
+            rx = section.rx, ry = section.ry,
+            A = section.area, J = section.j
+        )
+
+    /** ECP 205 steel member — via ecp.SteelDesignEngine. */
+    private fun designSteelMemberEcp(
+        section: SteelSectionType, memberType: SteelMemberType, grade: SteelGrade,
+        Pu: Double, Mu: Double, Vu: Double, Lmm: Double, Lbmm: Double
+    ): SteelMemberResult {
+        val engine = SteelDesignEngine()
+        val props = ecpSectionProperties(section)
+        val ecpGrade = ecpSteelGrade(grade)
+        val warnings = mutableListOf<String>()
+        val codeNotes = mutableListOf<String>()
+
+        val mRef = max(Mu, 1.0)
+        val vRef = max(Vu, 1.0)
+        val beam = engine.designBeam(mRef, vRef, 0.0, Lmm, props, ecpGrade, Lbmm)
+        val flexuralCapacity = steelCapacityFromRatio(mRef, beam.momentCheck.utilizationRatio)
+        val shearCapacity = steelCapacityFromRatio(vRef, beam.shearCheck.utilizationRatio)
+
+        val pRef = max(Pu, 1.0)
+        val compression = engine.checkColumnCompression(pRef, props, ecpGrade, 1.0, Lmm)
+        val axialCapacity = steelCapacityFromRatio(pRef, compression.axialCheck.utilizationRatio)
+
+        val axialRatio = if (axialCapacity > 0) Pu / axialCapacity else 0.0
+        val flexRatio = if (flexuralCapacity > 0) Mu / flexuralCapacity else 0.0
+        val shearRatio = if (shearCapacity > 0) Vu / shearCapacity else 0.0
+        val utilization = max(axialRatio, max(flexRatio, shearRatio))
+
+        warnings.addAll(beam.warnings)
+        warnings.addAll(compression.warnings)
+        codeNotes.addAll(beam.codeNotes)
+        codeNotes.addAll(compression.codeNotes)
+        codeNotes.add("ECP 205 — utilization = max(axial, flexure, shear) = ${"%.3f".format(utilization)}")
+
+        val bucklingCheck = if (memberType == SteelMemberType.COLUMN || Pu > 0) BucklingCheckResult(
+            slendernessRatio = compression.slendernessRatio,
+            criticalStress = 0.0,
+            bucklingMode = BucklingMode.FLEXURAL,
+            isSafe = compression.axialCheck.isSafe,
+            codeReference = CodeReference.ECP.STEEL_COLUMN_COMPRESSION
+        ) else null
 
         return SteelMemberResult(
-            sectionType = section, memberType = memberType, axialCapacity = axialCapacity,
-            flexuralCapacity = flexuralCapacity, shearCapacity = shearCapacity,
-            utilizationRatio = utilizationRatio,
-            isSafe = isSafe,
+            sectionType = section,
+            memberType = memberType,
+            axialCapacity = axialCapacity,
+            flexuralCapacity = flexuralCapacity,
+            shearCapacity = shearCapacity,
+            utilizationRatio = utilization,
+            isSafe = utilization <= 1.0 && beam.isSafe && compression.isSafe,
             connectionDesign = null,
-            bucklingCheck = if (!bucklingSafe) BucklingCheckResult(slendernessRatio = KLOverR, criticalStress = Fcr, bucklingMode = BucklingMode.FLEXURAL, isSafe = bucklingSafe, codeReference = codeRef) else null,
-            deflectionCheck = if (!deflectionSafe) DeflectionCheckResult(calculatedDeflection = appliedDeflection, allowableDeflection = deflectionLimit, ratio = if (deflectionLimit > 0) appliedDeflection / deflectionLimit else 0.0, isSafe = deflectionSafe, message = "Deflection exceeds L/250", recommendation = "Increase section depth or reduce span") else null,
-            weight = area * 1e-6 * 7850, cost = 0.0,
-            warnings = mutableListOf<String>().apply {
-                if (!bucklingSafe) add("$codeRef: Slender member (KL/r=${"%.1f".format(KLOverR)}) — increase section or reduce L")
-                if (!deflectionSafe) add("$codeRef: Deflection ${"%.1f".format(appliedDeflection)}mm > L/250=${"%.1f".format(deflectionLimit)}mm")
-            },
-            codeNotes = mutableListOf<String>().apply {
-                add("$codeRef: Steel member design")
-                add("fy = $fy MPa, φ = $phi")
-                add("φPn = ${"%.1f".format(axialCapacity)} kN, φMn = ${"%.1f".format(flexuralCapacity)} kN.m, φVn = ${"%.1f".format(shearCapacity)} kN")
-                add("KL/r = ${"%.1f".format(KLOverR)}, utilization = ${"%.3f".format(utilizationRatio)}")
-            }
+            bucklingCheck = bucklingCheck,
+            deflectionCheck = null,
+            weight = section.weight,
+            cost = 0.0,
+            warnings = warnings,
+            codeNotes = codeNotes
+        )
+    }
+
+    /** AISC 360 steel member — via aci.AISCSteelDesignEngine. */
+    private fun designSteelMemberAisc(
+        section: SteelSectionType, memberType: SteelMemberType, grade: SteelGrade,
+        Pu: Double, Mu: Double, Vu: Double, Lmm: Double, Lbmm: Double
+    ): SteelMemberResult {
+        val engine = AISCSteelDesignEngine()
+        val warnings = mutableListOf<String>()
+        val codeNotes = mutableListOf<String>()
+
+        val mRef = max(Mu, 1.0)
+        val vRef = max(Vu, 1.0)
+        val flex = engine.designFlexuralMember(section, grade, mRef, 0.0, vRef, 0.0, Lbmm, 1.0, false)
+        val flexuralCapacity = flex.momentCapacityX
+        val shearCapacity = flex.shearCapacityX
+
+        val pRef = max(Pu, 1.0)
+        val comp = engine.designCompressionMember(section, grade, pRef, 1.0, 1.0, Lmm, Lmm)
+        val axialCapacity = comp.phiPn
+
+        val axialRatio = if (axialCapacity > 0) Pu / axialCapacity else 0.0
+        val flexRatio = if (flexuralCapacity > 0) Mu / flexuralCapacity else 0.0
+        val shearRatio = if (shearCapacity > 0) Vu / shearCapacity else 0.0
+        val utilization = if (Pu > 0 && Mu > 0)
+            engine.checkCombinedLoading(Pu, Mu, 0.0, section, grade, 1.0, 1.0, Lmm, Lmm).interactionRatio
+        else max(axialRatio, max(flexRatio, shearRatio))
+
+        warnings.addAll(flex.warnings)
+        warnings.addAll(comp.warnings)
+        codeNotes.addAll(flex.codeNotes)
+        codeNotes.addAll(comp.codeNotes)
+        codeNotes.add("AISC 360-16 — utilization = ${"%.3f".format(utilization)}")
+
+        val bucklingCheck = if (memberType == SteelMemberType.COLUMN || Pu > 0) BucklingCheckResult(
+            slendernessRatio = comp.slendernessRatio,
+            criticalStress = comp.Fcr,
+            bucklingMode = BucklingMode.FLEXURAL,
+            isSafe = comp.isSafe,
+            codeReference = CodeReference.ACI.STEEL_COLUMN_COMPRESSION
+        ) else null
+
+        return SteelMemberResult(
+            sectionType = section,
+            memberType = memberType,
+            axialCapacity = axialCapacity,
+            flexuralCapacity = flexuralCapacity,
+            shearCapacity = shearCapacity,
+            utilizationRatio = utilization,
+            isSafe = utilization <= 1.0 && flex.isSafe && comp.isSafe,
+            connectionDesign = null,
+            bucklingCheck = bucklingCheck,
+            deflectionCheck = null,
+            weight = section.weight,
+            cost = 0.0,
+            warnings = warnings,
+            codeNotes = codeNotes
+        )
+    }
+
+    /** SBC 306 steel member — via sbc.SBCSteelDesignEngine. */
+    private fun designSteelMemberSbc(
+        section: SteelSectionType, memberType: SteelMemberType, grade: SteelGrade,
+        Pu: Double, Mu: Double, Vu: Double, Lmm: Double, Lbmm: Double
+    ): SteelMemberResult {
+        val engine = SBCSteelDesignEngine()
+        val warnings = mutableListOf<String>()
+        val codeNotes = mutableListOf<String>()
+
+        val mRef = max(Mu, 1.0)
+        val vRef = max(Vu, 1.0)
+        val beam = engine.designBeam(section, grade, mRef, vRef, 0.0, Lmm, Lbmm, 1.0)
+        val flexuralCapacity = beam.phiMn
+        val shearCapacity = beam.phiVn
+
+        val pRef = max(Pu, 1.0)
+        val col = engine.designColumn(section, grade, pRef, 0.0, 0.0, 1.0, 1.0, Lmm, Lmm)
+        val axialCapacity = col.phiPn
+
+        val axialRatio = if (axialCapacity > 0) Pu / axialCapacity else 0.0
+        val flexRatio = if (flexuralCapacity > 0) Mu / flexuralCapacity else 0.0
+        val shearRatio = if (shearCapacity > 0) Vu / shearCapacity else 0.0
+        val utilization = if (Pu > 0 && Mu > 0)
+            engine.checkCombinedLoading(Pu, Mu, 0.0, section, grade, 1.0, 1.0, Lmm, Lmm).interactionRatio
+        else max(axialRatio, max(flexRatio, shearRatio))
+
+        warnings.addAll(beam.warnings)
+        warnings.addAll(col.warnings)
+        codeNotes.addAll(beam.codeNotes)
+        codeNotes.addAll(col.codeNotes)
+        codeNotes.add("SBC 306 — utilization = ${"%.3f".format(utilization)}")
+
+        val deflectionCheck = DeflectionCheckResult(
+            calculatedDeflection = beam.deflection,
+            allowableDeflection = beam.deflectionAllowable,
+            ratio = beam.deflectionRatio,
+            isSafe = beam.deflection <= beam.deflectionAllowable + 1e-9,
+            message = "SBC 306 deflection check",
+            recommendation = if (beam.deflection > beam.deflectionAllowable) "افحص الانحراف أو زد القطاع" else ""
+        )
+
+        val bucklingCheck = if (memberType == SteelMemberType.COLUMN || Pu > 0) BucklingCheckResult(
+            slendernessRatio = col.slendernessRatio,
+            criticalStress = col.Fcr,
+            bucklingMode = BucklingMode.FLEXURAL,
+            isSafe = col.isSafe,
+            codeReference = CodeReference.SBC.STEEL_COLUMN_COMPRESSION
+        ) else null
+
+        return SteelMemberResult(
+            sectionType = section,
+            memberType = memberType,
+            axialCapacity = axialCapacity,
+            flexuralCapacity = flexuralCapacity,
+            shearCapacity = shearCapacity,
+            utilizationRatio = utilization,
+            isSafe = utilization <= 1.0 && beam.isSafe && col.isSafe,
+            connectionDesign = null,
+            bucklingCheck = bucklingCheck,
+            deflectionCheck = deflectionCheck,
+            weight = section.weight,
+            cost = 0.0,
+            warnings = warnings,
+            codeNotes = codeNotes
         )
     }
 
