@@ -76,4 +76,24 @@ class SteelMemberCodeDivergenceTest {
         assertTrue("At least one code must diverge from the old stub axial capacity", axialDiffers)
         assertTrue("At least one code must diverge from the old stub flexural capacity", flexDiffers)
     }
+
+    private fun warehouseInputs(code: DesignCode, rafter: SteelSectionType) = SteelWarehouseInputs(
+        span = 10.0, length = 12.0, eaveHeight = 5.0, ridgeHeight = 6.0, baySpacing = 1.0,
+        code = code, overrideRafterSection = rafter
+    )
+
+    @Test
+    fun `warehouse moment utilization drops with higher grade steel`() {
+        val st37 = SteelSectionType.ISection(160.0, 82.0, 7.4, 5.0, SteelGrade.ST37, "IPE 160")
+        val s355 = SteelSectionType.ISection(160.0, 82.0, 7.4, 5.0, SteelGrade.S355, "IPE 160")
+
+        val r1 = engine.designSteelWarehouse(warehouseInputs(DesignCode.ECP, st37))
+        val r2 = engine.designSteelWarehouse(warehouseInputs(DesignCode.ECP, s355))
+
+        assertTrue("utilization must be > 0", r1.mainFrame.utilizationMoment > 0.0)
+        assertTrue(
+            "Higher grade steel must reduce moment utilization (${r2.mainFrame.utilizationMoment} vs ${r1.mainFrame.utilizationMoment})",
+            r2.mainFrame.utilizationMoment < r1.mainFrame.utilizationMoment
+        )
+    }
 }

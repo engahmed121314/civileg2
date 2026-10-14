@@ -258,7 +258,16 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
   demand `max(demand, 1.0)` so zero-demand cases still yield a capacity), and combined
   utilization uses each engine's interaction equation when both `Pu>0` and `Mu>0`
   (else `max`). This removes the old `K·L·1000/r` unit bug (L already in mm) and makes the
-  numeric result **code-specific**. Added `SteelMemberCodeDivergenceTest.kt` (3 tests).
+  numeric result **code-specific**. Added `SteelMemberCodeDivergenceTest.kt`.
+- **Warehouse main-frame utilizations** (`CalculatorEngine.designSteelWarehouse`): the three
+  utilizations (moment/shear/axial) were computed with **hardcoded `fy = 240`** regardless of
+  the actual section grade, using raw hand formulas, and were **identical for every code**.
+  They now route through `steelMemberUtilizations(...)` (same ECP/AISC/SBC delegation as the
+  steel-member path) using each section's real grade. Added a common `SteelSectionType.grade`
+  accessor in `entities/SteelEntities.kt` (built-up falls back to ST37). `isSafe`/`safetyStatus`
+  remain deflection-based (unchanged) to avoid altering the existing verdict.
+- Tests: `SteelMemberCodeDivergenceTest` now has 4 tests (adds warehouse grade sensitivity).
+  Full suite green: **58 suites / 1186 tests / 0 failures**.
 
 ### 9.7 Still open
 - `CodeReference` ECP 203-2020 and SBC sub-clause numbers: pass an automated "every key

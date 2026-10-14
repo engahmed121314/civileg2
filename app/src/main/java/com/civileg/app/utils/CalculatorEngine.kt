@@ -635,6 +635,27 @@ class CalculatorEngine @Inject constructor(
         )
     }
 
+    /** (axialUtil, flexUtil, shearUtil) for a section under (Pu, Mu, Vu), by code. */
+    private fun steelMemberUtilizations(
+        section: SteelSectionType, grade: SteelGrade,
+        Pu: Double, Mu: Double, Vu: Double, Lmm: Double, Lbmm: Double,
+        domain: com.civileg.app.domain.entities.DesignCode
+    ): Triple<Double, Double, Double> {
+        val r = when (domain) {
+            com.civileg.app.domain.entities.DesignCode.ECP ->
+                designSteelMemberEcp(section, SteelMemberType.BEAM, grade, Pu, Mu, Vu, Lmm, Lbmm)
+            com.civileg.app.domain.entities.DesignCode.ACI ->
+                designSteelMemberAisc(section, SteelMemberType.BEAM, grade, Pu, Mu, Vu, Lmm, Lbmm)
+            com.civileg.app.domain.entities.DesignCode.SBC ->
+                designSteelMemberSbc(section, SteelMemberType.BEAM, grade, Pu, Mu, Vu, Lmm, Lbmm)
+        }
+        return Triple(
+            if (r.axialCapacity > 0) Pu / r.axialCapacity else 0.0,
+            if (r.flexuralCapacity > 0) Mu / r.flexuralCapacity else 0.0,
+            if (r.shearCapacity > 0) Vu / r.shearCapacity else 0.0
+        )
+    }
+
     fun designSteelWarehouse(inputs: SteelWarehouseInputs): SteelWarehouseAnalysisResult {
         InputGuard.positive("span", inputs.span)
         InputGuard.positive("eaveHeight", inputs.eaveHeight)
@@ -673,14 +694,22 @@ class CalculatorEngine @Inject constructor(
         val weightPerM2 = (totalWeightTons * 1000.0) / (span * length)
         val cost = totalWeightTons * 1000.0 * 2.5
 
+        // Code-specific, real-grade member checks (previously hardcoded fy=240 for every code/section).
+        val (colAxialUtil, _, colShearUtil) = steelMemberUtilizations(
+            colSection, colSection.grade, maxAxial, 0.0, maxShear, eave * 1000.0, eave * 1000.0, inputs.code
+        )
+        val (_, rafFlexUtil, rafShearUtil) = steelMemberUtilizations(
+            rafSection, rafSection.grade, 0.0, maxMoment, maxShear, span * 1000.0, bay * 1000.0, inputs.code
+        )
+
         val mainFrame = MainFrameResult(
             columnSection = colSection, rafterSection = rafSection,
             maxMoment = maxMoment, maxShear = maxShear, maxAxial = maxAxial,
             maxDeflection = maxDeflection, allowableDeflection = allowableDef,
             isSafe = maxDeflection <= allowableDef,
-            utilizationMoment = (maxMoment / (rafSection.sx * 240.0 / 1e6)).coerceIn(0.1, 1.5),
-            utilizationShear = (maxShear / (colSection.area * 0.6 * 240.0 / 1000.0)).coerceIn(0.1, 1.5),
-            utilizationAxial = (maxAxial / (colSection.area * 240.0 / 1000.0)).coerceIn(0.1, 1.5)
+            utilizationMoment = rafFlexUtil.coerceIn(0.1, 1.5),
+            utilizationShear = max(rafShearUtil, colShearUtil).coerceIn(0.1, 1.5),
+            utilizationAxial = colAxialUtil.coerceIn(0.1, 1.5)
         )
 
         val secondary = SecondaryMembersResult(

@@ -194,6 +194,21 @@ val SteelSectionType.flangeThickness: Double
 
 val SteelSectionType.area: Double get() = getArea()
 val SteelSectionType.weight: Double get() = area * 7.85e-3 // kg/m (mm2 * 7.85e-6 kg/mm3 * 1000 mm/m)
+
+/** درجة الصلب للقطاع (built-up: تُؤخذ من أول قطاع مكوّن، وإلا ST37). */
+val SteelSectionType.grade: SteelGrade
+    get() = when (this) {
+        is SteelSectionType.ISection -> grade
+        is SteelSectionType.CSection -> grade
+        is SteelSectionType.LSection -> grade
+        is SteelSectionType.CHS -> grade
+        is SteelSectionType.RHS -> grade
+        is SteelSectionType.TSection -> grade
+        is SteelSectionType.PlateGirder -> grade
+        is SteelSectionType.Pipe -> grade
+        is SteelSectionType.BuiltUp -> sections.firstOrNull()?.grade ?: SteelGrade.ST37
+    }
+
 /** عزم القصور حول المحور القوي (X) - mm⁴ */
 val SteelSectionType.ix: Double
     get() = when (this) {
