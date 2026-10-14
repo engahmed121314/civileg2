@@ -267,7 +267,16 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
   accessor in `entities/SteelEntities.kt` (built-up falls back to ST37). `isSafe`/`safetyStatus`
   remain deflection-based (unchanged) to avoid altering the existing verdict.
 - Tests: `SteelMemberCodeDivergenceTest` now has 4 tests (adds warehouse grade sensitivity).
-  Full suite green: **58 suites / 1186 tests / 0 failures**.
+- **Code-aware connection quick-tools** (`CalculatorEngine.calculateWeldCapacity` /
+  `calculateBoltCapacity`): previously ignored the `code` argument and used one hardcoded
+  φ-formula. Now dispatch by code: ACI → `AISCSteelDesignEngine`, SBC → `SBCSteelDesignEngine`
+  (both AISC 360 lineage, identical), ECP → `ecp.SteelConnectionDesign` (threaded bolt area +
+  ECP factors). Added public `calculateFilletWeldCapacity` / `calculateBoltShearCapacity` to the
+  AISC and SBC engines (SBC already had private equivalents). `SteelConnectionToolTest` (4 tests).
+- **CodeReference resolution test** (`CodeReferenceTest`, 3 tests): asserts the three code objects
+  expose the same key set and that every key resolves for every code (no silent
+  "Reference not found" reaching the UI).
+- Full suite green: **60 suites / 1193 tests / 0 failures**.
 
 ### 9.7 Still open
 - `CodeReference` ECP 203-2020 and SBC sub-clause numbers: pass an automated "every key

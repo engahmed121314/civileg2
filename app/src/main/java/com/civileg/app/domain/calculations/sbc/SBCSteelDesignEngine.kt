@@ -61,6 +61,39 @@ class SBCSteelDesignEngine {
     }
 
     // =====================================================================
+    // قدرة الوصلات البسيطة (SBC 306 تتبع AISC 360)
+    // =====================================================================
+
+    /**
+     * مقاومة اللحام التفريغي التصميمية φRn (kN) — SBC 306 / AISC J2.4.
+     * φ = 0.75، Fw = 0.60·FEXX، سماكة الحلق = 0.707·حجم اللحام.
+     */
+    fun calculateFilletWeldCapacity(
+        weldSize: Double,
+        weldLength: Double,
+        electrodeType: ElectrodeType
+    ): Double {
+        InputGuard.positive("weldSize", weldSize)
+        InputGuard.positive("weldLength", weldLength)
+        InputGuard.notNull("electrodeType", electrodeType)
+        val throat = 0.707 * weldSize
+        val fw = 0.60 * electrodeType.tensileStrength
+        return PHI_WELD * fw * throat * weldLength / 1000.0
+    }
+
+    /**
+     * مقاومة قص المسمار التصميمية φRn (kN) لعدد [count] مسمار مع اعتبار الخيوط — SBC J3.6.
+     * φ = 0.75، Fnv = 0.45·Fub، Ab = π/4·d² (المساحة الاسمية).
+     */
+    fun calculateBoltShearCapacity(boltDiameter: Double, grade: BoltGrade, count: Int = 1): Double {
+        InputGuard.positive("boltDiameter", boltDiameter)
+        InputGuard.positive("count", count)
+        val ab = PI / 4.0 * boltDiameter * boltDiameter
+        val fnv = 0.45 * grade.fu
+        return PHI_BOLT_SHEAR * fnv * ab * count / 1000.0
+    }
+
+    // =====================================================================
     // أنواع البيانات المحلية (Local Data Types)
     // تعريف محلي لنتائج التصميم - تتبع منهجية AISC 360-16 كما تبناه SBC 306
     // =====================================================================

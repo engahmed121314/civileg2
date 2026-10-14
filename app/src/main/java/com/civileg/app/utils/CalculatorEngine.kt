@@ -1472,19 +1472,26 @@ class CalculatorEngine @Inject constructor(
     fun calculateWeldCapacity(size: Double, length: Double, electrode: ElectrodeType, code: DesignCode): Double {
         InputGuard.positive("size", size)
         InputGuard.positive("length", length)
-        val fExx = electrode.tensileStrength
-        val phi = 0.75
-        return (phi * 0.60 * fExx * 0.707 * size * length) / 1000.0
+        InputGuard.notNull("electrode", electrode)
+        InputGuard.notNull("code", code)
+        return when (code) {
+            DesignCode.ACI -> AISCSteelDesignEngine().calculateFilletWeldCapacity(size, length, electrode)
+            DesignCode.SAUDI -> SBCSteelDesignEngine().calculateFilletWeldCapacity(size, length, electrode)
+            DesignCode.EGYPTIAN -> SteelConnectionDesign().calculateFilletWeldCapacity(size, length, electrode)
+        }
     }
 
     fun calculateBoltCapacity(diameter: Double, grade: BoltGrade, count: Int, code: DesignCode): Double {
         InputGuard.positive("diameter", diameter)
         InputGuard.positive("count", count)
-        val fub = grade.fu
-        val ab = PI / 4.0 * diameter * diameter
-        val phi = 0.75
-        val nominalShear = 0.45 * fub * ab
-        return (phi * nominalShear * count) / 1000.0
+        InputGuard.notNull("grade", grade)
+        InputGuard.notNull("code", code)
+        return when (code) {
+            DesignCode.ACI -> AISCSteelDesignEngine().calculateBoltShearCapacity(diameter, grade, count)
+            DesignCode.SAUDI -> SBCSteelDesignEngine().calculateBoltShearCapacity(diameter, grade, count)
+            DesignCode.EGYPTIAN ->
+                SteelConnectionDesign().calculateBoltShearCapacity(grade, diameter, isDoubleShear = false, includeThreadedArea = true) * count
+        }
     }
 
     // ══════════════════════════════════════════════════════════════

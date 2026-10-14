@@ -134,6 +134,37 @@ class AISCSteelDesignEngine {
         const val STANDARD_BOLT_HOLE_INCREMENT = 2.0  // mm added to bolt diameter
     }
 
+    // ===================== CONNECTION CAPACITY HELPERS =====================
+
+    /**
+     * Fillet-weld design strength φRn (kN) — AISC 360-16 J2.4.
+     * φ = 0.75, Fw = 0.60·FEXX, throat = 0.707·weldSize.
+     */
+    fun calculateFilletWeldCapacity(
+        weldSize: Double,
+        weldLength: Double,
+        electrodeType: ElectrodeType
+    ): Double {
+        InputGuard.positive("weldSize", weldSize)
+        InputGuard.positive("weldLength", weldLength)
+        InputGuard.notNull("electrodeType", electrodeType)
+        val throat = 0.707 * weldSize
+        val fw = 0.60 * electrodeType.tensileStrength
+        return PHI_BEARING * fw * throat * weldLength / 1000.0
+    }
+
+    /**
+     * Bolt shear design strength φRn (kN) for [count] bolts, threads included — AISC J3.6.
+     * φ = 0.75, Fnv = 0.45·Fub, Ab = π/4·d² (nominal body area).
+     */
+    fun calculateBoltShearCapacity(boltDiameter: Double, grade: BoltGrade, count: Int = 1): Double {
+        InputGuard.positive("boltDiameter", boltDiameter)
+        InputGuard.positive("count", count)
+        val ab = PI / 4.0 * boltDiameter * boltDiameter
+        val fnv = 0.45 * grade.fu
+        return PHI_BEARING * fnv * ab * count / 1000.0
+    }
+
     // ===================== SECTION PROPERTY HELPERS =====================
 
     /** Weak axis moment of inertia Iy — mm⁴ (AISC properties) */
