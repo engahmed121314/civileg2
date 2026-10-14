@@ -252,6 +252,7 @@ class SBCSteelDesignEngine {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
+        codeNotes.add(CodeReference.SBC.STEEL_BEAM_FLEXURE)
         codeNotes.add("SBC 306: تصميم الكمرات (Chapter F - يتبع AISC 360-16)")
         codeNotes.add("درجة الصلب: ${grade.displayName} (Fy=${grade.fy} MPa, Fu=${grade.fu} MPa)")
 
@@ -415,6 +416,7 @@ class SBCSteelDesignEngine {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
+        codeNotes.add(CodeReference.SBC.STEEL_COLUMN_COMPRESSION)
         codeNotes.add("SBC 306: تصميم الأعمدة (Chapter E - يتبع AISC 360-16)")
         codeNotes.add("درجة الصلب: ${grade.displayName} (Fy=${grade.fy} MPa, Fu=${grade.fu} MPa)")
 
@@ -654,6 +656,7 @@ class SBCSteelDesignEngine {
         val codeNotes = mutableListOf<String>()
         val calculations = StringBuilder()
 
+        codeNotes.add(CodeReference.SBC.STEEL_BOLTED_CONNECTION)
         codeNotes.add("SBC 306: تصميم الوصلات (Chapter J - يتبع AISC 360-16)")
         codeNotes.add("درجة الصلب: ${grade.displayName}, سماكة الصفيحة: ${String.format("%.1f", plateThickness)} mm")
 
@@ -784,6 +787,7 @@ class SBCSteelDesignEngine {
         calc.append("السعة الحاكمة: ${String.format("%.1f", capacity)} kN\n")
         calc.append("نسبة الاستغلال: ${String.format("%.2f", appliedForce / capacity.coerceAtLeast(0.001))}\n")
 
+        codeNotes.add(CodeReference.SBC.STEEL_BOLTED_CONNECTION)
         codeNotes.add("AISC J3.6 / SBC 306: فحص القص للمسمار")
         codeNotes.add("AISC J4.3 / SBC 306: فحص القص الكتلي (Block Shear)")
 
@@ -851,7 +855,8 @@ class SBCSteelDesignEngine {
             calc.append("السعة الحاكمة: ${String.format("%.1f", capacity)} kN\n")
             calc.append("نسبة الاستغلال: ${String.format("%.2f", appliedForce / capacity.coerceAtLeast(0.001))}\n")
 
-            codeNotes.add("AISC J2.4 / SBC 306: فحص اللحام التفريغي")
+            codeNotes.add(CodeReference.SBC.STEEL_WELDED_CONNECTION)
+        codeNotes.add("AISC J2.4 / SBC 306: فحص اللحام التفريغي")
             codeNotes.add("Fexx = ${String.format("%.0f", Fexx)} MPa, φ = $PHI_WELD")
 
             // فحص أقل حجم اللحام - AISC Table J2.4
@@ -934,6 +939,7 @@ class SBCSteelDesignEngine {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
+        codeNotes.add(CodeReference.SBC.STEEL_BASE_PLATE)
         codeNotes.add("SBC 306: تصميم القواعد المعدنية (يتبع AISC Design Guide 1)")
         codeNotes.add("درجة الصلب: ${grade.displayName}, مقاومة الخرسانة: f'c=${String.format("%.0f", fcu)} MPa")
 
@@ -1070,6 +1076,7 @@ class SBCSteelDesignEngine {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
+        codeNotes.add(CodeReference.SBC.STEEL_COMBINED_STRESS)
         codeNotes.add("SBC 306: تصميم الكوابرج (Chapter C & E - يتبع AISC 360-16)")
         codeNotes.add("درجة الصلب: ${grade.displayName}")
 

@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.CodeReference
 import kotlin.math.*
 
 /**
@@ -212,6 +213,7 @@ class SteelDesignEngine {
         // فحص الانبعاج المحلي
         val localBucklingCheck = checkLocalBuckling(section, grade)
 
+        codeNotes.add(CodeReference.ECP.STEEL_BEAM_FLEXURE)
         codeNotes.add("ECP 205 / AISC 360-22: LRFD Method")
         codeNotes.add("Section: ${section.name} (${grade.getGradeName()})")
         codeNotes.add("Ag=%.0f mm², Zx=%.0f mm³, Sx=%.0f mm³".format(section.A, section.Zx, section.Sx))
@@ -284,6 +286,7 @@ class SteelDesignEngine {
             details = "λ=$lambda, Fcr=${"%.1f".format(Fcr)} MPa, φPn=${"%.1f".format(phiPn)} kN"
         )
 
+        codeNotes.add(CodeReference.ECP.STEEL_COLUMN_COMPRESSION)
         codeNotes.add("ECP 205 / AISC 360: Compression Members")
         codeNotes.add("Slenderness ratio λ = ${"%.1f".format(lambda)}")
         codeNotes.add("Fcr = ${"%.1f".format(Fcr)} MPa")
@@ -359,6 +362,7 @@ class SteelDesignEngine {
         val isSafe = interaction <= 1.0
         if (!isSafe) warnings.add("معادلة التفاعل = %.2f > 1.0 - زِد المقطع".format(interaction))
 
+        codeNotes.add(CodeReference.ECP.STEEL_COMBINED_STRESS)
         codeNotes.add("AISC H1: Combined Axial + Flexure")
         codeNotes.add("Eq: %s (Pu/φPn=%.2f)".format(if (pr >= 0.2) "H1-1a" else "H1-1b", pr))
 

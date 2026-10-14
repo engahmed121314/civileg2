@@ -656,6 +656,7 @@ class AISCSteelDesignEngine {
         }
 
         // Code notes
+        codeNotes.add(CodeReference.ACI.STEEL_TENSION_MEMBER)
         codeNotes.add("AISC 360-16 Chapter D: تصميم عضو الشد")
         codeNotes.add("Fy = ${Fy.toInt()} MPa, Fu = ${Fu.toInt()} MPa")
         codeNotes.add("Ag = ${"%.0f".format(Ag)} mm²")
@@ -897,6 +898,7 @@ class AISCSteelDesignEngine {
         val lambdaY = (Ky * Ly) / ry.coerceAtLeast(0.1)
         val lambdaMax = maxOf(lambdaX, lambdaY)
 
+        codeNotes.add(CodeReference.ACI.STEEL_COLUMN_COMPRESSION)
         codeNotes.add("AISC 360-16 Chapter E: تصميم عضو الضغط")
         codeNotes.add("Fy = ${Fy.toInt()} MPa, Ag = ${"%.0f".format(Ag)} mm²")
         codeNotes.add("λx = ${"%.1f".format(lambdaX)}, λy = ${"%.1f".format(lambdaY)}")
@@ -1139,6 +1141,7 @@ class AISCSteelDesignEngine {
         val Fy = grade.fy
 
         val classification = classifySection(section, grade)
+        codeNotes.add(CodeReference.ACI.STEEL_BEAM_FLEXURE)
         codeNotes.add("AISC 360-16 Chapter F: تصميم الكمرة")
         trace.add("1. تصنيف المقطع: ${classification.overall}")
         trace.add("   λf = ${"%.2f".format(classification.flangeSlenderness)} (Limit λp = ${"%.2f".format(classification.flangeCompactLimit)})")
@@ -1593,6 +1596,7 @@ class AISCSteelDesignEngine {
         val Vn = 0.6 * Fy * Aw * Cv / 1000.0  // kN
         val phiVn = PHI_SHEAR * Vn
 
+        codeNotes.add(CodeReference.ACI.STEEL_BEAM_SHEAR)
         codeNotes.add("القص: h/tw = ${"%.1f".format(hOverTw)}, Cv = ${"%.3f".format(Cv)}, Aw = ${"%.0f".format(Aw)} mm²")
         codeNotes.add("φVn = ${"%.1f".format(phiVn)} kN")
 
@@ -1733,6 +1737,7 @@ class AISCSteelDesignEngine {
             Pair(ratio, "H1-1b")
         }
 
+        codeNotes.add(CodeReference.ACI.STEEL_COMBINED_STRESS)
         codeNotes.add("AISC 360-16 Chapter H: الحمل المركب")
         codeNotes.add("المعادلة: ${equation}")
         codeNotes.add("Pu/(φPn) = ${"%.3f".format(pr)}")

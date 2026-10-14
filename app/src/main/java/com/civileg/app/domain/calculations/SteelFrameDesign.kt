@@ -48,6 +48,8 @@ object SteelFrameDesign {
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
+        codeNotes.add(CodeReference.getReference(code, "STEEL_BEAM_FLEXURE"))
+        codeNotes.add(CodeReference.getReference(code, "STEEL_COMBINED_STRESS"))
 
         // Get all available sections sorted by weight (lightest first for optimization)
         val allSections = SteelTables.getAllSections()

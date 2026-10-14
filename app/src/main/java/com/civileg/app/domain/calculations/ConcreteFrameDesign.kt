@@ -65,6 +65,8 @@ object ConcreteFrameDesign {
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
+        codeNotes.add(CodeReference.getReference(code, "FRAME_FLEXURE"))
+        codeNotes.add(CodeReference.getReference(code, "FRAME_SHEAR"))
 
         // === FLEXURE DESIGN ===
         val (asReq, isSafeMoment, kBal) = designFlexure(maxM, b, d, fcu, fy, code, warnings, codeNotes)

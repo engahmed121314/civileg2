@@ -48,6 +48,22 @@ object CodeReference {
         
         // الخزانات
         const val TANK_HYDROSTATIC = "ECP 203-2020: Section 6-4 (Liquid-Retaining Structures)"
+        
+        // الهياكل المعدنية
+        const val STEEL_TENSION_MEMBER = "ECP 205-2007: Chapter 5 (Tension Members)"
+        const val STEEL_BEAM_FLEXURE = "ECP 205-2007: Chapter 6 (Flexural Members)"
+        const val STEEL_BEAM_SHEAR = "ECP 205-2007: Chapter 6 (Shear)"
+        const val STEEL_COLUMN_COMPRESSION = "ECP 205-2007: Chapter 7 (Compression Members)"
+        const val STEEL_COMBINED_STRESS = "ECP 205-2007: Chapter 8 (Combined Forces)"
+        const val STEEL_DEFLECTION = "ECP 205-2007: Serviceability Limit State (Deflection)"
+        const val STEEL_BASE_PLATE = "ECP 205-2007: Column Base Plates"
+        const val STEEL_BOLTED_CONNECTION = "ECP 205-2007: Chapter 10 (Bolted Connections)"
+        const val STEEL_WELDED_CONNECTION = "ECP 205-2007: Chapter 10 (Welded Connections)"
+        const val STEEL_BLOCK_SHEAR = "ECP 205-2007: Block Shear Rupture"
+        
+        // الإطارات الخرسانية
+        const val FRAME_FLEXURE = "ECP 203-2020: Section 4-2-1 (Frame Members)"
+        const val FRAME_SHEAR = "ECP 203-2020: Section 4-2-2 (Frame Members)"
     }
     
     // === الكود الأمريكي ACI 318-19 ===
@@ -92,6 +108,22 @@ object CodeReference {
         
         // الخزانات
         const val TANK_HYDROSTATIC = "ACI 350-20: Liquid-Containing Structures"
+        
+        // الهياكل المعدنية
+        const val STEEL_TENSION_MEMBER = "AISC 360-22: Chapter D (Tension Members)"
+        const val STEEL_BEAM_FLEXURE = "AISC 360-22: Chapter F (Flexure)"
+        const val STEEL_BEAM_SHEAR = "AISC 360-22: Chapter G (Shear)"
+        const val STEEL_COLUMN_COMPRESSION = "AISC 360-22: Chapter E (Compression)"
+        const val STEEL_COMBINED_STRESS = "AISC 360-22: Chapter H (Combined Forces)"
+        const val STEEL_DEFLECTION = "AISC 360-22: Chapter L (Serviceability)"
+        const val STEEL_BASE_PLATE = "AISC 360-22: Chapter J (Column Base Plates)"
+        const val STEEL_BOLTED_CONNECTION = "AISC 360-22: Chapter J3 (Bolted Connections)"
+        const val STEEL_WELDED_CONNECTION = "AISC 360-22: Chapter J2 (Welded Connections)"
+        const val STEEL_BLOCK_SHEAR = "AISC 360-22: Section J4.3 (Block Shear)"
+        
+        // الإطارات الخرسانية
+        const val FRAME_FLEXURE = "ACI 318-19: Chapter 9 (Frame Members)"
+        const val FRAME_SHEAR = "ACI 318-19: Chapter 22 (Frame Members)"
     }
     
     // === الكود السعودي SBC 304-2018 ===
@@ -136,6 +168,22 @@ object CodeReference {
         
         // الخزانات
         const val TANK_HYDROSTATIC = "SBC 304-2018: Section 350 (Liquid-Containing Structures)"
+        
+        // الهياكل المعدنية
+        const val STEEL_TENSION_MEMBER = "SBC 306-2018: Chapter D (Tension Members)"
+        const val STEEL_BEAM_FLEXURE = "SBC 306-2018: Chapter F (Flexure)"
+        const val STEEL_BEAM_SHEAR = "SBC 306-2018: Chapter G (Shear)"
+        const val STEEL_COLUMN_COMPRESSION = "SBC 306-2018: Chapter E (Compression)"
+        const val STEEL_COMBINED_STRESS = "SBC 306-2018: Chapter H (Combined Forces)"
+        const val STEEL_DEFLECTION = "SBC 306-2018: Chapter L (Serviceability)"
+        const val STEEL_BASE_PLATE = "SBC 306-2018: Chapter J (Column Base Plates)"
+        const val STEEL_BOLTED_CONNECTION = "SBC 306-2018: Chapter J3 (Bolted Connections)"
+        const val STEEL_WELDED_CONNECTION = "SBC 306-2018: Chapter J2 (Welded Connections)"
+        const val STEEL_BLOCK_SHEAR = "SBC 306-2018: Section J4.3 (Block Shear)"
+        
+        // الإطارات الخرسانية
+        const val FRAME_FLEXURE = "SBC 304-2018: Section 9 (Frame Members)"
+        const val FRAME_SHEAR = "SBC 304-2018: Section 11 (Frame Members)"
     }
     
     // دالة مساعدة للحصول على المرجع حسب الكود

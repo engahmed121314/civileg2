@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.CodeReference
 import kotlin.math.*
 
 /**
@@ -267,6 +268,7 @@ class SteelBasePlateDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
+        codeNotes.add(CodeReference.ECP.STEEL_BASE_PLATE)
         codeNotes.add("التصميم حسب AISC 360-16 الفصل 14 و ECP 205")
         codeNotes.add("طريقة التصميم: LRFD (Load and Resistance Factor Design)")
 
@@ -498,6 +500,7 @@ class SteelBasePlateDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
+        codeNotes.add(CodeReference.ECP.STEEL_BASE_PLATE)
         codeNotes.add("التصميم حسب AISC 360-16 الفصل 14 و ECP 205 - قاعدة غير مركزية")
         codeNotes.add("طريقة التصميم: LRFD")
 

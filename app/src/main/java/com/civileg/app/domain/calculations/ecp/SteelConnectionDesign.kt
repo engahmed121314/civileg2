@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.BoltConnectionType
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.BoltGrade
 import com.civileg.app.domain.entities.BoltPattern
 import com.civileg.app.domain.entities.ConnectionType
@@ -690,6 +691,7 @@ class SteelConnectionDesign {
             warnings.add("⚠️ المسافة بين المسامير (${finalSpacing.toInt()} مم) تتجاوز الحد الأقصى (${maxSpacing.toInt()} مم) حسب AISC J3.5")
         }
 
+        codeNotes.add(CodeReference.ECP.STEEL_BOLTED_CONNECTION)
         codeNotes.add("📌 AISC 360-J3.4: المسافة الدنيا من الحافة = ${minEdgeDist.toInt()} مم")
         codeNotes.add("📌 AISC 360-J3.3: المسافة الدنيا بين المسامير = 3×Ø = ${minSpacing.toInt()} مم")
         codeNotes.add("📌 AISC 360-J3.5: المسافة القصوى = min(24t, 305) = ${maxSpacing.toInt()} مم")
@@ -824,6 +826,7 @@ class SteelConnectionDesign {
                 }
             }
 
+            codeNotes.add(CodeReference.ECP.STEEL_BLOCK_SHEAR)
             codeNotes.add("📌 AISC 360-J4.3: مقاومة القص الكتلي = φ × [0.6×Fu×Anv + Ubs×Fu×Ant] = ${(blockShearResult.capacity * 1000).toInt()} N")
         }
 
@@ -1002,6 +1005,7 @@ class SteelConnectionDesign {
             warnings.add("⚠️ حجم اللحام (${weldSize.toInt()} مم) يتجاوز الحد الأقصى (${maxWeldSize.toInt()} مم) حسب AISC J2.2b")
         }
 
+        codeNotes.add(CodeReference.ECP.STEEL_WELDED_CONNECTION)
         codeNotes.add("📌 AISC 360-Table J2.4: الحجم الأدنى لللحام = ${minWeldSize.toInt()} مم (لسماكة ${plateThickness.toInt()} مم)")
         codeNotes.add("📌 AISC 360-J2.2b: الحجم الأقصى لللحام = ${maxWeldSize.toInt()} مم")
 

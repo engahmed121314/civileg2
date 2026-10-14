@@ -96,6 +96,8 @@ class ACIAdvancedColumn : ColumnDesign {
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
+        codeNotes.add(CodeReference.ACI.COLUMN_AXIAL)
+        codeNotes.add(CodeReference.ACI.COLUMN_REINFORCEMENT_MIN)
         val fcPrime = 0.8 * fcu // Cube to cylinder conversion for ACI
 
         // ── Section geometry ──

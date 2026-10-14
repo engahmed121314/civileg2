@@ -94,6 +94,8 @@ class ECPAdvancedColumn : ColumnDesign {
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
+        codeNotes.add(CodeReference.ECP.COLUMN_AXIAL)
+        codeNotes.add(CodeReference.ECP.COLUMN_REINFORCEMENT_MIN)
         
         // المساحة الكلية
         val Ag = columnType.getGrossArea()
