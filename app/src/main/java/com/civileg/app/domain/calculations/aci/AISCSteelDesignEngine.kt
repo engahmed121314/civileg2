@@ -336,15 +336,17 @@ class AISCSteelDesignEngine {
      * Classify section as Compact, Noncompact, or Slender
      */
     fun classifySection(section: SteelSectionType, grade: SteelGrade): SectionClassification {
+        InputGuard.notNull("section", section)
+        InputGuard.notNull("grade", grade)
         val Fy = grade.fy
         val warnings = mutableListOf<String>()
 
         when (section) {
             is SteelSectionType.ISection -> {
                 val bf = section.bf
-                val tf = section.tf
+                val tf = section.tf.coerceAtLeast(0.001)
                 val h = section.h
-                val tw = section.tw
+                val tw = section.tw.coerceAtLeast(0.001)
 
                 // Flange slenderness (AISC Table B4.1a, Case 1/10)
                 val lambdaF = (bf - tw) / (2.0 * tf)

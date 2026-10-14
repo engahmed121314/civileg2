@@ -73,7 +73,7 @@ object CodeReference {
         const val COLUMN_REINFORCEMENT_MIN = "ACI 318-19: Section 10.6.1 (ρmin = 1%)"
         const val COLUMN_REINFORCEMENT_MAX = "ACI 318-19: Section 10.6.1 (ρmax = 8%)"
         const val COLUMN_TIES = "ACI 318-19: Section 25.7.2"
-        const val COLUMN_COVER = "ACI 318-19: Section 20.6.1 (Cover ≥ 40mm)"
+        const val COLUMN_COVER = "ACI 318-19: Section 20.5.1.3 (Cover ≥ 40mm)"
         
         // الكمرات
         const val BEAM_FLEXURE = "ACI 318-19: Chapter 9"
@@ -84,8 +84,8 @@ object CodeReference {
         const val BEAM_DOUBLY_REINFORCED = "ACI 318-19: Section 9.3.3.2"
         
         // البلاطات
-        const val SLAB_ONE_WAY = "ACI 318-19: Section 8.3"
-        const val SLAB_TWO_WAY = "ACI 318-19: Chapter 8"
+        const val SLAB_ONE_WAY = "ACI 318-19: Chapter 7 (One-Way Slabs)"
+        const val SLAB_TWO_WAY = "ACI 318-19: Chapter 8 (Two-Way Slabs)"
         const val SLAB_DEFLECTION = "ACI 318-19: Section 24.2"
         
         // القواعد
@@ -144,7 +144,7 @@ object CodeReference {
         const val BEAM_DOUBLY_REINFORCED = "SBC 304-2018: Section 9.3.3.2"
         
         // البلاطات
-        const val SLAB_ONE_WAY = "SBC 304-2018: Section 8.3"
+        const val SLAB_ONE_WAY = "SBC 304-2018: Chapter 7 (One-Way Slabs)"
         const val SLAB_TWO_WAY = "SBC 304-2018: Section 8.4"
         const val SLAB_DEFLECTION = "SBC 304-2018: Section 9.5"
         

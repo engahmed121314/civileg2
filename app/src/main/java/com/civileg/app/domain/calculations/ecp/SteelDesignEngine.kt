@@ -135,9 +135,20 @@ class SteelDesignEngine {
         InputGuard.notNull("section", section)
         InputGuard.notNull("grade", grade)
         // [FIX] Shear area uses web depth (h - 2tf), not full depth
-        val hw = section.h - 2 * section.tf
+        val hw = (section.h - 2 * section.tf).coerceAtLeast(0.001)
         val Aw = hw * section.tw // mm² - مساحة الجذع
-        val Vn = 0.6 * grade.fy * Aw / 1000.0 // kN
+        // [FIX] Web shear-buckling reduction Cv (ECP 205 / AISC G2). Cv = 1 for stocky webs,
+        // reduces Vn for slender unstiffened webs (h/tw above the inelastic-buckling limit).
+        val hOverTw = hw / section.tw.coerceAtLeast(0.001)
+        val kShear = 5.0 // unstiffened web buckling coefficient
+        val cvLimit1 = 1.10 * sqrt(kShear * E_STEEL / grade.fy)
+        val cvLimit2 = 1.37 * sqrt(kShear * E_STEEL / grade.fy)
+        val Cv = when {
+            hOverTw <= cvLimit1 -> 1.0
+            hOverTw <= cvLimit2 -> cvLimit1 / hOverTw
+            else -> 1.51 * kShear * E_STEEL / (hOverTw * hOverTw * grade.fy)
+        }
+        val Vn = 0.6 * grade.fy * Aw * Cv / 1000.0 // kN
         val phiVn = PHI_SHEAR * Vn
         val ratio = Vu / phiVn
 
@@ -145,7 +156,7 @@ class SteelDesignEngine {
             utilizationRatio = ratio,
             isSafe = ratio <= 1.0,
             classification = if (ratio < 0.7) "Economic" else "Adequate",
-            details = "φVn = ${"%.1f".format(phiVn)} kN, Aw = ${"%.0f".format(Aw)} mm²"
+            details = "φVn = ${"%.1f".format(phiVn)} kN, Aw = ${"%.0f".format(Aw)} mm², h/tw = ${"%.1f".format(hOverTw)}, Cv = ${"%.3f".format(Cv)}"
         )
     }
 

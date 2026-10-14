@@ -245,6 +245,11 @@ class ExportViewModel @Inject constructor(
                 val fileName = "${projectName.replace(" ", "_")}_Steel_${System.currentTimeMillis()}.pdf"
                 val outputFile = File(outputDir, fileName)
                 
+                // [FIX] Reflect the actual bolted-connection design in the drawing.
+                val boltedConn = connectionDesign?.connectionType as? ConnectionType.Bolted
+                val boltDia = boltedConn?.boltDiameter ?: 20.0
+                val boltCount = boltedConn?.numberOfBolts ?: 4
+
                 val bitmap = drawingBitmap ?: PdfDrawingGenerator.generateSteelDrawing(
                     sectionName = sectionType.sectionName,
                     sectionHeight = sectionType.depth,
@@ -261,8 +266,8 @@ class ExportViewModel @Inject constructor(
                     sx = sectionType.sx,
                     zx = sectionType.zx,
                     weightPerMeter = sectionType.weight,
-                    boltDia = 20.0,
-                    boltCount = 4,
+                    boltDia = boltDia,
+                    boltCount = boltCount,
                     boltGauge = 90.0,
                     boltPitch = 75.0,
                     endPlateThickness = 12.0,

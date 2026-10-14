@@ -199,6 +199,12 @@ class SteelViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = java.io.File(directory, fileName)
 
+                // [FIX] Connection parameters must match the on-screen drawing: use the
+                // actual bolted-connection design result, falling back to configurable defaults.
+                val boltedConn = res.connectionDesign?.connectionType as? ConnectionType.Bolted
+                val boltDia = boltedConn?.boltDiameter ?: defaultBoltDia
+                val boltCount = boltedConn?.numberOfBolts ?: defaultBoltCount
+
                 // Generate steel drawing bitmap using actual section properties
                 // 2026-08-04 v3: Pass all section properties to match ProfessionalSteelDrawing
                 val drawingBitmap = try {
@@ -219,9 +225,9 @@ class SteelViewModel @Inject constructor(
                         sx = stored.section.sx,
                         zx = stored.section.zx,
                         weightPerMeter = stored.section.weight,
-                        // Connection parameters — use configurable defaults (set from connection design if available)
-                        boltDia = defaultBoltDia,
-                        boltCount = defaultBoltCount,
+                        // Connection parameters — from actual connection design (matches on-screen drawing)
+                        boltDia = boltDia,
+                        boltCount = boltCount,
                         boltGauge = defaultBoltGauge,
                         boltPitch = defaultBoltPitch,
                         endPlateThickness = defaultEndPlateThickness,

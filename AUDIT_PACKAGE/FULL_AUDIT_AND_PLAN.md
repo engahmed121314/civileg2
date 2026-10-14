@@ -16,8 +16,8 @@
 | Code selection | ⚠️ Fragmented | **Two `DesignCode` enums** + one screen (`SeismicScreen`) bypasses the factory. See §4. |
 | CalculatorEngine facade | ⚠️ Partial | Real (not stub) for most elements but duplicates engine math inline; some delegations missing. See §5. |
 | InputGuard | ✅ Mostly | Present at domain-engine entries; **`CalculatorEngine` coverage was the old zero-gap** — verify per §5. |
-| CodeReference | ✅ Broad | Concrete + steel/frame engines emit refs (commits `08bcc90`, `399c455`). Clause numbers unverified. |
-| Drawing → PDF | ⚠️ Gaps | Capture-based for most; **Seismic has no drawing; Pile/Steel/Warehouse use a divergent renderer**. Stale-bitmap bug in FlatSlab + ShearWall. See §6. |
+| CodeReference | ✅ Broad | Concrete + steel/frame engines emit refs (commits `08bcc90`, `399c455`). Confirmed errors fixed (ACI cover, one-way slab); ECP/SBC sub-clauses still unverified. See §9.6. |
+| Drawing → PDF | ⚠️ Gaps | Capture-based for most; **Seismic has no drawing; Pile/Steel/Warehouse use a divergent renderer**. Stale-bitmap bug in FlatSlab + ShearWall. Steel connection bolt params fixed in PDF path (§9.6). See §6. |
 | Export pipelines | ✅ Consolidated | `ExportManager` unified (`exportPdf/Dxf/Ifc/Csv/Both/Package`); 12 dead exporters deleted. Migrations to `ExportManager` still pending. |
 | Security / signing | ⚠️ Blocked | Needs production signer fingerprint + AdMob IDs. 15 Dependabot alerts. |
 
@@ -52,7 +52,7 @@
 | Staircase | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Seismic | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Steel member | ✅ | ✅ | ✅ | ✅ | ✅ (guard at `SteelDesignEngine.designBeam:189`) |
-| Steel connection | ✅ | ❌ | ✅ | — | ⚠️ `AISCSteelDesignEngine.classifySection:337` unguarded |
+| Steel connection | ✅ | ❌ | ✅ | — | ✅ `classifySection` now guarded (§9.6) |
 | Steel base plate | ✅ | ❌ | ✅ | — | — |
 
 **Legend:** ✅ present · ❌ absent · ⚠️ partial/risk.
@@ -138,7 +138,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 ### 5.2 Concrete fidelity gaps
 1. **Seismic PDF has no drawing** — `SeismicViewModel.kt:192` reads a `pendingDrawingBitmap` that is never set (no `DrawingCaptureArea` in `SeismicScreen.kt`) and has no generator fallback → `"[Drawing not available...]"`. `PdfDrawingGenerator.generateSeismicDrawing` exists (`:3060`) and can be wired. *(Fix implemented — see §9.)*
 2. **Stale-bitmap bug** — `FlatSlabViewModel.kt:186` and `ShearWallViewModel.kt:287` read the captured bitmap but never reset `pendingDrawingBitmap = null`, so a later export can show an **old** drawing. *(Fix implemented — see §9.)*
-3. **Steel connection PDF mismatch** — screen uses actual `boltDia`/`boltCount` from `res.connectionDesign`; PDF path passes configurable defaults (`defaultBoltDia=20`, `defaultBoltCount=4`, … `SteelViewModel.kt:68-74,223-229`). PDF can print the wrong bolt count/diameter.
+3. ~~**Steel connection PDF mismatch**~~ — **FIXED (§9.6):** PDF path now reads actual `boltDia`/`boltCount` from `res.connectionDesign` (falls back to defaults) in both `SteelViewModel` and `ExportViewModel`.
 4. **Fallback generators synthesize geometry** rather than read design values (combined footing hardcodes bars `CombinedFootingViewModel.kt:281-282`; retaining wall derives stem/base/rebar `:121-133`; stair width fixed `1200` `:135`; generic slab/column fallbacks `ExportViewModel.kt:336-353`). Only reachable when capture is absent.
 5. **Pile / Warehouse** use a renderer distinct from the screen — same-element divergence possible.
 
@@ -232,9 +232,27 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 - Updated `ACISlabTest` / `SBCSlabTest` cantilever expectations to `L/10`.
 - Full suite green: **57 suites / 1182 tests / 0 failures**.
 
-### 9.6 Still open
-- `ecp/SteelDesignEngine.kt` Cv coefficient — unaudited.
-- Steel-connection PDF bolt count/dia vs on-screen `res.connectionDesign` (P1 mismatch).
-- New `CodeReference` clause/section numbers not yet verified against code text.
+### 9.6 Resolved follow-ups (this pass)
+- `ecp/SteelDesignEngine.kt` — `checkBeamShear` now applies a web shear-buckling reduction
+  `Cv` (ECP 205 / AISC G2): `Cv = 1` for stocky webs (`h/tw ≤ 1.10√(kE/Fy)`), linear
+  `1.10√(kE/Fy)/(h/tw)` in the inelastic range, and `1.51·k·E/(h/tw)²/Fy` for slender webs
+  (`k = 5` unstiffened). Previously `Vn = 0.6·Fy·Aw` unconditionally, which is unconservative
+  for slender webs. `Aw = (h − 2·tf)·tw` (web depth already used). `h/tw`/`Cv` added to details.
+- `aci/AISCSteelDesignEngine.classifySection` — added `InputGuard.notNull` guards and
+  `coerceAtLeast(0.001)` on `tf`/`tw` before division (was the only unguarded public entry).
+- Steel-connection PDF bolt mismatch — `SteelViewModel.exportToPdf` and
+  `ExportViewModel.exportSteelReport` now derive `boltDia`/`boltCount` from
+  `connectionDesign.connectionType as? ConnectionType.Bolted`, falling back to defaults;
+  PDF drawing now matches the on-screen `ProfessionalSteelDrawing`.
+- `CodeReference` verification: fixed confirmed errors — ACI cover `20.6.1 → 20.5.1.3`
+  (Ch 20: 20.5 = Durability, 20.6 = Embedments); one-way slab `Section 8.3 → Chapter 7`
+  for ACI 318-19 and SBC 304-2018 (Ch 7 = one-way slabs). Remaining clause numbers
+  reviewed but ECP 203-2020 / SBC 304-2018 exact sub-clauses remain unverified (no
+  authoritative text available); refs are display-only and do not affect calculations.
+
+### 9.7 Still open
+- `CodeReference` ECP 203-2020 and SBC sub-clause numbers: pass an automated "every key
+  resolves per code" test (planned), but authoritative sub-clause text still needed.
+- AISC connection & base-plate methods; warehouse-vs-simple-beam divergence.
 
 *(See git diff for exact lines.)*
