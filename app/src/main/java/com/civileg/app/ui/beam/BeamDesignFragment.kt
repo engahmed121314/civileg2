@@ -165,9 +165,9 @@ class BeamDesignFragment : Fragment() {
             val wastePercent = binding.etWasteFactor.text.toString().toDoubleOrNull() ?: 5.0
 
             val code = when(selectedCode) {
-                DesignCode.ECP -> CalculatorEngine.DesignCode.EGYPTIAN
-                DesignCode.ACI -> CalculatorEngine.DesignCode.ACI
-                DesignCode.SBC -> CalculatorEngine.DesignCode.SAUDI
+                DesignCode.ECP -> DesignCode.ECP
+                DesignCode.ACI -> DesignCode.ACI
+                DesignCode.SBC -> DesignCode.SBC
             }
 
             // Perform Analysis for BMD/SFD using ContinuousBeamAnalysis

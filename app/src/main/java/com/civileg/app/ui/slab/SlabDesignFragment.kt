@@ -16,7 +16,6 @@ import com.civileg.app.db.Project as DbProject
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
-import com.civileg.app.utils.CalculatorEngine.DesignCode
 import com.civileg.app.utils.CalculatorEngine.SlabType
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.SettingsManager
@@ -50,7 +49,7 @@ class SlabDesignFragment : Fragment() {
     lateinit var designRepository: DesignRepository
     
     private var selectedSlabTypeEnum = SlabType.SOLID
-    private var selectedCodeEnum = DesignCode.EGYPTIAN
+    private var selectedCodeEnum = DesignCode.ECP
     private var lastResult: CalculatorEngine.SlabResult? = null
     private var projectsList: List<DbProject> = emptyList()
 
@@ -83,8 +82,8 @@ class SlabDesignFragment : Fragment() {
             if (isChecked) {
                 selectedCodeEnum = when (checkedId) {
                     R.id.btnAmericanCode -> DesignCode.ACI
-                    R.id.btnSaudiCode -> DesignCode.SAUDI
-                    else -> DesignCode.EGYPTIAN
+                    R.id.btnSaudiCode -> DesignCode.SBC
+                    else -> DesignCode.ECP
                 }
             }
         }
@@ -152,9 +151,9 @@ class SlabDesignFragment : Fragment() {
             val filePath = File(requireContext().getExternalFilesDir(null) ?: requireContext().cacheDir, fileName).absolutePath
 
             val codeLabel = when (selectedCodeEnum) {
-                DesignCode.EGYPTIAN -> "ECP 203"
+                DesignCode.ECP -> "ECP 203"
                 DesignCode.ACI -> "ACI 318"
-                DesignCode.SAUDI -> "SBC 304"
+                DesignCode.SBC -> "SBC 304"
             }
             val inputsMap = mapOf(
                 "Project" to projectName,

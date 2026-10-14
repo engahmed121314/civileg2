@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,7 +30,6 @@ import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.TankType
-import com.civileg.app.utils.CalculatorEngine.DesignCode
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalTankDrawing
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
@@ -80,7 +81,7 @@ fun TankScreen(
     var height by remember { mutableStateOf("3.5") }
     var fcu by remember { mutableStateOf("30") }
     var fy by remember { mutableStateOf("400") }
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
 
     // Input validation states
     var capacityError by remember { mutableStateOf("") }

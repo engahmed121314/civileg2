@@ -860,9 +860,9 @@ fun SeismicScreen(
                             spectralAcceleration = res.spectralAccel,
                             isSafe = true,
                             code = when (res.code) {
-                                DesignCode.ECP -> CalculatorEngine.DesignCode.EGYPTIAN
-                                DesignCode.ACI -> CalculatorEngine.DesignCode.ACI
-                                DesignCode.SBC -> CalculatorEngine.DesignCode.SAUDI
+                                DesignCode.ECP -> DesignCode.ECP
+                                DesignCode.ACI -> DesignCode.ACI
+                                DesignCode.SBC -> DesignCode.SBC
                             },
                             zone = res.baseShearResult.zoneFactor,
                             importance = res.baseShearResult.importanceFactor,

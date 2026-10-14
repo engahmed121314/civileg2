@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.components
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -67,8 +69,8 @@ import com.civileg.app.utils.CalculatorEngine
  */
 @Composable
 fun DesignCodeSelectorRow(
-    selectedCode: CalculatorEngine.DesignCode,
-    onCodeSelected: (CalculatorEngine.DesignCode) -> Unit,
+    selectedCode: DesignCode,
+    onCodeSelected: (DesignCode) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -83,7 +85,7 @@ fun DesignCodeSelectorRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            CalculatorEngine.DesignCode.entries.forEach { code ->
+            DesignCode.entries.forEach { code ->
                 FilterChip(
                     selected = code == selectedCode,
                     onClick = { onCodeSelected(code) },

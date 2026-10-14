@@ -1,5 +1,7 @@
 package com.civileg.app.utils
 
+import com.civileg.app.domain.entities.DesignCode
+
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import kotlin.math.PI
 import kotlin.math.pow
@@ -45,9 +47,9 @@ object QualityControlEngine {
         const val FIRE_PROTECTION = "FIRE_PROTECTION"
     }
 
-    fun codeName(code: CalculatorEngine.DesignCode): String = when (code) {
-        CalculatorEngine.DesignCode.ACI -> "ACI 318-19"
-        CalculatorEngine.DesignCode.SAUDI -> "SBC 304-2018"
+    fun codeName(code: DesignCode): String = when (code) {
+        DesignCode.ACI -> "ACI 318-19"
+        DesignCode.SBC -> "SBC 304-2018"
         else -> "ECP 203-2020"
     }
 
@@ -55,7 +57,7 @@ object QualityControlEngine {
     // CONCRETE
     // ==================================================================
     fun concreteQc(
-        code: CalculatorEngine.DesignCode,
+        code: DesignCode,
         elementId: String,
         volumeM3: Double,
         slumpMm: Double,
@@ -113,7 +115,7 @@ object QualityControlEngine {
     // REBAR
     // ==================================================================
     fun rebarQc(
-        code: CalculatorEngine.DesignCode,
+        code: DesignCode,
         barDiameterMm: Double,
         numBars: Int,
         fyMpa: Double,
@@ -130,8 +132,8 @@ object QualityControlEngine {
         val d = effectiveDepthMm.coerceAtLeast(1.0)
         val rho = asTotal / (b * d)
 
-        val fc = if (code == CalculatorEngine.DesignCode.EGYPTIAN) fcuMpa else fcuMpa * CUBE_TO_CYLINDER
-        val (k1, k2) = if (code == CalculatorEngine.DesignCode.EGYPTIAN) 0.225 to 1.3 else 0.25 to 1.4
+        val fc = if (code == DesignCode.ECP) fcuMpa else fcuMpa * CUBE_TO_CYLINDER
+        val (k1, k2) = if (code == DesignCode.ECP) 0.225 to 1.3 else 0.25 to 1.4
         val rhoMin = maxOf(k1 * sqrt(fc) / fyMpa, k2 / fyMpa)
         val beta1 = if (fc <= 28.0) 0.85 else (0.85 - 0.05 * (fc - 28.0) / 7.0).coerceAtLeast(0.65)
         val rhoBal = 0.85 * beta1 * (fc / fyMpa) * (600.0 / (600.0 + fyMpa))
@@ -186,7 +188,7 @@ object QualityControlEngine {
     // STEEL — uses SteelTables (111 sections) instead of SteelDictionary
     // ==================================================================
     fun steelQc(
-        code: CalculatorEngine.DesignCode,
+        code: DesignCode,
         sectionKey: String,
         fyMpa: Double,
         spanM: Double,
@@ -318,7 +320,7 @@ object QualityControlEngine {
     // BRIDGES
     // ==================================================================
     fun bridgeQc(
-        code: CalculatorEngine.DesignCode,
+        code: DesignCode,
         concreteStrengthMpa: Double,
         spanM: Double,
         naturalFrequencyHz: Double
@@ -405,7 +407,7 @@ object QualityControlEngine {
     // BUILDINGS
     // ==================================================================
     fun buildingQc(
-        code: CalculatorEngine.DesignCode,
+        code: DesignCode,
         numFloors: Int,
         floorHeightM: Double,
         totalWeightKn: Double,

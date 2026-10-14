@@ -14,9 +14,7 @@ import com.civileg.app.databinding.FragmentColumnDesignBinding
 import com.civileg.app.db.*
 import com.civileg.app.db.Project as DbProject
 import com.civileg.app.domain.entities.*
-import com.civileg.app.domain.entities.DesignCode as DomainDesignCode
 import com.civileg.app.utils.CalculatorEngine
-import com.civileg.app.utils.CalculatorEngine.DesignCode
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.SettingsManager
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
@@ -50,7 +48,7 @@ class ColumnDesignFragment : Fragment() {
     @Inject
     lateinit var designRepository: DesignRepository
     
-    private var selectedCode = DesignCode.EGYPTIAN
+    private var selectedCode = DesignCode.ECP
     private var colType = ColumnSectionView.ColumnType.RECTANGULAR
     private var lastResult: CalculatorEngine.ColumnResult? = null
     private var projectsList: List<DbProject> = emptyList()
@@ -129,8 +127,8 @@ class ColumnDesignFragment : Fragment() {
             if (isChecked) {
                 selectedCode = when (checkedId) {
                     R.id.btnAmericanCode -> DesignCode.ACI
-                    R.id.btnSaudiCode -> DesignCode.SAUDI
-                    else -> DesignCode.EGYPTIAN
+                    R.id.btnSaudiCode -> DesignCode.SBC
+                    else -> DesignCode.ECP
                 }
                 if (lastResult != null) {
                     calculateColumn()

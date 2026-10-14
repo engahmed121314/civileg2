@@ -1,5 +1,7 @@
 package com.civileg.app.ui.watertank
 
+import com.civileg.app.domain.entities.DesignCode
+
 import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
@@ -44,7 +46,7 @@ class TankInputActivity : AppCompatActivity() {
 
     private fun setupSpinners() {
         // Design Codes
-        val codes = CalculatorEngine.DesignCode.values()
+        val codes = DesignCode.values()
         binding.spinnerCode.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, codes.map { it.displayName })
 
         // Tank Types
@@ -95,7 +97,7 @@ class TankInputActivity : AppCompatActivity() {
         val fy = binding.etFy.text.toString().toDoubleOrNull() ?: return
         
         val type = CalculatorEngine.TankType.values()[binding.spinnerTankType.selectedItemPosition]
-        val code = CalculatorEngine.DesignCode.values()[binding.spinnerCode.selectedItemPosition]
+        val code = DesignCode.values()[binding.spinnerCode.selectedItemPosition]
         val diameter = binding.spinnerDiameter.selectedItem.toString().replace(" mm", "").toInt()
 
         viewModel.calculateTankPro(type, capacity, height, fcu, fy, diameter, code)

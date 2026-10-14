@@ -1,5 +1,7 @@
 package com.civileg.app.viewmodel
 
+import com.civileg.app.domain.entities.DesignCode
+
 import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -60,7 +62,7 @@ class FootingViewModel @Inject constructor(
         soil: Double,
         colB: Double,
         colT: Double,
-        code: CalculatorEngine.DesignCode,
+        code: DesignCode,
         preferredDiameter: Int,
         preferredSpacing: Double,
         p2: Double = 0.0,
@@ -160,8 +162,8 @@ class FootingViewModel @Inject constructor(
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
-                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    DesignCode.ACI -> "ACI 318"
+                    DesignCode.SBC -> "SBC 304"
                     else -> "ECP 203"
                 }
                 val inputsMap = mapOf(

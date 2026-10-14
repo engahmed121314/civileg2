@@ -1,5 +1,7 @@
 package com.civileg.app.utils
 
+import com.civileg.app.domain.entities.DesignCode
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -18,9 +20,9 @@ class QualityControlEngineTest {
     // ==================================================================
     @Test
     fun codeName_mapsEachDesignCode() {
-        assertEquals("ECP 203-2020", QualityControlEngine.codeName(CalculatorEngine.DesignCode.EGYPTIAN))
-        assertEquals("ACI 318-19", QualityControlEngine.codeName(CalculatorEngine.DesignCode.ACI))
-        assertEquals("SBC 304-2018", QualityControlEngine.codeName(CalculatorEngine.DesignCode.SAUDI))
+        assertEquals("ECP 203-2020", QualityControlEngine.codeName(DesignCode.ECP))
+        assertEquals("ACI 318-19", QualityControlEngine.codeName(DesignCode.ACI))
+        assertEquals("SBC 304-2018", QualityControlEngine.codeName(DesignCode.SBC))
     }
 
     // ==================================================================
@@ -29,7 +31,7 @@ class QualityControlEngineTest {
     @Test
     fun concreteQc_allCriteriaMet_passes() {
         val outcome = QualityControlEngine.concreteQc(
-            code = CalculatorEngine.DesignCode.EGYPTIAN,
+            code = DesignCode.ECP,
             elementId = "C1",
             volumeM3 = 12.0,
             slumpMm = 75.0,
@@ -46,7 +48,7 @@ class QualityControlEngineTest {
     @Test
     fun concreteQc_lowStrengthAndHighSlump_fails() {
         val outcome = QualityControlEngine.concreteQc(
-            code = CalculatorEngine.DesignCode.ACI,
+            code = DesignCode.ACI,
             elementId = "B2",
             volumeM3 = 8.0,
             slumpMm = 200.0,
@@ -67,7 +69,7 @@ class QualityControlEngineTest {
     @Test
     fun rebarQc_typicalBeamDetail_passes() {
         val outcome = QualityControlEngine.rebarQc(
-            code = CalculatorEngine.DesignCode.EGYPTIAN,
+            code = DesignCode.ECP,
             barDiameterMm = 16.0,
             numBars = 3,
             fyMpa = 400.0,
@@ -83,7 +85,7 @@ class QualityControlEngineTest {
     @Test
     fun rebarQc_insufficientCover_fails() {
         val outcome = QualityControlEngine.rebarQc(
-            code = CalculatorEngine.DesignCode.EGYPTIAN,
+            code = DesignCode.ECP,
             barDiameterMm = 16.0,
             numBars = 3,
             fyMpa = 400.0,
@@ -101,7 +103,7 @@ class QualityControlEngineTest {
     @Test
     fun steelQc_underloadedIpe200_passes() {
         val outcome = QualityControlEngine.steelQc(
-            code = CalculatorEngine.DesignCode.EGYPTIAN,
+            code = DesignCode.ECP,
             sectionKey = "IPE 200",
             fyMpa = 275.0,
             spanM = 5.0,
@@ -115,7 +117,7 @@ class QualityControlEngineTest {
     @Test
     fun steelQc_overloadedMoment_fails() {
         val outcome = QualityControlEngine.steelQc(
-            code = CalculatorEngine.DesignCode.EGYPTIAN,
+            code = DesignCode.ECP,
             sectionKey = "IPE 200",
             fyMpa = 275.0,
             spanM = 5.0,
@@ -128,7 +130,7 @@ class QualityControlEngineTest {
     @Test
     fun steelQc_unknownSection_failsGracefully() {
         val outcome = QualityControlEngine.steelQc(
-            code = CalculatorEngine.DesignCode.EGYPTIAN,
+            code = DesignCode.ECP,
             sectionKey = "NOT-A-SECTION",
             fyMpa = 275.0,
             spanM = 5.0,
@@ -174,7 +176,7 @@ class QualityControlEngineTest {
     @Test
     fun bridgeQc_adequateFrequency_passes() {
         val outcome = QualityControlEngine.bridgeQc(
-            code = CalculatorEngine.DesignCode.EGYPTIAN,
+            code = DesignCode.ECP,
             concreteStrengthMpa = 30.0,
             spanM = 20.0,
             naturalFrequencyHz = 2.5
@@ -185,7 +187,7 @@ class QualityControlEngineTest {
     @Test
     fun bridgeQc_lowFrequency_fails() {
         val outcome = QualityControlEngine.bridgeQc(
-            code = CalculatorEngine.DesignCode.EGYPTIAN,
+            code = DesignCode.ECP,
             concreteStrengthMpa = 30.0,
             spanM = 20.0,
             naturalFrequencyHz = 1.0
@@ -224,7 +226,7 @@ class QualityControlEngineTest {
     @Test
     fun buildingQc_regularFrame_passes() {
         val outcome = QualityControlEngine.buildingQc(
-            code = CalculatorEngine.DesignCode.ACI,
+            code = DesignCode.ACI,
             numFloors = 5,
             floorHeightM = 3.0,
             totalWeightKn = 50000.0,
@@ -240,7 +242,7 @@ class QualityControlEngineTest {
     @Test
     fun buildingQc_excessiveDrift_fails() {
         val outcome = QualityControlEngine.buildingQc(
-            code = CalculatorEngine.DesignCode.ACI,
+            code = DesignCode.ACI,
             numFloors = 5,
             floorHeightM = 3.0,
             totalWeightKn = 50000.0,

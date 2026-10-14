@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -90,7 +92,7 @@ fun FootingScreen(
     var colDistance by remember { mutableStateOf("3.5") }
     var maxLeft by remember { mutableStateOf("") }
     var maxRight by remember { mutableStateOf("") }
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -463,7 +465,7 @@ fun FootingScreen(
                                     soilPressureMax = res.soilPressure,
                                     soilPressureMin = res.soilPressure,
                                     viewMode = selectedViewMode,
-                                    designCode = selectedCode.toDomain(),
+                                    designCode = selectedCode,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             } else {
@@ -540,7 +542,7 @@ fun FootingScreen(
                             soilPressureMax = res.soilPressure,
                             soilPressureMin = res.soilPressure,
                             viewMode = 0,
-                            designCode = selectedCode.toDomain(),
+                            designCode = selectedCode,
                             modifier = Modifier.fillMaxWidth()
                         )
                     } else {

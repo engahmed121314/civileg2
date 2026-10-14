@@ -1,5 +1,7 @@
 package com.civileg.app.db
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey

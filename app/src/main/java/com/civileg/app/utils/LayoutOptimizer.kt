@@ -1,5 +1,7 @@
 package com.civileg.app.utils
 
+import com.civileg.app.domain.entities.DesignCode
+
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import kotlin.math.*
@@ -36,7 +38,7 @@ object LayoutOptimizer {
         plotLength: Double, // m
         columns: List<ColumnLoad>,
         soilCapacity: Double, // kPa
-        designCode: CalculatorEngine.DesignCode
+        designCode: DesignCode
     ): LayoutRecommendation {
         val plotArea = plotWidth * plotLength
         var totalAreaNeeded = 0.0

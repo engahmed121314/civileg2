@@ -1,6 +1,6 @@
 package com.civileg.app.utils
 
-import com.civileg.app.utils.CalculatorEngine.DesignCode
+import com.civileg.app.domain.entities.DesignCode
 
 data class QcLimit(
     val value: Double,
@@ -15,7 +15,7 @@ enum class ExposureClass { C0, C1, C2 }
 object QcLimits {
 
     fun minCover(element: ElementType, code: DesignCode): QcLimit = when (code) {
-        DesignCode.EGYPTIAN -> when (element) {
+        DesignCode.ECP -> when (element) {
             ElementType.SLAB -> QcLimit(20.0, "mm", "ECP 203 §4.2")
             ElementType.BEAM -> QcLimit(40.0, "mm", "ECP 203 §4.2")
             ElementType.COLUMN -> QcLimit(40.0, "mm", "ECP 203 §4.2")
@@ -29,7 +29,7 @@ object QcLimits {
             ElementType.FOUNDATION -> QcLimit(75.0, "mm", "ACI 318-19 §20.6.1.4.2")
             ElementType.WALL -> QcLimit(20.0, "mm", "ACI 318-19 §20.6.1.4.2")
         }
-        DesignCode.SAUDI -> when (element) {
+        DesignCode.SBC -> when (element) {
             ElementType.SLAB -> QcLimit(20.0, "mm", "SBC 304-2018")
             ElementType.BEAM -> QcLimit(40.0, "mm", "SBC 304-2018")
             ElementType.COLUMN -> QcLimit(40.0, "mm", "SBC 304-2018")
@@ -39,9 +39,9 @@ object QcLimits {
     }
 
     fun slumpRange(code: DesignCode): ClosedFloatingPointRange<Double> = when (code) {
-        DesignCode.EGYPTIAN -> 25.0..100.0
+        DesignCode.ECP -> 25.0..100.0
         DesignCode.ACI -> 25.0..150.0
-        DesignCode.SAUDI -> 25.0..120.0
+        DesignCode.SBC -> 25.0..120.0
     }
 
     fun airContent(code: DesignCode): ClosedFloatingPointRange<Double> = 3.0..8.0
@@ -53,9 +53,9 @@ object QcLimits {
     fun boltSpacingMin(d: Double): QcLimit = QcLimit(2.66 * d, "mm", "AISC 360-22 §J3.3")
 
     fun developmentLength(d: Double, fy: Double, fcu: Double, code: DesignCode): QcLimit = when (code) {
-        DesignCode.EGYPTIAN -> QcLimit(0.5 * fy / Math.sqrt(fcu) * d, "mm", "ECP 203 §4.2")
+        DesignCode.ECP -> QcLimit(0.5 * fy / Math.sqrt(fcu) * d, "mm", "ECP 203 §4.2")
         DesignCode.ACI -> QcLimit(0.5 * fy / Math.sqrt(fcu) * d, "mm", "ACI 318-19 §25.4.2")
-        DesignCode.SAUDI -> QcLimit(0.5 * fy / Math.sqrt(fcu) * d, "mm", "SBC 304-2018")
+        DesignCode.SBC -> QcLimit(0.5 * fy / Math.sqrt(fcu) * d, "mm", "SBC 304-2018")
     }
 
     fun lapSpliceLength(d: Double, fy: Double, fcu: Double, code: DesignCode, spliceClass: String): QcLimit {

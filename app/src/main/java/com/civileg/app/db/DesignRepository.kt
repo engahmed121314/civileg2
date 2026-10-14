@@ -1,5 +1,7 @@
 package com.civileg.app.db
 
+import com.civileg.app.domain.entities.DesignCode
+
 import com.civileg.app.domain.entities.SteelMemberResult
 import com.civileg.app.domain.entities.SteelWarehouseAnalysisResult
 import com.civileg.app.utils.CalculatorEngine

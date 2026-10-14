@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -76,7 +78,7 @@ fun StrapFootingScreen(
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("360") }
     var strapWidth by remember { mutableStateOf("400") }
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
     var barDia by remember { mutableStateOf("18") }
     var cover by remember { mutableStateOf("75") }
 
@@ -245,7 +247,7 @@ fun StrapFootingScreen(
                                 strapCount = res.strapBottomReinforcement.numBars,
                                 cover = cover.toDoubleOrNull() ?: 75.0,
                                 viewMode = selectedViewMode,
-                                designCode = selectedCode.toDomain(),
+                                designCode = selectedCode,
                                 modifier = Modifier.fillMaxWidth().height(400.dp)
                             )
                         }
@@ -280,7 +282,7 @@ fun StrapFootingScreen(
                                 strapCount = res.strapBottomReinforcement.numBars,
                                 cover = 75.0,
                                 viewMode = selectedViewMode,
-                                designCode = selectedCode.toDomain(),
+                                designCode = selectedCode,
                                 modifier = Modifier.fillMaxWidth().height(400.dp)
                             )
                         }

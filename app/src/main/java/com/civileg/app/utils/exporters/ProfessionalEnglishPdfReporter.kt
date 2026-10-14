@@ -1,5 +1,7 @@
 package com.civileg.app.utils.exporters
 
+import com.civileg.app.domain.entities.DesignCode
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log

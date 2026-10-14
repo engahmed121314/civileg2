@@ -1,5 +1,7 @@
 package com.civileg.app.viewmodel
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -52,7 +54,7 @@ class TankViewModel @Inject constructor(
         fcu: Double,
         fy: Double,
         preferredDiameter: Int,
-        code: CalculatorEngine.DesignCode
+        code: DesignCode
     ) {
         InputGuard.positive("capacity", capacity)
         InputGuard.positive("height", height)
@@ -83,7 +85,7 @@ class TankViewModel @Inject constructor(
 
     // Legacy method
     fun calculateTank(type: CalculatorEngine.TankType, capacity: Double, height: Double, fcu: Double, fy: Double) {
-        calculateTankPro(type, capacity, height, fcu, fy, 12, CalculatorEngine.DesignCode.EGYPTIAN)
+        calculateTankPro(type, capacity, height, fcu, fy, 12, DesignCode.ECP)
     }
 
     fun saveTank(projectId: Long, name: String, result: CalculatorEngine.TankResult) {
@@ -128,8 +130,8 @@ class TankViewModel @Inject constructor(
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
-                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    DesignCode.ACI -> "ACI 318"
+                    DesignCode.SBC -> "SBC 304"
                     else -> "ECP 203"
                 }
                 val inputsMap = mapOf(

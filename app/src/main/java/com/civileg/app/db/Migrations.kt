@@ -1,5 +1,7 @@
 package com.civileg.app.db
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
@@ -27,7 +29,7 @@ object Migrations {
      *       )
      *   """)
      */
-    val MIGRATION_6_7 = object : Migration(6, 7) {
+    val MIGRATION_6_7: Migration = object : Migration(6, 7) {
         override fun migrate(database: SupportSQLiteDatabase) {
             // No schema changes between v6 and v7 — no-op migration
         }
@@ -38,7 +40,7 @@ object Migrations {
      * Adds projectId indexes to all child entity tables for O(log n) lookups.
      * Also adds designId index on site_inspections.
      */
-    val MIGRATION_7_8 = object : Migration(7, 8) {
+    val MIGRATION_7_8: Migration = object : Migration(7, 8) {
         override fun migrate(database: SupportSQLiteDatabase) {
             // Add projectId indexes for all child tables
             val tablesWithProjectId = listOf(
@@ -60,7 +62,7 @@ object Migrations {
      * we must recreate each table with FK, copy data, then swap.
      * Also makes site_inspections.designId nullable to support SET NULL.
      */
-    val MIGRATION_8_9 = object : Migration(8, 9) {
+    val MIGRATION_8_9: Migration = object : Migration(8, 9) {
         override fun migrate(database: SupportSQLiteDatabase) {
             // Enable foreign key enforcement
             database.execSQL("PRAGMA foreign_keys = OFF")
@@ -276,7 +278,7 @@ object Migrations {
      * Migration from version 9 to 10.
      * Adds the `quality_records` table used by the Quality Engineer module.
      */
-    val MIGRATION_9_10 = object : Migration(9, 10) {
+    val MIGRATION_9_10: Migration = object : Migration(9, 10) {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL("""
                 CREATE TABLE IF NOT EXISTS quality_records (
@@ -302,7 +304,7 @@ object Migrations {
      * Migration from version 10 to 11.
      * Adds extended fields to quality_records for professional use.
      */
-    val MIGRATION_10_11 = object : Migration(10, 11) {
+    val MIGRATION_10_11: Migration = object : Migration(10, 11) {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL("ALTER TABLE quality_records ADD COLUMN inspectorName TEXT NOT NULL DEFAULT ''")
             database.execSQL("ALTER TABLE quality_records ADD COLUMN location TEXT NOT NULL DEFAULT ''")
@@ -317,7 +319,7 @@ object Migrations {
      * Migration from version 11 to 12.
      * Adds the ITP (inspection_test_plans) and NCR (non_conformities) tables.
      */
-    val MIGRATION_11_12 = object : Migration(11, 12) {
+    val MIGRATION_11_12: Migration = object : Migration(11, 12) {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL(
                 "CREATE TABLE IF NOT EXISTS inspection_test_plans (" +
@@ -373,8 +375,9 @@ object Migrations {
      * Helper to create a no-op migration between consecutive versions.
      * Use only when no schema changes occurred between versions.
      */
-    fun noOpMigration(from: Int, to: Int) = object : Migration(from, to) {
-        override fun migrate(database: SupportSQLiteDatabase) {
+    @Suppress("unused")
+    fun noOpMigration(from: Int, to: Int): Migration = object : Migration(from, to) {
+        override fun migrate(db: SupportSQLiteDatabase) {
             // No-op: schema unchanged between these versions
         }
     }

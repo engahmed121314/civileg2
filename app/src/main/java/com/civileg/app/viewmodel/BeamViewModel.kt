@@ -1,5 +1,7 @@
 package com.civileg.app.viewmodel
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -61,7 +63,7 @@ class BeamViewModel @Inject constructor(
         fcu: Double,
         fy: Double,
         preferredDiameter: Int,
-        code: CalculatorEngine.DesignCode,
+        code: DesignCode,
         supportType: CalculatorEngine.SupportType
     ) {
         InputGuard.positive("width", width)
@@ -121,7 +123,7 @@ class BeamViewModel @Inject constructor(
     }
 
     fun calculateBeam(span: Double, load: Double, fcu: Double, fy: Double) {
-        calculateBeamPro(250.0, 600.0, span, load * 0.6, load * 0.4, fcu, fy, 16, CalculatorEngine.DesignCode.EGYPTIAN, CalculatorEngine.SupportType.HINGED_HINGED)
+        calculateBeamPro(250.0, 600.0, span, load * 0.6, load * 0.4, fcu, fy, 16, DesignCode.ECP, CalculatorEngine.SupportType.HINGED_HINGED)
     }
 
     fun saveBeam(projectId: Long, name: String, result: CalculatorEngine.BeamResult) {
@@ -191,8 +193,8 @@ class BeamViewModel @Inject constructor(
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
-                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    DesignCode.ACI -> "ACI 318"
+                    DesignCode.SBC -> "SBC 304"
                     else -> "ECP 203"
                 }
 

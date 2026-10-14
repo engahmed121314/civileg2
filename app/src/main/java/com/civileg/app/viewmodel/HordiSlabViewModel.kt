@@ -195,9 +195,9 @@ class HordiSlabViewModel @Inject constructor(
         val res = _result.value ?: return
         viewModelScope.launch {
             val engineCode = when (lastInputParams?.designCode ?: "ECP") {
-                "ACI" -> com.civileg.app.utils.CalculatorEngine.DesignCode.ACI
-                "SBC" -> com.civileg.app.utils.CalculatorEngine.DesignCode.SAUDI
-                else -> com.civileg.app.utils.CalculatorEngine.DesignCode.EGYPTIAN
+                "ACI" -> DesignCode.ACI
+                "SBC" -> DesignCode.SBC
+                else -> DesignCode.ECP
             }
             // FIX: Estimate concrete volume and steel weight from available data
             val inputParams = lastInputParams

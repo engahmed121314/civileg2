@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -70,7 +72,7 @@ fun SlabScreen(
     var ribSpacingY by remember { mutableStateOf("500") }
 
     var selectedType by remember { mutableStateOf(CalculatorEngine.SlabType.SOLID) }
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
     var expandedType by remember { mutableStateOf(false) }
     var expandedCode by remember { mutableStateOf(false) }
     
@@ -179,7 +181,7 @@ fun SlabScreen(
                             shape = RoundedCornerShape(12.dp)
                         )
                         ExposedDropdownMenu(expanded = expandedCode, onDismissRequest = { expandedCode = false }) {
-                            CalculatorEngine.DesignCode.values().forEach { code ->
+                            DesignCode.values().forEach { code ->
                                 DropdownMenuItem(
                                     text = { Text(code.displayName) },
                                     onClick = {
@@ -534,7 +536,7 @@ fun SlabScreen(
                                         headBottomCount = 6,
                                         cover = 25.0,
                                         viewMode = selectedViewMode,
-                                        designCode = selectedCode.toDomain(),
+                                        designCode = selectedCode,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -551,7 +553,7 @@ fun SlabScreen(
                                         stirrupSpacing = 200.0,
                                         cover = 25.0,
                                         viewMode = selectedViewMode,
-                                        designCode = selectedCode.toDomain(),
+                                        designCode = selectedCode,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -613,7 +615,7 @@ fun SlabScreen(
                                 headBottomCount = 6,
                                 cover = 25.0,
                                 viewMode = 0,
-                                designCode = selectedCode.toDomain(),
+                                designCode = selectedCode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -630,7 +632,7 @@ fun SlabScreen(
                                 stirrupSpacing = 200.0,
                                 cover = 25.0,
                                 viewMode = 0,
-                                designCode = selectedCode.toDomain(),
+                                designCode = selectedCode,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

@@ -46,7 +46,7 @@ class SteelViewModel @Inject constructor(
         val section: SteelSectionType,
         val memberType: SteelMemberType,
         val inputs: SteelInputs,
-        val code: CalculatorEngine.DesignCode
+        val code: DesignCode
     )
 
     private val _isLoading = MutableLiveData(false)
@@ -89,7 +89,7 @@ class SteelViewModel @Inject constructor(
         section: SteelSectionType,
         memberType: SteelMemberType,
         inputs: SteelInputs,
-        code: CalculatorEngine.DesignCode
+        code: DesignCode
     ) {
         InputGuard.notNull("section", section)
         InputGuard.notNull("inputs", inputs)
@@ -240,8 +240,8 @@ class SteelViewModel @Inject constructor(
                 // Language fix (2026-08-04): ProfessionalEnglishPdfReporter uses Helvetica (English-only).
                 // Always pass English keys — Arabic keys would appear garbled.
                 val codeName = when (stored.code) {
-                    CalculatorEngine.DesignCode.ACI -> "AISC 360-16"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 306"
+                    DesignCode.ACI -> "AISC 360-16"
+                    DesignCode.SBC -> "SBC 306"
                     else -> "ECP 205-2007"
                 }
 
@@ -362,15 +362,15 @@ class SteelViewModel @Inject constructor(
         _errorMessage.value = null
     }
 
-    fun calculateWeldCapacity(size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.DesignCode): Double {
+    fun calculateWeldCapacity(size: Double, length: Double, electrode: ElectrodeType, code: DesignCode): Double {
         return calculatorEngine.calculateWeldCapacity(size, length, electrode, code)
     }
 
-    fun calculateBoltCapacity(diameter: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.DesignCode): Double {
+    fun calculateBoltCapacity(diameter: Double, grade: BoltGrade, count: Int, code: DesignCode): Double {
         return calculatorEngine.calculateBoltCapacity(diameter, grade, count, code)
     }
 
-    fun exportWeldToPdf(context: Context, size: Double, length: Double, electrode: ElectrodeType, code: CalculatorEngine.DesignCode, capacity: Double) {
+    fun exportWeldToPdf(context: Context, size: Double, length: Double, electrode: ElectrodeType, code: DesignCode, capacity: Double) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val fileName = "Weld_Report_${System.currentTimeMillis()}.pdf"
@@ -412,7 +412,7 @@ class SteelViewModel @Inject constructor(
         }
     }
 
-    fun exportBoltToPdf(context: Context, dia: Double, grade: BoltGrade, count: Int, code: CalculatorEngine.DesignCode, capacity: Double) {
+    fun exportBoltToPdf(context: Context, dia: Double, grade: BoltGrade, count: Int, code: DesignCode, capacity: Double) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val fileName = "Bolt_Report_${System.currentTimeMillis()}.pdf"

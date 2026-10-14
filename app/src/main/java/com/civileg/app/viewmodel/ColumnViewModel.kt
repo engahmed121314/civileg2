@@ -147,7 +147,7 @@ class ColumnViewModel @Inject constructor(
 
     fun calculateColumnPro(
         width: Double, depth: Double, height: Double, fcu: Double, fy: Double,
-        load: Double, diameter: Int, code: CalculatorEngine.DesignCode,
+        load: Double, diameter: Int, code: DesignCode,
         mx: Double = 0.0, my: Double = 0.0,
         isCircular: Boolean = false, connectedSlab: String = "SOLID", hasCap: Boolean = false,
         isSeismic: Boolean = false
@@ -360,10 +360,10 @@ class ColumnViewModel @Inject constructor(
         }
     }
 
-    private fun mapDesignCode(code: DesignCode): CalculatorEngine.DesignCode = when(code) {
-        DesignCode.ECP -> CalculatorEngine.DesignCode.EGYPTIAN
-        DesignCode.ACI -> CalculatorEngine.DesignCode.ACI
-        DesignCode.SBC -> CalculatorEngine.DesignCode.SAUDI
+    private fun mapDesignCode(code: DesignCode): DesignCode = when(code) {
+        DesignCode.ECP -> DesignCode.ECP
+        DesignCode.ACI -> DesignCode.ACI
+        DesignCode.SBC -> DesignCode.SBC
     }
 
     fun reset() {

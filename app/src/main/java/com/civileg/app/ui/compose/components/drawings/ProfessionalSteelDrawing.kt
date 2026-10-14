@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
+import com.civileg.app.domain.entities.DesignCode
+
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize

@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -78,7 +80,7 @@ fun SiteLayoutScreen() {
                         plotLength.toDoubleOrNull() ?: 30.0,
                         columns,
                         soilCapacity.toDoubleOrNull() ?: 200.0,
-                        CalculatorEngine.DesignCode.EGYPTIAN
+                        DesignCode.ECP
                     )
                 } catch (e: Throwable) {
                     siteError = "خطأ في التحليل: ${e.message?.take(100) ?: "Unknown"}"

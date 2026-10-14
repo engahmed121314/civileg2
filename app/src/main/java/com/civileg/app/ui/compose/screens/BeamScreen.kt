@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -88,7 +90,7 @@ fun BeamScreen(
     var barDiameter by remember { mutableStateOf("16") }
     var selectedSupport by remember { mutableStateOf(CalculatorEngine.SupportType.HINGED_HINGED) }
     var expandedSupport by remember { mutableStateOf(false) }
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -383,9 +385,9 @@ fun BeamScreen(
 
                 item {
                     val diagramCode = when (selectedCode) {
-                        CalculatorEngine.DesignCode.EGYPTIAN -> com.civileg.app.domain.entities.DesignCode.ECP
-                        CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
-                        CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
+                        DesignCode.ECP -> com.civileg.app.domain.entities.DesignCode.ECP
+                        DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
+                        DesignCode.SBC -> com.civileg.app.domain.entities.DesignCode.SBC
                     }
                     MomentShearForceDiagram(
                         span = span.toDoubleOrNull() ?: 5.0,

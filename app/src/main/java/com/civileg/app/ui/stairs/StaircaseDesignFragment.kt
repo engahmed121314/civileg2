@@ -1,5 +1,7 @@
 package com.civileg.app.ui.stairs
 
+import com.civileg.app.domain.entities.DesignCode
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -131,7 +133,7 @@ class StaircaseDesignFragment : Fragment() {
                 fcu = fc,
                 fy = fy,
                 preferredDiameter = 12,
-                code = CalculatorEngine.DesignCode.EGYPTIAN
+                code = DesignCode.ECP
             )
             
             lastResult = result

@@ -40,29 +40,6 @@ class CalculatorEngine @Inject constructor(
     private val settingsManager: SettingsManager
 ) {
 
-    enum class DesignCode(val displayNameAr: String, val displayNameEn: String) {
-        EGYPTIAN("الكود المصري - ECP 203", "Egyptian Code - ECP 203"),
-        ACI("الكود الأمريكي - ACI 318", "American Code - ACI 318"),
-        SAUDI("الكود السعودي - SBC 304", "Saudi Code - SBC 304");
-
-        val displayName: String
-            get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
-
-        fun toDomain(): com.civileg.app.domain.entities.DesignCode = when(this) {
-            EGYPTIAN -> com.civileg.app.domain.entities.DesignCode.ECP
-            ACI -> com.civileg.app.domain.entities.DesignCode.ACI
-            SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
-        }
-        
-        companion object {
-            fun fromDomain(domain: com.civileg.app.domain.entities.DesignCode): DesignCode = when(domain) {
-                com.civileg.app.domain.entities.DesignCode.ECP -> EGYPTIAN
-                com.civileg.app.domain.entities.DesignCode.ACI -> ACI
-                com.civileg.app.domain.entities.DesignCode.SBC -> SAUDI
-            }
-        }
-    }
-
     enum class SupportType(val displayNameAr: String, val displayNameEn: String) {
         HINGED_HINGED("مفصلي - مفصلي", "Hinged-Hinged"),
         ROLLER_HINGED("متدحرج - مفصلي", "Roller-Hinged"),
@@ -175,7 +152,7 @@ class CalculatorEngine @Inject constructor(
         val reinforcementBottom: ReinforcementBar = ReinforcementBar(), val reinforcementTop: ReinforcementBar = ReinforcementBar(),
         val stirrups: StirrupReinforcement = StirrupReinforcement(), val safetyChecks: List<DesignSafetyCheck> = emptyList(),
         val isSafe: Boolean = false, val concreteVolume: Double = 0.0, val steelWeight: Double = 0.0,
-        val cost: Double = 0.0, val code: DesignCode = DesignCode.EGYPTIAN, 
+        val cost: Double = 0.0, val code: DesignCode = DesignCode.ECP, 
         val appliedMoment: Double = 0.0, val appliedShear: Double = 0.0,
         val supportType: SupportType = SupportType.HINGED_HINGED,
         val span: Double = 0.0,
@@ -193,7 +170,7 @@ class CalculatorEngine @Inject constructor(
         val mx: Double = 0.0, val my: Double = 0.0,
         val reinforcement: ReinforcementBar = ReinforcementBar(), val stirrups: StirrupReinforcement = StirrupReinforcement(),
         val safetyChecks: List<DesignSafetyCheck> = emptyList(), val isSafe: Boolean = false,
-        val concreteVolume: Double = 0.0, val steelWeight: Double = 0.0, val cost: Double = 0.0, val code: DesignCode = DesignCode.EGYPTIAN,
+        val concreteVolume: Double = 0.0, val steelWeight: Double = 0.0, val cost: Double = 0.0, val code: DesignCode = DesignCode.ECP,
         val axialCapacity: Double = 0.0, val appliedAxial: Double = 0.0,
         val mxCapacity: Double = 0.0, val myCapacity: Double = 0.0,
         val slenderness: Double = 0.0, val isSlender: Boolean = false,
@@ -265,7 +242,7 @@ class CalculatorEngine @Inject constructor(
         val type: SlabType = SlabType.SOLID, val thickness: Double = 0.0,
         val reinforcementMain: ReinforcementBar = ReinforcementBar(), val reinforcementSecondary: ReinforcementBar = ReinforcementBar(),
         val isSafe: Boolean = false, val concreteVolume: Double = 0.0, val steelWeight: Double = 0.0,
-        val cost: Double = 0.0, val code: DesignCode = DesignCode.EGYPTIAN,
+        val cost: Double = 0.0, val code: DesignCode = DesignCode.ECP,
         val momentX: Double = 0.0, val momentY: Double = 0.0, val totalLoad: Double = 0.0,
         val punchingSafe: Boolean = true, val safetyChecks: List<DesignSafetyCheck> = emptyList(),
         val minThickness: Double = 0.0,
@@ -364,7 +341,7 @@ class CalculatorEngine @Inject constructor(
         val concreteVolume: Double = 0.0, 
         val steelWeight: Double = 0.0, 
         val cost: Double = 0.0,
-        val code: DesignCode = DesignCode.EGYPTIAN
+        val code: DesignCode = DesignCode.ECP
     ) : Parcelable
 
     @Parcelize
@@ -405,7 +382,7 @@ class CalculatorEngine @Inject constructor(
         // P0-2: delegate to the code-specific domain engine so ECP / ACI / SBC produce
         // distinct, code-correct results (previously identical inline math for all codes,
         // with a KL/r unit bug injecting a spurious ×1000 factor).
-        val domain = code.toDomain()
+        val domain = code
         val grade = inputs.grade
         val Pu = inputs.axialLoad.coerceAtLeast(0.0)
         val Mu = inputs.moment.coerceAtLeast(0.0)
@@ -778,7 +755,7 @@ class CalculatorEngine @Inject constructor(
         InputGuard.nonNegative("my", my)
         InputGuard.positive("clearHeight", clearHeight)
 
-        val domainCode = code.toDomain()
+        val domainCode = code
         val engine = CalculationFactory.getColumnDesign(domainCode)
 
         val res = engine.calculateReinforcement(
@@ -841,15 +818,15 @@ class CalculatorEngine @Inject constructor(
         InputGuard.nonNegative("deadLoad", deadLoad)
         InputGuard.nonNegative("liveLoad", liveLoad)
 
-        val domainCode = code.toDomain()
+        val domainCode = code
         val beamEngine = CalculationFactory.getBeamDesign(domainCode)
 
         val selfWeight = if (autoIncludeSelfWeight) 25.0 * (width / 1000.0) * (height / 1000.0) else 0.0
         val wDl = deadLoad + selfWeight
         val wLl = liveLoad
         val wu = when (code) {
-            DesignCode.EGYPTIAN -> 1.4 * wDl + 1.6 * wLl
-            DesignCode.ACI, DesignCode.SAUDI -> 1.2 * wDl + 1.6 * wLl
+            DesignCode.ECP -> 1.4 * wDl + 1.6 * wLl
+            DesignCode.ACI, DesignCode.SBC -> 1.2 * wDl + 1.6 * wLl
             else -> 1.4 * wDl + 1.6 * wLl
         }
 
@@ -867,9 +844,9 @@ class CalculatorEngine @Inject constructor(
         }
 
         val cover = when (code) {
-            DesignCode.EGYPTIAN -> 40.0
+            DesignCode.ECP -> 40.0
             DesignCode.ACI -> 40.0
-            DesignCode.SAUDI -> 50.0
+            DesignCode.SBC -> 50.0
             else -> 40.0
         }
         val effectiveDepth = max(50.0, height - cover)
@@ -954,7 +931,7 @@ class CalculatorEngine @Inject constructor(
         InputGuard.positive("ts", ts)
 
         return try {
-            val domainCode = code.toDomain()
+            val domainCode = code
             
             if (type == SlabType.HOLLOW_BLOCK) {
                 val hordiDesign = CalculationFactory.getHordiSlabDesign(domainCode)
@@ -1088,7 +1065,7 @@ class CalculatorEngine @Inject constructor(
         InputGuard.positive("colB", colB)
         InputGuard.positive("colT", colT)
 
-        val domainCode = code.toDomain()
+        val domainCode = code
         val footingEngine = CalculationFactory.getFootingDesign(domainCode)
 
         val initialDepth = 600.0
@@ -1149,7 +1126,7 @@ class CalculatorEngine @Inject constructor(
         InputGuard.positive("distance", distance)
         InputGuard.positive("soil", soil)
 
-        val design = CalculationFactory.getStrapFootingDesign(code.toDomain())
+        val design = CalculationFactory.getStrapFootingDesign(code)
         val inputs = StrapFootingDesignEngine.Inputs(
             column1Load = col1Load, column2Load = col2Load,
             distanceBetweenColumns = distance,
@@ -1235,7 +1212,7 @@ class CalculatorEngine @Inject constructor(
                 going = tread
             )
 
-            val result = CalculationFactory.getStaircaseDesign(code.toDomain()).designStaircase(input)
+            val result = CalculationFactory.getStaircaseDesign(code).designStaircase(input)
 
             val mainBar = parseBarSpec(result.mainRebar, result.mainRebarArea)
             val distBar = parseBarSpec(result.distributionRebar, result.distributionRebarArea)
@@ -1295,13 +1272,13 @@ class CalculatorEngine @Inject constructor(
         )
     }
 
-    fun designTank(type: TankType, capacity: Double, height: Double, fcu: Double, fy: Double, preferredDiameter: Int = 12, code: DesignCode = DesignCode.EGYPTIAN): TankResult {
+    fun designTank(type: TankType, capacity: Double, height: Double, fcu: Double, fy: Double, preferredDiameter: Int = 12, code: DesignCode = DesignCode.ECP): TankResult {
         InputGuard.positive("height", height)
         InputGuard.positive("capacity", capacity)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
 
-        val domainCode = code.toDomain()
+        val domainCode = code
         val tankEngine = CalculationFactory.getTankDesign(domainCode)
 
         val hM = height / 1000.0
@@ -1350,14 +1327,14 @@ class CalculatorEngine @Inject constructor(
         )
     }
 
-    fun designRetainingWall(height: Double, soilDensity: Double, frictionAngle: Double, surcharge: Double, fcu: Double, fy: Double, preferredDiameter: Int = 16, code: DesignCode = DesignCode.EGYPTIAN): RetainingWallResult {
+    fun designRetainingWall(height: Double, soilDensity: Double, frictionAngle: Double, surcharge: Double, fcu: Double, fy: Double, preferredDiameter: Int = 16, code: DesignCode = DesignCode.ECP): RetainingWallResult {
         InputGuard.positive("height", height)
         InputGuard.positive("soilDensity", soilDensity)
         InputGuard.positive("frictionAngle", frictionAngle)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
 
-        val domainCode = code.toDomain()
+        val domainCode = code
         val wallEngine = CalculationFactory.getRetainingWallDesign(domainCode)
 
         val baseWidth = max(0.5 * height, 1.5)
@@ -1410,11 +1387,11 @@ class CalculatorEngine @Inject constructor(
      * Previously used an inline simplified formula — now delegates to the proper
      * ECP 201 / ASCE 7 / SBC 301 seismic design implementations.
      */
-    fun calculateSeismicLoads(input: SeismicInput, code: DesignCode = DesignCode.EGYPTIAN): SeismicResult {
+    fun calculateSeismicLoads(input: SeismicInput, code: DesignCode = DesignCode.ECP): SeismicResult {
         InputGuard.positive("height", input.height)
         InputGuard.positive("totalWeight", input.totalWeight)
 
-        val domainCode = code.toDomain()
+        val domainCode = code
         val seismicEngine = CalculationFactory.getSeismicDesign(domainCode)
 
         // Map zone factor to SeismicZone enum
@@ -1476,8 +1453,8 @@ class CalculatorEngine @Inject constructor(
         InputGuard.notNull("code", code)
         return when (code) {
             DesignCode.ACI -> AISCSteelDesignEngine().calculateFilletWeldCapacity(size, length, electrode)
-            DesignCode.SAUDI -> SBCSteelDesignEngine().calculateFilletWeldCapacity(size, length, electrode)
-            DesignCode.EGYPTIAN -> SteelConnectionDesign().calculateFilletWeldCapacity(size, length, electrode)
+            DesignCode.SBC -> SBCSteelDesignEngine().calculateFilletWeldCapacity(size, length, electrode)
+            DesignCode.ECP -> SteelConnectionDesign().calculateFilletWeldCapacity(size, length, electrode)
         }
     }
 
@@ -1488,8 +1465,8 @@ class CalculatorEngine @Inject constructor(
         InputGuard.notNull("code", code)
         return when (code) {
             DesignCode.ACI -> AISCSteelDesignEngine().calculateBoltShearCapacity(diameter, grade, count)
-            DesignCode.SAUDI -> SBCSteelDesignEngine().calculateBoltShearCapacity(diameter, grade, count)
-            DesignCode.EGYPTIAN ->
+            DesignCode.SBC -> SBCSteelDesignEngine().calculateBoltShearCapacity(diameter, grade, count)
+            DesignCode.ECP ->
                 SteelConnectionDesign().calculateBoltShearCapacity(grade, diameter, isDoubleShear = false, includeThreadedArea = true) * count
         }
     }
@@ -1504,14 +1481,14 @@ class CalculatorEngine @Inject constructor(
      * Shear Wall Design — delegates to code-specific engine via CalculationFactory.
      * Covers: flexural design, shear design, boundary elements, coupling beams, slenderness.
      */
-    fun designShearWall(input: ShearWallInput, code: DesignCode = DesignCode.EGYPTIAN): ShearWallResult {
+    fun designShearWall(input: ShearWallInput, code: DesignCode = DesignCode.ECP): ShearWallResult {
         InputGuard.positive("wallLength", input.wallLength)
         InputGuard.positive("wallThickness", input.wallThickness)
         InputGuard.positive("wallHeight", input.wallHeight)
         InputGuard.positive("fcu", input.fcu)
         InputGuard.positive("fy", input.fy)
 
-        val domainCode = code.toDomain()
+        val domainCode = code
         val engine = CalculationFactory.getShearWallDesign(domainCode)
         return engine.designWall(input)
     }
@@ -1520,13 +1497,13 @@ class CalculatorEngine @Inject constructor(
      * Pile Foundation Design — delegates to code-specific engine via CalculationFactory.
      * Covers: single pile capacity, pile cap, settlement, group efficiency, lateral load.
      */
-    fun designPileFoundation(input: PileInput, code: DesignCode = DesignCode.EGYPTIAN): PileDesignResult {
+    fun designPileFoundation(input: PileInput, code: DesignCode = DesignCode.ECP): PileDesignResult {
         InputGuard.positive("pileDiameter", input.pileDiameter)
         InputGuard.positive("pileLength", input.pileLength)
         InputGuard.positive("fcu", input.fcu)
         InputGuard.positive("fy", input.fy)
 
-        val domainCode = code.toDomain()
+        val domainCode = code
         val engine = CalculationFactory.getPileFoundationDesign(domainCode)
         return engine.designPile(input)
     }
@@ -1535,14 +1512,14 @@ class CalculatorEngine @Inject constructor(
      * Flat Slab Design — delegates to code-specific engine via CalculationFactory.
      * Covers: DDM/EFM, moment distribution, punching shear, deflection, drop panels.
      */
-    fun designFlatSlab(input: FlatSlabInput, code: DesignCode = DesignCode.EGYPTIAN): FlatSlabResult {
+    fun designFlatSlab(input: FlatSlabInput, code: DesignCode = DesignCode.ECP): FlatSlabResult {
         InputGuard.positive("lx", input.lx)
         InputGuard.positive("ly", input.ly)
         InputGuard.positive("slabThickness", input.slabThickness)
         InputGuard.positive("fcu", input.fcu)
         InputGuard.positive("fy", input.fy)
 
-        val domainCode = code.toDomain()
+        val domainCode = code
         val engine = CalculationFactory.getFlatSlabDesign(domainCode)
         return engine.design(input)
     }
@@ -1557,7 +1534,7 @@ class CalculatorEngine @Inject constructor(
         distanceBetweenColumns: Double,
         soilBearingCapacity: Double,
         footingDepth: Double,
-        code: DesignCode = DesignCode.EGYPTIAN,
+        code: DesignCode = DesignCode.ECP,
         columnWidth: Double = 400.0,
         columnDepth: Double = 400.0,
         col2Width: Double = 400.0,
@@ -1570,7 +1547,7 @@ class CalculatorEngine @Inject constructor(
         InputGuard.positive("distanceBetweenColumns", distanceBetweenColumns)
         InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
 
-        val domainCode = code.toDomain()
+        val domainCode = code
         val footingEngine = CalculationFactory.getFootingDesign(domainCode)
         return footingEngine.designCombinedFooting(
             fcu = fcu, fy = fy,
@@ -1588,16 +1565,36 @@ class CalculatorEngine @Inject constructor(
      * Waffle Slab Design — delegates to code-specific engine via CalculationFactory.
      * Covers: rib flexure/shear, solid head design, punching shear, deflection.
      */
-    fun designWaffleSlab(input: WaffleSlabDesign.WaffleSlabInput, code: DesignCode = DesignCode.EGYPTIAN): WaffleSlabDesign.WaffleSlabResult {
+    fun designWaffleSlab(input: WaffleSlabDesign.WaffleSlabInput, code: DesignCode = DesignCode.ECP): WaffleSlabDesign.WaffleSlabResult {
         InputGuard.positive("lx", input.lx)
         InputGuard.positive("ly", input.ly)
         InputGuard.positive("fcu", input.fcu)
         InputGuard.positive("fy", input.fy)
 
-        val domainCode = code.toDomain()
+        val domainCode = code
         val engine = CalculationFactory.getWaffleSlabDesign(domainCode)
         return engine.design(input)
     }
 
     private fun t(ar: String, en: String): String = if (LocaleHelper.isArabic()) ar else en
 }
+
+/** Localized Arabic label for a design code (UI presentation). */
+val DesignCode.displayNameAr: String
+    get() = when (this) {
+        DesignCode.ECP -> "الكود المصري - ECP 203"
+        DesignCode.ACI -> "الكود الأمريكي - ACI 318"
+        DesignCode.SBC -> "الكود السعودي - SBC 304"
+    }
+
+/** Localized English label for a design code (UI presentation). */
+val DesignCode.displayNameEn: String
+    get() = when (this) {
+        DesignCode.ECP -> "Egyptian Code - ECP 203"
+        DesignCode.ACI -> "American Code - ACI 318"
+        DesignCode.SBC -> "Saudi Code - SBC 304"
+    }
+
+/** Locale-aware label for a design code, matching the previous nested-enum text. */
+val DesignCode.localizedName: String
+    get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn

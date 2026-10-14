@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -95,7 +97,7 @@ fun PileFoundationScreen(
     var columnLength by remember { mutableStateOf("400") }
 
     // ── Design code (ADR-002: per-code engine dispatch) ──
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
 
     // ── Expandable sections ──
     var showSoilParams by remember { mutableStateOf(true) }
@@ -520,7 +522,7 @@ fun PileFoundationScreen(
                             capConcreteCover = capCover.toDoubleOrNull() ?: 75.0,
                             columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
                             columnLength = columnLength.toDoubleOrNull() ?: 400.0,
-                            code = selectedCode.toDomain()
+                            code = selectedCode
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),

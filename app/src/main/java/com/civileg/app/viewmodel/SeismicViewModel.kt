@@ -244,12 +244,7 @@ class SeismicViewModel @Inject constructor(
     fun saveDesign(projectId: Long, name: String) {
         val res = _uiState.value.result ?: return
         viewModelScope.launch {
-            val domainCode = DesignCode.valueOf(_uiState.value.designCode)
-            val engineCode = when (domainCode) {
-                DesignCode.ECP -> com.civileg.app.utils.CalculatorEngine.DesignCode.EGYPTIAN
-                DesignCode.ACI -> com.civileg.app.utils.CalculatorEngine.DesignCode.ACI
-                DesignCode.SBC -> com.civileg.app.utils.CalculatorEngine.DesignCode.SAUDI
-            }
+            val engineCode = DesignCode.valueOf(_uiState.value.designCode)
             repository.saveSeismicDesign(projectId, name, com.civileg.app.utils.CalculatorEngine.SeismicResult(
                 baseShear = res.baseShear,
                 storyDrift = 0.0,  // SeismicBaseShearResult doesn't track drift; use force distribution if available

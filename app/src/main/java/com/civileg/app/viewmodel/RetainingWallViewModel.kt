@@ -1,5 +1,7 @@
 package com.civileg.app.viewmodel
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -51,7 +53,7 @@ class RetainingWallViewModel @Inject constructor(
         fcu: Double,
         fy: Double,
         preferredDiameter: Int,
-        code: CalculatorEngine.DesignCode
+        code: DesignCode
     ) {
         InputGuard.positive("height", height)
         InputGuard.positive("soilDensity", soilDensity)
@@ -92,7 +94,7 @@ class RetainingWallViewModel @Inject constructor(
 
     // Legacy method for backward compatibility
     fun calculateRetainingWall(height: Double, soilDensity: Double, frictionAngle: Double, surcharge: Double, fcu: Double, fy: Double) {
-        calculateRetainingWallPro(height, soilDensity, frictionAngle, surcharge, fcu, fy, 16, CalculatorEngine.DesignCode.EGYPTIAN)
+        calculateRetainingWallPro(height, soilDensity, frictionAngle, surcharge, fcu, fy, 16, DesignCode.ECP)
     }
 
     fun saveRetainingWall(projectId: Long, name: String, result: CalculatorEngine.RetainingWallResult) {
@@ -143,8 +145,8 @@ class RetainingWallViewModel @Inject constructor(
                     pendingDrawingBitmap = null  // consume after use
 
                     val codeName = when(currentResult.code) {
-                        CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                        CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                        DesignCode.ACI -> "ACI 318"
+                        DesignCode.SBC -> "SBC 304"
                         else -> "ECP 203"
                     }
                     val inputsMap = mapOf(

@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.CornerRadius

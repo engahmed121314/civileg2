@@ -592,7 +592,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
     var shear by remember { mutableStateOf("50") }
     var length by remember { mutableStateOf("3") }
     var selectedMemberType by remember { mutableStateOf(SteelMemberType.COLUMN) }
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
     
     val searchResults by viewModel.searchResults.observeAsState(emptyList())
     val library = viewModel.sectionLibrary
@@ -1041,7 +1041,7 @@ fun WeldDesignTab(viewModel: SteelViewModel) {
     var weldLength by remember { mutableStateOf("200") }
     var expandedElectrode by remember { mutableStateOf(false) }
     var selectedElectrode by remember { mutableStateOf(ElectrodeType.E70XX) }
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
     var capacity by remember { mutableStateOf(0.0) }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1128,7 +1128,7 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
     var boltCount by remember { mutableStateOf("4") }
     var expandedBoltGrade by remember { mutableStateOf(false) }
     var selectedBoltGrade by remember { mutableStateOf(BoltGrade.GRADE_8_8) }
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
     var capacity by remember { mutableStateOf(0.0) }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1211,7 +1211,7 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
 @Composable
 fun ConnectionDesignTab(viewModel: SteelViewModel) {
     val context = LocalContext.current
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
     var connectionType by remember { mutableIntStateOf(0) }
     val connTypes = listOf(stringResource(R.string.steel_conn_bolted_shear), stringResource(R.string.steel_conn_bolted_moment), stringResource(R.string.steel_conn_welded), stringResource(R.string.steel_conn_combined))
 
@@ -1243,7 +1243,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.steel_design_code_metal), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        CalculatorEngine.DesignCode.entries.forEach { code ->
+                        DesignCode.entries.forEach { code ->
                             FilterChip(
                                 selected = selectedCode == code,
                                 onClick = { selectedCode = code },

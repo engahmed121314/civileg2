@@ -32,9 +32,9 @@ class SteelMemberCodeDivergenceTest {
     @Test
     fun `all three codes produce positive finite capacities`() {
         for (code in listOf(
-            CalculatorEngine.DesignCode.EGYPTIAN,
-            CalculatorEngine.DesignCode.ACI,
-            CalculatorEngine.DesignCode.SAUDI
+            DesignCode.ECP,
+            DesignCode.ACI,
+            DesignCode.SBC
         )) {
             val r = engine.calculateSteelMember(section, SteelMemberType.COLUMN, inputs, code)
             assertTrue("$code axial capacity must be > 0", r.axialCapacity > 0.0)
@@ -48,7 +48,7 @@ class SteelMemberCodeDivergenceTest {
     @Test
     fun `ECP buckling slenderness is sane (no x1000 length bug)`() {
         val r = engine.calculateSteelMember(
-            section, SteelMemberType.COLUMN, inputs, CalculatorEngine.DesignCode.EGYPTIAN
+            section, SteelMemberType.COLUMN, inputs, DesignCode.ECP
         )
         val klr = r.bucklingCheck?.slendernessRatio
         assertTrue("Buckling check must be present for a column", klr != null)
@@ -65,8 +65,8 @@ class SteelMemberCodeDivergenceTest {
         val oldAxial = 0.9 * fy * section.area / 1000.0
         val oldFlex = 0.9 * fy * section.sx / 1e6
 
-        val ecp = engine.calculateSteelMember(section, SteelMemberType.COLUMN, inputs, CalculatorEngine.DesignCode.EGYPTIAN)
-        val aci = engine.calculateSteelMember(section, SteelMemberType.COLUMN, inputs, CalculatorEngine.DesignCode.ACI)
+        val ecp = engine.calculateSteelMember(section, SteelMemberType.COLUMN, inputs, DesignCode.ECP)
+        val aci = engine.calculateSteelMember(section, SteelMemberType.COLUMN, inputs, DesignCode.ACI)
 
         val axialDiffers = abs(ecp.axialCapacity - oldAxial) / oldAxial > 0.01 ||
             abs(aci.axialCapacity - oldAxial) / oldAxial > 0.01

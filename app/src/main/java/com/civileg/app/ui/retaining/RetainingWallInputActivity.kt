@@ -1,5 +1,7 @@
 package com.civileg.app.ui.retaining
 
+import com.civileg.app.domain.entities.DesignCode
+
 import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
@@ -28,7 +30,7 @@ class RetainingWallInputActivity : AppCompatActivity() {
     }
 
     private fun setupSpinners() {
-        val codes = CalculatorEngine.DesignCode.values().map { it.displayName }
+        val codes = DesignCode.values().map { it.displayName }
         binding.spinnerCode.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, codes)
 
         val diameters = listOf(12, 14, 16, 18, 20, 22, 25)
@@ -50,7 +52,7 @@ class RetainingWallInputActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val code = CalculatorEngine.DesignCode.values()[binding.spinnerCode.selectedItemPosition]
+            val code = DesignCode.values()[binding.spinnerCode.selectedItemPosition]
             val diameter = listOf(12, 14, 16, 18, 20, 22, 25)[binding.spinnerDiameter.selectedItemPosition]
 
             viewModel.calculateRetainingWallPro(h, soil, phi, surcharge, fcu, fy, diameter, code)

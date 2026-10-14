@@ -1,5 +1,7 @@
 package com.civileg.app.ui.footing
 
+import com.civileg.app.domain.entities.DesignCode
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -115,10 +117,10 @@ class FootingDesignFragment : Fragment() {
             val fy = binding.etFy.text.toString().toDoubleOrNull() ?: 360.0
             
             val code = when(binding.spinnerCode.selectedItemPosition) {
-                0 -> CalculatorEngine.DesignCode.EGYPTIAN
-                1 -> CalculatorEngine.DesignCode.ACI
-                2 -> CalculatorEngine.DesignCode.SAUDI
-                else -> CalculatorEngine.DesignCode.EGYPTIAN
+                0 -> DesignCode.ECP
+                1 -> DesignCode.ACI
+                2 -> DesignCode.SBC
+                else -> DesignCode.ECP
             }
 
             // Boundary Constraints

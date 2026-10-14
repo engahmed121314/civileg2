@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -74,7 +76,7 @@ fun RetainingWallScreen(
     var surcharge by remember { mutableStateOf("10.0") }
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("400") }
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
     var inputError by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -401,8 +403,8 @@ fun RetainingWallScreen(
                                 baseRebarDia = res.baseReinforcement.diameter.toDouble() / 1000,
                                 baseRebarSpacing = res.baseReinforcement.spacing.toDouble() / 1000,
                                 cover = when (selectedCode) {
-                                    CalculatorEngine.DesignCode.ACI -> 0.075
-                                    CalculatorEngine.DesignCode.SAUDI -> 0.065
+                                    DesignCode.ACI -> 0.075
+                                    DesignCode.SBC -> 0.065
                                     else -> 0.05
                                 },
                                 backfillAngle = res.backfillAngle,
@@ -448,8 +450,8 @@ fun RetainingWallScreen(
                         baseRebarDia = res.baseReinforcement.diameter.toDouble() / 1000,
                         baseRebarSpacing = res.baseReinforcement.spacing.toDouble() / 1000,
                         cover = when (selectedCode) {
-                            CalculatorEngine.DesignCode.ACI -> 0.075
-                            CalculatorEngine.DesignCode.SAUDI -> 0.065
+                            DesignCode.ACI -> 0.075
+                            DesignCode.SBC -> 0.065
                             else -> 0.05
                         },
                         backfillAngle = res.backfillAngle,

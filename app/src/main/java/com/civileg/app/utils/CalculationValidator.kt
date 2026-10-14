@@ -1,5 +1,7 @@
 package com.civileg.app.utils
 
+import com.civileg.app.domain.entities.DesignCode
+
 import com.civileg.app.utils.CalculatorEngine.*
 
 /**
@@ -58,7 +60,7 @@ object CalculationValidator {
 
         // 2. Reinforcement Ratio Audit
         val rho = result.reinforcementRatio
-        val minRho = if (result.code == DesignCode.EGYPTIAN) 0.8 else 1.0
+        val minRho = if (result.code == DesignCode.ECP) 0.8 else 1.0
         if (rho < minRho - 0.01) {
             warnings.add("Logic: Reinforcement ratio ($rho%) is below code minimum ($minRho%)")
         }

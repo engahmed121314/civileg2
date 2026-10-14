@@ -331,11 +331,7 @@ class CombinedFootingViewModel @Inject constructor(
     fun saveDesign(projectId: Long, name: String) {
         val ecpRes = _uiState.value.result ?: return
         viewModelScope.launch {
-            val engineCode = when (DesignCode.valueOf(_uiState.value.designCode)) {
-                DesignCode.ECP -> com.civileg.app.utils.CalculatorEngine.DesignCode.EGYPTIAN
-                DesignCode.ACI -> com.civileg.app.utils.CalculatorEngine.DesignCode.ACI
-                DesignCode.SBC -> com.civileg.app.utils.CalculatorEngine.DesignCode.SAUDI
-            }
+            val engineCode = DesignCode.valueOf(_uiState.value.designCode)
             repository.saveFootingDesign(projectId, name, com.civileg.app.utils.CalculatorEngine.FootingResult(
                 type = com.civileg.app.utils.CalculatorEngine.FootingType.COMBINED,
                 width = ecpRes.footingWidth * 1000, // m to mm

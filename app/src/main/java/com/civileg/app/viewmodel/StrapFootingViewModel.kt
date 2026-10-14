@@ -1,5 +1,7 @@
 package com.civileg.app.viewmodel
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -39,7 +41,7 @@ class StrapFootingViewModel @Inject constructor(
     private val _isExporting = MutableLiveData(false)
     val isExporting: LiveData<Boolean> = _isExporting
 
-    private var lastCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN
+    private var lastCode: DesignCode = DesignCode.ECP
 
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
@@ -49,7 +51,7 @@ class StrapFootingViewModel @Inject constructor(
         col1Load: Double, col2Load: Double, distance: Double,
         col1W: Double, col1D: Double, col2W: Double, col2D: Double,
         soil: Double, fcu: Double, fy: Double,
-        code: CalculatorEngine.DesignCode, preferredDiameter: Int, strapWidth: Double
+        code: DesignCode, preferredDiameter: Int, strapWidth: Double
     ) {
         InputGuard.positive("col1Load", col1Load)
         InputGuard.positive("col2Load", col2Load)
@@ -96,8 +98,8 @@ class StrapFootingViewModel @Inject constructor(
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when (lastCode) {
-                    CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                    CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                    DesignCode.ACI -> "ACI 318"
+                    DesignCode.SBC -> "SBC 304"
                     else -> "ECP 203"
                 }
                 val inputsMap = mapOf(

@@ -1,5 +1,7 @@
 package com.civileg.app.ui.retaining
 
+import com.civileg.app.domain.entities.DesignCode
+
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -89,7 +91,7 @@ class RetainingWallFragment : Fragment() {
                 surcharge = surcharge,
                 fcu = fc,
                 fy = fy,
-                code = CalculatorEngine.DesignCode.EGYPTIAN
+                code = DesignCode.ECP
             )
             
             lastResult = result

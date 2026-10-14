@@ -1,5 +1,7 @@
 package com.civileg.app.ui.column
 
+import com.civileg.app.domain.entities.DesignCode
+
 import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
@@ -28,7 +30,7 @@ class ColumnInputActivity : AppCompatActivity() {
     }
 
     private fun setupSpinners() {
-        val codes = CalculatorEngine.DesignCode.values().map { it.displayName }
+        val codes = DesignCode.values().map { it.displayName }
         binding.spinnerCode.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, codes)
 
         val diameters = listOf(12, 14, 16, 18, 20, 22, 25, 28, 32)
@@ -47,7 +49,7 @@ class ColumnInputActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val code = CalculatorEngine.DesignCode.values()[binding.spinnerCode.selectedItemPosition]
+            val code = DesignCode.values()[binding.spinnerCode.selectedItemPosition]
             val diameter = listOf(12, 14, 16, 18, 20, 22, 25, 28, 32)[binding.spinnerDiameter.selectedItemPosition]
 
             // التحديث لدعم المعاملات الجديدة في الـ ViewModel
@@ -60,11 +62,11 @@ class ColumnInputActivity : AppCompatActivity() {
                 axialLoad = binding.etLoad.text.toString(),
                 preferredDiameter = diameter.toString()
             )
-            // Map CalculatorEngine.DesignCode to domain.entities.DesignCode
+            // Map DesignCode to domain.entities.DesignCode
             val domainCode = when(code) {
-                CalculatorEngine.DesignCode.EGYPTIAN -> com.civileg.app.domain.entities.DesignCode.ECP
-                CalculatorEngine.DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
-                CalculatorEngine.DesignCode.SAUDI -> com.civileg.app.domain.entities.DesignCode.SBC
+                DesignCode.ECP -> com.civileg.app.domain.entities.DesignCode.ECP
+                DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
+                DesignCode.SBC -> com.civileg.app.domain.entities.DesignCode.SBC
             }
             viewModel.updateDesignCode(domainCode)
         }

@@ -1,5 +1,7 @@
 package com.civileg.app.viewmodel
 
+import com.civileg.app.domain.entities.DesignCode
+
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
@@ -43,7 +45,7 @@ import javax.inject.Inject
 // ═══════════════════════════════════════════════════════════════════════
 
 data class ConcreteQCState(
-    val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
+    val designCode: DesignCode = DesignCode.ECP,
     val elementId: String = "",
     val volume: String = "",
     val slump: String = "",
@@ -55,7 +57,7 @@ data class ConcreteQCState(
 )
 
 data class SoilQCState(
-    val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
+    val designCode: DesignCode = DesignCode.ECP,
     val cohesion: String = "25",
     val frictionAngle: String = "30",
     val unitWeight: String = "18",
@@ -69,7 +71,7 @@ data class SoilQCState(
 )
 
 data class RebarQCState(
-    val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
+    val designCode: DesignCode = DesignCode.ECP,
     val barDiameter: String = "16",
     val numBars: String = "3",
     val fy: String = "400",
@@ -82,7 +84,7 @@ data class RebarQCState(
 )
 
 data class SteelQCState(
-    val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
+    val designCode: DesignCode = DesignCode.ECP,
     val sectionKey: String = "IPE 200",
     val appliedMoment: String = "",
     val appliedShear: String = "",
@@ -93,7 +95,7 @@ data class SteelQCState(
 )
 
 data class RoadsQCState(
-    val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
+    val designCode: DesignCode = DesignCode.ECP,
     val surfaceLayerThickness: String = "50",
     val baseLayerThickness: String = "150",
     val subbaseLayerThickness: String = "200",
@@ -106,7 +108,7 @@ data class RoadsQCState(
 )
 
 data class BridgesQCState(
-    val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
+    val designCode: DesignCode = DesignCode.ECP,
     val concreteStrength: String = "30",
     val span: String = "20",
     val naturalFrequency: String = "2.5",
@@ -114,7 +116,7 @@ data class BridgesQCState(
 )
 
 data class TunnelsQCState(
-    val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
+    val designCode: DesignCode = DesignCode.ECP,
     val rockClass: String = "III",
     val tunnelConvergence: String = "20",
     val tunnelDiameter: String = "6",
@@ -123,7 +125,7 @@ data class TunnelsQCState(
 )
 
 data class BuildingsQCState(
-    val designCode: CalculatorEngine.DesignCode = CalculatorEngine.DesignCode.EGYPTIAN,
+    val designCode: DesignCode = DesignCode.ECP,
     val buildingType: String = "Residential",
     val numFloors: String = "5",
     val floorHeight: String = "3",
@@ -289,7 +291,7 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     // Design code
     // ---------------------------------------------------------------
-    fun updateDesignCode(code: CalculatorEngine.DesignCode) {
+    fun updateDesignCode(code: DesignCode) {
         _concreteState.value = _concreteState.value.copy(designCode = code)
         _soilState.value = _soilState.value.copy(designCode = code)
         _rebarState.value = _rebarState.value.copy(designCode = code)
@@ -577,7 +579,7 @@ class QualityEngineerViewModel @Inject constructor(
         val freq = InputGuard.inRange("naturalFrequency", s.naturalFrequency.toDoubleOrNull() ?: 2.5, 0.1, 10.0)
         
         val outcome = QualityControlEngine.bridgeQc(
-            code = CalculatorEngine.DesignCode.EGYPTIAN,
+            code = DesignCode.ECP,
             concreteStrengthMpa = concStrength,
             spanM = span,
             naturalFrequencyHz = freq
@@ -643,7 +645,7 @@ class QualityEngineerViewModel @Inject constructor(
     private fun persist(
         category: String,
         elementId: String,
-        code: CalculatorEngine.DesignCode,
+        code: DesignCode,
         outcome: QualityControlEngine.QcOutcome,
         inspectorName: String = "",
         location: String = "",
@@ -706,7 +708,7 @@ class QualityEngineerViewModel @Inject constructor(
     fun persistDisciplineOutcome(
         category: String,
         elementId: String,
-        code: CalculatorEngine.DesignCode,
+        code: DesignCode,
         outcome: QualityControlEngine.QcOutcome
     ) {
         persist(category, elementId, code, outcome)

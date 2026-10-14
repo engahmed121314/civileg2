@@ -1835,7 +1835,7 @@ private fun DisciplineQcTab(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
-    var designCode by remember(discipline) { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var designCode by remember(discipline) { mutableStateOf(DesignCode.ECP) }
     val values = remember(discipline) {
         mutableStateMapOf<String, String>().apply {
             discipline.fields.forEach { put(it.key, it.default) }

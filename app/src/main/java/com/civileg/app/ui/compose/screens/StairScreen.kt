@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -35,7 +37,6 @@ import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.StairType
-import com.civileg.app.utils.CalculatorEngine.DesignCode
 import com.civileg.app.viewmodel.StairViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStairDrawing
@@ -90,7 +91,7 @@ fun StairScreen(
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("360") }
     var expandedType by remember { mutableStateOf(false) }
-    var selectedCode by remember { mutableStateOf(CalculatorEngine.DesignCode.EGYPTIAN) }
+    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
 
     // Input validation
     var spanError by remember { mutableStateOf("") }
@@ -419,8 +420,8 @@ fun StairScreen(
                         drawingContent = {
                             val nRisers = ((res.span * 1000.0) / res.tread).toInt().coerceAtLeast(1)
                             val codeAwareCover = when (selectedCode) {
-                                CalculatorEngine.DesignCode.ACI -> 38.0
-                                CalculatorEngine.DesignCode.SAUDI -> 40.0
+                                DesignCode.ACI -> 38.0
+                                DesignCode.SBC -> 40.0
                                 else -> 25.0
                             }
                             val hasLanding = selectedType == CalculatorEngine.StairType.DOUBLE_FLIGHT ||
@@ -454,8 +455,8 @@ fun StairScreen(
         result?.let { res ->
             val nRisers = ((res.span * 1000.0) / res.tread).toInt().coerceAtLeast(1)
             val codeAwareCover = when (selectedCode) {
-                CalculatorEngine.DesignCode.ACI -> 38.0
-                CalculatorEngine.DesignCode.SAUDI -> 40.0
+                DesignCode.ACI -> 38.0
+                DesignCode.SBC -> 40.0
                 else -> 25.0
             }
             val hasLanding = selectedType == CalculatorEngine.StairType.DOUBLE_FLIGHT ||

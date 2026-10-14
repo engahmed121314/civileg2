@@ -1,5 +1,7 @@
 package com.civileg.app.viewmodel
 
+import com.civileg.app.domain.entities.DesignCode
+
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -53,7 +55,7 @@ class StairViewModel @Inject constructor(
         fcu: Double,
         fy: Double,
         preferredDiameter: Int,
-        code: CalculatorEngine.DesignCode
+        code: DesignCode
     ) {
         InputGuard.positive("span", span)
         InputGuard.positive("riser", riser)
@@ -97,7 +99,7 @@ class StairViewModel @Inject constructor(
 
     // Fixed legacy support
     fun calculateStair(rise: Double, run: Double, width: Double, load: Double, fcu: Double, fy: Double) {
-        calculateStairPro(CalculatorEngine.StairType.SINGLE_FLIGHT, run, rise, 300.0, load * 0.6, load * 0.4, fcu, fy, 12, CalculatorEngine.DesignCode.EGYPTIAN)
+        calculateStairPro(CalculatorEngine.StairType.SINGLE_FLIGHT, run, rise, 300.0, load * 0.6, load * 0.4, fcu, fy, 12, DesignCode.ECP)
     }
 
     fun saveStair(projectId: Long, name: String, result: CalculatorEngine.StairResult) {
@@ -123,8 +125,8 @@ class StairViewModel @Inject constructor(
                     val totalHeight = currentResult.span * (currentResult.riser / currentResult.tread)
                     val nRisers = (totalHeight / currentResult.riser).toInt().coerceAtLeast(1)
                     val pdfCover = when(currentResult.code) {
-                        CalculatorEngine.DesignCode.ACI -> 38.0
-                        CalculatorEngine.DesignCode.SAUDI -> 40.0
+                        DesignCode.ACI -> 38.0
+                        DesignCode.SBC -> 40.0
                         else -> 25.0
                     }
                     // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
@@ -146,8 +148,8 @@ class StairViewModel @Inject constructor(
                     pendingDrawingBitmap = null  // consume after use
 
                     val codeName = when(currentResult.code) {
-                        CalculatorEngine.DesignCode.ACI -> "ACI 318"
-                        CalculatorEngine.DesignCode.SAUDI -> "SBC 304"
+                        DesignCode.ACI -> "ACI 318"
+                        DesignCode.SBC -> "SBC 304"
                         else -> "ECP 203"
                     }
                     val inputsMap = mapOf(

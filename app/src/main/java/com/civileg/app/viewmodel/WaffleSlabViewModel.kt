@@ -216,11 +216,7 @@ class WaffleSlabViewModel @Inject constructor(
     fun saveDesign(projectId: Long, name: String) {
         val res = _result.value ?: return
         viewModelScope.launch {
-            val engineCode = when (lastInput?.designCode ?: DesignCode.ECP) {
-                DesignCode.ECP -> com.civileg.app.utils.CalculatorEngine.DesignCode.EGYPTIAN
-                DesignCode.ACI -> com.civileg.app.utils.CalculatorEngine.DesignCode.ACI
-                DesignCode.SBC -> com.civileg.app.utils.CalculatorEngine.DesignCode.SAUDI
-            }
+            val engineCode = lastInput?.designCode ?: DesignCode.ECP
             // FIX: Use total thickness (topping + rib) instead of corrupted concreteVolume
             val totalThickness = (lastInput?.toppingThickness ?: 0.0) + (lastInput?.ribHeight ?: 0.0)
             repository.saveSlabDesign(projectId, name, com.civileg.app.utils.CalculatorEngine.SlabResult(
