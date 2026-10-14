@@ -168,14 +168,22 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 8. Add `DxfDrawable` implementations for all elements so `exportBoth` is real.
 
 ### P2 — Coverage & robustness
-9. Add AISC connection & base-plate methods; guard `classifySection`.
+9. Add AISC connection & base-plate methods; guard `classifySection`. *(classifySection guarded §9.6;
+   AISC `calculateFilletWeldCapacity` + `calculateBoltShearCapacity` added §9.7; **base-plate port
+   deferred** — `ecp.SteelBasePlateDesign` already implements AISC 360-16 Ch.14 / DG1 and is the only
+   base-plate engine; duplicating 1100+ lines into ACI/SBC with no numeric change is unwarranted.)*
 10. Add `AcidCombinedFooting`/`SbcCombinedFooting` doc-only note in UI (or dedicated classes).
 11. Migrate all ViewModels to `ExportManager`.
 12. Crash-hardening sweep for tools (SoilBearing, RebarTool, UnitConverter, SiteLayout, etc.).
 
 ### P3 — Release
 13. Fill `AppIntegrityChecker.EXPECTED_SIGNER_FINGERPRINT` + production AdMob IDs.
-14. Resolve 15 Dependabot alerts (8 high, 6 moderate, 1 low).
+14. Resolve 15 Dependabot alerts (8 high, 6 moderate, 1 low). *(partial §9.7: **runtime** `guava`
+    forced 31.1-android → 33.4.0-android via an `app` dependency constraint, clearing CVE-2023-2976
+    + CVE-2020-8908. Remaining alerts are almost all in **non-shipped tooling/config classpaths**
+    — KSP's `grpc-netty` 1.57.2 pulls `netty-*` 4.1.93.Final, and room/hilt/dagger compiler pull
+    `guava` 22.0/31.0.1 and `protobuf-java` 3.x. Forcing upgrades there can break KSP/Hilt at build
+    time; needs a deliberate Kotlin/KSP bump, not a blind `force`.)*
 15. ProGuard / signing / versioning / store listing; manual PDF+DXF QA = 15 elements × 3 codes.
 
 ---
