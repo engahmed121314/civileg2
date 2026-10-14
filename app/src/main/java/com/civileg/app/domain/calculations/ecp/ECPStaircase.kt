@@ -295,6 +295,7 @@ class ECPStaircase : StaircaseDesign {
         ))
 
         // ========== 9. ملاحظات الكود ==========
+        codeNotes.add(CodeReference.ECP.SLAB_ONE_WAY)
         codeNotes.add("ECP 203-2020: Section 4-2 (Flexure design of waist slab)")
         codeNotes.add("ECP 203-2020: Section 6-2 (Slab reinforcement rules)")
         codeNotes.add("ECP 203-2020: Section 6-3 (Deflection limits L/250)")

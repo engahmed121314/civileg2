@@ -11,6 +11,7 @@ import com.civileg.app.domain.calculations.base.WaffleSlabDesign.PunchingShearCh
 import com.civileg.app.domain.RebarResult
 import com.civileg.app.domain.SafetyCheckItem
 import com.civileg.app.domain.entities.LoadCombination
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.ShearReinforcementResult
 import kotlin.math.*
 
@@ -60,6 +61,7 @@ class ACIWaffleSlabDesign : WaffleSlabDesign {
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<SafetyCheckItem>()
 
+        codeNotes.add(CodeReference.ACI.SLAB_TWO_WAY)
         codeNotes.add("ACI 318-19 Ch.8: Waffle Slab Design (Two-Way Joist System)")
         codeNotes.add("φ_flexure = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")
         codeNotes.add("f'c = 0.8 × fcu = ${String.format("%.1f", input.fcu * 0.8)} MPa")

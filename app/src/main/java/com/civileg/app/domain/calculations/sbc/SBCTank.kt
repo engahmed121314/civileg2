@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.ReinforcementResult
 import kotlin.math.*
 
@@ -215,6 +216,7 @@ class SBCTank : TankDesign {
             rhoActual >= MIN_RHO_ENV, "SBC 304: Min ρ = 0.20% for environmental"
         ))
 
+        codeNotes.add(CodeReference.SBC.TANK_HYDROSTATIC)
         codeNotes.add(String.format("SBC 304-2018: f'c=%.1f MPa (0.67×fcu/γc)", fcPrime))
         codeNotes.add(String.format("Vertical: %dØ%d @ %dmm", barsPerMeter, barDiameter.toInt(), spacing.toInt()))
         codeNotes.add(String.format("Horizontal: %dØ%d @ %dmm", hBarsPerMeter, hBarDia.toInt(), hSpacing.toInt()))

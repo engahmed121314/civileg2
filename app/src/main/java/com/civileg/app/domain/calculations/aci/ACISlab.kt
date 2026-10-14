@@ -93,6 +93,7 @@ class ACISlab : SlabDesign {
         // 4. نسبة الاستغلال
         val utilizationRatio = rhoFinal / rhoMin.coerceAtLeast(0.001)
 
+        codeNotes.add(CodeReference.ACI.SLAB_ONE_WAY)
         codeNotes.add("ACI 318-19: One-Way Slab Design")
         codeNotes.add(String.format("fc'=%.0f MPa, d=%.0f mm, Rn=%.2f", fc_prime, effectiveDepth, Rn))
         codeNotes.add(String.format("rho=%.4f, rho_min=%.4f", rhoFinal, rhoMin))
@@ -172,7 +173,9 @@ class ACISlab : SlabDesign {
         val Mu_long = max(Mu_long_pos, Mu_long_neg)
 
         val shortRes = designOneWaySlab(fcu, fy, slabThickness, shortSpan, Mu_short, q * lx / 2.0, loadCombination)
+            .let { it.copy(codeNotes = it.codeNotes + CodeReference.ACI.SLAB_TWO_WAY) }
         val longRes = designOneWaySlab(fcu, fy, slabThickness, longSpan, Mu_long, q * lx / 3.0, loadCombination)
+            .let { it.copy(codeNotes = it.codeNotes + CodeReference.ACI.SLAB_TWO_WAY) }
 
         codeNotes.add("ACI 318-19: Two-Way Slab (Direct Design Method)")
         codeNotes.add(String.format("ly/lx=%.2f, q=%.1f kN/m²", ratio, q))

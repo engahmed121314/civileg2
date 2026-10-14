@@ -191,6 +191,7 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         // ══════════════════════════════════════════════════════════════════
         // 7. Code Notes & Results
         // ══════════════════════════════════════════════════════════════════
+        codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
         codeNotes.add("SBC 304-2018 §6.4: Hordi Slab Design (independent SBC implementation)")
         codeNotes.add("f'c = 0.8 × fcu = ${String.format("%.1f", fc)} MPa (SBC 304/ACI conversion)")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S, φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")

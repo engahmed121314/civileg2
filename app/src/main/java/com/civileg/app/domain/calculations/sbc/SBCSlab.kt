@@ -89,6 +89,7 @@ class SBCSlab : SlabDesign {
 
         val utilizationRatio = rhoFinal / rhoMin.coerceAtLeast(0.001)
 
+        codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
         codeNotes.add("SBC 304-2018: One-Way Slab")
         codeNotes.add(String.format("fc'=%.0f MPa, d=%.0f mm", fc_prime, effectiveDepth))
 
@@ -156,7 +157,9 @@ class SBCSlab : SlabDesign {
         val Mu_long = max(q * lx * lx * longMomentCoeff, q * lx * lx * cm)
 
         val shortRes = designOneWaySlab(fcu, fy, slabThickness, shortSpan, Mu_short, q * lx / 2.0, loadCombination)
+            .let { it.copy(codeNotes = it.codeNotes + CodeReference.SBC.SLAB_TWO_WAY) }
         val longRes = designOneWaySlab(fcu, fy, slabThickness, longSpan, Mu_long, q * lx / 3.0, loadCombination)
+            .let { it.copy(codeNotes = it.codeNotes + CodeReference.SBC.SLAB_TWO_WAY) }
 
         return TwoWaySlabResult(
             shortDirection = shortRes,

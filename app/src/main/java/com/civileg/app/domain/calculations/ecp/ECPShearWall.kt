@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ShearWallDesign
 import kotlin.math.*
@@ -76,6 +77,7 @@ class ECPShearWall : ShearWallDesign {
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<ShearWallSafetyCheck>()
 
+        codeNotes.add(CodeReference.ECP.SW_SHEAR)
         codeNotes.add("ECP 203-2020 §6-7 / ECP 201: Shear Wall Design")
         codeNotes.add("Wall Type: ${input.wallType.displayName}")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S")

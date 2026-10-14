@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.StrapFootingDesign
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.core.engineering.StrapFootingDesignEngine
 
 /**
@@ -40,6 +41,8 @@ class ECPStrapFooting : StrapFootingDesign {
         val notes = result.codeNotes.toMutableList()
         notes.add("ECP 203-2020 §2.3: γD=${LF_DEAD}, γL=${LF_LIVE}")
         notes.add("ECP 203-2020 §7: Strap Footing Design")
+        notes.add(CodeReference.ECP.FOOTING_BEARING)
+        notes.add(CodeReference.ECP.FOOTING_REINFORCEMENT)
 
         return result.copy(codeNotes = notes)
     }

@@ -303,6 +303,7 @@ class SBCStaircase : StaircaseDesign {
         ))
 
         // ========== 9. SBC-specific: ملاحظات البيئة المالحة ==========
+        codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
         codeNotes.add("SBC 304-2018: Section 9 (Flexure)")
         codeNotes.add("SBC 304-2018: Section 11 (Shear)")
         codeNotes.add("SBC 304-2018: Section 7.7 (Cover requirements)")

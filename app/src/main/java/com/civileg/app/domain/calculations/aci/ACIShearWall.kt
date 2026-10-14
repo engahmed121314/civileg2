@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ShearWallDesign
 import kotlin.math.*
@@ -75,6 +76,7 @@ class ACIShearWall : ShearWallDesign {
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<ShearWallSafetyCheck>()
 
+        codeNotes.add(CodeReference.ACI.SW_SHEAR)
         codeNotes.add("ACI 318-19: Shear Wall Design")
         codeNotes.add("Wall Type: ${input.wallType.displayName}")
         codeNotes.add("φ_flex = $PHI_FLEXURE, φ_comp = $PHI_COMPRESSION, φ_shear = $PHI_SHEAR")

@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.FlatSlabDesign.MomentCoefficients
 import com.civileg.app.domain.calculations.base.FlatSlabDesign.PunchingShearResult
@@ -66,6 +67,7 @@ class SBCFlatSlab : FlatSlabDesign {
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<SafetyCheckItem>()
 
+        codeNotes.add(CodeReference.SBC.SLAB_TWO_WAY)
         codeNotes.add("SBC 304 §6-5: Flat Slab Design")
         codeNotes.add("Method: ${input.designMethod.displayName}")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S, φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")

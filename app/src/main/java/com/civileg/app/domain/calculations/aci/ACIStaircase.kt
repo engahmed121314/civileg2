@@ -329,6 +329,7 @@ class ACIStaircase : StaircaseDesign {
         ))
 
         // ========== 9. ملاحظات الكود ==========
+        codeNotes.add(CodeReference.ACI.SLAB_ONE_WAY)
         codeNotes.add("ACI 318-19: Chapter 9 (Flexure - one-way slab)")
         codeNotes.add("ACI 318-19: Chapter 22 (Shear)")
         codeNotes.add("ACI 318-19: Table 24.2.2 (Deflection L/240)")

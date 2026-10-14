@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.FlatSlabDesign.MomentCoefficients
@@ -59,6 +60,7 @@ class ECPFlatSlab : FlatSlabDesign {
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<SafetyCheckItem>()
 
+        codeNotes.add(CodeReference.ECP.SLAB_TWO_WAY)
         codeNotes.add("ECP 203-2020 §6-5: Flat Slab Design")
         codeNotes.add("Method: ${input.designMethod.displayName}")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S")

@@ -11,6 +11,7 @@ import com.civileg.app.domain.calculations.base.WaffleSlabDesign.PunchingShearCh
 import com.civileg.app.domain.RebarResult
 import com.civileg.app.domain.SafetyCheckItem
 import com.civileg.app.domain.entities.LoadCombination
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.ShearReinforcementResult
 import kotlin.math.*
 
@@ -62,6 +63,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<SafetyCheckItem>()
 
+        codeNotes.add(CodeReference.SBC.SLAB_TWO_WAY)
         codeNotes.add("SBC 304-2018 §6-4: Waffle Slab Design")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S, φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")
         codeNotes.add("Load: Wu = 1.4×DL + 1.6×LL (SBC 304 §3-2)")

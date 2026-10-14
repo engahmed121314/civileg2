@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.DesignCode
 import kotlin.math.*
 
@@ -148,6 +149,8 @@ class ACIRetainingWall : RetainingWallDesign {
             "Min \u03C1 = ${MIN_STEEL_RATIO}"
         )
         if (hWater > 0) notes.add("Water table at ${"%.1f".format(zwt)}m - hydrostatic pressure included")
+        notes.add(CodeReference.ACI.RW_LATERAL_EARTH)
+        notes.add(CodeReference.ACI.RW_STABILITY)
 
         return RetainingWallResult(
             isSafe = isSafe, designCode = DesignCode.ACI,

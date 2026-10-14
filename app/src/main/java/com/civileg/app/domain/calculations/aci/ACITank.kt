@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.ReinforcementResult
 import kotlin.math.*
 
@@ -232,6 +233,7 @@ class ACITank : TankDesign {
             rhoActual >= MIN_RHO_ENV, "ACI 350-06: Min ρ = 0.20% for environmental structures"
         ))
 
+        codeNotes.add(CodeReference.ACI.TANK_HYDROSTATIC)
         codeNotes.add("ACI 350-06 / ACI 318-19: Water-Retaining Structure")
         codeNotes.add(String.format("f'c=%.0f MPa (0.8×fcu), φ_flex=%.2f", fcPrime, PHI_FLEXURE))
         codeNotes.add(String.format("Fluid load factor: %.1f", FLUID_LOAD_FACTOR))

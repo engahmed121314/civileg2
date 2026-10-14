@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.SoilType
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
@@ -147,6 +148,7 @@ class ECPPileFoundation : PileFoundationDesign {
                 && pileReinforcement.isSafe
                 && (lateralResult as com.civileg.app.domain.calculations.base.LateralLoadResult).allowableLateralCapacity >= input.lateralLoad
 
+        codeNotes.add(CodeReference.ECP.PILE_CAPACITY)
         codeNotes.add("ECP 203-2020: Pile Foundation Design")
         codeNotes.add("Pile: ${input.pileType.displayName}, Ø${input.pileDiameter.toInt()}mm x ${input.pileLength}m")
         codeNotes.add("Soil: ${input.soilType.displayName}, FS=${input.safetyFactor}")

@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.calculations.base.ShearWallDesign
 import kotlin.math.*
 
@@ -79,6 +80,7 @@ class SBCShearWall : ShearWallDesign {
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<ShearWallSafetyCheck>()
 
+        codeNotes.add(CodeReference.SBC.SW_SHEAR)
         codeNotes.add("SBC 304 §6-7: Shear Wall Design")
         codeNotes.add("Wall Type: ${input.wallType.displayName}")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S, φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")

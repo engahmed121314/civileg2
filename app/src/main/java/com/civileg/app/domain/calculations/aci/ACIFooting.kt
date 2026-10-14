@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.ReinforcementResult
@@ -154,6 +155,9 @@ class ACIFooting : FootingDesign {
         }
 
         codeNotes.add("ACI 318-19: Isolated Footing Design")
+        codeNotes.add(CodeReference.ACI.FOOTING_BEARING)
+        codeNotes.add(CodeReference.ACI.FOOTING_SHEAR_PUNCHING)
+        codeNotes.add(CodeReference.ACI.FOOTING_REINFORCEMENT)
         codeNotes.add(String.format("B=%.0fxL=%.0f mm, d=%.0f mm", B, L, d))
         codeNotes.add(String.format("q_avg=%.1f, q_max=%.1f, q_min=%.1f kPa", q_avg, q_max, q_min))
         codeNotes.add(String.format("Mu_x=%.1f, Mu_y=%.1f kN.m", Mu_x, Mu_y))

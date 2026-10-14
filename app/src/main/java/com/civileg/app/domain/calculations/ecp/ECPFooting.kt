@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.ReinforcementResult
@@ -177,6 +178,9 @@ class ECPFooting : FootingDesign {
         val mainReinf = if (reinfX.astRequired >= reinfY.astRequired) reinfX else reinfY
 
         codeNotes.add("ECP 203-2020: Isolated Footing Design")
+        codeNotes.add(CodeReference.ECP.FOOTING_BEARING)
+        codeNotes.add(CodeReference.ECP.FOOTING_SHEAR_PUNCHING)
+        codeNotes.add(CodeReference.ECP.FOOTING_REINFORCEMENT)
         codeNotes.add(String.format("B=%.0fxL=%.0f mm, d=%.0f mm", B, L, d))
         codeNotes.add(String.format("q_avg=%.1f, q_max=%.1f, q_min=%.1f kPa", q_avg, q_max, q_min))
         codeNotes.add(String.format("Mu_x=%.1f, Mu_y=%.1f kN.m", Mu_x, Mu_y))

@@ -5,6 +5,7 @@ import com.civileg.app.domain.calculations.base.TankDesign
 import com.civileg.app.domain.calculations.base.TankResult
 import com.civileg.app.domain.calculations.base.TankSafetyCheck
 import com.civileg.app.domain.calculations.base.TankType
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.ReinforcementResult
 import kotlin.math.*
 import kotlin.collections.mutableListOf
@@ -251,6 +252,7 @@ class ECPTank : TankDesign {
             rho >= MIN_RHO_WATER, "Minimum reinforcement for water-retaining structures: 0.25%"
         ))
 
+        codeNotes.add(CodeReference.ECP.TANK_HYDROSTATIC)
         codeNotes.add("ECP 203-2020: Section 8-1 (Water-Retaining Structures)")
         codeNotes.add("Wall: Cantilever method, M = γw×h³/6")
         codeNotes.add("Vertical: ${barsPerMeter}Ø${barDiameter.toInt()} @ ${spacing.toInt()}mm")
@@ -331,6 +333,7 @@ class ECPTank : TankDesign {
         val fct = 0.6 * sqrt(fcu)
         val isCrackSafe = steelStress <= fct * 1000.0
 
+        codeNotes.add(CodeReference.ECP.TANK_HYDROSTATIC)
         codeNotes.add("ECP 203-2020: Section 8-1 (Circular Tank - Hoop Tension)")
         codeNotes.add("Max Hoop Tension T = γw×H×R = ${String.format("%.1f", maxHoopTension)} kN/m")
         codeNotes.add("Hoop: ${hoopBarsPerMeter}Ø${hoopBarDia.toInt()} @ ${hoopSpacing.toInt()}mm")

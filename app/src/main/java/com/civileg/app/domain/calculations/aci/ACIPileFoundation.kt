@@ -80,7 +80,8 @@ class ACIPileFoundation : PileFoundationDesign {
 
         val fc = input.fcu * CUBE_TO_CYLINDER
         codeNotes.add("ACI 318-19 Chapter 13: Deep Foundation Design")
-        codeNotes.add("f'c = 0.8 × fcu = %.1f MPa (cylinder) | ${CodeReference.ACI.BEAM_FLEXURE}".format(fc))
+        codeNotes.add(CodeReference.ACI.PILE_CAPACITY)
+        codeNotes.add("f'c = 0.8 × fcu = %.1f MPa (cylinder) | ${CodeReference.ACI.FOOTING_REINFORCEMENT}".format(fc))
         codeNotes.add("φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR, φ_tied = $PHI_TIED (ACI 318-19 §21.2.1)")
         codeNotes.add("Load combos: 1.2D+1.6L governing, 1.4D checked (ACI 318-19 §5.3.1)")
         codeNotes.add("Pile Type: ${input.pileType.displayName}, Soil: ${input.soilType.displayName}")

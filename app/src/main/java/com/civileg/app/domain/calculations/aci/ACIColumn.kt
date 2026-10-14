@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ColumnDesign
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.ColumnShearDesignResult
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.ReinforcementResult
@@ -196,7 +197,10 @@ class ACIColumn : ColumnDesign {
         val capacity = calculateAxialCapacity(fcu, fy, width, depth, astProvided, loadCombination)
         val utilizationRatio = axialLoad / capacity
         
-        codeNotes.add("ACI 318-19: Chapter 10 - Columns")
+        codeNotes.add(CodeReference.ACI.COLUMN_AXIAL)
+        codeNotes.add(CodeReference.ACI.COLUMN_REINFORCEMENT_MIN)
+        codeNotes.add(CodeReference.ACI.COLUMN_REINFORCEMENT_MAX)
+        codeNotes.add(CodeReference.ACI.COLUMN_COVER)
         codeNotes.add("phi = 0.65 for tied columns")
         codeNotes.add("Min cover: ${getMinCover()}mm for cast-in-place")
         
@@ -302,6 +306,7 @@ class ACIColumn : ColumnDesign {
         codeNotes.add("ACI 318-19 §22.5: Column Shear Design")
         codeNotes.add("f'c = 0.8×fcu = ${String.format("%.0f", fc)} MPa")
         codeNotes.add("Vc = 0.17√f'c·b·d = ${String.format("%.1f", Vc)} kN")
+        codeNotes.add(CodeReference.ACI.COLUMN_TIES)
         codeNotes.add("φVc = ${String.format("%.1f", phiVc)} kN  (φ=$phi)")
         if (needsStirrups) {
             codeNotes.add("Vu (${String.format("%.1f", Vu)} kN) > φVc → Stirrups required")

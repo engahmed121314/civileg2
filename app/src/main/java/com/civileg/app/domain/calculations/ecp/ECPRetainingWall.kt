@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.DesignCode
 import kotlin.math.*
 
@@ -172,6 +173,8 @@ class ECPRetainingWall : RetainingWallDesign {
             "Min steel = ${"%.4f".format(MIN_STEEL_RATIO)} (${MIN_STEEL_RATIO * 100}%)"
         )
         if (hWater > 0) notes.add("Water table at ${"%.1f".format(zwt)}m - hydrostatic pressure included")
+        notes.add(CodeReference.ECP.RW_LATERAL_EARTH)
+        notes.add(CodeReference.ECP.RW_STABILITY)
 
         return RetainingWallResult(
             isSafe = isSafe, designCode = DesignCode.ECP,

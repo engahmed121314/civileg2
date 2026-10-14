@@ -36,6 +36,18 @@ object CodeReference {
         // الزلازل
         const val SEISMIC_BASE_SHEAR = "ECP 203-2020: Appendix B"
         const val SEISMIC_RESPONSE_SPECTRUM = "ECP 203-2020: Section B-2"
+        
+        // الحوائط (السند والقِص)
+        const val RW_LATERAL_EARTH = "ECP 203-2020: Section 8-1 (Lateral Earth Pressure)"
+        const val RW_STABILITY = "ECP 203-2020: Section 8-2 (Stability Checks)"
+        const val SW_SHEAR = "ECP 203-2020: Section 8-3 (Shear Walls)"
+        
+        // الأساسات الخازوقية والقواعد المشتركة
+        const val PILE_CAPACITY = "ECP 203-2020: Section 7-5 (Pile Caps)"
+        const val COMBINED_FOOTING = "ECP 203-2020: Section 7-3 (Combined Footings)"
+        
+        // الخزانات
+        const val TANK_HYDROSTATIC = "ECP 203-2020: Section 6-4 (Liquid-Retaining Structures)"
     }
     
     // === الكود الأمريكي ACI 318-19 ===
@@ -68,6 +80,18 @@ object CodeReference {
         // الزلازل
         const val SEISMIC_BASE_SHEAR = "ACI 318-19: Chapter 18"
         const val SEISMIC_RESPONSE_SPECTRUM = "ACI 318-19: Section 18.2"
+        
+        // الحوائط (السند والقِص)
+        const val RW_LATERAL_EARTH = "ACI 318-19: Section 13.2 (Walls)"
+        const val RW_STABILITY = "ACI 318-19: Section 13.2.2 (Stability)"
+        const val SW_SHEAR = "ACI 318-19: Section 11.5 (Wall Shear)"
+        
+        // الأساسات الخازوقية والقواعد المشتركة
+        const val PILE_CAPACITY = "ACI 318-19: Section 13.3 (Pile Caps)"
+        const val COMBINED_FOOTING = "ACI 318-19: Section 13.3 (Combined Footings)"
+        
+        // الخزانات
+        const val TANK_HYDROSTATIC = "ACI 350-20: Liquid-Containing Structures"
     }
     
     // === الكود السعودي SBC 304-2018 ===
@@ -100,6 +124,18 @@ object CodeReference {
         // الزلازل
         const val SEISMIC_BASE_SHEAR = "SBC 304-2018: Section 21"
         const val SEISMIC_RESPONSE_SPECTRUM = "SBC 304-2018: Section 21.2"
+        
+        // الحوائط (السند والقِص)
+        const val RW_LATERAL_EARTH = "SBC 304-2018: Section 13.2 (Walls)"
+        const val RW_STABILITY = "SBC 304-2018: Section 13.2.2 (Stability)"
+        const val SW_SHEAR = "SBC 304-2018: Section 11.5 (Wall Shear)"
+        
+        // الأساسات الخازوقية والقواعد المشتركة
+        const val PILE_CAPACITY = "SBC 304-2018: Section 15.9 (Pile Caps)"
+        const val COMBINED_FOOTING = "SBC 304-2018: Section 15 (Combined Footings)"
+        
+        // الخزانات
+        const val TANK_HYDROSTATIC = "SBC 304-2018: Section 350 (Liquid-Containing Structures)"
     }
     
     // دالة مساعدة للحصول على المرجع حسب الكود

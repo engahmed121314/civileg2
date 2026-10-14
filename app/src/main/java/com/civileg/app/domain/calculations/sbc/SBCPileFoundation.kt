@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.SoilType
 import com.civileg.app.domain.calculations.base.*
 import kotlin.math.*
@@ -76,6 +77,7 @@ class SBCPileFoundation : PileFoundationDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
+        codeNotes.add(CodeReference.SBC.PILE_CAPACITY)
         codeNotes.add("SBC 304 §7: Pile Foundation Design")
         codeNotes.add("Pile Type: ${input.pileType.displayName}, Soil: ${input.soilType.displayName}")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S, φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")

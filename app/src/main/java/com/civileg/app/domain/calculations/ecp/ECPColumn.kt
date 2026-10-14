@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ColumnDesign
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.ColumnShearDesignResult
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.ReinforcementResult
@@ -149,7 +150,10 @@ class ECPColumn : ColumnDesign {
         InputGuard.finite("utilizationRatio", utilizationRatio)
         
         // ملاحظات الكود
-        codeNotes.add("ECP 203-2020: Section 4-2-3 (Column Design)")
+        codeNotes.add(CodeReference.ECP.COLUMN_AXIAL)
+        codeNotes.add(CodeReference.ECP.COLUMN_REINFORCEMENT_MIN)
+        codeNotes.add(CodeReference.ECP.COLUMN_REINFORCEMENT_MAX)
+        codeNotes.add(CodeReference.ECP.COLUMN_COVER)
         codeNotes.add("Cover: ${getMinCover()}mm minimum")
         if (eccentricity > minEccentricity) {
             codeNotes.add("Eccentricity check: e=${"%.1f".format(eccentricity)}mm > e_min=${"%.1f".format(minEccentricity)}mm")
@@ -420,6 +424,7 @@ class ECPColumn : ColumnDesign {
         val totalCapacity = Vc + if (needsStirrups) fyDesign * providedAsvPerS * d / 1000.0 else 0.0
         val utilizationRatio = if (totalCapacity > 0) Vu / totalCapacity else 2.0
 
+        codeNotes.add(CodeReference.ECP.COLUMN_TIES)
         codeNotes.add("ECP 203 §4-2-5: Column Shear Design")
         codeNotes.add("Vc = 0.24√fcu·b·d / γc = ${"%.1f".format(Vc)} kN  (design capacity, γc=${GAMMA_C})")
         if (needsStirrups) {

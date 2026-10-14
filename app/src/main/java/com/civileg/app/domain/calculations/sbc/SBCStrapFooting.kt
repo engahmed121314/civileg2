@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.StrapFootingDesign
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.core.engineering.StrapFootingDesignEngine
 
 /**
@@ -51,6 +52,8 @@ class SBCStrapFooting : StrapFootingDesign {
         val notes = result.codeNotes.toMutableList()
         notes.add("SBC 304-2018 §9.2: γD=${LF_DEAD}, γL=${LF_LIVE}")
         notes.add("SBC 304-2018 §13: Strap Footing Design")
+        notes.add(CodeReference.SBC.FOOTING_BEARING)
+        notes.add(CodeReference.SBC.FOOTING_REINFORCEMENT)
         notes.add("Cover: ${SBC_COVER_CORROSIVE}mm (بيئة مالحة) / ${SBC_COVER_NORMAL}mm (عادي)")
         notes.add("Min thickness: ${SBC_MIN_THICKNESS}mm")
 

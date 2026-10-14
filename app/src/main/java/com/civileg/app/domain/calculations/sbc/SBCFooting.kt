@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.ReinforcementResult
@@ -148,6 +149,9 @@ class SBCFooting : FootingDesign {
         }
 
         codeNotes.add("SBC 304-2018: Isolated Footing Design (ACI 318 based)")
+        codeNotes.add(CodeReference.SBC.FOOTING_BEARING)
+        codeNotes.add(CodeReference.SBC.FOOTING_SHEAR_PUNCHING)
+        codeNotes.add(CodeReference.SBC.FOOTING_REINFORCEMENT)
         codeNotes.add(String.format("B=%.0fxL=%.0f mm, d=%.0f mm", roundedWidth, roundedLength, d))
         codeNotes.add(String.format("q_avg=%.1f, q_max=%.1f, q_min=%.1f kPa", q_avg, q_max, q_min))
         codeNotes.add(String.format("Mu_x=%.1f, Mu_y=%.1f kN.m", Mu_x, Mu_y))

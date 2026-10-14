@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ColumnDesign
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.ColumnShearDesignResult
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.ReinforcementResult
@@ -115,7 +116,10 @@ class SBCColumn : ColumnDesign {
         val capacity = calculateAxialCapacity(fcu, fy, width, depth, astProvided, loadCombination)
         val utilizationRatio = axialLoad / capacity
         
-        codeNotes.add("SBC 304-2018: Section 10")
+        codeNotes.add(CodeReference.SBC.COLUMN_AXIAL)
+        codeNotes.add(CodeReference.SBC.COLUMN_REINFORCEMENT_MIN)
+        codeNotes.add(CodeReference.SBC.COLUMN_REINFORCEMENT_MAX)
+        codeNotes.add(CodeReference.SBC.COLUMN_COVER)
         codeNotes.add("phi = 0.65 (Tied)")
         
         return ReinforcementResult(
@@ -222,6 +226,7 @@ class SBCColumn : ColumnDesign {
         val totalCapacity = phiVc + if (needsStirrups) phi * fy * providedAsvPerS * d / 1000.0 else 0.0
         val utilizationRatio = if (totalCapacity > 0) Vu / totalCapacity else 2.0
 
+        codeNotes.add(CodeReference.SBC.COLUMN_TIES)
         codeNotes.add("SBC 304: Column Shear Design")
         codeNotes.add("f'c = 0.8×fcu = ${String.format("%.0f", fc)} MPa")
         codeNotes.add("Vc = 0.17√f'c·b·d = ${String.format("%.1f", Vc)} kN")

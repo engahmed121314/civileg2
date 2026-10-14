@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.DesignCode
 import kotlin.math.*
 
@@ -229,6 +230,8 @@ class SBCRetainingWall : RetainingWallDesign {
         if (hWater > 0) {
             notes.add("منسوب الماء عند ${"%.1f".format(zwt)}m — ضغط جوفي مُضمَّن")
         }
+        notes.add(CodeReference.SBC.RW_LATERAL_EARTH)
+        notes.add(CodeReference.SBC.RW_STABILITY)
 
         // SBC 304 §18: اعتبارات زلزالية
         if (otFS < 2.0) {

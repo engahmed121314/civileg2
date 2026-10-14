@@ -224,6 +224,7 @@ class SBCJoistSlab : HordiSlabDesign {
         val utilizationRatio = if (Vc > 0) designShear / Vc else 2.0
 
         // ── Code notes ──
+        codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
         codeNotes.add("SBC 304-2018 §8.4: Hordi/Joist Slab Design")
         codeNotes.add(String.format("γc=%.2f, γs=%.2f (SBC 304-4.2.2)", GAMMA_C, GAMMA_S))
         codeNotes.add(String.format("fcu=%.0f MPa → fcd=%.1f MPa, fsd=%.1f MPa", fcu, fc, fsd))

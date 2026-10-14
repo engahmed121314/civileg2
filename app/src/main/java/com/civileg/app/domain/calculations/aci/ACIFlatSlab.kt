@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.*
+import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.FlatSlabDesign.MomentCoefficients
@@ -56,6 +57,7 @@ class ACIFlatSlab : FlatSlabDesign {
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<SafetyCheckItem>()
 
+        codeNotes.add(CodeReference.ACI.SLAB_TWO_WAY)
         codeNotes.add("ACI 318-19 Ch.8: Two-Way Slab Systems")
         codeNotes.add("Method: ${input.designMethod.displayName}")
         codeNotes.add("φ_flexure = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")
