@@ -184,6 +184,10 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
     — KSP's `grpc-netty` 1.57.2 pulls `netty-*` 4.1.93.Final, and room/hilt/dagger compiler pull
     `guava` 22.0/31.0.1 and `protobuf-java` 3.x. Forcing upgrades there can break KSP/Hilt at build
     time; needs a deliberate Kotlin/KSP bump, not a blind `force`.)*
+    *(§9.8: Kotlin 2.1.21 → **2.2.20** + KSP 2.1.21-2.0.1 → **2.2.20-2.0.4** removed `grpc-netty`/
+    `netty-*`/`protobuf-java` from the KSP processor classpath entirely. Remaining `netty`/`grpc`/
+    `protobuf` alerts now only appear in AGP's internal Unified Test Platform (`_internal-unified-test-platform-*`)
+    and Dagger's compiler classpaths — dev/test-infra only, not shipped; would need an AGP bump.)*
 15. ProGuard / signing / versioning / store listing; manual PDF+DXF QA = 15 elements × 3 codes.
 
 ---
