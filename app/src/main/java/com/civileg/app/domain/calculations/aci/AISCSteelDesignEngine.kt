@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations.aci
 
 import android.os.Parcelable
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign
 import com.civileg.app.domain.entities.*
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
@@ -163,6 +164,25 @@ class AISCSteelDesignEngine {
         val ab = PI / 4.0 * boltDiameter * boltDiameter
         val fnv = 0.45 * grade.fu
         return PHI_BEARING * fnv * ab * count / 1000.0
+    }
+
+    // ===================== BASE PLATE (AISC 360-16 Ch.14 / DG1) =====================
+
+    /**
+     * Concentrically loaded base-plate design per AISC 360-16 Chapter 14 /
+     * AISC Design Guide 1.
+     *
+     * The single shared implementation lives in [SteelBasePlateDesign] (housed in
+     * the `ecp` package but implemented to AISC 360-16 Ch.14 / DG1, also valid for
+     * ECP 205). This method exposes it through the AISC engine so `getSteelDesignEngine`
+     * returns a complete API for every code — intentionally a thin delegate, not a
+     * duplicated 1100-line port (see AUDIT_PACKAGE §9).
+     */
+    fun designConcentricBasePlate(
+        input: SteelBasePlateDesign.ConcentricInput
+    ): SteelBasePlateDesign.BasePlateResult {
+        InputGuard.notNull("input", input)
+        return SteelBasePlateDesign().designConcentricBasePlate(input)
     }
 
     // ===================== SECTION PROPERTY HELPERS =====================
