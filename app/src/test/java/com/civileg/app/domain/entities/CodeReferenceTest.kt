@@ -55,4 +55,36 @@ class CodeReferenceTest {
     fun `unknown key returns not-found sentinel`() {
         assertEquals("Reference not found", CodeReference.getReference(DesignCode.ECP, "DOES_NOT_EXIST"))
     }
+
+    /**
+     * SBC 304-2018 follows the ACI 318-14 chapter layout. These assertions pin the
+     * chapter pointers that were previously wrong (shear/foundations/development/
+     * cover/seismic referenced the wrong chapters), verified against the official
+     * SBC 304-2018 table of contents.
+     */
+    @Test
+    fun `SBC refs point at the correct ACI-318-14 aligned chapters`() {
+        assertTrue(
+            "beam shear is sectional shear (Ch.22.5)",
+            CodeReference.SBC.BEAM_SHEAR.contains("22.5")
+        )
+        assertTrue(
+            "development length is Ch.25",
+            CodeReference.SBC.BEAM_DEVELOPMENT_LENGTH.contains("25.")
+        )
+        assertTrue(
+            "footings are Ch.13 Foundations (not Ch.15 Joints)",
+            CodeReference.SBC.FOOTING_REINFORCEMENT.contains("13.") &&
+                CodeReference.SBC.PILE_CAPACITY.contains("13.") &&
+                CodeReference.SBC.COMBINED_FOOTING.contains("13.")
+        )
+        assertTrue(
+            "seismic is Ch.18",
+            CodeReference.SBC.SEISMIC_BASE_SHEAR.contains("18")
+        )
+        assertTrue(
+            "cover is Ch.20 (not Ch.7 one-way slabs)",
+            CodeReference.SBC.COLUMN_COVER.contains("20.")
+        )
+    }
 }

@@ -127,44 +127,49 @@ object CodeReference {
     }
     
     // === الكود السعودي SBC 304-2018 ===
+    // Chapter structure verified against the official SBC 304-2018 table of contents,
+    // which follows ACI 318-14: Ch.7 One-Way Slabs, Ch.8 Two-Way Slabs, Ch.9 Beams,
+    // Ch.10 Columns, Ch.11 Walls, Ch.12 Diaphragms, Ch.13 Foundations, Ch.15 Joints,
+    // Ch.18 Earthquake-Resistant Structures, Ch.22 Sectional Strength,
+    // Ch.24 Serviceability, Ch.25 Reinforcement Details.
     object SBC {
         // الأعمدة
         const val COLUMN_AXIAL = "SBC 304-2018: Section 10"
         const val COLUMN_REINFORCEMENT_MIN = "SBC 304-2018: Section 10.6.1 (ρmin = 1%)"
         const val COLUMN_REINFORCEMENT_MAX = "SBC 304-2018: Section 10.6.1 (ρmax = 8%)"
         const val COLUMN_TIES = "SBC 304-2018: Section 10.7.6"
-        const val COLUMN_COVER = "SBC 304-2018: Section 7.7 (Cover ≥ 40mm)"
+        const val COLUMN_COVER = "SBC 304-2018: Section 20.5.1 (Cover ≥ 40mm)"
         
         // الكمرات
-        const val BEAM_FLEXURE = "SBC 304-2018: Section 9"
-        const val BEAM_SHEAR = "SBC 304-2018: Section 11"
+        const val BEAM_FLEXURE = "SBC 304-2018: Section 9 / 22.2 (Flexure)"
+        const val BEAM_SHEAR = "SBC 304-2018: Section 22.5 (One-Way Shear)"
         const val BEAM_REINFORCEMENT_MIN = "SBC 304-2018: Section 9.6.1"
         const val BEAM_REINFORCEMENT_MAX = "SBC 304-2018: Section 9.3.3.1"
-        const val BEAM_DEVELOPMENT_LENGTH = "SBC 304-2018: Section 12"
+        const val BEAM_DEVELOPMENT_LENGTH = "SBC 304-2018: Section 25.4 (Development of Reinforcement)"
         const val BEAM_DOUBLY_REINFORCED = "SBC 304-2018: Section 9.3.3.2"
         
         // البلاطات
         const val SLAB_ONE_WAY = "SBC 304-2018: Chapter 7 (One-Way Slabs)"
-        const val SLAB_TWO_WAY = "SBC 304-2018: Section 8.4"
-        const val SLAB_DEFLECTION = "SBC 304-2018: Section 9.5"
+        const val SLAB_TWO_WAY = "SBC 304-2018: Chapter 8 (Two-Way Slabs)"
+        const val SLAB_DEFLECTION = "SBC 304-2018: Section 24.2 (Deflections)"
         
         // القواعد
-        const val FOOTING_BEARING = "SBC 304-2018: Section 15.2"
-        const val FOOTING_SHEAR_PUNCHING = "SBC 304-2018: Section 15.5"
-        const val FOOTING_REINFORCEMENT = "SBC 304-2018: Section 15.4"
+        const val FOOTING_BEARING = "SBC 304-2018: Section 13.3 / 22.8 (Bearing)"
+        const val FOOTING_SHEAR_PUNCHING = "SBC 304-2018: Section 22.6 (Two-Way Shear)"
+        const val FOOTING_REINFORCEMENT = "SBC 304-2018: Section 13.3 (Foundations)"
         
         // الزلازل
-        const val SEISMIC_BASE_SHEAR = "SBC 304-2018: Section 21"
-        const val SEISMIC_RESPONSE_SPECTRUM = "SBC 304-2018: Section 21.2"
+        const val SEISMIC_BASE_SHEAR = "SBC 304-2018: Section 18 (Earthquake-Resistant Structures)"
+        const val SEISMIC_RESPONSE_SPECTRUM = "SBC 304-2018: Section 18.2"
         
         // الحوائط (السند والقِص)
-        const val RW_LATERAL_EARTH = "SBC 304-2018: Section 13.2 (Walls)"
-        const val RW_STABILITY = "SBC 304-2018: Section 13.2.2 (Stability)"
+        const val RW_LATERAL_EARTH = "SBC 304-2018: Section 11.5 (Walls — Lateral Earth)"
+        const val RW_STABILITY = "SBC 304-2018: Section 11.5 (Wall Stability)"
         const val SW_SHEAR = "SBC 304-2018: Section 11.5 (Wall Shear)"
         
         // الأساسات الخازوقية والقواعد المشتركة
-        const val PILE_CAPACITY = "SBC 304-2018: Section 15.9 (Pile Caps)"
-        const val COMBINED_FOOTING = "SBC 304-2018: Section 15 (Combined Footings)"
+        const val PILE_CAPACITY = "SBC 304-2018: Section 13.3 (Pile Caps)"
+        const val COMBINED_FOOTING = "SBC 304-2018: Section 13.3 (Combined Footings)"
         
         // الخزانات
         const val TANK_HYDROSTATIC = "SBC 304-2018: Section 350 (Liquid-Containing Structures)"
@@ -182,8 +187,8 @@ object CodeReference {
         const val STEEL_BLOCK_SHEAR = "SBC 306-2018: Section J4.3 (Block Shear)"
         
         // الإطارات الخرسانية
-        const val FRAME_FLEXURE = "SBC 304-2018: Section 9 (Frame Members)"
-        const val FRAME_SHEAR = "SBC 304-2018: Section 11 (Frame Members)"
+        const val FRAME_FLEXURE = "SBC 304-2018: Section 9 / 22.2 (Frame Members)"
+        const val FRAME_SHEAR = "SBC 304-2018: Section 22.5 (Frame Members)"
     }
     
     // دالة مساعدة للحصول على المرجع حسب الكود
