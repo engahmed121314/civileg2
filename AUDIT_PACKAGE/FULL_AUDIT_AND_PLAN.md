@@ -158,7 +158,8 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 ### P0 — Correctness of numbers (blocks trust)
 1. **Unify code selection** to `domain.entities.DesignCode`; delete nested enum; route `SeismicScreen` (and any direct instantiation) through `CalculationFactory`. Use `fromDomain()` for labels.
 2. **Delegate `CalculatorEngine`** methods to domain engines so results are code-differentiated (today some are identical for all codes).
-3. **Verify clause numbers** in `CodeReference.kt` against real ECP/ACI/SBC text; add a unit test asserting each key resolves for each code.
+3. **Verify clause numbers** in `CodeReference.kt` against real ECP/ACI/SBC text; add a unit test asserting each key resolves for each code. *(resolution test done §9.6; SBC clause
+   chapters corrected §9.9; ECP 203-2020 sub-clause text still needs the licensed document.)*
 
 ### P1 — Drawing/PDF fidelity
 4. Wire `generateSeismicDrawing` fallback + `DrawingCaptureArea` in `SeismicScreen`. *(fallback done)*
@@ -169,9 +170,10 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 
 ### P2 — Coverage & robustness
 9. Add AISC connection & base-plate methods; guard `classifySection`. *(classifySection guarded §9.6;
-   AISC `calculateFilletWeldCapacity` + `calculateBoltShearCapacity` added §9.7; **base-plate port
-   deferred** — `ecp.SteelBasePlateDesign` already implements AISC 360-16 Ch.14 / DG1 and is the only
-   base-plate engine; duplicating 1100+ lines into ACI/SBC with no numeric change is unwarranted.)*
+   AISC `calculateFilletWeldCapacity` + `calculateBoltShearCapacity` added §9.7; **base-plate minimal
+   adapter done §9.9** — `AISCSteelDesignEngine.designConcentricBasePlate()` delegates to the single
+   shared `ecp.SteelBasePlateDesign` (AISC 360-16 Ch.14 / DG1), closing the AISC API gap without
+   duplicating 1100+ lines; parity guarded by `AISCBasePlateAdapterTest`.)*
 10. Add `AcidCombinedFooting`/`SbcCombinedFooting` doc-only note in UI (or dedicated classes).
 11. Migrate all ViewModels to `ExportManager`.
 12. Crash-hardening sweep for tools (SoilBearing, RebarTool, UnitConverter, SiteLayout, etc.).
@@ -187,7 +189,10 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
     *(§9.8: Kotlin 2.1.21 → **2.2.20** + KSP 2.1.21-2.0.1 → **2.2.20-2.0.4** removed `grpc-netty`/
     `netty-*`/`protobuf-java` from the KSP processor classpath entirely. Remaining `netty`/`grpc`/
     `protobuf` alerts now only appear in AGP's internal Unified Test Platform (`_internal-unified-test-platform-*`)
-    and Dagger's compiler classpaths — dev/test-infra only, not shipped; would need an AGP bump.)*
+    and Dagger's compiler classpaths — dev/test-infra only, not shipped; would need an AGP bump.)
+    *(§9.9: AGP 8.9.2 → **8.11.1** (max within KGP 2.2.20 support) refreshed these to patched
+    versions — `netty-*` 4.1.110.Final, `grpc-*` 1.69.1, `protobuf-java` 3.25.5. AGP 9.x would
+    clear any residual dev-only alerts but is a major migration — deferred.)*
 15. ProGuard / signing / versioning / store listing; manual PDF+DXF QA = 15 elements × 3 codes.
 
 ---
@@ -298,8 +303,31 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 - Full suite green: **60 suites / 1193 tests / 0 failures**.
 
 ### 9.7 Still open
-- `CodeReference` ECP 203-2020 and SBC sub-clause numbers: pass an automated "every key
-  resolves per code" test (planned), but authoritative sub-clause text still needed.
-- AISC connection & base-plate methods; warehouse-vs-simple-beam divergence.
+- `CodeReference` ECP 203-2020 sub-clause numbers: authoritative text still needed for the
+  Egyptian code (SBC verified — see §9.8).
+- warehouse-vs-simple-beam divergence.
 
-*(See git diff for exact lines.)*
+### 9.8 Deferred items completed (DesignCode unification round 2)
+
+- **Full `DesignCode` unification (P0-1, now complete)** — nested `CalculatorEngine.DesignCode`
+  deleted; all ≈49 referencing files migrated to `domain.entities.DesignCode`. Domain
+  `.displayName` deliberately kept English (it is persisted to the DB by `DesignRepository`).
+  UI labels preserved via new `displayNameAr` / `displayNameEn` / `localizedName` extensions in
+  `CalculatorEngine.kt`. Old domain↔nested `toDomain()`/`fromDomain()` conversions removed.
+- **AISC base-plate adapter (P2-9, complete)** — `AISCSteelDesignEngine.designConcentricBasePlate(
+  SteelBasePlateDesign.ConcentricInput)` added as a thin delegate to the single shared AISC 360-16
+  Ch.14 / DG1 implementation (`ecp.SteelBasePlateDesign`), giving `getSteelDesignEngine(...)` a
+  complete API for every code without duplicating ≈1100 lines. `AISCBasePlateAdapterTest` (2 tests)
+  pins delegate parity + positive plate output.
+- **CodeReference SBC clause numbers (P0-3, SBC verified)** — corrected against the official
+  SBC 304-2018 table of contents (follows ACI 318-14 chapter layout). Fixed wrong chapter pointers:
+  beam shear → 22.5, development length → 25.4, footings/pile caps/combined footings → 13.3
+  (not 15), column cover → 20.5.1 (not 7.7), seismic → 18 (not 21), slab deflection → 24.2.
+  `CodeReferenceTest` extended to 4 tests (adds a regression test pinning these chapters).
+- **Dependabot (P3-14, improved)** — AGP 8.9.2 → **8.11.1** (still within KGP 2.2.20 support).
+  Resolved tooling graph moves the previously-flagged artifacts to patched versions:
+  `netty-*` 4.1.93.Final → **4.1.110.Final**, `grpc-*` 1.57.2 → **1.69.1**,
+  `protobuf-java` 3.24.4 → **3.25.5**, plus the runtime `guava` 33.4.0-android constraint.
+  Remaining alerts, if any, are AGP-internal Unified Test Platform / Dagger compiler classpaths
+  (dev-only, not shipped).
+- Full suite green after all changes: **61 suites / 1196 tests / 0 failures**.
