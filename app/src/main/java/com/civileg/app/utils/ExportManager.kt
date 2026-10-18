@@ -147,7 +147,7 @@ class ExportManager(private val context: Context) {
         outputPath: String,
         onComplete: (File?) -> Unit
     ) {
-        val exporter = DxfExporter(context)
+        val exporter = DxfExporter()
         exporter.exportDxf(drawing, outputPath)?.let { file ->
             ExportUtils.openFile(context, file, "application/dxf")
             onComplete(file)
@@ -198,7 +198,7 @@ class ExportManager(private val context: Context) {
         )
 
         val dxfFile = drawing?.let {
-            DxfExporter(context).exportDxf(it, File(outputDir, "$baseName.dxf").absolutePath)
+            DxfExporter().exportDxf(it, File(outputDir, "$baseName.dxf").absolutePath)
         }
 
         if (openPdfOnComplete && pdfFile != null) {
@@ -322,7 +322,7 @@ data class ExportBundle(
  * Interface for objects that can be exported to DXF.
  * Implement this in your drawing data classes.
  */
-interface DxfDrawable {
+fun interface DxfDrawable {
     /**
      * Export this drawing to the given DxfExporter.
      */

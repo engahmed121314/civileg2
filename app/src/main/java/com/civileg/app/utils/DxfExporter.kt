@@ -1,6 +1,5 @@
 package com.civileg.app.utils
 
-import android.content.Context
 import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
@@ -14,7 +13,7 @@ import java.io.FileOutputStream
  * ADR-004: DXF canonical line = detailing/V7 (DxfWriter AC1027 + DrawingValidator + CalculatorCadExporterV7)
  * ADR-009: English ONLY in DXF exports.
  */
-class DxfExporter(private val context: Context) {
+class DxfExporter {
 
     companion object {
         private const val TAG = "DxfExporter"
@@ -32,7 +31,10 @@ class DxfExporter(private val context: Context) {
      * @return File if successful, null otherwise
      */
     fun exportDxf(drawing: DxfDrawable, outputPath: String): File? {
-        val sb = StringBuilder()
+        // Reset the shared entity buffer. The entity primitives (addLine*, addCircle,
+        // addPolyline, ...) append to the field `sb`; shadowing it here would drop every
+        // entity and emit an empty ENTITIES section.
+        sb.setLength(0)
         currentLayer = "0"
 
         // Header
@@ -55,11 +57,25 @@ class DxfExporter(private val context: Context) {
             FileOutputStream(file).use { out ->
                 out.write(sb.toString().toByteArray())
             }
-            File(outputPath)
+            file
         } catch (e: Exception) {
             Log.e(TAG, "DXF export failed: ${e.message}", e)
             null
         }
+    }
+
+    /** Serialize a [DxfDrawable] to a DXF string (no file I/O). Useful for tests/validation. */
+    fun renderToString(drawing: DxfDrawable): String {
+        sb.setLength(0)
+        currentLayer = "0"
+        writeHeader(sb)
+        writeLayers(sb)
+        writeBlocks(sb)
+        sb.append("0\nSECTION\n2\nENTITIES\n")
+        drawing.exportToDxf(this)
+        sb.append("0\nENDSEC\n")
+        sb.append("0\nEOF\n")
+        return sb.toString()
     }
 
     // ───────────────────────────────────────────────────────────────────────────

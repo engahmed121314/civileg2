@@ -100,7 +100,7 @@ fun SiteLayoutScreen() {
                 onClick = {
                     try {
                         siteError = null
-                        val dxfExporter = DxfExporter(context)
+                        val dxfExporter = DxfExporter()
                         val file = dxfExporter.exportSiteLayout(
                             columns,
                             plotWidth.toDoubleOrNull() ?: 20.0,
