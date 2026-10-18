@@ -253,6 +253,22 @@ class BeamViewModel @Inject constructor(
                     outputPath = file.absolutePath
                 )
 
+                generated?.let { pdf ->
+                    com.civileg.app.utils.DxfExporter.writeSibling(
+                        pdf,
+                        com.civileg.app.utils.ElementDxfDrawings.beamSection(
+                            title = "BEAM ${lastSupportType.displayName}",
+                            widthMm = res.width.toDouble(),
+                            depthMm = res.depth.toDouble(),
+                            coverMm = 50.0,
+                            mainBarDiaMm = res.reinforcementBottom.diameter.toDouble(),
+                            mainBarCount = res.reinforcementBottom.numBars,
+                            stirrupDiaMm = res.stirrups.diameter.toDouble(),
+                            stirrupSpacingMm = res.stirrups.spacing.toDouble()
+                        )
+                    )
+                }
+
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)

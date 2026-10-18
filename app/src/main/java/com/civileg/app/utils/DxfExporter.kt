@@ -18,6 +18,18 @@ class DxfExporter {
     companion object {
         private const val TAG = "DxfExporter"
         private const val DXF_VERSION = "AC1027" // AutoCAD 2013 / R2007
+
+        /**
+         * Write a DXF companion (`<pdfName>.dxf`) next to [pdfFile].
+         * Best-effort: returns the DXF file, or null if writing failed.
+         */
+        fun writeSibling(pdfFile: File, drawing: DxfDrawable): File? = try {
+            val dxf = File(pdfFile.parentFile, pdfFile.nameWithoutExtension + ".dxf")
+            DxfExporter().exportDxf(drawing, dxf.absolutePath)
+        } catch (e: Exception) {
+            Log.e(TAG, "DXF companion export failed: ${e.message}", e)
+            null
+        }
     }
 
     private val sb = StringBuilder()

@@ -320,6 +320,47 @@ class CombinedFootingViewModel @Inject constructor(
                     outputPath = file.absolutePath
                 )
 
+                generated?.let { pdf ->
+                    val eR = ecpRes
+                    val fR = footingRes
+                    val distMm = state.distanceBetweenColumns.toDoubleOrNull() ?: 5000.0
+                    val colWidthMm = state.col1Width.toDoubleOrNull() ?: 400.0
+                    var lengthMm = 0.0
+                    var thicknessMm = 0.0
+                    var barDiaMm = 16.0
+                    var barSpacingMm = 150.0
+                    var hasData = false
+                    if (eR != null) {
+                        lengthMm = eR.footingLength * 1000.0
+                        thicknessMm = eR.footingThickness
+                        val nums = Regex("\\d+").findAll(eR.longBottomBars).map { it.value.toInt() }.toList()
+                        barDiaMm = nums.getOrNull(1)?.toDouble() ?: 16.0
+                        hasData = true
+                    } else if (fR != null) {
+                        lengthMm = fR.requiredLength
+                        thicknessMm = fR.requiredThickness
+                        barDiaMm = fR.reinforcement.barDiameter
+                        barSpacingMm = fR.reinforcement.spacing.takeIf { it > 0 } ?: 150.0
+                        hasData = true
+                    }
+                    if (hasData) {
+                        val centerMm = lengthMm / 2.0
+                        com.civileg.app.utils.DxfExporter.writeSibling(
+                            pdf,
+                            com.civileg.app.utils.ElementDxfDrawings.combinedFootingSection(
+                                title = "COMBINED FOOTING",
+                                lengthMm = lengthMm,
+                                thicknessMm = thicknessMm,
+                                coverMm = 50.0,
+                                barDiaMm = barDiaMm,
+                                barSpacingMm = barSpacingMm,
+                                columnWidthMm = colWidthMm,
+                                columnPositionsMm = listOf(centerMm - distMm / 2.0, centerMm + distMm / 2.0)
+                            )
+                        )
+                    }
+                }
+
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false) }
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

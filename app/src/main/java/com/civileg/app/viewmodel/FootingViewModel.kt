@@ -205,6 +205,21 @@ class FootingViewModel @Inject constructor(
                     outputPath = file.absolutePath
                 )
 
+                generated?.let { pdf ->
+                    com.civileg.app.utils.DxfExporter.writeSibling(
+                        pdf,
+                        com.civileg.app.utils.ElementDxfDrawings.footingSection(
+                            title = "FOOTING ${res.type.displayName}",
+                            widthMm = res.width.toDouble(),
+                            thicknessMm = res.thickness.toDouble(),
+                            coverMm = 70.0,
+                            barDiaMm = res.barDiameter.toDouble(),
+                            barSpacingMm = res.reinforcementBottom.spacing.toDouble(),
+                            columnWidthMm = res.column1Size.first.toDouble()
+                        )
+                    )
+                }
+
                 withContext(Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)

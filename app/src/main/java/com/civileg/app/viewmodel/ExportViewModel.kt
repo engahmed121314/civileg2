@@ -383,12 +383,7 @@ class ExportViewModel @Inject constructor(
      * can be opened in CAD. Best-effort: a DXF failure never fails the PDF export.
      */
     private fun writeDxfSibling(pdfFile: File, drawing: DxfDrawable) {
-        try {
-            val dxfFile = File(pdfFile.parentFile, pdfFile.nameWithoutExtension + ".dxf")
-            DxfExporter().exportDxf(drawing, dxfFile.absolutePath)
-        } catch (_: Exception) {
-            // ignore — DXF is a bonus artifact
-        }
+        DxfExporter.writeSibling(pdfFile, drawing)
     }
 
     // ========== Bitmap Generation Helpers ==========

@@ -176,6 +176,21 @@ class TankViewModel @Inject constructor(
                     outputPath = file.absolutePath
                 )
 
+                generated?.let { pdf ->
+                    com.civileg.app.utils.DxfExporter.writeSibling(
+                        pdf,
+                        com.civileg.app.utils.ElementDxfDrawings.tankSection(
+                            title = "TANK ${res.type.displayName}",
+                            widthMm = res.width * 1000.0,
+                            heightMm = res.height * 1000.0,
+                            wallThicknessMm = res.wallThickness,
+                            coverMm = 40.0,
+                            barDiaMm = res.wallReinforcement.diameter.toDouble(),
+                            barSpacingMm = res.wallReinforcement.spacing.toDouble()
+                        )
+                    )
+                }
+
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)

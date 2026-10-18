@@ -258,6 +258,22 @@ class PileFoundationViewModel @Inject constructor(
                     outputPath = file.absolutePath
                 )
 
+                generated?.let { pdf ->
+                    com.civileg.app.utils.DxfExporter.writeSibling(
+                        pdf,
+                        com.civileg.app.utils.ElementDxfDrawings.pileElevation(
+                            title = "PILE ${res.pileType}",
+                            lengthMm = res.pileLengthM * 1000.0,
+                            diameterMm = res.pileDiameterMm,
+                            coverMm = 75.0,
+                            mainBarDiaMm = reinf.longitudinalDiameter.toDouble(),
+                            mainBarCount = reinf.longitudinalBars,
+                            tieDiaMm = reinf.tiesDiameter.toDouble(),
+                            tieSpacingMm = reinf.tiesSpacing.toDouble()
+                        )
+                    )
+                }
+
                 withContext(Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)

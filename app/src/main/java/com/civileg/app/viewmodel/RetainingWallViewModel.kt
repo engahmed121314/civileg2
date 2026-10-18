@@ -179,7 +179,7 @@ class RetainingWallViewModel @Inject constructor(
                     }
 
                     // Professional English PDF Report — English only, no Arabic encoding issues
-                    com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
                         titleAr = "تقرير تصميم حائط ساند",
                         titleEn = "Retaining Wall Design Report",
                         subtitle = "Code: $codeName  •  H=${currentResult.height}m",
@@ -191,6 +191,22 @@ class RetainingWallViewModel @Inject constructor(
                         drawingBitmap = drawingBitmap,
                         outputPath = file.absolutePath
                     )
+                    generated?.let { pdf ->
+                        com.civileg.app.utils.DxfExporter.writeSibling(
+                            pdf,
+                            com.civileg.app.utils.ElementDxfDrawings.retainingWallSection(
+                                title = "RETAINING WALL",
+                                baseWidthMm = currentResult.baseWidth,
+                                baseThicknessMm = currentResult.stemThickness * 1.2,
+                                stemHeightMm = currentResult.height * 1000.0,
+                                stemThicknessMm = currentResult.stemThickness,
+                                coverMm = 50.0,
+                                barDiaMm = currentResult.stemReinforcement.diameter.toDouble(),
+                                barSpacingMm = currentResult.stemReinforcement.spacing.toDouble()
+                            )
+                        )
+                    }
+                    generated
                 }
                 exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                 onComplete(exportedFile)

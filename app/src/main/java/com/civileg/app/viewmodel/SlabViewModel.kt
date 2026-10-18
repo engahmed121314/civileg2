@@ -240,6 +240,20 @@ class SlabViewModel @Inject constructor(
                     outputPath = file.absolutePath
                 )
 
+                generated?.let { pdf ->
+                    com.civileg.app.utils.DxfExporter.writeSibling(
+                        pdf,
+                        com.civileg.app.utils.ElementDxfDrawings.slabSection(
+                            title = "SLAB ${inputs.type.displayName}",
+                            spanMm = inputs.lx * 1000.0,
+                            thicknessMm = res.thickness.toDouble(),
+                            coverMm = 25.0,
+                            mainBarDiaMm = res.reinforcementMain.diameter.toDouble(),
+                            mainSpacingMm = res.reinforcementMain.spacing.toDouble()
+                        )
+                    )
+                }
+
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)

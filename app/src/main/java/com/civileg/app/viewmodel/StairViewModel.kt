@@ -180,7 +180,7 @@ class StairViewModel @Inject constructor(
                     }
 
                     // Professional English PDF Report — English only, no Arabic encoding issues
-                    com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                    val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
                         titleAr = "تقرير تصميم سلم - ${currentResult.type.displayName}",
                         titleEn = "Stair Design Report — ${currentResult.type.displayName}",
                         subtitle = "Code: $codeName  •  Span=${currentResult.span}m",
@@ -192,6 +192,22 @@ class StairViewModel @Inject constructor(
                         drawingBitmap = drawingBitmap,
                         outputPath = file.absolutePath
                     )
+                    generated?.let { pdf ->
+                        com.civileg.app.utils.DxfExporter.writeSibling(
+                            pdf,
+                            com.civileg.app.utils.ElementDxfDrawings.stairSection(
+                                title = "STAIR ${currentResult.type.displayName}",
+                                runMm = nRisers.toDouble() * currentResult.tread,
+                                riseMm = currentResult.riser,
+                                steps = nRisers,
+                                waistThicknessMm = currentResult.thickness,
+                                coverMm = pdfCover,
+                                barDiaMm = currentResult.reinforcement.diameter.toDouble(),
+                                barSpacingMm = currentResult.reinforcement.spacing
+                            )
+                        )
+                    }
+                    generated
                 }
                 exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                 onComplete(exportedFile)

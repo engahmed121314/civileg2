@@ -334,6 +334,22 @@ class ColumnViewModel @Inject constructor(
                     outputPath = file.absolutePath
                 )
 
+                generated?.let { pdf ->
+                    com.civileg.app.utils.DxfExporter.writeSibling(
+                        pdf,
+                        com.civileg.app.utils.ElementDxfDrawings.columnSection(
+                            title = "COLUMN ${res.columnType}",
+                            widthMm = res.width.toDouble(),
+                            depthMm = res.depth.toDouble(),
+                            coverMm = 40.0,
+                            mainBarDiaMm = res.reinforcement.diameter.toDouble(),
+                            mainBarCount = res.reinforcement.numBars,
+                            tieDiaMm = res.stirrups.diameter.toDouble(),
+                            tieSpacingMm = res.stirrups.spacing.toDouble()
+                        )
+                    )
+                }
+
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false) }
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
