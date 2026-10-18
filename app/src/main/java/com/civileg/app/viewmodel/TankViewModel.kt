@@ -163,7 +163,7 @@ class TankViewModel @Inject constructor(
                 }
 
                 // Professional English PDF Report — English only, no Arabic encoding issues
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم خزان - ${res.type.displayName}",
                     titleEn = "Tank Design Report — ${res.type.displayName}",
                     subtitle = "Code: $codeName  •  ${res.length}×${res.width}×${res.height}m",
@@ -173,23 +173,17 @@ class TankViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.tankSection(
+                        title = "TANK ${res.type.displayName}",
+                        widthMm = res.width * 1000.0,
+                        heightMm = res.height * 1000.0,
+                        wallThicknessMm = res.wallThickness,
+                        coverMm = 40.0,
+                        barDiaMm = res.wallReinforcement.diameter.toDouble(),
+                        barSpacingMm = res.wallReinforcement.spacing.toDouble()
+                    ),
                     outputPath = file.absolutePath
-                )
-
-                generated?.let { pdf ->
-                    com.civileg.app.utils.DxfExporter.writeSibling(
-                        pdf,
-                        com.civileg.app.utils.ElementDxfDrawings.tankSection(
-                            title = "TANK ${res.type.displayName}",
-                            widthMm = res.width * 1000.0,
-                            heightMm = res.height * 1000.0,
-                            wallThicknessMm = res.wallThickness,
-                            coverMm = 40.0,
-                            barDiaMm = res.wallReinforcement.diameter.toDouble(),
-                            barSpacingMm = res.wallReinforcement.spacing.toDouble()
-                        )
-                    )
-                }
+                ).pdfFile
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

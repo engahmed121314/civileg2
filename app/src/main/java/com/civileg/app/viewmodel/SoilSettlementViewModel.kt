@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.core.engineering.SettlementAnalysisEngine
 import com.civileg.app.utils.ExportUtils
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -96,7 +95,7 @@ class SoilSettlementViewModel @Inject constructor() : ViewModel() {
                     )
                 )
                 
-                val exported = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val exported = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تحليل الهبوط",
                     titleEn = "Soil Settlement Analysis Report",
                     subtitle = "Footing: ${inputs.width}x${inputs.length} m",
@@ -107,7 +106,7 @@ class SoilSettlementViewModel @Inject constructor() : ViewModel() {
                     isSafe = res.isSafe,
                     drawingBitmap = null,
                     outputPath = file.absolutePath
-                )
+                ).pdfFile
 
                 withContext(Dispatchers.Main) {
                     exported?.let { ExportUtils.openPdf(context, it) }

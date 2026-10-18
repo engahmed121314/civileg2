@@ -177,30 +177,25 @@ class FlatSlabViewModel @Inject constructor(
                     )
                 }
 
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم بلاطة مسطحة",
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "????? ????? ????? ?????",
                     titleEn = "Flat Slab Design Report",
-                    subtitle = "${input.panelType.displayName} — ${input.designMethod.displayName}",
+                    subtitle = "${input.panelType.displayName} - ${input.designMethod.displayName}",
                     designType = input.panelType.displayName,
                     inputs = inputsMap, results = resultsMap,
                     safetyChecks = safetyChecks, isSafe = res.isSafe,
-                    drawingBitmap = pendingDrawingBitmap, outputPath = file.absolutePath
-                )
+                    drawingBitmap = pendingDrawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
+                        title = "FLAT SLAB ${input.panelType.displayName}",
+                        spanMm = input.lx,
+                        thicknessMm = input.slabThickness,
+                        coverMm = 25.0,
+                        mainBarDiaMm = res.columnStripBotRebar.diameter.toDouble(),
+                        mainSpacingMm = res.columnStripBotRebar.spacing.toDouble()
+                    ),
+                    outputPath = file.absolutePath
+                ).pdfFile
                 pendingDrawingBitmap = null  // consume after use
-
-                generated?.let { pdf ->
-                    com.civileg.app.utils.DxfExporter.writeSibling(
-                        pdf,
-                        com.civileg.app.utils.ElementDxfDrawings.slabSection(
-                            title = "FLAT SLAB ${input.panelType.displayName}",
-                            spanMm = input.lx,
-                            thicknessMm = input.slabThickness,
-                            coverMm = 25.0,
-                            mainBarDiaMm = res.columnStripBotRebar.diameter.toDouble(),
-                            mainSpacingMm = res.columnStripBotRebar.spacing.toDouble()
-                        )
-                    )
-                }
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

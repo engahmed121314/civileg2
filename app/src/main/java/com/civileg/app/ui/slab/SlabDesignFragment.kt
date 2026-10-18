@@ -19,7 +19,6 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.SlabType
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.SettingsManager
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.views.SlabDetailView
@@ -171,7 +170,7 @@ class SlabDesignFragment : Fragment() {
             )
             val safetyChecks = emptyList<GenericSafetyCheck>()
 
-            val exportedPath = ProfessionalEnglishPdfReporter.generateReportLegacy(
+            val exportedPath = com.civileg.app.utils.ExportManager(requireContext()).exportReportAndDxf(
                 titleAr = "تقرير تصميم بلاطة",
                 titleEn = "Slab Design Report",
                 subtitle = "Code: $codeLabel  •  t=${result.thickness}mm",
@@ -182,7 +181,7 @@ class SlabDesignFragment : Fragment() {
                 isSafe = result.isSafe,
                 drawingBitmap = null,
                 outputPath = filePath
-            )
+            ).pdfFile
 
             if (exportedPath != null) {
                 Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()

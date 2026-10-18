@@ -227,32 +227,26 @@ class SlabViewModel @Inject constructor(
                     )
                 }
 
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم بلاطة - ${inputs.type.displayName}",
-                    titleEn = "Slab Design Report — ${inputs.type.displayName}",
-                    subtitle = "Code: $codeName  •  Lx=${inputs.lx}m, Ly=${inputs.ly}m",
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "????? ????? ????? - ${inputs.type.displayName}",
+                    titleEn = "Slab Design Report - ${inputs.type.displayName}",
+                    subtitle = "Code: $codeName    Lx=${inputs.lx}m, Ly=${inputs.ly}m",
                     designType = inputs.type.displayName,
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
+                        title = "SLAB ${inputs.type.displayName}",
+                        spanMm = inputs.lx * 1000.0,
+                        thicknessMm = res.thickness.toDouble(),
+                        coverMm = 25.0,
+                        mainBarDiaMm = res.reinforcementMain.diameter.toDouble(),
+                        mainSpacingMm = res.reinforcementMain.spacing.toDouble()
+                    ),
                     outputPath = file.absolutePath
-                )
-
-                generated?.let { pdf ->
-                    com.civileg.app.utils.DxfExporter.writeSibling(
-                        pdf,
-                        com.civileg.app.utils.ElementDxfDrawings.slabSection(
-                            title = "SLAB ${inputs.type.displayName}",
-                            spanMm = inputs.lx * 1000.0,
-                            thicknessMm = res.thickness.toDouble(),
-                            coverMm = 25.0,
-                            mainBarDiaMm = res.reinforcementMain.diameter.toDouble(),
-                            mainSpacingMm = res.reinforcementMain.spacing.toDouble()
-                        )
-                    )
-                }
+                ).pdfFile
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

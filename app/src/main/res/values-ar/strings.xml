@@ -71,6 +71,7 @@
     <string name="calculate">تحليل وحساب</string>
     <string name="reset">مسح المدخلات</string>
     <string name="export_pdf">تصدير تقرير التصميم (PDF)</string>
+    <string name="export_dxf_created">تم حفظ مخطط DXF: %1$s</string>
     <string name="save_to_project">حفظ في خزنة المشاريع</string>
     <string name="save_design">حفظ التصميم</string>
     <string name="add_to_boq">إضافة لقائمة الكميات</string>

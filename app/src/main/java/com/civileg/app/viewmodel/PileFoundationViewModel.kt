@@ -245,7 +245,7 @@ class PileFoundationViewModel @Inject constructor(
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
 
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم خوازيق",
                     titleEn = "Pile Foundation Design Report",
                     subtitle = "${res.pileType} | Ø${res.pileDiameterMm.toInt()}×${res.pileLengthM}m | ${res.numberOfPiles} piles",
@@ -255,24 +255,18 @@ class PileFoundationViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.pileElevation(
+                        title = "PILE ${res.pileType}",
+                        lengthMm = res.pileLengthM * 1000.0,
+                        diameterMm = res.pileDiameterMm,
+                        coverMm = 75.0,
+                        mainBarDiaMm = reinf.longitudinalDiameter.toDouble(),
+                        mainBarCount = reinf.longitudinalBars,
+                        tieDiaMm = reinf.tiesDiameter.toDouble(),
+                        tieSpacingMm = reinf.tiesSpacing.toDouble()
+                    ),
                     outputPath = file.absolutePath
-                )
-
-                generated?.let { pdf ->
-                    com.civileg.app.utils.DxfExporter.writeSibling(
-                        pdf,
-                        com.civileg.app.utils.ElementDxfDrawings.pileElevation(
-                            title = "PILE ${res.pileType}",
-                            lengthMm = res.pileLengthM * 1000.0,
-                            diameterMm = res.pileDiameterMm,
-                            coverMm = 75.0,
-                            mainBarDiaMm = reinf.longitudinalDiameter.toDouble(),
-                            mainBarCount = reinf.longitudinalBars,
-                            tieDiaMm = reinf.tiesDiameter.toDouble(),
-                            tieSpacingMm = reinf.tiesSpacing.toDouble()
-                        )
-                    )
-                }
+                ).pdfFile
 
                 withContext(Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

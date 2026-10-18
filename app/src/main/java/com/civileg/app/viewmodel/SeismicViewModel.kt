@@ -12,7 +12,6 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -211,7 +210,7 @@ class SeismicViewModel @Inject constructor(
                     DesignCode.ACI -> "ASCE 7 / IBC"
                     DesignCode.SBC -> "SBC 301"
                 }
-                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم أحمال زلزالية",
                     titleEn = "Seismic Design Report",
                     subtitle = "Code: $codeName  •  Zone: ${state.seismicZone}",
@@ -222,7 +221,7 @@ class SeismicViewModel @Inject constructor(
                     isSafe = true,
                     drawingBitmap = drawingBitmap,
                     outputPath = file.absolutePath
-                )
+                ).pdfFile
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false) }

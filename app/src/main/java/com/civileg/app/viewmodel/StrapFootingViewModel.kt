@@ -12,7 +12,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import android.graphics.Bitmap
 import java.io.File
@@ -118,7 +117,7 @@ class StrapFootingViewModel @Inject constructor(
                     "Is Safe" to if (res.isSafe) "YES" else "NO"
                 )
                 val safetyChecks = res.safetyChecks.map { GenericSafetyCheck(it.name, it.value, it.limit, it.unit, it.isSafe) }
-                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم قاعدة شريطية",
                     titleEn = "Strap Footing Design Report",
                     subtitle = "Code: $codeName",
@@ -129,7 +128,7 @@ class StrapFootingViewModel @Inject constructor(
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
                     outputPath = file.absolutePath
-                )
+                ).pdfFile
                 onComplete(generated)
             } catch (e: Exception) {
                 onComplete(null)

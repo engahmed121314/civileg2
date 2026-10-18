@@ -240,34 +240,28 @@ class BeamViewModel @Inject constructor(
                 }
 
                 // Professional English PDF Report — English only, no Arabic encoding issues
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم كمرات - ${lastSupportType.displayName}",
-                    titleEn = "Beam Design Report — ${lastSupportType.displayName}",
-                    subtitle = "Code: $codeName  •  Span=${lastSpan}m, ${res.width}×${res.depth}mm",
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "????? ????? ????? - ${lastSupportType.displayName}",
+                    titleEn = "Beam Design Report - ${lastSupportType.displayName}",
+                    subtitle = "Code: $codeName    Span=${lastSpan}m, ${res.width}x${res.depth}mm",
                     designType = "Beam (${lastSupportType.displayName})",
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.beamSection(
+                        title = "BEAM ${lastSupportType.displayName}",
+                        widthMm = res.width.toDouble(),
+                        depthMm = res.depth.toDouble(),
+                        coverMm = 50.0,
+                        mainBarDiaMm = res.reinforcementBottom.diameter.toDouble(),
+                        mainBarCount = res.reinforcementBottom.numBars,
+                        stirrupDiaMm = res.stirrups.diameter.toDouble(),
+                        stirrupSpacingMm = res.stirrups.spacing.toDouble()
+                    ),
                     outputPath = file.absolutePath
-                )
-
-                generated?.let { pdf ->
-                    com.civileg.app.utils.DxfExporter.writeSibling(
-                        pdf,
-                        com.civileg.app.utils.ElementDxfDrawings.beamSection(
-                            title = "BEAM ${lastSupportType.displayName}",
-                            widthMm = res.width.toDouble(),
-                            depthMm = res.depth.toDouble(),
-                            coverMm = 50.0,
-                            mainBarDiaMm = res.reinforcementBottom.diameter.toDouble(),
-                            mainBarCount = res.reinforcementBottom.numBars,
-                            stirrupDiaMm = res.stirrups.diameter.toDouble(),
-                            stirrupSpacingMm = res.stirrups.spacing.toDouble()
-                        )
-                    )
-                }
+                ).pdfFile
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

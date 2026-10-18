@@ -12,7 +12,6 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -179,33 +178,26 @@ class WaffleSlabViewModel @Inject constructor(
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = input.designCode.displayName
-                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم بلاطة وا فل",
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "????? ????? ????? ?? ??",
                     titleEn = "Waffle Slab Design Report",
-                    subtitle = "Code: $codeName  •  Lx=${input.lx/1000.0}m × Ly=${input.ly/1000.0}m",
+                    subtitle = "Code: $codeName    Lx=${input.lx/1000.0}m x Ly=${input.ly/1000.0}m",
                     designType = "Waffle Slab",
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
+                        title = "WAFFLE SLAB",
+                        spanMm = input.lx,
+                        thicknessMm = input.ribHeight + input.toppingThickness,
+                        coverMm = input.clearCover,
+                        mainBarDiaMm = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 12.0,
+                        mainSpacingMm = res.ribDesign?.flexureReinforcement?.spacing?.toDouble() ?: 150.0
+                    ),
                     outputPath = file.absolutePath
-                )
-
-                generated?.let { pdf ->
-                    val rib = res.ribDesign
-                    com.civileg.app.utils.DxfExporter.writeSibling(
-                        pdf,
-                        com.civileg.app.utils.ElementDxfDrawings.slabSection(
-                            title = "WAFFLE SLAB",
-                            spanMm = input.lx,
-                            thicknessMm = input.ribHeight + input.toppingThickness,
-                            coverMm = input.clearCover,
-                            mainBarDiaMm = rib?.flexureReinforcement?.diameter?.toDouble() ?: 12.0,
-                            mainSpacingMm = rib?.flexureReinforcement?.spacing?.toDouble() ?: 150.0
-                        )
-                    )
-                }
+                ).pdfFile
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

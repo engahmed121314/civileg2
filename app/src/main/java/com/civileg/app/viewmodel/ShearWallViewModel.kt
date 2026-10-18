@@ -276,7 +276,7 @@ class ShearWallViewModel @Inject constructor(
                     )
                 }
 
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم حائط قص",
                     titleEn = "Shear Wall Design Report",
                     subtitle = "${state.wallType.displayName} — ${state.designCode}",
@@ -286,25 +286,19 @@ class ShearWallViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = pendingDrawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.wallElevation(
+                        title = "SHEAR WALL ${state.wallType.displayName}",
+                        widthMm = state.wallLength.toDoubleOrNull() ?: 3000.0,
+                        heightMm = (state.storyHeight.toDoubleOrNull() ?: 3.0) * 1000.0,
+                        coverMm = 40.0,
+                        verticalBarDiaMm = res.verticalReinforcement.diameter.toDouble(),
+                        verticalSpacingMm = res.verticalReinforcement.spacing.toDouble(),
+                        horizontalBarDiaMm = res.horizontalReinforcement.diameter.toDouble(),
+                        horizontalSpacingMm = res.horizontalReinforcement.spacing.toDouble()
+                    ),
                     outputPath = file.absolutePath
-                )
+                ).pdfFile
                 pendingDrawingBitmap = null  // consume after use
-
-                generated?.let { pdf ->
-                    com.civileg.app.utils.DxfExporter.writeSibling(
-                        pdf,
-                        com.civileg.app.utils.ElementDxfDrawings.wallElevation(
-                            title = "SHEAR WALL ${state.wallType.displayName}",
-                            widthMm = state.wallLength.toDoubleOrNull() ?: 3000.0,
-                            heightMm = (state.storyHeight.toDoubleOrNull() ?: 3.0) * 1000.0,
-                            coverMm = 40.0,
-                            verticalBarDiaMm = res.verticalReinforcement.diameter.toDouble(),
-                            verticalSpacingMm = res.verticalReinforcement.spacing.toDouble(),
-                            horizontalBarDiaMm = res.horizontalReinforcement.diameter.toDouble(),
-                            horizontalSpacingMm = res.horizontalReinforcement.spacing.toDouble()
-                        )
-                    )
-                }
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false) }

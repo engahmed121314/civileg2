@@ -18,7 +18,6 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ContinuousBeamAnalysis
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.SettingsManager
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.views.BeamSectionView
 import com.civileg.app.viewmodel.ProjectViewModel
@@ -334,7 +333,7 @@ class BeamDesignFragment : Fragment() {
                 GenericSafetyCheck("Deflection", result.deflection, result.allowableDeflection, "mm", result.deflection <= result.allowableDeflection)
             )
 
-            val exportedPath = ProfessionalEnglishPdfReporter.generateReportLegacy(
+            val exportedPath = com.civileg.app.utils.ExportManager(requireContext()).exportReportAndDxf(
                 titleAr = "تقرير تصميم كمرة",
                 titleEn = "Beam Design Report",
                 subtitle = "Code: $codeLabel  •  ${result.width}×${result.depth} mm",
@@ -345,7 +344,7 @@ class BeamDesignFragment : Fragment() {
                 isSafe = result.isSafe,
                 drawingBitmap = null,
                 outputPath = filePath
-            )
+            ).pdfFile
 
             if (exportedPath != null) {
                 Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()

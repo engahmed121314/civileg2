@@ -14,7 +14,6 @@ import com.civileg.app.domain.entities.SlabDesignResult
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -157,32 +156,26 @@ class HordiSlabViewModel @Inject constructor(
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = params.designCode
-                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم بلاطة هوردي",
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "????? ????? ????? ?????",
                     titleEn = "Hordi Slab Design Report",
-                    subtitle = "Code: $codeName  •  Span=${params.span/1000.0}m",
+                    subtitle = "Code: $codeName    Span=${params.span/1000.0}m",
                     designType = "Hordi Slab",
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
+                        title = "HORDI SLAB",
+                        spanMm = params.span,
+                        thicknessMm = params.totalThickness,
+                        coverMm = 25.0,
+                        mainBarDiaMm = res.barDiameter.toDouble(),
+                        mainSpacingMm = res.barSpacing.toDouble()
+                    ),
                     outputPath = file.absolutePath
-                )
-
-                generated?.let { pdf ->
-                    com.civileg.app.utils.DxfExporter.writeSibling(
-                        pdf,
-                        com.civileg.app.utils.ElementDxfDrawings.slabSection(
-                            title = "HORDI SLAB",
-                            spanMm = params.span,
-                            thicknessMm = params.totalThickness,
-                            coverMm = 25.0,
-                            mainBarDiaMm = res.barDiameter.toDouble(),
-                            mainSpacingMm = res.barSpacing.toDouble()
-                        )
-                    )
-                }
+                ).pdfFile
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

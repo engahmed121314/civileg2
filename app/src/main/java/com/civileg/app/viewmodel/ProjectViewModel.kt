@@ -20,7 +20,6 @@ import javax.inject.Inject
 import com.civileg.app.data.ProjectSyncManager
 import androidx.lifecycle.MutableLiveData
 import com.civileg.app.utils.ExportUtils
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -149,7 +148,7 @@ class ProjectViewModel @Inject constructor(
                     "Safe Designs" to "${designsList.count { it.isSafe }}"
                 )
                 val safetyChecks = emptyList<GenericSafetyCheck>()
-                val exported = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val exported = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير ملخص المشروع",
                     titleEn = "Project Summary Report",
                     subtitle = "Project: $projectName",
@@ -160,7 +159,7 @@ class ProjectViewModel @Inject constructor(
                     isSafe = designsList.all { it.isSafe },
                     drawingBitmap = null,
                     outputPath = file.absolutePath
-                )
+                ).pdfFile
 
                 withContext(Dispatchers.Main) {
                     exported?.let { ExportUtils.openPdf(context, it) }

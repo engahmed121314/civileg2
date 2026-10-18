@@ -3,7 +3,9 @@ package com.civileg.app.utils
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
+import com.civileg.app.R
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.utils.DxfExporter
 import com.civileg.app.utils.NativePdfExporter
@@ -205,6 +207,78 @@ class ExportManager(private val context: Context) {
             ExportUtils.openFile(context, pdfFile, "application/pdf")
         }
         return ExportBundle(pdfFile = pdfFile, dxfFile = dxfFile)
+    }
+
+    /**
+     * Export a design report to BOTH PDF and DXF in one call, using the
+     * professional English reporter for the PDF (the path all element screens use).
+     *
+     * This is the single migration target for ViewModels that previously called
+     * `ProfessionalEnglishPdfReporter.generateReportLegacy(...)` and then wrote a
+     * DXF companion by hand (P2-11).
+     *
+     * The PDF is EN-only (ADR-005/009); the DXF is AC1027/EN-only (ADR-004/009).
+     * A DXF failure never fails the PDF — [ExportBundle.dxfFile] is simply null.
+     * When a DXF is produced the user is notified with a toast, so the companion
+     * drawing is never written silently (P2-11 surfacing).
+     *
+     * @param drawing optional [DxfDrawable] companion; null ⇒ PDF only.
+     * @param openPdfOnComplete opens the PDF when it was produced successfully.
+     * @return [ExportBundle]; never throws.
+     */
+    fun exportReportAndDxf(
+        titleAr: String,
+        titleEn: String,
+        subtitle: String = "",
+        designType: String = "",
+        inputs: Map<String, String> = emptyMap(),
+        results: Map<String, String> = emptyMap(),
+        safetyChecks: List<GenericSafetyCheck> = emptyList(),
+        isSafe: Boolean = true,
+        drawingBitmap: Bitmap? = null,
+        drawing: DxfDrawable? = null,
+        outputPath: String,
+        openPdfOnComplete: Boolean = false
+    ): ExportBundle {
+        val pdfFile = try {
+            ProfessionalEnglishPdfReporter.generateReportLegacy(
+                titleAr = titleAr,
+                titleEn = titleEn,
+                subtitle = subtitle,
+                designType = designType,
+                inputs = inputs,
+                results = results,
+                safetyChecks = safetyChecks,
+                isSafe = isSafe,
+                drawingBitmap = drawingBitmap,
+                outputPath = outputPath
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "PDF export failed: ${e.message}", e)
+            null
+        }
+
+        val dxfFile = if (pdfFile != null && drawing != null) {
+            DxfExporter.writeSibling(pdfFile, drawing)
+        } else null
+
+        if (openPdfOnComplete && pdfFile != null) {
+            ExportUtils.openPdf(context, pdfFile)
+        }
+        if (dxfFile != null) notifyDxfSaved(dxfFile)
+
+        return ExportBundle(pdfFile = pdfFile, dxfFile = dxfFile)
+    }
+
+    private fun notifyDxfSaved(dxfFile: File) {
+        val message = try {
+            context.getString(R.string.export_dxf_created, dxfFile.name)
+        } catch (e: Exception) {
+            "DXF drawing saved: ${dxfFile.name}"
+        }
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            android.widget.Toast.makeText(context.applicationContext, message, android.widget.Toast.LENGTH_LONG).show()
+        }
     }
 
     /**

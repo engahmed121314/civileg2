@@ -321,34 +321,28 @@ class ColumnViewModel @Inject constructor(
                 }
 
                 // Professional English PDF Report — English only, no Arabic encoding issues
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
-                    titleAr = "تقرير تصميم أعمدة - ${res.columnType}",
-                    titleEn = "Column Design Report — ${res.columnType}",
-                    subtitle = "Code: $codeName  •  ${res.width}×${res.depth}mm, H=${h}m",
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "????? ????? ????? - ${res.columnType}",
+                    titleEn = "Column Design Report - ${res.columnType}",
+                    subtitle = "Code: $codeName    ${res.width}x${res.depth}mm, H=${h}m",
                     designType = "Column (${res.columnType})",
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.columnSection(
+                        title = "COLUMN ${res.columnType}",
+                        widthMm = res.width.toDouble(),
+                        depthMm = res.depth.toDouble(),
+                        coverMm = 40.0,
+                        mainBarDiaMm = res.reinforcement.diameter.toDouble(),
+                        mainBarCount = res.reinforcement.numBars,
+                        tieDiaMm = res.stirrups.diameter.toDouble(),
+                        tieSpacingMm = res.stirrups.spacing.toDouble()
+                    ),
                     outputPath = file.absolutePath
-                )
-
-                generated?.let { pdf ->
-                    com.civileg.app.utils.DxfExporter.writeSibling(
-                        pdf,
-                        com.civileg.app.utils.ElementDxfDrawings.columnSection(
-                            title = "COLUMN ${res.columnType}",
-                            widthMm = res.width.toDouble(),
-                            depthMm = res.depth.toDouble(),
-                            coverMm = 40.0,
-                            mainBarDiaMm = res.reinforcement.diameter.toDouble(),
-                            mainBarCount = res.reinforcement.numBars,
-                            tieDiaMm = res.stirrups.diameter.toDouble(),
-                            tieSpacingMm = res.stirrups.spacing.toDouble()
-                        )
-                    )
-                }
+                ).pdfFile
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false) }

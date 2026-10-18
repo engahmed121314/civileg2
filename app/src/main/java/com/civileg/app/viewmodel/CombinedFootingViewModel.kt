@@ -15,7 +15,6 @@ import com.civileg.app.domain.calculations.ecp.ECPCombinedFooting
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -309,7 +308,45 @@ class CombinedFootingViewModel @Inject constructor(
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = state.designCode
-                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val eR = ecpRes
+                val fR = footingRes
+                val distMm = state.distanceBetweenColumns.toDoubleOrNull() ?: 5000.0
+                val colWidthMm = state.col1Width.toDoubleOrNull() ?: 400.0
+                var lengthMm = 0.0
+                var thicknessMm = 0.0
+                var barDiaMm = 16.0
+                var barSpacingMm = 150.0
+                var hasData = false
+                if (eR != null) {
+                    lengthMm = eR.footingLength * 1000.0
+                    thicknessMm = eR.footingThickness
+                    val nums = Regex("\\d+").findAll(eR.longBottomBars).map { it.value.toInt() }.toList()
+                    val longCount = nums.getOrNull(0) ?: 8
+                    barDiaMm = nums.getOrNull(1)?.toDouble() ?: 16.0
+                    barSpacingMm = ((lengthMm - 2 * 75.0) / (longCount - 1).coerceAtLeast(1)).coerceIn(100.0, 250.0)
+                    hasData = true
+                } else if (fR != null) {
+                    lengthMm = fR.requiredLength
+                    thicknessMm = fR.requiredThickness
+                    barDiaMm = fR.reinforcement.barDiameter
+                    barSpacingMm = fR.reinforcement.spacing.takeIf { it > 0 } ?: 150.0
+                    hasData = true
+                }
+                val dxfDrawing = if (hasData) {
+                    val centerMm = lengthMm / 2.0
+                    com.civileg.app.utils.ElementDxfDrawings.combinedFootingSection(
+                        title = "COMBINED FOOTING",
+                        lengthMm = lengthMm,
+                        thicknessMm = thicknessMm,
+                        coverMm = 50.0,
+                        barDiaMm = barDiaMm,
+                        barSpacingMm = barSpacingMm,
+                        columnWidthMm = colWidthMm,
+                        columnPositionsMm = listOf(centerMm - distMm / 2.0, centerMm + distMm / 2.0)
+                    )
+                } else null
+
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم قاعدة مشتركة",
                     titleEn = "Combined Footing Design Report",
                     subtitle = "Code: $codeName  •  P1=${state.p1}kN, P2=${state.p2}kN",
@@ -319,51 +356,9 @@ class CombinedFootingViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = isSafe,
                     drawingBitmap = drawingBitmap,
+                    drawing = dxfDrawing,
                     outputPath = file.absolutePath
-                )
-
-                generated?.let { pdf ->
-                    val eR = ecpRes
-                    val fR = footingRes
-                    val distMm = state.distanceBetweenColumns.toDoubleOrNull() ?: 5000.0
-                    val colWidthMm = state.col1Width.toDoubleOrNull() ?: 400.0
-                    var lengthMm = 0.0
-                    var thicknessMm = 0.0
-                    var barDiaMm = 16.0
-                    var barSpacingMm = 150.0
-                    var hasData = false
-                    if (eR != null) {
-                        lengthMm = eR.footingLength * 1000.0
-                        thicknessMm = eR.footingThickness
-                        val nums = Regex("\\d+").findAll(eR.longBottomBars).map { it.value.toInt() }.toList()
-                        val longCount = nums.getOrNull(0) ?: 8
-                        barDiaMm = nums.getOrNull(1)?.toDouble() ?: 16.0
-                        barSpacingMm = ((lengthMm - 2 * 75.0) / (longCount - 1).coerceAtLeast(1)).coerceIn(100.0, 250.0)
-                        hasData = true
-                    } else if (fR != null) {
-                        lengthMm = fR.requiredLength
-                        thicknessMm = fR.requiredThickness
-                        barDiaMm = fR.reinforcement.barDiameter
-                        barSpacingMm = fR.reinforcement.spacing.takeIf { it > 0 } ?: 150.0
-                        hasData = true
-                    }
-                    if (hasData) {
-                        val centerMm = lengthMm / 2.0
-                        com.civileg.app.utils.DxfExporter.writeSibling(
-                            pdf,
-                            com.civileg.app.utils.ElementDxfDrawings.combinedFootingSection(
-                                title = "COMBINED FOOTING",
-                                lengthMm = lengthMm,
-                                thicknessMm = thicknessMm,
-                                coverMm = 50.0,
-                                barDiaMm = barDiaMm,
-                                barSpacingMm = barSpacingMm,
-                                columnWidthMm = colWidthMm,
-                                columnPositionsMm = listOf(centerMm - distMm / 2.0, centerMm + distMm / 2.0)
-                            )
-                        )
-                    }
-                }
+                ).pdfFile
 
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false) }

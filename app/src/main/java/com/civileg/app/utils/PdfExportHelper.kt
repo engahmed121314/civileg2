@@ -23,9 +23,9 @@ import java.io.File
  * Java try/catch — killing the app process on every PDF export.
  *
  * This helper therefore delegates to
- * [com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy]
- * (iText 8, PDFWriter/PdfDocument) — the same safe path used by
- * FrameAnalysisPdfExporter which never crashes.
+ * [com.civileg.app.utils.ExportManager.exportReportAndDxf] (which wraps
+ * ProfessionalEnglishPdfReporter / iText 8, PDFWriter/PdfDocument) — the same
+ * safe path used by FrameAnalysisPdfExporter which never crashes.
  *
  * Arabic shaping is handled by PdfTextSegmenter inside ProfessionalEnglishPdfReporter:
  * Arabic base letters (0600-06FF) are converted to Presentation Forms (FE70-FEFF)
@@ -59,7 +59,7 @@ object PdfExportHelper {
             directory.mkdirs()
             val file = File(directory, "$fileName.pdf")
 
-            val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+            val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                 titleAr = title,
                 titleEn = title,
                 subtitle = "",
@@ -70,7 +70,7 @@ object PdfExportHelper {
                 isSafe = true,
                 drawingBitmap = null,
                 outputPath = file.absolutePath
-            )
+            ).pdfFile
 
             if (generated != null) {
                 openPdf(context, generated)
@@ -124,7 +124,7 @@ object PdfExportHelper {
             directory.mkdirs()
             val file = File(directory, "$fileName.pdf")
 
-            val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+            val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                 titleAr = title,
                 titleEn = title,
                 subtitle = subtitle,
@@ -135,7 +135,7 @@ object PdfExportHelper {
                 isSafe = isSafe,
                 drawingBitmap = drawingBitmap,
                 outputPath = file.absolutePath
-            )
+            ).pdfFile
 
             if (generated != null) {
                 openPdf(context, generated)

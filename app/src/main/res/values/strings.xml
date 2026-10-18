@@ -74,6 +74,7 @@
     <string name="calculate">Analyze &amp; Calculate</string>
     <string name="reset">Clear Inputs</string>
     <string name="export_pdf">Export Design Report (PDF)</string>
+    <string name="export_dxf_created">DXF drawing saved: %1$s</string>
     <string name="save_to_project">Save to Project Vault</string>
     <string name="save_design">Save Design</string>
     <string name="add_to_boq">Add to BOQ List</string>

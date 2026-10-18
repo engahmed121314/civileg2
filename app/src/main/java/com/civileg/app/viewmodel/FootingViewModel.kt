@@ -188,7 +188,7 @@ class FootingViewModel @Inject constructor(
                     "Optimal" to if (res.isOptimal) "Yes" else "No"
                 )
                 // Professional English PDF Report — English only, no Arabic encoding issues
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم قاعدة - ${res.type.displayName}",
                     titleEn = "Footing Design Report — ${res.type.displayName}",
                     subtitle = "Code: $codeName  •  ${res.width}×${res.length}×${res.thickness}mm",
@@ -202,23 +202,17 @@ class FootingViewModel @Inject constructor(
                     },
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.footingSection(
+                        title = "FOOTING ${res.type.displayName}",
+                        widthMm = res.width.toDouble(),
+                        thicknessMm = res.thickness.toDouble(),
+                        coverMm = 70.0,
+                        barDiaMm = res.barDiameter.toDouble(),
+                        barSpacingMm = res.reinforcementBottom.spacing.toDouble(),
+                        columnWidthMm = res.column1Size.first.toDouble()
+                    ),
                     outputPath = file.absolutePath
-                )
-
-                generated?.let { pdf ->
-                    com.civileg.app.utils.DxfExporter.writeSibling(
-                        pdf,
-                        com.civileg.app.utils.ElementDxfDrawings.footingSection(
-                            title = "FOOTING ${res.type.displayName}",
-                            widthMm = res.width.toDouble(),
-                            thicknessMm = res.thickness.toDouble(),
-                            coverMm = 70.0,
-                            barDiaMm = res.barDiameter.toDouble(),
-                            barSpacingMm = res.reinforcementBottom.spacing.toDouble(),
-                            columnWidthMm = res.column1Size.first.toDouble()
-                        )
-                    )
-                }
+                ).pdfFile
 
                 withContext(Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

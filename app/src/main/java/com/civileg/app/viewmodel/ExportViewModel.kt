@@ -7,12 +7,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.entities.*
-import com.civileg.app.utils.DxfDrawable
-import com.civileg.app.utils.DxfExporter
 import com.civileg.app.utils.ElementDxfDrawings
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,7 +74,14 @@ class ExportViewModel @Inject constructor(
                         "Column Capacity", 0.0, result.axialCapacity, "kN", rr.isSafe
                     ))
                 }
-                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val w: Double
+                val d: Double
+                when (columnType) {
+                    is ColumnType.Rectangular -> { w = columnType.width; d = columnType.depth }
+                    is ColumnType.Circular -> { w = columnType.diameter; d = columnType.diameter }
+                    else -> { w = 300.0; d = 300.0 }
+                }
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم عمود",
                     titleEn = "Column Design Report",
                     subtitle = "Code: ${designCode.displayName}  •  ${columnType.displayName}",
@@ -87,18 +91,7 @@ class ExportViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = result.reinforcementResult.isSafe,
                     drawingBitmap = bitmap,
-                    outputPath = outputFile.absolutePath
-                )
-
-                generated?.let { pdf ->
-                    val w: Double
-                    val d: Double
-                    when (columnType) {
-                        is ColumnType.Rectangular -> { w = columnType.width; d = columnType.depth }
-                        is ColumnType.Circular -> { w = columnType.diameter; d = columnType.diameter }
-                        else -> { w = 300.0; d = 300.0 }
-                    }
-                    writeDxfSibling(pdf, ElementDxfDrawings.columnSection(
+                    drawing = ElementDxfDrawings.columnSection(
                         title = "COLUMN ${columnType.displayName}",
                         widthMm = w,
                         depthMm = d,
@@ -107,8 +100,9 @@ class ExportViewModel @Inject constructor(
                         mainBarCount = result.reinforcementResult.numberOfBars,
                         tieDiaMm = result.reinforcementResult.tiesDiameter.takeIf { it > 0 } ?: 8.0,
                         tieSpacingMm = result.reinforcementResult.tiesSpacing.takeIf { it > 0 } ?: 200.0
-                    ))
-                }
+                    ),
+                    outputPath = outputFile.absolutePath
+                ).pdfFile
 
                 _exportState.value = generated
                     ?.let { ExportState.Success(it) }
@@ -173,7 +167,7 @@ class ExportViewModel @Inject constructor(
                 val safetyChecks = listOf(GenericSafetyCheck(
                     "Beam Capacity", 0.0, result.flexureResult.astProvided, "mm²", result.flexureResult.isSafe
                 ))
-                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم كمرة",
                     titleEn = "Beam Design Report",
                     subtitle = "Code: ${designCode.displayName}  •  ${beamType.displayName}",
@@ -183,11 +177,7 @@ class ExportViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = result.flexureResult.isSafe,
                     drawingBitmap = bitmap,
-                    outputPath = outputFile.absolutePath
-                )
-
-                generated?.let { pdf ->
-                    writeDxfSibling(pdf, ElementDxfDrawings.beamSection(
+                    drawing = ElementDxfDrawings.beamSection(
                         title = "BEAM ${beamType.displayName}",
                         widthMm = inputs.width,
                         depthMm = inputs.totalDepth,
@@ -196,8 +186,9 @@ class ExportViewModel @Inject constructor(
                         mainBarCount = result.flexureResult.numberOfBars,
                         stirrupDiaMm = result.flexureResult.tiesDiameter.takeIf { it > 0 } ?: 8.0,
                         stirrupSpacingMm = result.flexureResult.tiesSpacing.takeIf { it > 0 } ?: 200.0
-                    ))
-                }
+                    ),
+                    outputPath = outputFile.absolutePath
+                ).pdfFile
 
                 _exportState.value = generated
                     ?.let { ExportState.Success(it) }
@@ -243,7 +234,7 @@ class ExportViewModel @Inject constructor(
                 val safetyChecks = listOf(GenericSafetyCheck(
                     "Slab Capacity", 0.0, result.flexureResult.providedReinforcement, "mm²", result.flexureResult.isSafe
                 ))
-                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم بلاطة",
                     titleEn = "Slab Design Report",
                     subtitle = "Code: ${designCode.displayName}  •  ${slabType.displayName}",
@@ -254,7 +245,7 @@ class ExportViewModel @Inject constructor(
                     isSafe = result.flexureResult.isSafe,
                     drawingBitmap = bitmap,
                     outputPath = outputFile.absolutePath
-                )
+                ).pdfFile
 
                 _exportState.value = generated
                     ?.let { ExportState.Success(it) }
@@ -350,7 +341,7 @@ class ExportViewModel @Inject constructor(
                 if (inputs.axialLoad > 0) safetyChecks.add(GenericSafetyCheck("Axial", inputs.axialLoad, result.axialCapacity, "kN", inputs.axialLoad <= result.axialCapacity))
                 if (inputs.moment > 0) safetyChecks.add(GenericSafetyCheck("Flexural", inputs.moment, result.flexuralCapacity, "kN.m", inputs.moment <= result.flexuralCapacity))
                 if (inputs.shear > 0) safetyChecks.add(GenericSafetyCheck("Shear", inputs.shear, result.shearCapacity, "kN", inputs.shear <= result.shearCapacity))
-                val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم قطاع معدني - ${sectionType.displayName}",
                     titleEn = "Steel Member Design Report — ${sectionType.displayName}",
                     subtitle = "Code: $codeName  •  $memberTypeLabel",
@@ -360,18 +351,15 @@ class ExportViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = result.isSafe,
                     drawingBitmap = bitmap,
-                    outputPath = outputFile.absolutePath
-                )
-
-                generated?.let { pdf ->
-                    writeDxfSibling(pdf, ElementDxfDrawings.steelISection(
+                    drawing = ElementDxfDrawings.steelISection(
                         title = sectionType.sectionName,
                         heightMm = sectionType.depth,
                         widthMm = sectionType.width,
                         webThicknessMm = sectionType.webThickness,
                         flangeThicknessMm = sectionType.flangeThickness
-                    ))
-                }
+                    ),
+                    outputPath = outputFile.absolutePath
+                ).pdfFile
 
                 _exportState.value = generated
                     ?.let { ExportState.Success(it) }
@@ -384,16 +372,6 @@ class ExportViewModel @Inject constructor(
         }
     }
     
-    // ========== DXF companion drawings ==========
-
-    /**
-     * Write a DXF companion (AC1027) next to the generated PDF so the same design
-     * can be opened in CAD. Best-effort: a DXF failure never fails the PDF export.
-     */
-    private fun writeDxfSibling(pdfFile: File, drawing: DxfDrawable) {
-        DxfExporter.writeSibling(pdfFile, drawing)
-    }
-
     // ========== Bitmap Generation Helpers ==========
     
     private fun generateColumnBitmap(columnType: ColumnType, result: AdvancedColumnResult): Bitmap? {

@@ -14,7 +14,6 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.ExportUtils
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -335,7 +334,7 @@ class SteelViewModel @Inject constructor(
                     ))
                 }
 
-                val generated = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم قطاع معدني - ${stored.section.displayName}",
                     titleEn = "Steel Member Design Report — ${stored.section.displayName}",
                     subtitle = "Code: $codeName  •  $memberTypeLabel",
@@ -346,7 +345,7 @@ class SteelViewModel @Inject constructor(
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
                     outputPath = file.absolutePath
-                )
+                ).pdfFile
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     if (generated != null) {
@@ -400,7 +399,7 @@ class SteelViewModel @Inject constructor(
                     GenericSafetyCheck("Weld Capacity", 0.0, capacity, "kN", capacity > 0)
                 )
 
-                val exported = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val exported = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم وصلة ملحومة",
                     titleEn = "Welded Connection Design Report",
                     subtitle = "Code: ${code.name}  •  Electrode: ${electrode.displayName}",
@@ -411,7 +410,7 @@ class SteelViewModel @Inject constructor(
                     isSafe = capacity > 0,
                     drawingBitmap = null,
                     outputPath = file.absolutePath
-                )
+                ).pdfFile
 
                 withContext(Dispatchers.Main) {
                     exported?.let { ExportUtils.openPdf(context, it) }
@@ -442,7 +441,7 @@ class SteelViewModel @Inject constructor(
                     GenericSafetyCheck("Bolt Capacity", 0.0, capacity, "kN", capacity > 0)
                 )
 
-                val exported = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val exported = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم وصلة مسمارية",
                     titleEn = "Bolted Connection Design Report",
                     subtitle = "Code: ${code.name}  •  Grade: ${grade.displayName}",
@@ -453,7 +452,7 @@ class SteelViewModel @Inject constructor(
                     isSafe = capacity > 0,
                     drawingBitmap = null,
                     outputPath = file.absolutePath
-                )
+                ).pdfFile
 
                 withContext(Dispatchers.Main) {
                     exported?.let { ExportUtils.openPdf(context, it) }
@@ -505,7 +504,7 @@ class SteelViewModel @Inject constructor(
                 val safetyChecks = listOf(
                     GenericSafetyCheck("Base Plate", 0.0, 1.0, "-", result.isSafe)
                 )
-                val exported = ProfessionalEnglishPdfReporter.generateReportLegacy(
+                val exported = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم قاعدة معدنية",
                     titleEn = "Steel Base Plate Design Report",
                     subtitle = "Column: $colSection",
@@ -516,7 +515,7 @@ class SteelViewModel @Inject constructor(
                     isSafe = result.isSafe,
                     drawingBitmap = drawing,
                     outputPath = file.absolutePath
-                )
+                ).pdfFile
 
                 withContext(Dispatchers.Main) {
                     exported?.let { ExportUtils.openPdf(context, it) }

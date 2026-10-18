@@ -17,7 +17,6 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.SettingsManager
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.views.ColumnSectionView
 import com.civileg.app.viewmodel.ProjectViewModel
@@ -312,7 +311,7 @@ class ColumnDesignFragment : Fragment() {
                 GenericSafetyCheck(check.name, check.value, check.limit, check.unit, check.isSafe)
             }
 
-            val exportedPath = ProfessionalEnglishPdfReporter.generateReportLegacy(
+            val exportedPath = com.civileg.app.utils.ExportManager(requireContext()).exportReportAndDxf(
                 titleAr = "تقرير تصميم عمود",
                 titleEn = "Column Design Report",
                 subtitle = "Code: $codeLabel  •  $columnTypeLabel",
@@ -323,7 +322,7 @@ class ColumnDesignFragment : Fragment() {
                 isSafe = result.isSafe,
                 drawingBitmap = null,
                 outputPath = filePath
-            )
+            ).pdfFile
 
             if (exportedPath != null) {
                 Toast.makeText(requireContext(), "PDF Exported: $fileName", Toast.LENGTH_LONG).show()
