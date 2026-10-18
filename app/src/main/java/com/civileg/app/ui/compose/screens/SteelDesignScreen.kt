@@ -646,6 +646,17 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
     var selectedGrade by remember { mutableStateOf(SteelGrade.ST37) }
     var expandedGrade by remember { mutableStateOf(false) }
 
+    // PDF drawing capture: the export embeds the view that is on screen right now.
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val captureScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+    // Hoisted out of the drawing item so the invisible capture area (below the list) can
+    // render the same tab the user has selected.
+    var selectedViewMode by remember { mutableIntStateOf(0) }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -928,7 +939,15 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
 
                 if (result != null) {
                     Button(
-                        onClick = { viewModel.exportToPdf(context) { } },
+                        onClick = {
+                            captureScope.launch {
+                                val captureBitmap = try {
+                                    pdfCaptureLayer.captureToAndroidBitmap()
+                                } catch (_: Exception) { null }
+                                viewModel.pendingDrawingBitmap = captureBitmap
+                                viewModel.exportToPdf(context) { }
+                            }
+                        },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                         enabled = !viewModel.isExporting.value!!
@@ -1010,7 +1029,6 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
             }
 
             item {
-                var selectedViewMode by remember { mutableIntStateOf(0) }
                 AppInteractiveDrawingScreen(
                     title = stringResource(R.string.steel_section_drawing),
                     subtitle = stringResource(R.string.steel_member_detail),
@@ -1060,6 +1078,49 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
         }
 
         item { Spacer(Modifier.height(24.dp)) }
+    }
+
+    // Invisible duplicate of the on-screen drawing, rendered at the selected view mode, so the
+    // exported PDF shows exactly what the user is looking at. The ViewModel still falls back to
+    // PdfDrawingGenerator.generateSteelDrawing when no capture is available.
+    result?.let { res ->
+        val connParams = com.civileg.app.utils.SteelConnectionDrawing.from(res.connectionDesign)
+        ComposeDrawingCaptureUtil.DrawingCaptureArea(
+            captureLayer = pdfCaptureLayer,
+            widthPx = screenWidthPx,
+            heightPx = screenHeightPx
+        ) {
+            Box(modifier = Modifier.background(Color(0xFF1E1E2C))) {
+                ProfessionalSteelDrawing(
+                    sectionName = res.sectionType.sectionName,
+                    depth = res.sectionType.depth,
+                    flangeWidth = res.sectionType.width,
+                    webThickness = res.sectionType.webThickness,
+                    flangeThickness = res.sectionType.flangeThickness,
+                    memberLength = (length.toDoubleOrNull() ?: 3.0) * 1000.0,
+                    isSafe = res.isSafe,
+                    utilizationRatio = res.utilizationRatio * 100,
+                    viewMode = selectedViewMode,
+                    modifier = Modifier.fillMaxSize(),
+                    sectionType = res.sectionType.displayName,
+                    radius = res.sectionType.rootRadius,
+                    area = res.sectionType.area,
+                    ix = res.sectionType.ix,
+                    sx = res.sectionType.sx,
+                    zx = res.sectionType.zx,
+                    weightPerMeter = res.sectionType.weight,
+                    boltDia = connParams.boltDia,
+                    boltCount = connParams.boltCount,
+                    boltGauge = connParams.boltGauge,
+                    boltPitch = connParams.boltPitch,
+                    // Same fixed values the on-screen drawing uses.
+                    endPlateThickness = 12.0,
+                    hasStiffener = false,
+                    weldSize = connParams.weldSize,
+                    isColumn = selectedMemberType == SteelMemberType.COLUMN
+                )
+            }
+        }
     }
 }
 

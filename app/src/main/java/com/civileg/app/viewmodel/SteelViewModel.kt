@@ -197,6 +197,10 @@ class SteelViewModel @Inject constructor(
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val res = _result.value ?: return
         val stored = lastMemberInputs ?: return
+        // Consume the on-screen drawing captured by SteelSectionTab just before this call,
+        // so a later export can never show a stale view.
+        val capturedDrawing = pendingDrawingBitmap
+        pendingDrawingBitmap = null
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
@@ -219,9 +223,10 @@ class SteelViewModel @Inject constructor(
                     defaultWeldSize = defaultWeldSize
                 )
 
-                // Generate steel drawing bitmap using actual section properties
-                // 2026-08-04 v3: Pass all section properties to match ProfessionalSteelDrawing
-                val drawingBitmap = try {
+                // Prefer the captured on-screen drawing (ProfessionalSteelDrawing) so the PDF
+                // shows exactly what the user is looking at; fall back to the independent
+                // renderer, which reads the actual section/connection properties.
+                val drawingBitmap = capturedDrawing ?: try {
                     PdfDrawingGenerator.generateSteelDrawing(
                         sectionName = stored.section.sectionName,
                         sectionHeight = stored.section.depth,
