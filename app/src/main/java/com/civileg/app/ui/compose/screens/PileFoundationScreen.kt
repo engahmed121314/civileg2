@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -32,7 +33,10 @@ import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalPileDrawing
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
 import com.civileg.app.viewmodel.PileFoundationViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +49,17 @@ fun PileFoundationScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val error by viewModel.error.observeAsState()
+
+    // PDF drawing capture: the export embeds the view that is on screen right now.
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val captureScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+    // Hoisted out of the drawing item so the invisible capture area (below the list) can
+    // render the same tab the user has selected.
+    var selectedViewMode by remember { mutableStateOf(0) }
 
     // Show errors via Snackbar
     val snackbarHostState = remember { SnackbarHostState() }
@@ -757,7 +772,13 @@ fun PileFoundationScreen(
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = {
-                                viewModel.exportToPdf(context) { }
+                                captureScope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { }
+                                }
                             },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
@@ -780,7 +801,7 @@ fun PileFoundationScreen(
                 }
 
                 // ─── DRAWING ────────────────────────────────────
-                item { var selectedViewMode by remember { mutableStateOf(0) }
+                item {
                     val configuration = LocalConfiguration.current
                     val drawingHeight = if (configuration.smallestScreenWidthDp >= 600) 580 else 480
                     InteractiveDrawingScreen(
@@ -818,6 +839,44 @@ fun PileFoundationScreen(
             }
 
             item { Spacer(modifier = Modifier.height(32.dp)) }
+        }
+
+        // Invisible duplicate of the on-screen drawing, rendered at the selected view mode, so
+        // the exported PDF shows exactly what the user is looking at. The ViewModel still falls
+        // back to PdfDrawingGenerator.generatePileDrawing when no capture is available.
+        result?.let { res ->
+            val cap = res.capResult
+            val group = res.groupResult
+            val reinf = res.pileReinforcement
+            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                captureLayer = pdfCaptureLayer,
+                widthPx = screenWidthPx,
+                heightPx = screenHeightPx
+            ) {
+                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                    ProfessionalPileDrawing(
+                        pileDiameter = res.pileDiameterMm,
+                        pileLength = res.pileLengthM,
+                        numberOfPiles = res.numberOfPiles,
+                        pileSpacing = group.spacing,
+                        pattern = group.pattern,
+                        capWidth = cap.capWidth,
+                        capLength = cap.capLength,
+                        capThickness = cap.capThickness,
+                        columnWidth = res.columnWidth,
+                        columnLength = res.columnLength,
+                        longitBars = reinf.longitudinalBars,
+                        longitDia = reinf.longitudinalDiameter,
+                        tiesDia = reinf.tiesDiameter,
+                        tiesSpacing = reinf.tiesSpacing,
+                        capRebarDia = cap.flexuralReinforcement.diameter,
+                        capRebarCount = cap.flexuralReinforcement.bars,
+                        soilType = res.soilType,
+                        viewMode = selectedViewMode,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
         }
         // Loading overlay
         if (isLoading) {
