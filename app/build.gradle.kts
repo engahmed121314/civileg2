@@ -57,6 +57,7 @@ android {
         dataBinding = true
         compose = true
         buildConfig = true
+        resValues = true
     }
 
     // Signing configuration — uses env vars for CI, or keystore.properties file locally
