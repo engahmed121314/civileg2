@@ -324,10 +324,19 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
   beam shear → 22.5, development length → 25.4, footings/pile caps/combined footings → 13.3
   (not 15), column cover → 20.5.1 (not 7.7), seismic → 18 (not 21), slab deflection → 24.2.
   `CodeReferenceTest` extended to 4 tests (adds a regression test pinning these chapters).
-- **Dependabot (P3-14, improved)** — AGP 8.9.2 → **8.11.1** (still within KGP 2.2.20 support).
-  Resolved tooling graph moves the previously-flagged artifacts to patched versions:
-  `netty-*` 4.1.93.Final → **4.1.110.Final**, `grpc-*` 1.57.2 → **1.69.1**,
-  `protobuf-java` 3.24.4 → **3.25.5**, plus the runtime `guava` 33.4.0-android constraint.
-  Remaining alerts, if any, are AGP-internal Unified Test Platform / Dagger compiler classpaths
-  (dev-only, not shipped).
+- **Dependabot (P3-14)** — Two AGP bumps attempted. **AGP 8.9.2 → 8.11.1**, then
+  **AGP 8.11.1 → 9.4.1 + Gradle 9.4.1 → 9.6.0** (AGP 9.4 requires Gradle 9.6). AGP 9.0+ enables
+  built-in Kotlin + a new DSL by default; the project still applies `org.jetbrains.kotlin.android`,
+  so it uses the documented temporary opt-out (`android.newDsl=false`,
+  `android.builtInKotlin=false` — removed in AGP 10). Also `buildFeatures { resValues = true }`
+  (AGP 9 no longer auto-enables it despite `android.defaults.buildfeatures.resValues=false`, but
+  `defaultConfig` calls `resValue()`). Build + suite green on AGP 9.4.1.
+  **Key finding:** the Dependabot count (15) was *unchanged* by either bump, and
+  `netty`/`grpc`/`protobuf` are not on `debugRuntimeClasspath` — i.e. the alerts are not in the
+  AGP buildscript classpath that Dependabot scans. Runtime `guava` is already forced to
+  33.4.0-android via an app constraint. The repo had **no lockfile and no dependency-submission
+  workflow**, so Dependabot relied on its own scheduled Graph resolver.
+  **Action taken:** added `.github/workflows/dependency-submission.yml`
+  (`gradle/actions/dependency-submission@v6`) to publish an accurate, promptly-refreshed graph so
+  the remaining alerts can be enumerated and fixed precisely.
 - Full suite green after all changes: **61 suites / 1196 tests / 0 failures**.
