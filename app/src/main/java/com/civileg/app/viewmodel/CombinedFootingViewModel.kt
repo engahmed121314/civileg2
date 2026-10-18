@@ -279,13 +279,15 @@ class CombinedFootingViewModel @Inject constructor(
                         val transNums = Regex("\\d+").findAll(eR.transBottomBars).map { it.value.toInt() }.toList()
                         val transCount = transNums.getOrNull(0) ?: 6
                         val transDia = transNums.getOrNull(1)?.toDouble() ?: 12.0
+                        val longSpacing = ((eR.footingLength * 1000.0 - 2 * 75.0) / (longCount - 1).coerceAtLeast(1)).coerceIn(100.0, 250.0)
+                        val transSpacing = ((eR.footingWidth * 1000.0 - 2 * 75.0) / (transCount - 1).coerceAtLeast(1)).coerceIn(100.0, 250.0)
                         com.civileg.app.utils.PdfDrawingGenerator.generateCombinedFootingDrawing(
                             footingLength = eR.footingLength * 1000, footingWidth = eR.footingWidth * 1000,
                             footingThickness = eR.footingThickness,
                             col1W = c1wDraw, col1D = c1dDraw, col2W = c2wDraw, col2D = c2dDraw,
                             distanceBetweenColumns = distDraw,
-                            longBarCount = longCount, longBarDia = longDia, longBarSpacing = 150.0,
-                            transBarCount = transCount, transBarDia = transDia, transBarSpacing = 200.0,
+                            longBarCount = longCount, longBarDia = longDia, longBarSpacing = longSpacing,
+                            transBarCount = transCount, transBarDia = transDia, transBarSpacing = transSpacing,
                             soilPressureMax = eR.qMax
                         )
                     } else if (fR != null) {
@@ -334,7 +336,9 @@ class CombinedFootingViewModel @Inject constructor(
                         lengthMm = eR.footingLength * 1000.0
                         thicknessMm = eR.footingThickness
                         val nums = Regex("\\d+").findAll(eR.longBottomBars).map { it.value.toInt() }.toList()
+                        val longCount = nums.getOrNull(0) ?: 8
                         barDiaMm = nums.getOrNull(1)?.toDouble() ?: 16.0
+                        barSpacingMm = ((lengthMm - 2 * 75.0) / (longCount - 1).coerceAtLeast(1)).coerceIn(100.0, 250.0)
                         hasData = true
                     } else if (fR != null) {
                         lengthMm = fR.requiredLength

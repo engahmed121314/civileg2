@@ -45,6 +45,10 @@ class StairViewModel @Inject constructor(
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
 
+    /** Flight width (mm) captured with the last calculation; used by the fallback drawing. */
+    @Volatile
+    private var lastStairWidthMm: Double = 1200.0
+
     fun calculateStairPro(
         type: CalculatorEngine.StairType,
         span: Double,
@@ -55,7 +59,8 @@ class StairViewModel @Inject constructor(
         fcu: Double,
         fy: Double,
         preferredDiameter: Int,
-        code: DesignCode
+        code: DesignCode,
+        stairWidthMm: Double = 1200.0
     ) {
         InputGuard.positive("span", span)
         InputGuard.positive("riser", riser)
@@ -68,6 +73,7 @@ class StairViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isLoading.value = true
+            lastStairWidthMm = stairWidthMm.coerceAtLeast(300.0)
             pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
                 val res = calculatorEngine.designStaircase(
@@ -100,7 +106,7 @@ class StairViewModel @Inject constructor(
 
     // Fixed legacy support
     fun calculateStair(rise: Double, run: Double, width: Double, load: Double, fcu: Double, fy: Double) {
-        calculateStairPro(CalculatorEngine.StairType.SINGLE_FLIGHT, run, rise, 300.0, load * 0.6, load * 0.4, fcu, fy, 12, DesignCode.ECP)
+        calculateStairPro(CalculatorEngine.StairType.SINGLE_FLIGHT, run, rise, 300.0, load * 0.6, load * 0.4, fcu, fy, 12, DesignCode.ECP, stairWidthMm = width)
     }
 
     fun saveStair(projectId: Long, name: String, result: CalculatorEngine.StairResult) {
@@ -135,7 +141,7 @@ class StairViewModel @Inject constructor(
                         PdfDrawingGenerator.generateStairDrawing(
                             totalHeight = totalHeight,
                             totalLength = nRisers.toDouble() * currentResult.tread,
-                            stairWidth = 1200.0,
+                            stairWidth = lastStairWidthMm,
                             riserHeight = currentResult.riser,
                             treadWidth = currentResult.tread,
                             slabThickness = currentResult.thickness,

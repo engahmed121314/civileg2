@@ -216,7 +216,8 @@ fun StairScreen(
                             fcu = fcu.toDoubleOrNull() ?: 25.0,
                             fy = fy.toDoubleOrNull() ?: 360.0,
                             preferredDiameter = 12,
-                            code = selectedCode
+                            code = selectedCode,
+                            stairWidthMm = stairWidth.toDoubleOrNull() ?: 1200.0
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
