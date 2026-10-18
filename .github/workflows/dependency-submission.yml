@@ -1,0 +1,33 @@
+# ============================================================================
+# CivilEG2 — Dependency Submission
+# Submits the resolved Gradle dependency graph to GitHub so Dependabot can
+# report vulnerabilities against an accurate, promptly-refreshed graph.
+# ============================================================================
+
+name: Dependency Submission
+
+on:
+  push:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  dependency-submission:
+    name: Submit dependency graph
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Generate and submit dependency graph
+        uses: gradle/actions/dependency-submission@v6
