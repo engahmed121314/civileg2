@@ -196,8 +196,9 @@ class SteelViewModel @Inject constructor(
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
-                // CRITICAL FIX (2026-07-27 v2): Use NativePdfExporter with StaticLayout
-                // for proper Arabic BIDI + HarfBuzz shaping.
+                // PDF + DXF via ExportManager.exportReportAndDxf (iText, EN-only per ADR-005/009).
+                // The old NativePdfExporter (android.graphics.pdf + Canvas) was removed:
+                // it can SIGSEGV inside Skia with no catchable exception.
                 val fileName = "Steel_Report_${System.currentTimeMillis()}.pdf"
                 val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
                     ?: context.cacheDir

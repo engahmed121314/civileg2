@@ -132,7 +132,7 @@ class FootingViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             withContext(Dispatchers.Main) { _isExporting.value = true }
             try {
-                // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
+                // PDF + DXF via ExportManager.exportReportAndDxf (iText, EN-only per ADR-005/009).
                 val fileName = "Footing_Report_${System.currentTimeMillis()}.pdf"
                 val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
                     ?: context.cacheDir

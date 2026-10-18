@@ -246,7 +246,7 @@ class ColumnViewModel @Inject constructor(
         _uiState.update { it.copy(isExporting = true) }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
+                // PDF + DXF via ExportManager.exportReportAndDxf (iText, EN-only per ADR-005/009).
                 val fileName = "Column_Report_${System.currentTimeMillis()}.pdf"
                 val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
                     ?: context.cacheDir

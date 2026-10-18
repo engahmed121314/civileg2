@@ -8,8 +8,6 @@ import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.utils.DxfExporter
-import com.civileg.app.utils.NativePdfExporter
-import com.civileg.app.utils.NativePdfExporter.SafetyCheck as NativePdfSafetyCheck
 import com.civileg.app.utils.ExportUtils
 import java.io.File
 import java.io.FileOutputStream
@@ -27,15 +25,19 @@ import java.util.zip.ZipOutputStream
  * ADR-009: Arabic FORBIDDEN in PDF/DXF exports; translation at export time only
  *
  * Supported formats:
- * - PDF: NativePdfExporter (Android PdfDocument + HarfBuzz) — EN-only
+ * - PDF: ProfessionalEnglishPdfReporter (iText) — EN-only
  * - DXF: DxfWriter AC1027 R2007+ — layers, blocks, BBS
  * - IFC: IfcWriter (IFC4) — BIM export for Revit/Navisworks/Tekla
  * - CSV: ExcelExporter (RFC-4180)
  *
+ * Every PDF path goes through iText. The Android-native
+ * android.graphics.pdf.PdfDocument + Canvas pipeline was removed because it can
+ * fail with an uncatchable Skia SIGSEGV; nothing in the app may reintroduce it.
+ *
  * Usage:
  * ```kotlin
  * val manager = ExportManager(context)
- * manager.exportPdf(context, result, drawingBitmap, "beam_report.pdf") { file ->
+ * manager.exportPdf(title = "Beam Design Report", outputPath = file.path) { file ->
  *     // handle file
  * }
  * ```
@@ -51,7 +53,7 @@ class ExportManager(private val context: Context) {
     // ───────────────────────────────────────────────────────────────────────────
 
     /**
-     * Export a structural design result to PDF using NativePdfExporter (Android PdfDocument).
+     * Export a structural design result to PDF using the professional reporter (iText).
      * EN-only per ADR-009. Drawing bitmap is embedded if provided.
      *
      * @param title Report title (e.g., "Beam Design Report")
@@ -71,17 +73,17 @@ class ExportManager(private val context: Context) {
         designType: String = "",
         inputs: Map<String, String> = emptyMap(),
         results: Map<String, String> = emptyMap(),
-        safetyChecks: List<NativePdfSafetyCheck> = emptyList(),
+        safetyChecks: List<ProfessionalEnglishPdfReporter.SafetyCheck> = emptyList(),
         isSafe: Boolean = true,
         drawingBitmap: Bitmap? = null,
         outputPath: String,
         onComplete: (File?) -> Unit
     ) {
-        val exporter = NativePdfExporter(context)
-        exporter.generateReport(
+        ProfessionalEnglishPdfReporter.generateReport(
+            reportType = ProfessionalEnglishPdfReporter.ReportType.GENERIC,
             title = title,
             subtitle = subtitle,
-            designType = designType,
+            designCode = "",
             inputs = inputs,
             results = results,
             safetyChecks = safetyChecks,
@@ -163,7 +165,7 @@ class ExportManager(private val context: Context) {
     /**
      * Export a design result to BOTH PDF and DXF in one call.
      *
-     * PDF is generated with NativePdfExporter (EN-only, ADR-005/009).
+     * PDF is generated with ProfessionalEnglishPdfReporter (iText, EN-only, ADR-005/009).
      * DXF is generated with DxfExporter (AC1027/R2007+, ADR-004) when a
      * [DxfDrawable] is supplied; otherwise only the PDF is produced.
      *
@@ -177,7 +179,7 @@ class ExportManager(private val context: Context) {
         designType: String = "",
         inputs: Map<String, String> = emptyMap(),
         results: Map<String, String> = emptyMap(),
-        safetyChecks: List<NativePdfSafetyCheck> = emptyList(),
+        safetyChecks: List<ProfessionalEnglishPdfReporter.SafetyCheck> = emptyList(),
         isSafe: Boolean = true,
         drawingBitmap: Bitmap? = null,
         drawing: DxfDrawable? = null,
@@ -187,10 +189,11 @@ class ExportManager(private val context: Context) {
     ): ExportBundle {
         outputDir.mkdirs()
 
-        val pdfFile = NativePdfExporter(context).generateReport(
+        val pdfFile = ProfessionalEnglishPdfReporter.generateReport(
+            reportType = ProfessionalEnglishPdfReporter.ReportType.GENERIC,
             title = title,
             subtitle = subtitle,
-            designType = designType,
+            designCode = "",
             inputs = inputs,
             results = results,
             safetyChecks = safetyChecks,

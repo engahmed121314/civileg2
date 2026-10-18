@@ -9,8 +9,8 @@ package com.civileg.app.utils
  * bottom-left corner and writes reinforcement onto the conventional layers
  * (REBAR / STIRRUPS / BEAMS / COLUMNS / SLABS / FOOTINGS / WALLS / TEXT).
  *
- * These factories make [ExportManager.exportBoth] real: pass the produced
- * [DxfDrawable] alongside the PDF result to emit PDF + DXF in one call.
+ * These factories make [ExportManager.exportReportAndDxf] real: pass the produced
+ * [DxfDrawable] alongside the report inputs to emit PDF + DXF in one call.
  */
 object ElementDxfDrawings {
 

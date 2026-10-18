@@ -20,7 +20,8 @@ import java.io.File
  * ********************************************************************************
  * NativePdfExporter (Android-native android.graphics.pdf.PdfDocument + Canvas)
  * was triggering NATIVE crashes (SIGSEGV in Skia) that could NOT be caught by
- * Java try/catch — killing the app process on every PDF export.
+ * Java try/catch — killing the app process on every PDF export. Both that class
+ * and PdfLayoutHelper have been deleted; no native-Canvas path may be reintroduced.
  *
  * This helper therefore delegates to
  * [com.civileg.app.utils.ExportManager.exportReportAndDxf] (which wraps

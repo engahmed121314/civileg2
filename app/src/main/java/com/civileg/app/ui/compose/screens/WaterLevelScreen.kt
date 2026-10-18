@@ -1,10 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Color as AndroidColor
-import android.graphics.Paint
-import android.graphics.pdf.PdfDocument
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -26,11 +22,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
+import com.civileg.app.utils.PdfGenerator
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 private data class LevelPoint(
     val pointName: String,
@@ -459,8 +455,11 @@ private fun SummaryRow(label: String, value: String) {
 // ========== PDF Export ==========
 
 /**
- * Export water-level survey data to a simple PDF using Android's native PdfDocument.
+ * Export water-level survey data to PDF.
  * Draws a title, summary info (BM, BS, HI), and a table of all reduced levels.
+ * Rendering goes through [PdfGenerator]'s iText pipeline so Arabic text is shaped
+ * correctly and the native android.graphics.pdf.PdfDocument + Canvas path
+ * (a known source of uncatchable Skia SIGSEGV crashes) is avoided.
  */
 private suspend fun exportWaterLevelPdf(
     context: Context,
@@ -471,141 +470,60 @@ private suspend fun exportWaterLevelPdf(
 ) {
     withContext(Dispatchers.IO) {
         try {
-            val fileName = "Water_Level_Survey_${System.currentTimeMillis()}.pdf"
-            val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
-                ?: context.cacheDir
-            directory.mkdirs()
-            val file = File(directory, fileName)
-
-            val pageWidth = 595  // A4 width in points
-            val pageHeight = 842 // A4 height in points
-            val margin = 36f
-
-            val pdfDocument = PdfDocument()
-            val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
-            val page = pdfDocument.startPage(pageInfo)
-            val canvas = page.canvas
-
-            // ── Paints ──
-            val titlePaint = Paint().apply {
-                textSize = 18f
-                isFakeBoldText = true
-                color = AndroidColor.rgb(21, 101, 192)
-                typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-            }
-            val headerPaint = Paint().apply {
-                textSize = 11f
-                isFakeBoldText = true
-                color = AndroidColor.WHITE
-                textAlign = Paint.Align.CENTER
-                typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-            }
-            val cellPaint = Paint().apply {
-                textSize = 10f
-                color = AndroidColor.rgb(33, 33, 33)
-                textAlign = Paint.Align.CENTER
-            }
-            val labelPaint = Paint().apply {
-                textSize = 12f
-                isFakeBoldText = true
-                color = AndroidColor.rgb(33, 33, 33)
-            }
-            val valuePaint = Paint().apply {
-                textSize = 12f
-                color = AndroidColor.rgb(33, 33, 33)
-            }
-            val linePaint = Paint().apply {
-                strokeWidth = 1f
-                color = AndroidColor.rgb(150, 150, 150)
-            }
-
-            var y = margin + 20f
-
-            // ── Title ──
-            canvas.drawText(context.getString(R.string.water_level_pdf_title), pageWidth / 2f, y, titlePaint)
-            y += 30f
-
-            // ── Summary ──
-            canvas.drawText(context.getString(R.string.water_level_pdf_bm_rl), margin, y, labelPaint)
-            canvas.drawText("%.3f m".format(benchmarkRL), margin + 120f, y, valuePaint)
-            y += 20f
-            canvas.drawText(context.getString(R.string.water_level_pdf_back_sight), margin, y, labelPaint)
-            canvas.drawText("%.3f m".format(backSight), margin + 120f, y, valuePaint)
-            y += 20f
-            canvas.drawText(context.getString(R.string.water_level_pdf_hi_label), margin, y, labelPaint)
-            canvas.drawText("%.3f m".format(hi), margin + 200f, y, valuePaint)
-            y += 30f
-
-            // ── Table ──
-            val colX = floatArrayOf(
-                margin,                           // Point
-                margin + 100f,                    // Type
-                margin + 220f,                    // Staff Reading
-                margin + 340f,                    // RL
-                margin + 440f                     // right edge
+            val rows = ArrayList<PdfGenerator.WaterLevelRow>()
+            rows.add(
+                PdfGenerator.WaterLevelRow(
+                    point = "BM",
+                    type = context.getString(R.string.water_level_benchmark_label),
+                    reading = "\u2014",
+                    rl = "%.3f".format(benchmarkRL)
+                )
             )
-            val rowHeight = 24f
-
-            // Header row
-            val headerBg = Paint().apply { color = AndroidColor.rgb(21, 101, 192) }
-            canvas.drawRect(colX[0], y, colX[4], y + rowHeight, headerBg)
-            canvas.drawText(context.getString(R.string.water_level_pdf_point), (colX[0] + colX[1]) / 2f, y + 16f, headerPaint)
-            canvas.drawText(context.getString(R.string.water_level_pdf_type), (colX[1] + colX[2]) / 2f, y + 16f, headerPaint)
-            canvas.drawText(context.getString(R.string.water_level_pdf_reading_m), (colX[2] + colX[3]) / 2f, y + 16f, headerPaint)
-            canvas.drawText(context.getString(R.string.water_level_pdf_rl_m), (colX[3] + colX[4]) / 2f, y + 16f, headerPaint)
-            y += rowHeight
-
-            // Row helper
-            fun drawRow(point: String, type: String, reading: String, rl: String, bgColor: Int) {
-                if (y + rowHeight > pageHeight - margin) return
-                val bgPaint = Paint().apply { color = bgColor }
-                canvas.drawRect(colX[0], y, colX[4], y + rowHeight, bgPaint)
-                canvas.drawText(point, (colX[0] + colX[1]) / 2f, y + 16f, cellPaint)
-                canvas.drawText(type, (colX[1] + colX[2]) / 2f, y + 16f, cellPaint)
-                canvas.drawText(reading, (colX[2] + colX[3]) / 2f, y + 16f, cellPaint)
-                canvas.drawText(rl, (colX[3] + colX[4]) / 2f, y + 16f, cellPaint)
-                // Cell borders
-                for (x in colX) {
-                    canvas.drawLine(x, y, x, y + rowHeight, linePaint)
-                }
-                canvas.drawLine(colX[0], y, colX[4], y, linePaint)
-                y += rowHeight
-            }
-
-            // Benchmark row
-            drawRow("BM", context.getString(R.string.water_level_benchmark_label), "—", "%.3f".format(benchmarkRL), AndroidColor.rgb(232, 245, 253))
-
-            // Back Sight row
-            drawRow("BS", context.getString(R.string.water_level_back_sight_label), "%.3f".format(backSight), "—", AndroidColor.rgb(227, 242, 253))
-
-            // Forward Sight rows
-            pointReadings.forEachIndexed { index, point ->
-                val hasReading = point.staffReading != 0.0 || pointReadings.getOrNull(index)?.staffReading != 0.0
-                val bgColor = if (index % 2 == 0) AndroidColor.WHITE else AndroidColor.rgb(245, 245, 245)
-                drawRow(
-                    point = point.pointName,
-                    type = context.getString(R.string.water_level_fore_sight_label),
-                    reading = if (hasReading) "%.3f".format(point.staffReading) else "—",
-                    rl = if (hasReading) "%.3f".format(point.rl) else "—",
-                    bgColor = bgColor
+            rows.add(
+                PdfGenerator.WaterLevelRow(
+                    point = "BS",
+                    type = context.getString(R.string.water_level_back_sight_label),
+                    reading = "%.3f".format(backSight),
+                    rl = "\u2014"
+                )
+            )
+            pointReadings.forEach { point ->
+                val hasReading = point.staffReading != 0.0
+                rows.add(
+                    PdfGenerator.WaterLevelRow(
+                        point = point.pointName,
+                        type = context.getString(R.string.water_level_fore_sight_label),
+                        reading = if (hasReading) "%.3f".format(point.staffReading) else "\u2014",
+                        rl = if (hasReading) "%.3f".format(point.rl) else "\u2014"
+                    )
                 )
             }
 
-            // ── Footer ──
-            y += 10f
-            if (y < pageHeight - margin) {
-                val validResults = pointReadings.filter { it.staffReading != 0.0 }
-                if (validResults.isNotEmpty()) {
-                    val maxRL = validResults.maxOf { it.rl }
-                    val minRL = validResults.minOf { it.rl }
-                    canvas.drawText(context.getString(R.string.water_level_pdf_max_rl_format, maxRL, minRL, maxRL - minRL), margin, y, labelPaint)
-                }
-            }
+            val validResults = pointReadings.filter { it.staffReading != 0.0 }
+            val footer = if (validResults.isNotEmpty()) {
+                val maxRL = validResults.maxOf { it.rl }
+                val minRL = validResults.minOf { it.rl }
+                context.getString(R.string.water_level_pdf_max_rl_format, maxRL, minRL, maxRL - minRL)
+            } else null
 
-            pdfDocument.finishPage(page)
-            pdfDocument.close()
+            val file = PdfGenerator.generateWaterLevelReport(
+                context = context,
+                title = context.getString(R.string.water_level_pdf_title),
+                summary = listOf(
+                    context.getString(R.string.water_level_pdf_bm_rl) to "%.3f m".format(benchmarkRL),
+                    context.getString(R.string.water_level_pdf_back_sight) to "%.3f m".format(backSight),
+                    context.getString(R.string.water_level_pdf_hi_label) to "%.3f m".format(hi)
+                ),
+                headers = listOf(
+                    context.getString(R.string.water_level_pdf_point),
+                    context.getString(R.string.water_level_pdf_type),
+                    context.getString(R.string.water_level_pdf_reading_m),
+                    context.getString(R.string.water_level_pdf_rl_m)
+                ),
+                rows = rows,
+                footer = footer
+            )
 
-            // Open the PDF
             com.civileg.app.utils.ExportUtils.openPdf(context, file)
         } catch (e: Exception) {
             android.util.Log.e("WaterLevelScreen", "PDF export failed", e)

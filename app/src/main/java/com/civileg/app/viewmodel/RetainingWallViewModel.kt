@@ -110,7 +110,7 @@ class RetainingWallViewModel @Inject constructor(
             _isExporting.value = true
             try {
                 val exportedFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    // CRITICAL FIX (2026-07-27): Use NativePdfExporter (Android-native)
+                    // PDF + DXF via ExportManager.exportReportAndDxf (iText, EN-only per ADR-005/009).
                     val fileName = "RetainingWall_Report_${System.currentTimeMillis()}.pdf"
                     val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
                         ?: context.cacheDir

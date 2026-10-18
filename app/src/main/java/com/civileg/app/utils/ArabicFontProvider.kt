@@ -187,9 +187,11 @@ object ArabicFontProvider {
     }
 
     /**
-     * Get Android Typeface for Canvas-based PDF generation (PdfLayoutHelper).
+     * Get Android Typeface for Canvas-based drawing generation (drawing bitmaps).
      *
      * Typeface is safe to cache — it's NOT tied to any PdfDocument.
+     * Note: this is for on-screen/Canvas drawings only. PDF documents themselves
+     * are produced with iText via ProfessionalEnglishPdfReporter / PdfGenerator.
      *
      * @param context Application context for asset access
      * @param bold Whether to return bold variant
