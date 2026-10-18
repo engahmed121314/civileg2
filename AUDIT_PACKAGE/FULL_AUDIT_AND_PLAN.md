@@ -129,8 +129,8 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 | RetainingWall | `ProfessionalRetainingWallDrawing` | ✅ | captured, else generator | ✅ (fallback synthesizes geometry) |
 | ShearWall | `ProfessionalShearWallDrawing` | ✅ | captured only | ✅ (stale-bitmap bug fixed) |
 | **Pile** | `ProfessionalPileDrawing` | ✅ (§9.13) | captured at current view, else `generatePileDrawing` | ✅ |
-| **Steel member** | `ProfessionalSteelDrawing` | ❌ | `generateSteelDrawing` only | ⚠️ alternate renderer (connection values correct §9.6) |
-| **Steel base plate** | (none) | ❌ | `generateBasePlateDrawing` | ⚠️ generator only |
+| **Steel member** | `ProfessionalSteelDrawing` | ✅ (§9.14) | captured at current view, else `generateSteelDrawing` | ✅ |
+| **Steel base plate** | (none) | n/a | `generateBasePlateDrawing` | ⚠️ generator only (no on-screen drawing exists to capture) |
 | **Warehouse** | `ProfessionalWarehouseDrawing` | ✅ (§9.12) | captured at current view, else `generateWarehouseDrawing` + 3D | ✅ |
 | **Seismic** | `ProfessionalSeismicDrawing` | ❌ | captured if set, else `generateSeismicDrawing` | ⚠️ generator fallback (was: no drawing) |
 | Frame BMD/SFD | `FrameDrawingCanvas` | n/a | `generateFrameBitmap` from result | ✅ |
@@ -140,7 +140,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 2. **Stale-bitmap bug** — `FlatSlabViewModel.kt:186` and `ShearWallViewModel.kt:287` read the captured bitmap but never reset `pendingDrawingBitmap = null`, so a later export can show an **old** drawing. *(Fix implemented — see §9.)*
 3. ~~**Steel connection PDF mismatch**~~ — **FIXED (§9.6):** PDF path now reads actual `boltDia`/`boltCount` from `res.connectionDesign` (falls back to defaults) in both `SteelViewModel` and `ExportViewModel`.
 4. **Fallback generators synthesize geometry** rather than read design values (combined footing hardcodes bars `CombinedFootingViewModel.kt:281-282`; retaining wall derives stem/base/rebar `:121-133`; generic slab/column fallbacks `ExportViewModel.kt:336-353`). Stair width and combined-footing bar spacing now read the real values (**§9.10**). Only reachable when capture is absent.
-5. ~~**Pile / Warehouse** use a renderer distinct from the screen~~ — **both fixed** (Warehouse §9.12, Pile §9.13); the PDF now embeds the captured on-screen view. Remaining ⚠️ rows (steel member / base plate) have no capture area but their fallbacks read the actual result values.
+5. ~~**Pile / Warehouse** use a renderer distinct from the screen~~ — **all three fixed** (Warehouse §9.12, Pile §9.13, steel member §9.14); the PDF now embeds the captured on-screen view. The only ⚠️ row left is the **base plate**, which has no on-screen drawing to capture — its fallback reads the actual result values.
 
 ---
 
@@ -203,7 +203,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 ☐ One DesignCode enum; all screens → CalculationFactory → code-correct engine
 ✅ CalculatorEngine steel member now delegates to engines (P0-2; other inline paths remain)
 ☐ Every engine: InputGuard + full result (codeNotes, warnings, safetyChecks, steps, diagram data)
-☐ Every element PDF has a drawing that matches the on-screen drawing and the result (no stale/placeholder)
+✅ Every element PDF has a drawing that matches the on-screen drawing and the result (no stale/placeholder) — §9.10 fallbacks, §9.11 native path removed, §9.12–9.14 captures; base plate has no on-screen drawing and reads real values
 ☐ PDF: single pipeline (ExportManager); DXF: AC1027 with layers/BBS; PDF+DXF exportable together
 ☐ CodeReference keys verified against code text
 ☐ Zero crashes with null/empty/invalid inputs
@@ -504,7 +504,33 @@ and the generator path always won.
   This matters because `LazyColumn` items are only composed when visible: an area placed inside the
   drawing item would leave the capture layer empty whenever the drawing is scrolled off-screen.
 
-**Result.** Matrix row **Pile** is now ✅. Every "capture-wired" element in §5.1 now embeds exactly
-what is on screen; the remaining ⚠️ rows (steel member, base plate) have no capture area by choice.
+**Result.** Matrix row **Pile** is now ✅. (Steel member closed next, §9.14; the base plate has no
+on-screen drawing to capture.)
+
+**Verified.** `:app:compileDebugKotlin` OK; full suite **63 suites / 1203 tests / 0 failures**.
+
+### 9.14 Steel member drawing capture wired (commit `f274318`)
+
+**Finding.** `SteelViewModel` already owned `pendingDrawingBitmap` (reset on calculate) but
+`exportToPdf` never read it — it always ran `PdfDrawingGenerator.generateSteelDrawing(...)`, an
+independent renderer, while the screen drew `ProfessionalSteelDrawing` inside
+`AppInteractiveDrawingScreen`. That was the last ⚠️ row in §5.1 with a real on-screen drawing.
+
+**Changes.**
+- `SteelViewModel.exportToPdf` consumes `pendingDrawingBitmap` on the caller thread before
+  launching the IO work and uses `capturedDrawing ?: generateSteelDrawing(...)` — the generator
+  (which reads the real section + connection properties) remains the fallback.
+- `SteelSectionTab` follows the same three-part pattern as Pile/Warehouse: capture layer + screen px
+  at function scope, `selectedViewMode` hoisted out of the drawing `item {}`, export button captures
+  first, and an invisible `DrawingCaptureArea` of `ProfessionalSteelDrawing` is composed **after**
+  the `LazyColumn` so it stays composed regardless of scroll position.
+- The duplicate passes the identical argument list as the visible drawing, including
+  `SteelConnectionDrawing.from(res.connectionDesign)` and the fixed `endPlateThickness = 12.0` /
+  `hasStiffener = false`, so capture and screen cannot drift.
+
+**Result.** §5.1 is now fully ✅ except **Steel base plate**, which legitimately has no on-screen
+drawing (`rg` finds no `ProfessionalBasePlateDrawing` composable — only
+`PdfDrawingGenerator.generateBasePlateDrawing`), so there is nothing to capture; its fallback reads
+the real result values.
 
 **Verified.** `:app:compileDebugKotlin` OK; full suite **63 suites / 1203 tests / 0 failures**.
