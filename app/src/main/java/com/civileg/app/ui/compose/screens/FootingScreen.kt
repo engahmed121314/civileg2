@@ -318,6 +318,17 @@ fun FootingScreen(
                             ResultRow(stringResource(R.string.column_steel_weight), "${"%.2f".format(res.steelWeight)} kg")
                             ResultRow("Allowable Pressure", "${"%.1f".format(res.allowablePressure)} kN/m²")
                             ResultRow(stringResource(R.string.column_estimated_cost), "${"%.2f".format(res.cost)}")
+                            if (selectedType == CalculatorEngine.FootingType.COMBINED) {
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    "Method: unified combined-footing design — centroid-balanced soil pressure, " +
+                                        "longitudinal and transverse bending, one-way and punching shear. " +
+                                        "ECP 203-2020 uses the dedicated combined-footing engine; " +
+                                        "ACI 318 / SBC 304 route through the shared footing design interface.",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }

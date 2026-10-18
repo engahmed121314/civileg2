@@ -110,8 +110,10 @@ class ExportViewModel @Inject constructor(
                     ))
                 }
 
-                _exportState.value = ExportState.Success(generated!!)
-                
+                _exportState.value = generated
+                    ?.let { ExportState.Success(it) }
+                    ?: ExportState.Error("PDF generation returned no file")
+
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
                 _errorMessage.value = "Column export failed / فشل تصدير العمود: ${e.localizedMessage ?: "Export failed"}"
@@ -197,8 +199,10 @@ class ExportViewModel @Inject constructor(
                     ))
                 }
 
-                _exportState.value = ExportState.Success(generated!!)
-                
+                _exportState.value = generated
+                    ?.let { ExportState.Success(it) }
+                    ?: ExportState.Error("PDF generation returned no file")
+
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
                 _errorMessage.value = "Beam export failed / فشل تصدير الكمرة: ${e.localizedMessage ?: "Export failed"}"
@@ -252,8 +256,10 @@ class ExportViewModel @Inject constructor(
                     outputPath = outputFile.absolutePath
                 )
 
-                _exportState.value = ExportState.Success(generated!!)
-                
+                _exportState.value = generated
+                    ?.let { ExportState.Success(it) }
+                    ?: ExportState.Error("PDF generation returned no file")
+
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
                 _errorMessage.value = "Slab export failed / فشل تصدير البلاطة: ${e.localizedMessage ?: "Export failed"}"
@@ -367,8 +373,10 @@ class ExportViewModel @Inject constructor(
                     ))
                 }
 
-                _exportState.value = ExportState.Success(generated!!)
-                
+                _exportState.value = generated
+                    ?.let { ExportState.Success(it) }
+                    ?: ExportState.Error("PDF generation returned no file")
+
             } catch (e: Exception) {
                 _exportState.value = ExportState.Error(e.localizedMessage ?: "Export failed")
                 _errorMessage.value = "Steel export failed / فشل تصدير القطعة الحديدية: ${e.localizedMessage ?: "Export failed"}"
