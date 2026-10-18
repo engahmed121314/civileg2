@@ -188,6 +188,20 @@ class FlatSlabViewModel @Inject constructor(
                 )
                 pendingDrawingBitmap = null  // consume after use
 
+                generated?.let { pdf ->
+                    com.civileg.app.utils.DxfExporter.writeSibling(
+                        pdf,
+                        com.civileg.app.utils.ElementDxfDrawings.slabSection(
+                            title = "FLAT SLAB ${input.panelType.displayName}",
+                            spanMm = input.lx,
+                            thicknessMm = input.slabThickness,
+                            coverMm = 25.0,
+                            mainBarDiaMm = res.columnStripBotRebar.diameter.toDouble(),
+                            mainSpacingMm = res.columnStripBotRebar.spacing.toDouble()
+                        )
+                    )
+                }
+
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)

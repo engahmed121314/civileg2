@@ -290,6 +290,22 @@ class ShearWallViewModel @Inject constructor(
                 )
                 pendingDrawingBitmap = null  // consume after use
 
+                generated?.let { pdf ->
+                    com.civileg.app.utils.DxfExporter.writeSibling(
+                        pdf,
+                        com.civileg.app.utils.ElementDxfDrawings.wallElevation(
+                            title = "SHEAR WALL ${state.wallType.displayName}",
+                            widthMm = state.wallLength.toDoubleOrNull() ?: 3000.0,
+                            heightMm = (state.storyHeight.toDoubleOrNull() ?: 3.0) * 1000.0,
+                            coverMm = 40.0,
+                            verticalBarDiaMm = res.verticalReinforcement.diameter.toDouble(),
+                            verticalSpacingMm = res.verticalReinforcement.spacing.toDouble(),
+                            horizontalBarDiaMm = res.horizontalReinforcement.diameter.toDouble(),
+                            horizontalSpacingMm = res.horizontalReinforcement.spacing.toDouble()
+                        )
+                    )
+                }
+
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     _uiState.update { it.copy(isExporting = false) }
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }

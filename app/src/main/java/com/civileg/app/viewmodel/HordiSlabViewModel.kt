@@ -170,6 +170,20 @@ class HordiSlabViewModel @Inject constructor(
                     outputPath = file.absolutePath
                 )
 
+                generated?.let { pdf ->
+                    com.civileg.app.utils.DxfExporter.writeSibling(
+                        pdf,
+                        com.civileg.app.utils.ElementDxfDrawings.slabSection(
+                            title = "HORDI SLAB",
+                            spanMm = params.span,
+                            thicknessMm = params.totalThickness,
+                            coverMm = 25.0,
+                            mainBarDiaMm = res.barDiameter.toDouble(),
+                            mainSpacingMm = res.barSpacing.toDouble()
+                        )
+                    )
+                }
+
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)

@@ -192,6 +192,21 @@ class WaffleSlabViewModel @Inject constructor(
                     outputPath = file.absolutePath
                 )
 
+                generated?.let { pdf ->
+                    val rib = res.ribDesign
+                    com.civileg.app.utils.DxfExporter.writeSibling(
+                        pdf,
+                        com.civileg.app.utils.ElementDxfDrawings.slabSection(
+                            title = "WAFFLE SLAB",
+                            spanMm = input.lx,
+                            thicknessMm = input.ribHeight + input.toppingThickness,
+                            coverMm = input.clearCover,
+                            mainBarDiaMm = rib?.flexureReinforcement?.diameter?.toDouble() ?: 12.0,
+                            mainSpacingMm = rib?.flexureReinforcement?.spacing?.toDouble() ?: 150.0
+                        )
+                    )
+                }
+
                 kotlinx.coroutines.withContext(Dispatchers.Main) {
                     generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
                     onComplete(generated)

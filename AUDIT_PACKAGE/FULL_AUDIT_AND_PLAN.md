@@ -352,11 +352,17 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
   call sites updated. `DxfDrawable` is now a `fun interface`.
 - **`ElementDxfDrawings` factories added (P1-8)** — data-driven `DxfDrawable` producers for
   every element: beam (section + elevation), column, slab, footing, combined footing, pile,
-  retaining wall, stair, tank, steel I-section, base plate, plus a generic fallback. Each draws
-  in mm with reinforcement on the conventional layers (REBAR/STIRRUPS/BEAMS/…).
-- **`ExportManager.exportBoth` now exercisable** — `ExportViewModel` (Column/Beam/Steel)
-  writes a DXF companion (`<name>.dxf`) next to the PDF via the new factories (best-effort;
-  a DXF failure never fails the PDF). Remaining element ViewModels + `exportBoth` migration is P2-11.
+  retaining wall, stair, tank, shear-wall elevation (`wallElevation`), steel I-section, base
+  plate, plus a generic fallback. Each draws in mm with reinforcement on the conventional
+  layers (REBAR/STIRRUPS/BEAMS/WALLS/…).
+- **`ExportManager.exportBoth` now exercisable** — `ExportViewModel` (Column/Beam/Steel) and
+  the element ViewModels (Beam, Column, Footing, Slab, Flat Slab, Hordi Slab, Waffle Slab,
+  Combined Footing, Retaining Wall, Stair, Tank, Pile, Shear Wall) write a DXF companion
+  (`<name>.dxf`) next to the PDF via `DxfExporter.writeSibling(...)` (best-effort; a DXF
+  failure never fails the PDF). **Strap footing and seismic** have no faithful section factory
+  (distance/positions are not carried in the result object), so they are intentionally not
+  wired rather than drawing fabricated geometry (relates to P1-7). `exportBoth` migration
+  remains P2-11.
 - **Steel connection values (P1-6)** — new `SteelConnectionDrawing.from()` reads the **actual**
   bolt diameter/count and weld size from `ConnectionDesignResult` (including `Hybrid`,
   which the old `as? Bolted` cast silently ignored) and derives gauge/pitch from the bolt

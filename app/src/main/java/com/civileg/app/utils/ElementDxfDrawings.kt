@@ -152,6 +152,38 @@ object ElementDxfDrawings {
         )
     }
 
+    /** Shear wall elevation: outline with vertical and horizontal reinforcement grid. */
+    fun wallElevation(
+        title: String,
+        widthMm: Double,
+        heightMm: Double,
+        coverMm: Double,
+        verticalBarDiaMm: Double,
+        verticalSpacingMm: Double,
+        horizontalBarDiaMm: Double,
+        horizontalSpacingMm: Double
+    ): DxfDrawable = DxfDrawable { ex ->
+        ex.sheetFrame(widthMm, heightMm)
+        ex.rect(0.0, 0.0, widthMm, heightMm, "WALLS")
+        var x = coverMm
+        while (x <= widthMm - coverMm) {
+            ex.vLine(x, coverMm, heightMm - coverMm, "REBAR")
+            x += verticalSpacingMm.coerceAtLeast(50.0)
+        }
+        var y = coverMm
+        while (y <= heightMm - coverMm) {
+            ex.hLine(coverMm, y, widthMm - coverMm, "STIRRUPS")
+            y += horizontalSpacingMm.coerceAtLeast(50.0)
+        }
+        ex.notes(
+            title,
+            widthMm,
+            heightMm,
+            "VERT Ø${fmt(verticalBarDiaMm)} @ ${fmt(verticalSpacingMm)}",
+            "HORZ Ø${fmt(horizontalBarDiaMm)} @ ${fmt(horizontalSpacingMm)}"
+        )
+    }
+
     /** Combined footing section with two column stubs. */
     fun combinedFootingSection(
         title: String,
