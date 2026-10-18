@@ -128,7 +128,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 | Stair | `ProfessionalStairDrawing` | ✅ | captured, else `generateStairDrawing` | ✅ (fallback uses real width §9.10) |
 | RetainingWall | `ProfessionalRetainingWallDrawing` | ✅ | captured, else generator | ✅ (fallback synthesizes geometry) |
 | ShearWall | `ProfessionalShearWallDrawing` | ✅ | captured only | ✅ (stale-bitmap bug fixed) |
-| **Pile** | `ProfessionalPileDrawing` | ❌ | `generatePileDrawing` only | ⚠️ alternate renderer |
+| **Pile** | `ProfessionalPileDrawing` | ✅ (§9.13) | captured at current view, else `generatePileDrawing` | ✅ |
 | **Steel member** | `ProfessionalSteelDrawing` | ❌ | `generateSteelDrawing` only | ⚠️ alternate renderer (connection values correct §9.6) |
 | **Steel base plate** | (none) | ❌ | `generateBasePlateDrawing` | ⚠️ generator only |
 | **Warehouse** | `ProfessionalWarehouseDrawing` | ✅ (§9.12) | captured at current view, else `generateWarehouseDrawing` + 3D | ✅ |
@@ -140,7 +140,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 2. **Stale-bitmap bug** — `FlatSlabViewModel.kt:186` and `ShearWallViewModel.kt:287` read the captured bitmap but never reset `pendingDrawingBitmap = null`, so a later export can show an **old** drawing. *(Fix implemented — see §9.)*
 3. ~~**Steel connection PDF mismatch**~~ — **FIXED (§9.6):** PDF path now reads actual `boltDia`/`boltCount` from `res.connectionDesign` (falls back to defaults) in both `SteelViewModel` and `ExportViewModel`.
 4. **Fallback generators synthesize geometry** rather than read design values (combined footing hardcodes bars `CombinedFootingViewModel.kt:281-282`; retaining wall derives stem/base/rebar `:121-133`; generic slab/column fallbacks `ExportViewModel.kt:336-353`). Stair width and combined-footing bar spacing now read the real values (**§9.10**). Only reachable when capture is absent.
-5. ~~**Pile / Warehouse** use a renderer distinct from the screen~~ — **Warehouse fixed (§9.12):** the PDF now embeds the captured on-screen view. **Pile** still renders independently of the screen.
+5. ~~**Pile / Warehouse** use a renderer distinct from the screen~~ — **both fixed** (Warehouse §9.12, Pile §9.13); the PDF now embeds the captured on-screen view. Remaining ⚠️ rows (steel member / base plate) have no capture area but their fallbacks read the actual result values.
 
 ---
 
@@ -307,7 +307,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 - `CodeReference` ECP 203-2020 sub-clause numbers: authoritative text still needed for the
   Egyptian code (SBC verified — see §9.8).
 - warehouse-vs-simple-beam divergence — **resolved (§9.12)**.
-- Pile drawing still uses a renderer distinct from the screen (§5.2 item 5).
+- Pile drawing divergence — **resolved (§9.13)**.
 
 ### 9.8 Deferred items completed (DesignCode unification round 2)
 
@@ -478,7 +478,33 @@ use (it already existed on the class, reset at calculate time).
   `ProfessionalWarehouseDrawing` at the *current* `viewMode` — so whatever tab is on screen is what
   lands in the PDF.
 
-**Result.** Matrix row **Warehouse** is now ✅. The only remaining alternate-renderer elements are
-**Pile** and the **steel member / base plate** drawings (both by design: no capture area wired).
+**Result.** Matrix row **Warehouse** is now ✅. Remaining alternate-renderer elements at this point:
+**Pile** (closed next, §9.13) and the **steel member / base plate** drawings (no capture area wired).
+
+**Verified.** `:app:compileDebugKotlin` OK; full suite **63 suites / 1203 tests / 0 failures**.
+
+### 9.13 Pile drawing capture wired (commit `c24c10d`)
+
+**Finding.** Pile was the last element still marked "⚠️ alternate renderer" *and* the ViewModel side
+was already complete: `PileFoundationViewModel` already owns `pendingDrawingBitmap` (reset on
+calculate at `:82`, consumed at `:224-225`) and already falls back to
+`PdfDrawingGenerator.generatePileDrawing` before calling `ExportManager.exportReportAndDxf`. The
+**only** missing piece was screen-side — `PileFoundationScreen` had no capture layer and its export
+button called `viewModel.exportToPdf(context)` directly, so `pendingDrawingBitmap` was always null
+and the generator path always won.
+
+**Changes (`PileFoundationScreen.kt` only).**
+- Capture layer + `captureScope` + screen px added at the top of `PileFoundationScreen`.
+- `selectedViewMode` **hoisted** out of the drawing `item {}` to the composable scope, so the
+  invisible capture area can render the same tab the user has selected (Front/Plan/Section/Elevation).
+- Export button now runs `pdfCaptureLayer.captureToAndroidBitmap()` inside `captureScope.launch`
+  and assigns `viewModel.pendingDrawingBitmap` before `exportToPdf`.
+- An invisible `DrawingCaptureArea` duplicate of `ProfessionalPileDrawing` is composed **after the
+  `LazyColumn`** (not inside an item), guarded by `result?.let { res -> … }` — following BeamScreen.
+  This matters because `LazyColumn` items are only composed when visible: an area placed inside the
+  drawing item would leave the capture layer empty whenever the drawing is scrolled off-screen.
+
+**Result.** Matrix row **Pile** is now ✅. Every "capture-wired" element in §5.1 now embeds exactly
+what is on screen; the remaining ⚠️ rows (steel member, base plate) have no capture area by choice.
 
 **Verified.** `:app:compileDebugKotlin` OK; full suite **63 suites / 1203 tests / 0 failures**.
