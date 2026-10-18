@@ -159,12 +159,16 @@ class SteelViewModel @Inject constructor(
     ) {
         val res = _warehouseResult.value ?: return
         val inputs = lastWarehouseInputs ?: return
+        // Consume the on-screen drawing captured by SteelDesignScreen just before this call,
+        // so a later export can never show a stale view.
+        val capturedDrawing = pendingDrawingBitmap
+        pendingDrawingBitmap = null
 
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
                 val exporter = com.civileg.app.utils.exporters.SteelWarehouseProPdfExporter(context)
-                val file = exporter.exportToDownload(inputs, res, clientName, projectName)
+                val file = exporter.exportToDownload(inputs, res, clientName, projectName, capturedDrawing)
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     com.civileg.app.utils.ExportUtils.openPdf(context, file)

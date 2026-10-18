@@ -61,7 +61,8 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         inputs: SteelWarehouseInputs,
         result: SteelWarehouseAnalysisResult,
         clientName: String,
-        projectName: String
+        projectName: String,
+        drawingBitmap: Bitmap? = null
     ): File {
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         val fileName = "Steel_Warehouse_Report_${timestamp}.pdf"
@@ -82,7 +83,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         document.add(AreaBreak())
 
         // 3. Drawings
-        addDrawingsPage(document, inputs, result)
+        addDrawingsPage(document, inputs, result, drawingBitmap)
         document.add(AreaBreak())
 
         // 4. Schedules
@@ -144,12 +145,19 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         }
     }
 
-    private fun addDrawingsPage(document: Document, inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
+    private fun addDrawingsPage(
+        document: Document,
+        inputs: SteelWarehouseInputs,
+        result: SteelWarehouseAnalysisResult,
+        drawingBitmap: Bitmap? = null
+    ) {
         document.add(Paragraph("Structural Engineering Sketches").setFontSize(14f).setBold().setFontColor(PRIMARY))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(10f))
 
         try {
-            val bitmap = PdfDrawingGenerator.generateWarehouseDrawing(inputs, result)
+            // Prefer the captured on-screen view (ProfessionalWarehouseDrawing) so the PDF
+            // matches what the user is looking at; fall back to the independent renderer.
+            val bitmap = drawingBitmap ?: PdfDrawingGenerator.generateWarehouseDrawing(inputs, result)
             val stream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
             document.add(Image(ImageDataFactory.create(stream.toByteArray())).setAutoScale(true).setHorizontalAlignment(HorizontalAlignment.CENTER))

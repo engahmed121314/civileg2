@@ -34,7 +34,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -59,6 +61,8 @@ import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen a
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSteelDrawing
 import com.civileg.app.ui.compose.components.drawings.ProfessionalWarehouseDrawing
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
 import com.civileg.app.viewmodel.SteelViewModel
 import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.data.PieData
@@ -68,6 +72,7 @@ import com.github.mikephil.charting.utils.ColorTemplate
 import java.io.File
 import java.util.*
 import kotlin.math.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -173,6 +178,12 @@ fun SteelDesignScreen(
 @Composable
 fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisResult?, isLoading: Boolean) {
     val context = LocalContext.current
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
     var span by remember { mutableStateOf("20.0") }
     var spacing by remember { mutableStateOf("6.0") }
     var eaveHeight by remember { mutableStateOf("6.0") }
@@ -305,8 +316,14 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                         },
                         confirmButton = {
                             Button(onClick = {
-                                viewModel.exportWarehouseProToPdf(context, clientName, projectName) { }
                                 showExportDialog = false
+                                scope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportWarehouseProToPdf(context, clientName, projectName) { }
+                                }
                             }) { Text(stringResource(R.string.steel_export_now)) }
                         },
                         dismissButton = { TextButton(onClick = { showExportDialog = false }) { Text(stringResource(R.string.cancel)) } }
@@ -327,7 +344,7 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
             }
 
             item { StructuralAnalysisVisualizer(lastWarehouseInputs(span, spacing, eaveHeight, totalLength, roofSlope, deadLoad, liveLoad, windSpeed), res) }
-            item { SteelWarehouseVisualizer(lastWarehouseInputs(span, spacing, eaveHeight, totalLength, roofSlope, deadLoad, liveLoad, windSpeed), res) }
+            item { SteelWarehouseVisualizer(lastWarehouseInputs(span, spacing, eaveHeight, totalLength, roofSlope, deadLoad, liveLoad, windSpeed), res, pdfCaptureLayer, screenWidthPx, screenHeightPx) }
         }
     }
 }
@@ -505,7 +522,13 @@ fun AnalysisDetailCard(res: MainFrameResult) {
 }
 
 @Composable
-fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
+fun SteelWarehouseVisualizer(
+    inputs: SteelWarehouseInputs,
+    result: SteelWarehouseAnalysisResult,
+    captureLayer: androidx.compose.ui.graphics.layer.GraphicsLayer,
+    captureWidthPx: Int,
+    captureHeightPx: Int
+) {
     var viewMode by remember { mutableIntStateOf(0) } // 0: Front, 1: Plan, 2: Side, 3: 3D
     val viewModes = listOf(stringResource(R.string.steel_view_front_elevation), stringResource(R.string.steel_view_plan), stringResource(R.string.steel_view_side_elevation), stringResource(R.string.steel_view_3d_perspective))
     
@@ -529,6 +552,23 @@ fun SteelWarehouseVisualizer(inputs: SteelWarehouseInputs, result: SteelWarehous
                 viewMode = viewMode,
                 modifier = Modifier.fillMaxSize()
             )
+        }
+
+        // Invisible duplicate at full opacity, so the PDF embeds exactly the view that is
+        // currently on screen (Front / Plan / Side / 3D) instead of a separate renderer.
+        ComposeDrawingCaptureUtil.DrawingCaptureArea(
+            captureLayer = captureLayer,
+            widthPx = captureWidthPx,
+            heightPx = captureHeightPx
+        ) {
+            Box(modifier = Modifier.background(Color(0xFF1E1E2C))) {
+                ProfessionalWarehouseDrawing(
+                    inputs = inputs,
+                    result = result,
+                    viewMode = viewMode,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }
