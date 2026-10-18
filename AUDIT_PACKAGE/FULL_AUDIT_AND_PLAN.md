@@ -119,28 +119,28 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 | Beam | `ProfessionalBeamDrawing` | ✅ | captured, else `generateBeamDrawing` | ✅ |
 | Column | `ProfessionalColumnDrawing` | ✅ | captured, else `generateColumnDrawing` | ✅ |
 | Slab (solid/flat/hordi/waffle) | `Professional*SlabDrawing` | ✅ | captured, else `generateSlabDrawingByType` | ✅ |
-| FlatSlab | `ProfessionalFlatSlabDrawing` | ✅ | captured only | ✅ but **stale-bitmap bug** |
+| FlatSlab | `ProfessionalFlatSlabDrawing` | ✅ | captured, else generator | ✅ (stale-bitmap bug fixed) |
 | WaffleSlab | `ProfessionalWaffleSlabDrawing` | ✅ | captured only | ✅ |
 | HordiSlab | `ProfessionalHordiSlabDrawing` | ✅ | captured only | ✅ |
 | Footing / Combined | `ProfessionalFooting/CombinedFootingDrawing` | ✅ | captured, else generator | ✅ (fallback synthesizes rebar) |
 | StrapFooting | `ProfessionalStrapFootingDrawing` | ✅ | captured only | ✅ |
 | Tank | `ProfessionalTankDrawing` | ✅ | captured, else `generateTankDrawing` | ✅ |
-| Stair | `ProfessionalStairDrawing` | ✅ | captured, else `generateStairDrawing` | ✅ (fallback width fixed 1200) |
+| Stair | `ProfessionalStairDrawing` | ✅ | captured, else `generateStairDrawing` | ✅ (fallback uses real width §9.10) |
 | RetainingWall | `ProfessionalRetainingWallDrawing` | ✅ | captured, else generator | ✅ (fallback synthesizes geometry) |
-| ShearWall | `ProfessionalShearWallDrawing` | ✅ | captured only | ✅ but **stale-bitmap bug** |
+| ShearWall | `ProfessionalShearWallDrawing` | ✅ | captured only | ✅ (stale-bitmap bug fixed) |
 | **Pile** | `ProfessionalPileDrawing` | ❌ | `generatePileDrawing` only | ⚠️ alternate renderer |
-| **Steel member** | `ProfessionalSteelDrawing` | ❌ | `generateSteelDrawing` only | ⚠️ **bolt count/dia mismatch** |
+| **Steel member** | `ProfessionalSteelDrawing` | ❌ | `generateSteelDrawing` only | ⚠️ alternate renderer (connection values correct §9.6) |
 | **Steel base plate** | (none) | ❌ | `generateBasePlateDrawing` | ⚠️ generator only |
-| **Warehouse** | `ProfessionalWarehouseDrawing` | ✅/partial | `generateWarehouseDrawing` + 3D | ⚠️ divergent |
-| **Seismic** | `ProfessionalSeismicDrawing` | ❌ | **none → placeholder** | ❌ biggest gap |
+| **Warehouse** | `ProfessionalWarehouseDrawing` | ✅ (§9.12) | captured at current view, else `generateWarehouseDrawing` + 3D | ✅ |
+| **Seismic** | `ProfessionalSeismicDrawing` | ❌ | captured if set, else `generateSeismicDrawing` | ⚠️ generator fallback (was: no drawing) |
 | Frame BMD/SFD | `FrameDrawingCanvas` | n/a | `generateFrameBitmap` from result | ✅ |
 
 ### 5.2 Concrete fidelity gaps
 1. **Seismic PDF has no drawing** — `SeismicViewModel.kt:192` reads a `pendingDrawingBitmap` that is never set (no `DrawingCaptureArea` in `SeismicScreen.kt`) and has no generator fallback → `"[Drawing not available...]"`. `PdfDrawingGenerator.generateSeismicDrawing` exists (`:3060`) and can be wired. *(Fix implemented — see §9.)*
 2. **Stale-bitmap bug** — `FlatSlabViewModel.kt:186` and `ShearWallViewModel.kt:287` read the captured bitmap but never reset `pendingDrawingBitmap = null`, so a later export can show an **old** drawing. *(Fix implemented — see §9.)*
 3. ~~**Steel connection PDF mismatch**~~ — **FIXED (§9.6):** PDF path now reads actual `boltDia`/`boltCount` from `res.connectionDesign` (falls back to defaults) in both `SteelViewModel` and `ExportViewModel`.
-4. **Fallback generators synthesize geometry** rather than read design values (combined footing hardcodes bars `CombinedFootingViewModel.kt:281-282`; retaining wall derives stem/base/rebar `:121-133`; stair width fixed `1200` `:135`; generic slab/column fallbacks `ExportViewModel.kt:336-353`). Only reachable when capture is absent.
-5. **Pile / Warehouse** use a renderer distinct from the screen — same-element divergence possible.
+4. **Fallback generators synthesize geometry** rather than read design values (combined footing hardcodes bars `CombinedFootingViewModel.kt:281-282`; retaining wall derives stem/base/rebar `:121-133`; generic slab/column fallbacks `ExportViewModel.kt:336-353`). Stair width and combined-footing bar spacing now read the real values (**§9.10**). Only reachable when capture is absent.
+5. ~~**Pile / Warehouse** use a renderer distinct from the screen~~ — **Warehouse fixed (§9.12):** the PDF now embeds the captured on-screen view. **Pile** still renders independently of the screen.
 
 ---
 
@@ -306,7 +306,8 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 ### 9.7 Still open
 - `CodeReference` ECP 203-2020 sub-clause numbers: authoritative text still needed for the
   Egyptian code (SBC verified — see §9.8).
-- warehouse-vs-simple-beam divergence.
+- warehouse-vs-simple-beam divergence — **resolved (§9.12)**.
+- Pile drawing still uses a renderer distinct from the screen (§5.2 item 5).
 
 ### 9.8 Deferred items completed (DesignCode unification round 2)
 
@@ -452,3 +453,32 @@ so they were left as-is rather than migrated.
 
 **Verified.** `rg "android\.graphics\.pdf" app/src` returns **only comments** — no executable
 reference remains. `:app:compileDebugKotlin` OK; full suite **63 suites / 1203 tests / 0 failures**.
+
+### 9.12 Warehouse drawing divergence closed (commit `745f125`)
+
+**Finding.** The warehouse was the last matrix row marked "⚠️ divergent" (§5.2 item 5). The screen
+renders `ProfessionalWarehouseDrawing` (Front / Plan / Side / 3D tabs), but
+`SteelWarehouseProPdfExporter.addDrawingsPage` **always** called
+`PdfDrawingGenerator.generateWarehouseDrawing` — a completely independent renderer — so the PDF
+sketch could not match what the user was looking at. The exporter had no bitmap parameter and
+`SteelViewModel.exportWarehouseProToPdf` never read the `pendingDrawingBitmap` that other elements
+use (it already existed on the class, reset at calculate time).
+
+**Changes.**
+- `SteelWarehouseProPdfExporter.exportToDownload(..., drawingBitmap: Bitmap? = null)` — the sketch
+  image is now `drawingBitmap ?: PdfDrawingGenerator.generateWarehouseDrawing(inputs, result)`;
+  the supplementary 3D isometric block is unchanged.
+- `SteelViewModel.exportWarehouseProToPdf` reads and **consumes** `pendingDrawingBitmap` on the
+  caller thread before launching the IO work, so a later export can never show a stale view
+  (the reset-on-calculate at `SteelViewModel.kt:107/:137` stays as the second guard).
+- `SteelDesignScreen` follows the BeamScreen capture pattern exactly:
+  `SteelWarehouseTab` owns `rememberDrawingCaptureLayer()` + screen px, the export dialog's
+  confirm button runs `pdfCaptureLayer.captureToAndroidBitmap()` **before** calling the ViewModel,
+  and `SteelWarehouseVisualizer` renders an invisible `DrawingCaptureArea` duplicate of
+  `ProfessionalWarehouseDrawing` at the *current* `viewMode` — so whatever tab is on screen is what
+  lands in the PDF.
+
+**Result.** Matrix row **Warehouse** is now ✅. The only remaining alternate-renderer elements are
+**Pile** and the **steel member / base plate** drawings (both by design: no capture area wired).
+
+**Verified.** `:app:compileDebugKotlin` OK; full suite **63 suites / 1203 tests / 0 failures**.
