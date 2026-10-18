@@ -205,11 +205,15 @@ class SteelViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = java.io.File(directory, fileName)
 
-                // [FIX] Connection parameters must match the on-screen drawing: use the
-                // actual bolted-connection design result, falling back to configurable defaults.
-                val boltedConn = res.connectionDesign?.connectionType as? ConnectionType.Bolted
-                val boltDia = boltedConn?.boltDiameter ?: defaultBoltDia
-                val boltCount = boltedConn?.numberOfBolts ?: defaultBoltCount
+                // Connection parameters must match the on-screen drawing: read the actual
+                // bolt diameter/count and weld size from the connection design, deriving
+                // gauge/pitch from the bolt diameter (AISC 360 J3.3), falling back to defaults.
+                val connParams = com.civileg.app.utils.SteelConnectionDrawing.from(
+                    connectionDesign = res.connectionDesign,
+                    defaultBoltDia = defaultBoltDia,
+                    defaultBoltCount = defaultBoltCount,
+                    defaultWeldSize = defaultWeldSize
+                )
 
                 // Generate steel drawing bitmap using actual section properties
                 // 2026-08-04 v3: Pass all section properties to match ProfessionalSteelDrawing
@@ -232,13 +236,13 @@ class SteelViewModel @Inject constructor(
                         zx = stored.section.zx,
                         weightPerMeter = stored.section.weight,
                         // Connection parameters — from actual connection design (matches on-screen drawing)
-                        boltDia = boltDia,
-                        boltCount = boltCount,
-                        boltGauge = defaultBoltGauge,
-                        boltPitch = defaultBoltPitch,
+                        boltDia = connParams.boltDia,
+                        boltCount = connParams.boltCount,
+                        boltGauge = connParams.boltGauge,
+                        boltPitch = connParams.boltPitch,
                         endPlateThickness = defaultEndPlateThickness,
                         hasStiffener = defaultHasStiffener,
-                        weldSize = defaultWeldSize,
+                        weldSize = connParams.weldSize,
                         isColumn = stored.memberType == com.civileg.app.domain.entities.SteelMemberType.COLUMN
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }

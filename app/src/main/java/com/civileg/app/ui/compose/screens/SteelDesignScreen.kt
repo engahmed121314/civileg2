@@ -983,19 +983,9 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                     selectedViewMode = selectedViewMode,
                     onViewModeChanged = { selectedViewMode = it },
                     drawingContent = {
-                        val conn = res.connectionDesign
-                        var boltDia = 20.0
-                        var boltCount = 4
-                        var boltGauge = 90.0
-                        var boltPitch = 75.0
-                        var endPlateThk = 12.0
-                        var hasStiff = false
-                        var weldSz = 6.0
-                        
-                        if (conn != null && conn.connectionType is ConnectionType.Bolted) {
-                            boltDia = conn.connectionType.boltDiameter
-                            boltCount = conn.connectionType.numberOfBolts
-                        }
+                        val connParams = com.civileg.app.utils.SteelConnectionDrawing.from(res.connectionDesign)
+                        val endPlateThk = 12.0
+                        val hasStiff = false
 
                         ProfessionalSteelDrawing(
                             sectionName = res.sectionType.sectionName,
@@ -1015,13 +1005,13 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             sx = res.sectionType.sx,
                             zx = res.sectionType.zx,
                             weightPerMeter = res.sectionType.weight,
-                            boltDia = boltDia,
-                            boltCount = boltCount,
-                            boltGauge = boltGauge,
-                            boltPitch = boltPitch,
+                            boltDia = connParams.boltDia,
+                            boltCount = connParams.boltCount,
+                            boltGauge = connParams.boltGauge,
+                            boltPitch = connParams.boltPitch,
                             endPlateThickness = endPlateThk,
                             hasStiffener = hasStiff,
-                            weldSize = weldSz,
+                            weldSize = connParams.weldSize,
                             isColumn = selectedMemberType == SteelMemberType.COLUMN
                         )
                     }

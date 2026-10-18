@@ -245,10 +245,9 @@ class ExportViewModel @Inject constructor(
                 val fileName = "${projectName.replace(" ", "_")}_Steel_${System.currentTimeMillis()}.pdf"
                 val outputFile = File(outputDir, fileName)
                 
-                // [FIX] Reflect the actual bolted-connection design in the drawing.
-                val boltedConn = connectionDesign?.connectionType as? ConnectionType.Bolted
-                val boltDia = boltedConn?.boltDiameter ?: 20.0
-                val boltCount = boltedConn?.numberOfBolts ?: 4
+                // Reflect the actual connection design in the drawing (bolt dia/count + weld
+                // size; gauge/pitch derived from the bolt diameter per AISC 360 J3.3).
+                val connParams = com.civileg.app.utils.SteelConnectionDrawing.from(connectionDesign)
 
                 val bitmap = drawingBitmap ?: PdfDrawingGenerator.generateSteelDrawing(
                     sectionName = sectionType.sectionName,
@@ -266,13 +265,13 @@ class ExportViewModel @Inject constructor(
                     sx = sectionType.sx,
                     zx = sectionType.zx,
                     weightPerMeter = sectionType.weight,
-                    boltDia = boltDia,
-                    boltCount = boltCount,
-                    boltGauge = 90.0,
-                    boltPitch = 75.0,
+                    boltDia = connParams.boltDia,
+                    boltCount = connParams.boltCount,
+                    boltGauge = connParams.boltGauge,
+                    boltPitch = connParams.boltPitch,
                     endPlateThickness = 12.0,
                     hasStiffener = false,
-                    weldSize = 6.0,
+                    weldSize = connParams.weldSize,
                     isColumn = memberType == SteelMemberType.COLUMN
                 )
                 
