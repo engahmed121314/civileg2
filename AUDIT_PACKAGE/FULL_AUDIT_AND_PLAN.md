@@ -146,9 +146,10 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 
 ## 6. Export Pipelines
 
-- **Unified:** `utils/ExportManager.kt` exposes `exportPdf`, `exportProfessionalPdf`, `exportDxf`, `exportIfc`, `exportCsv`, `exportBoth`, `exportPackage`; `DxfDrawable` interface (`:224`) enables one-call PDF+DXF.
+- **Unified:** `utils/ExportManager.kt` exposes `exportReportAndDxf`, `exportPdf`, `exportProfessionalPdf`, `exportDxf`, `exportIfc`, `exportCsv`, `exportBoth`, `exportPackage`; `DxfDrawable` interface (`:224`) enables one-call PDF+DXF.
 - **Deleted (dead):** 12 exporters (AdvancedPdfExporter, BilingualPdfHelper, CalculatorCadExporterV7, CalculatorDetailingV4, DxfExportEngine ×2, ComprehensivePdfExporter, FlatSlabPdfExporter, PileFoundationPdfExporter, ShearWallPdfExporter, SteelEnglishReportExporter, DxfStructuralExporter).
-- **Live:** `NativePdfExporter`, `DxfExporter` (AC1027), `PdfGenerator`, `PdfDrawingGenerator`, `ProfessionalEnglishPdfReporter`, `PdfExportHelper`, `SteelWarehouseProPdfExporter`, `FrameAnalysisPdfExporter`.
+- **Live:** `DxfExporter` (AC1027), `PdfGenerator`, `PdfDrawingGenerator`, `ProfessionalEnglishPdfReporter`, `PdfExportHelper`, `SteelWarehouseProPdfExporter`, `FrameAnalysisPdfExporter`.
+- **Deleted (native Canvas, §9.11):** `NativePdfExporter` and `PdfLayoutHelper` — the `android.graphics.pdf.PdfDocument` + Canvas path is gone from the app entirely.
 - **Pending:** ~~migrate ~15 ViewModels off direct `ProfessionalEnglishPdfReporter.generateReportLegacy` / `PdfGenerator` calls onto `ExportManager`~~ **done §9.10** via `ExportManager.exportReportAndDxf` (PDF + DXF in one call, DXF surfaced by toast). `QualityEngineerViewModel` still calls the photos-capable `generateReport()` directly.
 
 ---
@@ -416,3 +417,38 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
   `SiteLayoutViewModel` was deleted in `d7c4ab9`. `RebarToolViewModel` was hardened separately
   (§9.x): every public method now has `InputGuard` + `try/catch` and clears stale results.
 - Full suite green after all changes: **63 suites / 1203 tests / 0 failures**.
+
+### 9.11 Last native-Canvas PDF path removed — `android.graphics.pdf` is gone (commit `b3512bd`)
+
+**Finding.** `PdfExportHelper` documents that the Android-native
+`android.graphics.pdf.PdfDocument` + Canvas pipeline killed the app with an **uncatchable Skia
+SIGSEGV** (not caught by Java `try/catch`), which is why everything was moved to iText. The sweep
+showed that migration was incomplete: four **live** PDF writers were still drawing on Canvas —
+`PdfGenerator.generateBOQReport`, `generateEstimationReport` and `generateInventoryReport`
+(reached from the Compose `BOQScreen` / `InventoryScreen`), and `WaterLevelScreen.exportWaterLevelPdf`.
+The legacy Fragments/Activities that call `generateDesignReport`/`generateProfessionalReport` are
+**unreachable** (`activity_main.xml`, the only host of `NavHostFragment`, is never inflated;
+`MainActivity` is Compose-only; `res/navigation/nav_graph.xml` is self-labelled "LEGACY — UNUSED"),
+so they were left as-is rather than migrated.
+
+**Changes.**
+- `PdfGenerator.generateBOQReport` / `generateEstimationReport` / `generateInventoryReport`
+  rewritten on iText, reusing the object's shared helpers (`createStyledParagraph`, `addArabicCell`,
+  `createHeaderCell`, `createReportHeader`, `getArabicFont`) so Arabic keeps going through
+  `PdfTextSegmenter` Presentation-Forms shaping (ADR-005/009). All Canvas/Paint drawing removed.
+- New `PdfGenerator.generateWaterLevelReport(context, title, summary, headers, rows, footer)`
+  plus the `WaterLevelRow` data holder — a generic tabular survey report. `WaterLevelScreen` now
+  builds plain rows and no longer imports `Canvas`/`Paint`/`PdfDocument`/`File`.
+- `ExportManager.exportPdf` and `exportBoth` (both had **zero callers**) re-routed to
+  `ProfessionalEnglishPdfReporter.generateReport(ReportType.GENERIC, …)`; their `safetyChecks`
+  parameter is now `ProfessionalEnglishPdfReporter.SafetyCheck`.
+- **Deleted:** `NativePdfExporter.kt` (the SIGSEGV source) and `PdfLayoutHelper.kt` (the canvas
+  helper, now unreferenced).
+- `ArabicFontProvider.getArabicTypeface` **kept** — it is still used by `DrawingUtils` for
+  on-screen/drawing bitmaps; its KDoc no longer claims a PDF use case.
+- Comment/KDoc corrections so the dead API is never resurrected: `PdfExportHelper`,
+  `ElementDxfDrawings`, `ExportManager`, and the eight ViewModels that still carried a
+  "CRITICAL FIX … use NativePdfExporter" note (they had called `exportReportAndDxf` since §9.10).
+
+**Verified.** `rg "android\.graphics\.pdf" app/src` returns **only comments** — no executable
+reference remains. `:app:compileDebugKotlin` OK; full suite **63 suites / 1203 tests / 0 failures**.
