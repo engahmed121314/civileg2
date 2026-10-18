@@ -638,6 +638,11 @@ class CalculatorEngine @Inject constructor(
         InputGuard.positive("eaveHeight", inputs.eaveHeight)
         InputGuard.positive("baySpacing", inputs.baySpacing)
         InputGuard.positive("length", inputs.length)
+        InputGuard.nonNegative("ridgeHeight", inputs.ridgeHeight)
+        InputGuard.nonNegative("slope", inputs.slope)
+        InputGuard.nonNegative("deadLoad", inputs.deadLoad)
+        InputGuard.nonNegative("liveLoad", inputs.liveLoad)
+        InputGuard.nonNegative("purlinSpacing", inputs.purlinSpacing)
 
         val span = inputs.span
         val eave = inputs.eaveHeight
@@ -712,6 +717,13 @@ class CalculatorEngine @Inject constructor(
         )
     }
 
+    /**
+     * Pro wrapper (BoM + costing + ROI) over [designSteelWarehouse].
+     *
+     * InputGuard (ADR-010): every field this function touches (`span`, `length`, `deadLoad`,
+     * `liveLoad`, `code`) is validated by [designSteelWarehouse] on line 1 of this body, before
+     * any of them are read below — so there is deliberately no duplicate guard block here.
+     */
     fun calculateSteelWarehousePro(inputs: SteelWarehouseInputs): SteelWarehouseProResult {
         val basicRes = designSteelWarehouse(inputs)
         val bom = listOf(

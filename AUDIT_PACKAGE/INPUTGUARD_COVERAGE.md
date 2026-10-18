@@ -8,6 +8,10 @@
 
 ## Coverage Matrix
 
+> **⚠️ The matrix below is HISTORICAL** — it predates the P2-10 InputGuard sweep. The
+> **Verified status** table that follows supersedes it for `CalculatorEngine` and was scanned
+> directly from the source (guard count per function, `CalculatorEngine.kt`).
+
 | Engine / Function | Entry Point | InputGuard Status | Missing Guards |
 |------------------|-------------|-------------------|----------------|
 | **CalculatorEngine.designBeam** | ❌ STUB | ❌ NONE | fcu, fy, width, height, span, deadLoad, liveLoad, preferredDiameter |
@@ -23,11 +27,39 @@
 | **CalculatorEngine.designShearWall** | **MISSING** | **N/A** | N/A |
 | **CalculatorEngine.designFrame** | **MISSING** | **N/A** | N/A |
 | **CalculatorEngine.designSeismic** | **MISSING** | **N/A** | N/A |
-| **CalculatorEngine.designSteelWarehouse** | ✅ COMPLETE | ❌ NONE | inputs validation missing |
-| **CalculatorEngine.calculateSteelWarehousePro** | ✅ COMPLETE | ❌ NONE | inputs validation missing |
-| **CalculatorEngine.calculateSteelMember** | ✅ COMPLETE | ❌ NONE | inputs validation missing |
-| **CalculatorEngine.calculateStrapFooting** | ⚠️ PARTIAL | ❌ NONE | col1Load, col2Load, distance, soil, fcu, fy |
-| **CalculatorEngine.calculateSteelWarehouse** | ✅ COMPLETE | ❌ NONE | inputs validation missing |
+| **CalculatorEngine.designSteelWarehouse** | ✅ COMPLETE | ✅ 9 guards | span, eaveHeight, baySpacing, length, ridgeHeight, slope, deadLoad, liveLoad, purlinSpacing |
+| **CalculatorEngine.calculateSteelWarehousePro** | ✅ COMPLETE | ✅ inherited | calls `designSteelWarehouse` on line 1 of its body → all fields it reads are validated before first read |
+| **CalculatorEngine.calculateSteelMember** | ✅ COMPLETE | ✅ 4 guards | notNull(section, memberType, inputs, code) |
+| **CalculatorEngine.calculateStrapFooting** | ⚠️ PARTIAL | ⚠️ 4 guards | col1Load, col2Load, distance, soil |
+| **CalculatorEngine.calculateSteelWarehouse** | **DOES NOT EXIST** | n/a | no such function — only `designSteelWarehouse` + `calculateSteelWarehousePro` (stale row) |
+
+### Verified status (scanned from source, 2026-10-18)
+
+Guard counts are counted mechanically from `CalculatorEngine.kt`; line numbers are of the
+`fun` declaration. **✔ = entry validates its numeric inputs**; **⚠ = partial**.
+
+| Function | Line | InputGuard calls | Status |
+|----------|------|------------------|--------|
+| `calculateSteelMember` | 375 | 4 | ✔ notNull(section, memberType, inputs, code) |
+| `designSteelWarehouse` | 636 | 9 | ✔ span, eaveHeight, baySpacing, length, ridgeHeight, slope, deadLoad, liveLoad, purlinSpacing |
+| `calculateSteelWarehousePro` | 727 | 0 (inherited) | ✔ delegates to `designSteelWarehouse` first — documented in KDoc |
+| `designColumn` | 755 | 8 | ✔ fcu, fy, width, depth, pu, mx, my, clearHeight |
+| `designBeam` | 819 | 7 | ✔ |
+| `designSlab` | 938 | 5 | ✔ |
+| `calculateFooting` | 1067 | 6 | ✔ |
+| `calculateStrapFooting` | 1178 | 4 | ⚠ col1Load, col2Load, distance, soil guarded; other params unguarded |
+| `designStaircase` | 1248 | 5 | ✔ |
+| `designTank` | 1335 | 4 | ✔ |
+| `designRetainingWall` | 1390 | 5 | ✔ |
+| `calculateSeismicLoads` | 1450 | 2 | ⚠ only 2 of the zone/importance/soil/height/weight params guarded |
+| `designShearWall` | 1544 | 5 | ✔ |
+| `designPileFoundation` | 1560 | 4 | ✔ |
+| `designFlatSlab` | 1575 | 5 | ✔ |
+| `designFrame` | — | — | **does not exist** (stale row) |
+| `designSeismic` | — | — | **does not exist** (stale row) |
+
+**Remaining gaps in `CalculatorEngine`:** `calculateSeismicLoads` (2/5) and
+`calculateStrapFooting` (4/9).
 
 ---
 
@@ -211,24 +243,24 @@ object InputGuard {
 ## Implementation Checklist
 
 ### Phase 1: CalculatorEngine (Week 1)
-- [ ] Add InputGuard to `designBeam()` — 8 params
-- [ ] Add InputGuard to `designColumn()` — 8 params
-- [ ] Add InputGuard to `designSlab()` — 7 params
-- [ ] Add InputGuard to `calculateFooting()` — 6 params
-- [ ] Add InputGuard to `designStaircase()` — 8 params
-- [ ] Add InputGuard to `designTank()` — 5 params
-- [ ] Add InputGuard to `designRetainingWall()` — 6 params
-- [ ] Add InputGuard to `calculateSeismicLoads()` — 5 params
-- [ ] Add InputGuard to `designSteelWarehouse()` — 10+ params
-- [ ] Add InputGuard to `calculateSteelWarehousePro()` — 10+ params
-- [ ] Add InputGuard to `calculateSteelMember()` — 4 params
-- [ ] Add InputGuard to `calculateStrapFooting()` — 9 params
-- [ ] Add InputGuard to `calculateSteelWarehouse()` — 10+ params
-- [ ] Add InputGuard to NEW `designFlatSlab()` — 12 params
-- [ ] Add InputGuard to NEW `designPileFoundation()` — 10+ params
-- [ ] Add InputGuard to NEW `designShearWall()` — 7 params
-- [ ] Add InputGuard to NEW `designFrame()` — 8 params
-- [ ] Add InputGuard to NEW `designSeismic()` — 6 params
+- [x] Add InputGuard to `designBeam()` — 8 params (7 guards verified)
+- [x] Add InputGuard to `designColumn()` — 8 params (8 guards verified)
+- [x] Add InputGuard to `designSlab()` — 7 params (5 guards verified)
+- [x] Add InputGuard to `calculateFooting()` — 6 params (6 guards verified)
+- [x] Add InputGuard to `designStaircase()` — 8 params (5 guards verified)
+- [x] Add InputGuard to `designTank()` — 5 params (4 guards verified)
+- [x] Add InputGuard to `designRetainingWall()` — 6 params (5 guards verified)
+- [ ] Add InputGuard to `calculateSeismicLoads()` — 5 params → **only 2 guards; still open**
+- [x] Add InputGuard to `designSteelWarehouse()` — 10+ params (9 guards verified; added 2026-10-18)
+- [x] Add InputGuard to `calculateSteelWarehousePro()` — 10+ params (inherits from `designSteelWarehouse`, documented in KDoc)
+- [x] Add InputGuard to `calculateSteelMember()` — 4 params (4 guards verified)
+- [ ] Add InputGuard to `calculateStrapFooting()` — 9 params → **only 4 guards; still open**
+- [x] ~~Add InputGuard to `calculateSteelWarehouse()`~~ — **function does not exist** (N/A)
+- [x] Add InputGuard to NEW `designFlatSlab()` — 12 params (5 guards verified)
+- [x] Add InputGuard to NEW `designPileFoundation()` — 10+ params (4 guards verified)
+- [x] Add InputGuard to NEW `designShearWall()` — 7 params (5 guards verified)
+- [x] ~~Add InputGuard to NEW `designFrame()`~~ — **function does not exist** (N/A)
+- [x] ~~Add InputGuard to NEW `designSeismic()`~~ — **function does not exist** (N/A)
 
 ### Phase 2: Domain Engines (Week 2)
 - [ ] Create `ACIPileFoundation.kt` with InputGuard
