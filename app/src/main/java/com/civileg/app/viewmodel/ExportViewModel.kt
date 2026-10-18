@@ -7,6 +7,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.entities.*
+import com.civileg.app.utils.DxfDrawable
+import com.civileg.app.utils.DxfExporter
+import com.civileg.app.utils.ElementDxfDrawings
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
@@ -87,6 +90,26 @@ class ExportViewModel @Inject constructor(
                     outputPath = outputFile.absolutePath
                 )
 
+                generated?.let { pdf ->
+                    val w: Double
+                    val d: Double
+                    when (columnType) {
+                        is ColumnType.Rectangular -> { w = columnType.width; d = columnType.depth }
+                        is ColumnType.Circular -> { w = columnType.diameter; d = columnType.diameter }
+                        else -> { w = 300.0; d = 300.0 }
+                    }
+                    writeDxfSibling(pdf, ElementDxfDrawings.columnSection(
+                        title = "COLUMN ${columnType.displayName}",
+                        widthMm = w,
+                        depthMm = d,
+                        coverMm = 40.0,
+                        mainBarDiaMm = result.reinforcementResult.barDiameter,
+                        mainBarCount = result.reinforcementResult.numberOfBars,
+                        tieDiaMm = result.reinforcementResult.tiesDiameter.takeIf { it > 0 } ?: 8.0,
+                        tieSpacingMm = result.reinforcementResult.tiesSpacing.takeIf { it > 0 } ?: 200.0
+                    ))
+                }
+
                 _exportState.value = ExportState.Success(generated!!)
                 
             } catch (e: Exception) {
@@ -160,6 +183,19 @@ class ExportViewModel @Inject constructor(
                     drawingBitmap = bitmap,
                     outputPath = outputFile.absolutePath
                 )
+
+                generated?.let { pdf ->
+                    writeDxfSibling(pdf, ElementDxfDrawings.beamSection(
+                        title = "BEAM ${beamType.displayName}",
+                        widthMm = inputs.width,
+                        depthMm = inputs.totalDepth,
+                        coverMm = 40.0,
+                        mainBarDiaMm = result.flexureResult.barDiameter,
+                        mainBarCount = result.flexureResult.numberOfBars,
+                        stirrupDiaMm = result.flexureResult.tiesDiameter.takeIf { it > 0 } ?: 8.0,
+                        stirrupSpacingMm = result.flexureResult.tiesSpacing.takeIf { it > 0 } ?: 200.0
+                    ))
+                }
 
                 _exportState.value = ExportState.Success(generated!!)
                 
@@ -321,6 +357,16 @@ class ExportViewModel @Inject constructor(
                     outputPath = outputFile.absolutePath
                 )
 
+                generated?.let { pdf ->
+                    writeDxfSibling(pdf, ElementDxfDrawings.steelISection(
+                        title = sectionType.sectionName,
+                        heightMm = sectionType.depth,
+                        widthMm = sectionType.width,
+                        webThicknessMm = sectionType.webThickness,
+                        flangeThicknessMm = sectionType.flangeThickness
+                    ))
+                }
+
                 _exportState.value = ExportState.Success(generated!!)
                 
             } catch (e: Exception) {
@@ -330,6 +376,21 @@ class ExportViewModel @Inject constructor(
         }
     }
     
+    // ========== DXF companion drawings ==========
+
+    /**
+     * Write a DXF companion (AC1027) next to the generated PDF so the same design
+     * can be opened in CAD. Best-effort: a DXF failure never fails the PDF export.
+     */
+    private fun writeDxfSibling(pdfFile: File, drawing: DxfDrawable) {
+        try {
+            val dxfFile = File(pdfFile.parentFile, pdfFile.nameWithoutExtension + ".dxf")
+            DxfExporter().exportDxf(drawing, dxfFile.absolutePath)
+        } catch (_: Exception) {
+            // ignore — DXF is a bonus artifact
+        }
+    }
+
     // ========== Bitmap Generation Helpers ==========
     
     private fun generateColumnBitmap(columnType: ColumnType, result: AdvancedColumnResult): Bitmap? {

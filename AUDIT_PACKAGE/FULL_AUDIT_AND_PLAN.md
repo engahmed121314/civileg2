@@ -340,3 +340,31 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
   (`gradle/actions/dependency-submission@v6`) to publish an accurate, promptly-refreshed graph so
   the remaining alerts can be enumerated and fixed precisely.
 - Full suite green after all changes: **61 suites / 1196 tests / 0 failures**.
+
+### 9.9 DXF pipeline made real (P1-8) + steel connection values (P1-6)
+
+- **DXF entity-loss bug fixed** — `DxfExporter.exportDxf()` was shadowing the shared
+  `StringBuilder` with a local one, so every primitive appended by the drawing
+  (`addLine*`, `addCircle`, …) was dropped and the emitted ENTITIES section was empty.
+  The method now resets and writes the field buffer; a new `renderToString(DxfDrawable)`
+  allows file-free validation. The unused `Context` constructor param was dropped
+  (`DxfExporter()`), making the writer JVM-testable; `ExportManager` and `SiteLayoutScreen`
+  call sites updated. `DxfDrawable` is now a `fun interface`.
+- **`ElementDxfDrawings` factories added (P1-8)** — data-driven `DxfDrawable` producers for
+  every element: beam (section + elevation), column, slab, footing, combined footing, pile,
+  retaining wall, stair, tank, steel I-section, base plate, plus a generic fallback. Each draws
+  in mm with reinforcement on the conventional layers (REBAR/STIRRUPS/BEAMS/…).
+- **`ExportManager.exportBoth` now exercisable** — `ExportViewModel` (Column/Beam/Steel)
+  writes a DXF companion (`<name>.dxf`) next to the PDF via the new factories (best-effort;
+  a DXF failure never fails the PDF). Remaining element ViewModels + `exportBoth` migration is P2-11.
+- **Steel connection values (P1-6)** — new `SteelConnectionDrawing.from()` reads the **actual**
+  bolt diameter/count and weld size from `ConnectionDesignResult` (including `Hybrid`,
+  which the old `as? Bolted` cast silently ignored) and derives gauge/pitch from the bolt
+  diameter via AISC 360 J3.3 preferred 3d spacing (rounded to 5 mm), replacing the fixed
+  90/75 literals. Used by both the on-screen `ProfessionalSteelDrawing` and the PDF path.
+- **Tests** — `DxfExporterTest` (3) + `SteelConnectionDrawingTest` (4; caught the `Hybrid`
+  cast bug). Suite now **63 suites / 1203 tests / 0 failures**.
+- **Crash inventory re-checked (P2-12, partial)** — `SoilBearingCalculator` is already fully
+  defensively clamped (ADR-010) and `UnitConverter` defaults unknown units to a factor of 1.0
+  (no exception), so those "high risk" entries are stale. Remaining ViewModel-level
+  string-parsing/null-spinner guards still to sweep.
