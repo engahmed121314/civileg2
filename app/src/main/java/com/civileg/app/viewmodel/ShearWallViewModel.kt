@@ -187,6 +187,7 @@ class ShearWallViewModel @Inject constructor(
         InputGuard.positive("clearCover", cover)
 
         viewModelScope.launch {
+            pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val input = ShearWallInput(

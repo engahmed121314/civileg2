@@ -1,6 +1,7 @@
 package com.civileg.app.viewmodel
 
 import android.content.Context
+import android.graphics.Bitmap
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -55,6 +56,9 @@ class SteelViewModel @Inject constructor(
     private val _isExporting = MutableLiveData(false)
     val isExporting: LiveData<Boolean> = _isExporting
 
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    var pendingDrawingBitmap: Bitmap? = null
+
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
 
@@ -101,6 +105,7 @@ class SteelViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isLoading.value = true
+            pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             _errorMessage.value = null
             try {
                 val res = calculatorEngine.calculateSteelMember(section, memberType, inputs, code)
@@ -130,6 +135,7 @@ class SteelViewModel @Inject constructor(
         lastWarehouseInputs = inputs
         viewModelScope.launch {
             _isLoading.value = true
+            pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             _errorMessage.value = null
             try {
                 val res = calculatorEngine.designSteelWarehouse(inputs)

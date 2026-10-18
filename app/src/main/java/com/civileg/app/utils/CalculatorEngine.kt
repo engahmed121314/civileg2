@@ -1069,6 +1069,54 @@ class CalculatorEngine @Inject constructor(
         val footingEngine = CalculationFactory.getFootingDesign(domainCode)
 
         val initialDepth = 600.0
+
+        if (type == FootingType.COMBINED && p2 > 0.0 && distance > 0.0) {
+            val combinedRes = footingEngine.designCombinedFooting(
+                fcu = fcu, fy = fy,
+                axialLoad1 = p, axialLoad2 = p2,
+                distanceBetweenColumns = distance,
+                soilBearingCapacity = soil,
+                footingDepth = initialDepth,
+                loadCombination = LoadCombination.DEAD_LIVE,
+                columnWidth = colB, columnDepth = colT,
+                col2Width = colB, col2Depth = colT
+            )
+            val widthM = combinedRes.requiredWidth / 1000.0
+            val lengthM = combinedRes.requiredLength / 1000.0
+            val thickM = combinedRes.requiredThickness / 1000.0
+            val concreteVolume = widthM * lengthM * thickM
+            val barDia = combinedRes.reinforcement.barDiameter.toInt().takeIf { it > 0 } ?: preferredDiameter
+            val spacing = combinedRes.reinforcement.spacing.takeIf { it > 0 } ?: preferredSpacing
+            val numBarsX = max(5, ceil((combinedRes.requiredWidth - 100.0) / spacing).toInt())
+            val numBarsY = max(5, ceil((combinedRes.requiredLength - 100.0) / spacing).toInt())
+            val barAreaSingle = PI / 4.0 * barDia * barDia
+            val totalLengthX = numBarsX * lengthM
+            val totalLengthY = numBarsY * widthM
+            val steelWeight = (totalLengthX + totalLengthY) * barAreaSingle * 7850.0 / 1e6
+            val cost = concreteVolume * 120.0 + steelWeight * 1.5
+            val safetyChecks = listOf(
+                DesignSafetyCheck("Soil Bearing", combinedRes.soilPressure, soil, "kPa", combinedRes.soilPressure <= soil),
+                DesignSafetyCheck("Punching Shear", combinedRes.punchingShearCheck.appliedShear, combinedRes.punchingShearCheck.shearCapacity, "kN", combinedRes.punchingShearCheck.isSafe),
+                DesignSafetyCheck("Flexure Steel", combinedRes.reinforcement.astProvided, combinedRes.reinforcement.astRequired, "mm²", combinedRes.reinforcement.isSafe)
+            )
+            return FootingResult(
+                type = type, width = combinedRes.requiredWidth, length = combinedRes.requiredLength, thickness = combinedRes.requiredThickness,
+                soilPressure = combinedRes.soilPressure, allowablePressure = soil,
+                reinforcementBottom = ReinforcementBar(
+                    numBars = numBarsX, diameter = barDia, spacing = spacing, weightKg = steelWeight
+                ),
+                isSafe = combinedRes.isSafe, code = code,
+                concreteVolume = concreteVolume, steelWeight = steelWeight, cost = cost,
+                barsX = numBarsX, barsY = numBarsY, barDiameter = barDia,
+                utilizationRatio = (combinedRes.soilPressure / soil).coerceIn(0.1, 1.5),
+                safetyChecks = safetyChecks,
+                column1Size = Pair(colB, colT),
+                column2Size = Pair(colB, colT),
+                isCombined = true,
+                distanceBetweenColumns = distance
+            )
+        }
+
         val res = footingEngine.designIsolatedFooting(
             fcu = fcu, fy = fy, columnWidth = colB, columnDepth = colT,
             axialLoad = p, momentX = 0.0, momentY = 0.0,

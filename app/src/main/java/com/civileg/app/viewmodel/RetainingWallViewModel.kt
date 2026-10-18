@@ -65,6 +65,7 @@ class RetainingWallViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isLoading.value = true
+            pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
                 val res = calculatorEngine.designRetainingWall(
                     height = height,

@@ -335,20 +335,22 @@ class ExportViewModel @Inject constructor(
     
     private fun generateColumnBitmap(columnType: ColumnType, result: AdvancedColumnResult): Bitmap? {
         return try {
+            val tieDia = result.reinforcementResult.tiesDiameter.takeIf { it > 0 } ?: 8.0
+            val tieSpacing = result.reinforcementResult.tiesSpacing.takeIf { it > 0 } ?: 200.0
             when (columnType) {
                 is ColumnType.Rectangular -> PdfDrawingGenerator.generateColumnDrawing(
                     columnWidth = columnType.width, columnDepth = columnType.depth,
                     columnHeight = 3000.0,
                     numBars = result.reinforcementResult.numberOfBars,
                     barDia = result.reinforcementResult.barDiameter,
-                    tieDia = 8.0, tieSpacing = 200.0, cover = 40.0
+                    tieDia = tieDia, tieSpacing = tieSpacing, cover = 40.0
                 )
                 is ColumnType.Circular -> PdfDrawingGenerator.generateColumnDrawing(
                     columnWidth = columnType.diameter, columnDepth = columnType.diameter,
                     columnHeight = 3000.0,
                     numBars = result.reinforcementResult.numberOfBars,
                     barDia = result.reinforcementResult.barDiameter,
-                    tieDia = 8.0, tieSpacing = 200.0, cover = 40.0
+                    tieDia = tieDia, tieSpacing = tieSpacing, cover = 40.0
                 )
                 else -> null
             }

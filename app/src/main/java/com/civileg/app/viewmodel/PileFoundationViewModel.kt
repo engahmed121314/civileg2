@@ -79,6 +79,7 @@ class PileFoundationViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _isLoading.value = true
+            pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
                 // Rule 1.4: loud failures — validate before any maths (ADR-010)
                 InputGuard.positive("pileDiameter", pileDiameter)

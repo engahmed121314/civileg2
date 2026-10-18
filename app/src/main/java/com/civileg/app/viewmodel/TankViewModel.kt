@@ -64,6 +64,7 @@ class TankViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isLoading.value = true
+            pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
                 val res = calculatorEngine.designTank(type, capacity, height, fcu, fy, preferredDiameter, code)
                 

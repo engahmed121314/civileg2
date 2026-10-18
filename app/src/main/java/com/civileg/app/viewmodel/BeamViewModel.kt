@@ -77,6 +77,7 @@ class BeamViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isLoading.value = true
+            pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
                 // Store all inputs for PDF export
                 lastWidth = width

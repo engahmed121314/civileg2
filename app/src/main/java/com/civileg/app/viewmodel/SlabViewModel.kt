@@ -87,6 +87,7 @@ class SlabViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isLoading.value = true
+            pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
                 // Store inputs for PDF export
                 lastInputs = SlabStoredInputs(

@@ -192,6 +192,7 @@ class ColumnViewModel @Inject constructor(
     }
 
     private fun calculate() {
+        pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
         val state = _uiState.value
         val w = state.width.toDoubleOrNull() ?: return
         val d = state.depth.toDoubleOrNull() ?: return

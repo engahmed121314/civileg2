@@ -273,23 +273,33 @@ class CombinedFootingViewModel @Inject constructor(
                     val c2dDraw = state.col2Depth.toDoubleOrNull() ?: 400.0
                     val distDraw = state.distanceBetweenColumns.toDoubleOrNull() ?: 5000.0
                     if (eR != null) {
+                        val longNums = Regex("\\d+").findAll(eR.longBottomBars).map { it.value.toInt() }.toList()
+                        val longCount = longNums.getOrNull(0) ?: 8
+                        val longDia = longNums.getOrNull(1)?.toDouble() ?: 16.0
+                        val transNums = Regex("\\d+").findAll(eR.transBottomBars).map { it.value.toInt() }.toList()
+                        val transCount = transNums.getOrNull(0) ?: 6
+                        val transDia = transNums.getOrNull(1)?.toDouble() ?: 12.0
                         com.civileg.app.utils.PdfDrawingGenerator.generateCombinedFootingDrawing(
                             footingLength = eR.footingLength * 1000, footingWidth = eR.footingWidth * 1000,
                             footingThickness = eR.footingThickness,
                             col1W = c1wDraw, col1D = c1dDraw, col2W = c2wDraw, col2D = c2dDraw,
                             distanceBetweenColumns = distDraw,
-                            longBarCount = 8, longBarDia = 16.0, longBarSpacing = 150.0,
-                            transBarCount = 6, transBarDia = 12.0, transBarSpacing = 200.0,
+                            longBarCount = longCount, longBarDia = longDia, longBarSpacing = 150.0,
+                            transBarCount = transCount, transBarDia = transDia, transBarSpacing = 200.0,
                             soilPressureMax = eR.qMax
                         )
                     } else if (fR != null) {
+                        val barDia = fR.reinforcement.barDiameter
+                        val barSpacing = fR.reinforcement.spacing.takeIf { it > 0 } ?: 150.0
+                        val numBarsLong = kotlin.math.max(5, kotlin.math.ceil(fR.requiredWidth / barSpacing).toInt())
+                        val numBarsTrans = kotlin.math.max(5, kotlin.math.ceil(fR.requiredLength / barSpacing).toInt())
                         com.civileg.app.utils.PdfDrawingGenerator.generateCombinedFootingDrawing(
                             footingLength = fR.requiredLength, footingWidth = fR.requiredWidth,
                             footingThickness = fR.requiredThickness,
                             col1W = c1wDraw, col1D = c1dDraw, col2W = c2wDraw, col2D = c2dDraw,
                             distanceBetweenColumns = distDraw,
-                            longBarCount = 8, longBarDia = 16.0, longBarSpacing = 150.0,
-                            transBarCount = 6, transBarDia = 12.0, transBarSpacing = 200.0,
+                            longBarCount = numBarsLong, longBarDia = barDia, longBarSpacing = barSpacing,
+                            transBarCount = numBarsTrans, transBarDia = barDia, transBarSpacing = barSpacing,
                             soilPressureMax = fR.maxSoilPressure
                         )
                     } else null

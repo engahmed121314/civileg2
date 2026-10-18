@@ -104,6 +104,7 @@ class SeismicViewModel @Inject constructor(
         InputGuard.positive("buildingHeight", bldgH)
 
         viewModelScope.launch {
+            pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             _uiState.update { it.copy(isLoading = true) }
             try {
                 val designer: SeismicDesign = CalculationFactory.getSeismicDesign(

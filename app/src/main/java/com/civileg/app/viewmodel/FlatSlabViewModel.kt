@@ -86,6 +86,7 @@ class FlatSlabViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isLoading.value = true
+            pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             _error.value = null
             _errorMessage.value = null
             try {

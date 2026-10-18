@@ -81,6 +81,7 @@ class FootingViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isLoading.value = true
+            pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
                 lastFcu = fcu
                 lastFy = fy
