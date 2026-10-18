@@ -1184,7 +1184,15 @@ class CalculatorEngine @Inject constructor(
         InputGuard.positive("col1Load", col1Load)
         InputGuard.positive("col2Load", col2Load)
         InputGuard.positive("distance", distance)
+        InputGuard.positive("col1W", col1W)
+        InputGuard.positive("col1D", col1D)
+        InputGuard.positive("col2W", col2W)
+        InputGuard.positive("col2D", col2D)
         InputGuard.positive("soil", soil)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("strapWidth", strapWidth)
+        // `preferredDiameter` is deliberately not guarded: this function never reads it.
 
         val design = CalculationFactory.getStrapFootingDesign(code)
         val inputs = StrapFootingDesignEngine.Inputs(
@@ -1450,6 +1458,12 @@ class CalculatorEngine @Inject constructor(
     fun calculateSeismicLoads(input: SeismicInput, code: DesignCode = DesignCode.ECP): SeismicResult {
         InputGuard.positive("height", input.height)
         InputGuard.positive("totalWeight", input.totalWeight)
+        // Zone feeds the bucket mapping below; NaN or a negative factor previously fell through
+        // to ZONE_5 silently instead of failing.
+        InputGuard.inRange("zone", input.zone, 0.0, 0.40)
+        InputGuard.notBlank("soilType", input.soilType)
+        InputGuard.positive("importance", input.importance)
+        InputGuard.positive("reductionFactor", input.reductionFactor)
 
         val domainCode = code
         val seismicEngine = CalculationFactory.getSeismicDesign(domainCode)

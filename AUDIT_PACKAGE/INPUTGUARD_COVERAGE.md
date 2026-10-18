@@ -8,29 +8,29 @@
 
 ## Coverage Matrix
 
-> **⚠️ The matrix below is HISTORICAL** — it predates the P2-10 InputGuard sweep. The
-> **Verified status** table that follows supersedes it for `CalculatorEngine` and was scanned
-> directly from the source (guard count per function, `CalculatorEngine.kt`).
+> **The `CalculatorEngine` rows below were re-verified from source on 2026-10-18** and match the
+> **Verified status** table. The **domain-engine** rows that follow still reflect the original
+> audit and have not been re-scanned.
 
 | Engine / Function | Entry Point | InputGuard Status | Missing Guards |
 |------------------|-------------|-------------------|----------------|
-| **CalculatorEngine.designBeam** | ❌ STUB | ❌ NONE | fcu, fy, width, height, span, deadLoad, liveLoad, preferredDiameter |
-| **CalculatorEngine.designColumn** | ❌ STUB | ❌ NONE | fcu, fy, width, depth, pu, mx, my, clearHeight |
-| **CalculatorEngine.designSlab** | ⚠️ PARTIAL | ❌ NONE | fcu, fy, lx, ly, ts, deadLoad, liveLoad |
-| **CalculatorEngine.calculateFooting** | ❌ STUB | ❌ NONE | fcu, fy, soil, colB, colT, p |
-| **CalculatorEngine.designStaircase** | ⚠️ PARTIAL | ❌ NONE | fcu, fy, span, riser, tread, deadLoad, liveLoad |
-| **CalculatorEngine.designTank** | ❌ STUB | ❌ NONE | fcu, fy, height, capacity |
-| **CalculatorEngine.designRetainingWall** | ❌ STUB | ❌ NONE | fcu, fy, height, soilDensity, frictionAngle |
-| **CalculatorEngine.calculateSeismicLoads** | ❌ STUB | ❌ NONE | zone, importance, soilType, height, totalWeight |
-| **CalculatorEngine.designFlatSlab** | **MISSING** | **N/A** | N/A |
-| **CalculatorEngine.designPileFoundation** | **MISSING** | **N/A** | N/A |
-| **CalculatorEngine.designShearWall** | **MISSING** | **N/A** | N/A |
-| **CalculatorEngine.designFrame** | **MISSING** | **N/A** | N/A |
-| **CalculatorEngine.designSeismic** | **MISSING** | **N/A** | N/A |
+| **CalculatorEngine.designBeam** | ✅ | ✅ 7 guards | — see Verified status table |
+| **CalculatorEngine.designColumn** | ✅ | ✅ 8 guards | fcu, fy, width, depth, pu, mx, my, clearHeight |
+| **CalculatorEngine.designSlab** | ✅ | ✅ 5 guards | — see Verified status table |
+| **CalculatorEngine.calculateFooting** | ✅ | ✅ 6 guards | — see Verified status table |
+| **CalculatorEngine.designStaircase** | ✅ | ✅ 5 guards | — see Verified status table |
+| **CalculatorEngine.designTank** | ✅ | ✅ 4 guards | — see Verified status table |
+| **CalculatorEngine.designRetainingWall** | ✅ | ✅ 5 guards | — see Verified status table |
+| **CalculatorEngine.calculateSeismicLoads** | ✅ COMPLETE | ✅ 6 guards | height, totalWeight, zone, soilType, importance, reductionFactor |
+| **CalculatorEngine.designFlatSlab** | ✅ | ✅ 5 guards | — see Verified status table |
+| **CalculatorEngine.designPileFoundation** | ✅ | ✅ 4 guards | — see Verified status table |
+| **CalculatorEngine.designShearWall** | ✅ | ✅ 5 guards | — see Verified status table |
+| **CalculatorEngine.designFrame** | **DOES NOT EXIST** | n/a | stale row |
+| **CalculatorEngine.designSeismic** | **DOES NOT EXIST** | n/a | stale row |
 | **CalculatorEngine.designSteelWarehouse** | ✅ COMPLETE | ✅ 9 guards | span, eaveHeight, baySpacing, length, ridgeHeight, slope, deadLoad, liveLoad, purlinSpacing |
 | **CalculatorEngine.calculateSteelWarehousePro** | ✅ COMPLETE | ✅ inherited | calls `designSteelWarehouse` on line 1 of its body → all fields it reads are validated before first read |
 | **CalculatorEngine.calculateSteelMember** | ✅ COMPLETE | ✅ 4 guards | notNull(section, memberType, inputs, code) |
-| **CalculatorEngine.calculateStrapFooting** | ⚠️ PARTIAL | ⚠️ 4 guards | col1Load, col2Load, distance, soil |
+| **CalculatorEngine.calculateStrapFooting** | ✅ COMPLETE | ✅ 11 guards | col1Load, col2Load, distance, col1W/col1D/col2W/col2D, soil, fcu, fy, strapWidth |
 | **CalculatorEngine.calculateSteelWarehouse** | **DOES NOT EXIST** | n/a | no such function — only `designSteelWarehouse` + `calculateSteelWarehousePro` (stale row) |
 
 ### Verified status (scanned from source, 2026-10-18)
@@ -47,19 +47,20 @@ Guard counts are counted mechanically from `CalculatorEngine.kt`; line numbers a
 | `designBeam` | 819 | 7 | ✔ |
 | `designSlab` | 938 | 5 | ✔ |
 | `calculateFooting` | 1067 | 6 | ✔ |
-| `calculateStrapFooting` | 1178 | 4 | ⚠ col1Load, col2Load, distance, soil guarded; other params unguarded |
+| `calculateStrapFooting` | 1178 | 11 | ✔ col1Load, col2Load, distance, col1W/col1D/col2W/col2D, soil, fcu, fy, strapWidth (`preferredDiameter` unused by the function, deliberately unguarded) |
 | `designStaircase` | 1248 | 5 | ✔ |
 | `designTank` | 1335 | 4 | ✔ |
 | `designRetainingWall` | 1390 | 5 | ✔ |
-| `calculateSeismicLoads` | 1450 | 2 | ⚠ only 2 of the zone/importance/soil/height/weight params guarded |
+| `calculateSeismicLoads` | 1450 | 6 | ✔ height, totalWeight, zone (0.00–0.40), soilType (notBlank), importance, reductionFactor |
 | `designShearWall` | 1544 | 5 | ✔ |
 | `designPileFoundation` | 1560 | 4 | ✔ |
 | `designFlatSlab` | 1575 | 5 | ✔ |
 | `designFrame` | — | — | **does not exist** (stale row) |
 | `designSeismic` | — | — | **does not exist** (stale row) |
 
-**Remaining gaps in `CalculatorEngine`:** `calculateSeismicLoads` (2/5) and
-`calculateStrapFooting` (4/9).
+**Remaining gaps in `CalculatorEngine`:** none — every entry point listed above now validates the
+numeric inputs it reads (`designFrame` / `designSeismic` / `calculateSteelWarehouse` do not exist).
+Regression tests: `InputGuardTest`, `SteelWarehouseInputGuardTest`, `CalculatorEngineInputGuardTest`.
 
 ---
 
@@ -127,27 +128,18 @@ Guard counts are counted mechanically from `CalculatorEngine.kt`; line numbers a
 
 ## Missing InputGuard — Critical Gaps
 
-### CalculatorEngine (18 functions, 0 guarded)
-| Function | Priority | Reason |
-|----------|----------|--------|
-| designBeam | CRITICAL | STUB - used by BeamScreen |
-| designColumn | CRITICAL | STUB - used by ColumnScreen |
-| designSlab | HIGH | PARTIAL - used by SlabScreen |
-| calculateFooting | CRITICAL | STUB - used by FootingScreen |
-| designStaircase | HIGH | PARTIAL - used by StairScreen |
-| designTank | CRITICAL | STUB - used by TankScreen |
-| designRetainingWall | CRITICAL | STUB - used by RetainingWallScreen |
-| calculateSeismicLoads | CRITICAL | STUB - used by SeismicScreen |
-| designFlatSlab | CRITICAL | MISSING - used by FlatSlabScreen |
-| designPileFoundation | CRITICAL | MISSING - used by PileFoundationScreen |
-| designShearWall | CRITICAL | MISSING - used by ShearWallScreen |
-| designFrame | CRITICAL | MISSING - used by FrameAnalysisScreen |
-| designSeismic | CRITICAL | MISSING - used by SeismicScreen |
-| designSteelWarehouse | HIGH | Used by SteelDesignScreen |
-| calculateSteelWarehousePro | HIGH | Used by SteelDesignScreen |
-| calculateSteelMember | HIGH | Used by SteelDesignScreen |
-| calculateStrapFooting | HIGH | PARTIAL - used by StrapFootingScreen |
-| calculateSteelWarehouse | HIGH | Used by SteelDesignScreen |
+### CalculatorEngine — **CLOSED** (verified 2026-10-18)
+
+The original assessment ("18 functions, 0 guarded") is obsolete. All 15 `CalculatorEngine` entry
+points that actually exist now validate the numeric inputs they read — guard counts per function
+are in the **Verified status** table above. Three of the original 18 names (`designFrame`,
+`designSeismic`, `calculateSteelWarehouse`) refer to functions that do not exist.
+
+| Group | Status |
+|-------|--------|
+| `designBeam`, `designColumn`, `designSlab`, `calculateFooting`, `designStaircase`, `designTank`, `designRetainingWall`, `designFlatSlab`, `designPileFoundation`, `designShearWall` | ✅ guarded |
+| `calculateSeismicLoads`, `calculateStrapFooting`, `designSteelWarehouse`, `calculateSteelWarehousePro`, `calculateSteelMember` | ✅ guarded (completed 2026-10-18) |
+| `designFrame`, `designSeismic`, `calculateSteelWarehouse` | N/A — functions do not exist |
 
 ### Missing Domain Engine Files
 | File | Priority | Screen Affected |
@@ -250,11 +242,11 @@ object InputGuard {
 - [x] Add InputGuard to `designStaircase()` — 8 params (5 guards verified)
 - [x] Add InputGuard to `designTank()` — 5 params (4 guards verified)
 - [x] Add InputGuard to `designRetainingWall()` — 6 params (5 guards verified)
-- [ ] Add InputGuard to `calculateSeismicLoads()` — 5 params → **only 2 guards; still open**
+- [x] Add InputGuard to `calculateSeismicLoads()` — 5 params (6 guards verified; zone/soilType/importance/reductionFactor added 2026-10-18)
 - [x] Add InputGuard to `designSteelWarehouse()` — 10+ params (9 guards verified; added 2026-10-18)
 - [x] Add InputGuard to `calculateSteelWarehousePro()` — 10+ params (inherits from `designSteelWarehouse`, documented in KDoc)
 - [x] Add InputGuard to `calculateSteelMember()` — 4 params (4 guards verified)
-- [ ] Add InputGuard to `calculateStrapFooting()` — 9 params → **only 4 guards; still open**
+- [x] Add InputGuard to `calculateStrapFooting()` — 9 params (11 guards verified; added 2026-10-18)
 - [x] ~~Add InputGuard to `calculateSteelWarehouse()`~~ — **function does not exist** (N/A)
 - [x] Add InputGuard to NEW `designFlatSlab()` — 12 params (5 guards verified)
 - [x] Add InputGuard to NEW `designPileFoundation()` — 10+ params (4 guards verified)
