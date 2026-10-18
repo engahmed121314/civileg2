@@ -17,7 +17,7 @@
 | CalculatorEngine facade | ⚠️ Partial | Real (not stub) for most elements but duplicates engine math inline; some delegations missing. See §5. |
 | InputGuard | ✅ Mostly | Present at domain-engine entries; **`CalculatorEngine` coverage was the old zero-gap** — verify per §5. |
 | CodeReference | ✅ Broad | Concrete + steel/frame engines emit refs (commits `08bcc90`, `399c455`). Confirmed errors fixed (ACI cover, one-way slab); ECP/SBC sub-clauses still unverified. See §9.6. |
-| Drawing → PDF | ✅ | Capture-based for **every** element that has an on-screen drawing (Warehouse §9.12, Pile §9.13, steel member §9.14); Seismic falls back to `generateSeismicDrawing`; FlatSlab/ShearWall stale-bitmap fixed; fallbacks read real values (§9.10); native-Canvas PDF path removed (§9.11). Base plate is generator-only (no on-screen drawing exists). |
+| Drawing → PDF | ✅ | Capture-based for **every** element that has an on-screen drawing (Warehouse §9.12, Pile §9.13, steel member §9.14, Seismic §9.15); FlatSlab/ShearWall stale-bitmap fixed; all fallbacks read real values (§9.10); native-Canvas PDF path removed (§9.11). Base plate is generator-only (no on-screen drawing exists). |
 | Export pipelines | ✅ Consolidated | `ExportManager` unified (`exportReportAndDxf/exportPdf/Dxf/Ifc/Csv/Both/Package`); 12 dead exporters **plus `NativePdfExporter` + `PdfLayoutHelper`** deleted. All ViewModels migrated (§9.10); `QualityEngineerViewModel` still calls the photos-capable reporter directly. |
 | Security / signing | ⚠️ Blocked | Needs production signer fingerprint + AdMob IDs. 15 Dependabot alerts. |
 
@@ -132,11 +132,11 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 | **Steel member** | `ProfessionalSteelDrawing` | ✅ (§9.14) | captured at current view, else `generateSteelDrawing` | ✅ |
 | **Steel base plate** | (none) | n/a | `generateBasePlateDrawing` | ⚠️ generator only (no on-screen drawing exists to capture) |
 | **Warehouse** | `ProfessionalWarehouseDrawing` | ✅ (§9.12) | captured at current view, else `generateWarehouseDrawing` + 3D | ✅ |
-| **Seismic** | `ProfessionalSeismicDrawing` | ❌ | captured if set, else `generateSeismicDrawing` | ⚠️ generator fallback (was: no drawing) |
+| **Seismic** | `ProfessionalSeismicDrawing` | ✅ (§9.15) | captured at current view, else `generateSeismicDrawing` | ✅ |
 | Frame BMD/SFD | `FrameDrawingCanvas` | n/a | `generateFrameBitmap` from result | ✅ |
 
 ### 5.2 Concrete fidelity gaps
-1. **Seismic PDF has no drawing** — `SeismicViewModel.kt:192` reads a `pendingDrawingBitmap` that is never set (no `DrawingCaptureArea` in `SeismicScreen.kt`) and has no generator fallback → `"[Drawing not available...]"`. `PdfDrawingGenerator.generateSeismicDrawing` exists (`:3060`) and can be wired. *(Fix implemented — see §9.)*
+1. ~~**Seismic PDF has no drawing**~~ — **FIXED in two passes:** generator fallback wired first (§9.1), then the missing `DrawingCaptureArea` added so the PDF embeds the on-screen view at the current tab (**§9.15**).
 2. **Stale-bitmap bug** — `FlatSlabViewModel.kt:186` and `ShearWallViewModel.kt:287` read the captured bitmap but never reset `pendingDrawingBitmap = null`, so a later export can show an **old** drawing. *(Fix implemented — see §9.)*
 3. ~~**Steel connection PDF mismatch**~~ — **FIXED (§9.6):** PDF path now reads actual `boltDia`/`boltCount` from `res.connectionDesign` (falls back to defaults) in both `SteelViewModel` and `ExportViewModel`.
 4. **Fallback generators synthesize geometry** rather than read design values (combined footing hardcodes bars `CombinedFootingViewModel.kt:281-282`; retaining wall derives stem/base/rebar `:121-133`; generic slab/column fallbacks `ExportViewModel.kt:336-353`). Stair width and combined-footing bar spacing now read the real values (**§9.10**). Only reachable when capture is absent.
@@ -163,7 +163,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
    chapters corrected §9.9; ECP 203-2020 sub-clause text still needs the licensed document.)*
 
 ### P1 — Drawing/PDF fidelity
-4. Wire `generateSeismicDrawing` fallback + `DrawingCaptureArea` in `SeismicScreen`. *(fallback done)*
+4. Wire `generateSeismicDrawing` fallback + `DrawingCaptureArea` in `SeismicScreen`. *(done §9.15 — both halves now in place; every drawing-bearing element captures the on-screen view.)*
 5. Reset `pendingDrawingBitmap` in FlatSlab/ShearWall. *(done)*
 6. Pass **actual** connection values (bolt count/dia/gauge, weld, end-plate) into the Steel PDF path.
 7. Make fallback generators read result values (no hardcoded bars/dimensions); or guarantee capture always exists for those elements. *(done §9.10 — stair width and combined-footing bar spacing now derived from real inputs/results; remaining fallbacks are covered by a capture bitmap.)*
@@ -203,7 +203,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 ☐ One DesignCode enum; all screens → CalculationFactory → code-correct engine
 ✅ CalculatorEngine steel member now delegates to engines (P0-2; other inline paths remain)
 ☐ Every engine: InputGuard + full result (codeNotes, warnings, safetyChecks, steps, diagram data)
-✅ Every element PDF has a drawing that matches the on-screen drawing and the result (no stale/placeholder) — §9.10 fallbacks, §9.11 native path removed, §9.12–9.14 captures; base plate has no on-screen drawing and reads real values
+✅ Every element PDF has a drawing that matches the on-screen drawing and the result (no stale/placeholder) — §9.10 fallbacks, §9.11 native path removed, §9.12–§9.15 captures; base plate has no on-screen drawing and reads real values
 ☐ PDF: single pipeline (ExportManager); DXF: AC1027 with layers/BBS; PDF+DXF exportable together
 ☐ CodeReference keys verified against code text
 ☐ Zero crashes with null/empty/invalid inputs
@@ -541,3 +541,34 @@ drawing (`rg` finds no `ProfessionalBasePlateDrawing` composable — only
 the real result values.
 
 **Verified.** `:app:compileDebugKotlin` OK; full suite **63 suites / 1203 tests / 0 failures**.
+
+### 9.15 Seismic drawing capture wired (P1-4)
+
+**Finding.** §5.2 item 1's second half: `SeismicScreen` renders `ProfessionalSeismicDrawing`
+(All / Elevation / Spectrum / Forces tabs) but its export button always built the bitmap with
+`PdfDrawingGenerator.generateSeismicDrawing(...)` — an independent renderer — so the PDF never
+matched the view. The generator fallback itself had already been wired (§9.1).
+
+**Changes** (same three-part pattern as §9.12–§9.14, all in `SeismicScreen.kt`).
+- Capture layer, `density`/`config`, `screenWidthPx`/`screenHeightPx` and the drawing's
+  `selectedViewMode` moved to function scope — the `selectedViewMode` declaration was lifted out
+  of the drawing's `item {}` so the invisible duplicate renders the tab the user selected.
+- The export button (the **only** PDF path in the screen) captures first with
+  `pdfCaptureLayer.captureToAndroidBitmap()` inside its existing `scope.launch`; the generator
+  became the fallback used only when the layer holds no recorded content.
+- An invisible `DrawingCaptureArea` of `ProfessionalSeismicDrawing`, passing the identical
+  argument list as the visible call (`totalHeight`, `totalWeight`, `baseShear`, `zoneFactor`,
+  `soilFactor`, `importanceFactor`, `responseModification`, `numFloors`, `floorForces`,
+  `viewMode`, `designCode`), is composed **after** the `LazyColumn` and wrapped in
+  `result?.let { res -> … }` — required because `res` is scoped to the list's own
+  `result?.let { res -> … }` block.
+
+**Note.** `SeismicViewModel.exportToPdf` (`:160`) has no callers: the screen exports directly
+through `PdfExportHelper`, and nothing ever sets that ViewModel's `pendingDrawingBitmap`. It keeps
+its honest generator fallback and is a candidate for the pending dead-code cleanup decision.
+
+**Result.** Matrix row **Seismic** is now ✅, closing §5.2 item 1 and plan item **P1-4**. Every
+element with an on-screen drawing now embeds exactly what is on screen; the only generator-only row
+left is **Steel base plate**, which has no on-screen drawing.
+
+**Verified.** `:app:compileDebugKotlin` OK; full suite **65 suites / 1224 tests / 0 failures**.

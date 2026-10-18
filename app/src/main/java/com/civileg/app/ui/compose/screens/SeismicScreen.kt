@@ -25,7 +25,9 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -40,7 +42,9 @@ import com.civileg.app.db.Project
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.ExportUtils
+import com.civileg.app.utils.captureToAndroidBitmap
 import com.civileg.app.ui.compose.components.charts.SeismicResponseChart
 import com.civileg.app.utils.PdfExportHelper
 import com.civileg.app.viewmodel.ProjectViewModel
@@ -110,6 +114,16 @@ fun SeismicScreen(
     var showSuccessMsg by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+
+    // PDF drawing capture: the export embeds the view that is on screen right now.
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+    // Hoisted out of the drawing item so the invisible capture area (below the list) can
+    // render the same tab the user has selected.
+    var selectedViewMode by remember { mutableStateOf(0) }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
     val getDesigner: () -> SeismicDesign = {
@@ -617,7 +631,6 @@ fun SeismicScreen(
 
                 // ── Professional Seismic Drawing ─────────────────────────────
                 item {
-                    var selectedViewMode by remember { mutableStateOf(0) }
                     Card(
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
@@ -696,10 +709,21 @@ fun SeismicScreen(
                                 )
                                 scope.launch {
                                     try {
-                                        // CRITICAL FIX (2026-07-27 v3): Generate seismic drawing bitmap
-                                        // (building elevation + force distribution chart + response spectrum)
-                                        // and pass it to exportDesignReportAsync so the PDF includes visuals.
-                                        val drawingBitmap = try {
+                                        // Capture the drawing exactly as it appears on screen at the
+                                        // currently selected view mode, so the PDF cannot diverge from
+                                        // what the user is looking at.
+                                        val capturedBitmap = try {
+                                            pdfCaptureLayer.captureToAndroidBitmap()
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("SeismicScreen", "Drawing capture failed", e)
+                                            null
+                                        }
+                                        // Fallback (§9.10): generate the elevation + force distribution
+                                        // chart + response spectrum from the real result values when no
+                                        // capture area has been composed yet.
+                                        val drawingBitmap = if (capturedBitmap != null) {
+                                            capturedBitmap
+                                        } else try {
                                             com.civileg.app.utils.PdfDrawingGenerator.generateSeismicDrawing(
                                                 totalHeight = totalHeight,
                                                 numFloors = numFloors.toIntOrNull() ?: 5,
@@ -785,6 +809,36 @@ fun SeismicScreen(
             }
 
             item { Spacer(modifier = Modifier.height(48.dp)) }
+        }
+    }
+
+    // Invisible duplicate of the on-screen seismic drawing, composed at the currently selected
+    // view mode so the exported PDF embeds exactly what the user sees. It lives outside the
+    // LazyColumn because list items are only composed when scrolled into view.
+    result?.let { res ->
+        ComposeDrawingCaptureUtil.DrawingCaptureArea(
+            captureLayer = pdfCaptureLayer,
+            widthPx = screenWidthPx,
+            heightPx = screenHeightPx
+        ) {
+            Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                ProfessionalSeismicDrawing(
+                    buildingHeight = totalHeight,
+                    totalWeight = totalWeight.toDoubleOrNull() ?: 5000.0,
+                    baseShear = res.baseShearResult.baseShear,
+                    zoneFactor = res.baseShearResult.zoneFactor,
+                    soilFactor = res.baseShearResult.soilFactor,
+                    importanceFactor = res.baseShearResult.importanceFactor,
+                    responseModFactor = res.baseShearResult.responseModification,
+                    numFloors = numFloors.toIntOrNull() ?: 5,
+                    floorForces = res.floorForces.mapIndexed { i, f ->
+                        FloorForce(i + 1, f.lateralForce, f.floorHeight)
+                    },
+                    viewMode = selectedViewMode,
+                    designCode = selectedCode.designCode,
+                    modifier = Modifier.fillMaxWidth().height(400.dp)
+                )
+            }
         }
     }
 
