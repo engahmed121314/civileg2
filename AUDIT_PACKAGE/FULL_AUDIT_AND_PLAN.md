@@ -17,8 +17,8 @@
 | CalculatorEngine facade | ⚠️ Partial | Real (not stub) for most elements but duplicates engine math inline; some delegations missing. See §5. |
 | InputGuard | ✅ Mostly | Present at domain-engine entries; **`CalculatorEngine` coverage was the old zero-gap** — verify per §5. |
 | CodeReference | ✅ Broad | Concrete + steel/frame engines emit refs (commits `08bcc90`, `399c455`). Confirmed errors fixed (ACI cover, one-way slab); ECP/SBC sub-clauses still unverified. See §9.6. |
-| Drawing → PDF | ⚠️ Gaps | Capture-based for most; **Seismic has no drawing; Pile/Steel/Warehouse use a divergent renderer**. Stale-bitmap bug in FlatSlab + ShearWall. Steel connection bolt params fixed in PDF path (§9.6). See §6. |
-| Export pipelines | ✅ Consolidated | `ExportManager` unified (`exportPdf/Dxf/Ifc/Csv/Both/Package`); 12 dead exporters deleted. Migrations to `ExportManager` still pending. |
+| Drawing → PDF | ✅ | Capture-based for **every** element that has an on-screen drawing (Warehouse §9.12, Pile §9.13, steel member §9.14); Seismic falls back to `generateSeismicDrawing`; FlatSlab/ShearWall stale-bitmap fixed; fallbacks read real values (§9.10); native-Canvas PDF path removed (§9.11). Base plate is generator-only (no on-screen drawing exists). |
+| Export pipelines | ✅ Consolidated | `ExportManager` unified (`exportReportAndDxf/exportPdf/Dxf/Ifc/Csv/Both/Package`); 12 dead exporters **plus `NativePdfExporter` + `PdfLayoutHelper`** deleted. All ViewModels migrated (§9.10); `QualityEngineerViewModel` still calls the photos-capable reporter directly. |
 | Security / signing | ⚠️ Blocked | Needs production signer fingerprint + AdMob IDs. 15 Dependabot alerts. |
 
 ---
@@ -306,7 +306,14 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 ### 9.7 Still open
 - `CodeReference` ECP 203-2020 sub-clause numbers: authoritative text still needed for the
   Egyptian code (SBC verified — see §9.8).
-- warehouse-vs-simple-beam divergence — **resolved (§9.12)**.
+- warehouse-vs-simple-beam divergence — **resolved in §9.6**, not by the drawing work: both
+  `CalculatorEngine.calculateSteelMember` (`:393-400`) and `designSteelWarehouse` (via
+  `steelMemberUtilizations`, `:621-628`) now call the *same* `designSteelMemberEcp/Aisc/Sbc`
+  helpers, so identical section + grade + loads + code yield identical utilizations. Any remaining
+  difference is the legitimate modelling input (warehouse rafter uses `Lb = bay·1000`, column uses
+  `L = Lb = eave·1000`). Note the three helpers ignore their `memberType` argument and always run
+  both the flexural/shear and the column-compression check — conservative and identical for both
+  callers.
 - Pile drawing divergence — **resolved (§9.13)**.
 
 ### 9.8 Deferred items completed (DesignCode unification round 2)
