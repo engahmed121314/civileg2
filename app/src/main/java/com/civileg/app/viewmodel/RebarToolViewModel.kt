@@ -47,6 +47,7 @@ class RebarToolViewModel : ViewModel() {
 
     fun calculateWeight(diameter: Double, length: Double, quantity: Int) {
         _isLoading.value = true
+        _errorMessage.value = null
         try {
             InputGuard.positive("diameter", diameter)
             InputGuard.positive("length", length)
@@ -56,8 +57,10 @@ class RebarToolViewModel : ViewModel() {
             _weightResult.value = result
         } catch (e: IllegalArgumentException) {
             _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _weightResult.value = null
         } catch (e: Exception) {
             _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _weightResult.value = null
         } finally {
             _isLoading.value = false
         }
@@ -79,11 +82,13 @@ class RebarToolViewModel : ViewModel() {
         code: DesignCode
     ) {
         _isLoading.value = true
+        _errorMessage.value = null
         try {
             InputGuard.positive("diameter", diameter)
             InputGuard.positive("fy", fy)
             InputGuard.positive("fcu", fcu)
             InputGuard.nonNegative("excessRatio", excessRatio)
+            InputGuard.inRange("excessRatio", excessRatio, 0.0, 10.0)
 
             val result = when (code) {
                 DesignCode.ECP_203 -> RebarCalculator.developmentLengthECP(
@@ -100,10 +105,13 @@ class RebarToolViewModel : ViewModel() {
             _devLengthResult.value = result
         } catch (e: IllegalArgumentException) {
             _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _devLengthResult.value = null
         } catch (e: ArithmeticException) {
             _errorMessage.value = "Arithmetic error / خطأ حسابي: ${e.message}"
+            _devLengthResult.value = null
         } catch (e: Exception) {
             _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _devLengthResult.value = null
         } finally {
             _isLoading.value = false
         }
@@ -126,10 +134,12 @@ class RebarToolViewModel : ViewModel() {
         spliceClass: String
     ) {
         _isLoading.value = true
+        _errorMessage.value = null
         try {
             InputGuard.positive("diameter", diameter)
             InputGuard.positive("fy", fy)
             InputGuard.positive("fcu", fcu)
+            InputGuard.notBlank("spliceClass", spliceClass)
 
             val result = RebarCalculator.lapSpliceLength(
                 diameter, fy, fcu, lapType, code, isTopBar, isConfined, spliceClass
@@ -137,10 +147,13 @@ class RebarToolViewModel : ViewModel() {
             _lapResult.value = result
         } catch (e: IllegalArgumentException) {
             _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _lapResult.value = null
         } catch (e: ArithmeticException) {
             _errorMessage.value = "Arithmetic error / خطأ حسابي: ${e.message}"
+            _lapResult.value = null
         } catch (e: Exception) {
             _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _lapResult.value = null
         } finally {
             _isLoading.value = false
         }
@@ -157,10 +170,34 @@ class RebarToolViewModel : ViewModel() {
         topDia: Int, topCount: Int, botDia: Int, botCount: Int,
         stirrupDia: Int, stirrupSpacing: Double, cover: Double
     ) {
-        _scheduleResult.value = RebarCalculator.generateBeamSchedule(
-            width, depth, length, spans, topDia, topCount, botDia, botCount,
-            stirrupDia, stirrupSpacing, cover
-        )
+        _isLoading.value = true
+        _errorMessage.value = null
+        try {
+            InputGuard.positive("width", width)
+            InputGuard.positive("depth", depth)
+            InputGuard.positive("length", length)
+            InputGuard.positive("spans", spans.toDouble())
+            InputGuard.positive("topDia", topDia.toDouble())
+            InputGuard.positive("topCount", topCount.toDouble())
+            InputGuard.positive("botDia", botDia.toDouble())
+            InputGuard.positive("botCount", botCount.toDouble())
+            InputGuard.positive("stirrupDia", stirrupDia.toDouble())
+            InputGuard.positive("stirrupSpacing", stirrupSpacing)
+            InputGuard.nonNegative("cover", cover)
+
+            _scheduleResult.value = RebarCalculator.generateBeamSchedule(
+                width, depth, length, spans, topDia, topCount, botDia, botCount,
+                stirrupDia, stirrupSpacing, cover
+            )
+        } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _scheduleResult.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _scheduleResult.value = null
+        } finally {
+            _isLoading.value = false
+        }
     }
 
     fun generateSlabSchedule(
@@ -169,10 +206,31 @@ class RebarToolViewModel : ViewModel() {
         botLongDia: Int, botLongSp: Double,
         topShortDia: Int, topShortSp: Double, cover: Double
     ) {
-        _scheduleResult.value = RebarCalculator.generateSlabSchedule(
-            slabL, slabW, thickness, botShortDia, botShortSp,
-            botLongDia, botLongSp, topShortDia, topShortSp, cover
-        )
+        _isLoading.value = true
+        _errorMessage.value = null
+        try {
+            InputGuard.positive("slabL", slabL)
+            InputGuard.positive("slabW", slabW)
+            InputGuard.positive("thickness", thickness)
+            InputGuard.positive("botShortDia", botShortDia.toDouble())
+            InputGuard.positive("botShortSp", botShortSp)
+            InputGuard.positive("botLongDia", botLongDia.toDouble())
+            InputGuard.positive("botLongSp", botLongSp)
+            InputGuard.nonNegative("cover", cover)
+
+            _scheduleResult.value = RebarCalculator.generateSlabSchedule(
+                slabL, slabW, thickness, botShortDia, botShortSp,
+                botLongDia, botLongSp, topShortDia, topShortSp, cover
+            )
+        } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _scheduleResult.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _scheduleResult.value = null
+        } finally {
+            _isLoading.value = false
+        }
     }
 
     fun generateColumnSchedule(
@@ -180,9 +238,30 @@ class RebarToolViewModel : ViewModel() {
         mainDia: Int, mainCount: Int,
         tieDia: Int, tieSp: Double, cover: Double
     ) {
-        _scheduleResult.value = RebarCalculator.generateColumnSchedule(
-            colW, colD, height, mainDia, mainCount, tieDia, tieSp, cover
-        )
+        _isLoading.value = true
+        _errorMessage.value = null
+        try {
+            InputGuard.positive("colW", colW)
+            InputGuard.positive("colD", colD)
+            InputGuard.positive("height", height)
+            InputGuard.positive("mainDia", mainDia.toDouble())
+            InputGuard.positive("mainCount", mainCount.toDouble())
+            InputGuard.positive("tieDia", tieDia.toDouble())
+            InputGuard.positive("tieSp", tieSp)
+            InputGuard.nonNegative("cover", cover)
+
+            _scheduleResult.value = RebarCalculator.generateColumnSchedule(
+                colW, colD, height, mainDia, mainCount, tieDia, tieSp, cover
+            )
+        } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _scheduleResult.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _scheduleResult.value = null
+        } finally {
+            _isLoading.value = false
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -199,11 +278,27 @@ class RebarToolViewModel : ViewModel() {
         limitingWidth: Double
     ) {
         _isLoading.value = true
+        _errorMessage.value = null
         try {
+            InputGuard.nonNegative("steelStress", steelStress)
+            InputGuard.positive("barDiameter", barDiameter)
+            InputGuard.positive("barSpacing", barSpacing)
+            InputGuard.nonNegative("coverToBarCenter", coverToBarCenter)
+            InputGuard.positive("limitingWidth", limitingWidth)
+
             _crackResult.value = RebarCalculator.crackWidth(
                 steelStress, barDiameter, barSpacing, coverToBarCenter,
                 limitingWidth = limitingWidth
             )
+        } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _crackResult.value = null
+        } catch (e: ArithmeticException) {
+            _errorMessage.value = "Arithmetic error / خطأ حسابي: ${e.message}"
+            _crackResult.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _crackResult.value = null
         } finally {
             _isLoading.value = false
         }
