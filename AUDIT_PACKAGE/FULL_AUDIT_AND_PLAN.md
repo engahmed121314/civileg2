@@ -149,7 +149,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 - **Unified:** `utils/ExportManager.kt` exposes `exportPdf`, `exportProfessionalPdf`, `exportDxf`, `exportIfc`, `exportCsv`, `exportBoth`, `exportPackage`; `DxfDrawable` interface (`:224`) enables one-call PDF+DXF.
 - **Deleted (dead):** 12 exporters (AdvancedPdfExporter, BilingualPdfHelper, CalculatorCadExporterV7, CalculatorDetailingV4, DxfExportEngine ×2, ComprehensivePdfExporter, FlatSlabPdfExporter, PileFoundationPdfExporter, ShearWallPdfExporter, SteelEnglishReportExporter, DxfStructuralExporter).
 - **Live:** `NativePdfExporter`, `DxfExporter` (AC1027), `PdfGenerator`, `PdfDrawingGenerator`, `ProfessionalEnglishPdfReporter`, `PdfExportHelper`, `SteelWarehouseProPdfExporter`, `FrameAnalysisPdfExporter`.
-- **Pending:** migrate ~15 ViewModels off direct `ProfessionalEnglishPdfReporter.generateReportLegacy` / `PdfGenerator` calls onto `ExportManager`; add per-element `DxfDrawable` implementations (none exist today → `exportBoth` not exercised).
+- **Pending:** ~~migrate ~15 ViewModels off direct `ProfessionalEnglishPdfReporter.generateReportLegacy` / `PdfGenerator` calls onto `ExportManager`~~ **done §9.10** via `ExportManager.exportReportAndDxf` (PDF + DXF in one call, DXF surfaced by toast). `QualityEngineerViewModel` still calls the photos-capable `generateReport()` directly.
 
 ---
 
@@ -165,8 +165,8 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 4. Wire `generateSeismicDrawing` fallback + `DrawingCaptureArea` in `SeismicScreen`. *(fallback done)*
 5. Reset `pendingDrawingBitmap` in FlatSlab/ShearWall. *(done)*
 6. Pass **actual** connection values (bolt count/dia/gauge, weld, end-plate) into the Steel PDF path.
-7. Make fallback generators read result values (no hardcoded bars/dimensions); or guarantee capture always exists for those elements.
-8. Add `DxfDrawable` implementations for all elements so `exportBoth` is real.
+7. Make fallback generators read result values (no hardcoded bars/dimensions); or guarantee capture always exists for those elements. *(done §9.10 — stair width and combined-footing bar spacing now derived from real inputs/results; remaining fallbacks are covered by a capture bitmap.)*
+8. Add `DxfDrawable` implementations for all elements so `exportBoth` is real. *(done §9.9)*
 
 ### P2 — Coverage & robustness
 9. Add AISC connection & base-plate methods; guard `classifySection`. *(classifySection guarded §9.6;
@@ -174,9 +174,9 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
    adapter done §9.9** — `AISCSteelDesignEngine.designConcentricBasePlate()` delegates to the single
    shared `ecp.SteelBasePlateDesign` (AISC 360-16 Ch.14 / DG1), closing the AISC API gap without
    duplicating 1100+ lines; parity guarded by `AISCBasePlateAdapterTest`.)*
-10. Add `AcidCombinedFooting`/`SbcCombinedFooting` doc-only note in UI (or dedicated classes).
-11. Migrate all ViewModels to `ExportManager`.
-12. Crash-hardening sweep for tools (SoilBearing, RebarTool, UnitConverter, SiteLayout, etc.).
+10. Add `AcidCombinedFooting`/`SbcCombinedFooting` doc-only note in UI (or dedicated classes). *(done §9.10 — method note in `FootingScreen` results card, guarded by the Combined footing type.)*
+11. Migrate all ViewModels to `ExportManager`. *(done §9.10 — every element ViewModel, `ExportViewModel`, `PdfExportHelper` and the three legacy design fragments now go through `ExportManager.exportReportAndDxf`; the only remaining direct reporter use is `QualityEngineerViewModel`'s photos-capable `generateReport()`.)*
+12. Crash-hardening sweep for tools (SoilBearing, RebarTool, UnitConverter, SiteLayout, etc.). *(done §9.10 — SoilBearing/UnitConverter/RebarTool/ConcreteMixDesigner/SteelTables/BbsGenerator/SiteLayoutScreen all verified guarded; `WaterLevelCalculator`/`ExpressionParser`/`SiteLayoutViewModel` do not exist.)*
 
 ### P3 — Release
 13. Fill `AppIntegrityChecker.EXPECTED_SIGNER_FINGERPRINT` + production AdMob IDs.
@@ -374,3 +374,45 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
   defensively clamped (ADR-010) and `UnitConverter` defaults unknown units to a factor of 1.0
   (no exception), so those "high risk" entries are stale. Remaining ViewModel-level
   string-parsing/null-spinner guards still to sweep.
+
+### 9.10 Fallback honesty (P1-7), combined-footing note (P2-10), export unification (P2-11), tool sweep (P2-12)
+
+- **P1-7 — no fabricated fallback geometry.** The two fallback drawing generators that still
+  invented values now read the real ones:
+  - `StairViewModel` — the flight width is carried into the calculation
+    (`calculateStairPro(..., stairWidthMm = ...)`, set from `StairScreen`'s actual input) and used
+    by the fallback bitmap instead of a hardcoded `1200.0`; the legacy `calculateStair` overload
+    passes its own `width` through.
+  - `CombinedFootingViewModel` — long/transverse bar spacing is derived from the bar count and the
+    footing dimensions (`(length − 2·cover)/(count − 1)`, clamped to 100–250 mm) for both the
+    fallback bitmap and the DXF sibling, instead of fixed 150/200 mm literals.
+  - The remaining fallbacks were audited: every other element either derives its geometry from the
+    result object or is guaranteed a Compose capture bitmap. Strap footing and seismic stay
+    deliberately unwired (§9.9) — their result objects do not carry enough geometry to draw a
+    faithful section.
+- **P2-10 — combined-footing method note.** `FootingScreen`'s results card now states which engine
+  produced the design (guarded by `selectedType == COMBINED`): ECP 203-2020 uses the dedicated
+  `ECPCombinedFooting` engine, while ACI 318/SBC 304 route through the shared footing design
+  interface — no `AciCombinedFooting`/`SbcCombinedFooting` classes are implied.
+- **P2-11 — every export now goes through `ExportManager`.** New
+  `ExportManager.exportReportAndDxf(...)` wraps the professional English reporter (the path all
+  element screens used) and the AC1027 DXF companion in one call, returning an `ExportBundle`, and
+  **surfaces the DXF to the user with a toast** (`export_dxf_created`, EN + AR) so the companion
+  drawing is never written silently. Migrated: Beam, Column, Slab, Flat Slab, Hordi Slab, Waffle
+  Slab, Footing, Combined Footing, Retaining Wall, Tank, Stair, Shear Wall, Pile, Strap Footing,
+  Seismic, Soil Settlement, Project, Steel (4 reports), `ExportViewModel` (4 reports),
+  `PdfExportHelper`, and the `Slab`/`Beam`/`Column` design fragments. The now-dead
+  `ExportViewModel.writeDxfSibling` helper and every stale
+  `ProfessionalEnglishPdfReporter` import were removed. The only remaining direct reporter use is
+  `QualityEngineerViewModel`, which calls the photos-capable `generateReport()` (a signature
+  `exportReportAndDxf` deliberately does not cover).
+- **P2-12 — tool sweep closed.** Verified already safe: `SoilBearingCalculator`, `UnitConverter`,
+  `RebarCalculator`, `ConcreteMixDesigner` (all denominators clamped/positive by construction and
+  `ConcreteMixViewModel` guards every input with `InputGuard`), `SteelTables` (pure constants +
+  nullable lookups), `BbsGenerator` (every entry point already has `InputGuard`), `SiteLayoutScreen`
+  (`toDoubleOrNull()` + `catch (Throwable)` → error card), and the Room/DataStore `.first()` calls
+  in `QualityEngineerViewModel`. `WaterLevelCalculator` and `ExpressionParser` **do not exist**
+  (expression evaluation is inline in `CalculatorScreen` and already wrapped), and
+  `SiteLayoutViewModel` was deleted in `d7c4ab9`. `RebarToolViewModel` was hardened separately
+  (§9.x): every public method now has `InputGuard` + `try/catch` and clears stale results.
+- Full suite green after all changes: **63 suites / 1203 tests / 0 failures**.

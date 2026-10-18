@@ -1,5 +1,25 @@
 # Crash Inventory — Tools & Utility Screens
 
+> **STATUS UPDATE (P2-12 sweep closed)** — this inventory is the *original* risk assessment.
+> The fixes it prescribes are now **implemented and verified**; treat the tables below as
+> historical rationale, not as an open work list. Verified in `FULL_AUDIT_AND_PLAN.md` §9.10:
+>
+> - `SoilBearingCalculator` — fully `InputGuard`-guarded (ADR-010), clamped, no silent NaN.
+> - `UnitConverter` — unknown units default to a factor of 1.0 (no exception thrown).
+> - `RebarCalculator` — weight/area formulas correct; all failures are loud `InputGuard` errors.
+> - `RebarToolViewModel` — every public method now has `InputGuard` + `try/catch` + error message.
+> - `ConcreteMixDesigner` — all denominators positive by construction; `ConcreteMixViewModel`
+>   guards every input with `InputGuard`.
+> - `SteelTables` / `BbsGenerator` — pure constants / already `InputGuard`-guarded entry points.
+> - `SiteLayoutScreen` — `toDoubleOrNull()` + `catch (Throwable)` → error card.
+> - Room/DataStore `.first()` calls — safe (both sources always emit).
+> - `WaterLevelCalculator` and `ExpressionParser` **do not exist**; expression evaluation is
+>   inline in `CalculatorScreen` and already wrapped in `try/catch`.
+> - `SiteLayoutViewModel` was deleted (`d7c4ab9`); `SiteLayoutScreen` calls `LayoutOptimizer`
+>   directly with its own `try/catch`.
+>
+> No open crash risks remain from this inventory.
+
 ## Executive Summary
 | Total Tools Screens | Crash Risk High | Crash Risk Medium | Crash Risk Low |
 |---------------------|-----------------|-------------------|----------------|
