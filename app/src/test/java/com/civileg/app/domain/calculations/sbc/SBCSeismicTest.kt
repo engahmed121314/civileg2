@@ -342,11 +342,23 @@ class SBCSeismicTest {
         )
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun `response spectrum - zero peakGroundAcceleration throws`() {
-        engine.getResponseSpectrum(
+    @Test
+    fun `response spectrum - zero peakGroundAcceleration uses the code default`() {
+        // 0.0 is the documented "use the code default" value (SeismicDesign.getResponseSpectrum)
+        // and is exactly what CalculatorEngine and SeismicScreen pass. It must not throw, and must
+        // match an explicit DEFAULT_SPS (0.10 g) call.
+        val withDefault = engine.getResponseSpectrum(
             period = 0.5, dampingRatio = 0.05,
             soilType = SoilType.C, peakGroundAcceleration = 0.0
+        )
+        val explicit = engine.getResponseSpectrum(
+            period = 0.5, dampingRatio = 0.05,
+            soilType = SoilType.C, peakGroundAcceleration = 0.10
+        )
+        assertTrue("spectrum must be positive", withDefault.spectralAcceleration > 0.0)
+        assertEquals(
+            "0.0 must behave like the 0.10 g code default",
+            explicit.spectralAcceleration, withDefault.spectralAcceleration, 1e-12
         )
     }
 

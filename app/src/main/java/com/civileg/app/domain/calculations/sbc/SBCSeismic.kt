@@ -150,7 +150,11 @@ class SBCSeismic : SeismicDesign {
         InputGuard.positive("period", period)
         InputGuard.positive("dampingRatio", dampingRatio)
         InputGuard.notNull("soilType", soilType)
-        InputGuard.positive("peakGroundAcceleration", peakGroundAcceleration)
+        // `peakGroundAcceleration == 0.0` is the documented "use the code default" value
+        // (SeismicDesign.getResponseSpectrum) and is what both the facade and the screen pass;
+        // the body already falls back to DEFAULT_SPS below. Requiring it to be strictly positive
+        // made every SBC spectrum call fail while ECP/ACI accepted the same 0.0.
+        InputGuard.nonNegative("peakGroundAcceleration", peakGroundAcceleration)
         InputGuard.positive("importanceFactor", importanceFactor)
 
         // ── SBC 301 §4.3: طيف الاستجابة التصميمي ──
