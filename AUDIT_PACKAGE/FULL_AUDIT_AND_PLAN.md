@@ -11,10 +11,11 @@
 
 | Area | State | Notes |
 |------|-------|-------|
-| Build / tests | ✅ GREEN | `compileDebugKotlin` OK; **56 suites / 1177 tests / 0 failures**. `lintVitalRelease` passes. |
+| Build / tests | ✅ GREEN | `compileDebugKotlin` OK; **66 suites / 1233 tests / 0 failures**. `lintVitalRelease` passes. |
 | Domain engines | ✅ Present | 14 base interfaces; ECP/ACI/SBC implementations for all major element types (see §3). |
 | Code selection | ⚠️ Fragmented | **Two `DesignCode` enums** + one screen (`SeismicScreen`) bypasses the factory. See §4. |
-| CalculatorEngine facade | ⚠️ Partial | Real (not stub) for most elements but duplicates engine math inline; some delegations missing. See §5. |
+| CalculatorEngine facade | ⚠️ Partial | Real (not stub) for most elements but duplicates engine math inline; **steel member (§9.6) and solid slab (§9.16) now delegate**. See §5. |
+| Code parity | ⚠️ Partial | Probe (temporary, since deleted) found **solid slab and retaining wall** identical for all 3 codes. Solid slab fixed (§9.16); **retaining wall still identical — engine-level gap**. |
 | InputGuard | ✅ Mostly | Present at domain-engine entries; **`CalculatorEngine` coverage was the old zero-gap** — verify per §5. |
 | CodeReference | ✅ Broad | Concrete + steel/frame engines emit refs (commits `08bcc90`, `399c455`). Confirmed errors fixed (ACI cover, one-way slab); ECP/SBC sub-clauses still unverified. See §9.6. |
 | Drawing → PDF | ✅ | Capture-based for **every** element that has an on-screen drawing (Warehouse §9.12, Pile §9.13, steel member §9.14, Seismic §9.15); FlatSlab/ShearWall stale-bitmap fixed; all fallbacks read real values (§9.10); native-Canvas PDF path removed (§9.11). Base plate is generator-only (no on-screen drawing exists). |
@@ -201,13 +202,13 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 ## 8. Definition of Done (unchanged, non-negotiable)
 ```
 ☐ One DesignCode enum; all screens → CalculationFactory → code-correct engine
-✅ CalculatorEngine steel member now delegates to engines (P0-2; other inline paths remain)
+✅ CalculatorEngine steel member + solid slab now delegate to engines (P0-2, §9.6/§9.16; remaining inline paths listed there)
 ☐ Every engine: InputGuard + full result (codeNotes, warnings, safetyChecks, steps, diagram data)
 ✅ Every element PDF has a drawing that matches the on-screen drawing and the result (no stale/placeholder) — §9.10 fallbacks, §9.11 native path removed, §9.12–§9.15 captures; base plate has no on-screen drawing and reads real values
 ☐ PDF: single pipeline (ExportManager); DXF: AC1027 with layers/BBS; PDF+DXF exportable together
 ☐ CodeReference keys verified against code text
 ☐ Zero crashes with null/empty/invalid inputs
-☐ Parity: same inputs → 3 correct, different results (golden fixtures)
+☐ Parity: same inputs → 3 correct, different results (golden fixtures) — **slab ✅ (`SolidSlabCodeDivergenceTest`); retaining wall still identical across all 3 codes (§9.16)**
 ☐ Signed, ProGuard, versioned APK ready
 ```
 
@@ -572,3 +573,79 @@ element with an on-screen drawing now embeds exactly what is on screen; the only
 left is **Steel base plate**, which has no on-screen drawing.
 
 **Verified.** `:app:compileDebugKotlin` OK; full suite **65 suites / 1224 tests / 0 failures**.
+
+---
+
+### 9.16 SBC seismic PGA crash fixed + solid slab delegated to the code engines (P0-2)
+
+**Finding 1 (SBC seismic crash).** Running the parity probe (temporary `CodeParityProbeTest`,
+since deleted) crashed on SBC seismic with `Input 'peakGroundAcceleration' must be finite and
+positive, got 0.0`. Root cause: `CalculatorEngine.calculateSeismicLoads` and `SeismicScreen`
+both call `getResponseSpectrum(period, dampingRatio, soilType, importanceFactor)` omitting PGA;
+the `SeismicDesign` contract documents `peakGroundAcceleration = 0.0` as "use the code default"
+(`SeismicDesign.kt:38`), and ECP (default `0.15`) / ACI (default `0.0` with fallback) both honour
+that. Only `SBCSeismic.getResponseSpectrum` (`SBCSeismic.kt:153`) rejected `0.0` — so SBC seismic
+was unusable in the live screen.
+
+**Fix.** `SBCSeismic.kt:153` changed `InputGuard.positive` → `InputGuard.nonNegative`, with a
+comment citing the contract and the ECP/ACI parity. `SBCSeismicTest.kt:346` rewritten from "zero
+PGA throws" to `response spectrum - zero peakGroundAcceleration uses the code default` (0.0 must
+equal explicit `0.10 g`, `DEFAULT_SPS`). Commit `0153472`.
+
+**Finding 2 (solid slab: identical across all 3 codes).** `CalculatorEngine.designSlab`
+(`:938`) delegated only `HOLLOW_BLOCK` and `WAFFLE`; the `SOLID` fall-through was inline math
+(`:1031-1059`) applying ECP's `1.4D+1.6L` factored load and an ECP-style `0.87·fy` lever arm to
+every code, with a hard-coded `coerceIn(100, 250)` bar spacing. So ACI and SBC screens showed
+ECP numbers.
+
+**Fix** (`CalculatorEngine.kt`, designSlab SOLID path).
+- Factored panel load per code: ECP `1.4D+1.6L`, ACI/SBC `1.2D+1.6L` (inline `when (domainCode)`).
+- `ly/lx ≤ 2` → `designTwoWaySlab` (all edges simply supported — matches engines' hardcoded
+  `SupportCondition.SIMPLY_SUPPORTED` deflection assumption), else `designOneWaySlab` on the short
+  span; both through `CalculationFactory.getSlabDesign(domainCode)` (mm: spans ×1000).
+- Bar placement keeps the user's `preferredDiameter` (the solid-slab bar selector must keep
+  working) and derives spacing from the engine's code-required steel, clamped to the engine's own
+  limits: min 50 mm (ECP) / 100 mm (ACI·SBC), max `min(3·ts, slabEngine.getMaxBarSpacing())`
+  (ECP 200, ACI/SBC 450). `InputGuard.positive("preferredDiameter", …)` added.
+- Display moments mirror each engine's own convention: ECP = positive coefficient × that
+  direction's span²; ACI/SBC = `max(positive, support) × lx²` (their long coefficient is
+  pre-scaled by 1/ratio²).
+- One-way transverse (temperature/shrinkage) steel now populated from
+  `slabEngine.getMinReinforcementRatio()` (was empty `ReinforcementBar()`).
+- `suggestions = mainRes.warnings + mainRes.codeNotes`; 4 safety checks: "Flexure (main)",
+  "Flexure (secondary)", "Shear", "Min Thickness".
+
+**Facade-level `isSafe` gate (deliberate contract change).** `SlabResult.isSafe` = engine
+`isSafe` + provided ≥ required + shear + **code minimum thickness** (ECP L/25, ACI/SBC L/20).
+Rationale: a too-thin slab must never be reported SAFE by the screen. Engine
+`SlabDesignResult.isSafe` semantics untouched (strength-only; changing engines would break
+`SBCSlabTest` "typical inputs should be safe" at 200 mm/6000 span, min 300). The slab screen
+default (150 mm, 4×5 m) now reports UNSAFE with a "Min Thickness" row; 250 mm passes all codes.
+
+**Numbers (4×5 m two-way, 6+3 kN/m², fcu 30/fy 420, Ø12).**
+
+| | ECP | ACI | SBC |
+|--|--|--|--|
+| wu (kN/m²) | 13.2 | 12.0 | 12.0 |
+| Mx / My (kN·m) | 9.72 / 9.57 | 14.59 / 13.63 | 14.59 / 13.63 |
+| As,main req (mm²/m) | ~421 | ~320 | ~362 |
+| spacing (mm) | 200 | ~354 | ~313 |
+| min thickness (mm) | 160 | 200 | 200 |
+
+SBC ≠ ACI because SBC 304 §8.4 uses `ρmin = 0.25√fc'/fy` (≈0.29 %) vs ACI's 0.18 %.
+
+**Retaining wall — remaining gap (not fixed).** `designRetainingWall` already delegates
+(`:1406`), but the ECP/ACI/SBC retaining-wall engines produce the same stem/base/rebar for the
+same inputs, and the facade computes geometry from height alone (`:1408-1411`). Investigating
+means an engine-level review of the three retaining-wall implementations — deferred; the parity
+DoD line stays open until it is.
+
+**Tests.** New `SolidSlabCodeDivergenceTest` (9 tests): completeness for all codes, per-code
+factored load, engine-specific display moments, ECP≠ACI≠SBC required steel/spacing/weight
+(compared via the "Flexure (main)" safety-check row, not `utilizationRatio` — the latter is
+always 1.0 by construction), per-code deflection limits (160 / 200 / 200), thickness gate
+(150 mm unsafe / 250 mm safe for all three), one-way L/8 + temperature steel. Temporary probe
+`CodeParityProbeTest` deleted.
+
+**Verified.** `:app:compileDebugKotlin` OK; full suite **66 suites / 1233 tests / 0 failures**.
+Pushed to both remotes (`origin` + `github`).

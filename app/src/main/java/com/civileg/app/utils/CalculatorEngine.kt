@@ -1028,34 +1028,114 @@ class CalculatorEngine @Inject constructor(
                 )
             }
 
-            val wu = (1.4 * deadLoad + 1.6 * liveLoad)
-            val span = min(lx, ly)
-            val mu = wu * span.pow(2) / 8.0
-            
-            val d = max(50.0, ts - 20.0)
-            val astReq = (mu * 1e6) / (0.87 * fy * d)
-            val spacing = (1000.0 * (PI / 4.0 * preferredDiameter * preferredDiameter)) / max(astReq, 100.0)
-            val clampedSpacing = spacing.coerceIn(100.0, 250.0)
-            val astProvided = (1000.0 / clampedSpacing) * (PI / 4.0 * preferredDiameter * preferredDiameter)
+            // ── Solid slab → delegate to the code-specific SlabDesign engine (P0-2) ──
+            // The previous inline path applied ECP's 1.4D+1.6L load factors and an ECP-style
+            // 0.87·fy lever arm to every code, so ACI and SBC silently returned ECP numbers.
+            // The engine now owns the code-dependent design; this block only maps its result
+            // onto SlabResult. lx/ly are metres here, the engines work in mm.
+            val slabEngine = CalculationFactory.getSlabDesign(domainCode)
+            val shortM = min(lx, ly)
+            val longM = max(lx, ly)
+            val shortSpan = shortM * 1000.0
+            val longSpan = longM * 1000.0
+            val wu = when (domainCode) {                       // kN/m² — D+L factored per code
+                DesignCode.ECP -> 1.4 * deadLoad + 1.6 * liveLoad                        // ECP 203 §2-3-1
+                DesignCode.ACI, DesignCode.SBC -> 1.2 * deadLoad + 1.6 * liveLoad        // ACI 318 §5.3 / SBC 304
+            }
+            val isTwoWay = longM <= 2.0 * shortM
+
+            val mainRes: SlabDesignResult
+            val secondaryRes: SlabDesignResult?
+            val muX: Double
+            val muY: Double
+            if (isTwoWay) {
+                val supports = SlabSupportConditions(
+                    EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED,
+                    EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED
+                )
+                val tw = slabEngine.designTwoWaySlab(
+                    fcu, fy, ts, shortSpan, longSpan, supports, wu, LoadCombination.DEAD_LIVE
+                )
+                mainRes = tw.shortDirection
+                secondaryRes = tw.longDirection
+                // Displayed moments are the ones each engine actually designed for. ECP scales
+                // the positive (mid-span) coefficient with the span of that direction; ACI/SBC
+                // design for the larger of mid-span/support and pre-scale their long-direction
+                // coefficient by 1/ratio², i.e. they use lx² for both directions.
+                val c = tw.momentCoefficients
+                muX = when (domainCode) {
+                    DesignCode.ECP -> c.positiveShort * wu * shortM * shortM
+                    DesignCode.ACI, DesignCode.SBC -> max(c.positiveShort, c.negativeShort) * wu * shortM * shortM
+                }
+                muY = when (domainCode) {
+                    DesignCode.ECP -> c.positiveLong * wu * longM * longM
+                    DesignCode.ACI, DesignCode.SBC -> max(c.positiveLong, c.negativeLong) * wu * shortM * shortM
+                }
+            } else {
+                val mu = wu * shortM * shortM / 8.0
+                mainRes = slabEngine.designOneWaySlab(
+                    fcu, fy, ts, shortSpan, mu, wu * shortM / 2.0, LoadCombination.DEAD_LIVE
+                )
+                secondaryRes = null
+                muX = mu
+                muY = 0.0
+            }
+
+            // Bar placement keeps the user's preferred diameter (the solid-slab bar selector
+            // must keep working) and derives spacing from the engine's code-required steel,
+            // clamped to the engine's own per-code limits: min 50 mm (ECPSlab) / 100 mm
+            // (ACISlab·SBCSlab), max min(3h, getMaxBarSpacing()).
+            InputGuard.positive("preferredDiameter", preferredDiameter)
+            val minSpacing = if (domainCode == DesignCode.ECP) 50.0 else 100.0
+            val maxSpacing = minOf(3.0 * ts, slabEngine.getMaxBarSpacing())
+            val barArea = PI / 4.0 * preferredDiameter * preferredDiameter
+            fun placeBar(required: Double): Pair<Double, Double> {
+                val spacing = (barArea * 1000.0 / max(required, 1.0)).coerceIn(minSpacing, maxSpacing)
+                return spacing to barArea * 1000.0 / spacing
+            }
+
+            val mainRequired = mainRes.requiredReinforcement
+            val (mainSpacing, mainProvided) = placeBar(mainRequired)
+
+            val secondaryRequired = if (secondaryRes != null) secondaryRes.requiredReinforcement
+                else slabEngine.getMinReinforcementRatio() * 1000.0 * ts  // one-way temp/shrinkage steel
+            val (secondarySpacing, secondaryProvided) = placeBar(secondaryRequired)
+            val secondarySafe = (secondaryRes == null || secondaryRes.isSafe) &&
+                secondaryProvided >= secondaryRequired - 1e-6
+            val secondaryBar = ReinforcementBar(spacing = secondarySpacing, diameter = preferredDiameter)
 
             val concreteVol = lx * ly * ts / 1000.0
-            val steelW = astProvided * lx * ly * 7850.0 / 1e6
+            val steelW = (mainProvided + secondaryProvided) * lx * ly * 7850.0 / 1e6
             val costVal = concreteVol * 120.0 + steelW * 1.5
+            val vu = wu * shortM / 2.0
+            val flexureSafe = mainProvided >= mainRequired - 1e-6
+            val shearSafe = vu <= mainRes.shearCapacity
+            val thicknessSafe = ts >= mainRes.minThickness
 
             return SlabResult(
                 type = type,
                 thickness = ts,
-                isSafe = astProvided >= astReq,
+                // Strength (engine) + the code's own minimum-thickness/deflection limit, so a
+                // too-thin slab can never be reported as SAFE with all three codes.
+                isSafe = mainRes.isSafe && secondarySafe && flexureSafe && shearSafe && thicknessSafe,
                 code = code,
-                reinforcementMain = ReinforcementBar(spacing = clampedSpacing, diameter = preferredDiameter, weightKg = steelW),
-                momentX = mu,
-                utilizationRatio = (astReq / astProvided).coerceIn(0.1, 1.5),
+                reinforcementMain = ReinforcementBar(spacing = mainSpacing, diameter = preferredDiameter, weightKg = steelW),
+                reinforcementSecondary = secondaryBar,
+                momentX = muX,
+                momentY = muY,
+                totalLoad = wu,
+                utilizationRatio = (mainRequired / max(mainProvided, 1.0)).coerceIn(0.1, 1.5),
                 concreteVolume = concreteVol,
                 steelWeight = steelW,
                 cost = costVal,
+                minThickness = mainRes.minThickness,
                 safetyChecks = listOf(
-                    DesignSafetyCheck("Flexural Capacity", astProvided, astReq, "mm²/m", astProvided >= astReq)
-                )
+                    DesignSafetyCheck("Flexure (main)", mainProvided, mainRequired, "mm²/m", flexureSafe),
+                    DesignSafetyCheck("Flexure (secondary)", secondaryProvided, secondaryRequired, "mm²/m", secondarySafe),
+                    DesignSafetyCheck("Shear", vu, mainRes.shearCapacity, "kN/m", shearSafe),
+                    DesignSafetyCheck("Min Thickness", ts, mainRes.minThickness, "mm", thicknessSafe)
+                ),
+                suggestions = mainRes.warnings + mainRes.codeNotes
             )
         } catch (e: Exception) {
             // ADR-010: لا تُرجع isSafe=true عند الفشل — loud failure, no silent safe
