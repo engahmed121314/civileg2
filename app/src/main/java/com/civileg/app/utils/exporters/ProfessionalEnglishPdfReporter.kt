@@ -857,7 +857,8 @@ object ProfessionalEnglishPdfReporter {
         safetyChecks: List<GenericSafetyCheck>,
         isSafe: Boolean,
         drawingBitmap: Bitmap?,
-        outputPath: String
+        outputPath: String,
+        calculationSteps: List<CalculationStep> = emptyList()
     ): File? {
         val convertedChecks = safetyChecks.map {
             SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference)
@@ -894,6 +895,7 @@ object ProfessionalEnglishPdfReporter {
             safetyChecks = convertedChecks,
             isSafe = isSafe,
             drawingBitmap = drawingBitmap,
+            calculationSteps = calculationSteps,
             outputPath = outputPath
         )
     }
@@ -901,6 +903,38 @@ object ProfessionalEnglishPdfReporter {
     // ==================== Page Number Handler ====================
 
     private fun addPageNumbers(pdfDoc: PdfDocument) {
-        // Page numbers omitted for build compatibility
+        val font = try {
+            PdfFontFactory.createFont(StandardFonts.HELVETICA)
+        } catch (_: Exception) {
+            return
+        }
+        val footerColor = DeviceRgb(120, 120, 120)
+        pdfDoc.addEventHandler(com.itextpdf.kernel.events.PdfDocumentEvent.END_PAGE) { event ->
+            val docEvent = event as? com.itextpdf.kernel.events.PdfDocumentEvent ?: return@addEventHandler
+            val page = docEvent.page ?: return@addEventHandler
+            try {
+                val pageSize = page.pageSize
+                val canvas = com.itextpdf.kernel.pdf.canvas.PdfCanvas(
+                    page.newContentStreamAfter(),
+                    page.resources,
+                    docEvent.document
+                )
+                val pageNumber = docEvent.document.numberOfPages
+                canvas.beginText()
+                    .setFontAndSize(font, 8f)
+                    .setColor(footerColor, true)
+                    .moveText((pageSize.width - 70f).toDouble(), 20.0)
+                    .showText("Page $pageNumber")
+                    .endText()
+                canvas.beginText()
+                    .setFontAndSize(font, 8f)
+                    .setColor(footerColor, true)
+                    .moveText((pageSize.width / 2f - 60f).toDouble(), 20.0)
+                    .showText("CivilEG - Structural Design")
+                    .endText()
+                canvas.release()
+            } catch (_: Exception) {
+            }
+        }
     }
 }

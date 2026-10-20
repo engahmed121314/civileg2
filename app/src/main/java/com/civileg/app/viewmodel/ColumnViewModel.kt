@@ -330,6 +330,7 @@ class ColumnViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
+                    calculationSteps = res.calculationSteps,
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.columnSection(
                         title = "COLUMN ${res.columnType}",

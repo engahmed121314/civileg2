@@ -201,6 +201,7 @@ class FootingViewModel @Inject constructor(
                         )
                     },
                     isSafe = res.isSafe,
+                    calculationSteps = res.calculationSteps,
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.footingSection(
                         title = "FOOTING ${res.type.displayName}",

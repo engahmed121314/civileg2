@@ -195,6 +195,7 @@ class StairViewModel @Inject constructor(
                         results = resultsMap,
                         safetyChecks = safetyChecks,
                         isSafe = currentResult.isSafe,
+                        calculationSteps = currentResult.calculationSteps,
                         drawingBitmap = drawingBitmap,
                         drawing = com.civileg.app.utils.ElementDxfDrawings.stairSection(
                             title = "STAIR ${currentResult.type.displayName}",

@@ -172,6 +172,7 @@ class TankViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
+                    calculationSteps = res.calculationSteps,
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.tankSection(
                         title = "TANK ${res.type.displayName}",

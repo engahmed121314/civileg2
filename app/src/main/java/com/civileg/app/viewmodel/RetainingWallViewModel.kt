@@ -188,6 +188,7 @@ class RetainingWallViewModel @Inject constructor(
                         results = resultsMap,
                         safetyChecks = safetyChecks,
                         isSafe = currentResult.isSafe,
+                        calculationSteps = currentResult.calculationSteps,
                         drawingBitmap = drawingBitmap,
                         drawing = com.civileg.app.utils.ElementDxfDrawings.retainingWallSection(
                             title = "RETAINING WALL",

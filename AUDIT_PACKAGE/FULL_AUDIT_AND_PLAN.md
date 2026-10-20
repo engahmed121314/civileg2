@@ -966,3 +966,27 @@ Suite: **69 suites / 1263 tests / 0 failures**.
 **Remaining for Phase 3.** Steel, seismic and warehouse sheets currently receive the north
 arrow only (their result models carry no safety-check list to summarise), and some approximate
 geometry remains where no design value is available.
+
+### 9.24 Technical-office detail expansion, Phase 4 (reports)
+
+**Real calculation steps.** The reporter already rendered `CalculationStep` rows but the legacy
+export path (`generateReportLegacy`) had no way to receive them, so every viewmodel export fell
+back to the generic default steps. `generateReportLegacy` and
+`ExportManager.exportReportAndDxf` now accept the domain step list and map it to the reporter
+model (title -> description, substituted formula -> equation, clause -> reference,
+result + unit -> result). Beam, column, footing, slab, stair, tank and retaining-wall viewmodels
+pass `result.calculationSteps`, so their PDFs print the same trace as the screen.
+
+**Page numbers.** `ProfessionalEnglishPdfReporter.addPageNumbers` registers an iText
+`END_PAGE` handler that stamps "Page n" at the bottom-right and the running footer
+"CivilEG - Structural Design" at the bottom-centre of every page.
+
+**Drawing note.** `utils/PdfGenerator` no longer prints `[Drawing Placeholder]`; when no bitmap
+is attached it prints a bilingual note telling the user to export from the element screen to
+include the detail drawing.
+
+**Tests.** Suite unchanged at **69 suites / 1263 tests / 0 failures** (PDF generation needs an
+Android device and is covered by the manual QA matrix).
+
+**Remaining for Phase 4.** Add explicit BBS and BOQ tables to the report body (the data exists
+in `BbsGenerator` and the BOQ use case) and expose report metadata fields on the cover.

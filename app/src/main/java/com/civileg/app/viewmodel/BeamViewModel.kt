@@ -249,6 +249,7 @@ class BeamViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
+                    calculationSteps = res.calculationSteps,
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.beamSection(
                         title = "BEAM ${lastSupportType.displayName}",

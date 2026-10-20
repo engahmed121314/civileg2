@@ -236,6 +236,7 @@ class SlabViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
+                    calculationSteps = res.calculationSteps,
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
                         title = "SLAB ${inputs.type.displayName}",

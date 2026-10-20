@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.civileg.app.R
+import com.civileg.app.domain.entities.CalculationStep as DomainCalculationStep
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
@@ -240,6 +241,7 @@ class ExportManager(private val context: Context) {
         isSafe: Boolean = true,
         drawingBitmap: Bitmap? = null,
         drawing: DxfDrawable? = null,
+        calculationSteps: List<DomainCalculationStep> = emptyList(),
         outputPath: String,
         openPdfOnComplete: Boolean = false
     ): ExportBundle {
@@ -254,7 +256,18 @@ class ExportManager(private val context: Context) {
                 safetyChecks = safetyChecks,
                 isSafe = isSafe,
                 drawingBitmap = drawingBitmap,
-                outputPath = outputPath
+                outputPath = outputPath,
+                calculationSteps = calculationSteps.map { step ->
+                    ProfessionalEnglishPdfReporter.CalculationStep(
+                        stepNumber = step.stepNumber,
+                        description = step.title,
+                        equation = step.formulaWithValues.ifBlank { step.formula },
+                        reference = step.codeReference.ifBlank { null },
+                        result = listOf(step.result, step.unit)
+                            .filter { it.isNotBlank() }
+                            .joinToString(" ")
+                    )
+                }
             )
         } catch (e: Exception) {
             Log.e(TAG, "PDF export failed: ${e.message}", e)

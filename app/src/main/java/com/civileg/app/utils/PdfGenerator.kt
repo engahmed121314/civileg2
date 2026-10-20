@@ -246,7 +246,15 @@ object PdfGenerator {
             img.setAutoScale(true)
             drawingCell.add(img)
         } else {
-            drawingCell.add(Paragraph("[Drawing Placeholder]").setItalic().setFontColor(ColorConstants.GRAY))
+            drawingCell.add(
+                Paragraph(
+                    t(
+                        context,
+                        "لم يتم إرفاق صورة الرسم. استخدم زر تصدير PDF من شاشة العنصر للحصول على الرسم التفصيلي.",
+                        "No drawing image was attached. Use the element screen's Export PDF action to include the generated detail drawing."
+                    )
+                ).setItalic().setFontColor(ColorConstants.GRAY).setFontSize(9f)
+            )
         }
         mainTable.addCell(drawingCell)
         
