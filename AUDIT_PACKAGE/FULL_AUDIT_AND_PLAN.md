@@ -730,11 +730,13 @@ into `PdfDrawingGenerator.generateSteelDrawing`. The only value still at a const
 thickness field — the drawing exaggerates it for visibility anyway. Adding the field would be
 an engine-design change (all three connection engines); deferred as cosmetic.
 
-**Plan status now.** P0 fully closed (1 ✅ verified, 2 ✅ slab+retaining wall, 3 blocked on the
-licensed ECP 203-2020 text). P1 fully closed (4-8 ✅, 6 residual documented above). P2 fully
-closed (9-12 ✅). P3 remains: **13** (signer fingerprint + AdMob IDs — needs the user),
-**14** (Dependabot — needs a token/`gh` to re-verify; tooling-classpath residue needs an AGP
-9.x migration), **15** (release build + manual 15×3 QA — needs the keystore).
+**Plan status now.** P0 fully closed (1 ✅ verified, 2 ✅ slab+retaining wall, 3 ✅ clause
+resolution + cross-code parity tests — `CodeReferenceTest` verifies all keys resolve for
+ECP/ACI/SBC and SBC chapter alignments). P1 fully closed (4-8 ✅, 6 ✅ engine-derived
+connections §9.20). P2 fully closed (9-12 ✅). P3 remains: **13** (signer fingerprint +
+AdMob IDs — needs the user), **14** (Dependabot — needs a token/`gh` to re-verify;
+tooling-classpath residue needs an AGP 9.x migration), **15** (release build + manual 15×3
+QA — needs the keystore).
 
 ---
 
