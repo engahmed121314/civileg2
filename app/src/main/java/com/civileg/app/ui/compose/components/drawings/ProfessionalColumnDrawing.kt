@@ -217,6 +217,12 @@ fun ProfessionalColumnDrawing(
         }
 
         // ── Responsive title block ──
+        drawSheetAnnotations(
+            x = W - cfg.titleBlockWidth - margin * 0.3f,
+            y = H - cfg.titleBlockHeight - margin * 0.3f,
+            cfg = cfg,
+            summary = resultSummary
+        )
         drawResponsiveTitleBlock(
             x = W - cfg.titleBlockWidth - margin * 0.3f,
             y = H - cfg.titleBlockHeight - margin * 0.3f,

@@ -597,6 +597,12 @@ fun ProfessionalFootingDrawing(
         } // end reinforcement table
 
         // ── Responsive title block ─────────────────────────────
+        drawSheetAnnotations(
+            x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
+            y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,
+            cfg = cfg,
+            summary = resultSummary
+        )
         drawResponsiveTitleBlock(
             x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
             y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,

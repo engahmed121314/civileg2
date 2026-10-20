@@ -34,6 +34,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
+import com.civileg.app.ui.compose.components.drawings.slabDrawingSummary
 import com.civileg.app.ui.compose.components.drawings.ProfessionalWaffleSlabDrawing
 import com.civileg.app.ui.compose.components.drawings.ProfessionalHordiSlabDrawing
 import com.civileg.app.viewmodel.SlabViewModel
@@ -577,6 +578,7 @@ fun SlabScreen(
                                         ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
                                         ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
                                         viewMode = selectedViewMode,
+                                        resultSummary = slabDrawingSummary(res),
                                         modifier = Modifier.fillMaxWidth(),
                                         momentX = res.momentX,
                                         momentY = res.momentY,
@@ -656,6 +658,7 @@ fun SlabScreen(
                                 ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
                                 ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
                                 viewMode = 0,
+                                resultSummary = slabDrawingSummary(res),
                                 modifier = Modifier.fillMaxWidth(),
                                 momentX = res.momentX,
                                 momentY = res.momentY,

@@ -31,6 +31,7 @@ import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFlatSlabDrawing
+import com.civileg.app.ui.compose.components.drawings.flatSlabDrawingSummary
 import com.civileg.app.viewmodel.FlatSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
@@ -511,6 +512,7 @@ item {
                                     midTopRebar = res.middleStripTopRebar,
                                     midBotRebar = res.middleStripBotRebar,
                                     isSafe = res.isSafe, panelType = panelType,
+                                    resultSummary = flatSlabDrawingSummary(res),
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
@@ -540,6 +542,7 @@ item {
                                     midTopRebar = res.middleStripTopRebar,
                                     midBotRebar = res.middleStripBotRebar,
                                     isSafe = res.isSafe, panelType = panelType,
+                                    resultSummary = flatSlabDrawingSummary(res),
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }

@@ -296,6 +296,12 @@ fun ProfessionalBeamDrawing(
             cfg = cfg
         )
         // Responsive title block (bottom-right)
+        drawSheetAnnotations(
+            x = cw - cfg.titleBlockWidth - cfg.margin * 0.3f,
+            y = ch - cfg.titleBlockHeight - cfg.margin * 0.3f,
+            cfg = cfg,
+            summary = resultSummary
+        )
         drawResponsiveTitleBlock(
             x = cw - cfg.titleBlockWidth - cfg.margin * 0.3f,
             y = ch - cfg.titleBlockHeight - cfg.margin * 0.3f,

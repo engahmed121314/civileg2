@@ -37,6 +37,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.BeamViewModel
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.drawings.beamDrawingSummary
 import com.civileg.app.ui.compose.components.drawings.ProfessionalBeamDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.MomentShearForceDiagram
@@ -386,6 +387,7 @@ fun BeamScreen(
                                 topRebarCount = res.reinforcementTop.numBars,
                                 zones = res.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
                                 viewMode = selectedViewMode,
+                                resultSummary = beamDrawingSummary(res),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -448,6 +450,7 @@ fun BeamScreen(
                         topRebarCount = res.reinforcementTop.numBars,
                         zones = res.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
                         viewMode = 0,
+                        resultSummary = beamDrawingSummary(res),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

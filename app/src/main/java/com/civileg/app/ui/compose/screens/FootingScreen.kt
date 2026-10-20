@@ -32,6 +32,7 @@ import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.viewmodel.FootingViewModel
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.drawings.footingDrawingSummary
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFootingDrawing
@@ -511,6 +512,7 @@ fun FootingScreen(
                                     soilPressureMax = res.soilPressure,
                                     soilPressureMin = res.soilPressure,
                                     viewMode = selectedViewMode,
+                                    resultSummary = footingDrawingSummary(res),
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
@@ -588,6 +590,7 @@ fun FootingScreen(
                             soilPressureMax = res.soilPressure,
                             soilPressureMin = res.soilPressure,
                             viewMode = 0,
+                            resultSummary = footingDrawingSummary(res),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

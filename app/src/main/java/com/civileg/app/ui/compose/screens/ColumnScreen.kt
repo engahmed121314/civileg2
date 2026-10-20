@@ -39,6 +39,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.ColumnViewModel
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.drawings.columnDrawingSummary
 import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.BarInfo
@@ -477,6 +478,7 @@ fun ColumnScreen(
                                 sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
                                 zones = result.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
                                 viewMode = selectedViewMode,
+                                resultSummary = columnDrawingSummary(result),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -509,6 +511,7 @@ fun ColumnScreen(
                         sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
                         zones = result.stirrups.zones.map { StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
                         viewMode = 0,
+                        resultSummary = columnDrawingSummary(result),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
