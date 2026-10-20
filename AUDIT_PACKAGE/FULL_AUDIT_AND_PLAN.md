@@ -772,3 +772,68 @@ it should be re-added against the Compose hosts as a follow-up (flagged, not don
 
 **Verified.** `:app:compileDebugKotlin` OK (dangling references: none); full suite
 **67 suites / 1239 tests / 0 failures**.
+
+---
+
+### 9.20 P1-6 truth-up + fix (engine-derived connection)
+
+**Discovery (2026-10).** §9.9 incorrectly stated the drawing/PDF reads "actual" connection
+parameters from `SteelMemberResult.connectionDesign`. In reality:
+- `SteelMemberResult.connectionDesign` was **hardcoded `null` in all three code paths**
+  (`CalculatorEngine.kt:480/538/605`).
+- Consumers (`SteelDesignScreen`, `SteelViewModel`, `ExportViewModel`) therefore received
+  `null` and `SteelConnectionDrawing.from()` fell back to defaults: **4×M20, gauge/pitch 90/75,
+  weld 6 mm, end-plate 12 mm** (same for ECP/ACI/SBC, independent of design).
+- The only engine-side `ConnectionDesignResult` was produced by `SBCSteelDesignEngine.designConnection()`
+  inside the bracing path and **discarded** (never attached to the member result).
+- No member-connection inputs existed in `SteelInputs`/UI; `ExportViewModel.exportSteelReport()`
+  had no callers.
+
+**User decision (2026-10).** Chose **(b) — derive connection from the engines** (not user inputs).
+FLAG_SECURE deferred.
+
+**Fix applied:**
+
+- **Entity.** `ConnectionDesignResult` now has `endPlateThickness: Double = 12.0` (drawings use
+  it for elevation/connection detail; carries the plate thickness used in capacity checks).
+- **Engines (unified entry point).**
+  - `ecp/SteelConnectionDesign`: added `designConnection(...)` wrapper that delegates to existing
+    J2/J3/J4 (bolted/welded/hybrid/pressed) design and returns `ConnectionDesignResult` with
+    `endPlateThickness = plateThickness`.
+  - `aci/AISCSteelDesignEngine`: added `designConnection(...)` delegating to `SteelConnectionDesign()`
+    (shared implementation; code notes augmented with AISC 360-16 Ch.J reference). No formula
+    duplication.
+  - `sbc/SBCSteelDesignEngine`: `designConnection(...)` already exists; return now includes
+    `endPlateThickness = plateThickness`.
+- **CalculatorEngine (member → connection).**
+  - Added helpers:
+      - `designMemberConnection(...)` routes to the appropriate engine by `DesignCode`
+      - `autoDesignMemberConnection(...)` does a small auto-size (M20/Gr8.8, double-row bearing,
+        bolt counts 4,6,8,10) using `memberEndForce(Pu,Mu,Vu,depth)` (max of axial/shear/
+        equivalent flange pair M/depth). Returns the **first safe** candidate; if none, returns
+        the **last evaluated** candidate (so the drawing/PDF reflect an honestly-unsafe
+        connection with engine warnings).
+      - `memberEndForce(...)`
+  - **ECP/ACI/SBC `calculateSteelMember` paths** now populate `connectionDesign = autoDesignMemberConnection(...)`
+    (using `plateThickness = maxOf(web, flange, 8.0)` and `grade` from inputs). Removed all
+    `connectionDesign = null` assignments for member results.
+
+**Consumers.** `SteelConnectionDrawing.from()` already reads bolt dia/count from `Bolted`/`Hybrid`
+(and weld from `Welded`/`Hybrid`), deriving gauge/pitch from `boltDiameter`. Drawings and PDF
+generation now receive a **real `ConnectionDesignResult`** (engine-derived) per code path; the
+renderers already respect it. `ExportViewModel.exportSteelReport()` remains unused (dead) but
+its signature still accepts the parameter.
+
+**Tests.**
+- `SteelConnectionDrawingTest`: updated helper to include `endPlateThickness`.
+- `SteelMemberCodeDivergenceTest`: added assertions that `r.connectionDesign != null` and
+  `endPlateThickness > 0` for ECP/ACI/SBC.
+- **67 suites / 1239 tests / 0 failures** (after wiring); compileDebugKotlin OK.
+
+**Outcome (P1-6).** The steel member drawing and PDF now show a **realistic, engine-derived
+connection** based on actual member demand and selected code (via the shared connection design
+implementation). The previous "same defaults for all codes" artefact is removed. The auto-size
+policy is deterministic and conservative (bearing-type, M20); it can be refined later if UI
+connection inputs are introduced, but (b) meets the stated objective.
+
+**Note.** FLAG_SECURE remains deferred per user decision (see §9.19 note).

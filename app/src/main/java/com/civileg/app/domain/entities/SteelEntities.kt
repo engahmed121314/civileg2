@@ -604,7 +604,10 @@ data class ConnectionDesignResult(
     val isSafe: Boolean,
     val detailedCalculations: String,
     val warnings: List<String>,
-    val codeNotes: List<String>
+    val codeNotes: List<String>,
+    // mm — thickness of the connected plate used in the capacity checks; drawn as the
+    // end plate by ProfessionalSteelDrawing/PdfDrawingGenerator (AUDIT 9.20, P1-6).
+    val endPlateThickness: Double = 12.0
 ) : Parcelable
 
 @Parcelize

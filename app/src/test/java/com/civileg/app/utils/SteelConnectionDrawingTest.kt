@@ -20,7 +20,8 @@ class SteelConnectionDrawingTest {
         isSafe = true,
         detailedCalculations = "",
         warnings = emptyList(),
-        codeNotes = emptyList()
+        codeNotes = emptyList(),
+        endPlateThickness = 12.0
     )
 
     @Test

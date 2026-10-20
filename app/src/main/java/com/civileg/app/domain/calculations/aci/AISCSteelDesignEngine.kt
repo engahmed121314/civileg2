@@ -3,6 +3,7 @@ package com.civileg.app.domain.calculations.aci
 import android.os.Parcelable
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign
+import com.civileg.app.domain.calculations.ecp.SteelConnectionDesign
 import com.civileg.app.domain.entities.*
 import kotlinx.parcelize.Parcelize
 import kotlinx.parcelize.RawValue
@@ -164,6 +165,41 @@ class AISCSteelDesignEngine {
         val ab = PI / 4.0 * boltDiameter * boltDiameter
         val fnv = 0.45 * grade.fu
         return PHI_BEARING * fnv * ab * count / 1000.0
+    }
+
+    // ===================== MEMBER CONNECTION (P1-6) =====================
+
+    /**
+     * Connection verdict for the member drawing/PDF (P1-6, AUDIT 9.20).
+     *
+     * The AISC 360-16 Ch.J equations (J2 weld, J3 bolts, J4 block shear) are exactly what
+     * the shared [SteelConnectionDesign] implements — it cites them on every check — so this
+     * delegates the same way [designConcentricBasePlate] does for Ch.14: one implementation,
+     * branded per code, no duplicated formula port.
+     */
+    fun designConnection(
+        connectionType: ConnectionType,
+        appliedForce: Double,
+        plateThickness: Double,
+        grade: SteelGrade,
+        isSeismic: Boolean = false
+    ): ConnectionDesignResult {
+        val delegate = SteelConnectionDesign()
+        val result = delegate.designConnection(
+            connectionType, appliedForce, plateThickness, grade, isSeismic
+        )
+        val newNotes = result.codeNotes + "📌 AISC 360-16 Ch.J: فحوص الوصلات (J2 لحام / J3 براغي / J4 قص كتلي)"
+        return ConnectionDesignResult(
+            connectionType = result.connectionType,
+            capacity = result.capacity,
+            appliedForce = result.appliedForce,
+            utilizationRatio = result.utilizationRatio,
+            isSafe = result.isSafe,
+            detailedCalculations = result.detailedCalculations,
+            warnings = result.warnings,
+            codeNotes = newNotes,
+            endPlateThickness = result.endPlateThickness
+        )
     }
 
     // ===================== BASE PLATE (AISC 360-16 Ch.14 / DG1) =====================

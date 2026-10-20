@@ -42,6 +42,9 @@ class SteelMemberCodeDivergenceTest {
             assertTrue("$code shear capacity must be > 0", r.shearCapacity > 0.0)
             assertTrue("$code axial finite", r.axialCapacity.isFinite())
             assertTrue("$code flexural finite", r.flexuralCapacity.isFinite())
+            // AUDIT 9.20 (P1-6): engine-derived connection must be non-null and code-aware
+            assertTrue("$code connectionDesign must be non-null", r.connectionDesign != null)
+            assertTrue("$code connectionDesign endPlateThickness must be > 0", (r.connectionDesign!!.endPlateThickness) > 0.0)
         }
     }
 

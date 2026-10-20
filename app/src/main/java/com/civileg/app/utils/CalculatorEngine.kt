@@ -429,6 +429,60 @@ class CalculatorEngine @Inject constructor(
             A = section.area, J = section.j
         )
 
+    // ---- P1-6 / AUDIT 9.20 (b): engine-derived member end connection ----
+
+    /** All three code engines expose the same designConnection entry point. */
+    private fun designMemberConnection(
+        code: DesignCode,
+        connectionType: ConnectionType,
+        appliedForce: Double,
+        plateThickness: Double,
+        grade: SteelGrade
+    ): ConnectionDesignResult = when (code) {
+        DesignCode.ECP ->
+            SteelConnectionDesign().designConnection(connectionType, appliedForce, plateThickness, grade)
+        DesignCode.ACI ->
+            AISCSteelDesignEngine().designConnection(connectionType, appliedForce, plateThickness, grade)
+        DesignCode.SBC ->
+            SBCSteelDesignEngine().designConnection(connectionType, appliedForce, plateThickness, grade)
+    }
+
+    /**
+     * Auto-size the member end connection from the actual end-force demand (AUDIT 9.20):
+     * M20/Gr8.8 double-row bearing-type candidates with an increasing bolt count — the
+     * first safe candidate wins; if none passes, the largest one is returned so the
+     * drawing/PDF reports an honestly-unsafe connection with the engine's warnings.
+     */
+    private fun autoDesignMemberConnection(
+        code: DesignCode,
+        appliedForce: Double,
+        plateThickness: Double,
+        grade: SteelGrade
+    ): ConnectionDesignResult {
+        var last: ConnectionDesignResult? = null
+        for (count in intArrayOf(4, 6, 8, 10)) {
+            val candidate = ConnectionType.Bolted(
+                boltDiameter = 20.0,
+                boltGrade = BoltGrade.GRADE_8_8,
+                numberOfBolts = count,
+                boltPattern = BoltPattern.DOUBLE_ROW,
+                connectionType = BoltConnectionType.BEARING
+            )
+            val r = designMemberConnection(code, candidate, appliedForce, plateThickness, grade)
+            if (r.isSafe) return r
+            last = r
+        }
+        // The loop always iterates at least once, so `last` is non-null here.
+        return last!!
+    }
+
+    /**
+     * End force (kN) the connection must transfer: axial, shear, or the equivalent
+     * flange pair from the end moment (M / depth) — the worst case among them.
+     */
+    private fun memberEndForce(pu: Double, mu: Double, vu: Double, depthMm: Double): Double =
+        maxOf(abs(pu), abs(vu), if (depthMm > 0.0) abs(mu) * 1000.0 / depthMm else 0.0)
+
     /** ECP 205 steel member — via ecp.SteelDesignEngine. */
     private fun designSteelMemberEcp(
         section: SteelSectionType, memberType: SteelMemberType, grade: SteelGrade,
@@ -477,7 +531,12 @@ class CalculatorEngine @Inject constructor(
             shearCapacity = shearCapacity,
             utilizationRatio = utilization,
             isSafe = utilization <= 1.0 && beam.isSafe && compression.isSafe,
-            connectionDesign = null,
+            connectionDesign = autoDesignMemberConnection(
+                code = DesignCode.ECP,
+                appliedForce = memberEndForce(Pu, Mu, Vu, section.depth),
+                plateThickness = maxOf(section.webThickness, section.flangeThickness, 8.0),
+                grade = grade
+            ),
             bucklingCheck = bucklingCheck,
             deflectionCheck = null,
             weight = section.weight,
@@ -535,7 +594,12 @@ class CalculatorEngine @Inject constructor(
             shearCapacity = shearCapacity,
             utilizationRatio = utilization,
             isSafe = utilization <= 1.0 && flex.isSafe && comp.isSafe,
-            connectionDesign = null,
+            connectionDesign = autoDesignMemberConnection(
+                code = DesignCode.ACI,
+                appliedForce = memberEndForce(Pu, Mu, Vu, section.depth),
+                plateThickness = maxOf(section.webThickness, section.flangeThickness, 8.0),
+                grade = grade
+            ),
             bucklingCheck = bucklingCheck,
             deflectionCheck = null,
             weight = section.weight,
@@ -602,7 +666,12 @@ class CalculatorEngine @Inject constructor(
             shearCapacity = shearCapacity,
             utilizationRatio = utilization,
             isSafe = utilization <= 1.0 && beam.isSafe && col.isSafe,
-            connectionDesign = null,
+            connectionDesign = autoDesignMemberConnection(
+                code = DesignCode.ACI,
+                appliedForce = memberEndForce(Pu, Mu, Vu, section.depth),
+                plateThickness = maxOf(section.webThickness, section.flangeThickness, 8.0),
+                grade = grade
+            ),
             bucklingCheck = bucklingCheck,
             deflectionCheck = deflectionCheck,
             weight = section.weight,

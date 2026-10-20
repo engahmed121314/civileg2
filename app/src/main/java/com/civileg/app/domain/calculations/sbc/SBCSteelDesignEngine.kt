@@ -760,7 +760,8 @@ class SBCSteelDesignEngine {
             isSafe = isSafe,
             detailedCalculations = calculations.toString(),
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            endPlateThickness = plateThickness
         )
     }
 

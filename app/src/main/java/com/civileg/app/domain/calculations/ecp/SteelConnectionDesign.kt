@@ -1,14 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
-import com.civileg.app.domain.entities.BoltConnectionType
-import com.civileg.app.domain.entities.CodeReference
-import com.civileg.app.domain.entities.BoltGrade
-import com.civileg.app.domain.entities.BoltPattern
-import com.civileg.app.domain.entities.ConnectionType
-import com.civileg.app.domain.entities.ElectrodeType
-import com.civileg.app.domain.entities.SteelGrade
-import com.civileg.app.domain.entities.WeldType
+import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
@@ -1079,6 +1072,151 @@ class SteelConnectionDesign {
             utilizationRatio = utilizationRatio,
             warnings = warnings,
             codeNotes = codeNotes
+        )
+    }
+
+    // ===================== واجهة تصميم الوصلة الموحدة (P1-6) =====================
+
+    /**
+     * تقييم [connectionType] ضد [appliedForce] وإرجاع النتيجة كـ [ConnectionDesignResult]
+     * النطاقية التي تتغذى منها رسم/تقرير العضو المعدني (AUDIT 9.20 — P1-6).
+     *
+     * تعتمد على فحوص J2/J3/J4 المنفذة أعلاه (ECP 205-5/6 مكافئة لـ AISC 360 Ch.J).
+     * نقطة الدخول الموحدة الأكواد الثلاثة: ECP هنا، SBC في SBCSteelDesignEngine.designConnection،
+     * وACI يفوّض إليها (انظر AISCSteelDesignEngine.designConnection).
+     */
+    fun designConnection(
+        connectionType: ConnectionType,
+        appliedForce: Double,
+        plateThickness: Double,
+        grade: SteelGrade,
+        isSeismic: Boolean = false
+    ): ConnectionDesignResult {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.notNull("connectionType", connectionType)
+        InputGuard.notNull("grade", grade)
+        InputGuard.positive("plateThickness", plateThickness)
+
+        val warnings = mutableListOf<String>()
+        val codeNotes = mutableListOf<String>()
+        val calculations = StringBuilder()
+
+        var capacity = 0.0
+        var isSafe = false
+
+        when (connectionType) {
+            is ConnectionType.Bolted -> {
+                val r = designBoltedConnection(
+                    boltDiameter = connectionType.boltDiameter,
+                    boltGrade = connectionType.boltGrade,
+                    numberOfBolts = connectionType.numberOfBolts,
+                    boltPattern = connectionType.boltPattern,
+                    boltConnectionType = connectionType.connectionType,
+                    appliedShear = appliedForce,
+                    plateThickness = plateThickness,
+                    fuPlate = grade.fu,
+                    fyPlate = grade.fy
+                )
+                // controllingCapacity is per bolt (BEARING/SLIP) → total = × n
+                capacity = r.controllingCapacity * connectionType.numberOfBolts
+                isSafe = r.isSafe
+                calculations.append("=== وصلة براغي (ECP 205-5 / AISC 360-J3) ===\n")
+                calculations.append(
+                    "Ø${connectionType.boltDiameter.toInt()} × ${connectionType.numberOfBolts} — ${connectionType.boltGrade.displayName}\n"
+                )
+                calculations.append(
+                    "مقاومة/مسمار = ${"%.1f".format(r.controllingCapacity)} kN → الإجمالية = ${"%.1f".format(capacity)} kN\n"
+                )
+                calculations.append(
+                    "المطلوب = ${"%.1f".format(appliedForce)} kN، نسبة الاستخدام = ${"%.2f".format(if (capacity > 0) appliedForce / capacity else 0.0)}\n"
+                )
+                warnings.addAll(r.warnings)
+                codeNotes.addAll(r.codeNotes)
+            }
+
+            is ConnectionType.Welded -> {
+                val r = designWeldedConnection(
+                    weldType = connectionType.weldType,
+                    weldSize = connectionType.weldSize,
+                    weldLength = connectionType.weldLength,
+                    electrodeType = connectionType.electrodeType,
+                    appliedForce = appliedForce,
+                    plateThickness = plateThickness
+                )
+                capacity = r.capacity
+                isSafe = r.isSafe
+                calculations.append("=== وصلة لحام تفريغي (ECP 205-6 / AISC 360-J2) ===\n")
+                calculations.append(
+                    "حجم ${connectionType.weldSize.toInt()} مم × طول ${connectionType.weldLength.toInt()} مم — ${connectionType.electrodeType.displayName}\n"
+                )
+                calculations.append(
+                    "مقاومة اللحام = ${"%.1f".format(capacity)} kN، المطلوب = ${"%.1f".format(appliedForce)} kN\n"
+                )
+                warnings.addAll(r.warnings)
+                codeNotes.addAll(r.codeNotes)
+            }
+
+            is ConnectionType.Pressed -> {
+                capacity = connectionType.pressForce
+                isSafe = capacity >= appliedForce
+                calculations.append(
+                    "=== وصلة ضغط (AISC 360-J7) ===\nالقدرة = ${"%.1f".format(capacity)} kN، المطلوب = ${"%.1f".format(appliedForce)} kN\n"
+                )
+                if (!isSafe) warnings.add("قوة الوصلة (${ "%.1f".format(capacity) } kN) أقل من الحمل المطلوب")
+                codeNotes.add("AISC 360-J7: وصلة ضغط (Pressed)")
+            }
+
+            is ConnectionType.Hybrid -> {
+                val bolted = designBoltedConnection(
+                    boltDiameter = connectionType.bolted.boltDiameter,
+                    boltGrade = connectionType.bolted.boltGrade,
+                    numberOfBolts = connectionType.bolted.numberOfBolts,
+                    boltPattern = connectionType.bolted.boltPattern,
+                    boltConnectionType = connectionType.bolted.connectionType,
+                    appliedShear = appliedForce * 0.6,
+                    plateThickness = plateThickness,
+                    fuPlate = grade.fu,
+                    fyPlate = grade.fy
+                )
+                val welded = designWeldedConnection(
+                    weldType = connectionType.welded.weldType,
+                    weldSize = connectionType.welded.weldSize,
+                    weldLength = connectionType.welded.weldLength,
+                    electrodeType = connectionType.welded.electrodeType,
+                    appliedForce = appliedForce * 0.4,
+                    plateThickness = plateThickness
+                )
+                val boltTotal = bolted.controllingCapacity * connectionType.bolted.numberOfBolts
+                capacity = boltTotal + welded.capacity
+                isSafe = bolted.isSafe && welded.isSafe && capacity >= appliedForce
+                calculations.append("=== وصلة هجينة (براغي + لحام) — AISC 360-J1.7 ===\n")
+                calculations.append("  الجزء البراغي: ${"%.1f".format(boltTotal)} kN (من 60% من الحمل)\n")
+                calculations.append("  الجزء اللحامي: ${"%.1f".format(welded.capacity)} kN (من 40% من الحمل)\n")
+                calculations.append("  الإجمالي = ${"%.1f".format(capacity)} kN، المطلوب = ${"%.1f".format(appliedForce)} kN\n")
+                warnings.addAll(bolted.warnings)
+                warnings.addAll(welded.warnings)
+                codeNotes.addAll(bolted.codeNotes)
+                codeNotes.addAll(welded.codeNotes)
+                codeNotes.add("📌 AISC 360-J1.7 / ECP 205: وصلة مركبة (براغي + لحام)")
+            }
+        }
+
+        if (isSeismic) {
+            codeNotes.add("ECP 205: لا يُنص على فصل زلزالي مستقل لوصلات الإنشاء المعدني - تُطبَّق مقاومات LRFD المعتادة")
+        }
+
+        val utilizationRatio = if (capacity > 0) appliedForce / capacity else 0.0
+
+        return ConnectionDesignResult(
+            connectionType = connectionType,
+            capacity = capacity,
+            appliedForce = appliedForce,
+            utilizationRatio = utilizationRatio,
+            isSafe = isSafe,
+            detailedCalculations = calculations.toString(),
+            warnings = warnings,
+            codeNotes = codeNotes,
+            endPlateThickness = plateThickness
         )
     }
 
