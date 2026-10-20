@@ -247,8 +247,8 @@ class SeismicViewModel @Inject constructor(
             val engineCode = DesignCode.valueOf(_uiState.value.designCode)
             repository.saveSeismicDesign(projectId, name, com.civileg.app.utils.CalculatorEngine.SeismicResult(
                 baseShear = res.baseShear,
-                storyDrift = 0.0,  // SeismicBaseShearResult doesn't track drift; use force distribution if available
-                isSafe = res.warnings.isEmpty(),  // FIX: derive safety from warnings
+                storyDrift = res.maxStoryDrift,  // mm — equivalent-SDOF drift estimate
+                isSafe = res.driftIsSafe && res.warnings.isEmpty(),
                 code = engineCode,
                 zone = res.zoneFactor,
                 importance = res.importanceFactor,

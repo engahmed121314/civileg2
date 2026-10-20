@@ -161,7 +161,9 @@ class CalculatorEngine @Inject constructor(
         val utilizationRatio: Double = 0.0,
         val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
         val steelWasteTons: Double = 0.0,
-        val neutralAxisDepth: Double = 0.0
+        val neutralAxisDepth: Double = 0.0,
+        val warnings: List<String> = emptyList(),
+        val codeNotes: List<String> = emptyList()
     ) : Parcelable
 
     @Parcelize
@@ -185,7 +187,10 @@ class CalculatorEngine @Inject constructor(
         val momentCapacity: Double = 0.0,
         val utilizationRatio: Double = 0.0,
         val isDuctile: Boolean = true,
-        val confinementLength: Double = 0.0
+        val confinementLength: Double = 0.0,
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
+        val warnings: List<String> = emptyList(),
+        val codeNotes: List<String> = emptyList()
     ) : Parcelable
 
     enum class FootingType(val displayNameAr: String, val displayNameEn: String) {
@@ -881,7 +886,73 @@ class CalculatorEngine @Inject constructor(
             isDuctile = res.isSafe,
             // ── توسيع: طول منطقة الحصر حسب الكود ──
             // ACI 18.7.5.5 / SBC 304-21: max(6db, 450mm) للمناطق الزلزالية
-            confinementLength = max(6.0 * res.barDiameter, 450.0)
+            confinementLength = max(6.0 * res.barDiameter, 450.0),
+            warnings = res.warnings,
+            codeNotes = res.codeNotes,
+            calculationSteps = columnSteps(
+                code, pu, mx, my, fcu, fy, res, width, depth, clearHeight
+            )
+        )
+    }
+
+    private fun columnSteps(
+        code: DesignCode, pu: Double, mx: Double, my: Double,
+        fcu: Double, fy: Double,
+        res: com.civileg.app.domain.entities.ReinforcementResult,
+        width: Double, depth: Double, clearHeight: Double
+    ): List<CalculationStep> {
+        val ref = when (code) {
+            DesignCode.ECP -> "ECP 203-2020 §4-2"
+            DesignCode.ACI -> "ACI 318-19 §22.4"
+            DesignCode.SBC -> "SBC 304-2018 §4"
+        }
+        val mResultant = sqrt(mx * mx + my * my)
+        val eMm = if (pu > 0) mResultant / pu * 1000.0 else 0.0
+        val lambda = clearHeight * 1000.0 / min(width, depth)
+        val slender = lambda > 30.0
+        val axialCapacity = (res.astProvided * fy / 1.15 +
+            0.67 * fcu / 1.5 * (width * depth - res.astProvided)) / 1000.0
+        return listOf(
+            CalculationStep(
+                stepNumber = 1, title = "Ultimate Loads", subtitle = "Factored actions",
+                formula = "Pu, Mux, Muy",
+                formulaWithValues = "Pu = ${"%.1f".format(pu)} kN, Mux = ${"%.1f".format(mx)} kN·m, Muy = ${"%.1f".format(my)} kN·m",
+                result = "Mu = ${"%.1f".format(mResultant)} kN·m", unit = "kN·m",
+                codeReference = ref, status = StepStatus.CALCULATION
+            ),
+            CalculationStep(
+                stepNumber = 2, title = "Eccentricity", subtitle = "e = Mu / Pu",
+                formula = "e = Mu / Pu",
+                formulaWithValues = "e = ${"%.1f".format(mResultant)} / ${"%.1f".format(pu)} = ${"%.0f".format(eMm)} mm",
+                result = "${"%.0f".format(eMm)} mm", unit = "mm",
+                codeReference = ref, status = StepStatus.CALCULATION
+            ),
+            CalculationStep(
+                stepNumber = 3, title = "Reinforcement", subtitle = "Required vs provided",
+                formula = "As,req → As,prov",
+                formulaWithValues = "As,req = ${"%.0f".format(res.astRequired)} mm², As,prov = ${"%.0f".format(res.astProvided)} mm²",
+                result = "${res.numberOfBars}Ø${res.barDiameter.toInt()}", unit = "mm²",
+                codeReference = ref, status = if (res.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL,
+                isPass = res.isSafe
+            ),
+            CalculationStep(
+                stepNumber = 4, title = "Axial Capacity", subtitle = "φPn",
+                formula = "φPn = 0.35fcu·Ac + 0.87fy·As",
+                formulaWithValues = "Ag = ${"%.0f".format(width * depth)} mm², As = ${"%.0f".format(res.astProvided)} mm²",
+                result = "φPn = ${"%.0f".format(axialCapacity)} kN · Pu = ${"%.0f".format(pu)} kN", unit = "kN",
+                codeReference = ref,
+                status = if (axialCapacity >= pu) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL,
+                isPass = axialCapacity >= pu
+            ),
+            CalculationStep(
+                stepNumber = 5, title = "Slenderness", subtitle = "λ = l0 / i",
+                formula = "λ = l0 / (h/√12)",
+                formulaWithValues = "λ = ${"%.1f".format(lambda)} vs 30",
+                result = if (slender) "Slender — second-order effects required" else "Short column",
+                unit = "", codeReference = ref,
+                status = if (slender) StepStatus.WARNING else StepStatus.CHECK_PASS,
+                isPass = !slender
+            )
         )
     }
 
@@ -971,6 +1042,65 @@ class CalculatorEngine @Inject constructor(
             DesignSafetyCheck("Deflection Check", defCheck.calculatedDeflection, defCheck.allowableDeflection, "mm", defCheck.isSafe)
         )
 
+        val warnings = (flexRes.warnings + shearRes.warnings + defCheck.warnings +
+            listOfNotNull(defCheck.message.takeIf { it.isNotBlank() })).distinct()
+        val codeNotes = (flexRes.codeNotes + shearRes.codeNotes).distinct()
+        val ref = when (code) {
+            DesignCode.ECP -> "ECP 203-2020 §4"
+            DesignCode.ACI -> "ACI 318-19 §9"
+            DesignCode.SBC -> "SBC 304-2018 §9"
+        }
+        val steps = listOf(
+            CalculationStep(
+                stepNumber = 1, title = "Ultimate Load",
+                formula = "wu = γD·(DL+self) + γL·LL",
+                formulaWithValues = "wu = ${"%.2f".format(wu)} kN/m",
+                result = "wu = ${"%.2f".format(wu)} kN/m", unit = "kN/m",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 2, title = "Design Moment",
+                formula = "Mu = wu·L²/8 (support-dependent)",
+                formulaWithValues = "Mu = ${"%.2f".format(wu)} × ${"%.2f".format(span)}² / factor = ${"%.1f".format(mu)} kN·m",
+                result = "Mu = ${"%.1f".format(mu)} kN·m", unit = "kN·m",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 3, title = "Design Shear",
+                formula = "Vu = wu·L/2",
+                formulaWithValues = "Vu = ${"%.2f".format(wu)} × ${"%.2f".format(span)} / 2 = ${"%.1f".format(vu)} kN",
+                result = "Vu = ${"%.1f".format(vu)} kN", unit = "kN",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 4, title = "Flexural Steel",
+                formula = "As = Mu / (0.87fy·j·d)",
+                formulaWithValues = "As,req = ${"%.0f".format(flexRes.astRequired)} mm² → As,prov = ${"%.0f".format(flexRes.astProvided)} mm²",
+                result = "${flexRes.numberOfBars}Ø${flexRes.barDiameter.toInt()}", unit = "mm²",
+                codeReference = ref,
+                isPass = flexRes.isSafe,
+                status = if (flexRes.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 5, title = "Shear Reinforcement",
+                formula = "s = Asv·fy·d / Vs",
+                formulaWithValues = "Ø${shearRes.stirrupDiameter.toInt()} @ ${"%.0f".format(shearRes.stirrupSpacing)} mm",
+                result = "Ø${shearRes.stirrupDiameter.toInt()}@${"%.0f".format(shearRes.stirrupSpacing)}", unit = "mm",
+                codeReference = ref,
+                isPass = shearRes.isSafe,
+                status = if (shearRes.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 6, title = "Deflection",
+                formula = "Δ ≤ L/250",
+                formulaWithValues = "Δ = ${"%.2f".format(defCheck.calculatedDeflection)} mm vs ${"%.2f".format(defCheck.allowableDeflection)} mm",
+                result = if (defCheck.isSafe) "OK" else "Exceeds limit", unit = "mm",
+                codeReference = ref,
+                isPass = defCheck.isSafe,
+                status = if (defCheck.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            )
+        )
+
         return BeamResult(
             width = width, depth = height, mu = mu, vu = vu,
             reinforcementBottom = ReinforcementBar(
@@ -1000,7 +1130,10 @@ class CalculatorEngine @Inject constructor(
             deflection = defCheck.calculatedDeflection,
             allowableDeflection = defCheck.allowableDeflection,
             utilizationRatio = maxOf(flexRes.utilizationRatio, shearRes.utilizationRatio, defCheck.ratio),
-            neutralAxisDepth = flexRes.neutralAxisDepth
+            neutralAxisDepth = flexRes.neutralAxisDepth,
+            warnings = warnings,
+            codeNotes = codeNotes,
+            calculationSteps = steps
         )
     }
 
@@ -1352,55 +1485,104 @@ class CalculatorEngine @Inject constructor(
             soilBearingCapacity = soil, fcu = fcu, fy = fy,
             strapBeamWidth = strapWidth
         )
-        val res = StrapFootingDesignEngine.design(inputs)
+        // Route through the selected code engine so code notes/load factors apply (§P1-1).
+        val res = design.design(inputs)
 
         val vol1 = (res.footing1.width * res.footing1.length * res.footing1.thickness) / 1e9
         val vol2 = (res.footing2.width * res.footing2.length * res.footing2.thickness) / 1e9
-        val volStrap = (res.strapBeam.width * res.strapBeam.depth * distance) / 1e9
+        val strapLenM = distance / 1000.0 + 0.8 // main bars incl. anchorage into both footings
+        val volStrap = (res.strapBeam.width * res.strapBeam.depth * (distance / 1000.0)) / 1e9
         val totalConcreteVol = vol1 + vol2 + volStrap
 
-        val steel1 = res.footing1.reinforcement.numberOfBars * (PI / 4.0 * res.footing1.reinforcement.barDiameter.pow(2)) * (res.footing1.length / 1000.0) * 7850.0 / 1e6
-        val steel2 = res.footing2.reinforcement.numberOfBars * (PI / 4.0 * res.footing2.reinforcement.barDiameter.pow(2)) * (res.footing2.length / 1000.0) * 7850.0 / 1e6
-        val steelStrap = (res.strapBeam.topReinforcement.numberOfBars * (PI / 4.0 * res.strapBeam.topReinforcement.barDiameter.pow(2)) +
-            res.strapBeam.bottomReinforcement.numberOfBars * (PI / 4.0 * res.strapBeam.bottomReinforcement.barDiameter.pow(2))) * distance * 7850.0 / 1e6
+        val steel1 = res.footing1.reinforcement.numberOfBars *
+            barAreaMm2(res.footing1.reinforcement.barDiameter) * (res.footing1.length / 1000.0) * 7850.0 / 1e6
+        val steel2 = res.footing2.reinforcement.numberOfBars *
+            barAreaMm2(res.footing2.reinforcement.barDiameter) * (res.footing2.length / 1000.0) * 7850.0 / 1e6
+        val steelStrap = (res.strapBeam.topReinforcement.numberOfBars *
+            barAreaMm2(res.strapBeam.topReinforcement.barDiameter) +
+            res.strapBeam.bottomReinforcement.numberOfBars *
+            barAreaMm2(res.strapBeam.bottomReinforcement.barDiameter)) * strapLenM * 7850.0 / 1e6
         val totalSteelW = steel1 + steel2 + steelStrap
+
+        val q1 = res.soilPressure1
+        val q2 = res.soilPressure2
+        val safetyChecks = listOf(
+            DesignSafetyCheck("Soil Bearing - Footing 1", q1, soil, "kPa", q1 <= soil * 1.001),
+            DesignSafetyCheck("Soil Bearing - Footing 2", q2, soil, "kPa", q2 <= soil * 1.001),
+            DesignSafetyCheck("Punching Shear - Footing 1", res.punchingShear1, res.punchingCapacity1, "kN", res.punchingShear1 <= res.punchingCapacity1),
+            DesignSafetyCheck("Punching Shear - Footing 2", res.punchingShear2, res.punchingCapacity2, "kN", res.punchingShear2 <= res.punchingCapacity2),
+            DesignSafetyCheck("Strap Beam Flexure (As)", res.strapAsRequired, res.strapAsProvided, "mm²", res.strapAsRequired <= res.strapAsProvided),
+            DesignSafetyCheck("Strap Beam Shear", res.strapShear, res.strapShearCapacity, "kN", res.strapShear <= res.strapShearCapacity)
+        )
+        val isSafe = safetyChecks.all { it.isSafe }
+        val utilization = maxOf(
+            if (soil > 0) maxOf(q1, q2) / soil else 0.0,
+            if (res.punchingCapacity1 > 0) res.punchingShear1 / res.punchingCapacity1 else 0.0,
+            if (res.punchingCapacity2 > 0) res.punchingShear2 / res.punchingCapacity2 else 0.0,
+            if (res.strapAsProvided > 0) res.strapAsRequired / res.strapAsProvided else 0.0,
+            if (res.strapShearCapacity > 0) res.strapShear / res.strapShearCapacity else 0.0
+        ).coerceIn(0.0, 1.5)
+
+        val footing1Safe = q1 <= soil * 1.001 && res.punchingShear1 <= res.punchingCapacity1
+        val footing2Safe = q2 <= soil * 1.001 && res.punchingShear2 <= res.punchingCapacity2
 
         return StrapFootingResult(
             footing1 = FootingResult(
                 type = FootingType.ISOLATED, width = res.footing1.width, length = res.footing1.length, thickness = res.footing1.thickness,
-                reinforcementBottom = ReinforcementBar(numBars = res.footing1.reinforcement.numberOfBars, diameter = res.footing1.reinforcement.barDiameter.toInt(), weightKg = steel1),
-                isSafe = res.isSafe, code = code, allowablePressure = soil, 
-                soilPressure = res.reactions.first / (res.footing1.width * res.footing1.length / 1e6),
-                concreteVolume = vol1, steelWeight = steel1, cost = vol1 * 120.0 + steel1 * 1.5
+                reinforcementBottom = ReinforcementBar(
+                    numBars = res.footing1.reinforcement.numberOfBars,
+                    diameter = res.footing1.reinforcement.barDiameter.toInt(),
+                    spacing = res.footing1.reinforcement.spacing,
+                    weightKg = steel1
+                ),
+                isSafe = footing1Safe, code = code, allowablePressure = soil,
+                soilPressure = q1,
+                concreteVolume = vol1, steelWeight = steel1, cost = vol1 * 120.0 + steel1 * 1.5,
+                barsX = res.footing1.reinforcement.numberOfBars,
+                barsY = res.footing1.reinforcement.numberOfBars,
+                barDiameter = res.footing1.reinforcement.barDiameter.toInt(),
+                utilizationRatio = if (soil > 0) (q1 / soil).coerceIn(0.0, 1.5) else 0.0,
+                safetyChecks = safetyChecks
             ),
             footing2 = FootingResult(
                 type = FootingType.ISOLATED, width = res.footing2.width, length = res.footing2.length, thickness = res.footing2.thickness,
-                reinforcementBottom = ReinforcementBar(numBars = res.footing2.reinforcement.numberOfBars, diameter = res.footing2.reinforcement.barDiameter.toInt(), weightKg = steel2),
-                isSafe = res.isSafe, code = code, allowablePressure = soil, 
-                soilPressure = res.reactions.second / (res.footing2.width * res.footing2.length / 1e6),
-                concreteVolume = vol2, steelWeight = steel2, cost = vol2 * 120.0 + steel2 * 1.5
+                reinforcementBottom = ReinforcementBar(
+                    numBars = res.footing2.reinforcement.numberOfBars,
+                    diameter = res.footing2.reinforcement.barDiameter.toInt(),
+                    spacing = res.footing2.reinforcement.spacing,
+                    weightKg = steel2
+                ),
+                isSafe = footing2Safe, code = code, allowablePressure = soil,
+                soilPressure = q2,
+                concreteVolume = vol2, steelWeight = steel2, cost = vol2 * 120.0 + steel2 * 1.5,
+                barsX = res.footing2.reinforcement.numberOfBars,
+                barsY = res.footing2.reinforcement.numberOfBars,
+                barDiameter = res.footing2.reinforcement.barDiameter.toInt(),
+                utilizationRatio = if (soil > 0) (q2 / soil).coerceIn(0.0, 1.5) else 0.0,
+                safetyChecks = safetyChecks
             ),
             strapBeamWidth = res.strapBeam.width,
             strapBeamDepth = res.strapBeam.depth,
-            strapTopReinforcement = ReinforcementBar(numBars = res.strapBeam.topReinforcement.numberOfBars, diameter = res.strapBeam.topReinforcement.barDiameter.toInt()),
-            strapBottomReinforcement = ReinforcementBar(numBars = res.strapBeam.bottomReinforcement.numberOfBars, diameter = res.strapBeam.bottomReinforcement.barDiameter.toInt()),
+            strapTopReinforcement = ReinforcementBar(
+                numBars = res.strapBeam.topReinforcement.numberOfBars,
+                diameter = res.strapBeam.topReinforcement.barDiameter.toInt(),
+                spacing = res.strapBeam.topReinforcement.spacing
+            ),
+            strapBottomReinforcement = ReinforcementBar(
+                numBars = res.strapBeam.bottomReinforcement.numberOfBars,
+                diameter = res.strapBeam.bottomReinforcement.barDiameter.toInt(),
+                spacing = res.strapBeam.bottomReinforcement.spacing
+            ),
             reactions = res.reactions,
-            isSafe = res.isSafe,
-            concreteVolume = totalConcreteVol, 
+            isSafe = isSafe,
+            concreteVolume = totalConcreteVol,
             steelWeight = totalSteelW,
-            // ── توسيع: نسبة الاستغلال الفعلية من ضغط التربة والقدرة ──
-            utilizationRatio = if (res.isSafe) {
-                val area1 = res.footing1.width * res.footing1.length
-                val area2 = res.footing2.width * res.footing2.length
-                val maxSoilPressure = maxOf(
-                    if (area1 > 0) (res.reactions.first / (area1 / 1e6)).coerceAtLeast(0.0) else 0.0,
-                    if (area2 > 0) (res.reactions.second / (area2 / 1e6)).coerceAtLeast(0.0) else 0.0
-                )
-                val allowableSoil = inputs.soilBearingCapacity.coerceAtLeast(1.0)
-                (maxSoilPressure / allowableSoil).coerceIn(0.0, 1.5)
-            } else 1.5  // غير آمن → نسبة عالية
+            utilizationRatio = utilization,
+            safetyChecks = safetyChecks
         )
     }
+
+    private fun barAreaMm2(diameter: Double): Double = Math.PI / 4.0 * diameter * diameter
 
     fun designStaircase(type: StairType, span: Double, riser: Double, tread: Double, deadLoad: Double, liveLoad: Double, fcu: Double, fy: Double, preferredDiameter: Int, code: DesignCode): StairResult {
         InputGuard.positive("span", span)

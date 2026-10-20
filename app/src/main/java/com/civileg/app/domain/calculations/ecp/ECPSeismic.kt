@@ -84,7 +84,22 @@ class ECPSeismic : SeismicDesign {
         if (baseShear < minBaseShear) {
             warnings.add("Base shear increased to minimum (2% of weight) per ECP")
         }
-        
+
+        // ── Story-drift estimate (equivalent SDOF, ECP 201 inter-storey limit) ──
+        val g = 9.81
+        val omega = 2.0 * PI / period
+        val deltaElastic = sdValue * g / (omega * omega)                                  // m
+        val deltaDesign = responseModificationFactor * deltaElastic / importanceFactor    // m
+        val nStories = max(1.0, (h / 3.0).roundToInt().toDouble())
+        val storyH = h / nStories
+        val avgDrift = deltaDesign / nStories                                             // m
+        val allowRatio = 0.005                                                            // ECP 201 Δ/h limit
+        val allowDrift = allowRatio * storyH                                              // m
+        val driftRatio = if (storyH > 0) avgDrift / storyH else 0.0
+        if (driftRatio > allowRatio) {
+            warnings.add("Inter-storey drift exceeds ECP 201 limit (Δ/h = ${"%.4f".format(driftRatio)} > $allowRatio)")
+        }
+
         return SeismicBaseShearResult(
             baseShear = max(baseShear, minBaseShear),
             zoneFactor = ag,
@@ -93,7 +108,13 @@ class ECPSeismic : SeismicDesign {
             responseModification = responseModificationFactor,
             calculationFormula = "V = Sd(T1) × W",
             codeReference = CodeReference.ECP.SEISMIC_BASE_SHEAR,
-            warnings = warnings
+            warnings = warnings,
+            fundamentalPeriod = period,
+            roofDisplacement = deltaDesign * 1000.0,
+            maxStoryDrift = avgDrift * 1000.0,
+            allowableDrift = allowDrift * 1000.0,
+            driftRatio = driftRatio,
+            driftIsSafe = driftRatio <= allowRatio
         )
     }
 

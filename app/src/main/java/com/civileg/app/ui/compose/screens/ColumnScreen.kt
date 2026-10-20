@@ -650,6 +650,22 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             result.safetyChecks.forEach { check ->
                 ResultCheckRow(check)
             }
+
+            if (result.warnings.isNotEmpty()) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
+                Text("Warnings", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                result.warnings.forEach { warning ->
+                    Text("• $warning", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                }
+            }
+
+            if (result.codeNotes.isNotEmpty()) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
+                Text("Code Notes", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                result.codeNotes.forEach { note ->
+                    Text("• $note", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 }

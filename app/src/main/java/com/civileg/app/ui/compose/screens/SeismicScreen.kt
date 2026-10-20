@@ -909,10 +909,10 @@ fun SeismicScreen(
                     result?.let { res ->
                         val engineResult = CalculatorEngine.SeismicResult(
                             baseShear = res.baseShearResult.baseShear,
-                            storyDrift = 0.0,
+                            storyDrift = res.baseShearResult.maxStoryDrift,
                             timePeriod = res.fundamentalPeriod,
                             spectralAcceleration = res.spectralAccel,
-                            isSafe = true,
+                            isSafe = res.baseShearResult.driftIsSafe,
                             code = when (res.code) {
                                 DesignCode.ECP -> DesignCode.ECP
                                 DesignCode.ACI -> DesignCode.ACI
@@ -940,9 +940,11 @@ fun SeismicScreen(
 
 @Composable
 fun SeismicStabilityCard(res: SeismicBaseShearResult, totalHeight: Double) {
-    val drift = 0.005 * (totalHeight / 5.0) 
-    val limit = 0.020 * (totalHeight / 5.0)
-    val isSafe = drift <= limit
+    // Prefer the engine's equivalent-SDOF drift estimate; fall back to a heuristic if unavailable.
+    val hasEngineDrift = res.maxStoryDrift > 0.0
+    val drift = if (hasEngineDrift) res.maxStoryDrift / 1000.0 else 0.005 * (totalHeight / 5.0)
+    val limit = if (hasEngineDrift) res.allowableDrift / 1000.0 else 0.020 * (totalHeight / 5.0)
+    val isSafe = if (hasEngineDrift) res.driftIsSafe else drift <= limit
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),

@@ -146,11 +146,19 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         val steelWeight = ((numRibsX * providedSteel * (input.ly / 1000.0) / 1e6) + (numRibsY * providedSteel * (input.lx / 1000.0) / 1e6)) * 7850.0
 
         val isSafe = ribDesign.isSafe && solidHeadDesign.isSafe && punchingShearCheck.isSafe && deflectionCheck.isSafe
-        val utilizationRatio = maxOf(
-            ribDesign.utilizationRatio,
-            if (punchingShearCheck.vc > 0) punchingShearCheck.vu / punchingShearCheck.vc else 0.0,
-            if (deflectionCheck.allowable > 0) deflectionCheck.longTerm / deflectionCheck.allowable else 0.0
-        )
+        val punchUtil = if (punchingShearCheck.vc > 0) punchingShearCheck.vu / punchingShearCheck.vc else 0.0
+        val deflUtil = if (deflectionCheck.allowable > 0) deflectionCheck.longTerm / deflectionCheck.allowable else 0.0
+        val utilizationRatio = maxOf(ribDesign.utilizationRatio, punchUtil, deflUtil)
+
+        if (!isSafe) warnings.add("⚠ Waffle slab failed one or more ECP 203 checks")
+        if (utilizationRatio > 1.0) warnings.add("⚠ Utilization ratio = ${String.format("%.2f", utilizationRatio)} > 1.0")
+
+        val solidHeadUtil = if (solidHeadDesign.punchingShear.vc > 0)
+            solidHeadDesign.punchingShear.vu / solidHeadDesign.punchingShear.vc else 0.0
+        safetyChecks.add(SafetyCheckItem("Rib flexure", ribDesign.utilizationRatio, 1.0, "ECP 203 §4-2", passed = ribDesign.isSafe))
+        safetyChecks.add(SafetyCheckItem("Solid head", solidHeadUtil, 1.0, "ECP 203 §6-4", passed = solidHeadDesign.isSafe))
+        safetyChecks.add(SafetyCheckItem("Punching shear", punchUtil, 1.0, "ECP 203 §4-3", passed = punchingShearCheck.isSafe))
+        safetyChecks.add(SafetyCheckItem("Deflection", deflUtil, 1.0, "ECP 203 §6-3", passed = deflectionCheck.isSafe))
 
         return WaffleSlabResult(
             isSafe = isSafe,

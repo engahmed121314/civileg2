@@ -204,7 +204,7 @@ path.
 ```
 ✅ One DesignCode enum; all screens → CalculationFactory → code-correct engine (nested enum deleted, SeismicScreen routes through the factory — §3/§9.18)
 ✅ CalculatorEngine steel member + solid slab now delegate to engines (P0-2, §9.6/§9.16; remaining inline paths listed there)
-☐ Every engine: InputGuard + full result (codeNotes, warnings, safetyChecks, steps, diagram data)
+☐ Every engine: InputGuard + full result (codeNotes, warnings, safetyChecks, steps, diagram data) *(partial §9.21 — strap/waffle/flat-slab/seismic/beam/column emit checks+notes+steps; remaining elements and diagram data in Phase 2)*
 ✅ Every element PDF has a drawing that matches the on-screen drawing and the result (no stale/placeholder) — §9.10 fallbacks, §9.11 native path removed, §9.12–§9.15 captures; base plate has no on-screen drawing and reads real values
 ☐ PDF: single pipeline (ExportManager); DXF: AC1027 with layers/BBS; PDF+DXF exportable together
 ☐ CodeReference keys verified against code text
@@ -839,3 +839,49 @@ policy is deterministic and conservative (bearing-type, M20); it can be refined 
 connection inputs are introduced, but (b) meets the stated objective.
 
 **Note.** FLAG_SECURE remains deferred per user decision (see §9.19 note).
+
+### 9.21 Technical-office detail expansion, Phase 1 (calc accuracy & completeness)
+
+User-approved multi-phase expansion of calculations/drawings/reports. Phase 1 targets the
+numbers and their traceability. Commits land per sub-phase; suite stays green after each.
+
+**P1.1 — Strap footing is now a real design.** `core.engineering.StrapFootingDesignEngine`
+replaced its placeholder with a uniform-pressure, resultant-alignment design: column reactions
+R1/R2 (vertical equilibrium), footing sizing from net allowable bearing, thickness from punching
+(u1 at d/2, code capacity), flexural steel per direction, and a strap beam designed for the
+moment/shear from the eccentric column reaction (As, stirrups, shear capacity). The facade
+`CalculatorEngine.calculateStrapFooting` now calls `design.design(inputs)` (it previously
+bypassed the ECP/ACI/SBC wrappers), builds six `DesignSafetyCheck` rows and computes
+utilisation. Result carries `soilPressure1/2`, `punchingShear1/2`,
+`punchingCapacity1/2`, `strapMoment/Shear/AsRequired/AsProvided/ShearCapacity` and
+`calculationSteps`. The duplicate `domain.calculations.ecp.StrapFootingDesignEngine` stays
+unused (cleanup candidate).
+
+**P1.2 — Waffle slabs publish checks.** `ECPWaffleSlabDesign` and `ACIWaffleSlabDesign` now
+emit four `domain.SafetyCheckItem` rows (rib flexure, solid head, punching shear, deflection)
+plus warnings, instead of results with no auditable checks.
+
+**P1.3 — Flat slabs include flexure in safety.** `ECPFlatSlab`/`ACIFlatSlab`/`SBCFlatSlab`
+add column- and middle-strip top/bottom flexure checks; `overallSafe` now ANDs `flexureOk`
+and `maxUtil` includes the flexural utilisation (previously deflections/punching could pass
+while flexure failed).
+
+**P1.4 — Seismic drift is computed, not guessed.** `SeismicBaseShearResult` gains
+`fundamentalPeriod, roofDisplacement, maxStoryDrift, allowableDrift, driftRatio, driftIsSafe`,
+computed from an equivalent-SDOF displacement (ECP limit 0.005, ACI/SBC 0.020).
+`SeismicViewModel` persists the real `maxStoryDrift`/`driftIsSafe` and
+`SeismicStabilityCard` shows them (heuristic only as a legacy fallback).
+
+**P1.5 — Beam/column warnings, code notes and steps surface in the UI.**
+`CalculatorEngine.BeamResult` and `ColumnResult` now expose `warnings`, `codeNotes` and
+`calculationSteps` (beam: ultimate load, moment, shear, flexure, stirrups, deflection; column:
+loads, eccentricity, reinforcement, axial capacity, slenderness). Values come from the code
+engines (`wdflexRes.warnings/codeNotes`, `shearRes`, `defCheck`, column
+`ReinforcementResult`). `BeamScreen`/`ColumnScreen` render Warnings and Code Notes blocks.
+
+**Tests.** `EngineeringDetailExpansionTest` covers strap reactions/equilibrium/checks/steps and
+code-differentiated notes, waffle checks, flat-slab flexure, seismic drift for ECP/ACI/SBC, and
+beam/column step+note surfacing. Suite: **68 suites / 1250 tests / 0 failures**.
+
+**Remaining for Phase 1.** Step trace is present for beam/column/strap only; Phase 2 extends
+`CalculationStep` (with diagram data) to the remaining elements and renders the cards.

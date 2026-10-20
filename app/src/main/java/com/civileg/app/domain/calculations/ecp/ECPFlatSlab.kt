@@ -328,13 +328,29 @@ class ECPFlatSlab : FlatSlabDesign {
             "Steel weight ≈ %.1f kg/panel", steelWeight
         ))
 
-        // ── 15. Overall utilization ─────────────────────────────────
+        // ── 15. Flexure (reinforcement) checks ──────────────────────
+        val flexGroups = listOf(
+            "Col-strip top (X)" to colTopRebarX,
+            "Col-strip bottom (X)" to colBotRebarX,
+            "Mid-strip top (X)" to midTopRebarX,
+            "Mid-strip bottom (X)" to midBotRebarX
+        )
+        var flexUtil = 0.0
+        flexGroups.forEach { (label, r) ->
+            val u = if (r.providedArea > 0) r.requiredArea / r.providedArea else 0.0
+            flexUtil = maxOf(flexUtil, u)
+            safetyChecks.add(SafetyCheckItem(label, r.requiredArea, r.providedArea, "mm²", r.providedArea >= r.requiredArea))
+        }
+        val flexureOk = flexGroups.all { it.second.providedArea >= it.second.requiredArea }
+        if (!flexureOk) warnings.add("Reinforcement insufficient in one or more strips")
+
+        // ── 16. Overall utilization ─────────────────────────────────
         val maxUtil = maxOf(
             punchingResult.utilizationRatio,
             deflectionResult.ratio,
-            if (punchingResult.vc > 0) punchingResult.vu / punchingResult.vc else 0.0
+            flexUtil
         )
-        val overallSafe = punchingResult.isSafe && deflectionResult.isSafe && minThkOk
+        val overallSafe = punchingResult.isSafe && deflectionResult.isSafe && minThkOk && flexureOk
 
         // Build punching reinforcement result
         val punchingReinforcement = if (punchingResult.needsReinforcement && punchingResult.studDia > 0) {

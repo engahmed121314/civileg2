@@ -127,6 +127,25 @@ class SBCSeismic : SeismicDesign {
 
         val baseShear = finalCs * totalWeight
 
+        // ── Story-drift estimate (equivalent SDOF, SBC 301 §4.5) ──
+        val hDrift = buildingHeight
+        val g = 9.81
+        val periodD = if (T > 0.0) T else 0.1
+        val omega = 2.0 * PI / periodD
+        val deltaDesign = if (hDrift > 0.0) {
+            val deltaElastic = finalCs * g / (omega * omega)
+            responseModificationFactor * deltaElastic / importanceFactor
+        } else 0.0
+        val nStories = if (hDrift > 0.0) max(1.0, (hDrift / 3.0).roundToInt().toDouble()) else 1.0
+        val storyH = if (hDrift > 0.0) hDrift / nStories else 0.0
+        val avgDrift = deltaDesign / nStories
+        val allowRatio = 0.020
+        val allowDrift = allowRatio * storyH
+        val driftRatio = if (storyH > 0) avgDrift / storyH else 0.0
+        if (storyH > 0 && driftRatio > allowRatio) {
+            warnings.add("SBC 301 §4.5: inter-storey drift exceeds limit (Δ/h = ${"%.4f".format(driftRatio)} > $allowRatio)")
+        }
+
         return SeismicBaseShearResult(
             baseShear = baseShear,
             zoneFactor = SPS,
@@ -135,7 +154,13 @@ class SBCSeismic : SeismicDesign {
             responseModification = responseModificationFactor,
             calculationFormula = "SBC 301: V = Cs × W where Cs = SDS / (R/Ie)",
             codeReference = CodeReference.SBC.SEISMIC_BASE_SHEAR,
-            warnings = warnings
+            warnings = warnings,
+            fundamentalPeriod = periodD,
+            roofDisplacement = deltaDesign * 1000.0,
+            maxStoryDrift = avgDrift * 1000.0,
+            allowableDrift = allowDrift * 1000.0,
+            driftRatio = driftRatio,
+            driftIsSafe = driftRatio <= allowRatio
         )
     }
 

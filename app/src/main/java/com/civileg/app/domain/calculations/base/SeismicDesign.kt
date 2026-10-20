@@ -63,7 +63,14 @@ data class SeismicBaseShearResult(
     val responseModification: Double,     // R
     val calculationFormula: String,
     val codeReference: String,
-    val warnings: List<String> = emptyList()
+    val warnings: List<String> = emptyList(),
+    // ── Story-drift estimate (equivalent SDOF spectral-displacement method) ──
+    val fundamentalPeriod: Double = 0.0,  // s
+    val roofDisplacement: Double = 0.0,   // mm (design/inelastic)
+    val maxStoryDrift: Double = 0.0,      // mm (average per storey)
+    val allowableDrift: Double = 0.0,     // mm
+    val driftRatio: Double = 0.0,         // Δ/h
+    val driftIsSafe: Boolean = true
 )
 
 data class SpectrumValue(

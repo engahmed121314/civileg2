@@ -561,6 +561,22 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
                     Text(if (check.isSafe) stringResource(R.string.safe_check) else stringResource(R.string.unsafe_check), color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
+
+            if (result.warnings.isNotEmpty()) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                Text("Warnings", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                result.warnings.forEach { warning ->
+                    Text("• $warning", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                }
+            }
+
+            if (result.codeNotes.isNotEmpty()) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
+                Text("Code Notes", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                result.codeNotes.forEach { note ->
+                    Text("• $note", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 }

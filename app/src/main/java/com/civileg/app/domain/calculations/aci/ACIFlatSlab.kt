@@ -268,9 +268,25 @@ class ACIFlatSlab : FlatSlabDesign {
         val totalAsY = totalAsX * (lnYm / lnXm).coerceAtLeast(0.5)
         val steelWeight = (totalAsX + totalAsY) * (input.lx + input.ly) / 1e6 * STEEL_UNIT_WEIGHT
 
+        // ── Flexure (reinforcement) checks ──────────────────────────
+        val flexGroups = listOf(
+            "Col-strip top (X)" to colTopRebarX,
+            "Col-strip bottom (X)" to colBotRebarX,
+            "Mid-strip top (X)" to midTopRebarX,
+            "Mid-strip bottom (X)" to midBotRebarX
+        )
+        var flexUtil = 0.0
+        flexGroups.forEach { (label, r) ->
+            val u = if (r.providedArea > 0) r.requiredArea / r.providedArea else 0.0
+            flexUtil = maxOf(flexUtil, u)
+            safetyChecks.add(SafetyCheckItem(label, r.requiredArea, r.providedArea, "mm²", r.providedArea >= r.requiredArea))
+        }
+        val flexureOk = flexGroups.all { it.second.providedArea >= it.second.requiredArea }
+        if (!flexureOk) warnings.add("Reinforcement insufficient in one or more strips")
+
         // ── Overall utilization ─────────────────────────────────────
-        val maxUtil = maxOf(punchingResult.utilizationRatio, deflectionResult.ratio)
-        val overallSafe = punchingResult.isSafe && deflectionResult.isSafe && minThkOk
+        val maxUtil = maxOf(punchingResult.utilizationRatio, deflectionResult.ratio, flexUtil)
+        val overallSafe = punchingResult.isSafe && deflectionResult.isSafe && minThkOk && flexureOk
 
         val punchingReinforcement = if (punchingResult.needsReinforcement && punchingResult.studDia > 0) {
             val studArea = PI * punchingResult.studDia * punchingResult.studDia / 4
