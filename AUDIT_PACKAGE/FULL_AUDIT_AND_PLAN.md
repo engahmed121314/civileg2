@@ -929,3 +929,11 @@ three-code flat-slab, stair, retaining-wall, tank, shear-wall and pile step asse
 
 **Remaining for Phase 2.** On-screen reinforcement bar schedules (BBS) — the BBS writer already
 exists and is extended in Phase 5.
+
+**On-screen BBS (Phase 2 close-out).** `ui/compose/components/common/BbsTableCard.kt` renders
+`BbsEntry` rows (bar mark, diameter, shape code, quantity, length, weight + total). `BeamScreen`,
+`ColumnScreen` and `FootingScreen` call the existing `BbsGenerator.generateBeamBbs` /
+`generateColumnBbs` / `generateFootingBbs` and show the table next to the results, so the screen
+and the exported schedule share one source. Generation is wrapped in `runCatching` so an
+edge-case design cannot crash the results list. Suite stays **68 suites / 1259 tests / 0
+failures**.

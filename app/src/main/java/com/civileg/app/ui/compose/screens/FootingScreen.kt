@@ -27,9 +27,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.viewmodel.FootingViewModel
+import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFootingDrawing
@@ -336,6 +338,13 @@ fun FootingScreen(
 
                 if (res.calculationSteps.isNotEmpty()) {
                     item { CalculationStepsCard(res.calculationSteps, title = "Footing Calculation Steps") }
+                }
+
+                val bbsEntries = runCatching {
+                    BbsGenerator.generateFootingBbs("F1", res)
+                }.getOrDefault(emptyList())
+                if (bbsEntries.isNotEmpty()) {
+                    item { BbsTableCard(bbsEntries, title = "Footing Bar Bending Schedule") }
                 }
 
                 if (res.safetyChecks.isNotEmpty()) {

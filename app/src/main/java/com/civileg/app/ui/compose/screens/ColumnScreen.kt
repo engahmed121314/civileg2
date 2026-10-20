@@ -36,7 +36,9 @@ import androidx.compose.ui.res.stringResource
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.ColumnViewModel
+import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.BarInfo
@@ -303,6 +305,13 @@ fun ColumnScreen(
                 }
 
                 item { ColumnResultCard(result) }
+
+                val bbsEntries = runCatching {
+                    BbsGenerator.generateColumnBbs("C1", result)
+                }.getOrDefault(emptyList())
+                if (bbsEntries.isNotEmpty()) {
+                    item { BbsTableCard(bbsEntries, title = "Column Bar Bending Schedule") }
+                }
 
                 if (result.mx != 0.0 || result.my != 0.0) {
                     item {

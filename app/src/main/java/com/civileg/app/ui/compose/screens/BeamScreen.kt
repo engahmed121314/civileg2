@@ -34,7 +34,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.BeamViewModel
+import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.drawings.ProfessionalBeamDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.MomentShearForceDiagram
@@ -214,6 +216,13 @@ fun BeamScreen(
 
             result?.let { res ->
                 item { SectionHeader(stringResource(R.string.beam_results_economy), R.drawable.ic_calculator) }
+
+                val bbsEntries = runCatching {
+                    BbsGenerator.generateBeamBbs("B1", res, res.span * 1000.0)
+                }.getOrDefault(emptyList())
+                if (bbsEntries.isNotEmpty()) {
+                    item { BbsTableCard(bbsEntries, title = "Beam Bar Bending Schedule") }
+                }
                 
                 item {
                     val ecoColor = when {
