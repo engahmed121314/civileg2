@@ -34,6 +34,8 @@ import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalHordiSlabDrawing
 import com.civileg.app.ui.compose.components.drawings.hordiSlabDrawingSummary
+import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.HordiSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
@@ -294,6 +296,19 @@ fun HordiSlabScreen(
 
                 // ── Results ───────────────────────────────────────────
                 result?.let { res ->
+                    val bbsEntries = runCatching {
+                        BbsGenerator.generateHordiSlabBbs(
+                            mark = "H1",
+                            result = res,
+                            spanMm = span.toDoubleOrNull() ?: 6000.0,
+                            ribSpacingMm = ribSpacing.toDoubleOrNull() ?: 500.0,
+                            coverMm = cover.toDoubleOrNull() ?: 25.0
+                        )
+                    }.getOrDefault(emptyList())
+                    if (bbsEntries.isNotEmpty()) {
+                        item { BbsTableCard(bbsEntries, title = "Hordi Slab Bar Bending Schedule") }
+                    }
+
                     // Safety Status Gauge
                     item {
                         SafetyStatusCard(

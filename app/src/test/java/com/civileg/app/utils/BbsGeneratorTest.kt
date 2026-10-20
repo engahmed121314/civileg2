@@ -512,4 +512,156 @@ class BbsGeneratorTest {
 
         assertTrue(BbsGenerator.generateFlatSlabBbs("FS1", result, 6000.0, 7500.0).isEmpty())
     }
+
+    @Test
+    fun `pile bbs covers group bars ties and cap mesh`() {
+        val result = com.civileg.app.domain.PileDesignResult(
+            pileType = "BORED",
+            soilType = "SAND",
+            pileDiameterMm = 600.0,
+            pileLengthM = 12.0,
+            numberOfPiles = 4,
+            fcu = 30.0,
+            fy = 400.0,
+            capacityResult = com.civileg.app.domain.calculations.base.PileCapacityResult(
+                ultimateCapacity = 3000.0, allowableCapacity = 1500.0,
+                shaftResistance = 1800.0, endBearingResistance = 1200.0,
+                fs = 2.0, utilizationRatio = 0.8
+            ),
+            groupResult = com.civileg.app.domain.calculations.base.PileGroupResult(
+                efficiencyFactor = 0.85, groupCapacity = 5100.0, individualCapacity = 1500.0,
+                spacing = 1800.0, numberOfPiles = 4, pattern = "2x2"
+            ),
+            settlementResult = com.civileg.app.domain.calculations.base.PileSettlementResult(
+                immediateSettlement = 5.0, consolidationSettlement = 3.0,
+                totalSettlement = 8.0, allowableSettlement = 25.0, isOk = true
+            ),
+            capResult = com.civileg.app.domain.calculations.base.PileCapResult(
+                capWidth = 2400.0, capLength = 2400.0, capThickness = 800.0,
+                punchingShearOk = true, punchingShearStress = 1.2, punchingShearCapacity = 2.0,
+                beamShearOk = true, beamShearStress = 0.8, beamShearCapacity = 1.5,
+                flexuralReinforcement = com.civileg.app.domain.calculations.base.RebarDetail(
+                    bars = 12, diameter = 16, spacing = 150,
+                    area = 2412.0, requiredArea = 2000.0, ratio = 0.83
+                ),
+                punchingReinforcement = null,
+                concreteVolume = 4.6, steelWeight = 380.0
+            ),
+            lateralCapacity = 200.0,
+            lateralUtilizationRatio = 0.4,
+            negativeSkinFriction = 0.0,
+            pileReinforcement = com.civileg.app.domain.PileReinforcementResult(
+                longitudinalBars = 8, longitudinalDiameter = 20,
+                longitudinalArea = 2513.0, requiredLongitudinalArea = 2000.0,
+                tiesDiameter = 8, tiesSpacing = 200, isSafe = true, ratio = 0.01
+            ),
+            isSafe = true,
+            utilizationRatio = 0.8
+        )
+
+        val entries = BbsGenerator.generatePileBbs("PG1", result)
+
+        assertEquals(4, entries.size)
+        val longitudinal = entries.first { it.barMark == "01" }
+        assertEquals(32, longitudinal.count)
+        assertEquals((12000.0 + 40 * 20).toInt(), longitudinal.totalLengthPerBar.toInt())
+        val ties = entries.first { it.barMark == "02" }
+        // ((12000 - 150) / 200).toInt() + 1 = 60 ties per pile, 4 piles
+        assertEquals(240, ties.count)
+        assertEquals(12, entries.first { it.barMark == "03" }.count)
+        assertEquals(12, entries.first { it.barMark == "04" }.count)
+        assertTrue(entries.all { it.totalWeightKg > 0.0 })
+    }
+
+    @Test
+    fun `strap footing bbs includes both pads and strap bars`() {
+        fun pad(w: Double, l: Double) = FootingResult(
+            type = FootingType.ISOLATED,
+            width = w, length = l, thickness = 500.0,
+            soilPressure = 150.0, allowablePressure = 200.0,
+            reinforcementBottom = ReinforcementBar(diameter = 16, spacing = 150.0, numBars = 12),
+            isSafe = true, code = DesignCode.ECP,
+            concreteVolume = 1.2, steelWeight = 90.0, cost = 0.0
+        )
+        val result = StrapFootingResult(
+            footing1 = pad(2000.0, 2000.0),
+            footing2 = pad(1800.0, 1800.0),
+            strapBeamWidth = 400.0,
+            strapBeamDepth = 800.0,
+            strapTopReinforcement = ReinforcementBar(diameter = 16, spacing = 150.0, numBars = 4),
+            strapBottomReinforcement = ReinforcementBar(diameter = 16, spacing = 150.0, numBars = 4),
+            reactions = Pair(500.0, 600.0),
+            isSafe = true,
+            concreteVolume = 3.0,
+            steelWeight = 250.0,
+            utilizationRatio = 0.7
+        )
+
+        val entries = BbsGenerator.generateStrapFootingBbs("SF1", result, distanceMm = 5000.0)
+
+        // 2 pad directions per pad + strap top and bottom
+        assertEquals(6, entries.size)
+        assertEquals(2, entries.count { it.memberMark == "SF1-F1" })
+        assertEquals(2, entries.count { it.memberMark == "SF1-F2" })
+        assertEquals(2, entries.count { it.memberMark == "SF1" })
+        val strapBar = entries.first { it.memberMark == "SF1" && it.barMark == "01" }
+        assertEquals((5000.0 + 2 * 40 * 16).toInt(), strapBar.totalLengthPerBar.toInt())
+        assertEquals(4, strapBar.count)
+    }
+
+    @Test
+    fun `waffle slab bbs schedules ribs both ways and solid head`() {
+        val rebar = com.civileg.app.domain.RebarResult(
+            bars = 0, diameter = 16, spacing = 150,
+            providedArea = 1340.0, requiredArea = 1200.0, ratio = 0.9
+        )
+        val result = com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult(
+            isSafe = true,
+            utilizationRatio = 0.9,
+            ribDesign = com.civileg.app.domain.calculations.base.WaffleSlabDesign.RibDesignResult(
+                flexureReinforcement = rebar,
+                shearReinforcement = com.civileg.app.domain.entities.ShearReinforcementResult(),
+                isSafe = true,
+                utilizationRatio = 0.9
+            ),
+            solidHeadDesign = com.civileg.app.domain.calculations.base.WaffleSlabDesign.SolidHeadDesignResult(
+                flexureReinforcement = rebar,
+                punchingShear = com.civileg.app.domain.calculations.base.WaffleSlabDesign.PunchingShearCheck(
+                    vu = 300.0, vc = 400.0, isSafe = true, utilizationRatio = 0.75
+                ),
+                isSafe = true
+            )
+        )
+
+        val entries = BbsGenerator.generateWaffleSlabBbs(
+            mark = "WS1", result = result,
+            lxMm = 6000.0, lyMm = 7500.0, ribSpacingMm = 600.0, solidHeadSizeMm = 1000.0
+        )
+
+        assertEquals(4, entries.size)
+        // ((7500 - 50) / 600).toInt() + 1 = 13 ribs in X
+        assertEquals(13, entries.first { it.barMark == "01" }.count)
+        // ((6000 - 50) / 600).toInt() + 1 = 10 ribs in Y
+        assertEquals(10, entries.first { it.barMark == "02" }.count)
+        assertTrue(entries.all { it.totalWeightKg > 0.0 })
+    }
+
+    @Test
+    fun `hordi slab bbs is emitted per metre width`() {
+        val result = com.civileg.app.domain.entities.SlabDesignResult(
+            requiredReinforcement = 800.0, providedReinforcement = 900.0,
+            barDiameter = 12.0, barSpacing = 150.0, minThickness = 300.0,
+            shearCapacity = 120.0, isSafe = true, utilizationRatio = 0.8
+        )
+
+        val entries = BbsGenerator.generateHordiSlabBbs(
+            "H1", result, spanMm = 6000.0, ribSpacingMm = 500.0
+        )
+
+        assertEquals(2, entries.size)
+        // ((1000 - 50) / 500).toInt() + 1 = 2 ribs per metre width
+        assertEquals(2, entries.first { it.barMark == "01" }.count)
+        assertEquals((6000.0 - 50.0 + 2 * 9 * 12).toInt(), entries.first().totalLengthPerBar.toInt())
+        assertTrue(entries.all { it.totalWeightKg > 0.0 })
+    }
 }

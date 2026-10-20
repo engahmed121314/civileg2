@@ -30,12 +30,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStrapFootingDrawing
 import com.civileg.app.ui.compose.components.drawings.strapFootingDrawingSummary
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ExportUtils
+import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.StrapFootingViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
@@ -299,6 +301,15 @@ fun StrapFootingScreen(
 
                 if (res.calculationSteps.isNotEmpty()) {
                     item { CalculationStepsCard(res.calculationSteps, title = "Strap Footing Calculation Steps") }
+
+                    val bbsEntries = runCatching {
+                        BbsGenerator.generateStrapFootingBbs(
+                            "SF1", res, (distance.toDoubleOrNull() ?: 5.0) * 1000.0
+                        )
+                    }.getOrDefault(emptyList())
+                    if (bbsEntries.isNotEmpty()) {
+                        item { BbsTableCard(bbsEntries, title = "Strap Footing Bar Bending Schedule") }
+                    }
                 }
                 
                 item {

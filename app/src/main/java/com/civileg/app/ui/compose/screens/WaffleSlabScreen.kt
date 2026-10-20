@@ -32,6 +32,8 @@ import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalWaffleSlabDrawing
 import com.civileg.app.ui.compose.components.drawings.waffleSlabDrawingSummary
+import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.WaffleSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
@@ -288,6 +290,21 @@ fun WaffleSlabScreen(
 
                 // ── Results ───────────────────────────────────────────
                 result?.let { res ->
+                    val bbsEntries = runCatching {
+                        BbsGenerator.generateWaffleSlabBbs(
+                            mark = "WS1",
+                            result = res,
+                            lxMm = lx.toDoubleOrNull() ?: 6000.0,
+                            lyMm = ly.toDoubleOrNull() ?: 7500.0,
+                            ribSpacingMm = ribSpacing.toDoubleOrNull() ?: 600.0,
+                            solidHeadSizeMm = solidHeadSize.toDoubleOrNull() ?: 1000.0,
+                            coverMm = clearCover.toDoubleOrNull() ?: 25.0
+                        )
+                    }.getOrDefault(emptyList())
+                    if (bbsEntries.isNotEmpty()) {
+                        item { BbsTableCard(bbsEntries, title = "Waffle Slab Bar Bending Schedule") }
+                    }
+
                     // Safety Status Gauge
                     item {
                         SafetyStatusCard(

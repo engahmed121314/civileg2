@@ -165,6 +165,11 @@ class HordiSlabViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
+                    bbsEntries = runCatching {
+                        com.civileg.app.utils.BbsGenerator.generateHordiSlabBbs(
+                            "H1", res, params.span, params.ribSpacing
+                        )
+                    }.getOrDefault(emptyList()),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
                         title = "HORDI SLAB",

@@ -2,7 +2,10 @@ package com.civileg.app.utils
 
 import android.os.Parcelable
 import com.civileg.app.domain.FlatSlabResult
+import com.civileg.app.domain.PileDesignResult
 import com.civileg.app.domain.RebarResult
+import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
+import com.civileg.app.domain.entities.SlabDesignResult
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.utils.CalculatorEngine.*
 import kotlinx.parcelize.Parcelize
@@ -528,6 +531,285 @@ object BbsGenerator {
         addStrip(yBar, midStripY, result.middleStripBotRebar)
         addStrip(yBar, colStripY, result.columnStripTopRebar)
         addStrip(yBar, midStripY, result.middleStripTopRebar)
+        return entries
+    }
+
+    /**
+     * Generates a Bar Bending Schedule for a pile group and its cap.
+     *
+     * Longitudinal bars are full pile length plus 40d anchorage into the cap,
+     * ties are stepped at [PileReinforcementResult.tiesSpacing], and the cap is
+     * reinforced bottom both ways with the flexural rebar detail.
+     */
+    fun generatePileBbs(
+        mark: String,
+        result: PileDesignResult,
+        pileCoverMm: Double = 75.0,
+        capCoverMm: Double = 75.0
+    ): List<BbsEntry> {
+        InputGuard.notBlank("memberMark", mark)
+        InputGuard.positive("pileDiameter", result.pileDiameterMm)
+        InputGuard.positive("pileLength", result.pileLengthM)
+        InputGuard.inRange("pileCover", pileCoverMm, 40.0, 100.0)
+        InputGuard.inRange("capCover", capCoverMm, 40.0, 100.0)
+
+        val reinf = result.pileReinforcement
+        val cap = result.capResult
+        val capRebar = cap.flexuralReinforcement
+        InputGuard.positive("longitudinalBars", reinf.longitudinalBars)
+        InputGuard.positive("longitudinalDiameter", reinf.longitudinalDiameter)
+        InputGuard.positive("tiesDiameter", reinf.tiesDiameter)
+        InputGuard.positive("tiesSpacing", reinf.tiesSpacing)
+        InputGuard.positive("capBars", capRebar.bars)
+        InputGuard.positive("capDiameter", capRebar.diameter)
+        InputGuard.positive("capWidth", cap.capWidth)
+        InputGuard.positive("capLength", cap.capLength)
+
+        val entries = mutableListOf<BbsEntry>()
+        val piles = result.numberOfPiles.toDouble()
+
+        // 01 - Pile longitudinal bars for the whole group
+        val pileLengthMm = result.pileLengthM * 1000.0
+        val longCount = (piles * reinf.longitudinalBars).toInt()
+        val longBarLength = pileLengthMm + 40 * reinf.longitudinalDiameter
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "01",
+                diameter = reinf.longitudinalDiameter, shapeCode = 0, count = longCount,
+                lengthA = pileLengthMm,
+                lengthB = 40.0 * reinf.longitudinalDiameter,
+                totalLengthPerBar = longBarLength,
+                totalWeightKg = longCount * longBarLength / 1000.0 *
+                    (reinf.longitudinalDiameter.toDouble().pow(2) / 162.0)
+            )
+        )
+
+        // 02 - Ties / spiral, one cage per pile
+        val tiesPerPile = ((pileLengthMm - 2 * pileCoverMm) / reinf.tiesSpacing).toInt().coerceAtLeast(1) + 1
+        val tieCount = (tiesPerPile * result.numberOfPiles).toInt()
+        val tieLength = Math.PI * (result.pileDiameterMm - 2 * pileCoverMm) + 2 * 10 * reinf.tiesDiameter
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "02",
+                diameter = reinf.tiesDiameter, shapeCode = 51, count = tieCount,
+                lengthA = Math.PI * (result.pileDiameterMm - 2 * pileCoverMm),
+                lengthB = 2 * 10.0 * reinf.tiesDiameter,
+                totalLengthPerBar = tieLength,
+                totalWeightKg = tieCount * tieLength / 1000.0 *
+                    (reinf.tiesDiameter.toDouble().pow(2) / 162.0)
+            )
+        )
+
+        // 03 / 04 - Pile cap bottom mesh both directions
+        val capBars = capRebar.bars
+        val capDia = capRebar.diameter
+        val capLenX = (cap.capWidth - 2 * capCoverMm) + 2 * 9 * capDia
+        val capLenY = (cap.capLength - 2 * capCoverMm) + 2 * 9 * capDia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "03",
+                diameter = capDia, shapeCode = 0, count = capBars,
+                lengthA = cap.capWidth - 2 * capCoverMm,
+                totalLengthPerBar = capLenX,
+                totalWeightKg = capBars * capLenX / 1000.0 * (capDia.toDouble().pow(2) / 162.0)
+            )
+        )
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "04",
+                diameter = capDia, shapeCode = 0, count = capBars,
+                lengthA = cap.capLength - 2 * capCoverMm,
+                totalLengthPerBar = capLenY,
+                totalWeightKg = capBars * capLenY / 1000.0 * (capDia.toDouble().pow(2) / 162.0)
+            )
+        )
+        return entries
+    }
+
+    /**
+     * Generates a Bar Bending Schedule for a strap footing.
+     *
+     * Both pads reuse the isolated-footing schedule and the strap beam carries
+     * top and bottom longitudinal bars over [distanceMm], anchored 40d into each
+     * pad.
+     */
+    fun generateStrapFootingBbs(
+        mark: String,
+        result: StrapFootingResult,
+        distanceMm: Double
+    ): List<BbsEntry> {
+        InputGuard.notBlank("memberMark", mark)
+        InputGuard.positive("distance", distanceMm)
+        InputGuard.positive("footing1Length", result.footing1.length)
+
+        val entries = mutableListOf<BbsEntry>()
+        entries.addAll(generateFootingBbs("$mark-F1", result.footing1))
+        entries.addAll(generateFootingBbs("$mark-F2", result.footing2))
+
+        val strapLength = distanceMm +
+            2 * 40 * result.strapBottomReinforcement.diameter
+        val bottom = result.strapBottomReinforcement
+        if (bottom.numBars > 0) {
+            entries.add(
+                BbsEntry(
+                    memberMark = mark, barMark = "01",
+                    diameter = bottom.diameter, shapeCode = 0, count = bottom.numBars,
+                    lengthA = distanceMm,
+                    totalLengthPerBar = strapLength,
+                    totalWeightKg = bottom.numBars * strapLength / 1000.0 *
+                        (bottom.diameter.toDouble().pow(2) / 162.0)
+                )
+            )
+        }
+        val top = result.strapTopReinforcement
+        if (top.numBars > 0) {
+            entries.add(
+                BbsEntry(
+                    memberMark = mark, barMark = "02",
+                    diameter = top.diameter, shapeCode = 0, count = top.numBars,
+                    lengthA = distanceMm,
+                    totalLengthPerBar = strapLength,
+                    totalWeightKg = top.numBars * strapLength / 1000.0 *
+                        (top.diameter.toDouble().pow(2) / 162.0)
+                )
+            )
+        }
+        return entries
+    }
+
+    /**
+     * Generates a Bar Bending Schedule for a two-way waffle slab.
+     *
+     * Rib bottom bars are scheduled in both directions at the design flexural
+     * rebar, and the solid head gets top bars both ways. Topping mesh is covered
+     * by the solid-head schedule.
+     */
+    fun generateWaffleSlabBbs(
+        mark: String,
+        result: WaffleSlabResult,
+        lxMm: Double,
+        lyMm: Double,
+        ribSpacingMm: Double,
+        solidHeadSizeMm: Double,
+        coverMm: Double = 25.0
+    ): List<BbsEntry> {
+        InputGuard.notBlank("memberMark", mark)
+        InputGuard.positive("lx", lxMm)
+        InputGuard.positive("ly", lyMm)
+        InputGuard.positive("ribSpacing", ribSpacingMm)
+        InputGuard.inRange("cover", coverMm, 10.0, 75.0)
+
+        val rib = result.ribDesign ?: return emptyList()
+        val dia = rib.flexureReinforcement.diameter
+        val spacing = rib.flexureReinforcement.spacing
+        if (dia <= 0 || spacing <= 0) return emptyList()
+
+        val cover = coverMm
+        val entries = mutableListOf<BbsEntry>()
+
+        // 01 - Ribs spanning the short direction (bars run along lx)
+        val ribsX = ((lyMm - 2 * cover) / ribSpacingMm).toInt().coerceAtLeast(1) + 1
+        val xBarLength = (lxMm - 2 * cover) + 2 * 9 * dia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "01",
+                diameter = dia, shapeCode = 0, count = ribsX,
+                lengthA = lxMm - 2 * cover,
+                totalLengthPerBar = xBarLength,
+                totalWeightKg = ribsX * xBarLength / 1000.0 * (dia.toDouble().pow(2) / 162.0)
+            )
+        )
+
+        // 02 - Ribs spanning the long direction (bars run along ly)
+        val ribsY = ((lxMm - 2 * cover) / ribSpacingMm).toInt().coerceAtLeast(1) + 1
+        val yBarLength = (lyMm - 2 * cover) + 2 * 9 * dia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "02",
+                diameter = dia, shapeCode = 0, count = ribsY,
+                lengthA = lyMm - 2 * cover,
+                totalLengthPerBar = yBarLength,
+                totalWeightKg = ribsY * yBarLength / 1000.0 * (dia.toDouble().pow(2) / 162.0)
+            )
+        )
+
+        val head = result.solidHeadDesign ?: return entries
+        val headDia = head.flexureReinforcement.diameter
+        val headSpacing = head.flexureReinforcement.spacing
+        if (headDia <= 0 || headSpacing <= 0) return entries
+
+        val headCount = ((solidHeadSizeMm - 2 * cover) / headSpacing).toInt().coerceAtLeast(1) + 1
+        val headBarLength = (solidHeadSizeMm - 2 * cover) + 2 * 9 * headDia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "03",
+                diameter = headDia, shapeCode = 0, count = headCount,
+                lengthA = solidHeadSizeMm - 2 * cover,
+                totalLengthPerBar = headBarLength,
+                totalWeightKg = headCount * headBarLength / 1000.0 *
+                    (headDia.toDouble().pow(2) / 162.0)
+            )
+        )
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "04",
+                diameter = headDia, shapeCode = 0, count = headCount,
+                lengthA = solidHeadSizeMm - 2 * cover,
+                totalLengthPerBar = headBarLength,
+                totalWeightKg = headCount * headBarLength / 1000.0 *
+                    (headDia.toDouble().pow(2) / 162.0)
+            )
+        )
+        return entries
+    }
+
+    /**
+     * Generates a per-metre-width Bar Bending Schedule for a hordi (one-way
+     * ribbed) slab: rib bottom bars plus topping distribution bars.
+     */
+    fun generateHordiSlabBbs(
+        mark: String,
+        result: SlabDesignResult,
+        spanMm: Double,
+        ribSpacingMm: Double,
+        coverMm: Double = 25.0
+    ): List<BbsEntry> {
+        InputGuard.notBlank("memberMark", mark)
+        InputGuard.positive("span", spanMm)
+        InputGuard.positive("ribSpacing", ribSpacingMm)
+        InputGuard.inRange("cover", coverMm, 10.0, 75.0)
+        InputGuard.positive("barDiameter", result.barDiameter)
+        InputGuard.positive("barSpacing", result.barSpacing)
+
+        val dia = result.barDiameter
+        val spacing = result.barSpacing
+        val entries = mutableListOf<BbsEntry>()
+
+        // 01 - Rib bottom bars per metre width
+        val ribsPerMetre = ((1000.0 - 2 * coverMm) / ribSpacingMm).toInt().coerceAtLeast(1) + 1
+        val ribLength = (spanMm - 2 * coverMm) + 2 * 9 * dia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "01",
+                diameter = dia.toInt(), shapeCode = 0, count = ribsPerMetre,
+                lengthA = spanMm - 2 * coverMm,
+                totalLengthPerBar = ribLength,
+                totalWeightKg = ribsPerMetre * ribLength / 1000.0 * (dia * dia / 162.0)
+            )
+        )
+
+        // 02 - Topping distribution bars per metre width
+        val toppingCount = ((spanMm - 2 * coverMm) / spacing).toInt().coerceAtLeast(1) + 1
+        val toppingLength = (1000.0 - 2 * coverMm) + 2 * 9 * dia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "02",
+                diameter = dia.toInt(), shapeCode = 0, count = toppingCount,
+                lengthA = 1000.0 - 2 * coverMm,
+                totalLengthPerBar = toppingLength,
+                totalWeightKg = toppingCount * toppingLength / 1000.0 * (dia * dia / 162.0)
+            )
+        )
         return entries
     }
 

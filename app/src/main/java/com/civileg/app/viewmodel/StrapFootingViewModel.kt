@@ -41,6 +41,7 @@ class StrapFootingViewModel @Inject constructor(
     val isExporting: LiveData<Boolean> = _isExporting
 
     private var lastCode: DesignCode = DesignCode.ECP
+    private var lastDistanceMm: Double = 0.0
 
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
@@ -65,6 +66,7 @@ class StrapFootingViewModel @Inject constructor(
         InputGuard.positive("strapWidth", strapWidth)
 
         lastCode = code
+        lastDistanceMm = distance
         viewModelScope.launch {
             _isLoading.value = true
             try {
@@ -126,7 +128,17 @@ class StrapFootingViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
+                    calculationSteps = res.calculationSteps,
+                    bbsEntries = runCatching {
+                        com.civileg.app.utils.BbsGenerator.generateStrapFootingBbs("SF1", res, lastDistanceMm)
+                    }.getOrDefault(emptyList()),
+                    boqRows = com.civileg.app.utils.BoqEstimator.strapFootingRows(
+                        res, lastDistanceMm / 1000.0, "SF1"
+                    ),
                     drawingBitmap = drawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.generic(
+                        "STRAP FOOTING", res.footing1.length, res.footing1.width
+                    ),
                     outputPath = file.absolutePath
                 ).pdfFile
                 onComplete(generated)

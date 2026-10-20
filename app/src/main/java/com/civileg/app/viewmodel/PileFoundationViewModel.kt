@@ -254,6 +254,11 @@ class PileFoundationViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
+                    calculationSteps = res.calculationSteps,
+                    bbsEntries = runCatching {
+                        com.civileg.app.utils.BbsGenerator.generatePileBbs("PG1", res)
+                    }.getOrDefault(emptyList()),
+                    boqRows = com.civileg.app.utils.BoqEstimator.pileRows(res, "PG1"),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.pileElevation(
                         title = "PILE ${res.pileType}",

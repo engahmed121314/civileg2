@@ -30,6 +30,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
+import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalPileDrawing
@@ -37,6 +38,7 @@ import com.civileg.app.ui.compose.components.drawings.pileDrawingSummary
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
+import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.PileFoundationViewModel
 import kotlinx.coroutines.launch
 
@@ -570,6 +572,13 @@ fun PileFoundationScreen(
                 // ── Status Card ──
                 if (res.calculationSteps.isNotEmpty()) {
                     item { CalculationStepsCard(res.calculationSteps, title = "Pile Calculation Steps") }
+
+                    val bbsEntries = runCatching {
+                        BbsGenerator.generatePileBbs("PG1", res)
+                    }.getOrDefault(emptyList())
+                    if (bbsEntries.isNotEmpty()) {
+                        item { BbsTableCard(bbsEntries, title = "Pile Bar Bending Schedule") }
+                    }
                 }
                 item {
                     val statusColor = if (res.isSafe) Color(0xFF2E7D32) else Color(0xFFF57C00)

@@ -187,6 +187,15 @@ class WaffleSlabViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
+                    bbsEntries = runCatching {
+                        com.civileg.app.utils.BbsGenerator.generateWaffleSlabBbs(
+                            "WS1", res, input.lx, input.ly, input.ribSpacing,
+                            input.solidHeadSize, input.clearCover
+                        )
+                    }.getOrDefault(emptyList()),
+                    boqRows = com.civileg.app.utils.BoqEstimator.waffleSlabRows(
+                        res, input.lx / 1000.0, input.ly / 1000.0, "WS1"
+                    ),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
                         title = "WAFFLE SLAB",

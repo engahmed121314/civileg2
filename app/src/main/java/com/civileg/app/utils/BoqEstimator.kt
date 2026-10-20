@@ -1,8 +1,11 @@
 package com.civileg.app.utils
 
 import com.civileg.app.domain.FlatSlabResult
+import com.civileg.app.domain.PileDesignResult
+import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
 import com.civileg.app.utils.CalculatorEngine.*
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.BoqRow
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**
@@ -88,6 +91,49 @@ object BoqEstimator {
         item(2, "Reinforcement steel - $mark", "kg", result.steelWeight * wallLengthM),
         item(3, "Formwork - $mark (both faces)", "m2", 2 * result.height * wallLengthM),
         item(4, "Formwork - $mark (base soffit)", "m2", result.baseWidth / 1000.0 * wallLengthM)
+    )
+
+    fun pileRows(result: PileDesignResult, mark: String = "Pile group"): List<BoqRow> {
+        val n = result.numberOfPiles
+        val pileLengthMm = result.pileLengthM * 1000.0
+        val d = result.pileDiameterMm
+        val pileConcrete = n * Math.PI * (d / 2.0).pow(2) * pileLengthMm / 1_000_000_000.0
+        val pileSteel = result.pileReinforcement.longitudinalArea * n * pileLengthMm * 7850.0 / 1_000_000_000.0
+        val cap = result.capResult
+        return listOf(
+            item(1, "Concrete - $mark (piles + cap)", "m3", pileConcrete + cap.concreteVolume),
+            item(2, "Reinforcement steel - $mark", "kg", pileSteel + cap.steelWeight),
+            item(3, "Formwork - $mark (pile shafts)", "m2", n * Math.PI * d * pileLengthMm / 1_000_000.0),
+            item(4, "Formwork - cap sides", "m2", 2 * (cap.capWidth + cap.capLength) * cap.capThickness / 1_000_000.0)
+        )
+    }
+
+    fun strapFootingRows(
+        result: StrapFootingResult,
+        distanceM: Double,
+        mark: String = "Strap footing"
+    ): List<BoqRow> {
+        val f1 = result.footing1
+        val f2 = result.footing2
+        val padFormwork = 2 * (f1.width + f1.length) * f1.thickness / 1_000_000.0 +
+            2 * (f2.width + f2.length) * f2.thickness / 1_000_000.0
+        val strapFormwork = 2 * result.strapBeamDepth * distanceM / 1000.0
+        return listOf(
+            item(1, "Concrete - $mark", "m3", result.concreteVolume),
+            item(2, "Reinforcement steel - $mark", "kg", result.steelWeight),
+            item(3, "Formwork - pads + strap sides", "m2", padFormwork + strapFormwork)
+        )
+    }
+
+    fun waffleSlabRows(
+        result: WaffleSlabResult,
+        lxM: Double,
+        lyM: Double,
+        mark: String = "Waffle slab"
+    ): List<BoqRow> = listOf(
+        item(1, "Concrete - $mark", "m3", result.concreteVolume),
+        item(2, "Reinforcement steel - $mark", "kg", result.steelWeight),
+        item(3, "Formwork - $mark (soffit)", "m2", lxM * lyM)
     )
 
     fun flatSlabRows(

@@ -1060,3 +1060,36 @@ retaining/slab quantities.
 **Remaining.** Real excavation/waterproofing quantities (needs input depth), BBS for
 waffle/hordi/strap/combined/pile elements, and the DXF result-summary strip for the
 steel/seismic/warehouse sheets (currently north arrow only).
+
+### 9.27 Technical-office detail expansion, Phase 5 finalized (pile, strap, waffle, hordi)
+
+**Pile foundations.** `BbsGenerator.generatePileBbs` schedules the whole group: longitudinal bars
+(`numberOfPiles x bars`, full pile length + 40d cap anchorage), ties/spiral per pile
+(`pileLength / tiesSpacing + 1`, perimeter + 2x10d hook), and the pile-cap bottom mesh in both
+directions. The pile viewmodel attaches the schedule plus `calculationSteps`, and the screen
+shows it with `BbsTableCard`.
+
+**Strap footings.** `generateStrapFootingBbs` reuses the isolated-footing schedule for both pads
+(distinct member marks `SF1-F1` / `SF1-F2`) and adds top and bottom strap-beam bars over the
+column distance with 40d anchorage into each pad. The viewmodel now stores the column distance
+and the export gained a DXF generic drawing so the schedule also reaches the DXF companion.
+
+**Waffle slabs.** `generateWaffleSlabBbs` takes the panel and rib geometry directly
+(`lxMm`, `lyMm`, `ribSpacingMm`, `solidHeadSizeMm`, cover), schedules rib bottom bars in both
+directions and solid-head top bars both ways.
+
+**Hordi slabs.** `generateHordiSlabBbs` emits a per-metre-width schedule: rib bottom bars per
+metre width and topping distribution bars across the span, both with 9d hooks.
+
+**Quantities.** `BoqEstimator` gained `pileRows` (pile concrete/steel + cap, shaft and cap
+formwork), `strapFootingRows` (pads + strap sides) and `waffleSlabRows` (design volumes + panel
+soffit). Waffle and pile exports now carry BBS + BOQ; strap carries both plus calculation steps.
+All four screens render their schedules on screen.
+
+**Tests.** Suite now at **70 suites / 1282 tests / 0 failures**. New coverage: pile group
+bars/ties/cap mesh, strap pads + strap bars, waffle ribs both ways + solid head, hordi per-metre
+schedule, and pile/strap/waffle BOQ quantities.
+
+**Remaining.** Combined-footing rebar strings (`longBottomBars` etc.) are still opaque text and
+need a structured result before they can be scheduled; excavation/waterproofing quantities need
+a design-depth input; steel/seismic/warehouse DXF sheets still carry only the north arrow.
