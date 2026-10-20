@@ -39,6 +39,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.StairType
 import com.civileg.app.viewmodel.StairViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStairDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
@@ -314,6 +315,10 @@ fun StairScreen(
                             ResultRow("Cost", "${"%.2f".format(res.cost)}")
                         }
                     }
+                }
+
+                if (res.calculationSteps.isNotEmpty()) {
+                    item { CalculationStepsCard(res.calculationSteps, title = "Stair Calculation Steps") }
                 }
 
                 if (res.safetyChecks.isNotEmpty()) {

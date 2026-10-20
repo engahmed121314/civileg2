@@ -224,4 +224,26 @@ class EngineeringDetailExpansionTest {
         assertTrue("strap steps must be forwarded to the facade result", r.calculationSteps.isNotEmpty())
         assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
     }
+
+    @Test
+    fun `stair result exposes calculation steps`() {
+        val r = engine.designStaircase(
+            type = CalculatorEngine.StairType.SINGLE_FLIGHT, span = 3.6, riser = 175.0, tread = 280.0,
+            deadLoad = 4.0, liveLoad = 3.0, fcu = 30.0, fy = 420.0,
+            preferredDiameter = 12, code = DesignCode.ECP
+        )
+        assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+        assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
+    }
+
+    @Test
+    fun `retaining wall result exposes calculation steps`() {
+        val r = engine.designRetainingWall(
+            height = 4.0, soilDensity = 18.0, frictionAngle = 30.0, surcharge = 10.0,
+            fcu = 25.0, fy = 360.0, preferredDiameter = 16, code = DesignCode.ECP
+        )
+        assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+        assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
+        assertTrue("stability checks must be present", r.calculationSteps.any { it.title == "Overturning Stability" })
+    }
 }

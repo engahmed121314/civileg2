@@ -910,9 +910,15 @@ under the result card.
 moment, column-strip steel, punching, deflection) from each engine's own values, so ECP/ACI/SBC
 publish identical structure with code-specific numbers and clauses.
 
-**Tests.** `EngineeringDetailExpansionTest` adds slab, isolated-footing, strap-facade and
-three-code flat-slab step assertions. Suite: **68 suites / 1254 tests / 0 failures**.
+**Stair and retaining wall.** `designStaircase` emits geometry, factored load, moment, main
+steel, distribution steel and a safety summary. `designRetainingWall` emits active-pressure
+coefficient, stem moment, stem steel, overturning FS, sliding FS and bearing pressure. Both are
+rendered by the same steps card (`StairScreen`, `RetainingWallScreen`).
 
-**Remaining for Phase 2.** Retaining wall, staircase, tank, shear wall and pile still need
-engine-level step construction (models already accept the field), plus reinforcement bar
-schedules (BBS) on-screen — the BBS writer already exists and is extended in Phase 5.
+**Tests.** `EngineeringDetailExpansionTest` adds slab, isolated-footing, strap-facade,
+three-code flat-slab, stair and retaining-wall step assertions. Suite: **68 suites / 1256
+tests / 0 failures**.
+
+**Remaining for Phase 2.** Tank, shear wall and pile still need engine-level step construction
+(models already accept the field), plus reinforcement bar schedules (BBS) on-screen — the BBS
+writer already exists and is extended in Phase 5.

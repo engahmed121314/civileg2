@@ -1738,6 +1738,54 @@ class CalculatorEngine @Inject constructor(
                 (result.distributionRebarArea / 1000.0) * 1.2 * 7850.0 / 1e6
             val cost = concreteVolume * 120.0 + steelWeight * 1.5
 
+            val ref = codeNoteRef(code)
+            val steps = listOf(
+                CalculationStep(
+                    stepNumber = 1, title = "Geometry",
+                    formula = "n = L/tread; total rise = riser·(n+1)",
+                    formulaWithValues = "${nRisers} risers × ${"%.0f".format(riser)} mm, ${nTreads} treads × ${"%.0f".format(tread)} mm",
+                    result = "Total rise ${"%.2f".format(totalRise)} m", unit = "m",
+                    codeReference = ref
+                ),
+                CalculationStep(
+                    stepNumber = 2, title = "Factored Load",
+                    formula = "wu = γD·DL + γL·LL (per m width)",
+                    formulaWithValues = "wu = ${"%.2f".format(result.horizontalLoad)} kN/m",
+                    result = "${"%.2f".format(result.horizontalLoad)} kN/m", unit = "kN/m",
+                    codeReference = ref
+                ),
+                CalculationStep(
+                    stepNumber = 3, title = "Design Moment",
+                    formula = "Mu = wu·L²/8",
+                    formulaWithValues = "Mu = ${"%.1f".format(result.maxMoment)} kN·m/m",
+                    result = "${"%.1f".format(result.maxMoment)} kN·m/m", unit = "kN·m/m",
+                    codeReference = ref
+                ),
+                CalculationStep(
+                    stepNumber = 4, title = "Main Steel",
+                    formula = "As = Mu / (0.87fy·j·d)",
+                    formulaWithValues = "As = ${"%.0f".format(result.mainRebarArea)} mm²/m → ${mainBar.barString}",
+                    result = mainBar.barString, unit = "mm²/m",
+                    codeReference = ref, isPass = result.isSafe,
+                    status = if (result.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                ),
+                CalculationStep(
+                    stepNumber = 5, title = "Distribution Steel",
+                    formula = "As,dist = ρmin·b·h",
+                    formulaWithValues = "As = ${"%.0f".format(result.distributionRebarArea)} mm²/m → ${distBar.barString}",
+                    result = distBar.barString, unit = "mm²/m",
+                    codeReference = ref
+                ),
+                CalculationStep(
+                    stepNumber = 6, title = "Safety Checks",
+                    formula = "Flexure · shear · deflection",
+                    formulaWithValues = "${result.safetyChecks.count { it.isSafe }}/${result.safetyChecks.size} checks passed",
+                    result = if (result.isSafe) "SAFE" else "UNSAFE", unit = "",
+                    codeReference = ref, isPass = result.isSafe,
+                    status = if (result.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                )
+            )
+
             StairResult(
                 type = type,
                 thickness = defaultThickness,
@@ -1759,7 +1807,8 @@ class CalculatorEngine @Inject constructor(
                 tread = result.going,
                 fcu = fcu,
                 fy = fy,
-                suggestions = result.safetyChecks.filterNot { it.isSafe }.map { it.description }
+                suggestions = result.safetyChecks.filterNot { it.isSafe }.map { it.description },
+                calculationSteps = steps
             )
         } catch (e: Exception) {
             // ADR-010: لا تُرجع isSafe=true عند الفشل — loud failure, no silent safe
@@ -1937,6 +1986,56 @@ class CalculatorEngine @Inject constructor(
             DesignSafetyCheck(it.name, it.value, it.limit, "", it.isSafe)
         }
 
+        val ref = codeNoteRef(code)
+        val ka = tan(Math.toRadians(45.0 - frictionAngle / 2.0)).pow(2)
+        val steps = listOf(
+            CalculationStep(
+                stepNumber = 1, title = "Active Earth Pressure",
+                formula = "ka = tan²(45° − φ/2)",
+                formulaWithValues = "ka = tan²(45° − ${"%.0f".format(frictionAngle)}°/2) = ${"%.3f".format(ka)}",
+                result = "ka = ${"%.3f".format(ka)}", unit = "",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 2, title = "Stem Moment",
+                formula = "Mu = ka·γs·H³/6 + ks·q·H²/2",
+                formulaWithValues = "Mu = ${"%.1f".format(res.stemMoment)} kN·m/m",
+                result = "${"%.1f".format(res.stemMoment)} kN·m/m", unit = "kN·m/m",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 3, title = "Stem Steel",
+                formula = "As = Mu / (0.87fy·j·d)",
+                formulaWithValues = "As = ${"%.0f".format(res.stemMainRebarArea)} mm²/m → ${res.stemMainRebar}",
+                result = res.stemMainRebar, unit = "mm²/m",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 4, title = "Overturning Stability",
+                formula = "FS,ot = Mresisting / M overturning ≥ 1.5",
+                formulaWithValues = "FS = ${"%.2f".format(res.overturningFS)} vs 1.5",
+                result = if (res.overturningFS >= 1.5) "OK" else "Increase base", unit = "",
+                codeReference = ref, isPass = res.overturningFS >= 1.5,
+                status = if (res.overturningFS >= 1.5) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 5, title = "Sliding Stability",
+                formula = "FS,sl = μ·ΣV / ΣH ≥ 1.5",
+                formulaWithValues = "FS = ${"%.2f".format(res.slidingFS)} vs 1.5",
+                result = if (res.slidingFS >= 1.5) "OK" else "Add shear key", unit = "",
+                codeReference = ref, isPass = res.slidingFS >= 1.5,
+                status = if (res.slidingFS >= 1.5) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 6, title = "Bearing Pressure",
+                formula = "qmax/min = ΣV/A ± ΣM·c/I",
+                formulaWithValues = "qmax = ${"%.1f".format(res.maxBearingPressure)} kPa, qmin = ${"%.1f".format(res.minBearingPressure)} kPa",
+                result = if (res.maxBearingPressure <= 200.0) "OK" else "Exceeds 200 kPa", unit = "kPa",
+                codeReference = ref, isPass = res.maxBearingPressure <= 200.0,
+                status = if (res.maxBearingPressure <= 200.0) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            )
+        )
+
         return RetainingWallResult(
             height = height, stemThickness = stemBaseThick * 1000.0, baseWidth = baseWidth * 1000.0,
             stemReinforcement = stemBar, baseReinforcement = baseBar,
@@ -1944,7 +2043,8 @@ class CalculatorEngine @Inject constructor(
             concreteVolume = concreteVolume, steelWeight = steelWeight, cost = cost, code = code,
             factorOfSafetyOverturning = res.overturningFS, factorOfSafetySliding = res.slidingFS,
             maxBearingPressure = res.maxBearingPressure, minBearingPressure = res.minBearingPressure,
-            bearingFS = res.bearingFS, muStem = res.stemMoment, fcu = fcu, fy = fy
+            bearingFS = res.bearingFS, muStem = res.stemMoment, fcu = fcu, fy = fy,
+            calculationSteps = steps
         )
     }
 

@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalRetainingWallDrawing
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
@@ -279,6 +280,10 @@ fun RetainingWallScreen(
                             ResultRow("Cost", "${"%.2f".format(res.cost)}")
                         }
                     }
+                }
+
+                if (res.calculationSteps.isNotEmpty()) {
+                    item { CalculationStepsCard(res.calculationSteps, title = "Retaining Wall Calculation Steps") }
                 }
 
                 if (res.safetyChecks.isNotEmpty()) {
