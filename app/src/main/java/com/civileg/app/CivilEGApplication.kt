@@ -44,28 +44,8 @@ class CivilEGApplication : Application() {
         // Initialize security checks
         initializeSecurity()
 
-        // Register activity lifecycle callbacks for screen capture prevention
-        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
-            override fun onActivityStarted(activity: Activity) {}
-            override fun onActivityResumed(activity: Activity) {
-                // Prevent screen capture on sensitive screens
-                val sensitiveActivities = setOf(
-                    "ColumnResultActivity", "BeamResultActivity", "SlabResultActivity",
-                    "StairResultActivity", "TankResultActivity", "RetainingWallResultActivity"
-                )
-                if (sensitiveActivities.any { activity.localClassName.contains(it) }) {
-                    activity.window.setFlags(
-                        android.view.WindowManager.LayoutParams.FLAG_SECURE,
-                        android.view.WindowManager.LayoutParams.FLAG_SECURE
-                    )
-                }
-            }
-            override fun onActivityPaused(activity: Activity) {}
-            override fun onActivityStopped(activity: Activity) {}
-            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
-            override fun onActivityDestroyed(activity: Activity) {}
-        })
+        // Screen-capture (FLAG_SECURE) used to be enforced here for the six legacy ViewBinding
+        // "*ResultActivity" screens; those activities were deleted 2026-10 (unreachable).
     }
 
     private fun initializeSecurity() {

@@ -63,64 +63,9 @@
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
-        <!-- Design Module Activities — All internal (exported=false) -->
-        <activity
-            android:name=".ui.beam.BeamInputActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-        <activity
-            android:name=".ui.beam.BeamResultActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-
-        <activity
-            android:name=".ui.column.ColumnInputActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-        <activity
-            android:name=".ui.column.ColumnResultActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-
-        <activity
-            android:name=".ui.slab.SlabInputActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-        <activity
-            android:name=".ui.slab.SlabResultActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-
-        
-
-        <activity
-            android:name=".ui.stairs.StairInputActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-        <activity
-            android:name=".ui.stairs.StairResultActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-
-        <activity
-            android:name=".ui.retaining.RetainingWallInputActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-        <activity
-            android:name=".ui.retaining.RetainingWallResultActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-
-        <activity
-            android:name=".ui.watertank.TankInputActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-        <activity
-            android:name=".ui.watertank.TankResultActivity"
-            android:exported="false"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
-
-        <!-- Steel warehouse (if needed in future, add Activity class first) -->
+        <!-- Legacy ViewBinding design Activities (Beam/Column/Slab/Stair/RetainingWall/Tank
+             Input+Result) removed 2026-10: unreachable — MainActivity is Compose-only, nothing
+             launched them, and nav_graph/activity_main were never inflated. -->
 
         <!-- FileProvider — Restricted to exports directory only -->
         <provider

@@ -734,6 +734,41 @@ an engine-design change (all three connection engines); deferred as cosmetic.
 licensed ECP 203-2020 text). P1 fully closed (4-8 ✅, 6 residual documented above). P2 fully
 closed (9-12 ✅). P3 remains: **13** (signer fingerprint + AdMob IDs — needs the user),
 **14** (Dependabot — needs a token/`gh` to re-verify; tooling-classpath residue needs an AGP
-9.x migration), **15** (release build + manual 15×3 QA — needs the keystore). Dead legacy
-screens (~12 Fragments + `nav_graph.xml` + `activity_main.xml`) await the user's delete
-decision.
+9.x migration), **15** (release build + manual 15×3 QA — needs the keystore).
+
+---
+
+### 9.19 Dead legacy UI tree removed (user-approved cleanup)
+
+**Verification before deletion** (all negative = unreachable):
+- `MainActivity` is **Compose-only** (`setContent {}`) — `activity_main.xml` (the only layout
+  with `app:navGraph`) was never inflated, so `nav_graph.xml` and all **18 Fragments** were
+  unreachable.
+- The **12 legacy ViewBinding Activities** (Beam/Column/Slab/Stair/RetainingWall/Tank ×
+  Input+Result): every `*InputActivity` had **zero launchers** (no `Intent` anywhere), and the
+  `*ResultActivity` companions were only called from those dead Input activities.
+- `CivilEGApplication` referenced six of the Result activities **by string** — only to set
+  `FLAG_SECURE` on them (dead enforcement).
+- Binding exclusivity: all **33 ViewBinding classes** used by the deleted files were imported
+  by **no live file** (checked against all 35 remaining databinding users).
+- Adapters `SpanAdapter`/`ProjectAdapter`/`GalleryAdapter` had only dead callers;
+  `RetainingWallSectionView`/`RetainingWallDrawingView` were referenced only by the deleted
+  layouts; menus `bottom_nav_menu`/`drawer_menu` only by `activity_main.xml`;
+  `fragment_gallery.xml`/`fragment_project_builder.xml`/`item_project.xml` had zero refs.
+- `rg` over `app/src/test`: no test references any of it.
+
+**Deleted** (approved by the user 2026-10): 35 Kotlin files (18 Fragments, 12 Activities,
+3 Adapters, 2 custom views), 36 layouts (`activity_*` except `activity_splash`, all
+`fragment_*`, 3 item layouts), `res/navigation/nav_graph.xml`, both menus — and the now-empty
+`navigation`/`menu` resource dirs.
+
+**Edited:** `AndroidManifest.xml` (12 activity entries removed, comment left), and
+`CivilEGApplication.kt` (the `FLAG_SECURE` `ActivityLifecycleCallbacks` block deleted — it
+only named the removed activities; note left).
+
+**Note.** The FLAG_SECURE screen-capture protection now has **no coverage anywhere** — the
+live Compose screens never had it. If capture prevention on design results is still wanted,
+it should be re-added against the Compose hosts as a follow-up (flagged, not done).
+
+**Verified.** `:app:compileDebugKotlin` OK (dangling references: none); full suite
+**67 suites / 1239 tests / 0 failures**.
