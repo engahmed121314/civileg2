@@ -902,12 +902,17 @@ facade forwards the engine's step log (mapped to `CalculationStep` with the code
 
 **UI.** New `ui/compose/components/common/CalculationStepsCard.kt` renders any step list with
 number, title, formula, substituted values, result + unit, code clause and pass/fail/warning
-colour. Wired into `SlabScreen`, `FootingScreen` and `StrapFootingScreen` under the result
-card.
+colour. Wired into `SlabScreen`, `FootingScreen`, `StrapFootingScreen` and `FlatSlabScreen`
+under the result card.
 
-**Tests.** `EngineeringDetailExpansionTest` adds slab, isolated-footing and strap-facade step
-assertions. Suite: **68 suites / 1253 tests / 0 failures**.
+**Flat slab.** `FlatSlabResult` carries the step list; the shared
+`calculations/FlatSlabSteps.kt` builds six steps (factored load, static moment, column-strip
+moment, column-strip steel, punching, deflection) from each engine's own values, so ECP/ACI/SBC
+publish identical structure with code-specific numbers and clauses.
 
-**Remaining for Phase 2.** Flat slab, retaining wall, staircase, tank, shear wall and pile still
-need engine-level step construction (models already accept the field), plus reinforcement bar
+**Tests.** `EngineeringDetailExpansionTest` adds slab, isolated-footing, strap-facade and
+three-code flat-slab step assertions. Suite: **68 suites / 1254 tests / 0 failures**.
+
+**Remaining for Phase 2.** Retaining wall, staircase, tank, shear wall and pile still need
+engine-level step construction (models already accept the field), plus reinforcement bar
 schedules (BBS) on-screen — the BBS writer already exists and is extended in Phase 5.

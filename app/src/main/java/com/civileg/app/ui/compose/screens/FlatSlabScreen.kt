@@ -28,6 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.*
+import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFlatSlabDrawing
 import com.civileg.app.viewmodel.FlatSlabViewModel
@@ -332,6 +333,11 @@ item {
                             utilizationRatio = res.utilizationRatio, isSafe = res.isSafe,
                             title = "${stringResource(R.string.home_flat_slab)} — ${panelType.displayName}"
                         )
+                    }
+
+                    // Calculation Steps
+                    if (res.calculationSteps.isNotEmpty()) {
+                        item { CalculationStepsCard(res.calculationSteps, title = "Flat Slab Calculation Steps") }
                     }
 
                     // Load Summary

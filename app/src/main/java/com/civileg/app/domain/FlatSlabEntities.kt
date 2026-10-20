@@ -74,7 +74,8 @@ data class FlatSlabResult(
     val steelWeightPerPanel: Double,
     val warnings: List<String> = emptyList(),
     val codeNotes: List<String> = emptyList(),
-    val safetyChecks: List<SafetyCheckItem> = emptyList()
+    val safetyChecks: List<SafetyCheckItem> = emptyList(),
+    val calculationSteps: List<com.civileg.app.domain.entities.CalculationStep> = emptyList()
 )
 
 data class SafetyCheckItem(

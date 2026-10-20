@@ -2,7 +2,9 @@ package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.*
 import com.civileg.app.domain.entities.CodeReference
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.calculations.flatSlabCalculationSteps
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.FlatSlabDesign.MomentCoefficients
 import com.civileg.app.domain.calculations.base.FlatSlabDesign.PunchingShearResult
@@ -324,7 +326,20 @@ class ACIFlatSlab : FlatSlabDesign {
             concreteVolumePerPanel = concreteVolume,
             steelWeightPerPanel = steelWeight,
             warnings = warnings, codeNotes = codeNotes,
-            safetyChecks = safetyChecks
+            safetyChecks = safetyChecks,
+            calculationSteps = flatSlabCalculationSteps(
+                code = DesignCode.ACI,
+                wu = wu, moX = MoX, moY = MoY,
+                columnStripMomentNeg = maxOf(colNegExtX, colNegIntX),
+                columnStripMomentPos = colPosX,
+                columnStripTopRebar = colTopRebarX,
+                columnStripBotRebar = colBotRebarX,
+                punchingVu = punchingResult.vu, punchingVc = punchingResult.vc,
+                punchingOk = punchingResult.isSafe,
+                deflection = deflectionResult.longTerm,
+                allowableDeflection = deflectionResult.allowable,
+                deflectionOk = deflectionResult.isSafe
+            )
         )
     }
 

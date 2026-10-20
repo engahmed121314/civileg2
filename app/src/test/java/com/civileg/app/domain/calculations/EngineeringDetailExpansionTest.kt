@@ -121,6 +121,17 @@ class EngineeringDetailExpansionTest {
         assertTrue(r.safetyChecks.any { it.name.contains("Col-strip top") })
     }
 
+    @Test
+    fun `flat slab engines publish calculation steps`() {
+        val ecp = ECPFlatSlab().design(FlatSlabInput())
+        val aci = ACIFlatSlab().design(FlatSlabInput())
+        listOf(ecp, aci).forEach { r ->
+            assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+            assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
+            assertTrue("punching step must exist", r.calculationSteps.any { it.title == "Punching Shear" })
+        }
+    }
+
     // ─── Seismic drift ───────────────────────────────────────────────────
 
     @Test

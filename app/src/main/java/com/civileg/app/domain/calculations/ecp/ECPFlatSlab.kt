@@ -2,7 +2,9 @@ package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.*
 import com.civileg.app.domain.entities.CodeReference
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.calculations.flatSlabCalculationSteps
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.FlatSlabDesign.MomentCoefficients
 import com.civileg.app.domain.calculations.base.FlatSlabDesign.PunchingShearResult
@@ -399,7 +401,20 @@ class ECPFlatSlab : FlatSlabDesign {
             steelWeightPerPanel = steelWeight,
             warnings = warnings,
             codeNotes = codeNotes,
-            safetyChecks = safetyChecks
+            safetyChecks = safetyChecks,
+            calculationSteps = flatSlabCalculationSteps(
+                code = DesignCode.ECP,
+                wu = wu, moX = MoX, moY = MoY,
+                columnStripMomentNeg = maxOf(colNegExtX, colNegIntX),
+                columnStripMomentPos = colPosX,
+                columnStripTopRebar = colTopRebarX,
+                columnStripBotRebar = colBotRebarX,
+                punchingVu = punchingResult.vu, punchingVc = punchingResult.vc,
+                punchingOk = punchingResult.isSafe,
+                deflection = deflectionResult.longTerm,
+                allowableDeflection = deflectionResult.allowable,
+                deflectionOk = deflectionResult.isSafe
+            )
         )
     }
 
