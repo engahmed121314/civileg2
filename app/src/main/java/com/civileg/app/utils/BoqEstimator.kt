@@ -3,6 +3,7 @@ package com.civileg.app.utils
 import com.civileg.app.domain.FlatSlabResult
 import com.civileg.app.domain.PileDesignResult
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
+import com.civileg.app.domain.calculations.ecp.CombinedFootingResult
 import com.civileg.app.utils.CalculatorEngine.*
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.BoqRow
 import kotlin.math.pow
@@ -92,6 +93,20 @@ object BoqEstimator {
         item(3, "Formwork - $mark (both faces)", "m2", 2 * result.height * wallLengthM),
         item(4, "Formwork - $mark (base soffit)", "m2", result.baseWidth / 1000.0 * wallLengthM)
     )
+
+    fun combinedFootingRows(
+        result: CombinedFootingResult,
+        mark: String = "Combined footing"
+    ): List<BoqRow> {
+        val lengthM = result.footingLength
+        val widthM = result.footingWidth
+        val formwork = 2 * (lengthM + widthM) * result.footingThickness / 1000.0
+        return listOf(
+            item(1, "Concrete - $mark", "m3", result.concreteVolume),
+            item(2, "Reinforcement steel - $mark", "kg", result.steelWeight),
+            item(3, "Formwork - $mark (perimeter)", "m2", formwork)
+        )
+    }
 
     fun pileRows(result: PileDesignResult, mark: String = "Pile group"): List<BoqRow> {
         val n = result.numberOfPiles

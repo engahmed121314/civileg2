@@ -115,4 +115,21 @@ class DxfExporterTest {
         assertTrue(text.contains("51"))
         dir.deleteRecursively()
     }
+
+    @Test
+    fun genericDrawing_writesSummaryLinesBelowSheet() {
+        val drawing = ElementDxfDrawings.generic(
+            title = "SEISMIC SUMMARY",
+            widthMm = 600.0,
+            heightMm = 400.0,
+            summaryLines = listOf("Base shear V = 812.4 kN", "Zone 3 / Soil C")
+        )
+
+        val dxf = DxfExporter().renderToString(drawing)
+
+        assertTrue(dxf.contains("SEISMIC SUMMARY"))
+        assertTrue(dxf.contains("Base shear V = 812.4 kN"))
+        assertTrue(dxf.contains("Zone 3 / Soil C"))
+        assertTrue(count(dxf, "TEXT") >= 5)
+    }
 }

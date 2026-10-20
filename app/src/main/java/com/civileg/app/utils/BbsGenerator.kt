@@ -5,6 +5,7 @@ import com.civileg.app.domain.FlatSlabResult
 import com.civileg.app.domain.PileDesignResult
 import com.civileg.app.domain.RebarResult
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
+import com.civileg.app.domain.calculations.ecp.CombinedFootingResult
 import com.civileg.app.domain.entities.SlabDesignResult
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.utils.CalculatorEngine.*
@@ -810,6 +811,52 @@ object BbsGenerator {
                 totalWeightKg = toppingCount * toppingLength / 1000.0 * (dia * dia / 162.0)
             )
         )
+        return entries
+    }
+
+    /**
+     * Generates a Bar Bending Schedule for a combined footing from its bar
+     * designation strings (for example `8O16`).
+     *
+     * Longitudinal bottom and top bars run the full footing length; transverse
+     * bottom bars run the footing width. Bars carry 9d end hooks.
+     */
+    fun generateCombinedFootingBbs(
+        mark: String,
+        result: CombinedFootingResult,
+        coverMm: Double = 75.0
+    ): List<BbsEntry> {
+        InputGuard.notBlank("memberMark", mark)
+        InputGuard.positive("footingLength", result.footingLength)
+        InputGuard.positive("footingWidth", result.footingWidth)
+        InputGuard.inRange("cover", coverMm, 40.0, 100.0)
+
+        val lengthMm = result.footingLength * 1000.0
+        val widthMm = result.footingWidth * 1000.0
+        val entries = mutableListOf<BbsEntry>()
+        var barMark = 1
+
+        fun addRow(designation: String, barLengthMm: Double) {
+            val match = Regex("(\\d+)\\s*[ØOΦφ]?\\s*(\\d+)").find(designation) ?: return
+            val count = match.groupValues[1].toIntOrNull() ?: return
+            val dia = match.groupValues[2].toIntOrNull() ?: return
+            if (count <= 0 || dia <= 0 || barLengthMm <= 0.0) return
+            val total = barLengthMm + 2 * 9 * dia
+            entries.add(
+                BbsEntry(
+                    memberMark = mark,
+                    barMark = String.format(java.util.Locale.US, "%02d", barMark++),
+                    diameter = dia, shapeCode = 0, count = count,
+                    lengthA = barLengthMm,
+                    totalLengthPerBar = total,
+                    totalWeightKg = count * total / 1000.0 * (dia.toDouble().pow(2) / 162.0)
+                )
+            )
+        }
+
+        addRow(result.longBottomBars, lengthMm - 2 * coverMm)
+        addRow(result.longTopBars, lengthMm - 2 * coverMm)
+        addRow(result.transBottomBars, widthMm - 2 * coverMm)
         return entries
     }
 

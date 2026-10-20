@@ -1093,3 +1093,26 @@ schedule, and pile/strap/waffle BOQ quantities.
 **Remaining.** Combined-footing rebar strings (`longBottomBars` etc.) are still opaque text and
 need a structured result before they can be scheduled; excavation/waterproofing quantities need
 a design-depth input; steel/seismic/warehouse DXF sheets still carry only the north arrow.
+
+### 9.28 Technical-office detail expansion, Phase 5 complete (combined footing + DXF summary strips)
+
+**Combined footings.** `BbsGenerator.generateCombinedFootingBbs` parses the existing
+designation strings (for example `8Ø16`) from `CombinedFootingResult` instead of requiring a
+model change. Three rows are produced: longitudinal bottom, longitudinal top (both running the
+full footing length) and transverse bottom (running the footing width), with 75 mm default cover
+and 9d end hooks. `BoqEstimator.combinedFootingRows` adds concrete, steel and perimeter
+formwork, and `CombinedFootingViewModel` now passes both into the PDF/DXF export.
+
+**DXF summary strips.** `ElementDxfDrawings.notes` accepts optional `summaryLines` and writes
+up to five text rows below the sheet. `steelISection` and `generic` forward them, so:
+- steel members export an I-section sheet with Pu/Mu/Vu demand-vs-capacity and utilisation;
+- seismic exports a generic sheet with base shear, Z/S, I/R and code reference;
+- warehouse exports a DXF companion (`writeSibling`) summarising span, eave height, bay
+  spacing, column/rafter/purlin sections and total steel weight.
+
+**Tests.** Suite now at **70 suites / 1285 tests / 0 failures**. New coverage: combined-footing
+bar-designation parsing and lengths, combined-footing BOQ rows, and DXF summary text emission.
+
+**Remaining.** Excavation/waterproofing quantities still need a design-depth input; steel and
+seismic DXF sheets show summary text but no member/spectrum geometry (the PDF drawing remains
+the source of the graphical view).

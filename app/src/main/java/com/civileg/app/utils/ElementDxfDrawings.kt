@@ -345,7 +345,8 @@ object ElementDxfDrawings {
         heightMm: Double,
         widthMm: Double,
         webThicknessMm: Double,
-        flangeThicknessMm: Double
+        flangeThicknessMm: Double,
+        summaryLines: List<String> = emptyList()
     ): DxfDrawable = DxfDrawable { ex ->
         ex.sheetFrame(widthMm, heightMm)
         val fw = (widthMm - webThicknessMm) / 2.0
@@ -355,7 +356,11 @@ object ElementDxfDrawings {
         ex.rect(0.0, heightMm - flangeThicknessMm, widthMm, flangeThicknessMm, "COLUMNS")
         // web
         ex.rect(fw, flangeThicknessMm, webThicknessMm, heightMm - 2 * flangeThicknessMm, "COLUMNS")
-        ex.notes(title, widthMm, heightMm, "h=${fmt(heightMm)} mm", "b=${fmt(widthMm)} mm")
+        ex.notes(
+            title, widthMm, heightMm,
+            "h=${fmt(heightMm)} mm", "b=${fmt(widthMm)} mm",
+            summaryLines
+        )
     }
 
     /** Steel base plate: plate, anchor bolts and column footprint. */
@@ -390,10 +395,19 @@ object ElementDxfDrawings {
     // ───────────────────────────────────────────────────────────────────────────
 
     /** Generic rectangular element outline with a title. */
-    fun generic(title: String, widthMm: Double, heightMm: Double): DxfDrawable = DxfDrawable { ex ->
+    fun generic(
+        title: String,
+        widthMm: Double,
+        heightMm: Double,
+        summaryLines: List<String> = emptyList()
+    ): DxfDrawable = DxfDrawable { ex ->
         ex.sheetFrame(widthMm, heightMm)
         ex.rect(0.0, 0.0, widthMm, heightMm, "0")
-        ex.notes(title, widthMm, heightMm, "W=${fmt(widthMm)} mm", "H=${fmt(heightMm)} mm")
+        ex.notes(
+            title, widthMm, heightMm,
+            "W=${fmt(widthMm)} mm", "H=${fmt(heightMm)} mm",
+            summaryLines
+        )
     }
 
     // ───────────────────────────────────────────────────────────────────────────
@@ -434,11 +448,23 @@ object ElementDxfDrawings {
         rect(pad, pad, w - 2 * pad, h - 2 * pad, "0")
     }
 
-    private fun DxfExporter.notes(title: String, widthMm: Double, heightMm: Double, line1: String, line2: String) {
+    private fun DxfExporter.notes(
+        title: String,
+        widthMm: Double,
+        heightMm: Double,
+        line1: String,
+        line2: String,
+        summaryLines: List<String> = emptyList()
+    ) {
         val th = (minOf(widthMm, heightMm) / 12.0).coerceIn(15.0, 60.0)
         addText(0.0, -th * 2.2, title, th, "TEXT")
         addText(0.0, -th * 4.0, line1, th * 0.8, "TEXT")
         addText(widthMm * 0.55, -th * 4.0, line2, th * 0.8, "TEXT")
+        var y = -th * 5.8
+        summaryLines.take(5).forEach { line ->
+            addText(0.0, y, line, th * 0.7, "TEXT")
+            y -= th * 1.4
+        }
     }
 
     /**

@@ -170,6 +170,27 @@ class SteelViewModel @Inject constructor(
                 val exporter = com.civileg.app.utils.exporters.SteelWarehouseProPdfExporter(context)
                 val file = exporter.exportToDownload(inputs, res, clientName, projectName, capturedDrawing)
 
+                // DXF companion with a compact result summary on the drawing sheet.
+                try {
+                    com.civileg.app.utils.DxfExporter.writeSibling(
+                        file,
+                        com.civileg.app.utils.ElementDxfDrawings.generic(
+                            title = "STEEL WAREHOUSE ${inputs.span.toInt()}x${inputs.length.toInt()} m",
+                            widthMm = 600.0,
+                            heightMm = 400.0,
+                            summaryLines = listOf(
+                                "Span = ${inputs.span} m  Length = ${inputs.length} m",
+                                "Eave height = ${inputs.eaveHeight} m  Bay spacing = ${inputs.baySpacing} m",
+                                "Column: ${res.mainFrame.columnSection}",
+                                "Rafter: ${res.mainFrame.rafterSection}  Purlin: ${res.secondaryMembers.purlinSection}",
+                                "Steel weight = ${"%.1f".format(res.totalWeight)} t  (${"%.1f".format(res.weightPerM2)} kg/m2)"
+                            )
+                        )
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                     com.civileg.app.utils.ExportUtils.openPdf(context, file)
                     onComplete(file)
@@ -354,6 +375,19 @@ class SteelViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.steelISection(
+                        title = "${stored.section.sectionName} - $memberTypeLabel",
+                        heightMm = stored.section.depth,
+                        widthMm = stored.section.width,
+                        webThicknessMm = stored.section.webThickness,
+                        flangeThicknessMm = stored.section.flangeThickness,
+                        summaryLines = listOf(
+                            "Pu = ${String.format("%.1f", stored.inputs.axialLoad)} kN / ${String.format("%.1f", res.axialCapacity)} kN",
+                            "Mu = ${String.format("%.1f", stored.inputs.moment)} kN.m / ${String.format("%.1f", res.flexuralCapacity)} kN.m",
+                            "Vu = ${String.format("%.1f", stored.inputs.shear)} kN / ${String.format("%.1f", res.shearCapacity)} kN",
+                            "Utilization = ${(res.utilizationRatio * 100).toInt()}% - ${if (res.isSafe) "SAFE" else "UNSAFE"}"
+                        )
+                    ),
                     outputPath = file.absolutePath
                 ).pdfFile
 

@@ -163,4 +163,26 @@ class BoqEstimatorTest {
         assertEquals(18.0, rows[0].quantity, 1e-9)
         assertEquals(45.0, rows[2].quantity, 1e-9)
     }
+
+    @Test
+    fun `combined footing boq derives perimeter formwork`() {
+        val result = com.civileg.app.domain.calculations.ecp.CombinedFootingResult(
+            footingLength = 5.2, footingWidth = 2.4, footingThickness = 600.0,
+            effectiveDepth = 515.0, qMax = 220.0, qMin = 150.0,
+            centroidFromCol1 = 2.6, longBottomAs = 18.0, longTopAs = 12.0,
+            longBottomBars = "8\u00d816", longTopBars = "6\u00d816",
+            transBottomAs = 14.0, transBottomBars = "12\u00d816",
+            oneWayShearVu = 300.0, oneWayShearVc = 450.0,
+            oneWayShearSafe = true, punchingCol1Safe = true, punchingCol2Safe = true,
+            concreteVolume = 7.5, steelWeight = 380.0, isSafe = true,
+            warnings = emptyList()
+        )
+
+        val rows = BoqEstimator.combinedFootingRows(result, "CF1")
+
+        assertEquals(3, rows.size)
+        assertEquals(7.5, rows[0].quantity, 1e-9)
+        assertEquals(380.0, rows[1].quantity, 1e-9)
+        assertEquals(2 * (5.2 + 2.4) * 0.6, rows[2].quantity, 1e-9)
+    }
 }

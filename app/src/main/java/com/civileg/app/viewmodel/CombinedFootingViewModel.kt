@@ -355,6 +355,14 @@ class CombinedFootingViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = isSafe,
+                    bbsEntries = eR?.let { r ->
+                        runCatching {
+                            com.civileg.app.utils.BbsGenerator.generateCombinedFootingBbs("CF1", r)
+                        }.getOrDefault(emptyList())
+                    } ?: emptyList(),
+                    boqRows = eR?.let { r ->
+                        com.civileg.app.utils.BoqEstimator.combinedFootingRows(r, "CF1")
+                    } ?: emptyList(),
                     drawingBitmap = drawingBitmap,
                     drawing = dxfDrawing,
                     outputPath = file.absolutePath

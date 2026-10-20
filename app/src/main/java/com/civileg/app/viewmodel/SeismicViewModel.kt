@@ -220,6 +220,17 @@ class SeismicViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = true,
                     drawingBitmap = drawingBitmap,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.generic(
+                        title = "SEISMIC LOAD SUMMARY - Zone ${state.seismicZone}",
+                        widthMm = 600.0,
+                        heightMm = 400.0,
+                        summaryLines = listOf(
+                            "Base shear V = ${"%.1f".format(res.baseShear)} kN",
+                            "Z = ${"%.3f".format(res.zoneFactor)}  S = ${"%.3f".format(res.soilFactor)}",
+                            "I = ${"%.2f".format(res.importanceFactor)}  R = ${"%.1f".format(res.responseModification)}",
+                            "Code: ${res.codeReference}"
+                        )
+                    ),
                     outputPath = file.absolutePath
                 ).pdfFile
 

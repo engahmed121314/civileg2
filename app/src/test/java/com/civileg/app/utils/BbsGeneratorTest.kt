@@ -664,4 +664,30 @@ class BbsGeneratorTest {
         assertEquals((6000.0 - 50.0 + 2 * 9 * 12).toInt(), entries.first().totalLengthPerBar.toInt())
         assertTrue(entries.all { it.totalWeightKg > 0.0 })
     }
+
+    @Test
+    fun `combined footing bbs parses bar designations`() {
+        val result = com.civileg.app.domain.calculations.ecp.CombinedFootingResult(
+            footingLength = 5.2, footingWidth = 2.4, footingThickness = 600.0,
+            effectiveDepth = 515.0, qMax = 220.0, qMin = 150.0,
+            centroidFromCol1 = 2.6, longBottomAs = 18.0, longTopAs = 12.0,
+            longBottomBars = "8Ø16", longTopBars = "6Ø16",
+            transBottomAs = 14.0, transBottomBars = "12Ø16",
+            oneWayShearVu = 300.0, oneWayShearVc = 450.0,
+            oneWayShearSafe = true, punchingCol1Safe = true, punchingCol2Safe = true,
+            concreteVolume = 7.5, steelWeight = 380.0, isSafe = true,
+            warnings = emptyList()
+        )
+
+        val entries = BbsGenerator.generateCombinedFootingBbs("CF1", result)
+
+        assertEquals(3, entries.size)
+        assertEquals(listOf(8, 6, 12), entries.map { it.count })
+        assertEquals(listOf(16, 16, 16), entries.map { it.diameter })
+        // longitudinal: 5200 - 2*75 + 2*9*16
+        assertEquals(5200.0 - 2 * 75.0 + 2 * 9 * 16, entries[0].totalLengthPerBar, 1e-6)
+        // transverse: 2400 - 2*75 + 2*9*16
+        assertEquals(2400.0 - 2 * 75.0 + 2 * 9 * 16, entries[2].totalLengthPerBar, 1e-6)
+        assertTrue(entries.all { it.totalWeightKg > 0.0 })
+    }
 }
