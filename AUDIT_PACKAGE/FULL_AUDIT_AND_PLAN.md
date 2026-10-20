@@ -1028,3 +1028,35 @@ BBS generation plus a DXF export test asserting the appended schedule table.
 **Remaining.** Retaining-wall and flat-slab BBS generators; real BOQ quantities beyond
 concrete/steel (formwork, excavation); DXF result-summary strip for the steel/seismic/warehouse
 drawings that currently only carry the north arrow.
+
+### 9.26 Technical-office detail expansion, Phase 5 continued (remaining schedules + quantities)
+
+**Retaining wall BBS.** `BbsGenerator.generateRetainingWallBbs` schedules stem vertical bars
+(both faces, 40d base anchorage + 12d top hook), stem horizontal bars, base transverse bars and
+base longitudinal distribution bars. The design itself is per metre-run, so the generator takes
+`wallLengthM` (default 1.0) and scales counts; the retaining-wall screen and viewmodel now carry
+a wall-length input (`rw_wall_length`, EN/AR) and pass it to both the schedule and the export.
+
+**Flat slab BBS.** `BbsGenerator.generateFlatSlabBbs` schedules column-strip and middle-strip
+bars top and bottom in both directions (8 rows, marks 01-08). Strip widths come from the design
+result, the middle strip is the panel remainder, and bars carry 9d end hooks. It returns an
+empty schedule when any strip is narrower than twice the cover instead of emitting nonsense
+counts.
+
+**Measured quantities.** New `utils/BoqEstimator` turns results into BOQ rows:
+concrete (m3) and reinforcement (kg) always, plus derived formwork (m2):
+beam sides + soffit, column four faces, footing perimeter, slab/flat-slab soffit, stair inclined
+soffit, tank wall faces + base soffit, and retaining-wall faces + base soffit. Retaining-wall
+quantities scale with the wall length. All element viewmodels now use the estimator instead of
+the inline two-row lists, and the flat-slab export also gains calculation steps plus BBS.
+
+**Column schedule fix.** The column viewmodel now passes the actual column height to
+`generateColumnBbs` (`h * 1000`) instead of falling back to the 3 m default.
+
+**Tests.** Suite now at **70 suites / 1275 tests / 0 failures**. New coverage: retaining-wall
+BBS counts/anchorage, flat-slab BBS strips, cover rejection, and `BoqEstimator` beam/tank/
+retaining/slab quantities.
+
+**Remaining.** Real excavation/waterproofing quantities (needs input depth), BBS for
+waffle/hordi/strap/combined/pile elements, and the DXF result-summary strip for the
+steel/seismic/warehouse sheets (currently north arrow only).

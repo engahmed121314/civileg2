@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.utils.CalculationValidator
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.utils.PdfDrawingGenerator
@@ -201,10 +202,7 @@ class StairViewModel @Inject constructor(
                         bbsEntries = runCatching {
                             BbsGenerator.generateStairBbs("ST1", currentResult, lastStairWidthMm)
                         }.getOrDefault(emptyList()),
-                        boqRows = listOf(
-                            ProfessionalEnglishPdfReporter.BoqRow("1", "Concrete", "m3", currentResult.concreteVolume),
-                            ProfessionalEnglishPdfReporter.BoqRow("2", "Reinforcement steel", "kg", currentResult.steelWeight)
-                        ),
+                        boqRows = BoqEstimator.stairRows(currentResult, lastStairWidthMm / 1000.0, "ST1"),
                         drawingBitmap = drawingBitmap,
                         drawing = com.civileg.app.utils.ElementDxfDrawings.stairSection(
                             title = "STAIR ${currentResult.type.displayName}",

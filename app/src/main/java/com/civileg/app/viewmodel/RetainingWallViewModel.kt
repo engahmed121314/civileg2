@@ -7,6 +7,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
+import com.civileg.app.utils.BbsGenerator
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
@@ -46,6 +48,11 @@ class RetainingWallViewModel @Inject constructor(
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
 
+    /** Wall length used for schedules and quantities (design itself is per metre run). */
+    @Volatile
+    var wallLengthM: Double = 1.0
+        private set
+
     fun calculateRetainingWallPro(
         height: Double,
         soilDensity: Double,
@@ -54,7 +61,8 @@ class RetainingWallViewModel @Inject constructor(
         fcu: Double,
         fy: Double,
         preferredDiameter: Int,
-        code: DesignCode
+        code: DesignCode,
+        wallLengthM: Double = 1.0
     ) {
         InputGuard.positive("height", height)
         InputGuard.positive("soilDensity", soilDensity)
@@ -63,9 +71,11 @@ class RetainingWallViewModel @Inject constructor(
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("preferredDiameter", preferredDiameter)
+        InputGuard.positive("wallLength", wallLengthM)
 
         viewModelScope.launch {
             _isLoading.value = true
+            this@RetainingWallViewModel.wallLengthM = wallLengthM
             pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
                 val res = calculatorEngine.designRetainingWall(
@@ -190,10 +200,10 @@ class RetainingWallViewModel @Inject constructor(
                         safetyChecks = safetyChecks,
                         isSafe = currentResult.isSafe,
                         calculationSteps = currentResult.calculationSteps,
-                        boqRows = listOf(
-                            ProfessionalEnglishPdfReporter.BoqRow("1", "Concrete", "m3", currentResult.concreteVolume),
-                            ProfessionalEnglishPdfReporter.BoqRow("2", "Reinforcement steel", "kg", currentResult.steelWeight)
-                        ),
+                        bbsEntries = runCatching {
+                            BbsGenerator.generateRetainingWallBbs("RW1", currentResult, wallLengthM)
+                        }.getOrDefault(emptyList()),
+                        boqRows = BoqEstimator.retainingWallRows(currentResult, wallLengthM, "RW1"),
                         drawingBitmap = drawingBitmap,
                         drawing = com.civileg.app.utils.ElementDxfDrawings.retainingWallSection(
                             title = "RETAINING WALL",

@@ -184,6 +184,13 @@ class FlatSlabViewModel @Inject constructor(
                     designType = input.panelType.displayName,
                     inputs = inputsMap, results = resultsMap,
                     safetyChecks = safetyChecks, isSafe = res.isSafe,
+                    calculationSteps = res.calculationSteps,
+                    bbsEntries = runCatching {
+                        com.civileg.app.utils.BbsGenerator.generateFlatSlabBbs("FS1", res, input.lx, input.ly)
+                    }.getOrDefault(emptyList()),
+                    boqRows = com.civileg.app.utils.BoqEstimator.flatSlabRows(
+                        res, input.lx / 1000.0, input.ly / 1000.0, "FS1"
+                    ),
                     drawingBitmap = pendingDrawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
                         title = "FLAT SLAB ${input.panelType.displayName}",

@@ -7,6 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.utils.PdfDrawingGenerator
@@ -242,10 +243,7 @@ class SlabViewModel @Inject constructor(
                     bbsEntries = runCatching {
                         BbsGenerator.generateSlabBbs("S1", res, inputs.lx * 1000.0, inputs.ly * 1000.0)
                     }.getOrDefault(emptyList()),
-                    boqRows = listOf(
-                        ProfessionalEnglishPdfReporter.BoqRow("1", "Concrete", "m3", res.concreteVolume),
-                        ProfessionalEnglishPdfReporter.BoqRow("2", "Reinforcement steel", "kg", res.steelWeight)
-                    ),
+                    boqRows = BoqEstimator.slabRows(res, inputs.lx, inputs.ly, "S1"),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
                         title = "SLAB ${inputs.type.displayName}",

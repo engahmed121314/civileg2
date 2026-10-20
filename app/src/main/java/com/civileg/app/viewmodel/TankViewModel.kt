@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.utils.CalculationValidator
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.utils.PdfDrawingGenerator
@@ -178,10 +179,7 @@ class TankViewModel @Inject constructor(
                     bbsEntries = runCatching {
                         BbsGenerator.generateTankBbs("T1", res)
                     }.getOrDefault(emptyList()),
-                    boqRows = listOf(
-                        ProfessionalEnglishPdfReporter.BoqRow("1", "Concrete", "m3", res.concreteVolume),
-                        ProfessionalEnglishPdfReporter.BoqRow("2", "Reinforcement steel", "kg", res.steelWeight)
-                    ),
+                    boqRows = BoqEstimator.tankRows(res, "T1"),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.tankSection(
                         title = "TANK ${res.type.displayName}",

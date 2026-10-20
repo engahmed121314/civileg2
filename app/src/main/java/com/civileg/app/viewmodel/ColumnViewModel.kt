@@ -8,6 +8,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.entities.*
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.utils.CalculationValidator
@@ -333,12 +334,9 @@ class ColumnViewModel @Inject constructor(
                     isSafe = res.isSafe,
                     calculationSteps = res.calculationSteps,
                     bbsEntries = runCatching {
-                        com.civileg.app.utils.BbsGenerator.generateColumnBbs("C1", res)
+                        com.civileg.app.utils.BbsGenerator.generateColumnBbs("C1", res, h * 1000.0)
                     }.getOrDefault(emptyList()),
-                    boqRows = listOf(
-                        ProfessionalEnglishPdfReporter.BoqRow("1", "Concrete", "m3", res.concreteVolume),
-                        ProfessionalEnglishPdfReporter.BoqRow("2", "Reinforcement steel", "kg", res.steelWeight)
-                    ),
+                    boqRows = BoqEstimator.columnRows(res, h, "C1"),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.columnSection(
                         title = "COLUMN ${res.columnType}",

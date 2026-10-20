@@ -469,6 +469,7 @@
     <string name="stair_tread_mm">Tread (mm)</string>
     <string name="rw_default_name">Wall W1</string>
     <string name="rw_wall_height">Height (m)</string>
+    <string name="rw_wall_length">Wall Length (m)</string>
     <string name="rw_analyze">Analyze</string>
     <string name="rw_safe">Safe</string>
     <string name="rw_unsafe">Unsafe</string>

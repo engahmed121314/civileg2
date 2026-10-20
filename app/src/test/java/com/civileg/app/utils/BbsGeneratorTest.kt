@@ -411,4 +411,105 @@ class BbsGeneratorTest {
         assertEquals((2500.0 + 40 * 12).toInt(), wall.totalLengthPerBar.toInt())
         assertTrue(entries.drop(1).all { it.count > 0 && it.totalWeightKg > 0.0 })
     }
+
+    @Test
+    fun `retaining wall bbs schedules stem and base per wall length`() {
+        val result = RetainingWallResult(
+            height = 4.0,
+            stemThickness = 300.0,
+            baseWidth = 2500.0,
+            stemReinforcement = ReinforcementBar(diameter = 16, spacing = 150.0, numBars = 0),
+            baseReinforcement = ReinforcementBar(diameter = 16, spacing = 200.0, numBars = 0),
+            isSafe = true,
+            concreteVolume = 3.0,
+            steelWeight = 200.0,
+            cost = 0.0,
+            code = DesignCode.ECP
+        )
+
+        val entries = BbsGenerator.generateRetainingWallBbs("RW1", result, wallLengthM = 10.0)
+
+        assertEquals(4, entries.size)
+        val vertical = entries.first { it.barMark == "01" }
+        // ((10000 - 100) / 150) + 1 = 67 per face -> 134 both faces
+        assertEquals(134, vertical.count)
+        // 4000 + 40d anchorage + 12d top hook
+        assertEquals((4000.0 + 40 * 16 + 12 * 16).toInt(), vertical.totalLengthPerBar.toInt())
+        val transverse = entries.first { it.barMark == "03" }
+        // ((10000 - 100) / 200) + 1 = 50
+        assertEquals(50, transverse.count)
+        assertEquals((2500.0 - 100.0 + 2 * 40 * 16).toInt(), transverse.totalLengthPerBar.toInt())
+        assertTrue(entries.all { it.count > 0 && it.totalWeightKg > 0.0 })
+    }
+
+    @Test
+    fun `flat slab bbs schedules all strips top and bottom`() {
+        val rebar = com.civileg.app.domain.RebarResult(
+            bars = 0, diameter = 16, spacing = 150,
+            providedArea = 1340.0, requiredArea = 1200.0, ratio = 0.9
+        )
+        val result = com.civileg.app.domain.FlatSlabResult(
+            isSafe = true,
+            utilizationRatio = 0.9,
+            totalDeadLoad = 7.0,
+            totalFactoredLoad = 14.0,
+            panelMomentX = 200.0,
+            panelMomentY = 180.0,
+            columnStripMomentPos = 80.0,
+            columnStripMomentNeg = 90.0,
+            middleStripMomentPos = 50.0,
+            middleStripMomentNeg = 55.0,
+            columnStripWidthX = 3750.0,
+            columnStripWidthY = 3000.0,
+            columnStripTopRebar = rebar,
+            columnStripBotRebar = rebar,
+            middleStripTopRebar = rebar,
+            middleStripBotRebar = rebar,
+            punchingShearOk = true,
+            punchingShearVu = 300.0,
+            punchingShearVc = 400.0,
+            punchingPerimeter = 2000.0,
+            punchingReinforcement = null,
+            dropRequired = false,
+            dropThickness = 0.0,
+            deflectionOk = true,
+            deflection = 10.0,
+            allowableDeflection = 20.0,
+            concreteVolumePerPanel = 11.25,
+            steelWeightPerPanel = 700.0
+        )
+
+        val entries = BbsGenerator.generateFlatSlabBbs("FS1", result, lxMm = 6000.0, lyMm = 7500.0)
+
+        assertEquals(8, entries.size)
+        assertEquals(listOf("01", "02", "03", "04", "05", "06", "07", "08"), entries.map { it.barMark })
+        // ((3750 - 50) / 150) + 1 = 25 bars in the column strip
+        assertEquals(25, entries.first { it.barMark == "01" }.count)
+        assertEquals((6000.0 - 50.0 + 2 * 9 * 16).toInt(), entries.first().totalLengthPerBar.toInt())
+        assertTrue(entries.all { it.count > 0 && it.totalWeightKg > 0.0 })
+    }
+
+    @Test
+    fun `flat slab bbs rejects strips narrower than cover`() {
+        val rebar = com.civileg.app.domain.RebarResult(
+            bars = 0, diameter = 16, spacing = 150,
+            providedArea = 1340.0, requiredArea = 1200.0, ratio = 0.9
+        )
+        val result = com.civileg.app.domain.FlatSlabResult(
+            isSafe = true, utilizationRatio = 0.9, totalDeadLoad = 7.0, totalFactoredLoad = 14.0,
+            panelMomentX = 200.0, panelMomentY = 180.0,
+            columnStripMomentPos = 80.0, columnStripMomentNeg = 90.0,
+            middleStripMomentPos = 50.0, middleStripMomentNeg = 55.0,
+            columnStripWidthX = 40.0, columnStripWidthY = 40.0,
+            columnStripTopRebar = rebar, columnStripBotRebar = rebar,
+            middleStripTopRebar = rebar, middleStripBotRebar = rebar,
+            punchingShearOk = true, punchingShearVu = 300.0, punchingShearVc = 400.0,
+            punchingPerimeter = 2000.0, punchingReinforcement = null,
+            dropRequired = false, dropThickness = 0.0,
+            deflectionOk = true, deflection = 10.0, allowableDeflection = 20.0,
+            concreteVolumePerPanel = 11.25, steelWeightPerPanel = 700.0
+        )
+
+        assertTrue(BbsGenerator.generateFlatSlabBbs("FS1", result, 6000.0, 7500.0).isEmpty())
+    }
 }

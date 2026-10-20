@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalRetainingWallDrawing
@@ -38,6 +39,7 @@ import com.civileg.app.ui.compose.components.drawings.retainingWallDrawingSummar
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.RetainingWallViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
@@ -73,6 +75,7 @@ fun RetainingWallScreen(
     var designName by remember { mutableStateOf(rwDefaultName) }
 
     var height by remember { mutableStateOf("4.0") }
+    var wallLength by remember { mutableStateOf("10.0") }
     var soilDensity by remember { mutableStateOf("18.0") }
     var frictionAngle by remember { mutableStateOf("30.0") }
     var surcharge by remember { mutableStateOf("10.0") }
@@ -121,7 +124,11 @@ fun RetainingWallScreen(
             }
 
             item {
-                OutlinedTextField(value = height, onValueChange = { height = it }, label = { Text(stringResource(R.string.rw_wall_height)) }, modifier = Modifier.fillMaxWidth())
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(value = height, onValueChange = { height = it }, label = { Text(stringResource(R.string.rw_wall_height)) }, modifier = Modifier.weight(1f))
+                    Spacer(Modifier.width(8.dp))
+                    OutlinedTextField(value = wallLength, onValueChange = { wallLength = it }, label = { Text(stringResource(R.string.rw_wall_length)) }, modifier = Modifier.weight(1f))
+                }
             }
             item {
                 OutlinedTextField(value = soilDensity, onValueChange = { soilDensity = it }, label = { Text(stringResource(R.string.rw_soil_density)) }, modifier = Modifier.fillMaxWidth())
@@ -156,6 +163,7 @@ fun RetainingWallScreen(
                 Button(
                     onClick = {
                         val h = height.toDoubleOrNull()
+                        val wl = wallLength.toDoubleOrNull()
                         val sd = soilDensity.toDoubleOrNull()
                         val fa = frictionAngle.toDoubleOrNull()
                         val sc = surcharge.toDoubleOrNull()
@@ -164,6 +172,7 @@ fun RetainingWallScreen(
 
                         val errorMsg = when {
                             h == null || h <= 0 -> rwErrAllPositive
+                            wl == null || wl <= 0 -> rwErrAllPositive
                             sd == null || sd <= 0 -> rwErrAllPositive
                             fa == null || fa <= 0 || fa >= 90 -> rwErrFrictionAngle
                             sc == null || sc < 0 -> rwErrSurcharge
@@ -185,7 +194,8 @@ fun RetainingWallScreen(
                             fcu = fcuVal!!,
                             fy = fyVal!!,
                             preferredDiameter = 16,
-                            code = selectedCode
+                            code = selectedCode,
+                            wallLengthM = wl!!
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -285,6 +295,17 @@ fun RetainingWallScreen(
 
                 if (res.calculationSteps.isNotEmpty()) {
                     item { CalculationStepsCard(res.calculationSteps, title = "Retaining Wall Calculation Steps") }
+                }
+
+                val bbsEntries = runCatching {
+                    BbsGenerator.generateRetainingWallBbs(
+                        mark = "RW1",
+                        result = res,
+                        wallLengthM = wallLength.toDoubleOrNull() ?: 10.0
+                    )
+                }.getOrDefault(emptyList())
+                if (bbsEntries.isNotEmpty()) {
+                    item { BbsTableCard(bbsEntries, title = "Retaining Wall Bar Bending Schedule") }
                 }
 
                 if (res.safetyChecks.isNotEmpty()) {

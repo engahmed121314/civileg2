@@ -466,6 +466,7 @@
     <string name="stair_tread_mm">النائمة (مم)</string>
     <string name="rw_default_name">حائط W1</string>
     <string name="rw_wall_height">الارتفاع (م)</string>
+    <string name="rw_wall_length">طول الجدار (م)</string>
     <string name="rw_analyze">تحليل</string>
     <string name="rw_safe">آمن</string>
     <string name="rw_unsafe">غير آمن</string>

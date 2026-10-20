@@ -28,10 +28,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.*
+import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFlatSlabDrawing
 import com.civileg.app.ui.compose.components.drawings.flatSlabDrawingSummary
+import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.FlatSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
@@ -339,6 +341,18 @@ item {
                     // Calculation Steps
                     if (res.calculationSteps.isNotEmpty()) {
                         item { CalculationStepsCard(res.calculationSteps, title = "Flat Slab Calculation Steps") }
+
+                        val bbsEntries = runCatching {
+                            BbsGenerator.generateFlatSlabBbs(
+                                mark = "FS1",
+                                result = res,
+                                lxMm = (lx.toDoubleOrNull() ?: 6.0) * 1000.0,
+                                lyMm = (ly.toDoubleOrNull() ?: 7.5) * 1000.0
+                            )
+                        }.getOrDefault(emptyList())
+                        if (bbsEntries.isNotEmpty()) {
+                            item { BbsTableCard(bbsEntries, title = "Flat Slab Bar Bending Schedule") }
+                        }
                     }
 
                     // Load Summary

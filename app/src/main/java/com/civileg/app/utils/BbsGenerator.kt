@@ -1,6 +1,8 @@
 package com.civileg.app.utils
 
 import android.os.Parcelable
+import com.civileg.app.domain.FlatSlabResult
+import com.civileg.app.domain.RebarResult
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.utils.CalculatorEngine.*
 import kotlinx.parcelize.Parcelize
@@ -364,6 +366,168 @@ object BbsGenerator {
                 totalWeightKg = barsAlongWidth * baseLenY / 1000.0 * (baseDia.toDouble().pow(2) / 162.0)
             )
         )
+        return entries
+    }
+
+    /**
+     * Generates a Bar Bending Schedule for a cantilever retaining wall.
+     *
+     * The stem is scheduled per metre-run of wall (both faces), with 40d base
+     * anchorage and a 12d top hook. Base steel is scheduled in the transverse
+     * and longitudinal directions. [wallLengthM] scales every quantity to the
+     * actual wall length.
+     */
+    fun generateRetainingWallBbs(
+        mark: String,
+        result: RetainingWallResult,
+        wallLengthM: Double = 1.0,
+        coverMm: Double = 50.0
+    ): List<BbsEntry> {
+        InputGuard.notBlank("memberMark", mark)
+        InputGuard.positive("wallLength", wallLengthM)
+        InputGuard.positive("wallHeight", result.height)
+        InputGuard.positive("stemThickness", result.stemThickness)
+        InputGuard.positive("baseWidth", result.baseWidth)
+        InputGuard.inRange("cover", coverMm, 20.0, 75.0)
+        InputGuard.positive("stemDiameter", result.stemReinforcement.diameter)
+        InputGuard.positive("stemSpacing", result.stemReinforcement.spacing)
+        InputGuard.positive("baseDiameter", result.baseReinforcement.diameter)
+        InputGuard.positive("baseSpacing", result.baseReinforcement.spacing)
+
+        val lengthMm = wallLengthM * 1000.0
+        val heightMm = result.height * 1000.0
+        val baseWidthMm = result.baseWidth
+        InputGuard.require(lengthMm > 2 * coverMm, "Wall length must exceed twice the cover")
+
+        val stemDia = result.stemReinforcement.diameter
+        val stemSpacing = result.stemReinforcement.spacing
+        val entries = mutableListOf<BbsEntry>()
+
+        // 01 - Stem vertical bars, inner + outer face
+        val vertPerFace = (((lengthMm - 2 * coverMm) / stemSpacing).toInt() + 1).coerceAtLeast(1)
+        val vertCount = vertPerFace * 2
+        val vertLength = heightMm + 40 * stemDia + 12 * stemDia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "01",
+                diameter = stemDia, shapeCode = 0, count = vertCount,
+                lengthA = heightMm,
+                lengthB = 40.0 * stemDia,
+                lengthC = 12.0 * stemDia,
+                totalLengthPerBar = vertLength,
+                totalWeightKg = vertCount * vertLength / 1000.0 * (stemDia.toDouble().pow(2) / 162.0)
+            )
+        )
+
+        // 02 - Stem horizontal bars, inner + outer face
+        val horizLayers = (((heightMm - 2 * coverMm) / stemSpacing).toInt() + 1).coerceAtLeast(1)
+        val horizCount = horizLayers * 2
+        val horizLength = (lengthMm - 2 * coverMm) + 2 * 9 * stemDia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "02",
+                diameter = stemDia, shapeCode = 0, count = horizCount,
+                lengthA = lengthMm - 2 * coverMm,
+                totalLengthPerBar = horizLength,
+                totalWeightKg = horizCount * horizLength / 1000.0 * (stemDia.toDouble().pow(2) / 162.0)
+            )
+        )
+
+        val baseDia = result.baseReinforcement.diameter
+        val baseSpacing = result.baseReinforcement.spacing
+
+        // 03 - Base transverse bars (toe to heel)
+        val transverseCount = (((lengthMm - 2 * coverMm) / baseSpacing).toInt() + 1).coerceAtLeast(1)
+        val transverseLength = (baseWidthMm - 2 * coverMm) + 2 * 40 * baseDia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "03",
+                diameter = baseDia, shapeCode = 0, count = transverseCount,
+                lengthA = baseWidthMm - 2 * coverMm,
+                totalLengthPerBar = transverseLength,
+                totalWeightKg = transverseCount * transverseLength / 1000.0 * (baseDia.toDouble().pow(2) / 162.0)
+            )
+        )
+
+        // 04 - Base longitudinal distribution bars
+        val distCount = (((baseWidthMm - 2 * coverMm) / baseSpacing).toInt() + 1).coerceAtLeast(1)
+        val distLength = (lengthMm - 2 * coverMm) + 2 * 9 * baseDia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "04",
+                diameter = baseDia, shapeCode = 0, count = distCount,
+                lengthA = lengthMm - 2 * coverMm,
+                totalLengthPerBar = distLength,
+                totalWeightKg = distCount * distLength / 1000.0 * (baseDia.toDouble().pow(2) / 162.0)
+            )
+        )
+        return entries
+    }
+
+    /**
+     * Generates a Bar Bending Schedule for a flat slab panel.
+     *
+     * Column-strip and middle-strip bars are scheduled top and bottom in both
+     * directions. Strip widths come from the design result; the middle strip is
+     * the remainder of the panel. Bars carry 9d end hooks.
+     */
+    fun generateFlatSlabBbs(
+        mark: String,
+        result: FlatSlabResult,
+        lxMm: Double,
+        lyMm: Double,
+        coverMm: Double = 25.0
+    ): List<BbsEntry> {
+        InputGuard.notBlank("memberMark", mark)
+        InputGuard.positive("panelLength", lxMm)
+        InputGuard.positive("panelWidth", lyMm)
+        InputGuard.inRange("cover", coverMm, 10.0, 75.0)
+
+        val colStripX = result.columnStripWidthX
+        val colStripY = result.columnStripWidthY
+        val midStripX = lyMm - colStripX
+        val midStripY = lxMm - colStripY
+        if (colStripX <= 2 * coverMm || colStripY <= 2 * coverMm ||
+            midStripX <= 2 * coverMm || midStripY <= 2 * coverMm
+        ) {
+            return emptyList()
+        }
+
+        val entries = mutableListOf<BbsEntry>()
+        var barMark = 1
+
+        fun addStrip(
+            barLengthMm: Double,
+            stripWidthMm: Double,
+            rebar: RebarResult
+        ) {
+            val dia = rebar.diameter
+            val spacing = rebar.spacing.toDouble()
+            if (dia <= 0 || spacing <= 0.0) return
+            val count = (((stripWidthMm - 2 * coverMm) / spacing).toInt() + 1).coerceAtLeast(1)
+            val barLength = barLengthMm + 2 * 9 * dia
+            entries.add(
+                BbsEntry(
+                    memberMark = mark,
+                    barMark = String.format(java.util.Locale.US, "%02d", barMark++),
+                    diameter = dia, shapeCode = 0, count = count,
+                    lengthA = barLengthMm,
+                    totalLengthPerBar = barLength,
+                    totalWeightKg = count * barLength / 1000.0 * (dia.toDouble().pow(2) / 162.0)
+                )
+            )
+        }
+
+        val xBar = lxMm - 2 * coverMm
+        val yBar = lyMm - 2 * coverMm
+        addStrip(xBar, colStripX, result.columnStripBotRebar)
+        addStrip(xBar, midStripX, result.middleStripBotRebar)
+        addStrip(xBar, colStripX, result.columnStripTopRebar)
+        addStrip(xBar, midStripX, result.middleStripTopRebar)
+        addStrip(yBar, colStripY, result.columnStripBotRebar)
+        addStrip(yBar, midStripY, result.middleStripBotRebar)
+        addStrip(yBar, colStripY, result.columnStripTopRebar)
+        addStrip(yBar, midStripY, result.middleStripTopRebar)
         return entries
     }
 
