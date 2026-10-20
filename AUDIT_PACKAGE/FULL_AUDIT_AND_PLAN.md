@@ -988,5 +988,12 @@ include the detail drawing.
 **Tests.** Suite unchanged at **69 suites / 1263 tests / 0 failures** (PDF generation needs an
 Android device and is covered by the manual QA matrix).
 
-**Remaining for Phase 4.** Add explicit BBS and BOQ tables to the report body (the data exists
-in `BbsGenerator` and the BOQ use case) and expose report metadata fields on the cover.
+**BBS and BOQ sections.** `ProfessionalEnglishPdfReporter` now renders an optional
+`6. Bar Bending Schedule` table (member/bar mark, diameter, shape code, qty, length, per-bar and
+total weight, plus total steel) and a `7. Bill of Quantities` table.
+`ExportManager.exportReportAndDxf` accepts `bbsEntries` (the existing `BbsEntry` model) and maps
+it directly; the beam, column and footing viewmodels compute the schedule with `BbsGenerator` and
+attach it, so the PDF schedule is the same one shown on screen.
+
+**Remaining for Phase 4.** Wire BBS into the remaining viewmodels (slab, stair, tank, retaining
+wall, flat slab) and feed real BOQ rows from the BOQ use case.

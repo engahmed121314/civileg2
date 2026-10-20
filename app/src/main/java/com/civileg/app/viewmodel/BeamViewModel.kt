@@ -250,6 +250,9 @@ class BeamViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     calculationSteps = res.calculationSteps,
+                    bbsEntries = runCatching {
+                        com.civileg.app.utils.BbsGenerator.generateBeamBbs("B1", res, res.span * 1000.0)
+                    }.getOrDefault(emptyList()),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.beamSection(
                         title = "BEAM ${lastSupportType.displayName}",

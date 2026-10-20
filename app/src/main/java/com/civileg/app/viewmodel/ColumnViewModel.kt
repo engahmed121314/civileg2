@@ -331,6 +331,9 @@ class ColumnViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     calculationSteps = res.calculationSteps,
+                    bbsEntries = runCatching {
+                        com.civileg.app.utils.BbsGenerator.generateColumnBbs("C1", res)
+                    }.getOrDefault(emptyList()),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.columnSection(
                         title = "COLUMN ${res.columnType}",

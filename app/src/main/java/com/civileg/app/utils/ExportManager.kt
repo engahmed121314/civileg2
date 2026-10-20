@@ -242,6 +242,7 @@ class ExportManager(private val context: Context) {
         drawingBitmap: Bitmap? = null,
         drawing: DxfDrawable? = null,
         calculationSteps: List<DomainCalculationStep> = emptyList(),
+        bbsEntries: List<BbsEntry> = emptyList(),
         outputPath: String,
         openPdfOnComplete: Boolean = false
     ): ExportBundle {
@@ -257,6 +258,17 @@ class ExportManager(private val context: Context) {
                 isSafe = isSafe,
                 drawingBitmap = drawingBitmap,
                 outputPath = outputPath,
+                bbsRows = bbsEntries.map { entry ->
+                    ProfessionalEnglishPdfReporter.BbsRow(
+                        memberMark = entry.memberMark,
+                        barMark = entry.barMark,
+                        diameter = entry.diameter,
+                        shapeCode = entry.shapeCode,
+                        count = entry.count,
+                        totalLengthMm = entry.totalLengthPerBar,
+                        weightKg = entry.totalWeightKg
+                    )
+                },
                 calculationSteps = calculationSteps.map { step ->
                     ProfessionalEnglishPdfReporter.CalculationStep(
                         stepNumber = step.stepNumber,

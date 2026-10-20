@@ -73,6 +73,23 @@ object ProfessionalEnglishPdfReporter {
         val reference: String? = null
     )
 
+    data class BbsRow(
+        val memberMark: String,
+        val barMark: String,
+        val diameter: Int,
+        val shapeCode: Int,
+        val count: Int,
+        val totalLengthMm: Double,
+        val weightKg: Double
+    )
+
+    data class BoqRow(
+        val item: String,
+        val description: String,
+        val unit: String,
+        val quantity: Double
+    )
+
     data class CalculationStep(
         val stepNumber: Int,
         val description: String,
@@ -674,13 +691,75 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
+    private fun addBbsSection(document: Document, rows: List<BbsRow>) {
+        if (rows.isEmpty()) return
+        document.add(AreaBreak())
+        document.add(sectionTitle("6. Bar Bending Schedule"))
+        document.add(separator())
+
+        val table = Table(UnitValue.createPercentArray(floatArrayOf(12f, 12f, 9f, 9f, 9f, 20f, 14f, 15f)))
+            .useAllAvailableWidth()
+        table.addHeaderCell(headerCell("Member"))
+        table.addHeaderCell(headerCell("Bar"))
+        table.addHeaderCell(headerCell("Dia (mm)"))
+        table.addHeaderCell(headerCell("Shape"))
+        table.addHeaderCell(headerCell("Qty"))
+        table.addHeaderCell(headerCell("Length/bar (mm)"))
+        table.addHeaderCell(headerCell("Weight (kg)"))
+        table.addHeaderCell(headerCell("Total (kg)"))
+
+        var totalWeight = 0.0
+        rows.forEachIndexed { index, row ->
+            val bg = if (index % 2 == 0) null else ROW_ALT
+            totalWeight += row.weightKg
+            table.addCell(dataCell(row.memberMark, 8f, false, bg, TextAlignment.LEFT))
+            table.addCell(dataCell(row.barMark, 8f, false, bg, TextAlignment.LEFT))
+            table.addCell(dataCell(row.diameter.toString(), 8f, false, bg))
+            table.addCell(dataCell(row.shapeCode.toString(), 8f, false, bg))
+            table.addCell(dataCell(row.count.toString(), 8f, false, bg))
+            table.addCell(dataCell(String.format(Locale.US, "%.0f", row.totalLengthMm), 8f, false, bg))
+            val perBar = if (row.count > 0) row.weightKg / row.count else row.weightKg
+            table.addCell(dataCell(String.format(Locale.US, "%.2f", perBar), 8f, false, bg))
+            table.addCell(dataCell(String.format(Locale.US, "%.2f", row.weightKg), 8f, false, bg))
+        }
+        document.add(table)
+        document.add(Paragraph().add(
+            text(String.format(Locale.US, "Total steel: %.2f kg", totalWeight), createBoldFont(), 9f, PRIMARY)
+        ).setTextAlignment(TextAlignment.RIGHT))
+        document.add(emptyLine())
+    }
+
+    private fun addBoqSection(document: Document, rows: List<BoqRow>) {
+        if (rows.isEmpty()) return
+        document.add(sectionTitle("7. Bill of Quantities"))
+        document.add(separator())
+
+        val table = Table(UnitValue.createPercentArray(floatArrayOf(10f, 55f, 15f, 20f))).useAllAvailableWidth()
+        table.addHeaderCell(headerCell("Item"))
+        table.addHeaderCell(headerCell("Description"))
+        table.addHeaderCell(headerCell("Unit"))
+        table.addHeaderCell(headerCell("Quantity"))
+
+        rows.forEachIndexed { index, row ->
+            val bg = if (index % 2 == 0) null else ROW_ALT
+            table.addCell(dataCell(row.item, 8f, false, bg, TextAlignment.LEFT))
+            table.addCell(dataCell(row.description, 8f, false, bg, TextAlignment.LEFT))
+            table.addCell(dataCell(row.unit, 8f, false, bg))
+            table.addCell(dataCell(String.format(Locale.US, "%.2f", row.quantity), 8f, false, bg))
+        }
+        document.add(table)
+        document.add(emptyLine())
+    }
+
     private fun addDrawingSection(document: Document, bitmap: Bitmap?, title: String) {
         document.add(sectionTitle("5. Engineering Drawing"))
         document.add(separator())
 
         if (bitmap == null) {
-            document.add(Paragraph().add(text("[Drawing not available - ensure design data is complete]",
-                createPdfFont(), 9f, SECONDARY)).setTextAlignment(TextAlignment.CENTER))
+            document.add(Paragraph().add(text(
+                "No drawing image was supplied for this report. Export from the element screen to include the generated detail drawing.",
+                createPdfFont(), 9f, SECONDARY
+            )).setTextAlignment(TextAlignment.CENTER))
             document.add(emptyLine())
             return
         }
@@ -787,6 +866,8 @@ object ProfessionalEnglishPdfReporter {
         drawingBitmap: Bitmap? = null,
         photos: List<Bitmap> = emptyList(),
         calculationSteps: List<CalculationStep> = emptyList(),
+        bbsRows: List<BbsRow> = emptyList(),
+        boqRows: List<BoqRow> = emptyList(),
         config: ReportConfig = ReportConfig(),
         outputPath: String
     ): File? {
@@ -818,10 +899,16 @@ object ProfessionalEnglishPdfReporter {
             }
             addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
 
-            // 7. Site Photographs (optional)
+            // 6. Bar Bending Schedule
+            addBbsSection(document, bbsRows)
+
+            // 7. Bill of Quantities
+            addBoqSection(document, boqRows)
+
+            // 8. Site Photographs (optional)
             addPhotoGallery(document, photos)
 
-            // 8. Approval & Signature (optional)
+            // 9. Approval & Signature (optional)
             if (config.showSignature) {
                 addSignatureBlock(document, config)
             }
@@ -858,7 +945,9 @@ object ProfessionalEnglishPdfReporter {
         isSafe: Boolean,
         drawingBitmap: Bitmap?,
         outputPath: String,
-        calculationSteps: List<CalculationStep> = emptyList()
+        calculationSteps: List<CalculationStep> = emptyList(),
+        bbsRows: List<BbsRow> = emptyList(),
+        boqRows: List<BoqRow> = emptyList()
     ): File? {
         val convertedChecks = safetyChecks.map {
             SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference)
@@ -896,6 +985,8 @@ object ProfessionalEnglishPdfReporter {
             isSafe = isSafe,
             drawingBitmap = drawingBitmap,
             calculationSteps = calculationSteps,
+            bbsRows = bbsRows,
+            boqRows = boqRows,
             outputPath = outputPath
         )
     }

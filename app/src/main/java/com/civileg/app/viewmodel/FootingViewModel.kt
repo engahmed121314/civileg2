@@ -202,6 +202,9 @@ class FootingViewModel @Inject constructor(
                     },
                     isSafe = res.isSafe,
                     calculationSteps = res.calculationSteps,
+                    bbsEntries = runCatching {
+                        com.civileg.app.utils.BbsGenerator.generateFootingBbs("F1", res)
+                    }.getOrDefault(emptyList()),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.footingSection(
                         title = "FOOTING ${res.type.displayName}",
