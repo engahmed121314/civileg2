@@ -915,10 +915,17 @@ steel, distribution steel and a safety summary. `designRetainingWall` emits acti
 coefficient, stem moment, stem steel, overturning FS, sliding FS and bearing pressure. Both are
 rendered by the same steps card (`StairScreen`, `RetainingWallScreen`).
 
-**Tests.** `EngineeringDetailExpansionTest` adds slab, isolated-footing, strap-facade,
-three-code flat-slab, stair and retaining-wall step assertions. Suite: **68 suites / 1256
-tests / 0 failures**.
+**Tank, shear wall and pile.** `designTank` emits geometry, water pressure, thickness, wall
+steel, base steel and a safety summary (`TankScreen`). `designShearWall` and
+`designPileFoundation` build the trace in the facade via `result.copy(calculationSteps = …)`, so
+all three code engines share it: shear wall (slenderness, flexural demand, vertical steel, shear
+demand, horizontal steel, boundary element) and pile (single capacity, group efficiency,
+settlement, reinforcement, lateral capacity, overall safety). `PileFoundationScreen` renders the
+pile trace; shear wall keeps the data ready for its (legacy) screen.
 
-**Remaining for Phase 2.** Tank, shear wall and pile still need engine-level step construction
-(models already accept the field), plus reinforcement bar schedules (BBS) on-screen — the BBS
-writer already exists and is extended in Phase 5.
+**Tests.** `EngineeringDetailExpansionTest` adds slab, isolated-footing, strap-facade,
+three-code flat-slab, stair, retaining-wall, tank, shear-wall and pile step assertions. Suite:
+**68 suites / 1259 tests / 0 failures**.
+
+**Remaining for Phase 2.** On-screen reinforcement bar schedules (BBS) — the BBS writer already
+exists and is extended in Phase 5.

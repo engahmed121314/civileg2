@@ -12,6 +12,8 @@ import com.civileg.app.domain.calculations.aci.ACIStrapFooting
 import com.civileg.app.domain.calculations.sbc.SBCSeismic
 import com.civileg.app.domain.calculations.sbc.SBCStrapFooting
 import com.civileg.app.domain.FlatSlabInput
+import com.civileg.app.domain.PileInput
+import com.civileg.app.domain.ShearWallInput
 import com.civileg.app.domain.calculations.base.SoilType
 import com.civileg.app.domain.calculations.base.SeismicZone
 import com.civileg.app.domain.entities.DesignCode
@@ -245,5 +247,33 @@ class EngineeringDetailExpansionTest {
         assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
         assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
         assertTrue("stability checks must be present", r.calculationSteps.any { it.title == "Overturning Stability" })
+    }
+
+    @Test
+    fun `tank result exposes calculation steps`() {
+        val r = engine.designTank(
+            type = CalculatorEngine.TankType.RECTANGULAR_GROUND,
+            capacity = 100.0, height = 3000.0, fcu = 30.0, fy = 420.0,
+            preferredDiameter = 12, code = DesignCode.ECP
+        )
+        assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+        assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
+        assertTrue("wall steel step must exist", r.calculationSteps.any { it.title == "Wall Reinforcement" })
+    }
+
+    @Test
+    fun `shear wall result exposes calculation steps`() {
+        val r = engine.designShearWall(ShearWallInput(), DesignCode.ECP)
+        assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+        assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
+        assertTrue("shear demand step must exist", r.calculationSteps.any { it.title == "Shear Demand" })
+    }
+
+    @Test
+    fun `pile result exposes calculation steps`() {
+        val r = engine.designPileFoundation(PileInput(), DesignCode.ECP)
+        assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+        assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
+        assertTrue("capacity step must exist", r.calculationSteps.any { it.title == "Single Pile Capacity" })
     }
 }

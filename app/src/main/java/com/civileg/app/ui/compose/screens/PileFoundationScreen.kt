@@ -30,6 +30,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
+import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalPileDrawing
 import com.civileg.app.utils.CalculatorEngine
@@ -566,6 +567,9 @@ fun PileFoundationScreen(
                 val reinf = res.pileReinforcement
 
                 // ── Status Card ──
+                if (res.calculationSteps.isNotEmpty()) {
+                    item { CalculationStepsCard(res.calculationSteps, title = "Pile Calculation Steps") }
+                }
                 item {
                     val statusColor = if (res.isSafe) Color(0xFF2E7D32) else Color(0xFFF57C00)
                     Card(

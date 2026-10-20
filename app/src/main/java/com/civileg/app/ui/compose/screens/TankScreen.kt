@@ -30,6 +30,7 @@ import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.TankType
+import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalTankDrawing
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
@@ -348,6 +349,10 @@ fun TankScreen(
                             ResultRow("Cost", "${"%.2f".format(res.cost)}")
                         }
                     }
+                }
+
+                if (res.calculationSteps.isNotEmpty()) {
+                    item { CalculationStepsCard(res.calculationSteps, title = "Tank Calculation Steps") }
                 }
 
                 if (res.safetyChecks.isNotEmpty()) {

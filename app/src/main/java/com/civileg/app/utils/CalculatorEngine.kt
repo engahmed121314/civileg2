@@ -1908,13 +1908,63 @@ class CalculatorEngine @Inject constructor(
             DesignSafetyCheck(it.name, it.value, it.limit, it.unit, it.isSafe)
         }
 
+        val ref = codeNoteRef(code)
+        val steps = listOf(
+            CalculationStep(
+                stepNumber = 1, title = "Tank Geometry",
+                formula = "V = L·W·H",
+                formulaWithValues = "L = W = ${"%.2f".format(sideM)} m, H = ${"%.2f".format(hM)} m",
+                result = "V = ${"%.2f".format(res.capacityM3)} m³", unit = "m³",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 2, title = "Water Pressure",
+                formula = "p = γw·hw",
+                formulaWithValues = "p = 9.81 × ${"%.2f".format((height - 300.0) / 1000.0)} = ${"%.1f".format(res.pressure)} kN/m²",
+                result = "${"%.1f".format(res.pressure)} kN/m²", unit = "kN/m²",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 3, title = "Wall Thickness",
+                formula = "t ≥ tmin (code crack/serviceability)",
+                formulaWithValues = "t = ${"%.0f".format(res.wallThickness)} mm, base = ${"%.0f".format(res.baseThickness)} mm",
+                result = "${"%.0f".format(res.wallThickness)} mm", unit = "mm",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 4, title = "Wall Reinforcement",
+                formula = "As = M / (0.87fy·j·d)",
+                formulaWithValues = "As = ${"%.0f".format(res.wallReinforcement.astRequired)} mm²/m → ${wallBar.barString}",
+                result = wallBar.barString, unit = "mm²/m",
+                codeReference = ref, isPass = res.wallReinforcement.isSafe,
+                status = if (res.wallReinforcement.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 5, title = "Base Reinforcement",
+                formula = "As = M / (0.87fy·j·d)",
+                formulaWithValues = "As = ${"%.0f".format(res.baseReinforcement.astRequired)} mm²/m → ${baseBar.barString}",
+                result = baseBar.barString, unit = "mm²/m",
+                codeReference = ref, isPass = res.baseReinforcement.isSafe,
+                status = if (res.baseReinforcement.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 6, title = "Safety Checks",
+                formula = "Flexure · shear · crack width",
+                formulaWithValues = "${res.safetyChecks.count { it.isSafe }}/${res.safetyChecks.size} checks passed",
+                result = if (res.isSafe) "SAFE" else "UNSAFE", unit = "",
+                codeReference = ref, isPass = res.isSafe,
+                status = if (res.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            )
+        )
+
         return TankResult(
             type = type, length = sideMm, width = sideMm, height = height,
             wallThickness = res.wallThickness, baseThickness = res.baseThickness,
             wallReinforcement = wallBar, baseReinforcement = baseBar,
             isSafe = res.isSafe, concreteVolume = res.concreteVolume, steelWeight = res.steelWeight,
             cost = res.cost, code = code, waterPressure = res.pressure,
-            capacity = res.capacityM3, safetyChecks = checks, fcu = fcu, fy = fy
+            capacity = res.capacityM3, safetyChecks = checks, fcu = fcu, fy = fy,
+            calculationSteps = steps
         )
     }
 
@@ -2162,7 +2212,64 @@ class CalculatorEngine @Inject constructor(
 
         val domainCode = code
         val engine = CalculationFactory.getShearWallDesign(domainCode)
-        return engine.designWall(input)
+        val res = engine.designWall(input)
+        return res.copy(calculationSteps = shearWallSteps(input, res, code))
+    }
+
+    private fun shearWallSteps(
+        input: ShearWallInput,
+        res: ShearWallResult,
+        code: DesignCode
+    ): List<CalculationStep> {
+        val ref = codeNoteRef(code)
+        return listOf(
+            CalculationStep(
+                stepNumber = 1, title = "Slenderness",
+                formula = "λ = hw / lw",
+                formulaWithValues = "λ = ${"%.2f".format(res.slendernessRatio)} vs limit",
+                result = if (res.slendernessOk) "OK" else "Slender — stability check required",
+                unit = "", codeReference = ref, isPass = res.slendernessOk,
+                status = if (res.slendernessOk) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 2, title = "Flexural Demand",
+                formula = "Mu ≤ φMn",
+                formulaWithValues = "Mu = ${"%.1f".format(input.bendingMoment)} kN·m vs φMn = ${"%.1f".format(res.momentCapacity)} kN·m",
+                result = if (res.flexuralOk) "OK" else "Increase reinforcement", unit = "kN·m",
+                codeReference = ref, isPass = res.flexuralOk,
+                status = if (res.flexuralOk) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 3, title = "Vertical Reinforcement",
+                formula = "As = M / (0.87fy·j·d)",
+                formulaWithValues = "As = ${"%.0f".format(res.verticalReinforcement.requiredArea)} mm² → ${res.verticalReinforcement.barString}",
+                result = res.verticalReinforcement.barString, unit = "mm²",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 4, title = "Shear Demand",
+                formula = "Vu ≤ Vc + Vs",
+                formulaWithValues = "Vu = ${"%.1f".format(input.shearForce)} kN vs Vn = ${"%.1f".format(res.shearCapacity)} kN",
+                result = if (res.shearOk) "OK" else "Increase horizontal steel", unit = "kN",
+                codeReference = ref, isPass = res.shearOk,
+                status = if (res.shearOk) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 5, title = "Horizontal Reinforcement",
+                formula = "Ash = Vs·s / (fy·d)",
+                formulaWithValues = "Ash = ${"%.0f".format(res.horizontalReinforcement.requiredArea)} mm² → ${res.horizontalReinforcement.barString}",
+                result = res.horizontalReinforcement.barString, unit = "mm²",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 6, title = "Boundary Element",
+                formula = "Compression strain / confinement demand",
+                formulaWithValues = "Type = ${res.boundaryElementType.displayName}",
+                result = if (res.isSafe) "SAFE" else "UNSAFE", unit = "",
+                codeReference = ref, isPass = res.isSafe,
+                status = if (res.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            )
+        )
     }
 
     /**
@@ -2177,7 +2284,64 @@ class CalculatorEngine @Inject constructor(
 
         val domainCode = code
         val engine = CalculationFactory.getPileFoundationDesign(domainCode)
-        return engine.designPile(input)
+        val res = engine.designPile(input)
+        return res.copy(calculationSteps = pileSteps(input, res, code))
+    }
+
+    private fun pileSteps(
+        input: PileInput,
+        res: PileDesignResult,
+        code: DesignCode
+    ): List<CalculationStep> {
+        val ref = codeNoteRef(code)
+        return listOf(
+            CalculationStep(
+                stepNumber = 1, title = "Single Pile Capacity",
+                formula = "Qu = Qs + Qb; Qall = Qu / FS",
+                formulaWithValues = "Qu = ${"%.1f".format(res.capacityResult.ultimateCapacity)} kN, Qall = ${"%.1f".format(res.capacityResult.allowableCapacity)} kN",
+                result = "${"%.1f".format(res.capacityResult.allowableCapacity)} kN", unit = "kN",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 2, title = "Group Efficiency",
+                formula = "η = Qgroup / (n·Qsingle)",
+                formulaWithValues = "η = ${"%.2f".format(res.groupResult.efficiencyFactor)}, n = ${res.groupResult.numberOfPiles} (${res.groupResult.pattern})",
+                result = "Qgroup = ${"%.1f".format(res.groupResult.groupCapacity)} kN", unit = "kN",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 3, title = "Settlement",
+                formula = "δtotal ≤ δallow",
+                formulaWithValues = "δ = ${"%.1f".format(res.settlementResult.totalSettlement)} mm vs ${"%.1f".format(res.settlementResult.allowableSettlement)} mm",
+                result = if (res.settlementResult.isOk) "OK" else "Exceeds allowable", unit = "mm",
+                codeReference = ref, isPass = res.settlementResult.isOk,
+                status = if (res.settlementResult.isOk) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 4, title = "Pile Reinforcement",
+                formula = "As = ρ·Ac",
+                formulaWithValues = "As,req = ${"%.0f".format(res.pileReinforcement.requiredLongitudinalArea)} mm² → ${res.pileReinforcement.barString}",
+                result = res.pileReinforcement.barString, unit = "mm²",
+                codeReference = ref, isPass = res.pileReinforcement.isSafe,
+                status = if (res.pileReinforcement.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 5, title = "Lateral Capacity",
+                formula = "Hu ≤ Hallowable (Broms)",
+                formulaWithValues = "Hu = ${"%.1f".format(input.lateralLoad)} kN vs Hallow = ${"%.1f".format(res.lateralCapacity)} kN",
+                result = if (res.lateralUtilizationRatio <= 1.0) "OK" else "Exceeds capacity", unit = "kN",
+                codeReference = ref, isPass = res.lateralUtilizationRatio <= 1.0,
+                status = if (res.lateralUtilizationRatio <= 1.0) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 6, title = "Overall Safety",
+                formula = "Capacity · settlement · structural",
+                formulaWithValues = "utilization = ${"%.2f".format(res.utilizationRatio)}",
+                result = if (res.isSafe) "SAFE" else "UNSAFE", unit = "",
+                codeReference = ref, isPass = res.isSafe,
+                status = if (res.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            )
+        )
     }
 
     /**
