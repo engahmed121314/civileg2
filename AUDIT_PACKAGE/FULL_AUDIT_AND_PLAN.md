@@ -951,15 +951,16 @@ every drawing accepted the parameter and silently ignored it. New
 **Sheet annotations.** `DrawingUtils.drawResultSummaryStrip` draws a two-row box above the title
 block with `STATUS / UTIL / CODE` and `CHECKS / CONC / STEEL`; `drawSheetAnnotations` places the
 strip and a north arrow. `ProfessionalBeamDrawing`, `ProfessionalColumnDrawing`,
-`ProfessionalFootingDrawing`, `ProfessionalSlabDrawing` and `ProfessionalFlatSlabDrawing` now
-call it, and the corresponding screens pass the summary for both the on-screen view and the
+`ProfessionalFootingDrawing`, `ProfessionalSlabDrawing`, `ProfessionalFlatSlabDrawing`,
+`ProfessionalStairDrawing`, `ProfessionalTankDrawing`, `ProfessionalRetainingWallDrawing` and
+`ProfessionalPileDrawing` now call it, and the corresponding screens pass the summary for both the on-screen view and the
 invisible PDF capture layer, so screen and PDF show the same data. The previously unused
 `drawNorthArrow` is now reachable from every one of those sheets.
 
 **Tests.** `DrawingSummaryFactoryTest` asserts the check mapping, code label, utilization
-percentage, failed-check count and column axial ratio. Suite: **69 suites / 1262 tests / 0
-failures**.
+percentage, failed-check count, column axial ratio and the stair/retaining mapping.
+Suite: **69 suites / 1263 tests / 0 failures**.
 
-**Remaining for Phase 3.** Apply `drawSheetAnnotations` to the other Professional* drawings
-(stair, tank, retaining wall, pile, waffle, hordi, steel, seismic, warehouse, strap/combined
-footing) and replace the remaining approximate geometry where a design value is available.
+**Remaining for Phase 3.** Apply `drawSheetAnnotations` to the remaining Professional* drawings
+(waffle, hordi, steel, seismic, warehouse, strap/combined footing) and replace the remaining
+approximate geometry where a design value is available.

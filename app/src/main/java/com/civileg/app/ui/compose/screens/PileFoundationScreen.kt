@@ -33,6 +33,7 @@ import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalPileDrawing
+import com.civileg.app.ui.compose.components.drawings.pileDrawingSummary
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
@@ -835,6 +836,7 @@ fun PileFoundationScreen(
                                 capRebarCount = cap.flexuralReinforcement.bars,
                                 soilType = res.soilType,
                                 viewMode = selectedViewMode,
+                                resultSummary = pileDrawingSummary(res),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -877,6 +879,7 @@ fun PileFoundationScreen(
                         capRebarCount = cap.flexuralReinforcement.bars,
                         soilType = res.soilType,
                         viewMode = selectedViewMode,
+                        resultSummary = pileDrawingSummary(res),
                         modifier = Modifier.fillMaxSize()
                     )
                 }

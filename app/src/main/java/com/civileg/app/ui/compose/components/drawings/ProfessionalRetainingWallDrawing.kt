@@ -218,6 +218,12 @@ fun ProfessionalRetainingWallDrawing(
         }
 
         // ── Responsive title block ──
+        drawSheetAnnotations(
+            x = cw - cfg.titleBlockWidth - cfg.margin,
+            y = ch - cfg.titleBlockHeight - cfg.margin,
+            cfg = cfg,
+            summary = resultSummary
+        )
         drawResponsiveTitleBlock(
             x = cw - cfg.titleBlockWidth - cfg.margin,
             y = ch - cfg.titleBlockHeight - cfg.margin,

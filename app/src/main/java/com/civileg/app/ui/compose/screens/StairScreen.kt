@@ -41,6 +41,7 @@ import com.civileg.app.viewmodel.StairViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStairDrawing
+import com.civileg.app.ui.compose.components.drawings.stairDrawingSummary
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
@@ -449,6 +450,7 @@ fun StairScreen(
                                 cover = codeAwareCover,
                                 stairType = res.type.displayName,
                                 viewMode = selectedViewMode,
+                                resultSummary = stairDrawingSummary(res),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -490,6 +492,7 @@ fun StairScreen(
                         cover = codeAwareCover,
                         stairType = res.type.displayName,
                         viewMode = 0,
+                        resultSummary = stairDrawingSummary(res),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

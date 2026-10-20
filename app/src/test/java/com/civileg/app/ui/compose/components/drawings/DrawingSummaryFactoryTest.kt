@@ -93,4 +93,28 @@ class DrawingSummaryFactoryTest {
         assertEquals("SBC 304-2018", slabSummary.designCodeLabel)
         assertEquals(1, slabSummary.safetyChecks.size)
     }
+
+    @Test
+    fun `stair summary carries code and checks`() {
+        val result = CalculatorEngine.StairResult(
+            type = CalculatorEngine.StairType.SINGLE_FLIGHT,
+            thickness = 0.15,
+            reinforcement = CalculatorEngine.ReinforcementBar(),
+            distributionReinforcement = CalculatorEngine.ReinforcementBar(),
+            isSafe = true,
+            concreteVolume = 0.6,
+            steelWeight = 30.0,
+            cost = 0.0,
+            code = DesignCode.ECP,
+            utilizationRatio = 0.55,
+            safetyChecks = listOf(check("Flexure", 30.0, 45.0, true))
+        )
+
+        val summary = stairDrawingSummary(result)
+
+        assertTrue(summary.isSafe)
+        assertEquals("ECP 203-2020", summary.designCodeLabel)
+        assertEquals("55.0%", summary.utilizationPercent)
+        assertEquals(0, summary.failedCheckCount)
+    }
 }

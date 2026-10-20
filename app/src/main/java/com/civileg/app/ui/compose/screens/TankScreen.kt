@@ -33,6 +33,7 @@ import com.civileg.app.utils.CalculatorEngine.TankType
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalTankDrawing
+import com.civileg.app.ui.compose.components.drawings.tankDrawingSummary
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.viewmodel.TankViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
@@ -466,6 +467,7 @@ fun TankScreen(
                                 horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
                                 foundationDepth = if (selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0,
                                 viewMode = selectedViewMode,
+                                resultSummary = tankDrawingSummary(res),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -496,6 +498,7 @@ fun TankScreen(
                         horizontalRebarSpacing = res.baseReinforcement.spacing.toDouble(),
                         foundationDepth = if (selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0,
                         viewMode = 0,
+                        resultSummary = tankDrawingSummary(res),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

@@ -81,3 +81,42 @@ fun flatSlabDrawingSummary(result: com.civileg.app.domain.FlatSlabResult): Drawi
         punchingShearRatio = if (result.punchingShearVc > 0.0) result.punchingShearVu / result.punchingShearVc else 0.0,
         deflectionRatio = if (result.allowableDeflection > 0.0) result.deflection / result.allowableDeflection else 0.0
     )
+
+fun stairDrawingSummary(result: CalculatorEngine.StairResult): DrawingResultSummary =
+    DrawingResultSummary(
+        isSafe = result.isSafe,
+        utilizationRatio = result.utilizationRatio,
+        concreteVolume = result.concreteVolume,
+        steelWeight = result.steelWeight,
+        safetyChecks = result.safetyChecks.asDrawingChecks(),
+        designCodeLabel = result.code.version
+    )
+
+fun tankDrawingSummary(result: CalculatorEngine.TankResult): DrawingResultSummary =
+    DrawingResultSummary(
+        isSafe = result.isSafe,
+        utilizationRatio = result.utilizationRatio,
+        concreteVolume = result.concreteVolume,
+        steelWeight = result.steelWeight,
+        safetyChecks = result.safetyChecks.asDrawingChecks(),
+        designCodeLabel = result.code.version
+    )
+
+fun retainingWallDrawingSummary(result: CalculatorEngine.RetainingWallResult): DrawingResultSummary =
+    DrawingResultSummary(
+        isSafe = result.isSafe,
+        utilizationRatio = result.utilizationRatio,
+        concreteVolume = result.concreteVolume,
+        steelWeight = result.steelWeight,
+        safetyChecks = result.safetyChecks.asDrawingChecks(),
+        designCodeLabel = result.code.version
+    )
+
+fun pileDrawingSummary(result: com.civileg.app.domain.PileDesignResult): DrawingResultSummary =
+    DrawingResultSummary(
+        isSafe = result.isSafe,
+        utilizationRatio = result.utilizationRatio,
+        safetyChecks = emptyList(),
+        codeNotes = result.warnings + result.codeNotes,
+        designCodeLabel = ""
+    )

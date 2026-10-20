@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalRetainingWallDrawing
+import com.civileg.app.ui.compose.components.drawings.retainingWallDrawingSummary
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.viewmodel.ProjectViewModel
@@ -420,6 +421,7 @@ fun RetainingWallScreen(
                                 maxBearingPressure = res.maxBearingPressure,
                                 allowableBearingPressure = 200.0,
                                 viewMode = selectedViewMode,
+                                resultSummary = retainingWallDrawingSummary(res),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -467,6 +469,7 @@ fun RetainingWallScreen(
                         maxBearingPressure = res.maxBearingPressure,
                         allowableBearingPressure = 200.0,
                         viewMode = 0,
+                        resultSummary = retainingWallDrawingSummary(res),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
