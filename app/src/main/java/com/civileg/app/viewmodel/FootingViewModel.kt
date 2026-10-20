@@ -55,6 +55,8 @@ class FootingViewModel @Inject constructor(
     // Store actual inputs for save
     private var lastFcu: Double = 25.0
     private var lastFy: Double = 360.0
+    var excavationDepthM: Double = 0.0
+    var workingSpaceM: Double = 0.5
 
     fun calculateFooting(
         type: CalculatorEngine.FootingType,
@@ -207,7 +209,7 @@ class FootingViewModel @Inject constructor(
                     bbsEntries = runCatching {
                         com.civileg.app.utils.BbsGenerator.generateFootingBbs("F1", res)
                     }.getOrDefault(emptyList()),
-                    boqRows = BoqEstimator.footingRows(res, "F1"),
+                    boqRows = BoqEstimator.footingRows(res, "F1", excavationDepthM, workingSpaceM),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.footingSection(
                         title = "FOOTING ${res.type.displayName}",

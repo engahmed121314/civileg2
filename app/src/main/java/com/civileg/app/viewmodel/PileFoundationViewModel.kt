@@ -46,6 +46,9 @@ class PileFoundationViewModel @Inject constructor(
     private val _validationReport = MutableLiveData<String?>()
     val validationReport: LiveData<String?> = _validationReport
 
+    var excavationDepthM: Double = 0.0
+    var workingSpaceM: Double = 0.5
+
     /**
      * Run the full pile foundation design.
      */
@@ -258,7 +261,7 @@ class PileFoundationViewModel @Inject constructor(
                     bbsEntries = runCatching {
                         com.civileg.app.utils.BbsGenerator.generatePileBbs("PG1", res)
                     }.getOrDefault(emptyList()),
-                    boqRows = com.civileg.app.utils.BoqEstimator.pileRows(res, "PG1"),
+                    boqRows = com.civileg.app.utils.BoqEstimator.pileRows(res, "PG1", excavationDepthM, workingSpaceM),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.pileElevation(
                         title = "PILE ${res.pileType}",

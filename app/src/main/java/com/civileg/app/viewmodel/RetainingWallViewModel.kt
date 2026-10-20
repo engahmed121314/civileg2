@@ -53,6 +53,9 @@ class RetainingWallViewModel @Inject constructor(
     var wallLengthM: Double = 1.0
         private set
 
+    var excavationDepthM: Double = 0.0
+    var backfillWidthM: Double = 1.0
+
     fun calculateRetainingWallPro(
         height: Double,
         soilDensity: Double,
@@ -203,7 +206,7 @@ class RetainingWallViewModel @Inject constructor(
                         bbsEntries = runCatching {
                             BbsGenerator.generateRetainingWallBbs("RW1", currentResult, wallLengthM)
                         }.getOrDefault(emptyList()),
-                        boqRows = BoqEstimator.retainingWallRows(currentResult, wallLengthM, "RW1"),
+                        boqRows = BoqEstimator.retainingWallRows(currentResult, wallLengthM, "RW1", excavationDepthM, backfillWidthM),
                         drawingBitmap = drawingBitmap,
                         drawing = com.civileg.app.utils.ElementDxfDrawings.retainingWallSection(
                             title = "RETAINING WALL",
