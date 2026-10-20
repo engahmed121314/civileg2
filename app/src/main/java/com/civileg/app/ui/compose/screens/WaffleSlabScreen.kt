@@ -31,6 +31,7 @@ import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalWaffleSlabDrawing
+import com.civileg.app.ui.compose.components.drawings.waffleSlabDrawingSummary
 import com.civileg.app.viewmodel.WaffleSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
@@ -451,6 +452,7 @@ fun WaffleSlabScreen(
                                     headBottomCount = res.solidHeadDesign?.flexureReinforcement?.bars ?: 4,
                                     cover = clearCover.toDoubleOrNull() ?: 25.0,
                                     viewMode = viewMode,
+                                    resultSummary = waffleSlabDrawingSummary(res),
                                     designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -483,6 +485,7 @@ fun WaffleSlabScreen(
                                     headBottomCount = res.solidHeadDesign?.flexureReinforcement?.bars ?: 4,
                                     cover = clearCover.toDoubleOrNull() ?: 25.0,
                                     viewMode = viewMode,
+                                    resultSummary = waffleSlabDrawingSummary(res),
                                     designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
                                     modifier = Modifier.fillMaxSize()
                                 )

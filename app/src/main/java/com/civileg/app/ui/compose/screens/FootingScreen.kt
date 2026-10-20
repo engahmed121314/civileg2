@@ -491,6 +491,7 @@ fun FootingScreen(
                                     soilPressureMax = res.soilPressure,
                                     soilPressureMin = res.soilPressure,
                                     viewMode = selectedViewMode,
+                                    resultSummary = footingDrawingSummary(res),
                                     designCode = selectedCode,
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -569,6 +570,7 @@ fun FootingScreen(
                             soilPressureMax = res.soilPressure,
                             soilPressureMin = res.soilPressure,
                             viewMode = 0,
+                            resultSummary = footingDrawingSummary(res),
                             designCode = selectedCode,
                             modifier = Modifier.fillMaxWidth()
                         )

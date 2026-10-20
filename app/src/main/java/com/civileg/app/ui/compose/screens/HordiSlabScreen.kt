@@ -33,6 +33,7 @@ import com.civileg.app.domain.entities.SlabDesignResult
 import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalHordiSlabDrawing
+import com.civileg.app.ui.compose.components.drawings.hordiSlabDrawingSummary
 import com.civileg.app.viewmodel.HordiSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
@@ -388,6 +389,7 @@ fun HordiSlabScreen(
                                     stirrupSpacing = 200.0,
                                     cover = cover.toDoubleOrNull() ?: 25.0,
                                     viewMode = viewMode,
+                                    resultSummary = hordiSlabDrawingSummary(res),
                                     designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -415,6 +417,7 @@ fun HordiSlabScreen(
                                     stirrupSpacing = 200.0,
                                     cover = 25.0,
                                     viewMode = viewMode,
+                                    resultSummary = hordiSlabDrawingSummary(res),
                                     designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
                                     modifier = Modifier.fillMaxSize()
                                 )

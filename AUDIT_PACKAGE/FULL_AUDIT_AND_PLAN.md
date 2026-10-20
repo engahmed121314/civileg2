@@ -952,8 +952,10 @@ every drawing accepted the parameter and silently ignored it. New
 block with `STATUS / UTIL / CODE` and `CHECKS / CONC / STEEL`; `drawSheetAnnotations` places the
 strip and a north arrow. `ProfessionalBeamDrawing`, `ProfessionalColumnDrawing`,
 `ProfessionalFootingDrawing`, `ProfessionalSlabDrawing`, `ProfessionalFlatSlabDrawing`,
-`ProfessionalStairDrawing`, `ProfessionalTankDrawing`, `ProfessionalRetainingWallDrawing` and
-`ProfessionalPileDrawing` now call it, and the corresponding screens pass the summary for both the on-screen view and the
+`ProfessionalStairDrawing`, `ProfessionalTankDrawing`, `ProfessionalRetainingWallDrawing`,
+`ProfessionalPileDrawing`, `ProfessionalWaffleSlabDrawing`, `ProfessionalHordiSlabDrawing`,
+`ProfessionalStrapFootingDrawing`, `ProfessionalCombinedFootingDrawing`, `ProfessionalSteelDrawing`,
+`ProfessionalSeismicDrawing` and `ProfessionalWarehouseDrawing` now call it, and the corresponding screens pass the summary for both the on-screen view and the
 invisible PDF capture layer, so screen and PDF show the same data. The previously unused
 `drawNorthArrow` is now reachable from every one of those sheets.
 
@@ -961,6 +963,6 @@ invisible PDF capture layer, so screen and PDF show the same data. The previousl
 percentage, failed-check count, column axial ratio and the stair/retaining mapping.
 Suite: **69 suites / 1263 tests / 0 failures**.
 
-**Remaining for Phase 3.** Apply `drawSheetAnnotations` to the remaining Professional* drawings
-(waffle, hordi, steel, seismic, warehouse, strap/combined footing) and replace the remaining
-approximate geometry where a design value is available.
+**Remaining for Phase 3.** Steel, seismic and warehouse sheets currently receive the north
+arrow only (their result models carry no safety-check list to summarise), and some approximate
+geometry remains where no design value is available.

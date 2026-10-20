@@ -120,3 +120,36 @@ fun pileDrawingSummary(result: com.civileg.app.domain.PileDesignResult): Drawing
         codeNotes = result.warnings + result.codeNotes,
         designCodeLabel = ""
     )
+
+fun strapFootingDrawingSummary(result: CalculatorEngine.StrapFootingResult): DrawingResultSummary =
+    DrawingResultSummary(
+        isSafe = result.isSafe,
+        utilizationRatio = result.utilizationRatio,
+        concreteVolume = result.concreteVolume,
+        steelWeight = result.steelWeight,
+        safetyChecks = result.safetyChecks.asDrawingChecks(),
+        designCodeLabel = result.footing1.code.version
+    )
+
+fun waffleSlabDrawingSummary(
+    result: com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
+): DrawingResultSummary =
+    DrawingResultSummary(
+        isSafe = result.isSafe,
+        utilizationRatio = result.utilizationRatio,
+        concreteVolume = result.concreteVolume,
+        steelWeight = result.steelWeight,
+        safetyChecks = result.safetyChecks.map {
+            GenericSafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed)
+        },
+        codeNotes = result.warnings + result.codeNotes
+    )
+
+fun hordiSlabDrawingSummary(
+    result: com.civileg.app.domain.entities.SlabDesignResult
+): DrawingResultSummary =
+    DrawingResultSummary(
+        isSafe = result.isSafe,
+        utilizationRatio = result.utilizationRatio,
+        codeNotes = result.warnings + result.codeNotes
+    )

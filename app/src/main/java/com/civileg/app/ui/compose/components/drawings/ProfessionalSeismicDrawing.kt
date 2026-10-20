@@ -348,6 +348,12 @@ fun ProfessionalSeismicDrawing(
         } // end results table
 
         // ── Responsive title block ────────────────────────────────
+        drawSheetAnnotations(
+            w - cfg.titleBlockWidth - cfg.margin,
+            h - cfg.titleBlockHeight - cfg.margin,
+            cfg,
+            resultSummary
+        )
         drawResponsiveTitleBlock(
             w - cfg.titleBlockWidth - cfg.margin,
             h - cfg.titleBlockHeight - cfg.margin,

@@ -235,6 +235,12 @@ fun ProfessionalSteelDrawing(
         }
 
         // ── Responsive title block ────────────────────────────────
+        drawSheetAnnotations(
+            cw - cfg.titleBlockWidth - cfg.margin,
+            ch - cfg.titleBlockHeight - cfg.margin,
+            cfg,
+            resultSummary
+        )
         drawResponsiveTitleBlock(
             cw - cfg.titleBlockWidth - cfg.margin,
             ch - cfg.titleBlockHeight - cfg.margin,

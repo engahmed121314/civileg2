@@ -382,6 +382,13 @@ fun ProfessionalHordiSlabDrawing(
         } // end reinforcement table
 
         // ── Responsive Title Block ───────────────────────────────
+        drawSheetAnnotations(
+            x = w - cfg.titleBlockWidth - margin * 0.3f,
+            y = h - cfg.titleBlockHeight - margin * 0.3f,
+            cfg = cfg,
+
+            summary = resultSummary
+        )
         drawResponsiveTitleBlock(
             x = w - cfg.titleBlockWidth - margin * 0.3f,
             y = h - cfg.titleBlockHeight - margin * 0.3f,

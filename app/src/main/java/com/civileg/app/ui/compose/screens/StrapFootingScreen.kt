@@ -33,6 +33,7 @@ import com.civileg.app.R
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStrapFootingDrawing
+import com.civileg.app.ui.compose.components.drawings.strapFootingDrawingSummary
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.viewmodel.StrapFootingViewModel
@@ -248,6 +249,7 @@ fun StrapFootingScreen(
                                 strapCount = res.strapBottomReinforcement.numBars,
                                 cover = cover.toDoubleOrNull() ?: 75.0,
                                 viewMode = selectedViewMode,
+                                resultSummary = strapFootingDrawingSummary(res),
                                 designCode = selectedCode,
                                 modifier = Modifier.fillMaxWidth().height(400.dp)
                             )
@@ -283,6 +285,7 @@ fun StrapFootingScreen(
                                 strapCount = res.strapBottomReinforcement.numBars,
                                 cover = 75.0,
                                 viewMode = selectedViewMode,
+                                resultSummary = strapFootingDrawingSummary(res),
                                 designCode = selectedCode,
                                 modifier = Modifier.fillMaxWidth().height(400.dp)
                             )

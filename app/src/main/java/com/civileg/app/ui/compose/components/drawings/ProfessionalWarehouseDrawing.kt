@@ -59,6 +59,12 @@ fun ProfessionalWarehouseDrawing(
         }
 
         // ── Responsive title block ────────────────────────────────
+        drawSheetAnnotations(
+            w - cfg.titleBlockWidth - cfg.margin,
+            h - cfg.titleBlockHeight - cfg.margin,
+            cfg,
+            resultSummary
+        )
         drawResponsiveTitleBlock(
             w - cfg.titleBlockWidth - cfg.margin,
             h - cfg.titleBlockHeight - cfg.margin,
