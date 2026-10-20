@@ -885,3 +885,29 @@ beam/column step+note surfacing. Suite: **68 suites / 1250 tests / 0 failures**.
 
 **Remaining for Phase 1.** Step trace is present for beam/column/strap only; Phase 2 extends
 `CalculationStep` (with diagram data) to the remaining elements and renders the cards.
+
+### 9.22 Technical-office detail expansion, Phase 2 (calculation trace + shared UI)
+
+A reusable trace model is now surfaced by the facade and rendered by one shared composable.
+
+**Model.** `CalculationStep` (from `domain.entities`) is now carried by the facade results
+`SlabResult`, `FootingResult`, `StrapFootingResult`, `StairResult`, `TankResult`,
+`RetainingWallResult` in addition to the earlier beam/column results.
+
+**Populated.** `designSlab` (solid path) emits six steps: factored load, design moment
+(one-way vs two-way coefficient method), minimum thickness/deflection, main flexure steel,
+secondary steel, shear check. `calculateFooting` (isolated path) emits: required area, plan
+dimensions, soil-bearing check, punching check (u1 at d/2), flexural steel. The strap-footing
+facade forwards the engine's step log (mapped to `CalculationStep` with the code reference).
+
+**UI.** New `ui/compose/components/common/CalculationStepsCard.kt` renders any step list with
+number, title, formula, substituted values, result + unit, code clause and pass/fail/warning
+colour. Wired into `SlabScreen`, `FootingScreen` and `StrapFootingScreen` under the result
+card.
+
+**Tests.** `EngineeringDetailExpansionTest` adds slab, isolated-footing and strap-facade step
+assertions. Suite: **68 suites / 1253 tests / 0 failures**.
+
+**Remaining for Phase 2.** Flat slab, retaining wall, staircase, tank, shear wall and pile still
+need engine-level step construction (models already accept the field), plus reinforcement bar
+schedules (BBS) on-screen — the BBS writer already exists and is extended in Phase 5.

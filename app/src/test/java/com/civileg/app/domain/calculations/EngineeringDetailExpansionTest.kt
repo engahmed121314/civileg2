@@ -179,4 +179,38 @@ class EngineeringDetailExpansionTest {
         assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
         assertTrue("eccentricity step must exist", r.calculationSteps.any { it.title == "Eccentricity" })
     }
+
+    @Test
+    fun `slab result exposes calculation steps`() {
+        val r = engine.designSlab(
+            lx = 4.0, ly = 5.0, deadLoad = 5.0, liveLoad = 3.0, fcu = 30.0, fy = 420.0,
+            ts = 160.0, preferredDiameter = 12, code = DesignCode.ECP
+        )
+        assertEquals("six traceable design steps expected", 6, r.calculationSteps.size)
+        assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
+        assertTrue("flexural steel step must exist", r.calculationSteps.any { it.title == "Main Flexural Steel" })
+    }
+
+    @Test
+    fun `footing result exposes calculation steps`() {
+        val r = engine.calculateFooting(
+            type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
+            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
+        )
+        assertEquals("five traceable design steps expected", 5, r.calculationSteps.size)
+        assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
+        assertTrue("punching check step must exist", r.calculationSteps.any { it.title == "Punching Shear" })
+    }
+
+    @Test
+    fun `strap footing facade forwards calculation steps`() {
+        val r = engine.calculateStrapFooting(
+            col1Load = 500.0, col2Load = 300.0, distance = 4000.0,
+            col1W = 300.0, col1D = 500.0, col2W = 300.0, col2D = 500.0,
+            soil = 150.0, fcu = 25.0, fy = 360.0, code = DesignCode.ECP,
+            preferredDiameter = 16, strapWidth = 400.0
+        )
+        assertTrue("strap steps must be forwarded to the facade result", r.calculationSteps.isNotEmpty())
+        assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
+    }
 }

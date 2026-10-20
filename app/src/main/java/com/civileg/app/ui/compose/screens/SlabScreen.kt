@@ -31,6 +31,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
 import com.civileg.app.ui.compose.components.drawings.ProfessionalWaffleSlabDrawing
@@ -408,6 +409,10 @@ fun SlabScreen(
                 item { SectionHeader(stringResource(R.string.slab_results), R.drawable.ic_calculator) }
                 
                 item { SlabResultCard(res) }
+
+                if (res.calculationSteps.isNotEmpty()) {
+                    item { CalculationStepsCard(res.calculationSteps, title = "Slab Calculation Steps") }
+                }
 
                 if (res.safetyChecks.isNotEmpty()) {
                     item {

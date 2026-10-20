@@ -30,6 +30,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.viewmodel.FootingViewModel
+import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFootingDrawing
 import com.civileg.app.ui.compose.components.drawings.ProfessionalCombinedFootingDrawing
@@ -331,6 +332,10 @@ fun FootingScreen(
                             }
                         }
                     }
+                }
+
+                if (res.calculationSteps.isNotEmpty()) {
+                    item { CalculationStepsCard(res.calculationSteps, title = "Footing Calculation Steps") }
                 }
 
                 if (res.safetyChecks.isNotEmpty()) {

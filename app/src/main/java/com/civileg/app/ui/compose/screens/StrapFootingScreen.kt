@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStrapFootingDrawing
 import com.civileg.app.utils.CalculatorEngine
@@ -291,6 +292,10 @@ fun StrapFootingScreen(
                 
                 item {
                     StrapFootingResultCard(res)
+                }
+
+                if (res.calculationSteps.isNotEmpty()) {
+                    item { CalculationStepsCard(res.calculationSteps, title = "Strap Footing Calculation Steps") }
                 }
                 
                 item {

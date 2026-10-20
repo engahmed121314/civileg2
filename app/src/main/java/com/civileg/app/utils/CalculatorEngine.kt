@@ -223,7 +223,8 @@ class CalculatorEngine @Inject constructor(
         val distanceBetweenColumns: Double = 0.0,
         val reinforcementTopX: Int = 0,
         val topBarDiameter: Int = 16,
-        val reinforcementTopY: Int = 0
+        val reinforcementTopY: Int = 0,
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
     ) : Parcelable
 
     @Parcelize
@@ -239,7 +240,8 @@ class CalculatorEngine @Inject constructor(
         val concreteVolume: Double,
         val steelWeight: Double,
         val utilizationRatio: Double,
-        val safetyChecks: List<DesignSafetyCheck> = emptyList()
+        val safetyChecks: List<DesignSafetyCheck> = emptyList(),
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
     ) : Parcelable
 
     @Parcelize
@@ -262,7 +264,8 @@ class CalculatorEngine @Inject constructor(
         val middleStripSteelY: String = "",
         val dropPanelWidth: Double = 0.0,
         val dropPanelThick: Double = 0.0,
-        val punchingStressAtDrop: Double = 0.0
+        val punchingStressAtDrop: Double = 0.0,
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
     ) : Parcelable
 
     @Parcelize
@@ -280,7 +283,8 @@ class CalculatorEngine @Inject constructor(
         val tread: Double = 0.0,
         val fcu: Double = 25.0,
         val fy: Double = 400.0,
-        val suggestions: List<String> = emptyList()
+        val suggestions: List<String> = emptyList(),
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
     ) : Parcelable
 
     @Parcelize
@@ -296,7 +300,8 @@ class CalculatorEngine @Inject constructor(
         val utilizationRatio: Double = 0.0,
         val fcu: Double = 25.0,
         val fy: Double = 400.0,
-        val suggestions: List<String> = emptyList()
+        val suggestions: List<String> = emptyList(),
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
     ) : Parcelable {
         val wallThick: Double get() = wallThickness
         val baseThick: Double get() = baseThickness
@@ -324,7 +329,8 @@ class CalculatorEngine @Inject constructor(
         val maxBearingPressure: Double = 0.0,
         val minBearingPressure: Double = 0.0,
         val bearingFS: Double = 0.0,
-        val suggestions: List<String> = emptyList()
+        val suggestions: List<String> = emptyList(),
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
     ) : Parcelable
 
     // SteelMemberResult moved to SteelEntities.kt
@@ -1314,6 +1320,56 @@ class CalculatorEngine @Inject constructor(
             val shearSafe = vu <= mainRes.shearCapacity
             val thicknessSafe = ts >= mainRes.minThickness
 
+            val ref = codeNoteRef(domainCode)
+            val steps = listOf(
+                CalculationStep(
+                    stepNumber = 1, title = "Factored Load",
+                    formula = if (domainCode == DesignCode.ECP) "wu = 1.4DL + 1.6LL" else "wu = 1.2DL + 1.6LL",
+                    formulaWithValues = "wu = ${"%.2f".format(wu)} kN/m²",
+                    result = "wu = ${"%.2f".format(wu)} kN/m²", unit = "kN/m²",
+                    codeReference = ref
+                ),
+                CalculationStep(
+                    stepNumber = 2, title = "Design Moment",
+                    formula = if (isTwoWay) "M = α·wu·L² (coefficient method)" else "M = wu·L²/8",
+                    formulaWithValues = "Mx = ${"%.2f".format(muX)} kN·m/m, My = ${"%.2f".format(muY)} kN·m/m",
+                    result = "Mx = ${"%.2f".format(muX)} kN·m/m", unit = "kN·m/m",
+                    codeReference = ref
+                ),
+                CalculationStep(
+                    stepNumber = 3, title = "Minimum Thickness",
+                    formula = "ts ≥ hmin (code deflection limit)",
+                    formulaWithValues = "ts = ${"%.0f".format(ts)} mm vs hmin = ${"%.0f".format(mainRes.minThickness)} mm",
+                    result = if (thicknessSafe) "OK" else "Thickness insufficient", unit = "mm",
+                    codeReference = ref, isPass = thicknessSafe,
+                    status = if (thicknessSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                ),
+                CalculationStep(
+                    stepNumber = 4, title = "Main Flexural Steel",
+                    formula = "As = M / (0.87fy·j·d)",
+                    formulaWithValues = "As,req = ${"%.0f".format(mainRequired)} mm²/m → ${preferredDiameter}@${"%.0f".format(mainSpacing)} mm",
+                    result = "As,prov = ${"%.0f".format(mainProvided)} mm²/m", unit = "mm²/m",
+                    codeReference = ref, isPass = flexureSafe,
+                    status = if (flexureSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                ),
+                CalculationStep(
+                    stepNumber = 5, title = "Secondary Steel",
+                    formula = "As,sec = ρmin·b·h (or long-direction design)",
+                    formulaWithValues = "As,req = ${"%.0f".format(secondaryRequired)} mm²/m → ${preferredDiameter}@${"%.0f".format(secondarySpacing)} mm",
+                    result = "As,prov = ${"%.0f".format(secondaryProvided)} mm²/m", unit = "mm²/m",
+                    codeReference = ref, isPass = secondarySafe,
+                    status = if (secondarySafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                ),
+                CalculationStep(
+                    stepNumber = 6, title = "Shear Check",
+                    formula = "vu = wu·L/2 ≤ vc",
+                    formulaWithValues = "vu = ${"%.2f".format(vu)} kN/m vs vc = ${"%.2f".format(mainRes.shearCapacity)} kN/m",
+                    result = if (shearSafe) "OK" else "Shear reinforcement required", unit = "kN/m",
+                    codeReference = ref, isPass = shearSafe,
+                    status = if (shearSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                )
+            )
+
             return SlabResult(
                 type = type,
                 thickness = ts,
@@ -1337,7 +1393,8 @@ class CalculatorEngine @Inject constructor(
                     DesignSafetyCheck("Shear", vu, mainRes.shearCapacity, "kN/m", shearSafe),
                     DesignSafetyCheck("Min Thickness", ts, mainRes.minThickness, "mm", thicknessSafe)
                 ),
-                suggestions = mainRes.warnings + mainRes.codeNotes
+                suggestions = mainRes.warnings + mainRes.codeNotes,
+                calculationSteps = steps
             )
         } catch (e: Exception) {
             // ADR-010: لا تُرجع isSafe=true عند الفشل — loud failure, no silent safe
@@ -1442,6 +1499,48 @@ class CalculatorEngine @Inject constructor(
             DesignSafetyCheck("Flexure Steel", res.reinforcement.astProvided, res.reinforcement.astRequired, "mm²", res.reinforcement.isSafe)
         )
 
+        val ref = codeNoteRef(domainCode)
+        val steps = listOf(
+            CalculationStep(
+                stepNumber = 1, title = "Required Area",
+                formula = "A = P / q_allow",
+                formulaWithValues = "A = ${"%.0f".format(p)} / ${"%.0f".format(soil)} = ${"%.2f".format(p / soil)} m²",
+                result = "A = ${"%.2f".format(p / soil)} m²", unit = "m²",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 2, title = "Footing Dimensions",
+                formula = "B × L ≥ A (proportioned to column)",
+                formulaWithValues = "B × L = ${"%.2f".format(res.requiredWidth / 1000.0)} × ${"%.2f".format(res.requiredLength / 1000.0)} m",
+                result = "${"%.0f".format(res.requiredWidth)} × ${"%.0f".format(res.requiredLength)} mm", unit = "mm",
+                codeReference = ref
+            ),
+            CalculationStep(
+                stepNumber = 3, title = "Soil Bearing Check",
+                formula = "q = P/A ≤ q_allow",
+                formulaWithValues = "q = ${"%.1f".format(res.soilPressure)} kPa vs ${"%.1f".format(soil)} kPa",
+                result = if (res.soilPressure <= soil) "OK" else "Exceeds allowable", unit = "kPa",
+                codeReference = ref, isPass = res.soilPressure <= soil,
+                status = if (res.soilPressure <= soil) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 4, title = "Punching Shear",
+                formula = "Vp ≤ Vc (u1 at d/2)",
+                formulaWithValues = "Vp = ${"%.1f".format(res.punchingShearCheck.appliedShear)} kN vs Vc = ${"%.1f".format(res.punchingShearCheck.shearCapacity)} kN",
+                result = if (res.punchingShearCheck.isSafe) "OK" else "Increase thickness", unit = "kN",
+                codeReference = ref, isPass = res.punchingShearCheck.isSafe,
+                status = if (res.punchingShearCheck.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 5, title = "Flexural Steel",
+                formula = "As = M / (0.87fy·j·d)",
+                formulaWithValues = "As,req = ${"%.0f".format(res.reinforcement.astRequired)} mm² → As,prov = ${"%.0f".format(res.reinforcement.astProvided)} mm²",
+                result = "${numBarsX}Ø${barDia} @ ${"%.0f".format(spacing)} mm", unit = "mm²",
+                codeReference = ref, isPass = res.reinforcement.isSafe,
+                status = if (res.reinforcement.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            )
+        )
+
         return FootingResult(
             type = type, width = res.requiredWidth, length = res.requiredLength, thickness = res.requiredThickness,
             soilPressure = res.soilPressure, allowablePressure = soil,
@@ -1453,7 +1552,8 @@ class CalculatorEngine @Inject constructor(
             barsX = numBarsX, barsY = numBarsY, barDiameter = barDia,
             utilizationRatio = (res.soilPressure / soil).coerceIn(0.1, 1.5),
             safetyChecks = safetyChecks,
-            column1Size = Pair(colB, colT)
+            column1Size = Pair(colB, colT),
+            calculationSteps = steps
         )
     }
 
@@ -1578,8 +1678,21 @@ class CalculatorEngine @Inject constructor(
             concreteVolume = totalConcreteVol,
             steelWeight = totalSteelW,
             utilizationRatio = utilization,
-            safetyChecks = safetyChecks
+            safetyChecks = safetyChecks,
+            calculationSteps = res.calculationSteps.mapIndexed { i, line ->
+                CalculationStep(
+                    stepNumber = i + 1, title = "Strap Design ${i + 1}",
+                    formula = "", formulaWithValues = line, result = line,
+                    codeReference = codeNoteRef(code)
+                )
+            }
         )
+    }
+
+    private fun codeNoteRef(code: DesignCode): String = when (code) {
+        DesignCode.ECP -> "ECP 203-2020"
+        DesignCode.ACI -> "ACI 318-19"
+        DesignCode.SBC -> "SBC 304-2018"
     }
 
     private fun barAreaMm2(diameter: Double): Double = Math.PI / 4.0 * diameter * diameter
