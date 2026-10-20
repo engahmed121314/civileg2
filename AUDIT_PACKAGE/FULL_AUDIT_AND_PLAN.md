@@ -997,3 +997,34 @@ attach it, so the PDF schedule is the same one shown on screen.
 
 **Remaining for Phase 4.** Wire BBS into the remaining viewmodels (slab, stair, tank, retaining
 wall, flat slab) and feed real BOQ rows from the BOQ use case.
+
+### 9.25 Technical-office detail expansion, Phase 5 (slab/stair/tank BBS + DXF parity)
+
+**BBS coverage.** `BbsGenerator` now produces schedules for slabs (`generateSlabBbs`), stairs
+(`generateStairBbs`) and tanks (`generateTankBbs`). Slab bars are measured along the short span
+and distributed across the long span (secondary direction swapped), with 25 mm cover and 9d
+hooks. Stair main bars follow the inclined flight (horizontal run from `result.span`, rise from
+`risers x result.riser`) and distribution bars run across the flight width; the width is passed
+from the screen/viewmodel input. Tank walls are counted per face around the perimeter with 40d
+base anchorage and both base directions are scheduled (40 mm cover).
+
+**Wiring.** `SlabViewModel`, `StairViewModel` and `TankViewModel` attach the new schedules to
+`exportReportAndDxf`, and the slab/stair/tank screens render the same rows with `BbsTableCard`
+directly after the calculation-steps card. The generator is called inside `runCatching`, so a
+missing/invalid input never blocks the screen.
+
+**BOQ rows.** `ExportManager.exportReportAndDxf` accepts `boqRows` and forwards them to the
+reporter's `7. Bill of Quantities` section. Beam, column, footing, slab, stair, tank and
+retaining-wall viewmodels now emit concrete (m3) and reinforcement steel (kg) rows from their
+result models.
+
+**DXF parity.** `DxfExporter.exportDxf`/`writeSibling` accept the same `BbsEntry` list and append
+a `BAR BENDING SCHEDULE` table (header row, one row per bar mark, total steel) on the `BBS` layer
+below the detail drawing, so the PDF and its DXF companion carry identical schedules.
+
+**Tests.** Suite now at **69 suites / 1268 tests / 0 failures**. New coverage: slab/stair/tank
+BBS generation plus a DXF export test asserting the appended schedule table.
+
+**Remaining.** Retaining-wall and flat-slab BBS generators; real BOQ quantities beyond
+concrete/steel (formwork, excavation); DXF result-summary strip for the steel/seismic/warehouse
+drawings that currently only carry the north arrow.

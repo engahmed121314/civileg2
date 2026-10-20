@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.R
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -205,6 +206,10 @@ class FootingViewModel @Inject constructor(
                     bbsEntries = runCatching {
                         com.civileg.app.utils.BbsGenerator.generateFootingBbs("F1", res)
                     }.getOrDefault(emptyList()),
+                    boqRows = listOf(
+                        ProfessionalEnglishPdfReporter.BoqRow("1", "Concrete", "m3", res.concreteVolume),
+                        ProfessionalEnglishPdfReporter.BoqRow("2", "Reinforcement steel", "kg", res.steelWeight)
+                    ),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.footingSection(
                         title = "FOOTING ${res.type.displayName}",

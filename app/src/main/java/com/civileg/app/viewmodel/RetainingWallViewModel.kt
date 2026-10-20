@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -189,6 +190,10 @@ class RetainingWallViewModel @Inject constructor(
                         safetyChecks = safetyChecks,
                         isSafe = currentResult.isSafe,
                         calculationSteps = currentResult.calculationSteps,
+                        boqRows = listOf(
+                            ProfessionalEnglishPdfReporter.BoqRow("1", "Concrete", "m3", currentResult.concreteVolume),
+                            ProfessionalEnglishPdfReporter.BoqRow("2", "Reinforcement steel", "kg", currentResult.steelWeight)
+                        ),
                         drawingBitmap = drawingBitmap,
                         drawing = com.civileg.app.utils.ElementDxfDrawings.retainingWallSection(
                             title = "RETAINING WALL",

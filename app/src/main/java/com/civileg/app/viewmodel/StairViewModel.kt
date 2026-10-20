@@ -7,8 +7,10 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
+import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.utils.CalculationValidator
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.utils.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -196,6 +198,13 @@ class StairViewModel @Inject constructor(
                         safetyChecks = safetyChecks,
                         isSafe = currentResult.isSafe,
                         calculationSteps = currentResult.calculationSteps,
+                        bbsEntries = runCatching {
+                            BbsGenerator.generateStairBbs("ST1", currentResult, lastStairWidthMm)
+                        }.getOrDefault(emptyList()),
+                        boqRows = listOf(
+                            ProfessionalEnglishPdfReporter.BoqRow("1", "Concrete", "m3", currentResult.concreteVolume),
+                            ProfessionalEnglishPdfReporter.BoqRow("2", "Reinforcement steel", "kg", currentResult.steelWeight)
+                        ),
                         drawingBitmap = drawingBitmap,
                         drawing = com.civileg.app.utils.ElementDxfDrawings.stairSection(
                             title = "STAIR ${currentResult.type.displayName}",

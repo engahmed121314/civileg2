@@ -243,6 +243,7 @@ class ExportManager(private val context: Context) {
         drawing: DxfDrawable? = null,
         calculationSteps: List<DomainCalculationStep> = emptyList(),
         bbsEntries: List<BbsEntry> = emptyList(),
+        boqRows: List<ProfessionalEnglishPdfReporter.BoqRow> = emptyList(),
         outputPath: String,
         openPdfOnComplete: Boolean = false
     ): ExportBundle {
@@ -258,6 +259,7 @@ class ExportManager(private val context: Context) {
                 isSafe = isSafe,
                 drawingBitmap = drawingBitmap,
                 outputPath = outputPath,
+                boqRows = boqRows,
                 bbsRows = bbsEntries.map { entry ->
                     ProfessionalEnglishPdfReporter.BbsRow(
                         memberMark = entry.memberMark,
@@ -287,7 +289,7 @@ class ExportManager(private val context: Context) {
         }
 
         val dxfFile = if (pdfFile != null && drawing != null) {
-            DxfExporter.writeSibling(pdfFile, drawing)
+            DxfExporter.writeSibling(pdfFile, drawing, bbsEntries)
         } else null
 
         if (openPdfOnComplete && pdfFile != null) {

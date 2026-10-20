@@ -319,4 +319,96 @@ class BbsGeneratorTest {
         val combined = BbsGenerator.combineProjectBbs(emptyList())
         assertTrue("Empty input should produce empty output", combined.isEmpty())
     }
+
+    // ==================== Slab / Stair / Tank BBS ====================
+
+    private fun validSlabResult(): SlabResult = SlabResult(
+        thickness = 200.0,
+        reinforcementMain = ReinforcementBar(diameter = 12, spacing = 150.0, numBars = 0),
+        reinforcementSecondary = ReinforcementBar(diameter = 10, spacing = 200.0, numBars = 0)
+    )
+
+    @Test
+    fun `slab bbs produces main and secondary schedules`() {
+        val entries = BbsGenerator.generateSlabBbs(
+            mark = "S1",
+            result = validSlabResult(),
+            lxMm = 4000.0,
+            lyMm = 5000.0
+        )
+
+        assertEquals(2, entries.size)
+        val main = entries.first { it.barMark == "01" }
+        val secondary = entries.first { it.barMark == "02" }
+        assertEquals(12, main.diameter)
+        // (5000 - 2*25) / 150 + 1
+        assertEquals(34, main.count)
+        assertEquals(10, secondary.diameter)
+        // floor((4000 - 2*25) / 200) + 1
+        assertEquals(20, secondary.count)
+        assertTrue(main.totalWeightKg > 0.0)
+        assertTrue(secondary.totalWeightKg > 0.0)
+    }
+
+    @Test
+    fun `slab bbs rejects panels smaller than cover`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            BbsGenerator.generateSlabBbs("S1", validSlabResult(), lxMm = 40.0, lyMm = 40.0)
+        }
+    }
+
+    @Test
+    fun `stair bbs follows the inclined flight`() {
+        val result = StairResult(
+            type = StairType.SINGLE_FLIGHT,
+            thickness = 150.0,
+            reinforcement = ReinforcementBar(diameter = 12, spacing = 150.0, numBars = 0),
+            distributionReinforcement = ReinforcementBar(diameter = 10, spacing = 200.0, numBars = 0),
+            isSafe = true,
+            concreteVolume = 0.5,
+            steelWeight = 25.0,
+            cost = 0.0,
+            code = DesignCode.ECP,
+            span = 3.0,
+            tread = 300.0,
+            riser = 175.0
+        )
+
+        val entries = BbsGenerator.generateStairBbs("ST1", result, stairWidthMm = 1200.0)
+
+        assertEquals(2, entries.size)
+        val main = entries.first { it.barMark == "01" }
+        // run 3000, 10 risers -> rise 1750, incline ~3473 mm plus tails/hooks
+        assertTrue(main.totalLengthPerBar > 3470.0)
+        assertEquals(8, main.count) // floor((1200 - 50) / 150) + 1
+        assertTrue(entries.all { it.totalWeightKg > 0.0 })
+    }
+
+    @Test
+    fun `tank bbs counts wall faces and both base directions`() {
+        val result = TankResult(
+            type = TankType.UNDERGROUND,
+            length = 4.0,
+            width = 3.0,
+            height = 2.5,
+            wallThickness = 0.25,
+            baseThickness = 0.30,
+            wallReinforcement = ReinforcementBar(diameter = 12, spacing = 200.0, numBars = 0),
+            baseReinforcement = ReinforcementBar(diameter = 12, spacing = 200.0, numBars = 0),
+            isSafe = true,
+            concreteVolume = 12.0,
+            steelWeight = 600.0,
+            cost = 0.0,
+            code = DesignCode.ECP
+        )
+
+        val entries = BbsGenerator.generateTankBbs("T1", result)
+
+        assertEquals(3, entries.size)
+        val wall = entries.first { it.barMark == "01" }
+        // perimeter 14000 / 200 + 1 = 71 per face, two faces
+        assertEquals(142, wall.count)
+        assertEquals((2500.0 + 40 * 12).toInt(), wall.totalLengthPerBar.toInt())
+        assertTrue(entries.drop(1).all { it.count > 0 && it.totalWeightKg > 0.0 })
+    }
 }

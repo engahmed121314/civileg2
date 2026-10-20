@@ -23,9 +23,13 @@ class DxfExporter {
          * Write a DXF companion (`<pdfName>.dxf`) next to [pdfFile].
          * Best-effort: returns the DXF file, or null if writing failed.
          */
-        fun writeSibling(pdfFile: File, drawing: DxfDrawable): File? = try {
+        fun writeSibling(
+            pdfFile: File,
+            drawing: DxfDrawable,
+            bbsEntries: List<BbsEntry> = emptyList()
+        ): File? = try {
             val dxf = File(pdfFile.parentFile, pdfFile.nameWithoutExtension + ".dxf")
-            DxfExporter().exportDxf(drawing, dxf.absolutePath)
+            DxfExporter().exportDxf(drawing, dxf.absolutePath, bbsEntries)
         } catch (e: Exception) {
             Log.e(TAG, "DXF companion export failed: ${e.message}", e)
             null
@@ -42,7 +46,11 @@ class DxfExporter {
      * @param outputPath Output file path (must end with .dxf)
      * @return File if successful, null otherwise
      */
-    fun exportDxf(drawing: DxfDrawable, outputPath: String): File? {
+    fun exportDxf(
+        drawing: DxfDrawable,
+        outputPath: String,
+        bbsEntries: List<BbsEntry> = emptyList()
+    ): File? {
         // Reset the shared entity buffer. The entity primitives (addLine*, addCircle,
         // addPolyline, ...) append to the field `sb`; shadowing it here would drop every
         // entity and emit an empty ENTITIES section.
@@ -57,6 +65,7 @@ class DxfExporter {
         // Entities
         sb.append("0\nSECTION\n2\nENTITIES\n")
         drawing.exportToDxf(this)
+        appendBbsTable(bbsEntries)
         sb.append("0\nENDSEC\n")
 
         // End of file
@@ -93,6 +102,45 @@ class DxfExporter {
     // ───────────────────────────────────────────────────────────────────────────
     // HEADER
     // ───────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Append a Bar Bending Schedule table below the element drawing on layer `BBS`.
+     * Keeps the DXF companion in sync with the PDF schedule.
+     */
+    fun appendBbsTable(entries: List<BbsEntry>) {
+        if (entries.isEmpty()) return
+        val x = 0.0
+        val rowHeight = 300.0
+        var y = -2500.0
+        val colX = doubleArrayOf(0.0, 1200.0, 1900.0, 2600.0, 3300.0, 4900.0, 6300.0)
+
+        addText(x, y, "BAR BENDING SCHEDULE", 220.0, "BBS")
+        y -= rowHeight
+        val headers = listOf("Member", "Bar", "Dia (mm)", "Shape", "Qty", "Length/bar (mm)", "Total (kg)")
+        headers.forEachIndexed { i, h -> addText(x + colX[i], y, h, 160.0, "BBS") }
+        y -= rowHeight
+
+        for (entry in entries) {
+            val cells = listOf(
+                entry.memberMark,
+                entry.barMark,
+                entry.diameter.toString(),
+                entry.shapeCode.toString(),
+                entry.count.toString(),
+                String.format(java.util.Locale.US, "%.0f", entry.totalLengthPerBar),
+                String.format(java.util.Locale.US, "%.2f", entry.totalWeightKg)
+            )
+            cells.forEachIndexed { i, cell -> addText(x + colX[i], y, cell, 150.0, "BBS") }
+            y -= rowHeight
+        }
+
+        val total = entries.sumOf { it.totalWeightKg }
+        addText(
+            x + colX[5], y - rowHeight * 0.4,
+            String.format(java.util.Locale.US, "TOTAL STEEL: %.2f kg", total),
+            180.0, "BBS"
+        )
+    }
 
     private fun writeHeader(sb: StringBuilder) {
         sb.append("0\nSECTION\n2\nHEADER\n")

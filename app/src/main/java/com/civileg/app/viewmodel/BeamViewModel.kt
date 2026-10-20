@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.utils.PdfDrawingGenerator
 import com.civileg.app.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -253,6 +254,10 @@ class BeamViewModel @Inject constructor(
                     bbsEntries = runCatching {
                         com.civileg.app.utils.BbsGenerator.generateBeamBbs("B1", res, res.span * 1000.0)
                     }.getOrDefault(emptyList()),
+                    boqRows = listOf(
+                        ProfessionalEnglishPdfReporter.BoqRow("1", "Concrete", "m3", res.concreteVolume),
+                        ProfessionalEnglishPdfReporter.BoqRow("2", "Reinforcement steel", "kg", res.steelWeight)
+                    ),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.beamSection(
                         title = "BEAM ${lastSupportType.displayName}",

@@ -28,8 +28,10 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
+import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.TankType
+import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalTankDrawing
@@ -354,6 +356,13 @@ fun TankScreen(
 
                 if (res.calculationSteps.isNotEmpty()) {
                     item { CalculationStepsCard(res.calculationSteps, title = "Tank Calculation Steps") }
+
+                    val bbsEntries = runCatching {
+                        BbsGenerator.generateTankBbs("T1", res)
+                    }.getOrDefault(emptyList())
+                    if (bbsEntries.isNotEmpty()) {
+                        item { BbsTableCard(bbsEntries, title = "Tank Bar Bending Schedule") }
+                    }
                 }
 
                 if (res.safetyChecks.isNotEmpty()) {

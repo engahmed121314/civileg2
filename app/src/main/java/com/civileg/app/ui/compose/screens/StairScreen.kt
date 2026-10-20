@@ -35,10 +35,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
+import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.StairType
 import com.civileg.app.viewmodel.StairViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStairDrawing
 import com.civileg.app.ui.compose.components.drawings.stairDrawingSummary
@@ -320,6 +322,17 @@ fun StairScreen(
 
                 if (res.calculationSteps.isNotEmpty()) {
                     item { CalculationStepsCard(res.calculationSteps, title = "Stair Calculation Steps") }
+
+                    val bbsEntries = runCatching {
+                        BbsGenerator.generateStairBbs(
+                            mark = "ST1",
+                            result = res,
+                            stairWidthMm = stairWidth.toDoubleOrNull() ?: 1200.0
+                        )
+                    }.getOrDefault(emptyList())
+                    if (bbsEntries.isNotEmpty()) {
+                        item { BbsTableCard(bbsEntries, title = "Stair Bar Bending Schedule") }
+                    }
                 }
 
                 if (res.safetyChecks.isNotEmpty()) {

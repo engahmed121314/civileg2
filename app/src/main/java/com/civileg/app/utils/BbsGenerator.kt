@@ -183,6 +183,191 @@ object BbsGenerator {
     }
 
     /**
+     * Generates a Bar Bending Schedule for a designed slab panel.
+     *
+     * Main bars run along the short span [lxMm] and are distributed across [lyMm];
+     * secondary bars run along the long span. Both use 9d hooks at each end.
+     */
+    fun generateSlabBbs(
+        mark: String,
+        result: SlabResult,
+        lxMm: Double,
+        lyMm: Double,
+        coverMm: Double = 25.0
+    ): List<BbsEntry> {
+        InputGuard.notBlank("memberMark", mark)
+        InputGuard.positive("panelLength", lxMm)
+        InputGuard.positive("panelWidth", lyMm)
+        InputGuard.inRange("cover", coverMm, 10.0, 75.0)
+        InputGuard.positive("mainDiameter", result.reinforcementMain.diameter)
+        InputGuard.positive("mainSpacing", result.reinforcementMain.spacing)
+        InputGuard.positive("secondaryDiameter", result.reinforcementSecondary.diameter)
+        InputGuard.positive("secondarySpacing", result.reinforcementSecondary.spacing)
+        InputGuard.require(lxMm > 2 * coverMm && lyMm > 2 * coverMm, "Slab panel must be larger than twice the cover")
+
+        val entries = mutableListOf<BbsEntry>()
+
+        val mainDia = result.reinforcementMain.diameter
+        val mainSpacing = result.reinforcementMain.spacing
+        val mainCount = (((lyMm - 2 * coverMm) / mainSpacing).toInt() + 1).coerceAtLeast(1)
+        val mainLength = (lxMm - 2 * coverMm) + 2 * 9 * mainDia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "01",
+                diameter = mainDia, shapeCode = 0, count = mainCount,
+                lengthA = lxMm - 2 * coverMm,
+                totalLengthPerBar = mainLength,
+                totalWeightKg = mainCount * mainLength / 1000.0 * (mainDia.toDouble().pow(2) / 162.0)
+            )
+        )
+
+        val secDia = result.reinforcementSecondary.diameter
+        val secSpacing = result.reinforcementSecondary.spacing
+        val secCount = (((lxMm - 2 * coverMm) / secSpacing).toInt() + 1).coerceAtLeast(1)
+        val secLength = (lyMm - 2 * coverMm) + 2 * 9 * secDia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "02",
+                diameter = secDia, shapeCode = 0, count = secCount,
+                lengthA = lyMm - 2 * coverMm,
+                totalLengthPerBar = secLength,
+                totalWeightKg = secCount * secLength / 1000.0 * (secDia.toDouble().pow(2) / 162.0)
+            )
+        )
+
+        return entries
+    }
+
+    /**
+     * Generates a Bar Bending Schedule for a designed staircase flight.
+     *
+     * Main bars follow the inclined flight (run + rise), distribution bars span the
+     * flight width. The waist thickness supplies the anchorage tail at each end.
+     */
+    fun generateStairBbs(
+        mark: String,
+        result: StairResult,
+        stairWidthMm: Double,
+        coverMm: Double = 25.0
+    ): List<BbsEntry> {
+        InputGuard.notBlank("memberMark", mark)
+        InputGuard.positive("stairWidth", stairWidthMm)
+        InputGuard.positive("span", result.span)
+        InputGuard.positive("tread", result.tread)
+        InputGuard.positive("riser", result.riser)
+        InputGuard.inRange("cover", coverMm, 10.0, 75.0)
+        InputGuard.positive("mainDiameter", result.reinforcement.diameter)
+        InputGuard.positive("mainSpacing", result.reinforcement.spacing)
+
+        val runMm = result.span * 1000.0
+        val nRisers = (runMm / result.tread).toInt().coerceAtLeast(1)
+        val totalRiseMm = nRisers * result.riser
+        val inclineMm = sqrt(runMm * runMm + totalRiseMm * totalRiseMm)
+        val tailMm = (result.thickness - coverMm).coerceAtLeast(0.0)
+
+        val mainDia = result.reinforcement.diameter
+        val mainSpacing = result.reinforcement.spacing
+        val mainCount = (((stairWidthMm - 2 * coverMm) / mainSpacing).toInt() + 1).coerceAtLeast(1)
+        val mainLength = inclineMm + 2 * tailMm + 2 * 9 * mainDia
+        val entries = mutableListOf(
+            BbsEntry(
+                memberMark = mark, barMark = "01",
+                diameter = mainDia, shapeCode = 0, count = mainCount,
+                lengthA = inclineMm,
+                lengthB = tailMm,
+                totalLengthPerBar = mainLength,
+                totalWeightKg = mainCount * mainLength / 1000.0 * (mainDia.toDouble().pow(2) / 162.0)
+            )
+        )
+
+        val distDia = result.distributionReinforcement.diameter
+        val distSpacing = result.distributionReinforcement.spacing
+        if (distDia > 0 && distSpacing > 0) {
+            val distCount = ((inclineMm / distSpacing).toInt() + 1).coerceAtLeast(1)
+            val distLength = (stairWidthMm - 2 * coverMm) + 2 * 9 * distDia
+            entries.add(
+                BbsEntry(
+                    memberMark = mark, barMark = "02",
+                    diameter = distDia, shapeCode = 0, count = distCount,
+                    lengthA = stairWidthMm - 2 * coverMm,
+                    totalLengthPerBar = distLength,
+                    totalWeightKg = distCount * distLength / 1000.0 * (distDia.toDouble().pow(2) / 162.0)
+                )
+            )
+        }
+        return entries
+    }
+
+    /**
+     * Generates a Bar Bending Schedule for a rectangular tank.
+     *
+     * Wall steel is counted per wall face for all four walls (two faces), with a
+     * 40d anchorage into the base; base steel is provided in both directions.
+     */
+    fun generateTankBbs(
+        mark: String,
+        result: TankResult,
+        coverMm: Double = 40.0
+    ): List<BbsEntry> {
+        InputGuard.notBlank("memberMark", mark)
+        InputGuard.positive("tankLength", result.length)
+        InputGuard.positive("tankWidth", result.width)
+        InputGuard.positive("tankHeight", result.height)
+        InputGuard.inRange("cover", coverMm, 20.0, 75.0)
+        InputGuard.positive("wallDiameter", result.wallReinforcement.diameter)
+        InputGuard.positive("wallSpacing", result.wallReinforcement.spacing)
+        InputGuard.positive("baseDiameter", result.baseReinforcement.diameter)
+        InputGuard.positive("baseSpacing", result.baseReinforcement.spacing)
+
+        val entries = mutableListOf<BbsEntry>()
+
+        val wallDia = result.wallReinforcement.diameter
+        val wallSpacing = result.wallReinforcement.spacing
+        val wallPerimeterMm = 2 * (result.length + result.width) * 1000.0
+        val wallBarsPerFace = ((wallPerimeterMm / wallSpacing).toInt() + 1).coerceAtLeast(1)
+        val wallBarCount = wallBarsPerFace * 2 // inner + outer face
+        val wallBarLength = result.height * 1000.0 + 40 * wallDia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "01",
+                diameter = wallDia, shapeCode = 0, count = wallBarCount,
+                lengthA = result.height * 1000.0,
+                lengthB = 40.0 * wallDia,
+                totalLengthPerBar = wallBarLength,
+                totalWeightKg = wallBarCount * wallBarLength / 1000.0 * (wallDia.toDouble().pow(2) / 162.0)
+            )
+        )
+
+        val baseDia = result.baseReinforcement.diameter
+        val baseSpacing = result.baseReinforcement.spacing
+        val baseLengthMm = result.length * 1000.0
+        val baseWidthMm = result.width * 1000.0
+        val barsAlongLength = (((baseWidthMm - 2 * coverMm) / baseSpacing).toInt() + 1).coerceAtLeast(1)
+        val barsAlongWidth = (((baseLengthMm - 2 * coverMm) / baseSpacing).toInt() + 1).coerceAtLeast(1)
+        val baseLenX = (baseLengthMm - 2 * coverMm) + 2 * 9 * baseDia
+        val baseLenY = (baseWidthMm - 2 * coverMm) + 2 * 9 * baseDia
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "02",
+                diameter = baseDia, shapeCode = 0, count = barsAlongLength,
+                lengthA = baseLengthMm - 2 * coverMm,
+                totalLengthPerBar = baseLenX,
+                totalWeightKg = barsAlongLength * baseLenX / 1000.0 * (baseDia.toDouble().pow(2) / 162.0)
+            )
+        )
+        entries.add(
+            BbsEntry(
+                memberMark = mark, barMark = "03",
+                diameter = baseDia, shapeCode = 0, count = barsAlongWidth,
+                lengthA = baseWidthMm - 2 * coverMm,
+                totalLengthPerBar = baseLenY,
+                totalWeightKg = barsAlongWidth * baseLenY / 1000.0 * (baseDia.toDouble().pow(2) / 162.0)
+            )
+        )
+        return entries
+    }
+
+    /**
      * AI Waste Minimization (Bin Packing Algorithm)
      */
     fun optimizeCutting(entries: List<BbsEntry>, stockLength: Double = 12000.0): String {

@@ -85,4 +85,34 @@ class DxfExporterTest {
         assertTrue("DXF file must contain line entities", count(text, "LINE") >= 4)
         dir.deleteRecursively()
     }
+
+    @Test
+    fun exportWithBbs_appendsScheduleTable() {
+        val drawing = ElementDxfDrawings.generic("BEAM B1", 1000.0, 500.0)
+        val entries = listOf(
+            BbsEntry(
+                memberMark = "B1", barMark = "01", diameter = 16, shapeCode = 0,
+                count = 4, lengthA = 6000.0, totalLengthPerBar = 6300.0,
+                totalWeightKg = 4 * 6300.0 / 1000.0 * (16.0 * 16.0 / 162.0)
+            ),
+            BbsEntry(
+                memberMark = "B1", barMark = "02", diameter = 8, shapeCode = 51,
+                count = 20, lengthA = 200.0, lengthB = 500.0, totalLengthPerBar = 1400.0,
+                totalWeightKg = 20 * 1400.0 / 1000.0 * (8.0 * 8.0 / 162.0)
+            )
+        )
+        val dir = File(System.getProperty("java.io.tmpdir"), "civileg-bbs-${System.nanoTime()}")
+        dir.mkdirs()
+        val out = File(dir, "beam.dxf")
+
+        val file = DxfExporter().exportDxf(drawing, out.absolutePath, entries)
+
+        assertNotNull(file)
+        val text = out.readText()
+        assertTrue(text.contains("BAR BENDING SCHEDULE"))
+        assertTrue(text.contains("TOTAL STEEL"))
+        assertTrue(text.contains("B1"))
+        assertTrue(text.contains("51"))
+        dir.deleteRecursively()
+    }
 }
