@@ -11,11 +11,11 @@
 
 | Area | State | Notes |
 |------|-------|-------|
-| Build / tests | ✅ GREEN | `compileDebugKotlin` OK; **66 suites / 1233 tests / 0 failures**. `lintVitalRelease` passes. |
+| Build / tests | ✅ GREEN | `compileDebugKotlin` OK; **67 suites / 1239 tests / 0 failures**. `lintVitalRelease` passes. |
 | Domain engines | ✅ Present | 14 base interfaces; ECP/ACI/SBC implementations for all major element types (see §3). |
 | Code selection | ⚠️ Fragmented | **Two `DesignCode` enums** + one screen (`SeismicScreen`) bypasses the factory. See §4. |
 | CalculatorEngine facade | ⚠️ Partial | Real (not stub) for most elements but duplicates engine math inline; **steel member (§9.6) and solid slab (§9.16) now delegate**. See §5. |
-| Code parity | ⚠️ Partial | Probe (temporary, since deleted) found **solid slab and retaining wall** identical for all 3 codes. Solid slab fixed (§9.16); **retaining wall still identical — engine-level gap**. |
+| Code parity | ✅ | Probe found **solid slab and retaining wall** identical for all 3 codes. Both fixed and guarded by golden-fixture tests (§9.16, §9.17): slab delegates to the code engines; retaining wall had a facade unit bug (mm passed where the engines take metres) + a bar-spec parser bug that collapsed every result to Φ6@50. |
 | InputGuard | ✅ Mostly | Present at domain-engine entries; **`CalculatorEngine` coverage was the old zero-gap** — verify per §5. |
 | CodeReference | ✅ Broad | Concrete + steel/frame engines emit refs (commits `08bcc90`, `399c455`). Confirmed errors fixed (ACI cover, one-way slab); ECP/SBC sub-clauses still unverified. See §9.6. |
 | Drawing → PDF | ✅ | Capture-based for **every** element that has an on-screen drawing (Warehouse §9.12, Pile §9.13, steel member §9.14, Seismic §9.15); FlatSlab/ShearWall stale-bitmap fixed; all fallbacks read real values (§9.10); native-Canvas PDF path removed (§9.11). Base plate is generator-only (no on-screen drawing exists). |
@@ -208,7 +208,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 ☐ PDF: single pipeline (ExportManager); DXF: AC1027 with layers/BBS; PDF+DXF exportable together
 ☐ CodeReference keys verified against code text
 ☐ Zero crashes with null/empty/invalid inputs
-☐ Parity: same inputs → 3 correct, different results (golden fixtures) — **slab ✅ (`SolidSlabCodeDivergenceTest`); retaining wall still identical across all 3 codes (§9.16)**
+✅ Parity: same inputs → 3 correct, different results (golden fixtures) — slab (`SolidSlabCodeDivergenceTest`) + retaining wall (`RetainingWallCodeDivergenceTest`); ACI==SBC where the codes genuinely share equations (beam/column/seismic moments) but differ via ρmin, covers and limits
 ☐ Signed, ProGuard, versioned APK ready
 ```
 
@@ -634,11 +634,9 @@ default (150 mm, 4×5 m) now reports UNSAFE with a "Min Thickness" row; 250 mm p
 
 SBC ≠ ACI because SBC 304 §8.4 uses `ρmin = 0.25√fc'/fy` (≈0.29 %) vs ACI's 0.18 %.
 
-**Retaining wall — remaining gap (not fixed).** `designRetainingWall` already delegates
-(`:1406`), but the ECP/ACI/SBC retaining-wall engines produce the same stem/base/rebar for the
-same inputs, and the facade computes geometry from height alone (`:1408-1411`). Investigating
-means an engine-level review of the three retaining-wall implementations — deferred; the parity
-DoD line stays open until it is.
+**Retaining wall — remaining gap at the time of writing (now fixed — see §9.17).** The facade
+delegates, but the result was identical for all three codes; investigation found the cause was
+in the facade, not the engines.
 
 **Tests.** New `SolidSlabCodeDivergenceTest` (9 tests): completeness for all codes, per-code
 factored load, engine-specific display moments, ECP≠ACI≠SBC required steel/spacing/weight
@@ -649,3 +647,54 @@ always 1.0 by construction), per-code deflection limits (160 / 200 / 200), thick
 
 **Verified.** `:app:compileDebugKotlin` OK; full suite **66 suites / 1233 tests / 0 failures**.
 Pushed to both remotes (`origin` + `github`).
+
+---
+
+### 9.17 Retaining wall: facade unit bug + bar-spec parser bug fixed (parity closed)
+
+**Finding.** Continuing the parity probe work: `CalculatorEngine.designRetainingWall` is fully
+delegated (`CalculationFactory.getRetainingWallDesign`) and the three engines *do* differ
+(ECP: γs=1.15 K-method, cover 50, `max(0.26√fcu/fy, 0.0013)` minimum steel, OT FS ≥ 1.5;
+ACI: φ=0.9 Rn-ρ with f'c=0.8fcu, cover 75, ρmin 0.0018, OT FS ≥ 2.0; SBC: same Rn-ρ but
+ρmin 0.002, OT FS ≥ 1.5), yet the facade returned byte-identical results for all three codes.
+
+**Root cause 1 — unit mismatch (the big one).** The engines take **every linear dimension in
+metres** (stem depth is `stemBaseThickness * 1000 − cover`, self-weights are
+`25 × metre-volumes`). The facade computed `stemBaseThick = max(0.1 * height * 1000, 300)` —
+millimetres — and passed them straight through. With `tBase = 300` interpreted as 300 m, the
+self-weight terms exploded, `stemH = H − tFooting` went negative, the required steel became
+astronomical, and the resulting stability factors were nonsense. Because the mistake was
+identical for all codes it also **masked every code difference**.
+
+**Root cause 2 — `parseBarSpec` destroyed the bar spec.** The engines emit `"3Φ28"` (count
+first). The old parser took `numbers[0]→diameter` (3 → coerced to 6) and
+`numbers[1]→spacing` (28 → coerced to 50), so every code's rebar collapsed to **Φ6@50**.
+It also had to keep handling the staircase engines' `"Ø16 @ 150 mm c/c"` (spacing-first)
+format, which worked only by coincidence.
+
+**Changes** (`CalculatorEngine.kt`).
+- Geometry now in metres: `baseWidth = max(0.5h, 1.5)`, `stemBaseThick = max(0.1h, 0.30)`,
+  `stemTopThick = 0.25`, `baseThick = max(0.1h, 0.35)`; the UI-facing
+  `RetainingWallResult.stemThickness` / `baseWidth` still return millimetres
+  (`× 1000`) because the drawing generator and screens consume mm. `concreteVolume`
+  rewritten for the metre convention.
+- `parseBarSpec` now has three branches: `(\d+)Φ(\d+)` (count-first), `Φ(\d+) @ (\d+)`
+  (spacing-first), and the legacy bare-number fallback. Count-first bars get
+  `numBars`, `diameter`, `spacing = 1000/n`, and a derived steel weight when the
+  caller passes `area = 0` (the toe call does).
+- `preferredDiameter` (previously accepted and silently ignored) is now honored: the bar
+  count is re-selected at the user's diameter against the engine's code-required area
+  (from the "Stem Flexure" check's limit), falling back to the engine's own `selectBars`
+  when the preferred bars cannot cover the requirement (max 12 bars).
+
+**Effect.** The three codes now return genuinely different results — different required
+steel (ECP's 0.26√fcu/fy minimum plus its lever arm vs ACI/SBC's ρmin), different OT-FS
+limits (1.5 / 2.0 / 1.5), different shear limits, and different bar counts for the same
+preferred diameter. The stability factors are now physically meaningful.
+
+**Tests.** New `RetainingWallCodeDivergenceTest` (6 tests): completeness + parsed bars for
+all codes, preferred diameter honored with code-specific bar counts, stability limits code
+specific, flexure-governed ECP≠ACI required steel, bar count scales with diameter, zero
+height rejected.
+
+**Verified.** `:app:compileDebugKotlin` OK; full suite **67 suites / 1239 tests / 0 failures**.

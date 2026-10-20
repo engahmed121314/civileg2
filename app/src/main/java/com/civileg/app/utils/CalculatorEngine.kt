@@ -1408,6 +1408,36 @@ class CalculatorEngine @Inject constructor(
         if (spec.isBlank() || spec.contains("None")) {
             return ReinforcementBar(description = spec)
         }
+        // Engine specs come in two shapes:
+        //  - retaining wall: "3Φ28"          (count first)
+        //  - staircase:      "Ø16 @ 150 mm c/c"  (spacing first)
+        // The old code treated every number pair as [dia, spacing], so "3Φ28" collapsed
+        // to Φ6@50 for every code - the retaining wall showed identical bars for ECP/ACI/SBC.
+        val counted = Regex("(\\d+)\\s*[\\u03A6\\u00D8]\\s*(\\d+)").find(spec)
+        if (counted != null) {
+            val numBars = counted.groupValues[1].toInt()
+            val dia = counted.groupValues[2].toInt().coerceIn(6, 32)
+            val derivedArea = numBars * PI * (dia / 2.0).pow(2)
+            val areaFinal = if (area > 0.0) area else derivedArea
+            return ReinforcementBar(
+                numBars = numBars,
+                diameter = dia,
+                spacing = 1000.0 / numBars,
+                description = spec,
+                weightKg = (areaFinal / 1e6) * 7850.0
+            )
+        }
+        val spaced = Regex("[\\u03A6\\u00D8]\\s*(\\d+)\\s*@\\s*(\\d+)").find(spec)
+        if (spaced != null) {
+            val dia = spaced.groupValues[1].toInt().coerceIn(6, 32)
+            val spacing = spaced.groupValues[2].toDouble().coerceIn(50.0, 500.0)
+            return ReinforcementBar(
+                diameter = dia,
+                spacing = spacing,
+                description = spec,
+                weightKg = (area / 1e6) * 7850.0
+            )
+        }
         val numbers = Regex("\\d+(\\.\\d+)?").findAll(spec).map { it.value.toDouble() }.toList()
         if (numbers.isEmpty()) return ReinforcementBar(description = spec)
         val dia = numbers[0].toInt().coerceIn(6, 32)
@@ -1485,10 +1515,16 @@ class CalculatorEngine @Inject constructor(
         val domainCode = code
         val wallEngine = CalculationFactory.getRetainingWallDesign(domainCode)
 
-        val baseWidth = max(0.5 * height, 1.5)
-        val stemBaseThick = max(0.1 * height * 1000.0, 300.0)
-        val stemTopThick = 250.0
-        val baseThick = max(0.1 * height * 1000.0, 350.0)
+        // The engines take every linear dimension in METRES (their stem depth is
+        // `stemBaseThickness * 1000 - cover` and the self-weight terms are
+        // 25 kN/m³ × metre-volumes). The old code passed the thicknesses in millimetres,
+        // which inflated the weights/moments/required steel and produced nonsense
+        // stability factors - and, because the mistake was identical for all codes, it also
+        // hid the code differences.
+        val baseWidth = max(0.5 * height, 1.5)          // m
+        val stemBaseThick = max(0.1 * height, 0.30)     // m
+        val stemTopThick = 0.25                          // m
+        val baseThick = max(0.1 * height, 0.35)          // m
 
         val input = RetainingWallInput(
             wallHeight = height,
@@ -1508,10 +1544,28 @@ class CalculatorEngine @Inject constructor(
 
         val res = wallEngine.designRetainingWall(input)
 
-        val stemBar = parseBarSpec(res.stemMainRebar, res.stemMainRebarArea)
+        // Honor the user's preferred bar diameter (the screen's bar selector) by re-selecting
+        // the bar count at that diameter against the engine's code-required area; fall back to
+        // the engine's own selection when the preferred bars cannot cover the requirement
+        // (selectBars allows at most 12 bars).
+        val requiredStem = res.safetyChecks.firstOrNull { it.name == "Stem Flexure" }?.limit
+            ?: res.stemMainRebarArea
+        val preferredArea = PI / 4.0 * preferredDiameter * preferredDiameter
+        val preferredCount = ceil(requiredStem / preferredArea).toInt()
+        val stemBar = if (preferredCount in 1..12 && preferredCount * preferredArea >= requiredStem) {
+            ReinforcementBar(
+                numBars = preferredCount,
+                diameter = preferredDiameter,
+                spacing = 1000.0 / preferredCount,
+                description = res.stemMainRebar,
+                weightKg = (preferredCount * preferredArea / 1e6) * 7850.0
+            )
+        } else {
+            parseBarSpec(res.stemMainRebar, res.stemMainRebarArea)
+        }
         val baseBar = parseBarSpec(res.toeRebar, 0.0)
 
-        val concreteVolume = (baseWidth * (baseThick / 1000.0) + (stemBaseThick + stemTopThick) / 2000.0 * height)
+        val concreteVolume = baseWidth * baseThick + (stemBaseThick + stemTopThick) / 2.0 * height
         val steelWeight = (res.stemMainRebarArea / 1e6) * height * 7850.0 * 2.0
         val cost = concreteVolume * 120.0 + steelWeight * 1.5
 
@@ -1520,7 +1574,7 @@ class CalculatorEngine @Inject constructor(
         }
 
         return RetainingWallResult(
-            height = height, stemThickness = stemBaseThick, baseWidth = baseWidth * 1000.0,
+            height = height, stemThickness = stemBaseThick * 1000.0, baseWidth = baseWidth * 1000.0,
             stemReinforcement = stemBar, baseReinforcement = baseBar,
             safetyChecks = checks, isSafe = res.isSafe,
             concreteVolume = concreteVolume, steelWeight = steelWeight, cost = cost, code = code,
