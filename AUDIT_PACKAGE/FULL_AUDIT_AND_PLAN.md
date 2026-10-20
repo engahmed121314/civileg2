@@ -75,18 +75,19 @@
 
 The user picks a code in the UI, which must resolve to `domain.entities.DesignCode {ECP, ACI, SBC}` and drive engine selection via `CalculationFactory`.
 
-**Finding — two parallel enums:**
-1. `com.civileg.app.utils.CalculatorEngine.DesignCode` = `{EGYPTIAN, ACI, SAUDI}` (nested, UI/legacy).
-   - `toDomain()` (`CalculatorEngine.kt:49-53`) maps to the domain enum.
-   - `fromDomain()` (`:56-60`) exists but is **never called** — ViewModels convert by hand.
-2. `com.civileg.app.domain.entities.DesignCode` = `{ECP, ACI, SBC}` (canonical).
+**RESOLVED (verified 2026-10):** the nested `CalculatorEngine.DesignCode {EGYPTIAN, ACI, SAUDI}`
+is **already deleted** — `CalculatorEngine` takes the canonical
+`domain.entities.DesignCode {ECP, ACI, SBC}` everywhere; `rg "CalculatorEngine\.DesignCode"`
+finds nothing. `SeismicScreen` keeps a private `SeismicCodeOption {ECP_201, ASCE_7, SBC_301}`
+**display** enum only (wraps the domain enum) and already resolves engines through
+`CalculationFactory.getSeismicDesign` (`SeismicScreen.kt:130`). The only remaining direct
+instantiation is `TrialRunManager.kt:19` (`ECPSeismic()`), which is an intentionally ECP-only
+project simulation inside the `ecp` package (it also uses `ECPFooting` directly).
 
-**Finding — `SeismicScreen` bypasses the factory:**
-- Uses its own `SeismicCodeOption {ECP_201, ASCE_7, SBC_301}` → maps to domain `DesignCode`.
-- Instantiates `ECPSeismic()` / `ACISeismic()` / `SBCSeismic()` **directly**, whereas `SeismicViewModel` uses `CalculationFactory.getSeismicDesign(...)`.
-- Risk: two selection paths can diverge; new engines/codes won't propagate.
-
-**Recommendation (P2):** collapse to one enum (`domain.entities.DesignCode`), delete the nested UI enum, route every screen through `CalculationFactory`, and use `fromDomain()` where a UI label is required.
+**Note (legacy residue):** `RatioManager.designCodeFactors` still keys its safety-factor map by
+the old strings `"EGYPTIAN" / "ACI" / "SAUDI"`, but its only mutating API
+(`createCustomConfiguration`) has **no callers** — dead configuration utility, not a selection
+path.
 
 ---
 
@@ -96,7 +97,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 
 | Aspect | Finding |
 |--------|---------|
-| Input code type | Nested UI `DesignCode {EGYPTIAN, ACI, SAUDI}`; `toDomain():49-53`; `fromDomain():56-60` unused. |
+| Input code type | ✅ Canonical only — nested UI enum deleted; facade takes `domain.entities.DesignCode` (verified 2026-10, §3). |
 | Real vs stub | Old report claimed 10 stubs; several are now real-inline. **`calculateSteelMember` (`:396`) now delegates to the code-specific domain engines** (ECP/AISC/SBC) via `designSteelMemberEcp/Aisc/Sbc` — results are code-differentiated (P0-2, §9.6). The old inline stub computed φPn/φMn/φVn + KL/r identically for all 3 codes and inflated KL/r by ×1000. |
 | InputGuard | Applied (e.g. `:398-401`), but duplicate of the engine's own guards. |
 | Architecture risk | Two sources of truth (facade inline math + domain engines) → drift, especially for code differentiation. |
@@ -158,7 +159,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 ## 7. Prioritized Development Plan
 
 ### P0 — Correctness of numbers (blocks trust)
-1. **Unify code selection** to `domain.entities.DesignCode`; delete nested enum; route `SeismicScreen` (and any direct instantiation) through `CalculationFactory`. Use `fromDomain()` for labels.
+1. **Unify code selection** to `domain.entities.DesignCode`; delete nested enum; route `SeismicScreen` (and any direct instantiation) through `CalculationFactory`. Use `fromDomain()` for labels. *(done — verified 2026-10: nested enum gone, SeismicScreen routes through the factory; §3/§9.18)*
 2. **Delegate `CalculatorEngine`** methods to domain engines so results are code-differentiated (today some are identical for all codes).
 3. **Verify clause numbers** in `CodeReference.kt` against real ECP/ACI/SBC text; add a unit test asserting each key resolves for each code. *(resolution test done §9.6; SBC clause
    chapters corrected §9.9; ECP 203-2020 sub-clause text still needs the licensed document.)*
@@ -201,7 +202,7 @@ The user picks a code in the UI, which must resolve to `domain.entities.DesignCo
 
 ## 8. Definition of Done (unchanged, non-negotiable)
 ```
-☐ One DesignCode enum; all screens → CalculationFactory → code-correct engine
+✅ One DesignCode enum; all screens → CalculationFactory → code-correct engine (nested enum deleted, SeismicScreen routes through the factory — §3/§9.18)
 ✅ CalculatorEngine steel member + solid slab now delegate to engines (P0-2, §9.6/§9.16; remaining inline paths listed there)
 ☐ Every engine: InputGuard + full result (codeNotes, warnings, safetyChecks, steps, diagram data)
 ✅ Every element PDF has a drawing that matches the on-screen drawing and the result (no stale/placeholder) — §9.10 fallbacks, §9.11 native path removed, §9.12–§9.15 captures; base plate has no on-screen drawing and reads real values
@@ -698,3 +699,41 @@ specific, flexure-governed ECP≠ACI required steel, bar count scales with diame
 height rejected.
 
 **Verified.** `:app:compileDebugKotlin` OK; full suite **67 suites / 1239 tests / 0 failures**.
+
+---
+
+### 9.18 Plan-status truth-up (P0-1 verified, P1-6 residual documented)
+
+**P0-1 — code selection unified: verified done.** Re-checked against the codebase rather than
+the old notes:
+- `CalculatorEngine.DesignCode {EGYPTIAN, ACI, SAUDI}` is **already deleted**; the facade and
+  every ViewModel take the canonical `domain.entities.DesignCode {ECP, ACI, SBC}`. A repo-wide
+  `rg "CalculatorEngine\.DesignCode"` returns nothing.
+- `SeismicScreen` keeps a **private display enum** `SeismicCodeOption {ECP_201, ASCE_7, SBC_301}`
+  that wraps the domain enum, and resolves engines through
+  `CalculationFactory.getSeismicDesign` (`SeismicScreen.kt:130`) — the old "direct
+  instantiation" finding no longer holds.
+- Only remaining direct engine construction: `TrialRunManager.kt:19` (`ECPSeismic()`), which
+  is an intentionally ECP-only project simulation inside the `ecp` package (alongside
+  `ECPFooting` etc.) — not a UI selection path; left as is.
+- Residue noted, not changed: `RatioManager.designCodeFactors` keys its map with the legacy
+  strings `"EGYPTIAN"/"ACI"/"SAUDI"`, but its only mutating API
+  (`createCustomConfiguration`) has **no callers** — dead utility, documented in §3.
+
+DoD line 1 and §3/§4/§7 updated accordingly.
+
+**P1-6 — steel connection values in the PDF: residual documented.** `SteelViewModel`,
+`ExportViewModel` and `SteelDesignScreen` already pass the real connection parameters
+(`boltDia/boltCount/boltGauge/boltPitche/weldSize` via `SteelConnectionDrawing.from(res.connectionDesign)`)
+into `PdfDrawingGenerator.generateSteelDrawing`. The only value still at a constant is
+**end-plate thickness = 12 mm**, because `ConnectionDesignResult` (domain) has no end-plate
+thickness field — the drawing exaggerates it for visibility anyway. Adding the field would be
+an engine-design change (all three connection engines); deferred as cosmetic.
+
+**Plan status now.** P0 fully closed (1 ✅ verified, 2 ✅ slab+retaining wall, 3 blocked on the
+licensed ECP 203-2020 text). P1 fully closed (4-8 ✅, 6 residual documented above). P2 fully
+closed (9-12 ✅). P3 remains: **13** (signer fingerprint + AdMob IDs — needs the user),
+**14** (Dependabot — needs a token/`gh` to re-verify; tooling-classpath residue needs an AGP
+9.x migration), **15** (release build + manual 15×3 QA — needs the keystore). Dead legacy
+screens (~12 Fragments + `nav_graph.xml` + `activity_main.xml`) await the user's delete
+decision.
