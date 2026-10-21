@@ -51,6 +51,7 @@ class TankViewModel @Inject constructor(
     var pendingDrawingBitmap: Bitmap? = null
 
     var excavationDepthM: Double = 0.0
+    var blindingThicknessM: Double = 0.0
 
     fun calculateTankPro(
         type: CalculatorEngine.TankType,
@@ -181,7 +182,7 @@ class TankViewModel @Inject constructor(
                     bbsEntries = runCatching {
                         BbsGenerator.generateTankBbs("T1", res)
                     }.getOrDefault(emptyList()),
-                    boqRows = BoqEstimator.tankRows(res.concreteVolume, res.steelWeight, res.length, res.width, res.height, "T1", excavationDepthM),
+                    boqRows = BoqEstimator.tankRows(res.concreteVolume, res.steelWeight, res.length, res.width, res.height, "T1", excavationDepthM, blindingThicknessM),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.tankSection(
                         title = "TANK ${res.type.displayName}",

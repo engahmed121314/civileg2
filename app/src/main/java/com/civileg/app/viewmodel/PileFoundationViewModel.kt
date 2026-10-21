@@ -48,6 +48,7 @@ class PileFoundationViewModel @Inject constructor(
 
     var excavationDepthM: Double = 0.0
     var workingSpaceM: Double = 0.5
+    var blindingThicknessM: Double = 0.0
 
     /**
      * Run the full pile foundation design.
@@ -261,7 +262,7 @@ class PileFoundationViewModel @Inject constructor(
                     bbsEntries = runCatching {
                         com.civileg.app.utils.BbsGenerator.generatePileBbs("PG1", res)
                     }.getOrDefault(emptyList()),
-                    boqRows = com.civileg.app.utils.BoqEstimator.pileRows(res, "PG1", excavationDepthM, workingSpaceM),
+                    boqRows = com.civileg.app.utils.BoqEstimator.pileRows(res, "PG1", excavationDepthM, workingSpaceM, blindingThicknessM),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.pileElevation(
                         title = "PILE ${res.pileType}",

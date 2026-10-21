@@ -66,6 +66,7 @@ class CombinedFootingViewModel @Inject constructor(
 
     var excavationDepthM: Double = 0.0
     var workingSpaceM: Double = 0.5
+    var blindingThicknessM: Double = 0.0
 
     fun updateDesignCode(code: String) {
         _uiState.update { it.copy(designCode = code) }
@@ -364,7 +365,7 @@ class CombinedFootingViewModel @Inject constructor(
                         }.getOrDefault(emptyList())
                     } ?: emptyList(),
                     boqRows = eR?.let { r ->
-                        com.civileg.app.utils.BoqEstimator.combinedFootingRows(r, "CF1", excavationDepthM, workingSpaceM)
+                        com.civileg.app.utils.BoqEstimator.combinedFootingRows(r, "CF1", excavationDepthM, workingSpaceM, blindingThicknessM)
                     } ?: emptyList(),
                     drawingBitmap = drawingBitmap,
                     drawing = dxfDrawing,

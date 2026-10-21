@@ -44,7 +44,8 @@ object BoqEstimator {
         result: FootingResult,
         mark: String = "Footing",
         excavationDepthM: Double = 0.0,
-        workingSpaceM: Double = 0.5
+        workingSpaceM: Double = 0.5,
+        blindingThicknessM: Double = 0.0
     ): List<BoqRow> {
         val formwork = 2 * (result.width + result.length) * result.thickness / 1_000_000.0
         val rows = mutableListOf(
@@ -52,6 +53,11 @@ object BoqEstimator {
             item(2, "Reinforcement steel - $mark", "kg", result.steelWeight),
             item(3, "Formwork - $mark (perimeter)", "m2", formwork)
         )
+        if (blindingThicknessM > 0.0) {
+            val blL = (result.length / 1000.0) + 2 * workingSpaceM
+            val blW = (result.width / 1000.0) + 2 * workingSpaceM
+            rows.add(item(rows.size + 1, "Blinding concrete - $mark", "m3", blL * blW * blindingThicknessM))
+        }
         if (excavationDepthM > 0.0) {
             val excL = (result.length / 1000.0) + 2 * workingSpaceM
             val excW = (result.width / 1000.0) + 2 * workingSpaceM
@@ -117,7 +123,8 @@ object BoqEstimator {
         result: CombinedFootingResult,
         mark: String = "Combined footing",
         excavationDepthM: Double = 0.0,
-        workingSpaceM: Double = 0.5
+        workingSpaceM: Double = 0.5,
+        blindingThicknessM: Double = 0.0
     ): List<BoqRow> {
         val lengthM = result.footingLength
         val widthM = result.footingWidth
@@ -127,6 +134,11 @@ object BoqEstimator {
             item(2, "Reinforcement steel - $mark", "kg", result.steelWeight),
             item(3, "Formwork - $mark (perimeter)", "m2", formwork)
         )
+        if (blindingThicknessM > 0.0) {
+            val blL = lengthM + 2 * workingSpaceM
+            val blW = widthM + 2 * workingSpaceM
+            rows.add(item(rows.size + 1, "Blinding concrete - $mark", "m3", blL * blW * blindingThicknessM))
+        }
         if (excavationDepthM > 0.0) {
             val excL = lengthM + 2 * workingSpaceM
             val excW = widthM + 2 * workingSpaceM
@@ -139,7 +151,8 @@ object BoqEstimator {
         result: PileDesignResult,
         mark: String = "Pile group",
         excavationDepthM: Double = 0.0,
-        workingSpaceM: Double = 0.5
+        workingSpaceM: Double = 0.5,
+        blindingThicknessM: Double = 0.0
     ): List<BoqRow> {
         val n = result.numberOfPiles
         val pileLengthMm = result.pileLengthM * 1000.0
@@ -153,6 +166,11 @@ object BoqEstimator {
             item(3, "Formwork - $mark (pile shafts)", "m2", n * Math.PI * d * pileLengthMm / 1_000_000.0),
             item(4, "Formwork - cap sides", "m2", 2 * (cap.capWidth + cap.capLength) * cap.capThickness / 1_000_000.0)
         )
+        if (blindingThicknessM > 0.0) {
+            val blL = (cap.capLength / 1000.0) + 2 * workingSpaceM
+            val blW = (cap.capWidth / 1000.0) + 2 * workingSpaceM
+            rows.add(item(rows.size + 1, "Blinding concrete - cap", "m3", blL * blW * blindingThicknessM))
+        }
         if (excavationDepthM > 0.0) {
             val excL = (cap.capLength / 1000.0) + 2 * workingSpaceM
             val excW = (cap.capWidth / 1000.0) + 2 * workingSpaceM
@@ -196,7 +214,8 @@ object BoqEstimator {
         widthM: Double,
         heightM: Double,
         mark: String = "Water tank",
-        excavationDepthM: Double = 0.0
+        excavationDepthM: Double = 0.0,
+        blindingThicknessM: Double = 0.0
     ): List<BoqRow> {
         val rows = mutableListOf(
             item(1, "Concrete - $mark", "m3", concreteVolumeM3),
@@ -204,6 +223,9 @@ object BoqEstimator {
             item(3, "Formwork - $mark (walls)", "m2", 2 * (lengthM + widthM) * heightM),
             item(4, "Formwork - $mark (base)", "m2", lengthM * widthM)
         )
+        if (blindingThicknessM > 0.0) {
+            rows.add(item(rows.size + 1, "Blinding concrete - $mark", "m3", (lengthM + 0.5) * (widthM + 0.5) * blindingThicknessM))
+        }
         if (excavationDepthM > 0.0) {
             rows.add(item(rows.size + 1, "Excavation - $mark (pit)", "m3", (lengthM + 0.5) * (widthM + 0.5) * excavationDepthM))
         }
