@@ -152,7 +152,15 @@ class HordiSlabViewModel @Inject constructor(
 
                 val safetyChecks = emptyList<GenericSafetyCheck>()
 
-                val drawingBitmap = pendingDrawingBitmap
+                val drawingBitmap = pendingDrawingBitmap ?: runCatching {
+                    com.civileg.app.utils.PdfDrawingGenerator.generateSlabDrawingByType(
+                        slabType = com.civileg.app.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
+                        spanX = params.span, spanY = params.span, thickness = params.totalThickness,
+                        mainDia = res.barDiameter, mainSpacing = res.barSpacing,
+                        distDia = res.barDiameter, distSpacing = res.barSpacing,
+                        cover = 25.0, ribWidth = params.ribWidth, ribSpacing = params.ribSpacing
+                    )
+                }.getOrNull()
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = params.designCode

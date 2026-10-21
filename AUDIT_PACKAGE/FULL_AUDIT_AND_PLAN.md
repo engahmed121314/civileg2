@@ -1142,3 +1142,29 @@ so screen, PDF and DXF cannot diverge. Footing, retaining-wall, pile and tank sc
 **Tests.** Suite now at **70 suites / 1288 tests / 0 failures**. New coverage: excavation/blinding
 footprint maths, retaining-wall excavation + waterproofing rows, and rectangular/circular tank
 waterproofing areas.
+
+### 9.30 Report drawings and input completeness pass
+
+**Element drawing parity.** Every element export now resolves its drawing deterministically:
+- captured Compose bitmap (exactly what is on screen) when available, else a generated fallback;
+- DXF companion from the same geometry parameters.
+
+Flat slabs, waffle slabs and hordi slabs previously had no fallback (a failed capture produced a
+report without a drawing); they now fall back to PdfDrawingGenerator.generateSlabDrawingByType
+with FLAT / WAFFLE / HOLLOW_BLOCK geometry, cover and rib parameters taken from the actual inputs.
+The bulk project slab export (ExportViewModel.exportSlabReport) gained its missing
+ElementDxfDrawings.slabSection DXF drawing.
+
+**Steel reports.** Base-plate reports now write the matching DXF asePlate drawing; welded and
+bolted connection reports gained summary DXF sheets with size/length/grade/capacity and code.
+
+**Input completeness.** Reports previously omitted design and site inputs. Added:
+- footings: fcu, fy, excavation depth, working space, blinding thickness;
+- combined footings: excavation depth, working space, blinding thickness;
+- retaining walls: wall length, soil density, fcu, fy, excavation depth, trench width;
+- tanks: fcu, fy, excavation depth, blinding thickness;
+- piles: excavation depth, working space, blinding thickness;
+- strap footings: column loads, distance, column sizes, strap width, soil pressure, fcu/fy and bar
+  diameter (previously only the design code).
+
+**Tests.** Suite remains at **70 suites / 1288 tests / 0 failures** (compile + full rerun).

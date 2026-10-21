@@ -170,7 +170,10 @@ class PileFoundationViewModel @Inject constructor(
                     "Number of Piles" to "${res.numberOfPiles}",
                     "Soil Type" to res.soilType,
                     "fcu" to "${res.fcu} MPa",
-                    "fy" to "${res.fy} MPa"
+                    "fy" to "${res.fy} MPa",
+                    "Excavation Depth" to "$excavationDepthM m",
+                    "Working Space" to "$workingSpaceM m",
+                    "Blinding Thickness" to "$blindingThicknessM m"
                 )
 
                 val capacity = res.capacityResult

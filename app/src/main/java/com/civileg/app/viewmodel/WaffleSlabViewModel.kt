@@ -174,7 +174,18 @@ class WaffleSlabViewModel @Inject constructor(
                     )
                 }
 
-                val drawingBitmap = pendingDrawingBitmap
+                val drawingBitmap = pendingDrawingBitmap ?: runCatching {
+                    com.civileg.app.utils.PdfDrawingGenerator.generateSlabDrawingByType(
+                        slabType = com.civileg.app.utils.CalculatorEngine.SlabType.WAFFLE,
+                        spanX = input.lx, spanY = input.ly,
+                        thickness = input.ribHeight + input.toppingThickness,
+                        mainDia = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 12.0,
+                        mainSpacing = res.ribDesign?.flexureReinforcement?.spacing?.toDouble() ?: 150.0,
+                        distDia = 12.0, distSpacing = 200.0,
+                        cover = input.clearCover,
+                        ribWidth = input.ribWidth, ribSpacing = input.ribSpacing
+                    )
+                }.getOrNull()
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = input.designCode.displayName

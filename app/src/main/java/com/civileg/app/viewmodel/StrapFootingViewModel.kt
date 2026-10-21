@@ -42,6 +42,7 @@ class StrapFootingViewModel @Inject constructor(
 
     private var lastCode: DesignCode = DesignCode.ECP
     private var lastDistanceMm: Double = 0.0
+    private var lastInputs: List<Pair<String, String>> = emptyList()
 
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
@@ -67,6 +68,18 @@ class StrapFootingViewModel @Inject constructor(
 
         lastCode = code
         lastDistanceMm = distance
+        lastInputs = listOf(
+            "Column 1 Load" to "$col1Load kN",
+            "Column 2 Load" to "$col2Load kN",
+            "Column Distance" to "${distance / 1000.0} m",
+            "Column 1 Size" to "${col1W}x${col1D} mm",
+            "Column 2 Size" to "${col2W}x${col2D} mm",
+            "Strap Width" to "$strapWidth mm",
+            "Allowable Soil Pressure" to "$soil kN/m2",
+            "fcu" to "$fcu MPa",
+            "fy" to "$fy MPa",
+            "Preferred Bar Diameter" to "$preferredDiameter mm"
+        )
         viewModelScope.launch {
             _isLoading.value = true
             try {
@@ -105,7 +118,7 @@ class StrapFootingViewModel @Inject constructor(
                 }
                 val inputsMap = mapOf(
                     "Design Code" to codeName
-                )
+                ) + lastInputs.toMap()
                 val resultsMap = mutableMapOf(
                     "Footing 1 Width" to String.format("%.0f", res.footing1.width) + " mm",
                     "Footing 1 Length" to String.format("%.0f", res.footing1.length) + " mm",

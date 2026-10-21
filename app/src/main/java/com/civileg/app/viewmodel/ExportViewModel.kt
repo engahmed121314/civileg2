@@ -244,6 +244,14 @@ class ExportViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = result.flexureResult.isSafe,
                     drawingBitmap = bitmap,
+                    drawing = ElementDxfDrawings.slabSection(
+                        title = "${slabType.displayName.uppercase()} SLAB",
+                        spanMm = inputs.shortSpan * 1000.0,
+                        thicknessMm = inputs.thickness,
+                        coverMm = 25.0,
+                        mainBarDiaMm = result.flexureResult.barDiameter,
+                        mainSpacingMm = result.flexureResult.barSpacing
+                    ),
                     outputPath = outputFile.absolutePath
                 ).pdfFile
 

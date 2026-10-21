@@ -208,6 +208,9 @@ class CombinedFootingViewModel @Inject constructor(
                     "f'cu" to "${state.fcu} MPa",
                     "fy" to "${state.fy} MPa",
                     "Cover" to "${state.cover} mm",
+                    "Excavation Depth" to "$excavationDepthM m",
+                    "Working Space" to "$workingSpaceM m",
+                    "Blinding Thickness" to "$blindingThicknessM m",
                     "Design Code" to state.designCode
                 )
 

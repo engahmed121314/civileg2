@@ -169,6 +169,12 @@ class RetainingWallViewModel @Inject constructor(
                         "Stem Thickness" to "${currentResult.stemThickness} mm",
                         "Base Width" to "${currentResult.baseWidth} mm",
                         "Backfill Angle" to "${String.format("%.1f", currentResult.backfillAngle)}°",
+                        "Wall Length" to "$wallLengthM m",
+                        "Soil Density" to "${currentResult.soilDensity} kN/m3",
+                        "fcu" to "${currentResult.fcu} MPa",
+                        "fy" to "${currentResult.fy} MPa",
+                        "Excavation Depth" to "$excavationDepthM m",
+                        "Trench Width" to "$backfillWidthM m",
                         "Design Code" to codeName
                     )
                     val resultsMap = mutableMapOf(

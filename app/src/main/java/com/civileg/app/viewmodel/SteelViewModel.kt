@@ -453,6 +453,17 @@ class SteelViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = capacity > 0,
                     drawingBitmap = null,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.generic(
+                        title = "WELDED CONNECTION",
+                        widthMm = 500.0,
+                        heightMm = 300.0,
+                        summaryLines = listOf(
+                            "Weld size = $size mm  Length = $length mm",
+                            "Electrode: ${electrode.displayName}",
+                            "Capacity = ${String.format("%.1f", capacity)} kN",
+                            "Code: ${code.name}"
+                        )
+                    ),
                     outputPath = file.absolutePath
                 ).pdfFile
 
@@ -495,6 +506,16 @@ class SteelViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = capacity > 0,
                     drawingBitmap = null,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.generic(
+                        title = "BOLTED CONNECTION",
+                        widthMm = 500.0,
+                        heightMm = 300.0,
+                        summaryLines = listOf(
+                            "Bolt M$dia x $count  Grade: ${grade.displayName}",
+                            "Capacity = ${String.format("%.1f", capacity)} kN",
+                            "Code: ${code.name}"
+                        )
+                    ),
                     outputPath = file.absolutePath
                 ).pdfFile
 
@@ -558,6 +579,16 @@ class SteelViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = result.isSafe,
                     drawingBitmap = drawing,
+                    drawing = com.civileg.app.utils.ElementDxfDrawings.basePlate(
+                        title = "BASE PLATE - $colSection",
+                        plateWidthMm = result.plateWidth,
+                        plateLengthMm = result.plateLength,
+                        plateThicknessMm = result.plateThickness,
+                        boltDiaMm = result.anchorBolts.boltDiameter,
+                        boltCount = result.anchorBolts.numberOfBolts,
+                        columnWidthMm = bf,
+                        columnDepthMm = dc
+                    ),
                     outputPath = file.absolutePath
                 ).pdfFile
 

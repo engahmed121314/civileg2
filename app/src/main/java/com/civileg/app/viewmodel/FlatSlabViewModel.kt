@@ -177,6 +177,20 @@ class FlatSlabViewModel @Inject constructor(
                     )
                 }
 
+                val drawingBitmap = pendingDrawingBitmap ?: runCatching {
+                    com.civileg.app.utils.PdfDrawingGenerator.generateSlabDrawingByType(
+                        slabType = com.civileg.app.utils.CalculatorEngine.SlabType.FLAT,
+                        spanX = input.lx, spanY = input.ly, thickness = input.slabThickness,
+                        mainDia = res.columnStripBotRebar.diameter.toDouble(),
+                        mainSpacing = res.columnStripBotRebar.spacing.toDouble(),
+                        distDia = res.middleStripBotRebar.diameter.toDouble(),
+                        distSpacing = res.middleStripBotRebar.spacing.toDouble(),
+                        cover = input.clearCover,
+                        dropPanelSize = maxOf(input.dropSizeX, input.dropSizeY),
+                        columnSize = input.columnWidth
+                    )
+                }.getOrNull()
+
                 val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "????? ????? ????? ?????",
                     titleEn = "Flat Slab Design Report",
@@ -191,12 +205,12 @@ class FlatSlabViewModel @Inject constructor(
                     boqRows = com.civileg.app.utils.BoqEstimator.flatSlabRows(
                         res, input.lx / 1000.0, input.ly / 1000.0, "FS1"
                     ),
-                    drawingBitmap = pendingDrawingBitmap,
+                    drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
                         title = "FLAT SLAB ${input.panelType.displayName}",
                         spanMm = input.lx,
                         thicknessMm = input.slabThickness,
-                        coverMm = 25.0,
+                        coverMm = input.clearCover,
                         mainBarDiaMm = res.columnStripBotRebar.diameter.toDouble(),
                         mainSpacingMm = res.columnStripBotRebar.spacing.toDouble()
                     ),

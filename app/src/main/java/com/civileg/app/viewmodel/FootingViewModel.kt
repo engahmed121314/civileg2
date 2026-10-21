@@ -181,6 +181,11 @@ class FootingViewModel @Inject constructor(
                     "Soil Pressure" to "${String.format("%.2f", res.soilPressure)} kN/m²",
                     "Allowable Pressure" to "${String.format("%.2f", res.allowablePressure)} kN/m²",
                     "Design Code" to codeName,
+                    "fcu" to "$lastFcu MPa",
+                    "fy" to "$lastFy MPa",
+                    "Excavation Depth" to "$excavationDepthM m",
+                    "Working Space" to "$workingSpaceM m",
+                    "Blinding Thickness" to "$blindingThicknessM m",
                     "Applied Load" to "${String.format("%.1f", res.soilPressure * res.width * res.length / 1e6)} kN"
                 )
                 val resultsMap = mapOf(
