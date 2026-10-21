@@ -1116,3 +1116,29 @@ bar-designation parsing and lengths, combined-footing BOQ rows, and DXF summary 
 **Remaining.** Excavation/waterproofing quantities still need a design-depth input; steel and
 seismic DXF sheets show summary text but no member/spectrum geometry (the PDF drawing remains
 the source of the graphical view).
+
+### 9.29 Site quantities on screen (excavation, blinding, waterproofing)
+
+**Inputs.** Footing, retaining-wall, pile-foundation and tank screens gained a
+“Site & Quantities” block (strings oq_site_title, oq_excavation_depth,
+oq_working_space, oq_blinding_thickness, oq_backfill_width, EN + AR). Values are stored on
+the viewmodels as metres (xcavationDepthM, workingSpaceM, lindingThicknessM,
+ackfillWidthM) and default to 1.5 m / 0.5 m / 0.1 m so existing behaviour is unchanged when the
+user does not edit them.
+
+**Calculation precision.**
+- Excavation for pads and caps = (L + 2·working space)(W + 2·working space)·depth.
+- Blinding is measured over the same working-space footprint with its own thickness.
+- Retaining-wall trench = wall length · trench width · depth.
+- Tank pit = (L + 0.5)(W + 0.5)·depth.
+- Waterproofing: retaining wall earth face = height · length; underground tank = base area plus
+  wetted wall faces (rectangle LW + 2(L+W)H, circle πD²/4 + πDH via
+  BoqEstimator.tankWaterproofingArea).
+
+**Display.** New shared BoqTableCard renders the same BoqRow list used by the PDF/DXF export,
+so screen, PDF and DXF cannot diverge. Footing, retaining-wall, pile and tank screens now show
+“Bill of Quantities” directly under their bar bending schedule.
+
+**Tests.** Suite now at **70 suites / 1288 tests / 0 failures**. New coverage: excavation/blinding
+footprint maths, retaining-wall excavation + waterproofing rows, and rectangular/circular tank
+waterproofing areas.

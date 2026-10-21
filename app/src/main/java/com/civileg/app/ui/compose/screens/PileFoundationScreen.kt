@@ -31,6 +31,7 @@ import com.civileg.app.R
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalPileDrawing
@@ -39,6 +40,7 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import com.civileg.app.utils.BbsGenerator
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.viewmodel.PileFoundationViewModel
 import kotlinx.coroutines.launch
 
@@ -105,6 +107,11 @@ fun PileFoundationScreen(
     var embedmentDepth by remember { mutableStateOf("1.5") }
     var safetyFactor by remember { mutableStateOf("3") }
     var scourDepth by remember { mutableStateOf("0") }
+
+    // Site quantities (cap excavation / blinding)
+    var excavationDepth by remember { mutableStateOf("1.5") }
+    var workingSpace by remember { mutableStateOf("0.5") }
+    var blindingThickness by remember { mutableStateOf("0.1") }
 
     // ── Eccentricity ──
     var eccentricityX by remember { mutableStateOf("0") }
@@ -484,6 +491,26 @@ fun PileFoundationScreen(
                 }
             }
 
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(stringResource(R.string.boq_site_title), fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            PileInputField(excavationDepth, stringResource(R.string.boq_excavation_depth), { excavationDepth = it }, Modifier.weight(1f))
+                            PileInputField(workingSpace, stringResource(R.string.boq_working_space), { workingSpace = it }, Modifier.weight(1f))
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        PileInputField(blindingThickness, stringResource(R.string.boq_blinding_thickness), { blindingThickness = it }, Modifier.fillMaxWidth())
+                    }
+                }
+            }
+
             // ─── ERROR DISPLAY ────────────────────────────────────
             error?.let { err ->
                 item {
@@ -515,6 +542,9 @@ fun PileFoundationScreen(
                 Button(
                     onClick = {
                         if (!inputValid) return@Button
+                        viewModel.excavationDepthM = excavationDepth.toDoubleOrNull() ?: 0.0
+                        viewModel.workingSpaceM = workingSpace.toDoubleOrNull() ?: 0.5
+                        viewModel.blindingThicknessM = blindingThickness.toDoubleOrNull() ?: 0.0
                         viewModel.designPileFoundation(
                             pileType = selectedPileType,
                             pileDiameter = pileDiameter.toDouble()!!,
@@ -578,6 +608,16 @@ fun PileFoundationScreen(
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty()) {
                         item { BbsTableCard(bbsEntries, title = "Pile Bar Bending Schedule") }
+                    }
+
+                    val boqRows = runCatching {
+                        BoqEstimator.pileRows(
+                            res, "PG1",
+                            viewModel.excavationDepthM, viewModel.workingSpaceM, viewModel.blindingThicknessM
+                        )
+                    }.getOrDefault(emptyList())
+                    if (boqRows.isNotEmpty()) {
+                        item { BoqTableCard(boqRows, title = "Pile Bill of Quantities") }
                     }
                 }
                 item {

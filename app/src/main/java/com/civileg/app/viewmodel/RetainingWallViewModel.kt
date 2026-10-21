@@ -206,7 +206,11 @@ class RetainingWallViewModel @Inject constructor(
                         bbsEntries = runCatching {
                             BbsGenerator.generateRetainingWallBbs("RW1", currentResult, wallLengthM)
                         }.getOrDefault(emptyList()),
-                        boqRows = BoqEstimator.retainingWallRows(currentResult, wallLengthM, "RW1", excavationDepthM, backfillWidthM),
+                        boqRows = BoqEstimator.retainingWallRows(
+                            currentResult, wallLengthM, "RW1",
+                            excavationDepthM, backfillWidthM,
+                            waterproofingAreaM2 = currentResult.height * wallLengthM
+                        ),
                         drawingBitmap = drawingBitmap,
                         drawing = com.civileg.app.utils.ElementDxfDrawings.retainingWallSection(
                             title = "RETAINING WALL",

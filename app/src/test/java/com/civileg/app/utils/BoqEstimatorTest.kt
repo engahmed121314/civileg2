@@ -185,4 +185,53 @@ class BoqEstimatorTest {
         assertEquals(380.0, rows[1].quantity, 1e-9)
         assertEquals(2 * (5.2 + 2.4) * 0.6, rows[2].quantity, 1e-9)
     }
+
+    @Test
+    fun `excavation and blinding use working space offset`() {
+        val footing = CalculatorEngine.FootingResult(
+            type = FootingType.ISOLATED, width = 2000.0, length = 2000.0, thickness = 500.0,
+            soilPressure = 150.0, allowablePressure = 200.0,
+            reinforcementBottom = ReinforcementBar(numBars = 12, diameter = 16, spacing = 150.0),
+            isSafe = true, code = DesignCode.ECP,
+            concreteVolume = 2.0, steelWeight = 80.0, cost = 0.0
+        )
+
+        val rows = BoqEstimator.footingRows(
+            footing, "F1", excavationDepthM = 1.5, workingSpaceM = 0.5, blindingThicknessM = 0.1
+        )
+
+        assertEquals(5, rows.size)
+        // (2 + 1) * (2 + 1) * 0.1
+        assertEquals(0.9, rows[3].quantity, 1e-9)
+        // (2 + 1) * (2 + 1) * 1.5
+        assertEquals(13.5, rows[4].quantity, 1e-9)
+    }
+
+    @Test
+    fun `retaining wall adds excavation and earth-face waterproofing`() {
+        val result = CalculatorEngine.RetainingWallResult(
+            height = 4.0, stemThickness = 300.0, baseWidth = 2500.0,
+            stemReinforcement = ReinforcementBar(numBars = 5, diameter = 16, spacing = 150.0),
+            baseReinforcement = ReinforcementBar(numBars = 5, diameter = 16, spacing = 150.0),
+            isSafe = true, concreteVolume = 2.0, steelWeight = 100.0, cost = 0.0,
+            code = DesignCode.ECP
+        )
+
+        val rows = BoqEstimator.retainingWallRows(
+            result, wallLengthM = 10.0, excavationDepthM = 2.0, waterproofingAreaM2 = 40.0
+        )
+
+        assertEquals(6, rows.size)
+        assertEquals(20.0, rows[4].quantity, 1e-9)
+        assertEquals(40.0, rows[5].quantity, 1e-9)
+    }
+
+    @Test
+    fun `underground tank waterproofing covers base and walls`() {
+        val rect = BoqEstimator.tankWaterproofingArea(false, 5.0, 4.0, 3.0)
+        val circular = BoqEstimator.tankWaterproofingArea(true, 4.0, 4.0, 3.0)
+
+        assertEquals(74.0, rect, 1e-9)
+        assertEquals(Math.PI * 4.0 * 4.0 / 4.0 + Math.PI * 4.0 * 3.0, circular, 1e-9)
+    }
 }

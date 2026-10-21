@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalRetainingWallDrawing
@@ -83,6 +85,10 @@ fun RetainingWallScreen(
     var fy by remember { mutableStateOf("400") }
     var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
     var inputError by remember { mutableStateOf<String?>(null) }
+
+    // Site quantities (trench excavation)
+    var excavationDepth by remember { mutableStateOf("2.0") }
+    var trenchWidth by remember { mutableStateOf("1.0") }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     LaunchedEffect(vmError) {
@@ -160,6 +166,20 @@ fun RetainingWallScreen(
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
             item {
+                Text(stringResource(R.string.boq_site_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            }
+
+            item {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(value = excavationDepth, onValueChange = { excavationDepth = it }, label = { Text(stringResource(R.string.boq_excavation_depth)) }, modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedTextField(value = trenchWidth, onValueChange = { trenchWidth = it }, label = { Text(stringResource(R.string.boq_backfill_width)) }, modifier = Modifier.weight(1f))
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item {
                 Button(
                     onClick = {
                         val h = height.toDoubleOrNull()
@@ -186,6 +206,8 @@ fun RetainingWallScreen(
                             return@Button
                         }
 
+                        viewModel.excavationDepthM = excavationDepth.toDoubleOrNull() ?: 0.0
+                        viewModel.backfillWidthM = trenchWidth.toDoubleOrNull() ?: 1.0
                         viewModel.calculateRetainingWallPro(
                             height = h!!,
                             soilDensity = sd!!,
@@ -306,6 +328,18 @@ fun RetainingWallScreen(
                 }.getOrDefault(emptyList())
                 if (bbsEntries.isNotEmpty()) {
                     item { BbsTableCard(bbsEntries, title = "Retaining Wall Bar Bending Schedule") }
+                }
+
+                val wallLengthM = wallLength.toDoubleOrNull() ?: 10.0
+                val boqRows = runCatching {
+                    BoqEstimator.retainingWallRows(
+                        res, wallLengthM, "RW1",
+                        viewModel.excavationDepthM, viewModel.backfillWidthM,
+                        waterproofingAreaM2 = res.height * wallLengthM
+                    )
+                }.getOrDefault(emptyList())
+                if (boqRows.isNotEmpty()) {
+                    item { BoqTableCard(boqRows, title = "Retaining Wall Bill of Quantities") }
                 }
 
                 if (res.safetyChecks.isNotEmpty()) {

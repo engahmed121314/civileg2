@@ -1779,4 +1779,9 @@
     <string name="quality_tab_fire_protection">Fire Protection</string>
     <string name="quality_tab_reports">Reports</string>
     <string name="quality_tab_compliance">Compliance</string>
+    <string name="boq_site_title">Site &amp; Quantities</string>
+    <string name="boq_excavation_depth">Excavation Depth (m)</string>
+    <string name="boq_working_space">Working Space (m)</string>
+    <string name="boq_blinding_thickness">Blinding Thickness (m)</string>
+    <string name="boq_backfill_width">Trench Width for Excavation (m)</string>
 </resources>

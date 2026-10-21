@@ -32,6 +32,8 @@ import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.viewmodel.FootingViewModel
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.drawings.footingDrawingSummary
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
@@ -97,6 +99,11 @@ fun FootingScreen(
     var maxLeft by remember { mutableStateOf("") }
     var maxRight by remember { mutableStateOf("") }
     var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+
+    // Site quantities (excavation / blinding)
+    var excavationDepth by remember { mutableStateOf("1.5") }
+    var workingSpace by remember { mutableStateOf("0.5") }
+    var blindingThickness by remember { mutableStateOf("0.1") }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -210,6 +217,18 @@ fun FootingScreen(
             }
 
             item {
+                Text(stringResource(R.string.boq_site_title), fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FootingInputField(excavationDepth, stringResource(R.string.boq_excavation_depth), { excavationDepth = it }, Modifier.weight(1f))
+                    FootingInputField(workingSpace, stringResource(R.string.boq_working_space), { workingSpace = it }, Modifier.weight(1f))
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FootingInputField(blindingThickness, stringResource(R.string.boq_blinding_thickness), { blindingThickness = it }, Modifier.weight(1f))
+                }
+            }
+
+
+            item {
                 val inputValid = axialLoad.toDoubleOrNull()?.let { it > 0 } == true
                         && fcu.toDoubleOrNull()?.let { it > 0 } == true
                         && fy.toDoubleOrNull()?.let { it > 0 } == true
@@ -219,6 +238,9 @@ fun FootingScreen(
                 Button(
                     onClick = {
                         if (!inputValid) return@Button
+                        viewModel.excavationDepthM = excavationDepth.toDoubleOrNull() ?: 0.0
+                        viewModel.workingSpaceM = workingSpace.toDoubleOrNull() ?: 0.5
+                        viewModel.blindingThicknessM = blindingThickness.toDoubleOrNull() ?: 0.0
                         viewModel.calculateFooting(
                             type = selectedType,
                             p = axialLoad.toDouble()!!,
@@ -346,6 +368,16 @@ fun FootingScreen(
                 }.getOrDefault(emptyList())
                 if (bbsEntries.isNotEmpty()) {
                     item { BbsTableCard(bbsEntries, title = "Footing Bar Bending Schedule") }
+                }
+
+                val boqRows = runCatching {
+                    BoqEstimator.footingRows(
+                        res, "F1",
+                        viewModel.excavationDepthM, viewModel.workingSpaceM, viewModel.blindingThicknessM
+                    )
+                }.getOrDefault(emptyList())
+                if (boqRows.isNotEmpty()) {
+                    item { BoqTableCard(boqRows, title = "Footing Bill of Quantities") }
                 }
 
                 if (res.safetyChecks.isNotEmpty()) {

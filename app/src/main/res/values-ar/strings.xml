@@ -1696,4 +1696,9 @@
     <string name="quality_tab_fire_protection">الحماية من الحريق</string>
     <string name="quality_tab_reports">التقارير</string>
     <string name="quality_tab_compliance">الامتثال</string>
+    <string name="boq_site_title">الموقع والكميات</string>
+    <string name="boq_excavation_depth">عمق الحفر (م)</string>
+    <string name="boq_working_space">مسافة العمل (م)</string>
+    <string name="boq_blinding_thickness">سمك الخرسانة العادية (م)</string>
+    <string name="boq_backfill_width">عرض خندق الحفر (م)</string>
 </resources>

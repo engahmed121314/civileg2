@@ -29,9 +29,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.BbsGenerator
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.CalculatorEngine.TankType
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalTankDrawing
@@ -86,6 +88,10 @@ fun TankScreen(
     var fcu by remember { mutableStateOf("30") }
     var fy by remember { mutableStateOf("400") }
     var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+
+    // Site quantities (pit excavation / blinding)
+    var excavationDepth by remember { mutableStateOf("2.0") }
+    var blindingThickness by remember { mutableStateOf("0.1") }
 
     // Input validation states
     var capacityError by remember { mutableStateOf("") }
@@ -241,9 +247,19 @@ fun TankScreen(
             }
 
             item {
+                Text(stringResource(R.string.boq_site_title), fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TankInputField(excavationDepth, stringResource(R.string.boq_excavation_depth), { excavationDepth = it }, Modifier.weight(1f), "")
+                    TankInputField(blindingThickness, stringResource(R.string.boq_blinding_thickness), { blindingThickness = it }, Modifier.weight(1f), "")
+                }
+            }
+
+            item {
                 Button(
                     onClick = {
                         if (!validateInputs()) return@Button
+                        viewModel.excavationDepthM = excavationDepth.toDoubleOrNull() ?: 0.0
+                        viewModel.blindingThicknessM = blindingThickness.toDoubleOrNull() ?: 0.0
                         viewModel.calculateTankPro(
                             type = selectedType,
                             capacity = capacity.toDoubleOrNull() ?: 50.0,
@@ -362,6 +378,22 @@ fun TankScreen(
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty()) {
                         item { BbsTableCard(bbsEntries, title = "Tank Bar Bending Schedule") }
+                    }
+
+                    val boqRows = runCatching {
+                        BoqEstimator.tankRows(
+                            res.concreteVolume, res.steelWeight, res.length, res.width, res.height,
+                            "T1", viewModel.excavationDepthM, viewModel.blindingThicknessM,
+                            waterproofingAreaM2 = if (res.type.name.contains("UNDERGROUND")) {
+                                BoqEstimator.tankWaterproofingArea(
+                                    isCircular = res.type.name.contains("CIRCULAR"),
+                                    lengthM = res.length, widthM = res.width, heightM = res.height
+                                )
+                            } else 0.0
+                        )
+                    }.getOrDefault(emptyList())
+                    if (boqRows.isNotEmpty()) {
+                        item { BoqTableCard(boqRows, title = "Tank Bill of Quantities") }
                     }
                 }
 

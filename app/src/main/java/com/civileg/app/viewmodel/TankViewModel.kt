@@ -182,7 +182,16 @@ class TankViewModel @Inject constructor(
                     bbsEntries = runCatching {
                         BbsGenerator.generateTankBbs("T1", res)
                     }.getOrDefault(emptyList()),
-                    boqRows = BoqEstimator.tankRows(res.concreteVolume, res.steelWeight, res.length, res.width, res.height, "T1", excavationDepthM, blindingThicknessM),
+                    boqRows = BoqEstimator.tankRows(
+                        res.concreteVolume, res.steelWeight, res.length, res.width, res.height,
+                        "T1", excavationDepthM, blindingThicknessM,
+                        waterproofingAreaM2 = if (res.type.name.contains("UNDERGROUND")) {
+                            BoqEstimator.tankWaterproofingArea(
+                                isCircular = res.type.name.contains("CIRCULAR"),
+                                lengthM = res.length, widthM = res.width, heightM = res.height
+                            )
+                        } else 0.0
+                    ),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.tankSection(
                         title = "TANK ${res.type.displayName}",

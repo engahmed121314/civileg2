@@ -105,7 +105,8 @@ object BoqEstimator {
         wallLengthM: Double,
         mark: String = "Retaining wall",
         excavationDepthM: Double = 0.0,
-        backfillWidthM: Double = 1.0
+        backfillWidthM: Double = 1.0,
+        waterproofingAreaM2: Double = 0.0
     ): List<BoqRow> {
         val rows = mutableListOf(
             item(1, "Concrete - $mark", "m3", result.concreteVolume * wallLengthM),
@@ -115,6 +116,9 @@ object BoqEstimator {
         )
         if (excavationDepthM > 0.0 && wallLengthM > 0.0) {
             rows.add(item(rows.size + 1, "Excavation - $mark", "m3", wallLengthM * backfillWidthM * excavationDepthM))
+        }
+        if (waterproofingAreaM2 > 0.0) {
+            rows.add(item(rows.size + 1, "Waterproofing - $mark (earth face)", "m2", waterproofingAreaM2))
         }
         return rows
     }
@@ -207,6 +211,14 @@ object BoqEstimator {
         item(3, "Formwork - $mark (soffit)", "m2", lxM * lyM)
     )
 
+    /** Waterproofing area for an underground tank: base plus wetted wall faces. */
+    fun tankWaterproofingArea(isCircular: Boolean, lengthM: Double, widthM: Double, heightM: Double): Double =
+        if (isCircular) {
+            Math.PI * lengthM * lengthM / 4.0 + Math.PI * lengthM * heightM
+        } else {
+            lengthM * widthM + 2 * (lengthM + widthM) * heightM
+        }
+
     fun tankRows(
         concreteVolumeM3: Double,
         steelWeightKg: Double,
@@ -215,7 +227,8 @@ object BoqEstimator {
         heightM: Double,
         mark: String = "Water tank",
         excavationDepthM: Double = 0.0,
-        blindingThicknessM: Double = 0.0
+        blindingThicknessM: Double = 0.0,
+        waterproofingAreaM2: Double = 0.0
     ): List<BoqRow> {
         val rows = mutableListOf(
             item(1, "Concrete - $mark", "m3", concreteVolumeM3),
@@ -228,6 +241,9 @@ object BoqEstimator {
         }
         if (excavationDepthM > 0.0) {
             rows.add(item(rows.size + 1, "Excavation - $mark (pit)", "m3", (lengthM + 0.5) * (widthM + 0.5) * excavationDepthM))
+        }
+        if (waterproofingAreaM2 > 0.0) {
+            rows.add(item(rows.size + 1, "Waterproofing - $mark (base + walls)", "m2", waterproofingAreaM2))
         }
         return rows
     }
