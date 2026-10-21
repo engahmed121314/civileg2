@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStrapFootingDrawing
@@ -309,6 +311,15 @@ fun StrapFootingScreen(
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty()) {
                         item { BbsTableCard(bbsEntries, title = "Strap Footing Bar Bending Schedule") }
+                    }
+
+                    val boqRows = runCatching {
+                        BoqEstimator.strapFootingRows(
+                            res, distance.toDoubleOrNull() ?: 5.0, "SF1"
+                        )
+                    }.getOrDefault(emptyList())
+                    if (boqRows.isNotEmpty()) {
+                        item { BoqTableCard(boqRows, title = "Strap Footing Bill of Quantities") }
                     }
                 }
                 

@@ -39,6 +39,8 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.ColumnViewModel
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.drawings.columnDrawingSummary
 import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
@@ -312,6 +314,13 @@ fun ColumnScreen(
                 }.getOrDefault(emptyList())
                 if (bbsEntries.isNotEmpty()) {
                     item { BbsTableCard(bbsEntries, title = "Column Bar Bending Schedule") }
+                }
+
+                val boqRows = runCatching {
+                    BoqEstimator.columnRows(result, uiState.height.toDoubleOrNull() ?: 3.0, "C1")
+                }.getOrDefault(emptyList())
+                if (boqRows.isNotEmpty()) {
+                    item { BoqTableCard(boqRows, title = "Column Bill of Quantities") }
                 }
 
                 if (result.mx != 0.0 || result.my != 0.0) {

@@ -248,6 +248,18 @@ object BoqEstimator {
         return rows
     }
 
+    /** Per-metre-width quantities for a hordi (hollow-block) slab strip. */
+    fun hordiSlabRows(
+        spanM: Double,
+        totalThicknessM: Double,
+        steelWeightKgPerMetre: Double,
+        mark: String = "Hordi slab"
+    ): List<BoqRow> = listOf(
+        item(1, "Concrete - $mark (per 1 m width)", "m3", spanM * totalThicknessM),
+        item(2, "Reinforcement steel - $mark (per 1 m width)", "kg", steelWeightKgPerMetre),
+        item(3, "Formwork - $mark soffit (per 1 m width)", "m2", spanM)
+    )
+
     fun flatSlabRows(
         result: FlatSlabResult,
         lxM: Double,

@@ -41,6 +41,8 @@ import com.civileg.app.utils.CalculatorEngine.StairType
 import com.civileg.app.viewmodel.StairViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStairDrawing
 import com.civileg.app.ui.compose.components.drawings.stairDrawingSummary
@@ -332,6 +334,17 @@ fun StairScreen(
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty()) {
                         item { BbsTableCard(bbsEntries, title = "Stair Bar Bending Schedule") }
+                    }
+
+                    val boqRows = runCatching {
+                        BoqEstimator.stairRows(
+                            res,
+                            (stairWidth.toDoubleOrNull() ?: 1200.0) / 1000.0,
+                            "ST1"
+                        )
+                    }.getOrDefault(emptyList())
+                    if (boqRows.isNotEmpty()) {
+                        item { BoqTableCard(boqRows, title = "Stair Bill of Quantities") }
                     }
                 }
 

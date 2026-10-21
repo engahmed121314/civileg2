@@ -366,6 +366,13 @@ class CalculateElementBoq @Inject constructor() {
         val formArea = (2.0 * (lMm + wMm) * hMm + lMm * wMm) / 1e6 // جدران + قاعدة
         items += formworkItem("TNK_FORM_001", "Tank formwork (walls + base)", formArea, prices.formworkPerM2)
 
+        // 7. Waterproofing (base + walls)
+        val waterproofArea = tankLength * tankWidth + 2.0 * (tankLength + tankWidth) * tankHeight
+        items += BoqItem(
+            "TNK_WP_001", "Tank waterproofing (base + walls)",
+            BoqCategory.MISCELLANEOUS, "m2", waterproofArea, prices.waterproofingPerM2
+        )
+
         return items
     }
 
@@ -430,6 +437,13 @@ class CalculateElementBoq @Inject constructor() {
         // 6. الشدة
         val formArea = (lMm * hMm + lMm * (baseWidth * 1000.0)) / 1e6
         items += formworkItem("RW_FORM_001", "RW formwork (stem + base)", formArea, prices.formworkPerM2)
+
+        // 7. Waterproofing (earth face)
+        val waterproofArea = wallLength * totalHeight
+        items += BoqItem(
+            "RW_WP_001", "RW waterproofing (earth face)",
+            BoqCategory.MISCELLANEOUS, "m2", waterproofArea, prices.waterproofingPerM2
+        )
 
         return items
     }

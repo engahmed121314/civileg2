@@ -29,6 +29,8 @@ import com.civileg.app.R
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFlatSlabDrawing
@@ -352,6 +354,18 @@ item {
                         }.getOrDefault(emptyList())
                         if (bbsEntries.isNotEmpty()) {
                             item { BbsTableCard(bbsEntries, title = "Flat Slab Bar Bending Schedule") }
+                        }
+
+                        val boqRows = runCatching {
+                            BoqEstimator.flatSlabRows(
+                                res,
+                                lx.toDoubleOrNull() ?: 6.0,
+                                ly.toDoubleOrNull() ?: 7.5,
+                                "FS1"
+                            )
+                        }.getOrDefault(emptyList())
+                        if (boqRows.isNotEmpty()) {
+                            item { BoqTableCard(boqRows, title = "Flat Slab Bill of Quantities") }
                         }
                     }
 

@@ -33,6 +33,8 @@ import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
@@ -426,6 +428,18 @@ fun SlabScreen(
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty()) {
                         item { BbsTableCard(bbsEntries, title = "Slab Bar Bending Schedule") }
+                    }
+
+                    val boqRows = runCatching {
+                        BoqEstimator.slabRows(
+                            res,
+                            shortSpan.toDoubleOrNull() ?: 4.0,
+                            longSpan.toDoubleOrNull() ?: 5.0,
+                            "S1"
+                        )
+                    }.getOrDefault(emptyList())
+                    if (boqRows.isNotEmpty()) {
+                        item { BoqTableCard(boqRows, title = "Slab Bill of Quantities") }
                     }
                 }
 

@@ -35,6 +35,8 @@ import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalHordiSlabDrawing
 import com.civileg.app.ui.compose.components.drawings.hordiSlabDrawingSummary
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.HordiSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
@@ -307,6 +309,18 @@ fun HordiSlabScreen(
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty()) {
                         item { BbsTableCard(bbsEntries, title = "Hordi Slab Bar Bending Schedule") }
+                    }
+
+                    val boqRows = runCatching {
+                        BoqEstimator.hordiSlabRows(
+                            (span.toDoubleOrNull() ?: 6000.0) / 1000.0,
+                            (totalThickness.toDoubleOrNull() ?: 350.0) / 1000.0,
+                            bbsEntries.sumOf { it.totalWeightKg },
+                            "H1"
+                        )
+                    }.getOrDefault(emptyList())
+                    if (boqRows.isNotEmpty()) {
+                        item { BoqTableCard(boqRows, title = "Hordi Slab Bill of Quantities") }
                     }
 
                     // Safety Status Gauge

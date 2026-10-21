@@ -1168,3 +1168,25 @@ bolted connection reports gained summary DXF sheets with size/length/grade/capac
   diameter (previously only the design code).
 
 **Tests.** Suite remains at **70 suites / 1288 tests / 0 failures** (compile + full rerun).
+
+### 9.31 Screen BOQ parity for all concrete elements + project waterproofing
+
+**On-screen quantities expanded.** The `BoqTableCard` was previously shown only on the footing,
+retaining-wall, pile and tank screens; beam, column, slab, stair, flat-slab, waffle-slab,
+hordi-slab and strap-footing screens now render the exact same `BoqRow` list that is written into
+their PDF/DXF report, directly under the bar bending schedule. Any quantity mismatch between the
+screen and the exported report is therefore impossible.
+
+**Hordi slab quantities.** Added `BoqEstimator.hordiSlabRows(spanM, totalThicknessM,
+steelWeightKgPerMetre, mark)`, reporting concrete, reinforcement (summed from the generated BBS)
+and soffit formwork per 1 m width. Both `HordiSlabViewModel` export and `HordiSlabScreen` use it,
+so the previously report-only BBS now has matching quantities.
+
+**Project-level BOQ waterproofing.** `CalculateElementBoq` project rows previously stopped at
+formwork. Tank projects now add `TNK_WP_001` (base + wetted wall area) and retaining-wall projects
+add `RW_WP_001` (earth face = length x height), priced by the new
+`MaterialPrices.waterproofingPerM2` (default 80 EGP/m2), aligning project totals with the element
+BOQ estimator.
+
+**Tests.** Suite now at **71 suites / 1291 tests / 0 failures**. New coverage:
+`hordiSlabRows` per-metre-width quantities and project-level tank/retaining-wall waterproofing rows.

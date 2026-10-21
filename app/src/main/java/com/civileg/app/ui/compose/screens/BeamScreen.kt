@@ -37,6 +37,8 @@ import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.BeamViewModel
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.drawings.beamDrawingSummary
 import com.civileg.app.ui.compose.components.drawings.ProfessionalBeamDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
@@ -223,6 +225,13 @@ fun BeamScreen(
                 }.getOrDefault(emptyList())
                 if (bbsEntries.isNotEmpty()) {
                     item { BbsTableCard(bbsEntries, title = "Beam Bar Bending Schedule") }
+                }
+
+                val boqRows = runCatching {
+                    BoqEstimator.beamRows(res, "B1")
+                }.getOrDefault(emptyList())
+                if (boqRows.isNotEmpty()) {
+                    item { BoqTableCard(boqRows, title = "Beam Bill of Quantities") }
                 }
                 
                 item {

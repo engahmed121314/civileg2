@@ -165,6 +165,18 @@ class BoqEstimatorTest {
     }
 
     @Test
+    fun `hordi slab boq is reported per metre width`() {
+        val rows = BoqEstimator.hordiSlabRows(6.0, 0.35, 42.5, "H1")
+
+        assertEquals(3, rows.size)
+        assertEquals(listOf("m3", "kg", "m2"), rows.map { it.unit })
+        assertEquals(2.1, rows[0].quantity, 1e-9)
+        assertEquals(42.5, rows[1].quantity, 1e-9)
+        assertEquals(6.0, rows[2].quantity, 1e-9)
+        assertTrue(rows.all { it.quantity > 0.0 })
+    }
+
+    @Test
     fun `combined footing boq derives perimeter formwork`() {
         val result = com.civileg.app.domain.calculations.ecp.CombinedFootingResult(
             footingLength = 5.2, footingWidth = 2.4, footingThickness = 600.0,

@@ -163,6 +163,13 @@ class HordiSlabViewModel @Inject constructor(
                 }.getOrNull()
                 pendingDrawingBitmap = null  // consume after use
 
+                val bbsEntries = runCatching {
+                    com.civileg.app.utils.BbsGenerator.generateHordiSlabBbs(
+                        "H1", res, params.span, params.ribSpacing
+                    )
+                }.getOrDefault(emptyList())
+                val steelWeightKg = bbsEntries.sumOf { it.totalWeightKg }
+
                 val codeName = params.designCode
                 val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "????? ????? ????? ?????",
@@ -173,11 +180,10 @@ class HordiSlabViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
-                    bbsEntries = runCatching {
-                        com.civileg.app.utils.BbsGenerator.generateHordiSlabBbs(
-                            "H1", res, params.span, params.ribSpacing
-                        )
-                    }.getOrDefault(emptyList()),
+                    bbsEntries = bbsEntries,
+                    boqRows = com.civileg.app.utils.BoqEstimator.hordiSlabRows(
+                        params.span / 1000.0, params.totalThickness / 1000.0, steelWeightKg, "H1"
+                    ),
                     drawingBitmap = drawingBitmap,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
                         title = "HORDI SLAB",

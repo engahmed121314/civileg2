@@ -33,6 +33,8 @@ import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalWaffleSlabDrawing
 import com.civileg.app.ui.compose.components.drawings.waffleSlabDrawingSummary
 import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
+import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.WaffleSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
@@ -303,6 +305,18 @@ fun WaffleSlabScreen(
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty()) {
                         item { BbsTableCard(bbsEntries, title = "Waffle Slab Bar Bending Schedule") }
+                    }
+
+                    val boqRows = runCatching {
+                        BoqEstimator.waffleSlabRows(
+                            res,
+                            (lx.toDoubleOrNull() ?: 6000.0) / 1000.0,
+                            (ly.toDoubleOrNull() ?: 7500.0) / 1000.0,
+                            "WS1"
+                        )
+                    }.getOrDefault(emptyList())
+                    if (boqRows.isNotEmpty()) {
+                        item { BoqTableCard(boqRows, title = "Waffle Slab Bill of Quantities") }
                     }
 
                     // Safety Status Gauge
