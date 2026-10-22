@@ -6,13 +6,13 @@ import android.graphics.Canvas as AndroidCanvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.IntSize
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -25,7 +25,7 @@ object ComposeDrawingCaptureUtil {
 
     /**
      * Creates a [GraphicsLayer] that can be attached to a composable via
-     * [DrawingCaptureArea]. Call [captureLayerToBitmap] to obtain the rendered Bitmap.
+     * [DrawingCaptureArea]. Call [captureToAndroidBitmap] to obtain the rendered Bitmap.
      */
     @Composable
     fun rememberDrawingCaptureLayer(): GraphicsLayer = rememberGraphicsLayer()
@@ -33,8 +33,9 @@ object ComposeDrawingCaptureUtil {
     /**
      * Invisible rendering area that records drawing content into [captureLayer].
      * The content is measured at exactly [widthPx] x [heightPx] pixels but is
-     * invisible on screen (alpha = 0). The [captureLayer] captures the full-
-     * opacity content so the resulting Bitmap looks identical to the on-screen
+     * invisible on screen (since [drawWithContent] records into [captureLayer]
+     * without emitting output to the screen canvas). The [captureLayer] captures
+     * the full-opacity content so the resulting Bitmap looks identical to the on-screen
      * drawing.
      */
     @Composable
@@ -44,19 +45,34 @@ object ComposeDrawingCaptureUtil {
         heightPx: Int,
         content: @Composable () -> Unit
     ) {
+        val w = if (widthPx > 0) widthPx else 1200
+        val h = if (heightPx > 0) heightPx else 800
+        val safeW = w.coerceAtLeast(1)
+        val safeH = h.coerceAtLeast(1)
+        val targetSize = IntSize(safeW, safeH)
         Box(
             modifier = Modifier
-                .layout { measurable, _ ->
-                    val placeable = measurable.measure(
-                        Constraints.fixed(widthPx, heightPx)
-                    )
+                .layout { measurable, constraints ->
+                    val safeConstraints = constraints.sanitize()
+                    val fixed = Constraints(
+                        minWidth = safeW,
+                        maxWidth = safeW,
+                        minHeight = safeH,
+                        maxHeight = safeH
+                    ).sanitize()
+                    val placeable = measurable.measure(fixed)
                     layout(0, 0) {
                         placeable.place(0, 0)
                     }
                 }
-                .alpha(0f)
                 .drawWithContent {
-                    captureLayer.record { this@drawWithContent.drawContent() }
+                    try {
+                        captureLayer.record(size = targetSize) {
+                            this@drawWithContent.drawContent()
+                        }
+                    } catch (t: Throwable) {
+                        t.printStackTrace()
+                    }
                 }
         ) {
             content()
@@ -122,6 +138,31 @@ object ComposeDrawingCaptureUtil {
  * This is a suspend function because [GraphicsLayer.toImageBitmap] is suspend.
  * Call from a coroutine (e.g. `rememberCoroutineScope().launch { }`).
  */
-suspend fun GraphicsLayer.captureToAndroidBitmap(): Bitmap {
-    return toImageBitmap().asAndroidBitmap()
+suspend fun GraphicsLayer.captureToAndroidBitmap(): Bitmap? {
+    return try {
+        if (size.width <= 0 || size.height <= 0) {
+            null
+        } else {
+            toImageBitmap().asAndroidBitmap()
+        }
+    } catch (t: Throwable) {
+        t.printStackTrace()
+        null
+    }
+}
+
+fun Constraints.sanitize(): Constraints {
+    val minW = minWidth.coerceAtLeast(0)
+    val maxW = maxWidth.coerceAtLeast(minW)
+    val minH = minHeight.coerceAtLeast(0)
+    val maxH = maxHeight.coerceAtLeast(minH)
+    return Constraints(minWidth = minW, maxWidth = maxW, minHeight = minH, maxHeight = maxH)
+}
+
+fun Modifier.safeConstraints(): Modifier = this.layout { measurable, constraints ->
+    val safe = constraints.sanitize()
+    val placeable = measurable.measure(safe)
+    layout(placeable.width, placeable.height) {
+        placeable.place(0, 0)
+    }
 }

@@ -240,4 +240,54 @@ class FrameAnalysisEngineTest {
             assertTrue("hasResults should be true", result.hasResults)
         }
     }
+
+    @Test
+    fun solveFrame_memberEndReleases_produceSimplySupportedBeam() {
+        val nodes = listOf(
+            FrameNode(1, 0.0, 0.0, SupportType.Pin),
+            FrameNode(2, 6.0, 0.0, SupportType.Roller)
+        )
+        val member = FrameMember(
+            id = 1, nodeI = 1, nodeJ = 2,
+            materialType = FrameMaterialType.Concrete,
+            memberType = FrameMemberType.Beam,
+            concreteSection = ConcreteSectionProps(300.0, 500.0),
+            releaseI = true, releaseJ = true
+        )
+        val loads = listOf(MemberLoad(1, MemberLoadType.UDL, 10.0, loadCase = "DL"))
+
+        val result = FrameAnalysisEngine.solveFrame(
+            nodes, listOf(member), emptyList(), loads, FrameAnalysisSettings()
+        )
+
+        assertTrue("Released beam should solve: ${result.errorMessage}", result.isSolved)
+        val forces = result.memberEndForces.single()
+        assertEquals(0.0, forces.mi_z, 1e-6)
+        assertEquals(0.0, forces.mj_z, 1e-6)
+        assertEquals(30.0, forces.fi_y, 1e-6)
+        assertEquals(45.0, result.memberDiagrams.single().maxMoment, 0.2)
+    }
+
+    @Test
+    fun solveFrame_singleEndRelease_transfersZeroMomentAtReleasedEnd() {
+        val nodes = listOf(
+            FrameNode(1, 0.0, 0.0, SupportType.Fixed),
+            FrameNode(2, 6.0, 0.0, SupportType.Free)
+        )
+        val member = FrameMember(
+            id = 1, nodeI = 1, nodeJ = 2,
+            materialType = FrameMaterialType.Concrete,
+            memberType = FrameMemberType.Beam,
+            concreteSection = ConcreteSectionProps(300.0, 500.0),
+            releaseJ = true
+        )
+        val loads = listOf(MemberLoad(1, MemberLoadType.UDL, 10.0, loadCase = "DL"))
+
+        val result = FrameAnalysisEngine.solveFrame(
+            nodes, listOf(member), emptyList(), loads, FrameAnalysisSettings()
+        )
+
+        assertTrue("Cantilever with tip hinge should solve: ${result.errorMessage}", result.isSolved)
+        assertEquals(0.0, result.memberEndForces.single().mj_z, 1e-6)
+    }
 }

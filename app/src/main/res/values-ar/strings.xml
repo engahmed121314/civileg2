@@ -371,11 +371,29 @@
     <string name="frame_tab_members">الأعضاء</string>
     <string name="frame_tab_loads">الحمولات</string>
     <string name="frame_tab_results">النتائج</string>
+    <string name="frame_modeler_tab">رسم الموديل</string>
+    <string name="frame_modeler_view_tab">العرض والنتائج</string>
+    <string name="frame_modeler_short_hint">اسحب للتحريك • اضغط بإصبعين للتكبير</string>
+    <string name="frame_save_design">حفظ الموديل</string>
+    <string name="frame_open_design">فتح موديل محفوظ</string>
+    <string name="frame_default_design_name">موديل إطار</string>
+    <string name="frame_save_name">اسم الموديل</string>
+    <string name="frame_save_project">اختر المشروع</string>
+    <string name="frame_no_projects_for_save">أنشئ مشروعًا أولًا ثم احفظ موديل الإطار.</string>
+    <string name="frame_no_saved_designs">لا توجد موديلات إطارات محفوظة بعد.</string>
+    <string name="frame_design_saved">تم حفظ موديل الإطار</string>
+    <string name="frame_design_loaded">تم فتح موديل الإطار</string>
     <string name="frame_solve">حل</string>
     <string name="frame_info_nodes">العقد: %d</string>
     <string name="frame_info_members">الأعضاء: %d</string>
     <string name="frame_info_solved">تم الحل ✓  |  الحمولات: %d</string>
     <string name="frame_press_solve">اضغط على زر \'حل\' لبدء التحليل</string>
+    <string name="frame_validation_title">التحقق من النموذج</string>
+    <string name="frame_validation_ok">حسنًا</string>
+    <string name="frame_export_dxf">تصدير DXF</string>
+    <string name="frame_dxf_error">فشل تصدير DXF: %1$s</string>
+    <string name="frame_share_dxf">مشاركة DXF</string>
+    <string name="frame_dxf_subject">نموذج الإطار DXF</string>
 
     <!-- General -->
     <string name="error_calculation">خطأ في الحساب</string>

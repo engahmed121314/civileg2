@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,16 +31,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.db.Design
+import com.civileg.app.db.DesignType
+import com.civileg.app.db.Project
 import com.civileg.app.domain.entities.*
 import com.civileg.app.ui.theme.CivilEngineerTheme
 import com.civileg.app.viewmodel.DiagramType
 import com.civileg.app.viewmodel.FrameAnalysisViewModel
+import com.civileg.app.viewmodel.FrameDesignNotice
+import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.utils.FrameAnalysisPdfExporter
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Locale
 import kotlin.math.abs
 
 /**
@@ -53,6 +61,7 @@ import kotlin.math.abs
 @Composable
 fun FrameAnalysisScreen(
     viewModel: FrameAnalysisViewModel = hiltViewModel(),
+    projectViewModel: ProjectViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
     val nodes by viewModel.nodes.observeAsState(emptyList())
@@ -64,13 +73,34 @@ fun FrameAnalysisScreen(
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     val errorMsg by viewModel.errorMessage.observeAsState()
+    val validationIssues by viewModel.validationIssues.observeAsState(emptyList())
+    val designNotice by viewModel.designNotice.observeAsState()
+    val modelLoadVersion by viewModel.modelLoadVersion.observeAsState(0)
     val diagramType by viewModel.activeDiagramType.observeAsState(DiagramType.BMD)
     val selectedMemberId by viewModel.selectedMemberId.observeAsState()
     val concreteResults by viewModel.concreteResults.observeAsState(emptyList())
     val steelResults by viewModel.steelResults.observeAsState(emptyList())
+    val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val allDesigns by projectViewModel.allDesigns.observeAsState(emptyList())
+    val savedFrameDesigns = remember(allDesigns) {
+        allDesigns.filter { it.type == DesignType.FRAME_ANALYSIS }
+    }
     val context = LocalContext.current
 
     var selectedTab by remember { mutableIntStateOf(0) }
+    var showSaveDesignDialog by remember { mutableStateOf(false) }
+    var showOpenDesignDialog by remember { mutableStateOf(false) }
+    val defaultDesignName = stringResource(R.string.frame_default_design_name)
+    val savedMessage = stringResource(R.string.frame_design_saved)
+    val loadedMessage = stringResource(R.string.frame_design_loaded)
+    LaunchedEffect(designNotice) {
+        when (designNotice) {
+            FrameDesignNotice.SAVED -> Toast.makeText(context, savedMessage, Toast.LENGTH_SHORT).show()
+            FrameDesignNotice.LOADED -> Toast.makeText(context, loadedMessage, Toast.LENGTH_SHORT).show()
+            null -> Unit
+        }
+        if (designNotice != null) viewModel.clearDesignNotice()
+    }
     val tabs = listOf(
         stringResource(R.string.frame_tab_drawing),
         stringResource(R.string.frame_tab_nodes),
@@ -108,6 +138,12 @@ fun FrameAnalysisScreen(
                     navigationIconContentColor = Color.White
                 ),
                 actions = {
+                    IconButton(onClick = { showSaveDesignDialog = true }) {
+                        Icon(Icons.Default.Save, stringResource(R.string.frame_save_design), tint = Color.White)
+                    }
+                    IconButton(onClick = { showOpenDesignDialog = true }) {
+                        Icon(Icons.Default.FolderOpen, stringResource(R.string.frame_open_design), tint = Color.White)
+                    }
                     var showTemplatesMenu by remember { mutableStateOf(false) }
                     Box {
                         IconButton(onClick = { showTemplatesMenu = true }) {
@@ -152,7 +188,8 @@ fun FrameAnalysisScreen(
                                 try {
                                     val file = FrameAnalysisPdfExporter.generateFrameAnalysisPdf(
                                         context, inputs.nodes, inputs.members, inputs.nodalLoads,
-                                        inputs.memberLoads, inputs.settings, inputs.result
+                                        inputs.memberLoads, inputs.settings, inputs.result,
+                                        inputs.slabs, inputs.sceneView
                                     )
                                     withContext(Dispatchers.Main) {
                                         try {
@@ -261,7 +298,7 @@ fun FrameAnalysisScreen(
                 when (selectedTab) {
                     0 -> DrawingTab(
                         modifier = Modifier.fillMaxSize(),
-                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, settingsVal, steelFyVal, viewModel
+                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, modelLoadVersion, viewModel
                     )
                     1 -> NodesTab(nodes, members, viewModel)
                     2 -> MembersTab(nodes, members, settingsVal, viewModel)
@@ -270,6 +307,54 @@ fun FrameAnalysisScreen(
                 }
             }
         }
+    }
+    if (showSaveDesignDialog) {
+        FrameSaveDesignDialog(
+            projects = projects,
+            defaultName = "$defaultDesignName ${savedFrameDesigns.size + 1}",
+            onDismiss = { showSaveDesignDialog = false },
+            onSave = { projectId, name ->
+                showSaveDesignDialog = false
+                viewModel.saveFrameDesign(projectId, name)
+            }
+        )
+    }
+    if (showOpenDesignDialog) {
+        FrameOpenDesignDialog(
+            designs = savedFrameDesigns,
+            projects = projects,
+            onDismiss = { showOpenDesignDialog = false },
+            onOpen = { designId ->
+                showOpenDesignDialog = false
+                viewModel.loadFrameDesign(designId)
+            }
+        )
+    }
+    if (validationIssues.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearValidationIssues() },
+            title = { Text(stringResource(R.string.frame_validation_title)) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    validationIssues.forEachIndexed { index, issue ->
+                        Text(
+                            "${index + 1}. ${issue.message}",
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(vertical = 3.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearValidationIssues() }) {
+                    Text(stringResource(R.string.frame_validation_ok))
+                }
+            }
+        )
     }
     if (isLoading) {
         Box(
@@ -285,6 +370,136 @@ fun FrameAnalysisScreen(
 }
 
 // ============================================================================
+// Save / Open dialogs
+// ============================================================================
+@Composable
+private fun FrameSaveDesignDialog(
+    projects: List<Project>,
+    defaultName: String,
+    onDismiss: () -> Unit,
+    onSave: (projectId: Long, name: String) -> Unit
+) {
+    var name by rememberSaveable { mutableStateOf(defaultName) }
+    var selectedProjectId by rememberSaveable {
+        mutableStateOf(projects.firstOrNull()?.id ?: 0L)
+    }
+    var projectMenuExpanded by remember { mutableStateOf(false) }
+    LaunchedEffect(projects) {
+        if (selectedProjectId == 0L) {
+            selectedProjectId = projects.firstOrNull()?.id ?: 0L
+        }
+    }
+    val selectedProject = projects.firstOrNull { it.id == selectedProjectId }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.frame_save_design)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (projects.isEmpty()) {
+                    Text(
+                        stringResource(R.string.frame_no_projects_for_save),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    Box {
+                        OutlinedButton(
+                            onClick = { projectMenuExpanded = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(selectedProject?.name ?: stringResource(R.string.frame_save_project))
+                        }
+                        DropdownMenu(
+                            expanded = projectMenuExpanded,
+                            onDismissRequest = { projectMenuExpanded = false }
+                        ) {
+                            for (project in projects) {
+                                DropdownMenuItem(
+                                    text = { Text(project.name) },
+                                    onClick = {
+                                        selectedProjectId = project.id
+                                        projectMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.frame_save_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank() && selectedProjectId > 0,
+                onClick = { onSave(selectedProjectId, name.trim()) }
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun FrameOpenDesignDialog(
+    designs: List<Design>,
+    projects: List<Project>,
+    onDismiss: () -> Unit,
+    onOpen: (designId: Long) -> Unit
+) {
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.frame_open_design)) },
+        text = {
+            if (designs.isEmpty()) {
+                Text(stringResource(R.string.frame_no_saved_designs))
+            } else {
+                LazyColumn(modifier = Modifier.heightIn(max = 380.dp)) {
+                    items(designs, key = { it.id }) { design ->
+                        val projectName = projects.firstOrNull { it.id == design.projectId }?.name
+                        ListItem(
+                            headlineContent = {
+                                Text(design.name, fontWeight = FontWeight.SemiBold)
+                            },
+                            supportingContent = {
+                                Text(
+                                    buildString {
+                                        append(dateFormat.format(design.createdAt))
+                                        if (!projectName.isNullOrBlank()) append(" • $projectName")
+                                        append(" • ${design.codeUsed}")
+                                    },
+                                    fontSize = 12.sp
+                                )
+                            },
+                            leadingContent = {
+                                Icon(Icons.Default.FolderOpen, contentDescription = null)
+                            },
+                            modifier = Modifier.clickable { onOpen(design.id) }
+                        )
+                        HorizontalDivider()
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+// ============================================================================
 // Tab 0: Drawing
 // ============================================================================
 @Composable
@@ -297,11 +512,12 @@ private fun DrawingTab(
     result: FrameAnalysisResult?,
     diagramType: DiagramType,
     selectedMemberId: Int?,
-    settingsVal: FrameAnalysisSettings,
-    steelFyVal: Double,
+    modelLoadVersion: Int,
     viewModel: FrameAnalysisViewModel
 ) {
     var viewMode by remember { mutableIntStateOf(0) }
+    var editorMode by rememberSaveable { mutableIntStateOf(0) }
+    val slabs by viewModel.slabs.observeAsState(emptyList())
     // FIX: Sync local viewMode with ViewModel so it survives tab switches
     val vmViewMode by viewModel.drawingViewMode.observeAsState(0)
     LaunchedEffect(vmViewMode) { viewMode = vmViewMode }
@@ -315,6 +531,58 @@ private fun DrawingTab(
     )
 
     Column(modifier = modifier.fillMaxSize()) {
+        Surface(color = Color(0xFFF5F7FA)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilterChip(
+                    selected = editorMode == 0,
+                    onClick = { editorMode = 0 },
+                    label = { Text(stringResource(R.string.frame_modeler_tab), fontSize = 12.sp) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color(0xFF1565C0),
+                        selectedLabelColor = Color.White
+                    )
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                FilterChip(
+                    selected = editorMode == 1,
+                    onClick = { editorMode = 1 },
+                    label = { Text(stringResource(R.string.frame_modeler_view_tab), fontSize = 12.sp) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color(0xFF1565C0),
+                        selectedLabelColor = Color.White
+                    )
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = stringResource(R.string.frame_modeler_short_hint),
+                    fontSize = 9.sp,
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        if (editorMode == 0) {
+            FrameModelerTab(
+                modifier = Modifier.fillMaxSize(),
+                nodes = nodes,
+                members = members,
+                nodalLoads = nodalLoads,
+                memberLoads = memberLoads,
+                slabs = slabs,
+
+                externalFitRequest = modelLoadVersion,
+                viewModel = viewModel
+            )
+            return@Column
+        }
+
         // Design Code & Steel Fy selector
         Surface(
             color = Color(0xFFE3F2FD),

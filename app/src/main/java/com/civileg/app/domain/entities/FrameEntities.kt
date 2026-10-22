@@ -76,7 +76,9 @@ data class FrameMember(
     val memberType: FrameMemberType = FrameMemberType.Beam,
     val concreteSection: @RawValue ConcreteSectionProps? = null,
     val steelSectionName: String? = null,
-    val name: String = ""
+    val name: String = "",
+    val releaseI: Boolean = false,
+    val releaseJ: Boolean = false
 ) : Parcelable {
     /** طول العضو (يُحسب من الإحداثيات) */
     fun getLength(nodes: List<FrameNode>): Double {

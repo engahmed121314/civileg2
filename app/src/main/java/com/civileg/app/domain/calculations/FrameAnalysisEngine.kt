@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations
 
 import com.civileg.app.domain.entities.*
+import com.civileg.app.domain.modeler.FrameModelValidator
 import kotlin.math.*
 
 /**
@@ -40,8 +41,21 @@ object FrameAnalysisEngine {
         InputGuard.notEmpty("members", members)
         InputGuard.notNull("settings", settings)
         try {
-            if (nodes.size < 2) return FrameAnalysisResult(errorMessage = "يجب إدخال عقدتين على الأقل")
-            if (members.isEmpty()) return FrameAnalysisResult(errorMessage = "يجب إدخال عضو واحد على الأقل")
+            val validationIssues = FrameModelValidator.validate(
+                nodes = nodes,
+                members = members,
+                nodalLoads = nodalLoads,
+                memberLoads = memberLoads
+            )
+            if (validationIssues.isNotEmpty()) {
+                val shown = validationIssues.take(5).joinToString("\n") { it.message }
+                val suffix = if (validationIssues.size > 5) {
+                    "\n+${validationIssues.size - 5} ..."
+                } else {
+                    ""
+                }
+                return FrameAnalysisResult(errorMessage = shown + suffix)
+            }
 
             val numNodes = nodes.size
             val totalDOF = numNodes * DOF_PER_NODE
@@ -67,7 +81,7 @@ object FrameAnalysisEngine {
                 val mIdx = members.indexOfFirst { it.id == mLoad.memberId }
                 if (mIdx < 0) continue
                 val member = members[mIdx]
-                val fefLocal = getFixedEndForces(member, mLoad, nodes)
+                val fefLocal = getFixedEndForces(member, mLoad, nodes, settings)
                 
                 // CRITICAL FIX: FEF must be transformed from LOCAL to GLOBAL before assembly into F
                 val cosA = member.getCosTheta(nodes)
@@ -104,18 +118,30 @@ object FrameAnalysisEngine {
             val freeDOFs = (0 until totalDOF).filter { it !in restrainedDOFs }
             if (freeDOFs.isEmpty()) return FrameAnalysisResult(errorMessage = "لا توجد درجات حرية - الإطار مقيّد بالكامل")
 
-            val Kff = Array(freeDOFs.size) { i -> DoubleArray(freeDOFs.size) { j -> Kg[freeDOFs[i]][freeDOFs[j]] } }
-            val Ff = DoubleArray(freeDOFs.size) { F[freeDOFs[it]] }
+            // Member-end releases can leave a node rotation with zero stiffness.
+            // Such DOFs are inactive (the connected member is hinged there); they
+            // must not enter the stiffness system or it becomes singular.
+            val inactiveDOFs = freeDOFs.filter { abs(Kg[it][it]) < 1e-9 }
+            if (inactiveDOFs.any { abs(F[it]) > 1e-9 }) {
+                return FrameAnalysisResult(errorMessage = "يوجد حمل على درجة حرية غير فعالة - تحقق من المفاصل")
+            }
+            val activeFreeDOFs = freeDOFs.filter { it !in inactiveDOFs }
+            if (activeFreeDOFs.isEmpty()) {
+                return FrameAnalysisResult(errorMessage = "لا توجد درجات حرية - الإطار مقيّد بالكامل")
+            }
+
+            val Kff = Array(activeFreeDOFs.size) { i -> DoubleArray(activeFreeDOFs.size) { j -> Kg[activeFreeDOFs[i]][activeFreeDOFs[j]] } }
+            val Ff = DoubleArray(activeFreeDOFs.size) { F[activeFreeDOFs[it]] }
 
             val Uf = solveLinearSystem(Kff, Ff) ?: return FrameAnalysisResult(errorMessage = "فشل حل نظام المعادلات - تحقق من الارتكازات")
-            
+
             if (Uf.any { it.isNaN() || it.isInfinite() }) {
                 return FrameAnalysisResult(errorMessage = "نتائج غير منطقية (NaN/Inf) - تحقق من استقرار المنشأ")
             }
 
             // 5. Full displacement vector
             val U = DoubleArray(totalDOF)
-            for (i in freeDOFs.indices) U[freeDOFs[i]] = Uf[i]
+            for (i in activeFreeDOFs.indices) U[activeFreeDOFs[i]] = Uf[i]
 
             // 6. Compute reactions
             val reactions = DoubleArray(totalDOF)
@@ -141,7 +167,7 @@ object FrameAnalysisEngine {
                 // Member stiffness properties
                 val E = getE(member, settings)
                 val (A, I) = getSectionProperties(member, settings)
-                val k = memberLocalStiffness(E, A, I, L)
+                val k = effectiveMemberStiffness(member, memberLocalStiffness(E, A, I, L))
 
                 // Local end displacements
                 val uGlobalI = doubleArrayOf(U[ni * 3], U[ni * 3 + 1], U[ni * 3 + 2])
@@ -159,7 +185,7 @@ object FrameAnalysisEngine {
                 val fefThisMember = DoubleArray(6)
                 val memberLoadList = memberLoads.filter { it.memberId == member.id }
                 for (mLoad in memberLoadList) {
-                    val fef = getFixedEndForces(member, mLoad, nodes)
+                    val fef = getFixedEndForces(member, mLoad, nodes, settings)
                     for (i in 0..5) fefThisMember[i] += fef[i]
                 }
 
@@ -234,7 +260,7 @@ object FrameAnalysisEngine {
         val E = getE(member, settings)
         val (A, I) = getSectionProperties(member, settings)
 
-        val kl = memberLocalStiffness(E, A, I, L)
+        val kl = effectiveMemberStiffness(member, memberLocalStiffness(E, A, I, L))
         val T = transformationMatrix(cosA, sinA)
         val Tt = transpose(T, 6, 6)
         val klT = multiply(Tt, kl, 6, 6, 6)
@@ -270,6 +296,96 @@ object FrameAnalysisEngine {
         return k
     }
 
+    private fun releasedDofs(member: FrameMember): IntArray {
+        val released = mutableListOf<Int>()
+        if (member.releaseI) released.add(2)
+        if (member.releaseJ) released.add(5)
+        return released.toIntArray()
+    }
+
+    private fun effectiveMemberStiffness(
+        member: FrameMember,
+        k: Array<DoubleArray>
+    ): Array<DoubleArray> {
+        val released = releasedDofs(member)
+        if (released.isEmpty()) return k
+        return condenseMember(member, k, DoubleArray(6)).first
+    }
+
+    private fun condenseFixedEndForces(
+        member: FrameMember,
+        settings: FrameAnalysisSettings,
+        nodes: List<FrameNode>,
+        fef: DoubleArray
+    ): DoubleArray {
+        if (!member.releaseI && !member.releaseJ) return fef
+        val L = member.getLength(nodes)
+        if (L < 1e-12) return fef
+        val k = memberLocalStiffness(
+            getE(member, settings),
+            getSectionProperties(member, settings).first,
+            getSectionProperties(member, settings).second,
+            L
+        )
+        return condenseMember(member, k, fef).second
+    }
+
+    /**
+     * Static condensation for member-end moment releases.
+     * Released rotational DOFs are eliminated from both the local stiffness
+     * matrix and the fixed-end force vector so their end moment is exactly zero.
+     */
+    private fun condenseMember(
+        member: FrameMember,
+        k: Array<DoubleArray>,
+        fef: DoubleArray
+    ): Pair<Array<DoubleArray>, DoubleArray> {
+        val released = releasedDofs(member)
+        if (released.isEmpty()) return k to fef
+
+        val retained = (0 until 6).filter { it !in released }
+        val rc = retained.size
+        val cc = released.size
+
+        val kcc = Array(cc) { i -> DoubleArray(cc) { j -> k[released[i]][released[j]] } }
+        val krc = Array(rc) { i -> DoubleArray(cc) { j -> k[retained[i]][released[j]] } }
+        val kcr = Array(cc) { i -> DoubleArray(rc) { j -> k[released[i]][retained[j]] } }
+        val krr = Array(rc) { i -> DoubleArray(rc) { j -> k[retained[i]][retained[j]] } }
+
+        val invKcc = invertSmall(kcc) ?: return k to fef
+        val krcInv = multiply(krc, invKcc, rc, cc, cc)
+        val kStar = Array(rc) { i ->
+            DoubleArray(rc) { j ->
+                krr[i][j] - (0 until cc).sumOf { m -> krcInv[i][m] * kcr[m][j] }
+            }
+        }
+        val fefRetained = DoubleArray(rc) { retained[it].let { dof -> fef[dof] } }
+        val fefReleased = DoubleArray(cc) { released[it].let { dof -> fef[dof] } }
+        val fefStar = DoubleArray(rc) { i ->
+            fefRetained[i] - (0 until cc).sumOf { m -> krcInv[i][m] * fefReleased[m] }
+        }
+
+        val kEff = Array(6) { DoubleArray(6) }
+        for (i in 0 until rc) {
+            for (j in 0 until rc) kEff[retained[i]][retained[j]] = kStar[i][j]
+        }
+        val fefEff = DoubleArray(6)
+        for (i in 0 until rc) fefEff[retained[i]] = fefStar[i]
+        return kEff to fefEff
+    }
+
+    private fun invertSmall(a: Array<DoubleArray>): Array<DoubleArray>? {
+        val n = a.size
+        if (n == 0) return emptyArray()
+        val inv = Array(n) { DoubleArray(n) }
+        for (col in 0 until n) {
+            val b = DoubleArray(n) { if (it == col) 1.0 else 0.0 }
+            val x = solveLinearSystem(a, b) ?: return null
+            for (row in 0 until n) inv[row][col] = x[row]
+        }
+        return inv
+    }
+
     /**
      * مصفوفة التحويل من المحلي للعام (6x6)
      */
@@ -294,13 +410,14 @@ object FrameAnalysisEngine {
     private fun getFixedEndForces(
         member: FrameMember,
         load: MemberLoad,
-        nodes: List<FrameNode>
+        nodes: List<FrameNode>,
+        settings: FrameAnalysisSettings
     ): DoubleArray {
         val L = member.getLength(nodes)
         val w = load.value
         val a = load.position
 
-        return when (load.loadType) {
+        val raw = when (load.loadType) {
             MemberLoadType.UDL -> {
                 // FEF for UDL w (kN/m) over full span L
                 // Local: [0, -wL/2, -wL²/12, 0, -wL/2, wL²/12]
@@ -349,6 +466,7 @@ object FrameAnalysisEngine {
                 )
             }
         }
+        return condenseFixedEndForces(member, settings, nodes, raw)
     }
 
     // ========================================================================

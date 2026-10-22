@@ -182,8 +182,8 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val config = LocalConfiguration.current
-    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
-    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt().coerceAtLeast(800)
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt().coerceAtLeast(600)
     var span by remember { mutableStateOf("20.0") }
     var spacing by remember { mutableStateOf("6.0") }
     var eaveHeight by remember { mutableStateOf("6.0") }
@@ -651,8 +651,8 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
     val captureScope = rememberCoroutineScope()
     val density = LocalDensity.current
     val config = LocalConfiguration.current
-    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
-    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt().coerceAtLeast(800)
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt().coerceAtLeast(600)
     // Hoisted out of the drawing item so the invisible capture area (below the list) can
     // render the same tab the user has selected.
     var selectedViewMode by remember { mutableIntStateOf(0) }

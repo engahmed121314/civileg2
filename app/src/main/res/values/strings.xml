@@ -374,11 +374,29 @@
     <string name="frame_tab_members">Members</string>
     <string name="frame_tab_loads">Loads</string>
     <string name="frame_tab_results">Results</string>
+    <string name="frame_modeler_tab">Draw model</string>
+    <string name="frame_modeler_view_tab">View &amp; results</string>
+    <string name="frame_modeler_short_hint">Drag to pan • Pinch to zoom</string>
+    <string name="frame_save_design">Save Model</string>
+    <string name="frame_open_design">Open Saved Model</string>
+    <string name="frame_default_design_name">Frame Model</string>
+    <string name="frame_save_name">Model name</string>
+    <string name="frame_save_project">Choose project</string>
+    <string name="frame_no_projects_for_save">Create a project first, then save the frame model.</string>
+    <string name="frame_no_saved_designs">No saved frame models yet.</string>
+    <string name="frame_design_saved">Frame model saved</string>
+    <string name="frame_design_loaded">Frame model opened</string>
     <string name="frame_solve">Solve</string>
     <string name="frame_info_nodes">Nodes: %d</string>
     <string name="frame_info_members">Members: %d</string>
     <string name="frame_info_solved">Solved ✓  |  Loads: %d</string>
     <string name="frame_press_solve">Press \'Solve\' to start analysis</string>
+    <string name="frame_validation_title">Model validation</string>
+    <string name="frame_validation_ok">OK</string>
+    <string name="frame_export_dxf">Export DXF</string>
+    <string name="frame_dxf_error">DXF export failed: %1$s</string>
+    <string name="frame_share_dxf">Share DXF</string>
+    <string name="frame_dxf_subject">Frame model DXF</string>
 
     <!-- General -->
     <string name="error_calculation">Calculation Error</string>

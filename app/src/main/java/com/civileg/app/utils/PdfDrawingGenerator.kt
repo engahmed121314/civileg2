@@ -328,7 +328,8 @@ object PdfDrawingGenerator {
         if (text.isEmpty()) return
         val paint = bilingualTextPaint(text, color, size, bold)
         // Layout width = max available width to the right edge
-        val layoutWidth = (this.width - x).toInt().coerceAtLeast(1)
+        val canvasW = if (this.width > 0) this.width.toFloat() else 1400f
+        val layoutWidth = (canvasW - x).toInt().coerceAtLeast(100)
         val sl = StaticLayout.Builder
             .obtain(text, 0, text.length, paint, layoutWidth)
             .setAlignment(

@@ -415,16 +415,17 @@ class DesignRepository @Inject constructor(
         projectId: Long, type: DesignType, name: String, isSafe: Boolean, utilizationRatio: Double,
         concreteVolume: Double, steelWeight: Double, totalCost: Double, result: Any, codeUsed: String,
         inputData: String = "{}"
-    ) {
+    ): Long {
         val design = Design(
             projectId = projectId, type = type, name = name, inputData = inputData,
             results = gson.toJson(result), isSafe = isSafe, utilizationRatio = utilizationRatio, codeUsed = codeUsed,
             concreteVolume = concreteVolume, steelWeight = steelWeight, totalCost = totalCost
         )
-        designDao.insertDesign(design)
+        return designDao.insertDesign(design)
     }
 
     fun getDesignsForProject(projectId: Long) = designDao.getDesignsForProject(projectId)
+    suspend fun getDesignById(designId: Long): Design? = designDao.getDesignById(designId)
     fun searchDesigns(query: String): Flow<List<Design>> = designDao.searchDesigns("%$query%")
     suspend fun deleteDesign(design: Design) = designDao.deleteDesign(design)
     suspend fun getTotalCost(projectId: Long): Double = designDao.getTotalCostForProject(projectId) ?: 0.0
@@ -433,16 +434,21 @@ class DesignRepository @Inject constructor(
         projectId: Long, name: String,
         nodes: List<Any>, members: List<Any>,
         nodalLoads: List<Any>, memberLoads: List<Any>,
+        slabs: List<Any> = emptyList(),
         result: Any,
-        designCode: String
-    ) {
+        designCode: String,
+        steelFy: Double = 355.0
+    ): Long {
         val inputData = JSONObject().apply {
+            put("schemaVersion", 2)
             put("nodes", gson.toJson(nodes))
             put("members", gson.toJson(members))
             put("nodalLoads", gson.toJson(nodalLoads))
             put("memberLoads", gson.toJson(memberLoads))
+            put("slabs", gson.toJson(slabs))
+            put("steelFy", steelFy)
         }.toString()
-        saveGeneralDesign(
+        return saveGeneralDesign(
             projectId = projectId,
             type = DesignType.FRAME_ANALYSIS,
             name = name,
