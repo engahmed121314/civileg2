@@ -1,5 +1,6 @@
 package com.civileg.app.utils
 
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import kotlin.math.PI
 import kotlin.math.pow
@@ -39,8 +40,8 @@ object QualityControlEngineNew {
         val compactionPct = if (maxDryDensity > 0) fieldDensity / maxDryDensity * 100.0 else 0.0
 
         val checks = listOf(
-            GenericSafetyCheck("Excavation depth within tolerance", excavationDepth, excavationDepth + 0.05, "m",
-                true, "AASHTO T99"),
+            GenericSafetyCheck("Excavation depth > 0", excavationDepth, 0.0, "m",
+                excavationDepth > 0.0, "AASHTO T99"),
             GenericSafetyCheck("Slope angle ≥ safe minimum", slopeAngle, minSlope, "°",
                 slopeAngle >= minSlope, "AASHTO §10.4"),
             GenericSafetyCheck("Compaction ≥ 95% MDD", compactionPct, 95.0, "%",
@@ -51,10 +52,10 @@ object QualityControlEngineNew {
                 fieldMoisture in (optimumMoisture - 2.0)..(optimumMoisture + 2.0), "AASHTO T99"),
             GenericSafetyCheck("Groundwater below excavation base", groundwaterLevel, excavationDepth, "m",
                 groundwaterLevel >= excavationDepth, "ECP 202"),
-            GenericSafetyCheck("Backfill type compliant", 1.0, 1.0, "-",
-                true, "Project Specs"),
-            GenericSafetyCheck("Compaction method appropriate", 1.0, 1.0, "-",
-                true, "Project Specs")
+            GenericSafetyCheck("Backfill type provided", 1.0, 1.0, "-",
+                backfillType.isNotBlank() && !backfillType.equals("none", true), "Project Specs"),
+            GenericSafetyCheck("Compaction method provided", 1.0, 1.0, "-",
+                compactionMethod.isNotBlank(), "Project Specs")
         )
 
         val passed = checks.all { it.passed }
@@ -111,22 +112,27 @@ object QualityControlEngineNew {
         val ultimateCapacity = shaftResistance + endBearing
         val allowableCapacity = ultimateCapacity / safetyFactor
         val minSpacing = 3.0 * diameterM
+        val safePileCount = maxOf(numberOfPiles, 1)
+        val safeSpacing = if (pileSpacing > 0.0) pileSpacing else 1.0
+        val groupEfficiency = (1.0 - (safePileCount - 1) * diameterM / (4.0 * safeSpacing * safePileCount))
+            .coerceIn(0.5, 1.0)
+        val embedmentBelowScour = pileLength - scourDepth
 
         val checks = listOf(
-            GenericSafetyCheck("Ultimate capacity ≥ axial load × FS", ultimateCapacity, axialLoad * safetyFactor, "kN",
+            GenericSafetyCheck("Ultimate capacity ≥ axial load x FS", ultimateCapacity, axialLoad * safetyFactor, "kN",
                 ultimateCapacity >= axialLoad * safetyFactor, "AASHTO §10.7"),
             GenericSafetyCheck("Allowable capacity ≥ axial load", allowableCapacity, axialLoad, "kN",
                 allowableCapacity >= axialLoad, "AASHTO §10.7"),
             GenericSafetyCheck("Pile spacing ≥ 3d", pileSpacing, minSpacing, "m",
                 pileSpacing >= minSpacing, "AASHTO §10.7"),
-            GenericSafetyCheck("Pile length ≥ required", pileLength, pileLength, "m",
-                true, "Design Drawings"),
+            GenericSafetyCheck("Embedment below scour ≥ 5d", embedmentBelowScour, 5.0 * diameterM, "m",
+                embedmentBelowScour >= 5.0 * diameterM, "Design Drawings"),
             GenericSafetyCheck("Scour depth within limit", scourDepth, pileLength * 0.1, "m",
                 scourDepth <= pileLength * 0.1, "AASHTO"),
             GenericSafetyCheck("Cap concrete cover ≥ 75 mm", capConcreteCover, 75.0, "mm",
                 capConcreteCover >= 75.0, "ACI 318-19 §20.6"),
-            GenericSafetyCheck("Group efficiency ≥ 0.7", 0.85, 0.7, "-",
-                true, "AASHTO §10.7")
+            GenericSafetyCheck("Group efficiency ≥ 0.7", groupEfficiency, 0.7, "-",
+                groupEfficiency >= 0.7, "AASHTO §10.7")
         )
 
         val passed = checks.all { it.passed }
@@ -167,8 +173,10 @@ object QualityControlEngineNew {
         foundationSoilBearing: Double,
         concreteStrength: Double,
         steelGrade: Double,
-        seismicCoefficient: Double
+        seismicCoefficient: Double,
+        designCode: DesignCode = DesignCode.ECP
     ): QcOutcome {
+        val minConcreteStrength = if (designCode == DesignCode.ACI) 25.0 else 30.0
         val ka = (1.0 - Math.sin(Math.toRadians(backfillFrictionAngle))) /
             (1.0 + Math.sin(Math.toRadians(backfillFrictionAngle)))
         val thicknessM = wallThickness / 1000.0
@@ -195,20 +203,21 @@ object QualityControlEngineNew {
                 fsSliding >= 1.5, "AASHTO §11"),
             GenericSafetyCheck("Foundation bearing ≥ actual", foundationSoilBearing, actualBearingPressure, "kPa",
                 foundationSoilBearing >= actualBearingPressure, "AASHTO §10.6"),
-            GenericSafetyCheck("Concrete strength ≥ fcu", concreteStrength, concreteStrength, "MPa",
-                true, "ACI 318 §26.12"),
+            GenericSafetyCheck("Concrete strength ≥ code minimum", concreteStrength, minConcreteStrength, "MPa",
+                concreteStrength >= minConcreteStrength, designCode.version),
             GenericSafetyCheck("Wall thickness ≥ 300 mm", wallThickness, 300.0, "mm",
                 wallThickness >= 300.0, "ACI 318"),
-            GenericSafetyCheck("Drainage behind wall", 1.0, 1.0, "-",
-                true, "AASHTO §11"),
-            GenericSafetyCheck("Expansion joints every 6 m", 1.0, 1.0, "-",
-                true, "ACI 318")
+            GenericSafetyCheck("Groundwater below wall base", groundwaterLevel, foundationDepth, "m",
+                groundwaterLevel >= foundationDepth, "AASHTO §11"),
+            GenericSafetyCheck("Wall panel height ≤ 6 m", wallHeight, 6.0, "m",
+                wallHeight <= 6.0, "ACI 318")
         )
 
         val passed = checks.all { it.passed }
         val details = listOf(
             "Wall height" to "%.2f m".format(wallHeight),
             "Wall thickness" to "%.0f mm".format(wallThickness),
+            "Design code" to "${designCode.displayName} (${designCode.version})",
             "Active earth pressure" to "%.1f kN/m".format(activePressure),
             "FS overturning" to "%.2f".format(fsOverturning),
             "FS sliding" to "%.2f".format(fsSliding),
@@ -302,14 +311,14 @@ object QualityControlEngineNew {
                 verticality <= 5.0, "ASTM C926"),
             GenericSafetyCheck("Adhesion strength ≥ 0.3 MPa", adhesionStrength, 0.3, "MPa",
                 adhesionStrength >= 0.3, "ASTM C926"),
-            GenericSafetyCheck("Mortar strength ≥ required", mortarStrength, mortarStrength, "MPa",
-                true, "ECP 204"),
+            GenericSafetyCheck("Mortar strength ≥ 5 MPa", mortarStrength, 5.0, "MPa",
+                mortarStrength >= 5.0, "ECP 204"),
             GenericSafetyCheck("Joint thickness 10 ± 2 mm", jointThickness, 12.0, "mm",
                 jointThickness in 8.0..12.0, "ECP 204"),
-            GenericSafetyCheck("Curing ≥ 7 days", 7.0, 7.0, "days",
-                true, "ASTM C926"),
-            GenericSafetyCheck("No cracks or voids", 1.0, 1.0, "-",
-                true, "Visual Inspection")
+            GenericSafetyCheck("Curing method provided", 1.0, 1.0, "-",
+                curingMethod.isNotBlank() && !curingMethod.equals("none", true), "ASTM C926"),
+            GenericSafetyCheck("Plaster type provided", 1.0, 1.0, "-",
+                plasterType.isNotBlank() && !plasterType.equals("none", true), "Visual Inspection")
         )
 
         val passed = checks.all { it.passed }
@@ -348,18 +357,18 @@ object QualityControlEngineNew {
         val checks = listOf(
             GenericSafetyCheck("Surface flatness ≤ 3 mm/2m", surfaceFlatness, 3.0, "mm/2m",
                 surfaceFlatness <= 3.0, "ASTM E1155"),
-            GenericSafetyCheck("Compressive strength ≥ required", compressiveStrength, compressiveStrength, "MPa",
-                true, "ACI 302"),
-            GenericSafetyCheck("Tensile strength ≥ required", tensileStrength, tensileStrength, "MPa",
-                true, "ACI 302"),
+            GenericSafetyCheck("Compressive strength ≥ 25 MPa", compressiveStrength, 25.0, "MPa",
+                compressiveStrength >= 25.0, "ACI 302"),
+            GenericSafetyCheck("Tensile strength ≥ 2 MPa", tensileStrength, 2.0, "MPa",
+                tensileStrength >= 2.0, "ACI 302"),
             GenericSafetyCheck("Joint spacing ≤ 6 m", jointSpacing, 6.0, "m",
                 jointSpacing <= 6.0, "ACI 302"),
             GenericSafetyCheck("Joint width 6 ± 2 mm", jointWidth, 8.0, "mm",
                 jointWidth in 4.0..8.0, "ACI 302"),
-            GenericSafetyCheck("Curing ≥ 7 days", 7.0, 7.0, "days",
-                true, "ACI 302"),
-            GenericSafetyCheck("No cracks or delamination", 1.0, 1.0, "-",
-                true, "Visual Inspection"),
+            GenericSafetyCheck("Curing method provided", 1.0, 1.0, "-",
+                curingMethod.isNotBlank() && !curingMethod.equals("none", true), "ACI 302"),
+            GenericSafetyCheck("Slab thickness ≥ 100 mm", slabThickness, 100.0, "mm",
+                slabThickness >= 100.0, "ACI 302"),
             GenericSafetyCheck("Levelness within ±10 mm", levelness, 10.0, "mm",
                 levelness <= 10.0, "ECP 203")
         )
@@ -396,25 +405,32 @@ object QualityControlEngineNew {
         connectionDetails: String,
         transportDamage: Boolean,
         erectionTolerance: Double,
-        groutStrength: Double
+        groutStrength: Double,
+        designCode: DesignCode = DesignCode.ECP
     ): QcOutcome {
+        val dimensionsValid = elementDimensions
+            .split(Regex("[xX*]"))
+            .mapNotNull { it.trim().toDoubleOrNull() }
+            .let { dims -> dims.size >= 2 && dims.all { it > 0.0 } }
+        val minConcreteStrength = if (designCode == DesignCode.ACI) 25.0 else 30.0
         val checks = listOf(
-            GenericSafetyCheck("Element dimensions within ±5 mm", 5.0, 5.0, "mm",
-                true, "ACI 318 §17 / PCI"),
-            GenericSafetyCheck("Concrete strength ≥ fcu", concreteStrength, concreteStrength, "MPa",
-                true, "ACI 318 §26.12"),
+            GenericSafetyCheck("Element dimensions valid", if (dimensionsValid) 1.0 else 0.0, 1.0, "-",
+                dimensionsValid, "ACI 318 §17 / PCI"),
+            GenericSafetyCheck("Concrete strength ≥ code minimum", concreteStrength, minConcreteStrength, "MPa",
+                concreteStrength >= minConcreteStrength, designCode.version),
             GenericSafetyCheck("Cover ≥ required", coverThickness, 40.0, "mm",
                 coverThickness >= 40.0, "ACI 318 §20.6"),
             GenericSafetyCheck("No cracks or damage", 1.0, 1.0, "-",
                 !transportDamage, "PCI"),
             GenericSafetyCheck("Lifting anchors present", 1.0, 1.0, "-",
                 liftingAnchors, "PCI"),
-            GenericSafetyCheck("Connection details compliant", 1.0, 1.0, "-",
-                true, "ACI 318 §17"),
+            GenericSafetyCheck("Connection details provided", 1.0, 1.0, "-",
+                connectionDetails.isNotBlank() && !connectionDetails.equals("none", true),
+                "ACI 318 §17"),
             GenericSafetyCheck("Erection tolerance ≤ ±10 mm", erectionTolerance, 10.0, "mm",
                 erectionTolerance <= 10.0, "PCI"),
-            GenericSafetyCheck("Grout strength ≥ required", groutStrength, groutStrength, "MPa",
-                true, "ACI 318")
+            GenericSafetyCheck("Grout strength ≥ 30 MPa", groutStrength, 30.0, "MPa",
+                groutStrength >= 30.0, "ACI 318")
         )
 
         val passed = checks.all { it.passed }
@@ -422,6 +438,7 @@ object QualityControlEngineNew {
             "Element type" to elementType,
             "Dimensions" to elementDimensions,
             "Concrete strength" to "%.1f MPa".format(concreteStrength),
+            "Design code" to "${designCode.displayName} (${designCode.version})",
             "Cover thickness" to "%.0f mm".format(coverThickness),
             "Erection tolerance" to "%.1f mm".format(erectionTolerance)
         )
@@ -453,25 +470,32 @@ object QualityControlEngineNew {
         frictionCoefficient: Double,
         wobbleCoefficient: Double
     ): QcOutcome {
-        val elongationDiff = if (expectedElongation > 0) Math.abs(elongation - expectedElongation) / expectedElongation * 100.0 else 0.0
+        val tendonAreaMm2 = PI * tendonDiameter * tendonDiameter / 4.0
+        val maxJackingForceKn = 0.80 * 1860.0 * tendonAreaMm2 / 1000.0
+        val elongationDiff = if (expectedElongation > 0) {
+            Math.abs(elongation - expectedElongation) / expectedElongation * 100.0
+        } else {
+            Double.POSITIVE_INFINITY
+        }
 
         val checks = listOf(
-            GenericSafetyCheck("Jacking force ≥ 0.75 Fpu", jackingForce, jackingForce * 0.75, "kN",
-                jackingForce >= jackingForce * 0.75, "ACI 318 §20 / PTI"),
+            GenericSafetyCheck("Jacking force ≤ 0.80 Fpu", jackingForce, maxJackingForceKn, "kN",
+                jackingForce > 0.0 && jackingForce <= maxJackingForceKn, "ACI 318 §20 / PTI"),
             GenericSafetyCheck("Elongation within ±5%", elongationDiff, 5.0, "%",
-                elongationDiff <= 5.0, "ACI 318 §20"),
+                expectedElongation > 0.0 && elongationDiff <= 5.0, "ACI 318 §20"),
             GenericSafetyCheck("Grout strength ≥ 30 MPa", groutStrength, 30.0, "MPa",
                 groutStrength >= 30.0, "ACI 318 §20"),
-            GenericSafetyCheck("Grout flow ≥ 25 sec", groutFlow, 25.0, "sec",
-                groutFlow >= 25.0, "ASTM C939"),
+            GenericSafetyCheck("Grout flow time 10-25 sec", groutFlow, 25.0, "sec",
+                groutFlow in 10.0..25.0, "ASTM C939"),
             GenericSafetyCheck("Stress loss ≤ 20%", stressLoss, 20.0, "%",
                 stressLoss <= 20.0, "ACI 318 §20"),
-            GenericSafetyCheck("Friction coefficient 0.15–0.25", frictionCoefficient, 0.25, "-",
+            GenericSafetyCheck("Friction coefficient 0.15-0.25", frictionCoefficient, 0.25, "-",
                 frictionCoefficient in 0.15..0.25, "PTI"),
-            GenericSafetyCheck("Wobble coefficient 0.001–0.005", wobbleCoefficient, 0.005, "-",
+            GenericSafetyCheck("Wobble coefficient 0.001-0.005", wobbleCoefficient, 0.005, "-",
                 wobbleCoefficient in 0.001..0.005, "PTI"),
             GenericSafetyCheck("Corrosion protection present", 1.0, 1.0, "-",
-                true, "ACI 318 §20")
+                corrosionProtection.isNotBlank() && !corrosionProtection.equals("none", true),
+                "ACI 318 §20")
         )
 
         val passed = checks.all { it.passed }
@@ -509,22 +533,22 @@ object QualityControlEngineNew {
         substrateCondition: String
     ): QcOutcome {
         val checks = listOf(
-            GenericSafetyCheck("Flow time ≥ 25 sec", flowTime, 25.0, "sec",
-                flowTime >= 25.0, "ASTM C939"),
+            GenericSafetyCheck("Flow time 10-25 sec", flowTime, 25.0, "sec",
+                flowTime in 10.0..25.0, "ASTM C939"),
             GenericSafetyCheck("Shrinkage ≤ 0.1%", shrinkage, 0.1, "%",
                 shrinkage <= 0.1, "ASTM C939"),
             GenericSafetyCheck("Compressive strength ≥ 30 MPa", compressiveStrength, 30.0, "MPa",
                 compressiveStrength >= 30.0, "ACI 304"),
-            GenericSafetyCheck("Viscosity within limits", viscosity, viscosity, "cP",
-                true, "Product Specs"),
-            GenericSafetyCheck("Gel time within limits", gelTime, gelTime, "min",
-                true, "Product Specs"),
+            GenericSafetyCheck("Viscosity 100-1000 cP", viscosity, 1000.0, "cP",
+                viscosity in 100.0..1000.0, "Product Specs"),
+            GenericSafetyCheck("Gel time 5-30 min", gelTime, 30.0, "min",
+                gelTime in 5.0..30.0, "Product Specs"),
             GenericSafetyCheck("Bond strength ≥ 1.5 MPa", bondStrength, 1.5, "MPa",
                 bondStrength >= 1.5, "ACI 304"),
-            GenericSafetyCheck("Injection pressure 0.2–0.5 MPa", injectionPressure, 0.5, "MPa",
+            GenericSafetyCheck("Injection pressure 0.2-0.5 MPa", injectionPressure, 0.5, "MPa",
                 injectionPressure in 0.2..0.5, "ACI 304"),
-            GenericSafetyCheck("Injection volume ≥ required", injectionVolume, injectionVolume, "L",
-                true, "Design")
+            GenericSafetyCheck("Injection volume > 0", injectionVolume, 0.0, "L",
+                injectionVolume > 0.0, "Design")
         )
 
         val passed = checks.all { it.passed }
@@ -566,22 +590,23 @@ object QualityControlEngineNew {
         val sptImprovement = if (preImprovementSPT > 0) (postImprovementSPT - preImprovementSPT).toDouble() / preImprovementSPT * 100.0 else 0.0
 
         val checks = listOf(
-            GenericSafetyCheck("Post-improvement bearing ≥ required", postImprovementBearing, postImprovementBearing, "kPa",
-                true, "AASHTO / FHWA"),
+            GenericSafetyCheck("Post-improvement bearing ≥ pre-improvement", postImprovementBearing, preImprovementBearing, "kPa",
+                postImprovementBearing >= preImprovementBearing, "AASHTO / FHWA"),
             GenericSafetyCheck("Bearing improvement ≥ 50%", bearingImprovement, 50.0, "%",
                 bearingImprovement >= 50.0, "FHWA"),
             GenericSafetyCheck("SPT improvement ≥ 50%", sptImprovement, 50.0, "%",
                 sptImprovement >= 50.0, "FHWA"),
             GenericSafetyCheck("Settlement after ≤ 25 mm", settlementAfter, 25.0, "mm",
                 settlementAfter <= 25.0, "AASHTO"),
-            GenericSafetyCheck("Improvement depth ≥ required", improvementDepth, improvementDepth, "m",
-                true, "Design"),
-            GenericSafetyCheck("Improvement diameter ≥ required", improvementDiameter, improvementDiameter, "m",
-                true, "Design"),
-            GenericSafetyCheck("Spacing ≤ required", spacing, spacing, "m",
-                true, "Design"),
-            GenericSafetyCheck("Improvement material compliant", 1.0, 1.0, "-",
-                true, "Project Specs")
+            GenericSafetyCheck("Improvement depth > 0", improvementDepth, 0.0, "m",
+                improvementDepth > 0.0, "Design"),
+            GenericSafetyCheck("Improvement diameter > 0", improvementDiameter, 0.0, "m",
+                improvementDiameter > 0.0, "Design"),
+            GenericSafetyCheck("Spacing ≥ 2 x diameter", spacing, 2.0 * improvementDiameter, "m",
+                improvementDiameter > 0.0 && spacing >= 2.0 * improvementDiameter, "Design"),
+            GenericSafetyCheck("Improvement material provided", 1.0, 1.0, "-",
+                improvementMaterial.isNotBlank() && !improvementMaterial.equals("none", true),
+                "Project Specs")
         )
 
         val passed = checks.all { it.passed }
@@ -619,23 +644,27 @@ object QualityControlEngineNew {
         leakTestResult: Boolean,
         hydrostaticTest: Boolean,
         valveType: String,
-        drainageSystem: Boolean
+        drainageSystem: Boolean,
+        designCode: DesignCode = DesignCode.ECP
     ): QcOutcome {
+        val minConcreteStrength = if (designCode == DesignCode.ACI) 25.0 else 30.0
+        val minWallThickness = if (designCode == DesignCode.ACI) 200.0 else 250.0
         val checks = listOf(
             GenericSafetyCheck("Leak test passed", 1.0, 1.0, "-",
                 leakTestResult, "ACI 350 / AWWA D100"),
             GenericSafetyCheck("Hydrostatic test passed", 1.0, 1.0, "-",
                 hydrostaticTest, "ACI 350"),
-            GenericSafetyCheck("Concrete strength ≥ fcu", concreteStrength, concreteStrength, "MPa",
-                true, "ACI 318 §26.12"),
-            GenericSafetyCheck("Wall thickness ≥ 200 mm", wallThickness, 200.0, "mm",
-                wallThickness >= 200.0, "ACI 350"),
+            GenericSafetyCheck("Concrete strength ≥ code minimum", concreteStrength, minConcreteStrength, "MPa",
+                concreteStrength >= minConcreteStrength, designCode.version),
+            GenericSafetyCheck("Wall thickness ≥ code minimum", wallThickness, minWallThickness, "mm",
+                wallThickness >= minWallThickness, "ACI 350 / ECP"),
             GenericSafetyCheck("Floor thickness ≥ 150 mm", floorThickness, 150.0, "mm",
                 floorThickness >= 150.0, "ACI 350"),
             GenericSafetyCheck("Waterproofing present", 1.0, 1.0, "-",
-                true, "ACI 350"),
+                waterproofingType.isNotBlank() && !waterproofingType.equals("none", true),
+                "ACI 350"),
             GenericSafetyCheck("Valves present and functional", 1.0, 1.0, "-",
-                true, "AWWA D100"),
+                valveType.isNotBlank() && !valveType.equals("none", true), "AWWA D100"),
             GenericSafetyCheck("Drainage system present", 1.0, 1.0, "-",
                 drainageSystem, "ACI 350")
         )
@@ -644,6 +673,7 @@ object QualityControlEngineNew {
         val details = listOf(
             "Tank type" to tankType,
             "Capacity" to "%.1f m³".format(tankCapacity),
+            "Design code" to "${designCode.displayName} (${designCode.version})",
             "Wall thickness" to "%.0f mm".format(wallThickness),
             "Floor thickness" to "%.0f mm".format(floorThickness),
             "Leak test" to if (leakTestResult) "PASS" else "FAIL"
@@ -681,16 +711,16 @@ object QualityControlEngineNew {
                 slope >= 1.0, "AASHTO / ECP 204"),
             GenericSafetyCheck("Manhole spacing ≤ 50 m", manholeSpacing, 50.0, "m",
                 manholeSpacing <= 50.0, "ECP 204"),
-            GenericSafetyCheck("Manhole depth ≥ required", manholeDepth, manholeDepth, "m",
-                true, "ECP 204"),
-            GenericSafetyCheck("Pipe diameter ≥ required", pipeDiameter, pipeDiameter, "mm",
-                true, "Design"),
+            GenericSafetyCheck("Manhole depth > 0", manholeDepth, 0.0, "m",
+                manholeDepth > 0.0, "ECP 204"),
+            GenericSafetyCheck("Pipe diameter > 0", pipeDiameter, 0.0, "mm",
+                pipeDiameter > 0.0, "Design"),
             GenericSafetyCheck("Backfill compaction ≥ 95%", backfillCompaction, 95.0, "%",
                 backfillCompaction >= 95.0, "AASHTO T99"),
-            GenericSafetyCheck("Flow rate ≥ required", flowRate, flowRate, "L/s",
-                true, "Design"),
-            GenericSafetyCheck("Invert level within ±20 mm", invertLevel, invertLevel + 20.0, "mm",
-                true, "ECP 204")
+            GenericSafetyCheck("Flow rate > 0", flowRate, 0.0, "L/s",
+                flowRate > 0.0, "Design"),
+            GenericSafetyCheck("Pipe length > 0", pipeLength, 0.0, "m",
+                pipeLength > 0.0, "ECP 204")
         )
 
         val passed = checks.all { it.passed }
@@ -728,20 +758,20 @@ object QualityControlEngineNew {
         humidity: Double
     ): QcOutcome {
         val checks = listOf(
-            GenericSafetyCheck("DFT ≥ required", dft, dft, "μm",
-                true, "ASTM D3359"),
+            GenericSafetyCheck("DFT ≥ 100 μm", dft, 100.0, "μm",
+                dft >= 100.0, "ASTM D3359"),
             GenericSafetyCheck("Adhesion ≥ 1.5 MPa", adhesionStrength, 1.5, "MPa",
                 adhesionStrength >= 1.5, "ASTM D3359"),
             GenericSafetyCheck("Color uniformity", 1.0, 1.0, "-",
                 colorUniformity, "Visual"),
-            GenericSafetyCheck("Surface preparation compliant", 1.0, 1.0, "-",
-                true, "SSPC"),
-            GenericSafetyCheck("Number of coats ≥ required", numberOfCoats.toDouble(), numberOfCoats.toDouble(), "-",
-                true, "Product Specs"),
-            GenericSafetyCheck("Coating thickness ≥ required", coatingThickness, coatingThickness, "mm",
-                true, "ASTM D3359"),
-            GenericSafetyCheck("Fire rating compliant", 1.0, 1.0, "-",
-                true, "ASTM E119"),
+            GenericSafetyCheck("Surface preparation provided", 1.0, 1.0, "-",
+                surfacePreparation.isNotBlank() && !surfacePreparation.equals("none", true), "SSPC"),
+            GenericSafetyCheck("Number of coats ≥ 1", numberOfCoats.toDouble(), 1.0, "-",
+                numberOfCoats >= 1, "Product Specs"),
+            GenericSafetyCheck("Coating thickness > 0", coatingThickness, 0.0, "mm",
+                coatingThickness > 0.0, "ASTM D3359"),
+            GenericSafetyCheck("Curing time > 0", curingTime, 0.0, "hours",
+                curingTime > 0.0, "ASTM E119"),
             GenericSafetyCheck("Application temperature 5–40 °C", ambientTemperature, 40.0, "°C",
                 ambientTemperature in 5.0..40.0, "Product Specs")
         )
@@ -781,16 +811,16 @@ object QualityControlEngineNew {
         firstAidKit: Boolean
     ): QcOutcome {
         val checks = listOf(
-            GenericSafetyCheck("Grading level within ±50 mm", gradingLevel, gradingLevel + 50.0, "mm",
-                true, "Project Specs"),
+            GenericSafetyCheck("Grading level provided", gradingLevel, 0.0, "mm",
+                gradingLevel >= 0.0, "Project Specs"),
             GenericSafetyCheck("Slope within ±1%", slope, 1.0, "%",
                 slope <= 1.0, "Project Specs"),
             GenericSafetyCheck("Fences present and sound", 1.0, 1.0, "-",
-                true, "Project Specs"),
+                fenceType.isNotBlank() && !fenceType.equals("none", true), "Project Specs"),
             GenericSafetyCheck("Gates present and functional", 1.0, 1.0, "-",
-                true, "Project Specs"),
+                gateType.isNotBlank() && !gateType.equals("none", true), "Project Specs"),
             GenericSafetyCheck("Lighting present and functional", 1.0, 1.0, "-",
-                true, "Project Specs"),
+                lightingType.isNotBlank() && !lightingType.equals("none", true), "Project Specs"),
             GenericSafetyCheck("Drainage system present", 1.0, 1.0, "-",
                 drainageSystem, "Project Specs"),
             GenericSafetyCheck("Safety signs present", 1.0, 1.0, "-",
@@ -833,22 +863,22 @@ object QualityControlEngineNew {
         surfacePreparation: String
     ): QcOutcome {
         val checks = listOf(
-            GenericSafetyCheck("Coating thickness ≥ required", coatingThickness, coatingThickness, "mm",
-                true, "ASTM E119 / ACI 216"),
+            GenericSafetyCheck("Coating thickness > 0", coatingThickness, 0.0, "mm",
+                coatingThickness > 0.0, "ASTM E119 / ACI 216"),
             GenericSafetyCheck("Adhesion ≥ 1.0 MPa", adhesionStrength, 1.0, "MPa",
                 adhesionStrength >= 1.0, "ASTM E119"),
-            GenericSafetyCheck("Fire rating compliant", 1.0, 1.0, "-",
-                true, "ASTM E119"),
-            GenericSafetyCheck("Coverage area ≥ required", coverageArea, coverageArea, "m²",
-                true, "Design"),
-            GenericSafetyCheck("Application method compliant", 1.0, 1.0, "-",
-                true, "Product Specs"),
-            GenericSafetyCheck("Curing time ≥ required", curingTime, curingTime, "hours",
-                true, "Product Specs"),
-            GenericSafetyCheck("Application temperature 5–40 °C", ambientTemperature, 40.0, "°C",
+            GenericSafetyCheck("Fire rating provided", 1.0, 1.0, "-",
+                fireRating.isNotBlank() && !fireRating.equals("none", true), "ASTM E119"),
+            GenericSafetyCheck("Coverage area > 0", coverageArea, 0.0, "m²",
+                coverageArea > 0.0, "Design"),
+            GenericSafetyCheck("Application method provided", 1.0, 1.0, "-",
+                applicationMethod.isNotBlank(), "Product Specs"),
+            GenericSafetyCheck("Curing time > 0", curingTime, 0.0, "hours",
+                curingTime > 0.0, "Product Specs"),
+            GenericSafetyCheck("Application temperature 5-40 °C", ambientTemperature, 40.0, "°C",
                 ambientTemperature in 5.0..40.0, "Product Specs"),
-            GenericSafetyCheck("Surface preparation compliant", 1.0, 1.0, "-",
-                true, "SSPC")
+            GenericSafetyCheck("Surface preparation provided", 1.0, 1.0, "-",
+                surfacePreparation.isNotBlank(), "SSPC")
         )
 
         val passed = checks.all { it.passed }

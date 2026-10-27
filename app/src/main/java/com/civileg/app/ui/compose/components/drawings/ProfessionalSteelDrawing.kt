@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
@@ -41,6 +43,131 @@ private val StiffenerColor = Color(0xFF6C7A89)
 private val WeldSymbol = Color(0xFF9B59B6)
 private val GridLine = Color(0xFF34495E)
 private val AxisLine = Color(0xFF7F8C8D)
+
+private enum class SteelShape {
+    I_BEAM, CHANNEL, ANGLE, RHS, CHS, T_SECTION, PLATE_GIRDER, PIPE, BUILT_UP, UNKNOWN
+}
+
+private fun steelShapeOf(sectionType: String): SteelShape {
+    val s = sectionType.uppercase()
+    return when {
+        s.contains("PLATE GIRDER") || s.startsWith("PG ") -> SteelShape.PLATE_GIRDER
+        s.contains("T SECTION") || s.startsWith("T ") -> SteelShape.T_SECTION
+        s.contains("BUILT-UP") || s.contains("BUILT UP") -> SteelShape.BUILT_UP
+        s.contains("PIPE") -> SteelShape.PIPE
+        s.contains("CIRCULAR HOLLOW") || s.contains("CHS") -> SteelShape.CHS
+        s.contains("RECTANGULAR HOLLOW") || s.contains("RHS") ||
+            s.contains("SHS") || s.contains("HSS") -> SteelShape.RHS
+        s.contains("CHANNEL") || s.contains("UPN") || s.contains("C-SECTION") -> SteelShape.CHANNEL
+        s.contains("ANGLE") || s.startsWith("L ") || s.contains("L-SECTION") -> SteelShape.ANGLE
+        s.contains("I-BEAM") || s.contains("IPE") || s.contains("HEA") ||
+            s.contains("HEB") || s.startsWith("W") || s.contains("I/H") ||
+            s.contains("WIDE FLANGE") -> SteelShape.I_BEAM
+        else -> SteelShape.UNKNOWN
+    }
+}
+
+private fun buildSectionPath(
+    shape: SteelShape,
+    left: Float,
+    top: Float,
+    width: Float,
+    height: Float,
+    flangeThickness: Float,
+    webThickness: Float
+): Path {
+    val right = left + width
+    val bottom = top + height
+    val cx = left + width / 2f
+    val cy = top + height / 2f
+    val tf = flangeThickness.coerceIn(1f, height * 0.35f)
+    val tw = webThickness.coerceIn(1f, width * 0.35f)
+
+    return Path().apply {
+        when (shape) {
+            SteelShape.I_BEAM, SteelShape.PLATE_GIRDER, SteelShape.BUILT_UP -> {
+                moveTo(left, top)
+                lineTo(right, top)
+                lineTo(right, top + tf)
+                lineTo(cx + tw / 2f, top + tf)
+                lineTo(cx + tw / 2f, bottom - tf)
+                lineTo(right, bottom - tf)
+                lineTo(right, bottom)
+                lineTo(left, bottom)
+                lineTo(left, bottom - tf)
+                lineTo(cx - tw / 2f, bottom - tf)
+                lineTo(cx - tw / 2f, top + tf)
+                lineTo(left, top + tf)
+                close()
+            }
+
+            SteelShape.CHANNEL -> {
+                moveTo(left, top)
+                lineTo(right, top)
+                lineTo(right, top + tf)
+                lineTo(left + tw, top + tf)
+                lineTo(left + tw, bottom - tf)
+                lineTo(right, bottom - tf)
+                lineTo(right, bottom)
+                lineTo(left, bottom)
+                close()
+            }
+
+            SteelShape.ANGLE -> {
+                moveTo(left, top)
+                lineTo(left + tw, top)
+                lineTo(left + tw, bottom - tf)
+                lineTo(right, bottom - tf)
+                lineTo(right, bottom)
+                lineTo(left, bottom)
+                close()
+            }
+
+            SteelShape.T_SECTION -> {
+                moveTo(left, top)
+                lineTo(right, top)
+                lineTo(right, top + tf)
+                lineTo(cx + tw / 2f, top + tf)
+                lineTo(cx + tw / 2f, bottom)
+                lineTo(cx - tw / 2f, bottom)
+                lineTo(cx - tw / 2f, top + tf)
+                lineTo(left, top + tf)
+                close()
+            }
+
+            SteelShape.RHS -> {
+                fillType = PathFillType.EvenOdd
+                addRect(Rect(left, top, right, bottom))
+                addRect(Rect(left + tw, top + tf, right - tw, bottom - tf))
+            }
+
+            SteelShape.CHS, SteelShape.PIPE -> {
+                fillType = PathFillType.EvenOdd
+                val r = min(width, height) / 2f
+                addOval(Rect(cx - r, cy - r, cx + r, cy + r))
+                val ri = (r - tw).coerceAtLeast(1f)
+                addOval(Rect(cx - ri, cy - ri, cx + ri, cy + ri))
+            }
+
+            SteelShape.UNKNOWN -> addRect(Rect(left, top, right, bottom))
+        }
+    }
+}
+
+private fun DrawScope.drawSectionShape(
+    shape: SteelShape,
+    left: Float,
+    top: Float,
+    width: Float,
+    height: Float,
+    flangeThickness: Float,
+    webThickness: Float,
+    fillColor: Color = SteelGray
+) {
+    val path = buildSectionPath(shape, left, top, width, height, flangeThickness, webThickness)
+    drawPath(path, fillColor)
+    drawPath(path, Color.White, style = Stroke(1.5f))
+}
 
 @Composable
 fun ProfessionalSteelDrawing(
@@ -99,10 +226,7 @@ fun ProfessionalSteelDrawing(
         val cw = size.width
         val ch = size.height
 
-        val isIBeam = sectionType.contains("I-BEAM", ignoreCase = true) || sectionType.contains("IPE", ignoreCase = true) || sectionType.contains("HEB", ignoreCase = true) || sectionType.contains("HEA", ignoreCase = true)
-        val isHSS = sectionType.contains("HSS", ignoreCase = true) || sectionType.contains("RHS", ignoreCase = true) || sectionType.contains("SHS", ignoreCase = true) || sectionType.contains("CHS", ignoreCase = true)
-        val isChannel = sectionType.contains("CHANNEL", ignoreCase = true) || sectionType.contains("UPN", ignoreCase = true) || sectionType.contains("C-SECTION", ignoreCase = true)
-        val isAngle = sectionType.contains("ANGLE", ignoreCase = true) || sectionType.contains("L-SECTION", ignoreCase = true)
+        val shape = steelShapeOf(sectionType)
 
         // ── Layout zones ──
         val margin = cfg.margin
@@ -148,7 +272,7 @@ fun ProfessionalSteelDrawing(
                 // 1. ELEVATION VIEW
                 drawElevationView(
                     elevLeft, elevTop, elevRight, elevBottom,
-                    isIBeam, isHSS, isChannel, isAngle,
+                    shape,
                     memberLength, depth, flangeWidth, flangeThickness, webThickness,
                     boltDia, boltCount, boltGauge, boltPitch, endPlateThickness,
                     hasStiffener, weldSize, isColumn, sectionName,
@@ -173,7 +297,7 @@ fun ProfessionalSteelDrawing(
                 // 2. CROSS-SECTION VIEW
                 drawCrossSectionView(
                     sectLeft, sectTop, sectRight, sectBottom,
-                    isIBeam, isHSS, isChannel, isAngle,
+                    shape,
                     depth, flangeWidth, flangeThickness, webThickness, radius,
                     area, ix, sx, zx
                 )
@@ -185,7 +309,7 @@ fun ProfessionalSteelDrawing(
                 // 3. CONNECTION DETAIL
                 drawConnectionDetail(
                     connLeft, connTop, connRight, connBottom,
-                    isIBeam, isHSS, isChannel, isAngle,
+                    shape,
                     depth, flangeWidth, flangeThickness, webThickness,
                     boltDia, boltCount, boltGauge, boltPitch, endPlateThickness, weldSize,
                     connectionType, hasMomentConnection, hasStiffener, stiffenerCount,
@@ -212,25 +336,27 @@ fun ProfessionalSteelDrawing(
                     drawTextAnnotated("3D ISOMETRIC", cw - 120f, margin + 30f, Color(0xFFE67E22), 12f, center = true, bold = true)
                 }
 
-                // Utilization badge
+                // Utilization badge (utilizationRatio is fraction 0-1)
+                val urFraction = utilizationRatio.coerceIn(0.0, 2.0)
+                val urPercent = (urFraction * 100).toInt()
                 val urColor = when {
-                    utilizationRatio > 1.0 -> Color.Red
-                    utilizationRatio > 0.9 -> Color(0xFFF57C00)
-                    utilizationRatio > 0 -> Color(0xFF2E7D32)
+                    urFraction > 1.0 -> Color.Red
+                    urFraction > 0.9 -> Color(0xFFF57C00)
+                    urFraction > 0 -> Color(0xFF2E7D32)
                     else -> DimWhite
                 }
-                if (utilizationRatio > 0) {
-                    drawTextAnnotated("UR: ${(utilizationRatio * 100).toInt()}%", cw - 100f, margin + 50f, urColor, 14f, center = true, bold = true)
+                if (urFraction > 0) {
+                    drawTextAnnotated("UR: ${urPercent}%", cw - 100f, margin + 50f, urColor, 14f, center = true, bold = true)
                 }
             }
             1 -> { // ELEVATION ONLY
-                drawElevationView(margin + 50f, margin + 50f, cw - margin - 50f, ch - margin - 150f, isIBeam, isHSS, isChannel, isAngle, memberLength, depth, flangeWidth, flangeThickness, webThickness, boltDia, boltCount, boltGauge, boltPitch, endPlateThickness, hasStiffener, weldSize, isColumn, sectionName, 0, 0.0, 0.0, 0.0, 0.0, false)
+                drawElevationView(margin + 50f, margin + 50f, cw - margin - 50f, ch - margin - 150f, shape, memberLength, depth, flangeWidth, flangeThickness, webThickness, boltDia, boltCount, boltGauge, boltPitch, endPlateThickness, hasStiffener, weldSize, isColumn, sectionName)
             }
             2 -> { // CROSS SECTION ONLY
-                drawCrossSectionView(margin + 100f, margin + 100f, cw - margin - 100f, ch - margin - 100f, isIBeam, isHSS, isChannel, isAngle, depth, flangeWidth, flangeThickness, webThickness, radius, area, ix, sx, zx)
+                drawCrossSectionView(margin + 100f, margin + 100f, cw - margin - 100f, ch - margin - 100f, shape, depth, flangeWidth, flangeThickness, webThickness, radius, area, ix, sx, zx)
             }
             3 -> { // CONNECTION ONLY
-                drawConnectionDetail(margin + 100f, margin + 100f, cw - margin - 100f, ch - margin - 100f, isIBeam, isHSS, isChannel, isAngle, depth, flangeWidth, flangeThickness, webThickness, boltDia, boltCount, boltGauge, boltPitch, endPlateThickness, weldSize, connectionType, hasMomentConnection, hasStiffener, stiffenerCount, stiffenerThickness, stiffenerWidth, stiffenerHeight)
+                drawConnectionDetail(margin + 100f, margin + 100f, cw - margin - 100f, ch - margin - 100f, shape, depth, flangeWidth, flangeThickness, webThickness, boltDia, boltCount, boltGauge, boltPitch, endPlateThickness, weldSize, connectionType, hasMomentConnection, hasStiffener, stiffenerCount, stiffenerThickness, stiffenerWidth, stiffenerHeight)
             }
         }
 
@@ -253,65 +379,17 @@ fun ProfessionalSteelDrawing(
 
 private fun DrawScope.drawStatusOverlay(x: Float, y: Float, isSafe: Boolean, utilizationRatio: Double) {
     val color = if (isSafe) Color(0xFF2E7D32) else Color.Red
+    val urFraction = utilizationRatio.coerceIn(0.0, 2.0)
+    val urPercent = (urFraction * 100).toInt()
     drawRect(color.copy(alpha = 0.1f), Offset(x, y), Size(110f, 45f))
     drawRect(color, Offset(x, y), Size(110f, 45f), style = Stroke(1.5f))
     drawTextCentered(if (isSafe) "SAFE" else "UNSAFE", x + 55f, y + 18f, color, 12f, true)
-    drawTextCentered("U.R: ${(utilizationRatio).toInt()}%", x + 55f, y + 36f, color, 12f, true)
-}
-
-private fun DrawScope.drawElevationView(
-    left: Float, top: Float, right: Float, bottom: Float,
-    isIBeam: Boolean, isHSS: Boolean, isChannel: Boolean, isAngle: Boolean,
-    memberLength: Double, depth: Double, flangeWidth: Double,
-    flangeThickness: Double, webThickness: Double,
-    boltDia: Double, boltCount: Int, boltGauge: Double,
-    boltPitch: Double, endPlateThickness: Double,
-    hasStiffener: Boolean, weldSize: Double,
-    isColumn: Boolean, sectionName: String
-) {
-    val viewW = right - left
-    val viewH = bottom - top
-    
-    val scaleX = viewW / memberLength.toFloat().coerceAtLeast(1f)
-    val scaleY = (viewH * 0.6f) / depth.toFloat().coerceAtLeast(1f)
-    val scale = min(scaleX, scaleY)
-    
-    val sLen = memberLength.toFloat() * scale
-    val sDep = depth.toFloat() * scale
-    val sTf = flangeThickness.toFloat() * scale
-    val sEp = endPlateThickness.toFloat() * scale
-    
-    val cx = (left + right) / 2f
-    val cy = (top + bottom) / 2f
-    
-    val mLeft = cx - sLen / 2f
-    val mRight = cx + sLen / 2f
-    val mTop = cy - sDep / 2f
-    val mBot = cy + sDep / 2f
-
-    // Draw member body
-    drawRect(SteelGray, Offset(mLeft, mTop), Size(sLen, sDep))
-    drawRect(Color.White.copy(alpha = 0.5f), Offset(mLeft, mTop), Size(sLen, sDep), style = Stroke(1.2f))
-
-    if (isIBeam || isChannel) {
-        drawLine(SteelDarkGray, Offset(mLeft, mTop + sTf), Offset(mRight, mTop + sTf), 1f)
-        drawLine(SteelDarkGray, Offset(mLeft, mBot - sTf), Offset(mRight, mBot - sTf), 1f)
-    }
-
-    // End Plates and Connections
-    drawRect(PlateGray, Offset(mLeft - sEp, mTop - 5f), Size(sEp, sDep + 10f))
-    drawRect(PlateGray, Offset(mRight, mTop - 5f), Size(sEp, sDep + 10f))
-
-    // Dimension lines
-    drawHorizontalDimension(mLeft, mRight, mBot + 25f, "${memberLength.toInt()} mm", DimWhite, 12f)
-    drawVerticalDimension(mTop, mBot, mRight + sEp + 15f, "d=${depth.toInt()}", DimWhite, 12f)
-    
-    drawTextCentered(sectionName, cx, mTop - 12f, Color.Cyan, 14f, true)
+    drawTextCentered("U.R: ${urPercent}%", x + 55f, y + 36f, color, 12f, true)
 }
 
 private fun DrawScope.drawCrossSectionView(
     left: Float, top: Float, right: Float, bottom: Float,
-    isIBeam: Boolean, isHSS: Boolean, isChannel: Boolean, isAngle: Boolean,
+    shape: SteelShape,
     depth: Double, flangeWidth: Double,
     flangeThickness: Double, webThickness: Double,
     radius: Double, area: Double,
@@ -321,76 +399,25 @@ private fun DrawScope.drawCrossSectionView(
     val viewH = bottom - top
     val cx = (left + right) / 2f
     val cy = (top + bottom) / 2f
-    
-    val scale = min((viewW * 0.7f) / flangeWidth.toFloat().coerceAtLeast(1f), (viewH * 0.7f) / depth.toFloat().coerceAtLeast(1f))
-    val sW = flangeWidth.toFloat() * scale
-    val sH = depth.toFloat() * scale
-    val sTf = flangeThickness.toFloat() * scale
-    val sTw = webThickness.toFloat() * scale
-    
+
+    val safeDepth = depth.coerceAtLeast(1.0)
+    val safeWidth = flangeWidth.coerceAtLeast(1.0)
+    val scale = min(
+        (viewW * 0.65f) / safeWidth.toFloat(),
+        (viewH * 0.65f) / safeDepth.toFloat()
+    )
+    val sW = safeWidth.toFloat() * scale
+    val sH = safeDepth.toFloat() * scale
+    val sTf = (flangeThickness * scale).toFloat().coerceIn(1f, sH * 0.35f)
+    val sTw = (webThickness * scale).toFloat().coerceIn(1f, sW * 0.35f)
+
     val scx = cx - sW / 2f
     val scy = cy - sH / 2f
-    
-    drawRect(SectionFill, Offset(scx, scy), Size(sW, sH))
-    
-    if (isIBeam) {
-        val path = Path().apply {
-            moveTo(scx, scy)
-            lineTo(scx + sW, scy)
-            lineTo(scx + sW, scy + sTf)
-            lineTo(scx + sW/2 + sTw/2, scy + sTf)
-            lineTo(scx + sW/2 + sTw/2, scy + sH - sTf)
-            lineTo(scx + sW, scy + sH - sTf)
-            lineTo(scx + sW, scy + sH)
-            lineTo(scx, scy + sH)
-            lineTo(scx, scy + sH - sTf)
-            lineTo(scx + sW/2 - sTw/2, scy + sH - sTf)
-            lineTo(scx + sW/2 - sTw/2, scy + sTf)
-            lineTo(scx, scy + sTf)
-            close()
-        }
-        drawPath(path, SteelGray)
-        drawPath(path, Color.White, style = Stroke(1.5f))
-    } else {
-        drawRect(SteelGray, Offset(scx, scy), Size(sW, sH), style = Stroke(1.5f))
-    }
 
-    drawHorizontalDimension(scx, scx + sW, scy + sH + 20f, "b=${flangeWidth.toInt()}", DimWhite, 11f)
-    drawVerticalDimension(scy, scy + sH, scx - 20f, "d=${depth.toInt()}", DimWhite, 11f)
-}
+    drawSectionShape(shape, scx, scy, sW, sH, sTf, sTw, SectionFill)
 
-private fun DrawScope.drawConnectionDetail(
-    left: Float, top: Float, right: Float, bottom: Float,
-    isIBeam: Boolean, isHSS: Boolean, isChannel: Boolean, isAngle: Boolean,
-    depth: Double, flangeWidth: Double,
-    flangeThickness: Double, webThickness: Double,
-    boltDia: Double, boltCount: Int, boltGauge: Double,
-    boltPitch: Double, endPlateThickness: Double,
-    weldSize: Double
-) {
-    val viewW = right - left
-    val viewH = bottom - top
-    val cx = (left + right) / 2f
-    val cy = (top + bottom) / 2f
-    
-    val scale = min((viewW * 0.7f) / flangeWidth.toFloat().coerceAtLeast(1f), (viewH * 0.7f) / depth.toFloat().coerceAtLeast(1f))
-    val sW = flangeWidth.toFloat() * scale
-    val sH = depth.toFloat() * scale
-    
-    val epx = cx - sW / 2f
-    val epy = cy - sH / 2f
-    
-    drawRect(PlateGray.copy(alpha = 0.2f), Offset(epx, epy), Size(sW, sH))
-    drawRect(PlateGray, Offset(epx, epy), Size(sW, sH), style = Stroke(1.5f))
-    
-    // Draw bolts
-    val boltRadius = (boltDia.toFloat() / 2f) * scale * 0.5f
-    val boltSpacingY = (sH - 40f) / max(boltCount - 1, 1)
-    for (i in 0 until boltCount) {
-        val by = epy + 20f + i * boltSpacingY
-        drawCircle(BoltOrange, boltRadius.coerceAtLeast(5f), Offset(cx - sW * 0.3f, by))
-        drawCircle(BoltOrange, boltRadius.coerceAtLeast(5f), Offset(cx + sW * 0.3f, by))
-    }
+    drawHorizontalDimension(scx, scx + sW, scy + sH + 20f, "b=${safeWidth.toInt()}", DimWhite, 11f)
+    drawVerticalDimension(scy, scy + sH, scx - 20f, "d=${safeDepth.toInt()}", DimWhite, 11f)
 }
 
 private fun DrawScope.drawPropertiesTable(
@@ -503,7 +530,7 @@ private fun DrawScope.drawVerticalDimension(y1: Float, y2: Float, x: Float, text
 
 private fun DrawScope.drawElevationView(
     left: Float, top: Float, right: Float, bottom: Float,
-    isIBeam: Boolean, isHSS: Boolean, isChannel: Boolean, isAngle: Boolean,
+    shape: SteelShape,
     memberLength: Double, depth: Double, flangeWidth: Double,
     flangeThickness: Double, webThickness: Double,
     boltDia: Double, boltCount: Int, boltGauge: Double,
@@ -540,13 +567,38 @@ private fun DrawScope.drawElevationView(
     drawRect(SteelGray, Offset(mLeft, mTop), Size(sLen, sDep))
     drawRect(Color.White.copy(alpha = 0.5f), Offset(mLeft, mTop), Size(sLen, sDep), style = Stroke(1.2f))
 
-    if (isIBeam || isChannel) {
-        // Flange lines
-        drawLine(SteelDarkGray, Offset(mLeft, mTop + sTf), Offset(mRight, mTop + sTf), strokeWidth = 1f)
-        drawLine(SteelDarkGray, Offset(mLeft, mBot - sTf), Offset(mRight, mBot - sTf), strokeWidth = 1f)
+    when (shape) {
+        SteelShape.I_BEAM, SteelShape.PLATE_GIRDER, SteelShape.BUILT_UP,
+        SteelShape.CHANNEL, SteelShape.T_SECTION -> {
+            // Flange lines
+            drawLine(SteelDarkGray, Offset(mLeft, mTop + sTf), Offset(mRight, mTop + sTf), strokeWidth = 1f)
+            drawLine(SteelDarkGray, Offset(mLeft, mBot - sTf), Offset(mRight, mBot - sTf), strokeWidth = 1f)
 
-        // Web center line (dashed)
-        drawDashedLine(SteelDarkGray, Offset(cx, mTop + sTf), Offset(cx, mBot - sTf), strokeWidth = 0.5f)
+            // Web center line (dashed)
+            if (shape != SteelShape.T_SECTION) {
+                drawDashedLine(SteelDarkGray, Offset(cx, mTop + sTf), Offset(cx, mBot - sTf), strokeWidth = 0.5f)
+            }
+        }
+
+        SteelShape.ANGLE -> {
+            drawLine(SteelDarkGray, Offset(mLeft, mBot - sTf), Offset(mRight, mBot - sTf), strokeWidth = 1f)
+            drawDashedLine(SteelDarkGray, Offset(mLeft + sTw, mTop), Offset(mLeft + sTw, mBot), strokeWidth = 0.5f)
+        }
+
+        SteelShape.RHS, SteelShape.CHS, SteelShape.PIPE -> {
+            val insetX = max(sTw, 2f)
+            val insetY = max(sTf, 2f)
+            if (sLen > 2 * insetX && sDep > 2 * insetY) {
+                drawRect(
+                    Color.White.copy(alpha = 0.35f),
+                    Offset(mLeft + insetX, mTop + insetY),
+                    Size(sLen - 2 * insetX, sDep - 2 * insetY),
+                    style = Stroke(1f)
+                )
+            }
+        }
+
+        SteelShape.UNKNOWN -> Unit
     }
 
     // Stiffeners on web (for moment connections)
@@ -602,12 +654,17 @@ private fun DrawScope.drawElevationView(
     drawTextCentered(sectionName, cx, mTop - 12f, Color.Cyan, 14f, true)
 
     // Section type label
-    val typeLabel = when {
-        isIBeam -> "I-SECTION"
-        isHSS -> "HSS/RHS"
-        isChannel -> "CHANNEL"
-        isAngle -> "ANGLE"
-        else -> "STEEL"
+    val typeLabel = when (shape) {
+        SteelShape.I_BEAM -> "I-SECTION"
+        SteelShape.CHANNEL -> "CHANNEL"
+        SteelShape.ANGLE -> "ANGLE"
+        SteelShape.RHS -> "RHS/SHS"
+        SteelShape.CHS -> "CHS"
+        SteelShape.PIPE -> "PIPE"
+        SteelShape.T_SECTION -> "T-SECTION"
+        SteelShape.PLATE_GIRDER -> "PLATE GIRDER"
+        SteelShape.BUILT_UP -> "BUILT-UP"
+        SteelShape.UNKNOWN -> "STEEL"
     }
     drawTextCentered(typeLabel, cx, mBot + 45f, ExtGray, 10f)
 }
@@ -741,7 +798,7 @@ private fun DrawScope.drawMomentShearDiagrams(
 
 private fun DrawScope.drawConnectionDetail(
     left: Float, top: Float, right: Float, bottom: Float,
-    isIBeam: Boolean, isHSS: Boolean, isChannel: Boolean, isAngle: Boolean,
+    shape: SteelShape,
     depth: Double, flangeWidth: Double,
     flangeThickness: Double, webThickness: Double,
     boltDia: Double, boltCount: Int, boltGauge: Double,
@@ -779,12 +836,7 @@ private fun DrawScope.drawConnectionDetail(
     drawRect(PlateGray, Offset(epx - sEp, epy), Size(sW + 2 * sEp, sH), style = Stroke(1.5f))
 
     // Column section outline on plate
-    drawRect(SteelGray.copy(alpha = 0.3f), Offset(epx, epy), Size(sW, sH))
-    if (isIBeam || isChannel) {
-        drawSolidLine(SteelDarkGray, Offset(epx, epy + sTf), Offset(epx + sW, epy + sTf), strokeWidth = 1f)
-        drawSolidLine(SteelDarkGray, Offset(epx, epy + sH - sTf), Offset(epx + sW, epy + sH - sTf), strokeWidth = 1f)
-        drawDashedLine(SteelDarkGray, Offset(cx, epy + sTf), Offset(cx, epy + sH - sTf), strokeWidth = 0.5f)
-    }
+    drawSectionShape(shape, epx, epy, sW, sH, sTf, sTw, SteelGray.copy(alpha = 0.35f))
 
     // Stiffeners on connection
     if (stiffenerCount > 0 && hasMomentConnection) {

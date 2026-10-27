@@ -197,8 +197,7 @@ class FrameAnalysisEngineTest {
         val result = FrameAnalysisEngine.solveFrame(nodes, members, emptyList(), memberLoads, settings)
         if (result.isSolved && result.memberDiagrams.isNotEmpty()) {
             val maxMoment = result.memberDiagrams[0].maxMoment
-            // Engine max moment accounts for section properties and analysis method
-            assertEquals("Max moment should match engine output", 104.9, maxMoment, 5.0)
+            assertEquals("Max moment should match wL^2/8 for simply supported beam", 45.0, maxMoment, 0.5)
         }
     }
 

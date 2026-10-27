@@ -99,10 +99,52 @@ class ECPRetainingWall : RetainingWallDesign {
         }
         val bearingFS = if (maxBearing > 0) input.soilBearingCapacity / maxBearing else 0.0
 
-        // Stem design (cantilever from base)
+        // Stem design (cantilever from base) — account for water table
         val stemH = H - tFooting
-        val stemMomentUnfactored = (Ka * gamma * stemH.pow(3) / 6) + (Ka * q * stemH.pow(2) / 2)
-        val stemShearUnfactored = Ka * gamma * stemH.pow(2) / 2 + Ka * q * stemH
+        val zwtRelative = zwt - tFooting  // Water table depth relative to stem top
+        
+        // Compute stem moment and shear considering water table
+        val stemMomentUnfactored: Double
+        val stemShearUnfactored: Double
+        
+        if (zwtRelative <= 0) {
+            // Water table at or above stem top: fully submerged
+            val gammaEff = gamma - 9.81
+            val hWaterStem = stemH
+            stemMomentUnfactored = (Ka * gammaEff * stemH.pow(3) / 6) 
+                + (0.5 * 9.81 * hWaterStem.pow(2) * (2.0/3.0) * stemH)  // water pressure moment
+                + (Ka * q * stemH.pow(2) / 2)
+            stemShearUnfactored = Ka * gammaEff * stemH.pow(2) / 2 
+                + 9.81 * hWaterStem * stemH
+                + Ka * q * stemH
+        } else if (zwtRelative >= stemH) {
+            // Water table below stem base: dry stem
+            stemMomentUnfactored = (Ka * gamma * stemH.pow(3) / 6) + (Ka * q * stemH.pow(2) / 2)
+            stemShearUnfactored = Ka * gamma * stemH.pow(2) / 2 + Ka * q * stemH
+        } else {
+            // Water table within stem height: partial submergence
+            val hDry = zwtRelative
+            val hSub = stemH - zwtRelative
+            val gammaEff = gamma - 9.81
+            
+            // Dry portion (above water table)
+            val momentDry = (Ka * gamma * hDry.pow(3) / 6) + (Ka * q * hDry.pow(2) / 2)
+            val shearDry = Ka * gamma * hDry.pow(2) / 2 + Ka * q * hDry
+            
+            // Submerged portion (below water table)
+            // Soil pressure at top of submerged portion
+            val paTop = Ka * gamma * hDry + Ka * q
+            val paBase = Ka * gammaEff * hSub + paTop
+            val momentSub = paTop * hSub * hSub / 2.0 + (paBase - paTop) * hSub * hSub / 3.0
+            val shearSub = (paTop + paBase) / 2.0 * hSub
+            
+            // Water pressure on submerged portion
+            val momentWater = 0.5 * 9.81 * hSub.pow(2) * (2.0/3.0) * hSub
+            val shearWater = 9.81 * hSub * hSub / 2.0
+            
+            stemMomentUnfactored = momentDry + momentSub + momentWater
+            stemShearUnfactored = shearDry + shearSub + shearWater
+        }
 
         val Mu = LOAD_FACTOR_LIVE * stemMomentUnfactored
         val Vu = LOAD_FACTOR_LIVE * stemShearUnfactored

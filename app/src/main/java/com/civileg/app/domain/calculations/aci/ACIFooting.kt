@@ -47,9 +47,10 @@ class ACIFooting : FootingDesign {
         }
 
         // 2. تحويل الأحمال للخدمة (لحساب أبعاد القاعدة)
-        val P_service = axialLoad / loadCombination.getFactorForCode(DesignCode.ACI)
-        val Mx_service = momentX / loadCombination.getFactorForCode(DesignCode.ACI)
-        val My_service = momentY / loadCombination.getFactorForCode(DesignCode.ACI)
+        val factor = loadCombination.getFactorForCode(DesignCode.ACI)
+        val P_service = axialLoad / factor
+        val Mx_service = momentX / factor
+        val My_service = momentY / factor
 
         // 3. حساب المساحة المطلوبة
         val t_m = footingDepth / 1000.0
@@ -99,18 +100,21 @@ class ACIFooting : FootingDesign {
             warnings.add("ACI: Footing separation - increase dimensions")
         }
 
+        // Factored soil pressure for flexure and one-way shear design (ultimate level)
+        val q_factored = q_avg * factor
+
         // 8. السمك الفعال
         val d = footingDepth - getMinCover() - 10.0
 
-        // 9. عزم الانحناء في الاتجاهين (الناتئ من وجه العمود)
+        // 9. عزم الانحناء في الاتجاهين (الناتئ من وجه العمود) — factored pressure
         val cantX = (B - columnWidth) / 2.0 / 1000.0  // m
         val cantY = (L - columnDepth) / 2.0 / 1000.0  // m
-        val Mu_x = q_avg * (L / 1000.0) * cantX * cantX / 2.0  // kN.m
-        val Mu_y = q_avg * (B / 1000.0) * cantY * cantY / 2.0  // kN.m
+        val Mu_x = q_factored * (L / 1000.0) * cantX * cantX / 2.0  // kN.m
+        val Mu_y = q_factored * (B / 1000.0) * cantY * cantY / 2.0  // kN.m
 
-        // 10. فحص القص الأحادي عند بعد d/2 من وجه العمود (ACI 318-22.5)
-        val Vu_x = q_avg * (L / 1000.0) * max(cantX - d / 2000.0, 0.0)  // kN
-        val Vu_y = q_avg * (B / 1000.0) * max(cantY - d / 2000.0, 0.0)  // kN
+        // 10. فحص القص الأحادي عند بعد d/2 من وجه العمود (ACI 318-22.5) — factored pressure
+        val Vu_x = q_factored * (L / 1000.0) * max(cantX - d / 2000.0, 0.0)  // kN
+        val Vu_y = q_factored * (B / 1000.0) * max(cantY - d / 2000.0, 0.0)  // kN
         // One-way shear capacity: Vc = φ × 0.17√f'c × b × d (ACI 318-22.5.5.1)
         val fc_prime = 0.8 * fcu
         val vc_oneWay = 0.17 * sqrt(fc_prime)  // MPa
@@ -180,7 +184,9 @@ class ACIFooting : FootingDesign {
             isSafe = q_max <= soilBearingCapacity
                 && q_min >= 0
                 && Vu_x <= Vc_x && Vu_y <= Vc_y
-                && punchingCheck.isSafe,
+                && punchingCheck.isSafe
+                && reinfX.isSafe
+                && reinfY.isSafe,
             warnings = warnings,
             codeNotes = codeNotes
         )

@@ -10,6 +10,7 @@ import android.graphics.Path
 import com.civileg.app.R
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.modeler.FrameSceneView
+import com.civileg.app.domain.modeler.ModelerLayerVisibility
 import com.civileg.app.viewmodel.DiagramType
 import com.itextpdf.io.font.PdfEncodings
 import com.itextpdf.kernel.font.PdfFont
@@ -272,11 +273,13 @@ object FrameAnalysisPdfExporter {
         nodes: List<FrameNode>, members: List<FrameMember>,
         memberLoads: List<MemberLoad>, nodalLoads: List<NodalLoad>,
         slabs: List<SlabPanel>, result: FrameAnalysisResult?, diagramType: DiagramType,
-        sceneView: FrameSceneView? = null
+        sceneView: FrameSceneView? = null,
+        dimensions: List<Dimension> = emptyList()
     ): Bitmap? {
         if (nodes.isEmpty()) return null
 
         val view = sceneView?.takeIf { it.isValid }
+        val layers = view?.layers ?: ModelerLayerVisibility()
         val renderFactor = if (view != null) {
             maxOf(1f, view.width / 1200f, view.height / 1600f)
         } else {
@@ -312,8 +315,53 @@ object FrameAnalysisPdfExporter {
             oy = (pad + ((h - 2 * pad) - ySpan * scale) / 2f + yMax.toFloat() * scale).toFloat()
         }
 
-        fun sx(x: Double) = (x * scale + ox).toFloat()
-        fun sy(y: Double) = (-y * scale + oy).toFloat()
+        fun toScreenX(x: Double) = (x * scale + ox).toFloat()
+        fun toScreenY(y: Double) = (-y * scale + oy).toFloat()
+
+        fun drawDimensionsPdf(
+            canvas: Canvas,
+            dimensions: List<Dimension>,
+            nodes: List<FrameNode>,
+            scale: Float
+        ) {
+            if (dimensions.isEmpty()) return
+            val dimPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#6A1B9A")
+                strokeWidth = 1.5f
+                style = Paint.Style.STROKE
+            }
+            val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#4A148C")
+                textSize = 12f * scale
+                textAlign = Paint.Align.CENTER
+            }
+            val arrowSize = 6f * scale
+            val extOffset = 8f * scale
+            val nodeById = nodes.associateBy { it.id }
+            for (dim in dimensions) {
+                val n1 = nodeById[dim.point1Id] ?: continue
+                val n2 = nodeById[dim.point2Id] ?: continue
+                val p1x = toScreenX(n1.x); val p1y = toScreenY(n1.y)
+                val p2x = toScreenX(n2.x); val p2y = toScreenY(n2.y)
+                val dx = p2x - p1x; val dy = p2y - p1y
+                val len = hypot(dx, dy)
+                if (len < 1f) continue
+                val ux = dx / len; val uy = dy / len
+                val offsetPx = (dim.offsetDistance * scale).toFloat()
+                val offX = -uy * offsetPx; val offY = ux * offsetPx
+                val d1x = p1x + offX; val d1y = p1y + offY
+                val d2x = p2x + offX; val d2y = p2y + offY
+                canvas.drawLine(p1x, p1y, d1x, d1y, dimPaint)
+                canvas.drawLine(p2x, p2y, d2x, d2y, dimPaint)
+                canvas.drawLine(d1x, d1y, d2x, d2y, dimPaint)
+                canvas.drawLine(d1x, d1y, d1x + ux * arrowSize, d1y + uy * arrowSize, dimPaint)
+                canvas.drawLine(d2x, d2y, d2x - ux * arrowSize, d2y - uy * arrowSize, dimPaint)
+                val midX = (d1x + d2x) / 2f
+                val midY = (d1y + d2y) / 2f
+                val text = dim.getDisplayText(nodes)
+                canvas.drawText(text, midX, midY - 4f * scale, textPaint)
+            }
+        }
 
         var gridStep = if (view != null) view.gridMm / 1000.0 else 1.0
         if (gridStep <= 0.0) gridStep = 1.0
@@ -343,7 +391,7 @@ object FrameAnalysisPdfExporter {
                 isMajor -> 110
                 else -> 55
             }
-            canvas.drawLine(sx(x), 0f, sx(x), h.toFloat(), paint)
+            canvas.drawLine(toScreenX(x), 0f, toScreenX(x), h.toFloat(), paint)
             x += gridStep
             count++
         }
@@ -364,7 +412,7 @@ object FrameAnalysisPdfExporter {
                 isMajor -> 110
                 else -> 55
             }
-            canvas.drawLine(0f, sy(y), w.toFloat(), sy(y), paint)
+            canvas.drawLine(0f, toScreenY(y), w.toFloat(), toScreenY(y), paint)
             y += gridStep
             count++
         }
@@ -380,7 +428,7 @@ object FrameAnalysisPdfExporter {
         while (x <= gridRight && count < 2000) {
             val major = round(x / (gridStep * 10.0)) * (gridStep * 10.0)
             if (abs(x - major) < gridStep * 0.5 && abs(x) >= gridStep * 0.5) {
-                canvas.drawText(formatGridLabel(x), sx(x) + 3f, h - 18f, gridLabelPaint)
+                canvas.drawText(formatGridLabel(x), toScreenX(x) + 3f, h - 18f, gridLabelPaint)
             }
             x += gridStep
             count++
@@ -390,7 +438,7 @@ object FrameAnalysisPdfExporter {
         while (y <= gridTop && count < 2000) {
             val major = round(y / (gridStep * 10.0)) * (gridStep * 10.0)
             if (abs(y - major) < gridStep * 0.5 && abs(y) >= gridStep * 0.5) {
-                canvas.drawText(formatGridLabel(y), 4f, sy(y) - 12f, gridLabelPaint)
+                canvas.drawText(formatGridLabel(y), 4f, toScreenY(y) - 12f, gridLabelPaint)
             }
             y += gridStep
             count++
@@ -413,8 +461,8 @@ object FrameAnalysisPdfExporter {
                 if (pts.size != 4) continue
                 val path = android.graphics.Path()
                 pts.forEachIndexed { index, node ->
-                    if (index == 0) path.moveTo(sx(node.x), sy(node.y))
-                    else path.lineTo(sx(node.x), sy(node.y))
+                    if (index == 0) path.moveTo(toScreenX(node.x), toScreenY(node.y))
+                    else path.lineTo(toScreenX(node.x), toScreenY(node.y))
                 }
                 path.close()
                 canvas.drawPath(path, slabFill)
@@ -428,8 +476,8 @@ object FrameAnalysisPdfExporter {
                 val member = members.find { it.id == diagram.memberId } ?: continue
                 val ni = nodes.find { it.id == member.nodeI } ?: continue
                 val nj = nodes.find { it.id == member.nodeJ } ?: continue
-                val x1 = sx(ni.x); val y1 = sy(ni.y)
-                val x2 = sx(nj.x); val y2 = sy(nj.y)
+                val x1 = toScreenX(ni.x); val y1 = toScreenY(ni.y)
+                val x2 = toScreenX(nj.x); val y2 = toScreenY(nj.y)
                 val L = sqrt((x2 - x1).pow(2) + (y2 - y1).pow(2))
                 if (L < 1f) continue
                 val dx = (x2 - x1) / L; val dy = (y2 - y1) / L
@@ -485,7 +533,7 @@ object FrameAnalysisPdfExporter {
                 FrameMaterialType.Concrete -> Color.parseColor("#1565C0")
                 FrameMaterialType.Steel -> Color.parseColor("#E65100")
             }
-            canvas.drawLine(sx(ni.x), sy(ni.y), sx(nj.x), sy(nj.y), paint)
+            canvas.drawLine(toScreenX(ni.x), toScreenY(ni.y), toScreenX(nj.x), toScreenY(nj.y), paint)
             val releasePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.parseColor("#D84315")
                 style = Paint.Style.STROKE
@@ -493,12 +541,12 @@ object FrameAnalysisPdfExporter {
             }
             val releaseFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
             if (member.releaseI) {
-                canvas.drawCircle(sx(ni.x), sy(ni.y), 7f, releaseFill)
-                canvas.drawCircle(sx(ni.x), sy(ni.y), 7f, releasePaint)
+                canvas.drawCircle(toScreenX(ni.x), toScreenY(ni.y), 7f, releaseFill)
+                canvas.drawCircle(toScreenX(ni.x), toScreenY(ni.y), 7f, releasePaint)
             }
             if (member.releaseJ) {
-                canvas.drawCircle(sx(nj.x), sy(nj.y), 7f, releaseFill)
-                canvas.drawCircle(sx(nj.x), sy(nj.y), 7f, releasePaint)
+                canvas.drawCircle(toScreenX(nj.x), toScreenY(nj.y), 7f, releaseFill)
+                canvas.drawCircle(toScreenX(nj.x), toScreenY(nj.y), 7f, releasePaint)
             }
         }
 
@@ -506,7 +554,7 @@ object FrameAnalysisPdfExporter {
         val supportPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.parseColor("#1565C0"); strokeWidth = 3f }
         for (node in nodes) {
             if (node.support == SupportType.Free) continue
-            val px = sx(node.x); val py = sy(node.y)
+            val px = toScreenX(node.x); val py = toScreenY(node.y)
             when (node.support) {
                 SupportType.Pin -> {
                     val path = android.graphics.Path()
@@ -532,11 +580,16 @@ object FrameAnalysisPdfExporter {
         // Nodes
         val nodePaint = Paint(Paint.ANTI_ALIAS_FLAG)
         for (node in nodes) {
-            val px = sx(node.x); val py = sy(node.y)
+            val px = toScreenX(node.x); val py = toScreenY(node.y)
             nodePaint.color = Color.WHITE; canvas.drawCircle(px, py, 6f, nodePaint)
             nodePaint.color = Color.BLACK; canvas.drawCircle(px, py, 6f, nodePaint.apply { style = Paint.Style.STROKE; strokeWidth = 2f })
             textPaint.color = Color.parseColor("#1565C0"); textPaint.textAlign = Paint.Align.CENTER
             canvas.drawText("${node.id}", px, py - 12f, textPaint)
+        }
+
+        // Dimensions
+        if (layers.dimensions && dimensions.isNotEmpty()) {
+            drawDimensionsPdf(canvas, dimensions, nodes, scale)
         }
 
         // Loads
@@ -547,7 +600,7 @@ object FrameAnalysisPdfExporter {
         }
         for (load in nodalLoads) {
             val node = nodes.find { it.id == load.nodeId } ?: continue
-            val px = sx(node.x); val py = sy(node.y)
+            val px = toScreenX(node.x); val py = toScreenY(node.y)
             val magnitude = hypot(load.fx, load.fy)
             if (magnitude > 1e-9) {
                 val ux = (load.fx / magnitude).toFloat()
@@ -569,8 +622,8 @@ object FrameAnalysisPdfExporter {
             val member = members.find { it.id == load.memberId } ?: continue
             val ni = nodes.find { it.id == member.nodeI } ?: continue
             val nj = nodes.find { it.id == member.nodeJ } ?: continue
-            val x1 = sx(ni.x); val y1 = sy(ni.y)
-            val x2 = sx(nj.x); val y2 = sy(nj.y)
+            val x1 = toScreenX(ni.x); val y1 = toScreenY(ni.y)
+            val x2 = toScreenX(nj.x); val y2 = toScreenY(nj.y)
             val dx = x2 - x1; val dy = y2 - y1
             val len = hypot(dx, dy)
             if (len < 1e-3f) continue

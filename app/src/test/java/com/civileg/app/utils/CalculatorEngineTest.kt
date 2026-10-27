@@ -179,6 +179,35 @@ class CalculatorEngineTest {
         assertEquals(300.0, s!!.depth, 1.0)
     }
 
+    @Test
+    fun testAdditionalSteelSectionFamiliesAreAvailable() {
+        val names = SteelTables.getAllSections().map { it.name }
+        assertTrue("CHS family missing", names.contains("CHS 168.3x6.3"))
+        assertTrue("Pipe family missing", names.contains("Pipe 6\" Std"))
+        assertTrue("T family missing", names.contains("T 150x150x10x8"))
+        assertTrue("Plate girder family missing", names.contains("PG 800x300x14x10"))
+        assertNotNull(SteelTables.getSectionByDepth(168.3, "CHS"))
+        assertNotNull(SteelTables.getSectionByDepth(219.1, "PIPE"))
+        assertNotNull(SteelTables.getSectionByDepth(150.0, "T"))
+        assertNotNull(SteelTables.getSectionByDepth(800.0, "PG"))
+    }
+
+    @Test
+    fun testAdditionalSteelSectionsHavePositiveProperties() {
+        val added = SteelTables.chsSections + SteelTables.pipeSections +
+            SteelTables.tSections + SteelTables.plateGirderSections
+        assertTrue("Additional families should not be empty", added.isNotEmpty())
+        for (s in added) {
+            assertTrue("${s.name}: depth > 0", s.depth > 0)
+            assertTrue("${s.name}: width > 0", s.width > 0)
+            assertTrue("${s.name}: area > 0", s.area > 0)
+            assertTrue("${s.name}: weight > 0", s.weight > 0)
+            assertTrue("${s.name}: Ix > 0", s.iy > 0)
+            assertTrue("${s.name}: Sx > 0", s.sy > 0)
+            assertTrue("${s.name}: rx > 0", s.ry > 0)
+        }
+    }
+
     // ------------------------------------------------------------------
     // 3. SteelGrade enum values
     // ------------------------------------------------------------------

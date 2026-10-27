@@ -377,10 +377,72 @@ class CalculatorEngine @Inject constructor(
     // --- Steel Dictionary & Design ---
 
     fun getSteelSectionLibrary(): Map<String, List<SteelSectionType>> {
-        val iSections = SteelTables.ipeSections.map { s ->
+        fun iSections(rows: List<SteelTables.SectionProperties>) = rows.map { s ->
             SteelSectionType.ISection(h = s.depth, bf = s.width, tf = s.tf, tw = s.tw, grade = SteelGrade.ST37, customName = s.name)
         }
-        return mapOf("IPE (European I-Beams)" to iSections)
+
+        val ipe = iSections(SteelTables.ipeSections)
+        val hea = iSections(SteelTables.heaSections)
+        val heb = iSections(SteelTables.hebSections)
+        val wShapes = iSections(SteelTables.wShapeSections)
+
+        val upn = SteelTables.upnSections.map { s ->
+            SteelSectionType.CSection(h = s.depth, bf = s.width, tf = s.tf, tw = s.tw, grade = SteelGrade.ST37, customName = s.name)
+        }
+
+        val angles = SteelTables.angleSections.map { s ->
+            SteelSectionType.LSection(legA = s.depth, legB = s.width, thickness = s.tf, grade = SteelGrade.ST37, customName = s.name)
+        }
+
+        val rhs = SteelTables.rhsSections.map { s ->
+            SteelSectionType.RHS(width = s.width, height = s.depth, thickness = s.tf, grade = SteelGrade.ST37, customName = s.name)
+        }
+
+        val chs = listOf(
+            SteelSectionType.CHS(outerDiameter = 114.3, thickness = 5.0, grade = SteelGrade.ST37, customName = "CHS 114.3x5.0"),
+            SteelSectionType.CHS(outerDiameter = 139.7, thickness = 5.0, grade = SteelGrade.ST37, customName = "CHS 139.7x5.0"),
+            SteelSectionType.CHS(outerDiameter = 168.3, thickness = 6.3, grade = SteelGrade.ST37, customName = "CHS 168.3x6.3"),
+            SteelSectionType.CHS(outerDiameter = 193.7, thickness = 6.3, grade = SteelGrade.ST37, customName = "CHS 193.7x6.3"),
+            SteelSectionType.CHS(outerDiameter = 219.1, thickness = 8.0, grade = SteelGrade.ST37, customName = "CHS 219.1x8.0"),
+            SteelSectionType.CHS(outerDiameter = 273.0, thickness = 8.0, grade = SteelGrade.ST37, customName = "CHS 273.0x8.0"),
+            SteelSectionType.CHS(outerDiameter = 323.9, thickness = 10.0, grade = SteelGrade.ST37, customName = "CHS 323.9x10.0")
+        )
+
+        val pipes = listOf(
+            SteelSectionType.Pipe(outerDiameter = 88.9, wallThickness = 5.49, pipeSchedule = "Std", grade = SteelGrade.ST37, customName = "Pipe 3\" Std"),
+            SteelSectionType.Pipe(outerDiameter = 114.3, wallThickness = 6.02, pipeSchedule = "Std", grade = SteelGrade.ST37, customName = "Pipe 4\" Std"),
+            SteelSectionType.Pipe(outerDiameter = 168.3, wallThickness = 7.11, pipeSchedule = "Std", grade = SteelGrade.ST37, customName = "Pipe 6\" Std"),
+            SteelSectionType.Pipe(outerDiameter = 219.1, wallThickness = 8.18, pipeSchedule = "Std", grade = SteelGrade.ST37, customName = "Pipe 8\" Std"),
+            SteelSectionType.Pipe(outerDiameter = 273.0, wallThickness = 9.27, pipeSchedule = "Std", grade = SteelGrade.ST37, customName = "Pipe 10\" Std")
+        )
+
+        val tSections = listOf(
+            SteelSectionType.TSection(flangeWidth = 100.0, flangeThickness = 8.0, webDepth = 100.0, webThickness = 6.0, grade = SteelGrade.ST37, customName = "T 100x100x8x6"),
+            SteelSectionType.TSection(flangeWidth = 150.0, flangeThickness = 10.0, webDepth = 150.0, webThickness = 8.0, grade = SteelGrade.ST37, customName = "T 150x150x10x8"),
+            SteelSectionType.TSection(flangeWidth = 200.0, flangeThickness = 12.0, webDepth = 200.0, webThickness = 10.0, grade = SteelGrade.ST37, customName = "T 200x200x12x10"),
+            SteelSectionType.TSection(flangeWidth = 250.0, flangeThickness = 14.0, webDepth = 250.0, webThickness = 12.0, grade = SteelGrade.ST37, customName = "T 250x250x14x12")
+        )
+
+        val plateGirders = listOf(
+            SteelSectionType.PlateGirder(h = 600.0, bfTop = 250.0, bfBot = 250.0, tfTop = 12.0, tfBot = 12.0, tw = 8.0, grade = SteelGrade.ST37, customName = "PG 600x250x12x8"),
+            SteelSectionType.PlateGirder(h = 800.0, bfTop = 300.0, bfBot = 300.0, tfTop = 14.0, tfBot = 14.0, tw = 10.0, grade = SteelGrade.ST37, customName = "PG 800x300x14x10"),
+            SteelSectionType.PlateGirder(h = 1000.0, bfTop = 350.0, bfBot = 350.0, tfTop = 16.0, tfBot = 16.0, tw = 12.0, grade = SteelGrade.ST37, customName = "PG 1000x350x16x12"),
+            SteelSectionType.PlateGirder(h = 1200.0, bfTop = 400.0, bfBot = 400.0, tfTop = 20.0, tfBot = 20.0, tw = 14.0, grade = SteelGrade.ST37, customName = "PG 1200x400x20x14")
+        )
+
+        return linkedMapOf(
+            "IPE (European I-Beams)" to ipe,
+            "HEA (European Wide Flange)" to hea,
+            "HEB (European Wide Flange)" to heb,
+            "UPN (European Channels)" to upn,
+            "Angles (L-Sections)" to angles,
+            "RHS/SHS (Rectangular Hollow)" to rhs,
+            "W (AISC Wide Flange)" to wShapes,
+            "CHS (Circular Hollow)" to chs,
+            "Pipes (ASTM A53)" to pipes,
+            "T Sections" to tSections,
+            "Plate Girders" to plateGirders
+        )
     }
 
     fun calculateSteelMember(section: SteelSectionType, memberType: SteelMemberType, inputs: SteelInputs, code: DesignCode): SteelMemberResult {

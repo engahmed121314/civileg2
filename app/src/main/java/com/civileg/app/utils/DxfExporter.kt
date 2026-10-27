@@ -36,8 +36,36 @@ class DxfExporter {
         }
     }
 
-    private val sb = StringBuilder()
+    private var sb = StringBuilder()
     private var currentLayer = "0"
+    // Bounds tracking for EXTMIN/EXTMAX
+    private var minX = Double.POSITIVE_INFINITY
+    private var maxX = Double.NEGATIVE_INFINITY
+    private var minY = Double.POSITIVE_INFINITY
+    private var maxY = Double.NEGATIVE_INFINITY
+    private var minZ = Double.POSITIVE_INFINITY
+    private var maxZ = Double.NEGATIVE_INFINITY
+    private var boundsInitialized = false
+
+    private fun updateBounds(x: Double, y: Double, z: Double = 0.0) {
+        if (x < minX) minX = x
+        if (x > maxX) maxX = x
+        if (y < minY) minY = y
+        if (y > maxY) maxY = y
+        if (z < minZ) minZ = z
+        if (z > maxZ) maxZ = z
+        boundsInitialized = true
+    }
+
+    private fun resetBounds() {
+        minX = Double.POSITIVE_INFINITY
+        maxX = Double.NEGATIVE_INFINITY
+        minY = Double.POSITIVE_INFINITY
+        maxY = Double.NEGATIVE_INFINITY
+        minZ = Double.POSITIVE_INFINITY
+        maxZ = Double.NEGATIVE_INFINITY
+        boundsInitialized = false
+    }
 
     /**
      * Export a DxfDrawable to DXF file.
@@ -51,24 +79,33 @@ class DxfExporter {
         outputPath: String,
         bbsEntries: List<BbsEntry> = emptyList()
     ): File? {
-        // Reset the shared entity buffer. The entity primitives (addLine*, addCircle,
-        // addPolyline, ...) append to the field `sb`; shadowing it here would drop every
-        // entity and emit an empty ENTITIES section.
-        sb.setLength(0)
+        // Two-pass approach: first pass collects bounds, second pass writes with correct header
+        // Pass 1: Export to a temporary buffer to collect bounds
+        val entityBuffer = StringBuilder()
+        val savedSb = sb
+        val savedLayer = currentLayer
+        
+        sb = entityBuffer
         currentLayer = "0"
-
-        // Header
+        resetBounds()
+        
+        drawing.exportToDxf(this)
+        appendBbsTableToBuffer(entityBuffer, bbsEntries)
+        
+        // Pass 2: Write actual file with correct header using collected bounds
+        sb = savedSb
+        sb.setLength(0)
+        currentLayer = savedLayer
+        
+        // Header with correct bounds
         writeHeader(sb)
         writeLayers(sb)
         writeBlocks(sb)
 
         // Entities
         sb.append("0\nSECTION\n2\nENTITIES\n")
-        drawing.exportToDxf(this)
-        appendBbsTable(bbsEntries)
+        sb.append(entityBuffer)
         sb.append("0\nENDSEC\n")
-
-        // End of file
         sb.append("0\nEOF\n")
 
         // Write to file
@@ -87,13 +124,28 @@ class DxfExporter {
 
     /** Serialize a [DxfDrawable] to a DXF string (no file I/O). Useful for tests/validation. */
     fun renderToString(drawing: DxfDrawable): String {
+        // Two-pass approach for correct bounds
+        val entityBuffer = StringBuilder()
+        val savedSb = sb
+        val savedLayer = currentLayer
+        
+        sb = entityBuffer
+        currentLayer = "0"
+        resetBounds()
+        
+        drawing.exportToDxf(this)
+        appendBbsTableToBuffer(entityBuffer, emptyList())
+        
+        // Second pass: write to actual buffer with correct header
+        sb = savedSb
         sb.setLength(0)
         currentLayer = "0"
+        
         writeHeader(sb)
         writeLayers(sb)
         writeBlocks(sb)
         sb.append("0\nSECTION\n2\nENTITIES\n")
-        drawing.exportToDxf(this)
+        sb.append(entityBuffer)
         sb.append("0\nENDSEC\n")
         sb.append("0\nEOF\n")
         return sb.toString()
@@ -142,14 +194,71 @@ class DxfExporter {
         )
     }
 
+    /** Write BBS table to a provided StringBuilder (used in two-pass export). */
+    private fun appendBbsTableToBuffer(buffer: StringBuilder, entries: List<BbsEntry>) {
+        if (entries.isEmpty()) return
+        val x = 0.0
+        val rowHeight = 300.0
+        var y = -2500.0
+        val colX = doubleArrayOf(0.0, 1200.0, 1900.0, 2600.0, 3300.0, 4900.0, 6300.0)
+
+        buffer.append("0\nTEXT\n8\nBBS\n")
+        buffer.append("10\n$x\n20\n$y\n30\n0.0\n")
+        buffer.append("40\n220.0\n")
+        buffer.append("1\nBAR BENDING SCHEDULE\n")
+        y -= rowHeight
+        val headers = listOf("Member", "Bar", "Dia (mm)", "Shape", "Qty", "Length/bar (mm)", "Total (kg)")
+        headers.forEachIndexed { i, h ->
+            buffer.append("0\nTEXT\n8\nBBS\n")
+            buffer.append("10\n${x + colX[i]}\n20\n$y\n30\n0.0\n")
+            buffer.append("40\n160.0\n")
+            buffer.append("1\n$h\n")
+        }
+        y -= rowHeight
+
+        for (entry in entries) {
+            val cells = listOf(
+                entry.memberMark,
+                entry.barMark,
+                entry.diameter.toString(),
+                entry.shapeCode.toString(),
+                entry.count.toString(),
+                String.format(java.util.Locale.US, "%.0f", entry.totalLengthPerBar),
+                String.format(java.util.Locale.US, "%.2f", entry.totalWeightKg)
+            )
+            cells.forEachIndexed { i, cell ->
+                buffer.append("0\nTEXT\n8\nBBS\n")
+                buffer.append("10\n${x + colX[i]}\n20\n$y\n30\n0.0\n")
+                buffer.append("40\n150.0\n")
+                buffer.append("1\n$cell\n")
+            }
+            y -= rowHeight
+        }
+
+        val total = entries.sumOf { it.totalWeightKg }
+        buffer.append("0\nTEXT\n8\nBBS\n")
+        buffer.append("10\n${x + colX[5]}\n20\n${y - rowHeight * 0.4}\n30\n0.0\n")
+        buffer.append("40\n180.0\n")
+        buffer.append("1\nTOTAL STEEL: ${String.format(java.util.Locale.US, "%.2f kg", total)}\n")
+    }
+
     private fun writeHeader(sb: StringBuilder) {
+        // Use tracked bounds if available, otherwise use defaults
+        val useBounds = boundsInitialized
+        val extMinX = if (useBounds) minX else 0.0
+        val extMinY = if (useBounds) minY else 0.0
+        val extMinZ = if (useBounds) minZ else 0.0
+        val extMaxX = if (useBounds) maxX else 100000.0
+        val extMaxY = if (useBounds) maxY else 100000.0
+        val extMaxZ = if (useBounds) maxZ else 0.0
+
         sb.append("0\nSECTION\n2\nHEADER\n")
         sb.append("9\n\$ACADVER\n1\nAC1027\n") // AC1027 = AutoCAD 2013
         sb.append("9\n\$INSBASE\n10\n0.0\n20\n0.0\n30\n0.0\n")
-        sb.append("9\n\$EXTMIN\n10\n0.0\n20\n0.0\n30\n0.0\n")
-        sb.append("9\n\$EXTMAX\n10\n100000.0\n20\n100000.0\n30\n0.0\n")
-        sb.append("9\n\$LIMMIN\n10\n0.0\n20\n0.0\n")
-        sb.append("9\n\$LIMMAX\n10\n100000.0\n20\n100000.0\n")
+        sb.append("9\n\$EXTMIN\n10\n$extMinX\n20\n$extMinY\n30\n$extMinZ\n")
+        sb.append("9\n\$EXTMAX\n10\n$extMaxX\n20\n$extMaxY\n30\n$extMaxZ\n")
+        sb.append("9\n\$LIMMIN\n10\n$extMinX\n20\n$extMinY\n")
+        sb.append("9\n\$LIMMAX\n10\n$extMaxX\n20\n$extMaxY\n")
         sb.append("9\n\$ORTHOMODE\n70\n0\n")
         sb.append("9\n\$REGENMODE\n70\n1\n")
         sb.append("9\n\$FILLETRAD\n40\n0.0\n")
@@ -157,6 +266,8 @@ class DxfExporter {
         sb.append("9\n\$ANGDIR\n70\n0\n")
         sb.append("9\n\$PDMODE\n70\n0\n")
         sb.append("9\n\$PDSIZE\n40\n0.0\n")
+        sb.append("9\n\$INSUNITS\n70\n4\n") // 4 = millimeters
+        sb.append("9\n\$DWGCODEPAGE\n3\nANSI_1252\n")
         sb.append("0\nENDSEC\n")
     }
 
@@ -220,6 +331,8 @@ class DxfExporter {
         sb.append("0\nLINE\n8\n$layer\n")
         sb.append("10\n$x1\n20\n$y1\n30\n$z1\n")
         sb.append("11\n$x2\n21\n$y2\n31\n$z2\n")
+        updateBounds(x1, y1, z1)
+        updateBounds(x2, y2, z2)
     }
 
     fun addLine2D(x1: Double, y1: Double, x2: Double, y2: Double, layer: String = "0") {
@@ -230,6 +343,8 @@ class DxfExporter {
         sb.append("0\nCIRCLE\n8\n$layer\n")
         sb.append("10\n$centerX\n20\n$centerY\n30\n0.0\n")
         sb.append("40\n$radius\n")
+        updateBounds(centerX - radius, centerY - radius)
+        updateBounds(centerX + radius, centerY + radius)
     }
 
     fun addArc(centerX: Double, centerY: Double, radius: Double, startAngle: Double, endAngle: Double, layer: String = "0") {
@@ -238,6 +353,8 @@ class DxfExporter {
         sb.append("40\n$radius\n")
         sb.append("50\n$startAngle\n")
         sb.append("51\n$endAngle\n")
+        updateBounds(centerX - radius, centerY - radius)
+        updateBounds(centerX + radius, centerY + radius)
     }
 
     fun addPolyline(points: List<Pair<Double, Double>>, layer: String = "0", closed: Boolean = false) {
@@ -246,6 +363,7 @@ class DxfExporter {
         sb.append("70\n${if (closed) 1 else 0}\n")
         points.forEach { (x, y) ->
             sb.append("10\n$x\n20\n$y\n")
+            updateBounds(x, y)
         }
     }
 
@@ -255,6 +373,7 @@ class DxfExporter {
         sb.append("40\n$height\n")
         sb.append("1\n$text\n")
         sb.append("50\n$rotation\n")
+        updateBounds(x, y)
     }
 
     fun addMText(x: Double, y: Double, text: String, height: Double = 100.0, layer: String = "TEXT", width: Double = 1000.0) {
@@ -263,6 +382,7 @@ class DxfExporter {
         sb.append("40\n$height\n")
         sb.append("41\n$width\n")
         sb.append("1\n$text\n")
+        updateBounds(x, y)
     }
 
     fun addHatch(pattern: String, scale: Double, points: List<Pair<Double, Double>>, layer: String = "HATCH") {

@@ -22,10 +22,14 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
+import com.civileg.app.domain.calculations.SteelFrameDesign
 import com.civileg.app.domain.entities.*
+import com.civileg.app.ui.compose.components.drawings.drawSteelSectionViews
 import com.civileg.app.viewmodel.DiagramType
 import kotlin.math.*
 
@@ -55,11 +59,17 @@ fun FrameDrawingCanvas(
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .onSizeChanged { canvasSize = it }
+    ) {
         val density = LocalDensity.current
-        val canvasW = with(density) { maxWidth.toPx() }
-        val canvasH = with(density) { maxHeight.toPx() }
-        if (canvasW <= 0f || canvasH <= 0f) return@BoxWithConstraints
+        val canvasW = canvasSize.width.toFloat()
+        val canvasH = canvasSize.height.toFloat()
+        if (canvasW <= 0f || canvasH <= 0f) return@Box
         val textMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
 
         // Calculate scale to fit frame in canvas with padding (all in pixels)
@@ -348,7 +358,7 @@ private fun DrawScope.drawLongitudinalSection(
         drawLine(Color(0xFF555555), Offset(x, groundY), Offset(x - 8f, groundY + 10f), strokeWidth = 1f)
     }
 
-    // Draw members with thick lines (sections)
+    // Draw members with high-fidelity section styling
     for (member in members) {
         val ni = nodes.find { it.id == member.nodeI } ?: continue
         val nj = nodes.find { it.id == member.nodeJ } ?: continue
@@ -360,8 +370,30 @@ private fun DrawScope.drawLongitudinalSection(
             FrameMaterialType.Steel -> Color(0xFFFF9800)
         }
 
-        // Clean section member line
-        drawLine(memberColor, p1, p2, strokeWidth = 8f, cap = StrokeCap.Round)
+        // Draw structural line with shadow for depth
+        drawLine(Color.Black.copy(alpha = 0.2f), p1 + Offset(2f, 2f), p2 + Offset(2f, 2f), strokeWidth = 12f)
+        drawLine(memberColor, p1, p2, strokeWidth = 10f, cap = StrokeCap.Square)
+
+        // Draw reinforcement/inner section details for Concrete
+        if (member.materialType == FrameMaterialType.Concrete) {
+            drawLine(Color(0xFFE0E0E0), p1, p2, strokeWidth = 2f)
+        }
+    }
+
+    // Add Detailed Dimensions annotations
+    for (i in 0 until members.size) {
+        val ni = nodes.find { it.id == members[i].nodeI } ?: continue
+        val nj = nodes.find { it.id == members[i].nodeJ } ?: continue
+        val p1 = toScreen(ni.x, ni.y)
+        val p2 = toScreen(nj.x, nj.y)
+        val mid = (p1 + p2) / 2f
+        
+        drawText(
+            textMeasurer = textMeasurer,
+            text = String.format(java.util.Locale.ROOT, "L=%.2fm", hypot(nj.x - ni.x, nj.y - ni.y)),
+            topLeft = mid - Offset(20f, 30f),
+            style = TextStyle(color = Color.DarkGray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        )
     }
 
     // Draw supports (with proper foundation symbols)
@@ -436,9 +468,37 @@ private fun DrawScope.drawLongitudinalSection(
 }
 
 // ============================================================================
-// View 2: Cross Section (قطاع عرضي)
+// View 2: Cross Section (???? ????)
 // Shows typical column and beam sections with reinforcement
 // ============================================================================
+private fun DrawScope.drawSteelMemberSheet(
+    member: FrameMember,
+    result: FrameAnalysisResult?,
+    nodes: List<FrameNode>,
+    canvasW: Float,
+    canvasH: Float,
+    textMeasurer: TextMeasurer
+) {
+    val designResult = result?.steelDesignResults?.firstOrNull { it.memberId == member.id }
+    val nodeI = nodes.find { it.id == member.nodeI }
+    val nodeJ = nodes.find { it.id == member.nodeJ }
+    val lengthMm = if (nodeI != null && nodeJ != null) {
+        hypot(nodeJ.x - nodeI.x, nodeJ.y - nodeI.y) * 1000.0
+    } else {
+        6000.0
+    }
+    drawSteelSectionViews(
+        sectionName = designResult?.selectedSection
+            ?: member.steelSectionName?.trim()?.takeUnless { SteelFrameDesign.isAutoSection(it) }
+            ?: "IPE 300",
+        memberLengthMm = lengthMm,
+        memberType = member.memberType,
+        textMeasurer = textMeasurer,
+        topLeft = Offset(0f, 36f),
+        sheetSize = Size(canvasW, (canvasH - 36f).coerceAtLeast(40f))
+    )
+}
+
 private fun DrawScope.drawCrossSection(
     nodes: List<FrameNode>,
     members: List<FrameMember>,
@@ -466,6 +526,50 @@ private fun DrawScope.drawCrossSection(
             style = TextStyle(color = Color.Gray, fontSize = 14.sp)
         )
         return
+    }
+
+    val selectedMember = selectedMemberId?.let { id -> members.find { it.id == id } }
+    if (selectedMember != null && selectedMember.materialType == FrameMaterialType.Steel) {
+        drawSteelMemberSheet(selectedMember, result, nodes, canvasW, canvasH, textMeasurer)
+        return
+    }
+    if (selectedMember != null && selectedMember.materialType == FrameMaterialType.Concrete) {
+        val isVertical = selectedMember.memberType == FrameMemberType.Column || run {
+            val nodeI = nodes.find { it.id == selectedMember.nodeI }
+            val nodeJ = nodes.find { it.id == selectedMember.nodeJ }
+            nodeI != null && nodeJ != null &&
+                abs(nodeJ.y - nodeI.y) > abs(nodeJ.x - nodeI.x)
+        }
+        if (isVertical) {
+            drawColumnSection(
+                canvasW / 2f,
+                canvasH / 2f,
+                selectedMember,
+                result,
+                textMeasurer,
+                context
+            )
+        } else {
+            drawBeamSection(
+                canvasW / 2f,
+                canvasH / 2f,
+                selectedMember,
+                result,
+                textMeasurer,
+                context
+            )
+        }
+        return
+    }
+
+    if (members.none { it.materialType == FrameMaterialType.Concrete }) {
+        val steelMembers = members.filter { it.materialType == FrameMaterialType.Steel }
+        val representative = steelMembers.firstOrNull { it.memberType == FrameMemberType.Column }
+            ?: steelMembers.firstOrNull()
+        if (representative != null) {
+            drawSteelMemberSheet(representative, result, nodes, canvasW, canvasH, textMeasurer)
+            return
+        }
     }
 
     val columnMembers = members.filter { it.memberType == FrameMemberType.Column }
@@ -511,7 +615,7 @@ private fun DrawScope.drawColumnSection(
     val designRes = result?.concreteDesignResults?.firstOrNull { it.memberId == member?.id }
     val numBarsBot = designRes?.numBarsBot?.takeIf { it > 0 } ?: 4
     val numBarsTop = designRes?.numBarsTop?.takeIf { it > 0 } ?: 2
-    val numBars = numBarsBot + numBarsTop
+    val numBars = maxOf(numBarsBot, numBarsTop)
     val barDia = designRes?.barDia?.takeIf { it > 0 }?.toInt() ?: 16
     val tieDia = designRes?.stirrupDia?.takeIf { it > 0 }?.toInt() ?: 8
     val stirrupSpacing = designRes?.stirrupSpacing?.takeIf { it > 0 }?.toInt() ?: 150

@@ -19,6 +19,7 @@ import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.modeler.FrameModelValidator
 import com.civileg.app.domain.modeler.FrameSceneView
 import com.civileg.app.domain.modeler.FrameValidationIssue
+import com.civileg.app.domain.modeler.ModelerLayerVisibility
 import com.civileg.app.domain.modeler.SlabLoadDistributor
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,16 +42,24 @@ class FrameAnalysisViewModel @Inject constructor(
     private val _nodalLoads = MutableLiveData<List<NodalLoad>>(emptyList())
     private val _memberLoads = MutableLiveData<List<MemberLoad>>(emptyList())
     private val _slabs = MutableLiveData<List<SlabPanel>>(emptyList())
+    private val _dimensions = MutableLiveData<List<Dimension>>(emptyList())
     private val _settings = MutableLiveData(FrameAnalysisSettings())
     private val _steelFy = MutableLiveData(355.0)
+
+    // === Multi-selection state ===
+    private val _selectedNodeIds = MutableLiveData<Set<Int>>(emptySet())
+    private val _selectedMemberIds = MutableLiveData<Set<Int>>(emptySet())
 
     val nodes: LiveData<List<FrameNode>> get() = _nodes
     val members: LiveData<List<FrameMember>> get() = _members
     val nodalLoads: LiveData<List<NodalLoad>> get() = _nodalLoads
     val memberLoads: LiveData<List<MemberLoad>> get() = _memberLoads
     val slabs: LiveData<List<SlabPanel>> get() = _slabs
+    val dimensions: LiveData<List<Dimension>> get() = _dimensions
     val settings: LiveData<FrameAnalysisSettings> get() = _settings
     val steelFy: LiveData<Double> get() = _steelFy
+    val selectedNodeIds: LiveData<Set<Int>> get() = _selectedNodeIds
+    val selectedMemberIds: LiveData<Set<Int>> get() = _selectedMemberIds
 
     // === Undo / Redo ===
     private data class ModelSnapshot(
@@ -58,7 +67,10 @@ class FrameAnalysisViewModel @Inject constructor(
         val members: List<FrameMember>,
         val nodalLoads: List<NodalLoad>,
         val memberLoads: List<MemberLoad>,
-        val slabs: List<SlabPanel>
+        val slabs: List<SlabPanel>,
+        val dimensions: List<Dimension>,
+        val selectedNodeIds: Set<Int>,
+        val selectedMemberIds: Set<Int>
     )
 
     private val undoStack = ArrayDeque<ModelSnapshot>()
@@ -78,7 +90,10 @@ class FrameAnalysisViewModel @Inject constructor(
         _members.value ?: emptyList(),
         _nodalLoads.value ?: emptyList(),
         _memberLoads.value ?: emptyList(),
-        _slabs.value ?: emptyList()
+        _slabs.value ?: emptyList(),
+        _dimensions.value ?: emptyList(),
+        _selectedNodeIds.value ?: emptySet(),
+        _selectedMemberIds.value ?: emptySet()
     )
 
     private fun recordUndo() {
@@ -118,6 +133,9 @@ class FrameAnalysisViewModel @Inject constructor(
         _nodalLoads.value = s.nodalLoads
         _memberLoads.value = s.memberLoads
         _slabs.value = s.slabs
+        _dimensions.value = s.dimensions
+        _selectedNodeIds.value = s.selectedNodeIds
+        _selectedMemberIds.value = s.selectedMemberIds
         _result.value = null
         _concreteResults.value = emptyList()
         _steelResults.value = emptyList()
@@ -181,9 +199,10 @@ class FrameAnalysisViewModel @Inject constructor(
         panY: Float,
         width: Int,
         height: Int,
-        gridMm: Int
+        gridMm: Int,
+        layers: ModelerLayerVisibility = ModelerLayerVisibility()
     ) {
-        val view = FrameSceneView(scale, panX, panY, width, height, gridMm)
+        val view = FrameSceneView(scale, panX, panY, width, height, gridMm, layers)
         if (view.isValid) modelerSceneView = view
     }
 
@@ -205,6 +224,144 @@ class FrameAnalysisViewModel @Inject constructor(
     fun clearValidationIssues() {
         _validationIssues.value = emptyList()
     }
+
+    // === Multi-selection Methods ===
+    fun selectNode(nodeId: Int, addToSelection: Boolean = false) {
+        if (addToSelection) {
+            _selectedNodeIds.value = (_selectedNodeIds.value ?: emptySet()) + nodeId
+        } else {
+            _selectedNodeIds.value = setOf(nodeId)
+        }
+        _selectedMemberIds.value = emptySet()
+    }
+
+    fun selectMember(memberId: Int, addToSelection: Boolean = false) {
+        if (addToSelection) {
+            _selectedMemberIds.value = (_selectedMemberIds.value ?: emptySet()) + memberId
+        } else {
+            _selectedMemberIds.value = setOf(memberId)
+        }
+        _selectedNodeIds.value = emptySet()
+    }
+
+    fun toggleNodeSelection(nodeId: Int) {
+        _selectedNodeIds.value = if ((_selectedNodeIds.value ?: emptySet()).contains(nodeId)) {
+            (_selectedNodeIds.value ?: emptySet()) - nodeId
+        } else {
+            (_selectedNodeIds.value ?: emptySet()) + nodeId
+        }
+        _selectedMemberIds.value = emptySet()
+    }
+
+    fun toggleMemberSelection(memberId: Int) {
+        _selectedMemberIds.value = if ((_selectedMemberIds.value ?: emptySet()).contains(memberId)) {
+            (_selectedMemberIds.value ?: emptySet()) - memberId
+        } else {
+            (_selectedMemberIds.value ?: emptySet()) + memberId
+        }
+        _selectedNodeIds.value = emptySet()
+    }
+
+    fun clearSelection() {
+        _selectedNodeIds.value = emptySet()
+        _selectedMemberIds.value = emptySet()
+    }
+
+    fun selectAllNodes() {
+        val allIds = _nodes.value?.let { it.map { it.id }.toSet() } ?: emptySet()
+        _selectedNodeIds.value = allIds
+        _selectedMemberIds.value = emptySet()
+    }
+
+    fun selectAllMembers() {
+        val allIds = _members.value?.let { it.map { it.id }.toSet() } ?: emptySet()
+        _selectedMemberIds.value = allIds
+        _selectedNodeIds.value = emptySet()
+    }
+
+    fun selectAll() {
+        selectAllNodes()
+        val allMemberIds = _members.value?.let { it.map { it.id }.toSet() } ?: emptySet()
+        _selectedMemberIds.value = allMemberIds
+    }
+
+    fun getSelectedNodes(): List<FrameNode> {
+        val ids = _selectedNodeIds.value ?: emptySet()
+        return _nodes.value?.filter { it.id in ids } ?: emptyList()
+    }
+
+    fun getSelectedMembers(): List<FrameMember> {
+        val ids = _selectedMemberIds.value ?: emptySet()
+        return _members.value?.filter { it.id in ids } ?: emptyList()
+    }
+
+    fun setSelection(nodeIds: Set<Int>, memberIds: Set<Int>) {
+        _selectedNodeIds.value = nodeIds
+        _selectedMemberIds.value = memberIds
+    }
+
+    // === Clipboard for Copy/Paste ===
+    private data class ClipboardData(
+        val nodes: List<FrameNode>,
+        val members: List<FrameMember>,
+        val nodalLoads: List<NodalLoad>,
+        val memberLoads: List<MemberLoad>
+    )
+
+    private var clipboard: ClipboardData? = null
+
+    fun copySelection() {
+        val nodes = getSelectedNodes()
+        val members = getSelectedMembers()
+        val nodeIds = nodes.map { it.id }.toSet()
+        val nodalLoads = _nodalLoads.value?.filter { it.nodeId in nodeIds } ?: emptyList()
+        val memberIds = _selectedMemberIds.value ?: emptySet()
+        val memberLoads = _memberLoads.value?.filter { it.memberId in memberIds } ?: emptyList()
+        clipboard = ClipboardData(nodes, members, nodalLoads, memberLoads)
+    }
+
+    fun pasteClipboard(): Boolean {
+        return clipboard?.let { data ->
+            recordUndo()
+            val nodeIdMap = mutableMapOf<Int, Int>()
+            val newNodes = data.nodes.map { node ->
+                val newId = (_nodes.value?.maxOfOrNull { it.id } ?: 0) + 1 + nodeIdMap.size
+                nodeIdMap[node.id] = newId
+                node.copy(id = newId, x = node.x + 1.0, y = node.y + 1.0)
+            }
+            _nodes.value = (_nodes.value ?: emptyList()) + newNodes
+
+            val memberIdMap = mutableMapOf<Int, Int>()
+            val newMembers = data.members.map { member ->
+                val newId = (_members.value?.maxOfOrNull { it.id } ?: 0) + 1 + memberIdMap.size
+                memberIdMap[member.id] = newId
+                val newNodeI = nodeIdMap[member.nodeI] ?: return@map null
+                val newNodeJ = nodeIdMap[member.nodeJ] ?: return@map null
+                memberIdMap[member.id] = newId
+                member.copy(id = newId, nodeI = newNodeI, nodeJ = newNodeJ)
+            }.filterNotNull()
+            _members.value = (_members.value ?: emptyList()) + newMembers
+
+            val newNodalLoads = data.nodalLoads.map { load ->
+                val newNodeId = nodeIdMap[load.nodeId] ?: return@map null
+                load.copy(nodeId = newNodeId)
+            }.filterNotNull()
+            _nodalLoads.value = (_nodalLoads.value ?: emptyList()) + newNodalLoads
+
+            val newMemberLoads = data.memberLoads.map { load ->
+                val newMemberId = memberIdMap[load.memberId] ?: return@map null
+                load.copy(memberId = newMemberId)
+            }.filterNotNull()
+            _memberLoads.value = (_memberLoads.value ?: emptyList()) + newMemberLoads
+
+            _selectedNodeIds.value = newNodes.map { it.id }.toSet()
+            _selectedMemberIds.value = newMembers.map { it.id }.toSet()
+            regenerateDimensions()
+            true
+        } ?: false
+    }
+
+    fun hasClipboard(): Boolean = clipboard != null
 
     private val _designNotice = MutableLiveData<FrameDesignNotice?>()
     val designNotice: LiveData<FrameDesignNotice?> get() = _designNotice
@@ -382,6 +539,7 @@ class FrameAnalysisViewModel @Inject constructor(
         val id = (current.maxOfOrNull { it.id } ?: 0) + 1
         current.add(FrameMember(id, nodeI, nodeJ, materialType, memberType, concreteSection, steelSectionName, name))
         _members.value = current
+        regenerateDimensions()
         return id
     }
 
@@ -431,6 +589,24 @@ class FrameAnalysisViewModel @Inject constructor(
         recordUndo()
         _members.value = _members.value?.filter { it.id != memberId }
         _memberLoads.value = _memberLoads.value?.filter { it.memberId != memberId }
+        regenerateDimensions()
+    }
+
+    private fun regenerateDimensions() {
+        val nodes = _nodes.value ?: emptyList()
+        val members = _members.value ?: emptyList()
+        val dims = mutableListOf<Dimension>()
+        var dimId = 1
+        for (member in members) {
+            dims.add(Dimension(
+                id = dimId++,
+                point1Id = member.nodeI,
+                point2Id = member.nodeJ,
+                offsetDistance = 0.5,
+                dimensionType = DimensionType.Aligned
+            ))
+        }
+        _dimensions.value = dims
     }
 
     // ========================================================================
@@ -672,6 +848,7 @@ class FrameAnalysisViewModel @Inject constructor(
         _nodalLoads.value = emptyList()
         _memberLoads.value = emptyList()
         _slabs.value = emptyList()
+        _dimensions.value = emptyList()
         _result.value = null
         _concreteResults.value = emptyList()
         _steelResults.value = emptyList()
@@ -691,6 +868,7 @@ class FrameAnalysisViewModel @Inject constructor(
         val nl = _nodalLoads.value ?: emptyList()
         val ml = _memberLoads.value ?: emptyList()
         val slabs = _slabs.value ?: emptyList()
+        val dims = _dimensions.value ?: emptyList()
         val st = _settings.value ?: FrameAnalysisSettings()
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -703,6 +881,7 @@ class FrameAnalysisViewModel @Inject constructor(
                     nodalLoads = nl,
                     memberLoads = ml,
                     slabs = slabs,
+                    dimensions = dims,
                     result = res,
                     designCode = st.designCode.displayName,
                     steelFy = _steelFy.value ?: 355.0
@@ -738,6 +917,7 @@ class FrameAnalysisViewModel @Inject constructor(
                 val loadedNodalLoads = readList("nodalLoads", Array<NodalLoad>::class.java)
                 val loadedMemberLoads = readList("memberLoads", Array<MemberLoad>::class.java)
                 val loadedSlabs = readList("slabs", Array<SlabPanel>::class.java)
+                val loadedDimensions = readList("dimensions", Array<Dimension>::class.java)
                 if (loadedNodes.isEmpty()) {
                     throw IllegalStateException("Saved model has no joints")
                 }
@@ -750,6 +930,7 @@ class FrameAnalysisViewModel @Inject constructor(
                     _nodalLoads.value = loadedNodalLoads
                     _memberLoads.value = loadedMemberLoads
                     _slabs.value = loadedSlabs
+                    _dimensions.value = loadedDimensions
                     _settings.value = (_settings.value ?: FrameAnalysisSettings()).copy(designCode = code)
                     _steelFy.value = steelFy
                     _result.value = null
@@ -786,6 +967,7 @@ class FrameAnalysisViewModel @Inject constructor(
         val nodalLoads: List<NodalLoad>,
         val memberLoads: List<MemberLoad>,
         val slabs: List<SlabPanel>,
+        val dimensions: List<Dimension>,
         val settings: FrameAnalysisSettings,
         val result: FrameAnalysisResult?,
         val sceneView: FrameSceneView?
@@ -798,6 +980,7 @@ class FrameAnalysisViewModel @Inject constructor(
             nodalLoads = _nodalLoads.value ?: emptyList(),
             memberLoads = _memberLoads.value ?: emptyList(),
             slabs = _slabs.value ?: emptyList(),
+            dimensions = _dimensions.value ?: emptyList(),
             settings = _settings.value ?: FrameAnalysisSettings(),
             result = _result.value,
             sceneView = modelerSceneView

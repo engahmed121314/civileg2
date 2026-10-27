@@ -6,7 +6,8 @@ data class FrameSceneView(
     val panY: Float,
     val width: Int,
     val height: Int,
-    val gridMm: Int
+    val gridMm: Int,
+    val layers: ModelerLayerVisibility = ModelerLayerVisibility()
 ) {
     val isValid: Boolean
         get() = scale.isFinite() && scale > 0f &&

@@ -775,11 +775,12 @@ private fun DrawScope.drawReinforcementTable(
         start = Offset(tableLeft, r1Y + rowH),
         end = Offset(tableLeft + tableW, r1Y + rowH), strokeWidth = 0.5f)
 
-    // Row 2: Horizontal / Vertical distribution
+    // Row 2: Horizontal / Vertical distribution (if available in result)
     val r2Y = r1Y + rowH
-    val dir2 = if (isCircular) "Vertical" else "Horizontal"
+    val dir2 = if (isCircular) "Hoop" else "Horizontal"
     val loc2 = "Wall"
-    val row2 = arrayOf(dir2, loc2, "Ø${hDia.toInt()}", "@${hSpacing.toInt()}mm", "Dist")
+    // Note: TankResult doesn't expose horizontal wall steel; showing base values as placeholder
+    val row2 = arrayOf(dir2, loc2, "Ø${hDia.toInt()}", "@${hSpacing.toInt()}mm", "Dist (base)")
     cx = tableLeft
     for (i in row2.indices) {
         drawTextAnnotated(row2[i], cx + 6f, r2Y + rowH / 2f + 5f, RebarLightBlue, 14f)
@@ -796,7 +797,8 @@ private fun DrawScope.drawReinforcementTable(
     drawRect(color = TableRowAlt, topLeft = Offset(tableLeft, r3Y), size = Size(tableW, rowH))
     val baseDir = "Both"
     val baseLoc = "Base"
-    val row3 = arrayOf(baseDir, baseLoc, "Ø${vDia.toInt()}", "@${hSpacing.toInt()}mm", "Base")
+    // Base uses base reinforcement diameter and spacing
+    val row3 = arrayOf(baseDir, baseLoc, "Ø${hDia.toInt()}", "@${hSpacing.toInt()}mm", "Base")
     cx = tableLeft
     for (i in row3.indices) {
         drawTextAnnotated(row3[i], cx + 6f, r3Y + rowH / 2f + 5f, RebarBlue.copy(alpha = 0.7f), 14f)

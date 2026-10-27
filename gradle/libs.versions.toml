@@ -8,6 +8,10 @@ mockk = "1.13.13"
 robolectric = "4.14.1"
 androidxTestCore = "1.6.1"
 espressoCore = "3.6.1"
+androidxComposeUiTest = "1.8.0"
+androidxComposeUiTestJunit4 = "1.8.0"
+androidxComposeUiTestManifest = "1.8.0"
+androidxTestRules = "1.6.1"
 lifecycleRuntimeKtx = "2.8.7"
 room = "2.7.1"
 hilt = "2.56.1"
@@ -50,6 +54,10 @@ room-testing = { group = "androidx.room", name = "room-testing", version.ref = "
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-compose-ui-test = { group = "androidx.compose.ui", name = "ui-test", version.ref = "androidxComposeUiTest" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4", version.ref = "androidxComposeUiTestJunit4" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest", version.ref = "androidxComposeUiTestManifest" }
+androidx-test-rules = { group = "androidx.test", name = "rules", version.ref = "androidxTestRules" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }

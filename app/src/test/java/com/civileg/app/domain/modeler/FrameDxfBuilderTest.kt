@@ -8,6 +8,7 @@ import com.civileg.app.domain.entities.NodalLoad
 import com.civileg.app.domain.entities.SlabPanel
 import com.civileg.app.domain.entities.SupportType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -32,7 +33,7 @@ class FrameDxfBuilderTest {
         val dxf = FrameDxfBuilder.build(squareNodes, squareMembers, emptyList(), emptyList(), emptyList())
 
         assertTrue(dxf.startsWith("0\nSECTION\n2\nHEADER"))
-        assertTrue(dxf.contains("\$ACADVER\n1\nAC1009"))
+        assertTrue(dxf.contains("\$ACADVER\n1\nAC1027"))
         assertTrue(dxf.contains("0\nSECTION\n2\nBLOCKS\n0\nENDSEC"))
         assertTrue(dxf.contains("0\nSECTION\n2\nTABLES"))
         assertTrue(dxf.contains("2\nLTYPE"))
@@ -75,8 +76,9 @@ class FrameDxfBuilderTest {
             listOf(slab)
         )
 
-        assertTrue(dxf.contains("0\nPOLYLINE\n8\nSLABS\n66\n1\n70\n1"))
-        assertEquals(4, dxf.windowed("VERTEX".length).count { it == "VERTEX" })
+        // LWPOLYLINE (AC1027) with 5 vertices (4 corners + closing vertex) and closed flag = 1
+        assertTrue(dxf.contains("0\nLWPOLYLINE\n8\nSLABS\n90\n5\n70\n1"))
+        // LWPOLYLINE embeds vertices directly, no separate VERTEX entities
         assertTrue(dxf.contains("S1 200.00mm"))
     }
 
@@ -110,6 +112,43 @@ class FrameDxfBuilderTest {
         assertTrue(dxf.contains("8\nSUPPORTS"))
         assertTrue(dxf.contains("8\nJOINTS"))
         assertTrue(dxf.contains("8\nTEXT"))
+    }
+
+    @Test
+    fun hiddenLayersOmitTheirEntitiesButKeepLayerTable() {
+        val slab = SlabPanel(id = 1, nodeIds = listOf(1, 2, 3, 4), thicknessMm = 200.0)
+        val nodalLoad = NodalLoad(nodeId = 2, fx = 10.0, fy = -20.0, loadCase = "LL")
+        val memberLoad = MemberLoad(
+            memberId = 1,
+            loadType = MemberLoadType.UDL,
+            value = 12.5,
+            loadCase = "DL"
+        )
+        val dxf = FrameDxfBuilder.build(
+            squareNodes,
+            squareMembers,
+            listOf(nodalLoad),
+            listOf(memberLoad),
+            listOf(slab),
+            layers = ModelerLayerVisibility(
+                grid = false,
+                joints = false,
+                members = false,
+                supports = false,
+                loads = false,
+                slabs = false
+            )
+        )
+        val entities = dxf.substringAfter("2\nENTITIES").substringBefore("0\nENDSEC")
+
+        assertFalse(entities.contains("8\nGRID"))
+        assertFalse(entities.contains("8\nSLABS"))
+        assertFalse(entities.contains("8\nMEMBERS"))
+        assertFalse(entities.contains("8\nSUPPORTS"))
+        assertFalse(entities.contains("8\nJOINTS"))
+        assertFalse(entities.contains("8\nLOAD_LL"))
+        assertTrue(dxf.contains("2\nMEMBERS"))
+        assertTrue(dxf.contains("2\nGRID"))
     }
 
     @Test

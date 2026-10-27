@@ -38,6 +38,7 @@ sealed class AppScreen(val route: String, val titleResId: Int, val iconRes: Int)
     object WaffleSlab : AppScreen("waffle_slab", R.string.home_waffle_slab, R.drawable.ic_slab)
     object HordiSlab : AppScreen("hordi_slab", R.string.home_hordi_slab, R.drawable.ic_slab)
     object ShearWall : AppScreen("shear_wall", R.string.home_shear_wall, R.drawable.ic_wall)
+    object PostTensioned : AppScreen("post_tensioned", R.string.home_post_tensioned, R.drawable.ic_beam)
     
     // New Tools
     object RebarTool : AppScreen("rebar_tool", R.string.home_rebar_tool, R.drawable.ic_steel)

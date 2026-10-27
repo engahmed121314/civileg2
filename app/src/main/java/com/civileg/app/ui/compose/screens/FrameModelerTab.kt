@@ -2,6 +2,12 @@ package com.civileg.app.ui.compose.screens
 
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -24,10 +30,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
@@ -46,6 +57,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -61,7 +76,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -83,9 +108,12 @@ import com.civileg.app.domain.entities.MemberLoad
 import com.civileg.app.domain.entities.MemberLoadType
 import com.civileg.app.domain.entities.NodalLoad
 import com.civileg.app.domain.entities.SlabDistribution
+import com.civileg.app.ui.compose.components.drawings.SteelSectionDrawing
 import com.civileg.app.domain.entities.SlabPanel
 import com.civileg.app.domain.entities.SupportType
 import com.civileg.app.domain.entities.orderQuadJoints
+import com.civileg.app.domain.calculations.SteelFrameDesign
+import com.civileg.app.domain.modeler.ModelerLayerVisibility
 import com.civileg.app.utils.FrameDxfExporter
 import com.civileg.app.utils.LocaleHelper
 import com.civileg.app.utils.SteelTables
@@ -133,12 +161,23 @@ fun FrameModelerTab(
     var pendingStart by rememberSaveable { mutableStateOf<Int?>(null) }
     var pendingSlabNodes by rememberSaveable { mutableStateOf(listOf<Int>()) }
     var memberDragPreview by remember { mutableStateOf<Pair<Double, Double>?>(null) }
-    var selectedNodeId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var additiveSelection by remember { mutableStateOf(false) }
+    var clipboardVersion by remember { mutableIntStateOf(0) }
     var fitRequest by remember { mutableIntStateOf(0) }
     var viewport by remember { mutableStateOf(ModelerViewport()) }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    var cursorWorld by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var layerMask by rememberSaveable { mutableIntStateOf(ModelerLayerVisibility.ALL) }
+    val layers = ModelerLayerVisibility.fromMask(layerMask)
+    val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
+    val rootFocusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(viewport, canvasSize, gridMm) {
+    LaunchedEffect(Unit) {
+        rootFocusRequester.requestFocus()
+    }
+
+    LaunchedEffect(viewport, canvasSize, gridMm, layers) {
         if (canvasSize.width > 0 && canvasSize.height > 0) {
             viewModel.updateModelerSceneView(
                 scale = viewport.scale,
@@ -146,7 +185,8 @@ fun FrameModelerTab(
                 panY = viewport.panY,
                 width = canvasSize.width,
                 height = canvasSize.height,
-                gridMm = gridMm
+                gridMm = gridMm,
+                layers = layers
             )
         }
     }
@@ -164,7 +204,11 @@ fun FrameModelerTab(
     var slabDraft by remember { mutableStateOf<List<Int>?>(null) }
     var editSlabTarget by remember { mutableStateOf<SlabPanel?>(null) }
 
-    val selectedMemberId by viewModel.selectedMemberId.observeAsState()
+    val selectedNodeIds by viewModel.selectedNodeIds.observeAsState(emptySet())
+    val selectedMemberIds by viewModel.selectedMemberIds.observeAsState(emptySet())
+    val selectedNodeId = selectedNodeIds.singleOrNull()
+    val selectedMemberId = selectedMemberIds.singleOrNull()
+    val dimensions by viewModel.dimensions.observeAsState(emptyList())
     val historyVersion by viewModel.historyState.observeAsState(0)
     val context = LocalContext.current
     val exportScope = rememberCoroutineScope()
@@ -209,6 +253,40 @@ fun FrameModelerTab(
         )
     }
 
+    fun handleShortcut(event: KeyEvent): Boolean {
+        when (event.key) {
+            Key.ShiftLeft, Key.ShiftRight, Key.CtrlLeft, Key.CtrlRight -> {
+                additiveSelection = event.type == KeyEventType.KeyDown
+                return false
+            }
+        }
+        if (event.type != KeyEventType.KeyDown || !event.isCtrlPressed) return false
+        return when (event.key) {
+            Key.Z -> {
+                if (event.isShiftPressed) viewModel.redo() else viewModel.undo()
+                true
+            }
+            Key.Y -> {
+                viewModel.redo()
+                true
+            }
+            Key.C -> {
+                viewModel.copySelection()
+                clipboardVersion++
+                true
+            }
+            Key.V -> {
+                viewModel.pasteClipboard()
+                true
+            }
+            Key.A -> {
+                viewModel.selectAll()
+                true
+            }
+            else -> false
+        }
+    }
+
     fun handleTap(tap: ModelerTap) {
         when (tool) {
             ModelerTool.Pan -> {
@@ -216,32 +294,27 @@ fun FrameModelerTab(
             }
             ModelerTool.Select -> {
                 if (tap.nodeId != null) {
-                    selectedNodeId = tap.nodeId
-                    viewModel.setSelectedMember(null)
+                    viewModel.selectNode(tap.nodeId, additiveSelection)
                 } else if (tap.memberId != null) {
-                    selectedNodeId = null
-                    viewModel.setSelectedMember(tap.memberId)
+                    viewModel.selectMember(tap.memberId, additiveSelection)
                 } else if (tap.panelId != null) {
                     editSlabTarget = slabs.find { it.id == tap.panelId }
-                } else {
-                    selectedNodeId = null
-                    viewModel.setSelectedMember(null)
+                } else if (!additiveSelection) {
+                    viewModel.clearSelection()
                 }
             }
             ModelerTool.Move -> {
                 if (tap.nodeId != null) {
-                    selectedNodeId = tap.nodeId
-                    viewModel.setSelectedMember(null)
+                    viewModel.selectNode(tap.nodeId)
                 }
             }
             ModelerTool.Joint -> {
                 if (tap.nodeId == null) {
                     val id = viewModel.addNode(tap.worldX, tap.worldY)
-                    selectedNodeId = id
+                    viewModel.selectNode(id)
                 } else {
-                    selectedNodeId = tap.nodeId
+                    viewModel.selectNode(tap.nodeId)
                 }
-                viewModel.setSelectedMember(null)
             }
             ModelerTool.Member -> {
                 val nodeId = tap.nodeId ?: return
@@ -258,17 +331,14 @@ fun FrameModelerTab(
                             FrameMemberType.Beam
                         }
                         val id = viewModel.addMemberBetween(start, nodeId, type)
-                        id?.let {
-                            selectedNodeId = null
-                            viewModel.setSelectedMember(it)
-                        }
+                        id?.let { viewModel.selectMember(it) }
                     }
                     pendingStart = null
                 }
             }
             ModelerTool.Support -> tap.nodeId?.let {
                 viewModel.setNodeSupport(it, supportType)
-                selectedNodeId = it
+                viewModel.selectNode(it)
             }
             ModelerTool.Hinge -> tap.memberId?.let { id ->
                 hingeTarget = members.find { it.id == id }
@@ -292,16 +362,39 @@ fun FrameModelerTab(
                 }
             }
             ModelerTool.Erase -> {
+                val removedLabel = when {
+                    tap.nodeId != null -> t("العقدة ${tap.nodeId}", "joint ${tap.nodeId}")
+                    tap.memberId != null -> t("العضو ${tap.memberId}", "member ${tap.memberId}")
+                    tap.panelId != null -> t("البلاطة ${tap.panelId}", "slab ${tap.panelId}")
+                    else -> null
+                }
                 when {
                     tap.nodeId != null -> viewModel.removeNode(tap.nodeId)
                     tap.memberId != null -> viewModel.removeMember(tap.memberId)
                     tap.panelId != null -> viewModel.removeSlabPanel(tap.panelId)
                 }
+                if (removedLabel != null) {
+                    viewModel.clearSelection()
+                    snackbarScope.launch {
+                        val result = snackbarHostState.showSnackbar(
+                            message = t("تم حذف $removedLabel", "Deleted $removedLabel"),
+                            actionLabel = t("تراجع", "Undo"),
+                            duration = SnackbarDuration.Long
+                        )
+                        if (result == SnackbarResult.ActionPerformed) viewModel.undo()
+                    }
+                }
             }
         }
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .focusRequester(rootFocusRequester)
+            .focusable()
+            .onPreviewKeyEvent { handleShortcut(it) }
+    ) {
         Surface(color = Color(0xFFE3F2FD)) {
             Column {
                 Row(
@@ -319,6 +412,17 @@ fun FrameModelerTab(
                         onClick = { viewModel.redo() },
                         enabled = historyVersion >= 0 && viewModel.canRedo
                     ) { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo", tint = Color(0xFF1565C0)) }
+                    IconButton(
+                        onClick = {
+                            viewModel.copySelection()
+                            clipboardVersion++
+                        },
+                        enabled = selectedNodeIds.isNotEmpty() || selectedMemberIds.isNotEmpty()
+                    ) { Icon(Icons.Default.ContentCopy, contentDescription = t("نسخ", "Copy"), tint = Color(0xFF1565C0)) }
+                    IconButton(
+                        onClick = { viewModel.pasteClipboard() },
+                        enabled = clipboardVersion >= 0 && viewModel.hasClipboard()
+                    ) { Icon(Icons.Default.ContentPaste, contentDescription = t("لصق", "Paste"), tint = Color(0xFF1565C0)) }
                     IconButton(onClick = { fitRequest++ }) {
                         Icon(Icons.Default.FitScreen, contentDescription = "Fit", tint = Color(0xFF1565C0))
                     }
@@ -387,12 +491,12 @@ fun FrameModelerTab(
                         }
                     }
                     Spacer(Modifier.width(4.dp))
-                    OutlinedButton(onClick = { zoomBy(1.35f) }, modifier = Modifier.height(34.dp)) {
-                        Text("+", fontSize = 16.sp)
+                    IconButton(onClick = { zoomBy(1.35f) }, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Default.Add, contentDescription = t("تكبير", "Zoom in"), tint = Color(0xFF1565C0))
                     }
                     Spacer(Modifier.width(4.dp))
-                    OutlinedButton(onClick = { zoomBy(1f / 1.35f) }, modifier = Modifier.height(34.dp)) {
-                        Text("−", fontSize = 16.sp)
+                    IconButton(onClick = { zoomBy(1f / 1.35f) }, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Default.Remove, contentDescription = t("تصغير", "Zoom out"), tint = Color(0xFF1565C0))
                     }
                     Spacer(Modifier.width(10.dp))
                     ToolChip(t("تحديد", "Select"), ModelerTool.Select, tool) { tool = it; pendingStart = null }
@@ -408,7 +512,11 @@ fun FrameModelerTab(
                     ToolChip(t("حذف", "Erase"), ModelerTool.Erase, tool) { tool = it; pendingStart = null }
                 }
 
-                if (tool == ModelerTool.Support) {
+                AnimatedVisibility(
+                    visible = tool == ModelerTool.Support,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -457,6 +565,11 @@ fun FrameModelerTab(
                         selectedMm = snapMm,
                         onSelect = { snapMm = it }
                     )
+                    Spacer(Modifier.width(6.dp))
+                    LayerDropdown(
+                        layers = layers,
+                        onToggle = { mask -> layerMask = mask }
+                    )
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = t(
@@ -484,8 +597,10 @@ fun FrameModelerTab(
                 nodalLoads = nodalLoads,
                 memberLoads = memberLoads,
                 slabs = slabs,
-                selectedNodeId = selectedNodeId,
-                selectedMemberId = selectedMemberId,
+                layers = layers,
+                dimensions = dimensions,
+                selectedNodeIds = selectedNodeIds,
+                selectedMemberIds = selectedMemberIds,
                 tool = tool,
                 pendingStartNodeId = pendingStart,
                 pendingSlabNodeIds = pendingSlabNodes,
@@ -495,17 +610,43 @@ fun FrameModelerTab(
                 viewport = viewport,
                 onViewportChange = { viewport = it },
                 onTap = ::handleTap,
-                onNodeDragStart = { viewModel.beginNodeDrag() },
-                onNodeDrag = { id, x, y ->
-                    viewModel.dragNode(id, x, y)
-                    selectedNodeId = id
+                onMarqueeSelect = { minX, minY, maxX, maxY, additive ->
+                    val nodeIds = nodes
+                        .filter { it.x in minX..maxX && it.y in minY..maxY }
+                        .map { it.id }
+                        .toSet()
+                    val memberIds = members
+                        .filter { member ->
+                            val a = nodes.find { it.id == member.nodeI }
+                            val b = nodes.find { it.id == member.nodeJ }
+                            a != null && b != null &&
+                                a.x in minX..maxX && a.y in minY..maxY &&
+                                b.x in minX..maxX && b.y in minY..maxY
+                        }
+                        .map { it.id }
+                        .toSet()
+                    if (additive) {
+                        viewModel.setSelection(
+                            selectedNodeIds + nodeIds,
+                            selectedMemberIds + memberIds
+                        )
+                    } else {
+                        viewModel.setSelection(nodeIds, memberIds)
+                    }
                 },
+                additiveSelection = additiveSelection,
+                onCursorWorldChange = { cursorWorld = it },
+                onNodeDragStart = { id ->
+                    viewModel.beginNodeDrag()
+                    viewModel.selectNode(id)
+                },
+                onNodeDrag = { id, x, y -> viewModel.dragNode(id, x, y) },
                 onNodeDragEnd = { viewModel.endNodeDrag() },
                 onNodeDragCancel = { viewModel.cancelNodeDrag() },
                 onMemberDragStart = { nodeId ->
                     pendingStart = nodeId
                     memberDragPreview = null
-                    selectedNodeId = null
+                    viewModel.clearSelection()
                 },
                 onMemberDragUpdate = { x, y ->
                     if (pendingStart != null) memberDragPreview = x to y
@@ -530,8 +671,7 @@ fun FrameModelerTab(
                                 if (isColumn) FrameMemberType.Column else FrameMemberType.Beam
                             )
                             if (memberId != null) {
-                                selectedNodeId = null
-                                viewModel.setSelectedMember(memberId)
+                                viewModel.selectMember(memberId)
                             }
                         }
                     }
@@ -580,6 +720,13 @@ fun FrameModelerTab(
                 }
             }
 
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 76.dp)
+            )
+
             if (nodes.isEmpty()) {
                 Card(
                     modifier = Modifier
@@ -624,9 +771,9 @@ fun FrameModelerTab(
                         onDeleteNodalLoad = { index -> viewModel.removeNodalLoad(index) },
                         onDelete = {
                             viewModel.removeNode(selectedNode.id)
-                            selectedNodeId = null
+                            viewModel.clearSelection()
                         },
-                        onDismiss = { selectedNodeId = null }
+                        onDismiss = { viewModel.clearSelection() }
                     )
                     selectedMember != null -> MemberInspector(
                         member = selectedMember,
@@ -651,11 +798,66 @@ fun FrameModelerTab(
                         onEditProperties = { editingMemberProps = selectedMember },
                         onDelete = {
                             viewModel.removeMember(selectedMember.id)
-                            viewModel.setSelectedMember(null)
+                            viewModel.clearSelection()
                         },
-                        onDismiss = { viewModel.setSelectedMember(null) }
+                        onDismiss = { viewModel.clearSelection() }
                     )
                 }
+            }
+        }
+
+        Surface(color = Color(0xFFECEFF1)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val cursor = cursorWorld
+                Text(
+                    text = if (cursor != null) {
+                        String.format(
+                            java.util.Locale.ROOT,
+                            "X: %.3f m    Y: %.3f m",
+                            cursor.first,
+                            cursor.second
+                        )
+                    } else {
+                        "X: —    Y: —"
+                    },
+                    fontSize = 10.sp,
+                    color = Color(0xFF37474F),
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.width(14.dp))
+                Text(
+                    text = t(
+                        "تكبير ${String.format(java.util.Locale.ROOT, "%.0f", viewport.scale / 60f * 100f)}%",
+                        "Zoom ${String.format(java.util.Locale.ROOT, "%.0f", viewport.scale / 60f * 100f)}%"
+                    ),
+                    fontSize = 10.sp,
+                    color = Color.Gray
+                )
+                Spacer(Modifier.width(14.dp))
+                Text(
+                    text = t(
+                        "شبكة ${gridLabel(gridMm)} • التقاط ${snapLabel(snapMm)}",
+                        "Grid ${gridLabel(gridMm)} • Snap ${snapLabel(snapMm)}"
+                    ),
+                    fontSize = 10.sp,
+                    color = Color.Gray
+                )
+                Spacer(Modifier.width(14.dp))
+                Text(
+                    text = t(
+                        "${nodes.size} عقدة / ${members.size} عضو / ${slabs.size} بلاطة",
+                        "${nodes.size} joints / ${members.size} members / ${slabs.size} slabs"
+                    ),
+                    fontSize = 10.sp,
+                    color = Color(0xFF1565C0),
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
@@ -715,6 +917,7 @@ fun FrameModelerTab(
     editingMemberProps?.let { member ->
         MemberPropertiesDialog(
             member = member,
+            memberLengthM = memberLength(member, nodes),
             onDismiss = { editingMemberProps = null },
             onSave = { updated ->
                 viewModel.updateMember(updated)
@@ -786,7 +989,9 @@ private fun MemberPropsDialog(
     var depthMm by remember(member) {
         mutableStateOf(member.concreteSection?.depth?.let(::formatCoord) ?: "500")
     }
-    var steelSection by remember(member) { mutableStateOf(member.steelSectionName ?: "IPE 200") }
+    var steelSection by remember(member) {
+        mutableStateOf(member.steelSectionName ?: SteelFrameDesign.AUTO_SECTION)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -843,7 +1048,9 @@ private fun MemberPropsDialog(
                     materialType = material,
                     memberType = type,
                     concreteSection = if (material == FrameMaterialType.Concrete) ConcreteSectionProps(w, d) else null,
-                    steelSectionName = if (material == FrameMaterialType.Steel) steelSection.ifBlank { "IPE 200" } else null
+                    steelSectionName = if (material == FrameMaterialType.Steel) {
+                        steelSection.trim().takeUnless { SteelFrameDesign.isAutoSection(it) }
+                    } else null
                 )
                 onSave(updated)
             }) { Text(t("حفظ", "Save"), color = Color(0xFF1565C0)) }
@@ -1008,8 +1215,11 @@ private fun MemberInspector(
                 "${member.materialType.name} • ${member.memberType.name}" +
                     (member.concreteSection?.takeIf { member.materialType == FrameMaterialType.Concrete }
                         ?.let { " • ${it.width.toInt()}×${it.depth.toInt()}" } ?: "") +
-                    (member.steelSectionName?.takeIf { member.materialType == FrameMaterialType.Steel }
-                        ?.let { " • $it" } ?: ""),
+                    (if (member.materialType == FrameMaterialType.Steel) {
+                        " • " + (member.steelSectionName
+                            ?.takeUnless { SteelFrameDesign.isAutoSection(it) }
+                            ?: t("تلقائي", "Auto"))
+                    } else ""),
                 fontSize = 10.sp,
                 color = Color.Gray
             )
@@ -1076,6 +1286,7 @@ private fun MemberInspector(
 @Composable
 private fun MemberPropertiesDialog(
     member: FrameMember,
+    memberLengthM: Double,
     onDismiss: () -> Unit,
     onSave: (FrameMember) -> Unit
 ) {
@@ -1089,7 +1300,7 @@ private fun MemberPropertiesDialog(
     var cover by remember(member.id) { mutableStateOf(formatCoord(existingSection.cover)) }
     val steelSections = remember { SteelTables.getAllSections() }
     var steelSectionName by remember(member.id) {
-        mutableStateOf(member.steelSectionName ?: steelSections.firstOrNull()?.name ?: "IPE 300")
+        mutableStateOf(member.steelSectionName ?: SteelFrameDesign.AUTO_SECTION)
     }
     var steelExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
@@ -1163,19 +1374,35 @@ private fun MemberPropertiesDialog(
                     Spacer(Modifier.height(6.dp))
                     NumberField(cover, { cover = it }, t("الغطاء (مم)", "Cover (mm)"), Modifier.fillMaxWidth())
                 } else {
+                    val isAutoSection = SteelFrameDesign.isAutoSection(steelSectionName)
                     Spacer(Modifier.height(6.dp))
                     Box {
                         OutlinedButton(
                             onClick = { steelExpanded = true },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(steelSectionName, fontSize = 12.sp)
+                            Text(
+                                if (isAutoSection) t("تلقائي", "Auto") else steelSectionName,
+                                fontSize = 12.sp
+                            )
                         }
                         DropdownMenu(
                             expanded = steelExpanded,
                             onDismissRequest = { steelExpanded = false },
                             modifier = Modifier.heightIn(max = 300.dp)
                         ) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        t("تلقائي - اختيار أفضل قطاع", "Auto - select optimal section"),
+                                        fontSize = 11.sp
+                                    )
+                                },
+                                onClick = {
+                                    steelSectionName = SteelFrameDesign.AUTO_SECTION
+                                    steelExpanded = false
+                                }
+                            )
                             for (section in steelSections) {
                                 DropdownMenuItem(
                                     text = {
@@ -1195,11 +1422,30 @@ private fun MemberPropertiesDialog(
                     Spacer(Modifier.height(4.dp))
                     Text(
                         t(
-                            "تُحسب خصائص المقطع من جدول القطاعات القياسية.",
+                            "????? ????? ?????? ?? ???? ???????? ????????.",
                             "Section properties are taken from the standard steel table."
                         ),
                         fontSize = 9.sp,
                         color = Color.Gray
+                    )
+                    if (isAutoSection) {
+                        Text(
+                            t(
+                                "سيُختار القطاع الأمثل تلقائياً عند التحليل.",
+                                "The optimal section is selected automatically during analysis."
+                            ),
+                            fontSize = 9.sp,
+                            color = Color.Gray
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    SteelSectionDrawing(
+                        sectionName = if (isAutoSection) "IPE 300" else steelSectionName,
+                        memberLengthMm = (memberLengthM * 1000.0).let { if (it > 1.0) it else 6000.0 },
+                        memberType = memberType,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(210.dp)
                     )
                 }
             }
@@ -1225,9 +1471,10 @@ private fun MemberPropertiesDialog(
                             materialType = materialType,
                             concreteSection = section,
                             steelSectionName = if (materialType == FrameMaterialType.Steel) {
-                                steelSectionName
+                                steelSectionName.trim()
+                                    .takeUnless { SteelFrameDesign.isAutoSection(it) }
                             } else {
-                                member.steelSectionName
+                                null
                             }
                         )
                     )
@@ -1307,6 +1554,58 @@ private fun GridDropdown(
                     }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun LayerDropdown(
+    layers: ModelerLayerVisibility,
+    onToggle: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val mask = layers.toMask()
+    val items = listOf(
+        Triple(t("الشبكة", "Grid"), ModelerLayerVisibility.GRID, layers.grid),
+        Triple(t("العقد", "Joints"), ModelerLayerVisibility.JOINTS, layers.joints),
+        Triple(t("الأعضاء", "Members"), ModelerLayerVisibility.MEMBERS, layers.members),
+        Triple(t("الاستنادات", "Supports"), ModelerLayerVisibility.SUPPORTS, layers.supports),
+        Triple(t("الأحمال", "Loads"), ModelerLayerVisibility.LOADS, layers.loads),
+        Triple(t("البلاطات", "Slabs"), ModelerLayerVisibility.SLABS, layers.slabs),
+        Triple(t("الأبعاد", "Dimensions"), ModelerLayerVisibility.DIMENSIONS, layers.dimensions)
+    )
+    Box {
+        AssistChip(
+            onClick = { expanded = true },
+            label = { Text(t("الطبقات", "Layers"), fontSize = 10.sp) },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.Layers,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            for ((label, bit, enabled) in items) {
+                DropdownMenuItem(
+                    text = { Text(label, fontSize = 12.sp) },
+                    trailingIcon = {
+                        if (enabled) Icon(Icons.Default.Check, contentDescription = null)
+                    },
+                    onClick = { onToggle(mask xor bit) }
+                )
+            }
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        t("إظهار الكل", "Show all"),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                onClick = { onToggle(ModelerLayerVisibility.ALL) }
+            )
         }
     }
 }

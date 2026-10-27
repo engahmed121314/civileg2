@@ -435,6 +435,7 @@ class DesignRepository @Inject constructor(
         nodes: List<Any>, members: List<Any>,
         nodalLoads: List<Any>, memberLoads: List<Any>,
         slabs: List<Any> = emptyList(),
+        dimensions: List<Any> = emptyList(),
         result: Any,
         designCode: String,
         steelFy: Double = 355.0
@@ -446,6 +447,7 @@ class DesignRepository @Inject constructor(
             put("nodalLoads", gson.toJson(nodalLoads))
             put("memberLoads", gson.toJson(memberLoads))
             put("slabs", gson.toJson(slabs))
+            put("dimensions", gson.toJson(dimensions))
             put("steelFy", steelFy)
         }.toString()
         return saveGeneralDesign(

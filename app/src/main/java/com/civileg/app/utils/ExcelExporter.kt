@@ -9,8 +9,17 @@ import java.io.FileOutputStream
 /**
  * EXCEL EXPORTER - Civil EG
  * Generates CSV files (compatible with Excel) for Bill of Quantities and Design Results.
+ * Follows RFC-4180: fields containing comma, quote, or newline are wrapped in quotes,
+ * and internal quotes are doubled.
  */
 object ExcelExporter {
+
+    private fun escapeCsv(value: String): String {
+        if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
+            return "\"${value.replace("\"", "\"\"")}\""
+        }
+        return value
+    }
 
     fun exportBOQToCsv(context: Context, projectName: String, materials: List<MaterialItem>): File? {
         val fileName = "${projectName}_BOQ_${System.currentTimeMillis()}.csv"
@@ -23,13 +32,13 @@ object ExcelExporter {
             writer.write("Item Name,Category,Unit,Quantity,Unit Price (EGP),Total Price (EGP)\n")
             
             var grandTotal = 0.0
-            materials.forEach { item ->
-                val line = "${item.name},${item.category},${item.unit},${item.quantity},${item.unitPrice},${item.totalPrice}\n"
+materials.forEach { item ->
+                val line = "${escapeCsv(item.name)},${escapeCsv(item.category.name)},${escapeCsv(item.unit)},${escapeCsv(item.quantity.toString())},${escapeCsv(item.unitPrice.toString())},${escapeCsv(item.totalPrice.toString())}\n"
                 writer.write(line)
                 grandTotal += item.totalPrice
             }
             
-            writer.write("\n,,,TOTAL PROJECT COST,,$grandTotal\n")
+            writer.write(",,,TOTAL PROJECT COST,,$grandTotal\n")
             writer.close()
             return file
         } catch (e: Exception) {
@@ -45,16 +54,16 @@ object ExcelExporter {
         try {
             val writer = FileOutputStream(file).bufferedWriter()
             writer.write("\uFEFF")
-            writer.write("Design Report: ${design.name}\n")
-            writer.write("Type: ${design.type}\n")
-            writer.write("Code: ${design.codeUsed}\n")
+writer.write("Design Report: ${escapeCsv(design.name)}\n")
+            writer.write("Type: ${escapeCsv(design.type.name)}\n")
+            writer.write("Code: ${escapeCsv(design.codeUsed)}\n")
             writer.write("Safety Status: ${if (design.isSafe) "SAFE" else "UNSAFE"}\n\n")
             
             writer.write("Input Data\n")
-            writer.write("${design.inputData.replace(",", ";")}\n\n") // Simple JSON dump
+            writer.write("${escapeCsv(design.inputData.replace(",", ";"))}\n\n") // Simple JSON dump
             
             writer.write("Calculation Results\n")
-            writer.write("${design.results.replace(",", ";")}\n")
+            writer.write("${escapeCsv(design.results.replace(",", ";"))}\n")
             
             writer.close()
             return file

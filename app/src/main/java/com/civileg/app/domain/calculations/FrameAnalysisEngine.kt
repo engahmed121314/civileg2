@@ -100,9 +100,11 @@ object FrameAnalysisEngine {
                 val ni = nodes.indexOfFirst { it.id == member.nodeI }
                 val nj = nodes.indexOfFirst { it.id == member.nodeJ }
                 if (ni >= 0 && nj >= 0) {
-                    // Assemble equivalent nodal loads: P_eq = -FEF_global
-                    F[ni * 3] -= fefGlobal[0]; F[ni * 3 + 1] -= fefGlobal[1]; F[ni * 3 + 2] -= fefGlobal[2]
-                    F[nj * 3] -= fefGlobal[3]; F[nj * 3 + 1] -= fefGlobal[4]; F[nj * 3 + 2] -= fefGlobal[5]
+                    // Assemble equivalent nodal loads: P_eq = FEF_global
+                    // getFixedEndForces already returns P_eq (equivalent nodal loads), not FEF.
+                    // P_eq for downward UDL: vertical = -wL/2 at each node (downward load).
+                    F[ni * 3] += fefGlobal[0]; F[ni * 3 + 1] += fefGlobal[1]; F[ni * 3 + 2] += fefGlobal[2]
+                    F[nj * 3] += fefGlobal[3]; F[nj * 3 + 1] += fefGlobal[4]; F[nj * 3 + 2] += fefGlobal[5]
                 }
             }
 
@@ -237,6 +239,94 @@ object FrameAnalysisEngine {
         } catch (e: Exception) {
             return FrameAnalysisResult(errorMessage = "خطأ في التحليل: ${e.message}")
         }
+    }
+
+    /**
+     * حل الإطار مع تراكيب أحمال متعددة (Load Combinations) وإرجاع المظروف (Envelope)
+     * يطبق كل تركيبة أحمال ويحسب القيم القصوى المطلقة للتصميم
+     */
+    fun solveFrameWithCombinations(
+        nodes: List<FrameNode>,
+        members: List<FrameMember>,
+        nodalLoads: List<NodalLoad>,
+        memberLoads: List<MemberLoad>,
+        settings: FrameAnalysisSettings
+    ): FrameAnalysisResult {
+        val combinations = settings.loadCombinations
+        if (combinations.isEmpty()) {
+            // Fallback to single analysis with DL+LL factors
+            return solveFrame(nodes, members, nodalLoads, memberLoads, settings)
+        }
+
+        var envelopeResult: FrameAnalysisResult? = null
+        var envelopeMemberEndForces: MutableList<MemberEndForces> = mutableListOf()
+        var envelopeMemberDiagrams: MutableList<MemberDiagram> = mutableListOf()
+
+        for (combo in combinations) {
+            // Scale loads by combination factors
+            val scaledNodalLoads = nodalLoads.map { load ->
+                load.copy(
+                    fx = load.fx * combo.dlFactor,
+                    fy = load.fy * combo.llFactor,
+                    mz = load.mz * combo.wlFactor
+                )
+            }
+            val scaledMemberLoads = memberLoads.map { load ->
+                load.copy(value = load.value * when {
+                    load.loadType == MemberLoadType.UDL -> combo.dlFactor
+                    load.loadType == MemberLoadType.PointLoad -> combo.llFactor
+                    load.loadType == MemberLoadType.Moment -> combo.dlFactor
+                    load.loadType == MemberLoadType.LinearVarying -> combo.llFactor
+                    else -> 1.0
+                })
+            }
+
+            val result = solveFrame(nodes, members, scaledNodalLoads, scaledMemberLoads, settings)
+            if (!result.isSolved) {
+                return result // Return error immediately
+            }
+
+            if (envelopeResult == null) {
+                envelopeResult = result
+                envelopeMemberEndForces = result.memberEndForces.toMutableList()
+                envelopeMemberDiagrams = result.memberDiagrams.toMutableList()
+            } else {
+                // Update envelope: take maximum absolute values for each member
+                for (i in envelopeMemberEndForces.indices) {
+                    val env = envelopeMemberEndForces[i]
+                    val cur = result.memberEndForces.find { it.memberId == env.memberId }
+                    if (cur != null) {
+                        envelopeMemberEndForces[i] = env.copy(
+                            fi_x = if (abs(cur.fi_x) > abs(env.fi_x)) cur.fi_x else env.fi_x,
+                            fi_y = if (abs(cur.fi_y) > abs(env.fi_y)) cur.fi_y else env.fi_y,
+                            mi_z = if (abs(cur.mi_z) > abs(env.mi_z)) cur.mi_z else env.mi_z,
+                            fj_x = if (abs(cur.fj_x) > abs(env.fj_x)) cur.fj_x else env.fj_x,
+                            fj_y = if (abs(cur.fj_y) > abs(env.fj_y)) cur.fj_y else env.fj_y,
+                            mj_z = if (abs(cur.mj_z) > abs(env.mj_z)) cur.mj_z else env.mj_z
+                        )
+                    }
+                }
+                for (i in envelopeMemberDiagrams.indices) {
+                    val env = envelopeMemberDiagrams[i]
+                    val cur = result.memberDiagrams.find { it.memberId == env.memberId }
+                    if (cur != null) {
+                        val maxMoment = cur.momentDiagram.maxByOrNull { abs(it.value) } ?: env.momentDiagram.maxByOrNull { abs(it.value) }
+                        val maxShear = cur.shearDiagram.maxByOrNull { abs(it.value) } ?: env.shearDiagram.maxByOrNull { abs(it.value) }
+                        val maxAxial = cur.axialDiagram.maxByOrNull { abs(it.value) } ?: env.axialDiagram.maxByOrNull { abs(it.value) }
+                        envelopeMemberDiagrams[i] = env.copy(
+                            momentDiagram = if (abs(maxMoment?.value ?: 0.0) > abs(env.momentDiagram.maxByOrNull { abs(it.value) }?.value ?: 0.0)) cur.momentDiagram else env.momentDiagram,
+                            shearDiagram = if (abs(maxShear?.value ?: 0.0) > abs(env.shearDiagram.maxByOrNull { abs(it.value) }?.value ?: 0.0)) cur.shearDiagram else env.shearDiagram,
+                            axialDiagram = if (abs(maxAxial?.value ?: 0.0) > abs(env.axialDiagram.maxByOrNull { abs(it.value) }?.value ?: 0.0)) cur.axialDiagram else env.axialDiagram
+                        )
+                    }
+                }
+            }
+        }
+
+        return envelopeResult?.copy(
+            memberEndForces = envelopeMemberEndForces,
+            memberDiagrams = envelopeMemberDiagrams
+        ) ?: FrameAnalysisResult(errorMessage = "No load combinations produced results")
     }
 
     // ========================================================================
@@ -563,7 +653,7 @@ object FrameAnalysisEngine {
                 // E_c = 4700 * sqrt(fcu) MPa = 4700 * sqrt(fcu) * 1e3 kN/m²
                 4700.0 * sqrt(fcu) * 1e3
             }
-            FrameMaterialType.Steel -> settings.eSteel * 1e3  // MPa -> kN/m²
+            FrameMaterialType.Steel -> settings.eSteel  // already in kN/m² (200 GPa = 200e6 kN/m²)
         }
     }
 

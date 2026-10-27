@@ -1,5 +1,6 @@
 package com.civileg.app.domain.modeler
 
+import com.civileg.app.domain.entities.Dimension
 import com.civileg.app.domain.entities.FrameMember
 import com.civileg.app.domain.entities.FrameNode
 import com.civileg.app.domain.entities.MemberLoad
@@ -18,13 +19,14 @@ import kotlin.math.sin
 
 object FrameDxfBuilder {
 
-    private const val GRID = "GRID"
-    private const val SLABS = "SLABS"
-    private const val MEMBERS = "MEMBERS"
-    private const val JOINTS = "JOINTS"
-    private const val SUPPORTS = "SUPPORTS"
-    private const val TEXT = "TEXT"
-    private const val MM = 1000.0
+private const val GRID = "GRID"
+private const val SLABS = "SLABS"
+private const val MEMBERS = "MEMBERS"
+private const val JOINTS = "JOINTS"
+private const val SUPPORTS = "SUPPORTS"
+private const val TEXT = "TEXT"
+private const val DIMENSIONS = "DIMENSIONS"
+private const val MM = 1000.0
 
     private data class Layer(val name: String, val color: Int)
     private data class Bounds(val minX: Double, val maxX: Double, val minY: Double, val maxY: Double)
@@ -36,7 +38,9 @@ object FrameDxfBuilder {
         members: List<FrameMember>,
         nodalLoads: List<NodalLoad>,
         memberLoads: List<MemberLoad>,
-        slabs: List<SlabPanel>
+        slabs: List<SlabPanel>,
+        dimensions: List<Dimension> = emptyList(),
+        layers: ModelerLayerVisibility = ModelerLayerVisibility()
     ): String {
         val nodeById = nodes.associateBy { it.id }
         val loadLayers = buildLoadLayers(
@@ -50,7 +54,8 @@ object FrameDxfBuilder {
             Layer(MEMBERS, 5),
             Layer(JOINTS, 7),
             Layer(SUPPORTS, 3),
-            Layer(TEXT, 7)
+            Layer(TEXT, 7),
+            Layer(DIMENSIONS, 6)
         )
 
         val writer = DxfWriter()
@@ -64,13 +69,16 @@ object FrameDxfBuilder {
         writer.pair(2, "ENTITIES")
 
         if (nodes.isNotEmpty() && bounds != null) {
-            writeGrid(writer, bounds)
-            writeSlabs(writer, slabs, nodeById)
-            writeMembers(writer, members, nodeById)
-            writeSupports(writer, nodes)
-            writeJoints(writer, nodes)
-            writeNodalLoads(writer, nodalLoads, nodeById, loadLayers)
-            writeMemberLoads(writer, memberLoads, members, nodeById, loadLayers)
+            if (layers.grid) writeGrid(writer, bounds)
+            if (layers.slabs) writeSlabs(writer, slabs, nodeById)
+            if (layers.members) writeMembers(writer, members, nodeById)
+            if (layers.supports) writeSupports(writer, nodes)
+            if (layers.joints) writeJoints(writer, nodes)
+            if (layers.loads) {
+                writeNodalLoads(writer, nodalLoads, nodeById, loadLayers)
+                writeMemberLoads(writer, memberLoads, members, nodeById, loadLayers)
+            }
+            if (layers.dimensions) writeDimensions(writer, dimensions, nodeById)
             writer.text(
                 layer = TEXT,
                 x = (bounds.minX - 1.0) * MM,
@@ -101,9 +109,9 @@ object FrameDxfBuilder {
         writer.pair(0, "SECTION")
         writer.pair(2, "HEADER")
         writer.pair(9, "\$ACADVER")
-        writer.pair(1, "AC1009")
+        writer.pair(1, "AC1027") // AutoCAD 2013 / R2007
         writer.pair(9, "\$INSUNITS")
-        writer.pair(70, 4)
+        writer.pair(70, 4) // 4 = millimeters
         writer.pair(9, "\$EXTMIN")
         writer.pair(10, minX)
         writer.pair(20, minY)
@@ -112,6 +120,26 @@ object FrameDxfBuilder {
         writer.pair(10, maxX)
         writer.pair(20, maxY)
         writer.pair(30, 0.0)
+        writer.pair(9, "\$LIMMIN")
+        writer.pair(10, minX)
+        writer.pair(20, minY)
+        writer.pair(9, "\$LIMMAX")
+        writer.pair(10, maxX)
+        writer.pair(20, maxY)
+        writer.pair(9, "\$ORTHOMODE")
+        writer.pair(70, 0)
+        writer.pair(9, "\$REGENMODE")
+        writer.pair(70, 1)
+        writer.pair(9, "\$FILLETRAD")
+        writer.pair(40, 0.0)
+        writer.pair(9, "\$ANGBASE")
+        writer.pair(50, 0.0)
+        writer.pair(9, "\$ANGDIR")
+        writer.pair(70, 0)
+        writer.pair(9, "\$PDMODE")
+        writer.pair(70, 0)
+        writer.pair(9, "\$PDSIZE")
+        writer.pair(40, 0.0)
         writer.pair(9, "\$DWGCODEPAGE")
         writer.pair(3, "ANSI_1252")
         writer.pair(0, "ENDSEC")
@@ -122,14 +150,31 @@ object FrameDxfBuilder {
         writer.pair(2, "TABLES")
         writer.pair(0, "TABLE")
         writer.pair(2, "LTYPE")
-        writer.pair(70, 1)
+        writer.pair(70, 3)
         writer.pair(0, "LTYPE")
         writer.pair(2, "CONTINUOUS")
-        writer.pair(70, 64)
+        writer.pair(70, 0)
         writer.pair(3, "Solid line")
         writer.pair(72, 65)
         writer.pair(73, 0)
         writer.pair(40, 0.0)
+        writer.pair(0, "LTYPE")
+        writer.pair(2, "DASHED")
+        writer.pair(70, 0)
+        writer.pair(3, "Dashed line")
+        writer.pair(72, 65)
+        writer.pair(73, 0)
+        writer.pair(40, 12.7)
+        writer.pair(49, -6.35)
+        writer.pair(49, 6.35)
+        writer.pair(0, "LTYPE")
+        writer.pair(2, "DOTTED")
+        writer.pair(70, 0)
+        writer.pair(3, "Dotted line")
+        writer.pair(72, 65)
+        writer.pair(73, 0)
+        writer.pair(40, 0.0)
+        writer.pair(49, 3.175)
         writer.pair(0, "ENDTAB")
         writer.pair(0, "TABLE")
         writer.pair(2, "LAYER")
@@ -182,7 +227,9 @@ object FrameDxfBuilder {
             val points = slab.nodeIds.mapNotNull { nodeById[it] }
             if (points.size != 4) return@forEach
             val vertices = points.map { it.x * MM to it.y * MM }
-            writer.polyline(SLABS, vertices)
+            // Close the polygon by repeating the first vertex
+            val closedVertices = vertices + vertices.first()
+            writer.polyline(SLABS, closedVertices)
             writer.text(
                 layer = TEXT,
                 x = points.sumOf { it.x } / 4.0 * MM,
@@ -396,6 +443,56 @@ object FrameDxfBuilder {
         }
     }
 
+    private fun writeDimensions(
+        writer: DxfWriter,
+        dimensions: List<Dimension>,
+        nodeById: Map<Int, FrameNode>
+    ) {
+        if (dimensions.isEmpty()) return
+        for (dim in dimensions) {
+            val p1 = nodeById[dim.point1Id] ?: continue
+            val p2 = nodeById[dim.point2Id] ?: continue
+            val x1 = p1.x * MM
+            val y1 = p1.y * MM
+            val x2 = p2.x * MM
+            val y2 = p2.y * MM
+            val dx = x2 - x1
+            val dy = y2 - y1
+            val length = hypot(dx, dy)
+            if (length < 1.0) continue
+
+            val ux = dx / length
+            val uy = dy / length
+            val offsetDist = dim.offsetDistance * MM
+            val nx = -uy * offsetDist
+            val ny = ux * offsetDist
+            val extOffset = 200.0 // 200mm extension line offset
+
+            // Dimension line
+            val dimStartX = x1 + ux * 200.0 + nx
+            val dimStartY = y1 + uy * 200.0 + ny
+            val dimEndX = x2 - ux * 200.0 + nx
+            val dimEndY = y2 - uy * 200.0 + ny
+
+            writer.line(DIMENSIONS, dimStartX, dimStartY, dimEndX, dimEndY)
+
+            // Extension lines
+            writer.line(DIMENSIONS, x1, y1, x1 + ux * 200.0, y1 + uy * 200.0)
+            writer.line(DIMENSIONS, x2, y2, x2 - ux * 200.0, y2 - uy * 200.0)
+
+            // Arrows (simple lines)
+            val arrowSize = 150.0
+            writer.line(DIMENSIONS, dimStartX, dimStartY, dimStartX - ux * 150.0 + uy * 50.0, dimStartY - uy * 150.0 - ux * 50.0)
+            writer.line(DIMENSIONS, dimEndX, dimEndY, dimEndX + ux * 150.0 - uy * 50.0, dimEndY + uy * 150.0 + ux * 50.0)
+
+            // Dimension text
+            val text = dim.getDisplayText(nodeById.values.toList())
+            val midX = (x1 + x2) / 2.0 + nx
+            val midY = (y1 + y2) / 2.0 + ny
+            writer.text(DIMENSIONS, midX, midY + 300.0, 200.0, text)
+        }
+    }
+
     private fun modelBounds(nodes: List<FrameNode>): Bounds? {
         if (nodes.isEmpty()) return null
         return Bounds(
@@ -410,7 +507,8 @@ object FrameDxfBuilder {
         val layers = LinkedHashMap<String, Layer>()
         val palette = intArrayOf(1, 5, 4, 6, 3, 2)
         cases.forEachIndexed { index, loadCase ->
-            val base = "LOAD_" + loadCase.uppercase(Locale.US)
+            val sanitized = transliterateToAscii(loadCase)
+            val base = "LOAD_" + sanitized.uppercase(Locale.US)
                 .replace(invalidLayerChars, "_")
                 .trim('_')
                 .take(20)
@@ -503,23 +601,28 @@ object FrameDxfBuilder {
             pair(7, "STANDARD")
         }
 
-        fun polyline(layer: String, points: List<Pair<Double, Double>>) {
-            pair(0, "POLYLINE")
+        fun mtext(layer: String, x: Double, y: Double, height: Double, value: String, width: Double = 5000.0) {
+            pair(0, "MTEXT")
             pair(8, layer)
-            pair(66, 1)
-            pair(70, 1)
-            pair(10, 0.0)
-            pair(20, 0.0)
+            pair(10, x)
+            pair(20, y)
             pair(30, 0.0)
+            pair(40, height)
+            pair(41, width)
+            pair(1, value)
+            pair(7, "STANDARD")
+        }
+
+        fun polyline(layer: String, points: List<Pair<Double, Double>>) {
+            // LWPOLYLINE (Lightweight Polyline) - AC1027 preferred
+            pair(0, "LWPOLYLINE")
+            pair(8, layer)
+            pair(90, points.size) // vertex count
+            pair(70, if (points.first() == points.last()) 1 else 0) // closed flag
             points.forEach { (x, y) ->
-                pair(0, "VERTEX")
-                pair(8, layer)
                 pair(10, x)
                 pair(20, y)
-                pair(30, 0.0)
             }
-            pair(0, "SEQEND")
-            pair(8, layer)
         }
 
         fun arrow(
@@ -544,5 +647,24 @@ object FrameDxfBuilder {
         }
 
         override fun toString(): String = builder.toString()
+    }
+
+    /**
+     * Simple Arabic → ASCII transliteration for DXF layer names.
+     * Maps common Arabic load case names to unique ASCII identifiers.
+     */
+    private fun transliterateToAscii(input: String): String {
+        val map = mapOf(
+            'أ' to "A", 'ب' to "B", 'ت' to "T", 'ث' to "Th", 'ج' to "J",
+            'ح' to "H", 'خ' to "Kh", 'د' to "D", 'ذ' to "Dh", 'ر' to "R",
+            'ز' to "Z", 'س' to "S", 'ش' to "Sh", 'ص' to "S", 'ض' to "D",
+            'ط' to "T", 'ظ' to "Z", 'ع' to "A", 'غ' to "Gh", 'ف' to "F",
+            'ق' to "Q", 'ك' to "K", 'ل' to "L", 'م' to "M", 'ن' to "N",
+            'ه' to "H", 'و' to "W", 'ي' to "Y", 'ة' to "T", 'ى' to "Y",
+            'إ' to "I", 'آ' to "A", 'ؤ' to "U", 'ئ' to "I", 'ء' to "A",
+            'ً' to "", 'ٌ' to "", 'ٍ' to "", 'َ' to "", 'ُ' to "", 'ِ' to "",
+            'ّ' to "", 'ْ' to ""
+        )
+        return input.map { c -> map[c] ?: c.toString() }.joinToString("").replace(Regex("[^A-Za-z0-9_]+"), "_")
     }
 }

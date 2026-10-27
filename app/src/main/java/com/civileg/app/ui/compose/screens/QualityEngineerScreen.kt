@@ -1611,7 +1611,8 @@ private enum class QcDiscipline(
 
 private fun computeDisciplineOutcome(
     d: QcDiscipline,
-    m: Map<String, String>
+    m: Map<String, String>,
+    designCode: DesignCode = DesignCode.ECP
 ): QualityControlEngine.QcOutcome = when (d) {
     QcDiscipline.EARTHWORKS -> QualityControlEngineNew.earthworksQc(
         excavationDepth = m.num("excavationDepth"),
@@ -1662,7 +1663,8 @@ private fun computeDisciplineOutcome(
         foundationSoilBearing = m.num("foundationSoilBearing"),
         concreteStrength = m.num("concreteStrength"),
         steelGrade = m.num("steelGrade"),
-        seismicCoefficient = m.num("seismicCoefficient")
+        seismicCoefficient = m.num("seismicCoefficient"),
+        designCode = designCode
     )
     QcDiscipline.WATERPROOFING -> QualityControlEngineNew.waterproofingQc(
         waterproofingType = m.str("waterproofingType"),
@@ -1715,7 +1717,8 @@ private fun computeDisciplineOutcome(
         connectionDetails = m.str("connectionDetails"),
         transportDamage = m.bool("transportDamage"),
         erectionTolerance = m.num("erectionTolerance"),
-        groutStrength = m.num("groutStrength")
+        groutStrength = m.num("groutStrength"),
+        designCode = designCode
     )
     QcDiscipline.POST_TENSION -> QualityControlEngineNew.postTensionQc(
         tendonType = m.str("tendonType"),
@@ -1772,7 +1775,8 @@ private fun computeDisciplineOutcome(
         leakTestResult = m.bool("leakTestResult"),
         hydrostaticTest = m.bool("hydrostaticTest"),
         valveType = m.str("valveType"),
-        drainageSystem = m.bool("drainageSystem")
+        drainageSystem = m.bool("drainageSystem"),
+        designCode = designCode
     )
     QcDiscipline.DRAINAGE -> QualityControlEngineNew.drainageQc(
         pipeMaterial = m.str("pipeMaterial"),
@@ -1852,7 +1856,7 @@ private fun DisciplineQcTab(
     ) {
         DesignCodeSelectorRow(
             selectedCode = designCode,
-            onCodeSelected = { designCode = it }
+            onCodeSelected = { designCode = it; outcome = null }
         )
 
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -1898,7 +1902,7 @@ private fun DisciplineQcTab(
 
         Button(
             onClick = {
-                val result = computeDisciplineOutcome(discipline, values)
+                val result = computeDisciplineOutcome(discipline, values, designCode)
                 outcome = result
                 viewModel.persistDisciplineOutcome(discipline.category, discipline.elementId, designCode, result)
                 scope.launch {

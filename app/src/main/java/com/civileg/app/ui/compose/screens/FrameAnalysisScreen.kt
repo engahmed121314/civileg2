@@ -35,6 +35,11 @@ import com.civileg.app.db.Design
 import com.civileg.app.db.DesignType
 import com.civileg.app.db.Project
 import com.civileg.app.domain.entities.*
+import com.civileg.app.domain.calculations.SteelFrameDesign
+import com.civileg.app.ui.compose.components.drawings.FrameRebarSectionDrawing
+import com.civileg.app.ui.compose.components.drawings.FrameSteelSectionDrawing
+import com.civileg.app.ui.compose.components.drawings.SteelSectionDrawing
+import com.civileg.app.utils.SteelTables
 import com.civileg.app.ui.theme.CivilEngineerTheme
 import com.civileg.app.viewmodel.DiagramType
 import com.civileg.app.viewmodel.FrameAnalysisViewModel
@@ -49,6 +54,7 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.hypot
 
 /**
  * Frame Analysis and Design Screen (2D Frames).
@@ -138,92 +144,87 @@ fun FrameAnalysisScreen(
                     navigationIconContentColor = Color.White
                 ),
                 actions = {
-                    IconButton(onClick = { showSaveDesignDialog = true }) {
-                        Icon(Icons.Default.Save, stringResource(R.string.frame_save_design), tint = Color.White)
-                    }
-                    IconButton(onClick = { showOpenDesignDialog = true }) {
-                        Icon(Icons.Default.FolderOpen, stringResource(R.string.frame_open_design), tint = Color.White)
-                    }
-                    var showTemplatesMenu by remember { mutableStateOf(false) }
+                    val scope = rememberCoroutineScope()
                     Box {
-                        IconButton(onClick = { showTemplatesMenu = true }) {
-                            Icon(Icons.Default.Dashboard, contentDescription = "Templates", tint = Color.White)
+                        var showActionMenu by remember { mutableStateOf(false) }
+                        IconButton(onClick = { showActionMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Actions", tint = Color.White)
                         }
                         DropdownMenu(
-                            expanded = showTemplatesMenu,
-                            onDismissRequest = { showTemplatesMenu = false }
+                            expanded = showActionMenu,
+                            onDismissRequest = { showActionMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.frame_simple_portal_desc)) },
-                                onClick = {
-                                    showTemplatesMenu = false
-                                    viewModel.loadSimplePortalFrame(6.0, 4.0, 20.0)
-                                },
-                                leadingIcon = { Icon(Icons.Default.Home, contentDescription = null) }
+                                text = { Text(stringResource(R.string.frame_save_design)) },
+                                onClick = { showActionMenu = false; showSaveDesignDialog = true },
+                                leadingIcon = { Icon(Icons.Default.Save, contentDescription = null) }
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.frame_two_story_desc)) },
-                                onClick = {
-                                    showTemplatesMenu = false
-                                    viewModel.loadTwoStoryFrame(6.0, 4.0, 3.5, 15.0)
-                                },
-                                leadingIcon = { Icon(Icons.Default.Layers, contentDescription = null) }
+                                text = { Text(stringResource(R.string.frame_open_design)) },
+                                onClick = { showActionMenu = false; showOpenDesignDialog = true },
+                                leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null) }
                             )
-                        }
-                    }
-                    IconButton(onClick = { viewModel.clearAll() }) {
-                        Icon(Icons.Default.DeleteSweep, stringResource(R.string.frame_clear_all), tint = Color.White)
-                    }
-                    // PDF Export
-                    if (result?.hasResults == true) {
-                        val frameShareReport = stringResource(R.string.frame_share_report)
-                        val framePdfErrorMsg = stringResource(R.string.frame_pdf_error)
-                        val frameReportSubject = stringResource(R.string.frame_report_subject)
-                        val scope = rememberCoroutineScope()
-                        var isFrameExporting by remember { mutableStateOf(false) }
-                        IconButton(enabled = !isFrameExporting, onClick = {
-                            val inputs = viewModel.getStoredInputs()
-                            isFrameExporting = true
-                            scope.launch(Dispatchers.IO) {
-                                try {
-                                    val file = FrameAnalysisPdfExporter.generateFrameAnalysisPdf(
-                                        context, inputs.nodes, inputs.members, inputs.nodalLoads,
-                                        inputs.memberLoads, inputs.settings, inputs.result,
-                                        inputs.slabs, inputs.sceneView
-                                    )
-                                    withContext(Dispatchers.Main) {
-                                        try {
-                                            val uri = androidx.core.content.FileProvider.getUriForFile(
-                                                context, "${context.packageName}.provider", file
-                                            )
-                                            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                                type = "application/pdf"
-                                                putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                                                putExtra(android.content.Intent.EXTRA_SUBJECT, frameReportSubject)
-                                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                            }
-                                            context.startActivity(Intent.createChooser(intent, frameShareReport))
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, framePdfErrorMsg.format(e.message ?: ""), Toast.LENGTH_LONG).show()
-                                        }
-                                        isFrameExporting = false
+                            var showTemplatesMenu by remember { mutableStateOf(false) }
+                            DropdownMenuItem(
+                                text = { Text("Templates") },
+                                onClick = { showTemplatesMenu = true },
+                                leadingIcon = { Icon(Icons.Default.Dashboard, contentDescription = null) }
+                            )
+                            DropdownMenu(
+                                expanded = showTemplatesMenu,
+                                onDismissRequest = { showTemplatesMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.frame_simple_portal_desc)) },
+                                    onClick = {
+                                        showTemplatesMenu = false; showActionMenu = false
+                                        viewModel.loadSimplePortalFrame(6.0, 4.0, 20.0)
                                     }
-                                } catch (e: Throwable) {
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(context, framePdfErrorMsg.format(e.message ?: ""), Toast.LENGTH_LONG).show()
-                                        isFrameExporting = false
-                                    }
-                                }
-                            }
-                        }) {
-                            if (isFrameExporting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                    color = Color.White
                                 )
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, stringResource(R.string.frame_export_pdf), tint = Color.White)
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.frame_two_story_desc)) },
+                                    onClick = {
+                                        showTemplatesMenu = false; showActionMenu = false
+                                        viewModel.loadTwoStoryFrame(6.0, 4.0, 3.5, 15.0)
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.frame_clear_all)) },
+                                onClick = { showActionMenu = false; viewModel.clearAll() },
+                                leadingIcon = { Icon(Icons.Default.DeleteSweep, contentDescription = null) }
+                            )
+                            if (result?.hasResults == true) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.frame_export_pdf)) },
+                                    onClick = {
+                                        showActionMenu = false
+                                        val inputs = viewModel.getStoredInputs()
+                                        scope.launch(Dispatchers.IO) {
+                                            try {
+                                                val file = FrameAnalysisPdfExporter.generateFrameAnalysisPdf(
+                                                    context, inputs.nodes, inputs.members, inputs.nodalLoads,
+                                                    inputs.memberLoads, inputs.settings, inputs.result,
+                                                    inputs.slabs, inputs.sceneView
+                                                )
+                                                withContext(Dispatchers.Main) {
+                                                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                                                        context, "${context.packageName}.provider", file
+                                                    )
+                                                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                        type = "application/pdf"
+                                                        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                    }
+                                                    context.startActivity(Intent.createChooser(intent, "Share Report"))
+                                                }
+                                            } catch (e: Exception) {
+                                                withContext(Dispatchers.Main) { Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show() }
+                                            }
+                                        }
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.PictureAsPdf, contentDescription = null) }
+                                )
                             }
                         }
                     }
@@ -865,8 +866,29 @@ private fun MembersTab(
     var editDepth by remember { mutableStateOf("500") }
     var editFcu by remember { mutableStateOf("25") }
     var editFy by remember { mutableStateOf("400") }
-    var editSteelSection by remember { mutableStateOf("IPE 300") }
+    var editSteelSection by remember { mutableStateOf(SteelFrameDesign.AUTO_SECTION) }
+    var steelSectionExpanded by remember { mutableStateOf(false) }
+    val steelSections = remember { SteelTables.getAllSections() }
     var editingMemberId by remember { mutableStateOf<Int?>(null) }
+
+    fun openMemberEditor(member: FrameMember) {
+        editingMemberId = member.id
+        editNodeI = member.nodeI.toString()
+        editNodeJ = member.nodeJ.toString()
+        editMaterial = member.materialType
+        editMemberType = member.memberType
+        editName = member.name
+        val section = member.concreteSection
+        editWidth = section?.width?.toString() ?: "250"
+        editDepth = section?.depth?.toString() ?: "500"
+        editFcu = section?.fcu?.toString() ?: "25"
+        editFy = section?.fy?.toString() ?: "400"
+        editSteelSection = member.steelSectionName
+            ?.takeUnless { SteelFrameDesign.isAutoSection(it) }
+            ?: SteelFrameDesign.AUTO_SECTION
+        steelSectionExpanded = false
+        showAddDialog = true
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -882,7 +904,8 @@ private fun MembersTab(
                     editNodeI = ""; editNodeJ = ""; editMaterial = FrameMaterialType.Concrete
                     editMemberType = FrameMemberType.Beam; editName = ""
                     editWidth = "250"; editDepth = "500"; editFcu = "25"; editFy = "400"
-                    editSteelSection = "IPE 300"; editingMemberId = null
+                    editSteelSection = SteelFrameDesign.AUTO_SECTION; editingMemberId = null
+                    steelSectionExpanded = false
                     showAddDialog = true
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
@@ -931,8 +954,17 @@ private fun MembersTab(
                                     fontSize = 10.sp, color = Color(0xFF1565C0)
                                 )
                             } else if (member.materialType == FrameMaterialType.Steel) {
-                                Text(member.steelSectionName ?: "IPE 300", fontSize = 10.sp, color = Color(0xFFE65100))
+                                Text(
+                                    member.steelSectionName
+                                        ?.takeUnless { SteelFrameDesign.isAutoSection(it) }
+                                        ?: stringResource(R.string.frame_steel_section_auto),
+                                    fontSize = 10.sp,
+                                    color = Color(0xFFE65100)
+                                )
                             }
+                        }
+                        IconButton(onClick = { openMemberEditor(member) }) {
+                            Icon(Icons.Default.Edit, stringResource(R.string.frame_edit), tint = Color(0xFF1565C0), modifier = Modifier.size(20.dp))
                         }
                         IconButton(onClick = { viewModel.removeMember(member.id) }) {
                             Icon(Icons.Default.Delete, stringResource(R.string.delete), tint = Color.Red.copy(alpha = 0.7f), modifier = Modifier.size(20.dp))
@@ -946,7 +978,10 @@ private fun MembersTab(
     // Add/Edit Member Dialog
     if (showAddDialog) {
         AlertDialog(
-            onDismissRequest = { showAddDialog = false },
+            onDismissRequest = {
+                editingMemberId = null
+                showAddDialog = false
+            },
             title = { Text(if (editingMemberId != null) stringResource(R.string.frame_edit_member) else stringResource(R.string.frame_add_member_title)) },
             text = {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1022,9 +1057,77 @@ private fun MembersTab(
                         }
                     } else {
                         item {
+                            val isAutoSection = SteelFrameDesign.isAutoSection(editSteelSection)
                             Text(stringResource(R.string.frame_steel_section), fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            OutlinedTextField(value = editSteelSection, onValueChange = { editSteelSection = it },
-                                label = { Text(stringResource(R.string.frame_section_name_hint)) }, modifier = Modifier.fillMaxWidth())
+                            Box {
+                                OutlinedButton(
+                                    onClick = { steelSectionExpanded = true },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        if (isAutoSection) stringResource(R.string.frame_steel_section_auto) else editSteelSection,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = steelSectionExpanded,
+                                    onDismissRequest = { steelSectionExpanded = false },
+                                    modifier = Modifier.heightIn(max = 300.dp)
+                                ) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                stringResource(R.string.frame_steel_section_auto),
+                                                fontSize = 11.sp
+                                            )
+                                        },
+                                        onClick = {
+                                            editSteelSection = SteelFrameDesign.AUTO_SECTION
+                                            steelSectionExpanded = false
+                                        }
+                                    )
+                                    for (section in steelSections) {
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    "${section.name}  (${section.depth.toInt()}×${section.width.toInt()})",
+                                                    fontSize = 11.sp
+                                                )
+                                            },
+                                            onClick = {
+                                                editSteelSection = section.name
+                                                steelSectionExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        item {
+                            val isAutoSection = SteelFrameDesign.isAutoSection(editSteelSection)
+                            if (isAutoSection) {
+                                Text(
+                                    stringResource(R.string.frame_steel_section_auto_hint),
+                                    fontSize = 9.sp,
+                                    color = Color.Gray
+                                )
+                                Spacer(Modifier.height(4.dp))
+                            }
+                            SteelSectionDrawing(
+                                sectionName = if (isAutoSection) "IPE 300" else editSteelSection,
+                                memberLengthMm = run {
+                                    val ni = nodes.find { it.id == editNodeI.toIntOrNull() }
+                                    val nj = nodes.find { it.id == editNodeJ.toIntOrNull() }
+                                    if (ni != null && nj != null) {
+                                        (hypot(nj.x - ni.x, nj.y - ni.y) * 1000.0)
+                                            .takeIf { it > 1.0 } ?: 6000.0
+                                    } else 6000.0
+                                },
+                                memberType = editMemberType,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(210.dp)
+                            )
                         }
                     }
                 }
@@ -1040,24 +1143,34 @@ private fun MembersTab(
                             fcu = editFcu.toDoubleOrNull() ?: 25.0,
                             fy = editFy.toDoubleOrNull() ?: 400.0
                         ) else null
+                    val steelSectionChoice = if (
+                        editMaterial == FrameMaterialType.Steel &&
+                        !SteelFrameDesign.isAutoSection(editSteelSection)
+                    ) {
+                        editSteelSection.trim()
+                    } else null
                     if (editingMemberId != null) {
                         val existing = members.find { it.id == editingMemberId }
                         if (existing != null) {
                             viewModel.updateMember(existing.copy(
                                 nodeI = nI, nodeJ = nJ, materialType = editMaterial,
                                 memberType = editMemberType, concreteSection = concreteSec,
-                                steelSectionName = if (editMaterial == FrameMaterialType.Steel) editSteelSection else null,
+                                steelSectionName = steelSectionChoice,
                                 name = editName
                             ))
                         }
                     } else {
-                        viewModel.addMember(nI, nJ, editMaterial, editMemberType, concreteSec, editSteelSection, editName)
+                        viewModel.addMember(nI, nJ, editMaterial, editMemberType, concreteSec, steelSectionChoice, editName)
                     }
+                    editingMemberId = null
                     showAddDialog = false
                 }) { Text(stringResource(R.string.save), color = Color(0xFF1565C0)) }
             },
             dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) { Text(stringResource(R.string.cancel)) }
+                TextButton(onClick = {
+                    editingMemberId = null
+                    showAddDialog = false
+                }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -1231,6 +1344,14 @@ private fun LoadsTab(
 // ============================================================================
 // Tab 4: Results
 // ============================================================================
+private fun frameMemberLengthMm(memberId: Int, nodes: List<FrameNode>, members: List<FrameMember>): Double {
+    val member = members.find { it.id == memberId } ?: return 6000.0
+    val nodeI = nodes.find { it.id == member.nodeI } ?: return 6000.0
+    val nodeJ = nodes.find { it.id == member.nodeJ } ?: return 6000.0
+    val lengthM = hypot(nodeJ.x - nodeI.x, nodeJ.y - nodeI.y)
+    return if (lengthM > 0.0) lengthM * 1000.0 else 6000.0
+}
+
 @Composable
 private fun ResultsTab(
     result: FrameAnalysisResult?,
@@ -1278,17 +1399,24 @@ private fun ResultsTab(
         if (concreteResults.isNotEmpty()) add(stringResource(R.string.frame_result_concrete_design))
         if (steelResults.isNotEmpty()) add(stringResource(R.string.frame_result_steel_design))
     }
+    val concreteTabIndex = if (concreteResults.isNotEmpty()) 2 else -1
+    val steelTabIndex = if (steelResults.isNotEmpty()) {
+        if (concreteResults.isNotEmpty()) 3 else 2
+    } else {
+        -1
+    }
+    val activeSubTab = resultSubTab.coerceIn(0, (subTabs.size - 1).coerceAtLeast(0))
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = resultSubTab) {
+        TabRow(selectedTabIndex = activeSubTab) {
             for ((i, title) in subTabs.withIndex()) {
-                Tab(selected = resultSubTab == i, onClick = { resultSubTab = i }, text = { Text(title, fontSize = 12.sp) })
+                Tab(selected = activeSubTab == i, onClick = { resultSubTab = i }, text = { Text(title, fontSize = 12.sp) })
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
         LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 8.dp)) {
         // === Displacements ===
-        if (resultSubTab == 0) {
+        if (activeSubTab == 0) {
             item {
                 Card(modifier = Modifier.fillMaxWidth().padding(4.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF3E5F5))) {
                     Column(modifier = Modifier.padding(12.dp)) {
@@ -1312,7 +1440,7 @@ private fun ResultsTab(
         }
 
         // === Reactions ===
-        if (resultSubTab == 1) {
+        if (activeSubTab == 1) {
             item {
                 Card(modifier = Modifier.fillMaxWidth().padding(4.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))) {
                     Column(modifier = Modifier.padding(12.dp)) {
@@ -1347,7 +1475,7 @@ private fun ResultsTab(
         }
 
         // === Concrete Design Results ===
-        if (resultSubTab == 2 && concreteResults.isNotEmpty()) {
+        if (activeSubTab == concreteTabIndex && concreteResults.isNotEmpty()) {
             items(concreteResults) { cr ->
                 Card(
                     modifier = Modifier
@@ -1383,6 +1511,13 @@ private fun ResultsTab(
                         if (cr.stirrupDia > 0) {
                             Text(stringResource(R.string.frame_stirrups, cr.stirrupDia.toInt(), cr.stirrupSpacing.toInt()), fontSize = 11.sp)
                         }
+                        Spacer(Modifier.height(6.dp))
+                        FrameRebarSectionDrawing(
+                            result = cr,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                        )
                         Spacer(Modifier.height(4.dp))
 
                         // Utilization bars
@@ -1408,7 +1543,7 @@ private fun ResultsTab(
         }
 
         // === Steel Design Results ===
-        if (resultSubTab == 3 && steelResults.isNotEmpty()) {
+        if (activeSubTab == steelTabIndex && steelResults.isNotEmpty()) {
             items(steelResults) { sr ->
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(4.dp),
@@ -1432,6 +1567,14 @@ private fun ResultsTab(
                         Text(stringResource(R.string.frame_steel_section_info, sr.sectionWeight, sr.sectionIx, sr.sectionSx), fontSize = 11.sp, color = Color.Gray)
                         Spacer(Modifier.height(2.dp))
                         Text(stringResource(R.string.frame_max_forces, sr.maxMoment, sr.maxShear, sr.axialForce), fontSize = 11.sp)
+                        Spacer(Modifier.height(6.dp))
+                        FrameSteelSectionDrawing(
+                            result = sr,
+                            memberLengthMm = frameMemberLengthMm(sr.memberId, nodes, members),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(230.dp)
+                        )
                         Spacer(Modifier.height(4.dp))
 
                         Row { Text(stringResource(R.string.frame_bending), fontSize = 11.sp); UtilizationBar(sr.flexuralUtilization, Modifier.weight(1f)) }

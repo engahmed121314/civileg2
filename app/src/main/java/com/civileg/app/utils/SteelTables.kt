@@ -1,5 +1,7 @@
 package com.civileg.app.utils
 
+import kotlin.math.pow
+
 object SteelTables {
 
     /**
@@ -329,8 +331,139 @@ object SteelTables {
             Sx = 60.7, Sy_aisc = 28.3, Zx = 68.7, Zy = 30.9, J = 8.67, Cw = 22700.0)
     )
 
+    // ============================================================
+    // CHS / Pipe / T / Plate Girder — additional shapes used by the
+    // frame member picker and the three-view section preview.
+    // ============================================================
+    val chsSections = listOf(
+        hollowRound("CHS 114.3x5.0", 114.3, 5.0),
+        hollowRound("CHS 139.7x5.0", 139.7, 5.0),
+        hollowRound("CHS 168.3x6.3", 168.3, 6.3),
+        hollowRound("CHS 193.7x6.3", 193.7, 6.3),
+        hollowRound("CHS 219.1x8.0", 219.1, 8.0),
+        hollowRound("CHS 273.0x8.0", 273.0, 8.0),
+        hollowRound("CHS 323.9x10.0", 323.9, 10.0)
+    )
+
+    val pipeSections = listOf(
+        hollowRound("Pipe 3\" Std", 88.9, 5.49),
+        hollowRound("Pipe 4\" Std", 114.3, 6.02),
+        hollowRound("Pipe 6\" Std", 168.3, 7.11),
+        hollowRound("Pipe 8\" Std", 219.1, 8.18),
+        hollowRound("Pipe 10\" Std", 273.0, 9.27)
+    )
+
+    val tSections = listOf(
+        teeSection("T 100x100x8x6", 100.0, 8.0, 100.0, 6.0),
+        teeSection("T 150x150x10x8", 150.0, 10.0, 150.0, 8.0),
+        teeSection("T 200x200x12x10", 200.0, 12.0, 200.0, 10.0),
+        teeSection("T 250x250x14x12", 250.0, 14.0, 250.0, 12.0)
+    )
+
+    val plateGirderSections = listOf(
+        plateGirder("PG 600x250x12x8", 600.0, 250.0, 12.0, 8.0),
+        plateGirder("PG 800x300x14x10", 800.0, 300.0, 14.0, 10.0),
+        plateGirder("PG 1000x350x16x12", 1000.0, 350.0, 16.0, 12.0),
+        plateGirder("PG 1200x400x20x14", 1200.0, 400.0, 20.0, 14.0)
+    )
+
+    private fun hollowRound(name: String, od: Double, t: Double): SectionProperties {
+        val inner = (od - 2.0 * t).coerceAtLeast(1.0)
+        val areaMm2 = Math.PI * (od * od - inner * inner) / 4.0
+        val ixMm4 = Math.PI * (od.pow(4) - inner.pow(4)) / 64.0
+        val areaCm2 = areaMm2 / 100.0
+        val ixCm4 = ixMm4 / 1e4
+        val sxCm3 = ixMm4 / (od / 2.0) / 1e3
+        val rCm = kotlin.math.sqrt(ixCm4 / areaCm2.coerceAtLeast(1e-9))
+        return SectionProperties(
+            name = name,
+            depth = od,
+            width = od,
+            tw = t,
+            tf = t,
+            area = areaCm2,
+            weight = areaMm2 * 0.00785,
+            iy = ixCm4,
+            iz = ixCm4,
+            sy = sxCm3,
+            sz = sxCm3,
+            ry = rCm,
+            rz = rCm,
+            Sx = sxCm3,
+            Sy_aisc = sxCm3,
+            Zx = sxCm3 * 1.12,
+            Zy = sxCm3 * 1.12,
+            J = 2.0 * ixCm4
+        )
+    }
+
+    private fun teeSection(name: String, bf: Double, tf: Double, d: Double, tw: Double): SectionProperties {
+        val areaMm2 = bf * tf + d * tw
+        val yBar = (bf * tf * (d + tf / 2.0) + d * tw * (d / 2.0)) / areaMm2
+        val totalH = d + tf
+        val ixMm4 = (bf * tf.pow(3) / 12.0 + bf * tf * (totalH - tf / 2.0 - yBar).pow(2)) +
+            (tw * d.pow(3) / 12.0 + d * tw * (d / 2.0 - yBar).pow(2))
+        val iyMm4 = (tf * bf.pow(3) + d * tw.pow(3)) / 12.0
+        val areaCm2 = areaMm2 / 100.0
+        val ixCm4 = ixMm4 / 1e4
+        val iyCm4 = iyMm4 / 1e4
+        val sxCm3 = ixMm4 / maxOf(yBar, totalH - yBar) / 1e3
+        val syCm3 = iyMm4 / (bf / 2.0) / 1e3
+        return SectionProperties(
+            name = name,
+            depth = totalH,
+            width = bf,
+            tw = tw,
+            tf = tf,
+            area = areaCm2,
+            weight = areaMm2 * 0.00785,
+            iy = ixCm4,
+            iz = iyCm4,
+            sy = sxCm3,
+            sz = syCm3,
+            ry = kotlin.math.sqrt(ixCm4 / areaCm2.coerceAtLeast(1e-9)),
+            rz = kotlin.math.sqrt(iyCm4 / areaCm2.coerceAtLeast(1e-9)),
+            Sx = sxCm3,
+            Sy_aisc = syCm3,
+            Zx = sxCm3 * 1.05,
+            Zy = syCm3 * 1.05
+        )
+    }
+
+    private fun plateGirder(name: String, h: Double, bf: Double, tf: Double, tw: Double): SectionProperties {
+        val webH = (h - 2.0 * tf).coerceAtLeast(1.0)
+        val areaMm2 = 2.0 * bf * tf + webH * tw
+        val ixMm4 = (bf * h.pow(3) - (bf - tw) * webH.pow(3)) / 12.0
+        val iyMm4 = (2.0 * tf * bf.pow(3) + webH * tw.pow(3)) / 12.0
+        val areaCm2 = areaMm2 / 100.0
+        val ixCm4 = ixMm4 / 1e4
+        val iyCm4 = iyMm4 / 1e4
+        val sxCm3 = ixMm4 / (h / 2.0) / 1e3
+        val syCm3 = iyMm4 / (bf / 2.0) / 1e3
+        return SectionProperties(
+            name = name,
+            depth = h,
+            width = bf,
+            tw = tw,
+            tf = tf,
+            area = areaCm2,
+            weight = areaMm2 * 0.00785,
+            iy = ixCm4,
+            iz = iyCm4,
+            sy = sxCm3,
+            sz = syCm3,
+            ry = kotlin.math.sqrt(ixCm4 / areaCm2.coerceAtLeast(1e-9)),
+            rz = kotlin.math.sqrt(iyCm4 / areaCm2.coerceAtLeast(1e-9)),
+            Sx = sxCm3,
+            Sy_aisc = syCm3,
+            Zx = sxCm3 * 1.12,
+            Zy = syCm3 * 1.12
+        )
+    }
+
     fun getAllSections(): List<SectionProperties> =
-        ipeSections + heaSections + hebSections + upnSections + angleSections + wShapeSections + rhsSections
+        ipeSections + heaSections + hebSections + upnSections + angleSections +
+            wShapeSections + rhsSections + chsSections + pipeSections + tSections + plateGirderSections
 
     fun getSectionByName(name: String): SectionProperties? = getAllSections().find {
         it.name.equals(name, ignoreCase = true)
@@ -352,6 +485,10 @@ object SteelTables {
             "ANGLE" -> angleSections
             "W" -> wShapeSections
             "RHS" -> rhsSections
+            "CHS" -> chsSections
+            "PIPE" -> pipeSections
+            "T" -> tSections
+            "PG" -> plateGirderSections
             else -> ipeSections
         }
         return list.minByOrNull { kotlin.math.abs(it.depth - depth) }

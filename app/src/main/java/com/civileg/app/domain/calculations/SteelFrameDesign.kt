@@ -11,6 +11,15 @@ import kotlin.math.*
  */
 object SteelFrameDesign {
 
+    const val AUTO_SECTION = "Auto"
+
+    fun isAutoSection(name: String?): Boolean {
+        val trimmed = name?.trim().orEmpty()
+        return trimmed.isEmpty() ||
+            trimmed.equals(AUTO_SECTION, ignoreCase = true) ||
+            trimmed.equals("تلقائي", ignoreCase = true)
+    }
+
     /**
      * تصميم جميع الأعضاء المعدنية في الإطار
      */
@@ -51,11 +60,25 @@ object SteelFrameDesign {
         codeNotes.add(CodeReference.getReference(code, "STEEL_BEAM_FLEXURE"))
         codeNotes.add(CodeReference.getReference(code, "STEEL_COMBINED_STRESS"))
 
-        // Get all available sections sorted by weight (lightest first for optimization)
+        val requestedName = member.steelSectionName?.trim().orEmpty()
+        val requestedSection = if (isAutoSection(requestedName)) {
+            null
+        } else {
+            SteelTables.getSectionByName(requestedName).also {
+                if (it == null) {
+                    warnings.add("القطاع المحدد \"$requestedName\" غير موجود في مكتبة القطاعات - تم الاختيار التلقائي")
+                }
+            }
+        }
+
         val allSections = SteelTables.getAllSections()
 
-        // Find the lightest section that satisfies all checks
-        val bestSection = findOptimalSection(allSections, maxM, maxV, Pu, member.memberType, code, steelFy, warnings)
+        val bestSection = requestedSection
+            ?: findOptimalSection(allSections, maxM, maxV, Pu, member.memberType, code, steelFy, warnings)
+
+        if (requestedSection != null) {
+            codeNotes.add("تم استخدام القطاع المحدد يدوياً: ${requestedSection.name}")
+        }
 
         if (bestSection == null) {
             // Fallback: pick the largest section and mark as unsafe
@@ -121,6 +144,10 @@ object SteelFrameDesign {
         }
 
         val isSafe = flexUtil <= 1.0 && shearUtil <= 1.0 && combinedUtil <= 1.0
+
+        if (requestedSection != null && !isSafe) {
+            warnings.add("القطاع المحدد يدوياً لا يحقق جميع شروط الأمان - راجع نسب الاستغلال")
+        }
 
         if (code == DesignCode.SBC) codeNotes.add("SBC 304-2018 - البند 8")
         else if (code == DesignCode.ECP) codeNotes.add("ECP 205-2007 - البند 6")

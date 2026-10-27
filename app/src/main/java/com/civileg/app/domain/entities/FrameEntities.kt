@@ -110,6 +110,48 @@ data class FrameMember(
     }
 }
 
+/**
+ * بعد (Dimension) على الرسم - يُظهر المسافة بين نقطتين
+ * @param id معرف البعد
+ * @param point1Id معرف النقطة الأولى (عقدة أو نقطة مخصصة)
+ * @param point2Id معرف النقطة الثانية
+ * @param offsetDistance مسافة خط البعد عن الخط المستقيم (متر) - موجب يعني جانبًا واحدًا
+ * @param dimensionType نوع البعد (محاذٍ للعضو، أفقي، رأسي)
+ * @param textOverride نص مخصص (اختياري) - إذا فارغ يُحسب تلقائيًا
+ */
+@Parcelize
+data class Dimension(
+    val id: Int,
+    val point1Id: Int,
+    val point2Id: Int,
+    val offsetDistance: Double = 0.5, // متر
+    val dimensionType: DimensionType = DimensionType.Aligned,
+    val textOverride: String = ""
+) : Parcelable {
+
+    /** نص البعد للعرض */
+    fun getDisplayText(nodes: List<FrameNode>): String {
+        if (textOverride.isNotBlank()) return textOverride
+        val p1 = nodes.find { it.id == point1Id }
+        val p2 = nodes.find { it.id == point2Id }
+        if (p1 == null || p2 == null) return "?"
+        val dx = p2.x - p1.x
+        val dy = p2.y - p1.y
+        val length = sqrt(dx * dx + dy * dy)
+        return String.format(java.util.Locale.ROOT, "%.2f m", length)
+    }
+}
+
+@Parcelize
+enum class DimensionType(val displayNameAr: String, val displayNameEn: String) : Parcelable {
+    Aligned("محاذٍ", "Aligned"),
+    Horizontal("أفقي", "Horizontal"),
+    Vertical("رأسي", "Vertical");
+
+    /** Locale-aware display name */
+    val displayName: String get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
+}
+
 @Parcelize
 enum class FrameMaterialType(val displayNameAr: String, val displayNameEn: String) : Parcelable {
     Concrete("خرسانة", "Concrete"),

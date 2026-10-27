@@ -97,18 +97,21 @@ class SBCFooting : FootingDesign {
             warnings.add("SBC: Footing separation - increase dimensions")
         }
         
+        // Factored soil pressure for flexure and one-way shear design (ultimate level)
+        val q_factored = q_avg * factor
+        
         // 5. السمك الفعال
         val d = footingDepth - getMinCover() - 10.0
         
-        // 6. عزم الانحناء في الاتجاهين (الناتئ من وجه العمود)
+        // 6. عزم الانحناء في الاتجاهين (الناتئ من وجه العمود) — factored pressure
         val cantX = (roundedWidth - columnWidth) / 2.0 / 1000.0  // m
         val cantY = (roundedLength - columnDepth) / 2.0 / 1000.0  // m
-        val Mu_x = q_avg * (roundedLength / 1000.0) * cantX * cantX / 2.0  // kN.m
-        val Mu_y = q_avg * (roundedWidth / 1000.0) * cantY * cantY / 2.0  // kN.m
+        val Mu_x = q_factored * (roundedLength / 1000.0) * cantX * cantX / 2.0  // kN.m
+        val Mu_y = q_factored * (roundedWidth / 1000.0) * cantY * cantY / 2.0  // kN.m
 
-        // 7. فحص القص الأحادي عند بعد d/2 من وجه العمود (SBC 304 / ACI 318-22.5)
-        val Vu_x = q_avg * (roundedLength / 1000.0) * max(cantX - d / 2000.0, 0.0)  // kN
-        val Vu_y = q_avg * (roundedWidth / 1000.0) * max(cantY - d / 2000.0, 0.0)  // kN
+        // 7. فحص القص الأحادي عند بعد d/2 من وجه العمود (SBC 304 / ACI 318-22.5) — factored pressure
+        val Vu_x = q_factored * (roundedLength / 1000.0) * max(cantX - d / 2000.0, 0.0)  // kN
+        val Vu_y = q_factored * (roundedWidth / 1000.0) * max(cantY - d / 2000.0, 0.0)  // kN
         // One-way shear capacity: Vc = 0.17 × √f'c × b × d (ACI 318-22.5.5.1)
         val fc_prime = 0.8 * fcu  // SBC 304 follows ACI: f'c = 0.8 x fcu
         val vc_oneWay = 0.17 * sqrt(fc_prime)  // MPa
@@ -174,7 +177,9 @@ class SBCFooting : FootingDesign {
             punchingShearCheck = punchingCheck,
             isSafe = q_max <= soilBearingCapacity && q_min >= 0
                 && Vu_x <= Vc_x && Vu_y <= Vc_y
-                && punchingCheck.isSafe,
+                && punchingCheck.isSafe
+                && reinfX.isSafe
+                && reinfY.isSafe,
             warnings = warnings,
             codeNotes = codeNotes
         )
@@ -257,36 +262,39 @@ class SBCFooting : FootingDesign {
         }
         
         // ρ from Rn-ρ method
-        val rho = if (Rn > 0.0 && 0.85 * fc > 0.0) {
-            val discriminant = 1.0 - 2.0 * Rn / (0.85 * fc)
-            if (discriminant > 0.0) (0.85 * fc / fy) * (1.0 - sqrt(discriminant)) else rho_bal
-        } else 0.0
+        val discriminant = 1.0 - 2.0 * Rn / (0.85 * fc)
+        val rho = if (discriminant > 0.0) {
+            (0.85 * fc / fy) * (1.0 - sqrt(discriminant))
+        } else {
+            warnings.add("SBC: Section compression failure - increase effective depth")
+            0.025
+        }
         
-        val asRequired = rho * b * d
-        
-        // الحد الأدنى للتسليح (ACI 318-13.3.1): 0.18% × b × d
-        val asMin = MIN_REIN_RATIO * b * d
-        val asFinal = max(asRequired, asMin)
+        // الحد الأدنى والأقصى للتسليح (ACI 318-13.3.1): min 0.18%, max 0.025
+        val rhoMin = max(MIN_REIN_RATIO, 1.33 * sqrt(fc) / fy)
+        val rhoMax = 0.025
+        val rhoFinal = rho.coerceIn(rhoMin, rhoMax)
+        val asRequired = rhoFinal * b * d
         
         // اختيار القضبان
         val availableBars = listOf(12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 25.0)
         val barDiameter = availableBars.firstOrNull { dia ->
             val area = PI * dia * dia / 4.0
-            val barsPerMeter = ceil(asFinal / area).toInt()
+            val barsPerMeter = ceil(asRequired / area).toInt()
             barsPerMeter in 5..20
         } ?: 16.0
         
         val barArea = PI * barDiameter * barDiameter / 4.0
-        val nominalBars = ceil(asFinal / barArea).toInt()
+        val nominalBars = ceil(asRequired / barArea).toInt()
         val nominalSpacing = floor(1000.0 / nominalBars)
         
         // ACI 318: max spacing = min(3h, 450mm) for footings
         val maxSpacing = min(450.0, min(3.0 * d, 750.0))
-        val finalSpacing = max(nominalSpacing, 100.0).coerceAtMost(maxSpacing)
+        val finalSpacing = nominalSpacing.coerceIn(100.0, maxSpacing)
         val actualBars = ceil(1000.0 / finalSpacing).toInt()
         val asProvided = actualBars * barArea
         
-        val utilization = asRequired / asProvided
+        val utilization = rho / rhoFinal.coerceAtLeast(0.001)
         codeNotes.add(String.format("SBC 304/ACI 318: %dØ%d @ %dmm", actualBars, barDiameter.toInt(), finalSpacing.toInt()))
         
         return ReinforcementResult(
@@ -296,7 +304,7 @@ class SBCFooting : FootingDesign {
             numberOfBars = actualBars,
             tiesDiameter = 0.0,
             tiesSpacing = 0.0,
-            isSafe = utilization <= 1.0 && rho <= rho_bal,
+            isSafe = discriminant > 0.0 && utilization <= 1.0,
             utilizationRatio = utilization,
             spacing = finalSpacing,
             warnings = warnings,

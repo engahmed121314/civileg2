@@ -20,6 +20,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.civileg.app.domain.entities.Dimension
 import com.civileg.app.domain.entities.FrameMember
 import com.civileg.app.domain.entities.FrameNode
 import com.civileg.app.domain.entities.MemberLoad
@@ -45,6 +47,7 @@ import com.civileg.app.domain.entities.MemberLoadType
 import com.civileg.app.domain.entities.NodalLoad
 import com.civileg.app.domain.entities.SlabPanel
 import com.civileg.app.domain.entities.SupportType
+import com.civileg.app.domain.modeler.ModelerLayerVisibility
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -99,8 +102,10 @@ fun FrameModelerCanvas(
     nodalLoads: List<NodalLoad>,
     memberLoads: List<MemberLoad>,
     slabs: List<SlabPanel>,
-    selectedNodeId: Int?,
-    selectedMemberId: Int?,
+    layers: ModelerLayerVisibility = ModelerLayerVisibility(),
+    dimensions: List<Dimension> = emptyList(),
+    selectedNodeIds: Set<Int> = emptySet(),
+    selectedMemberIds: Set<Int> = emptySet(),
     tool: ModelerTool,
     pendingStartNodeId: Int?,
     pendingSlabNodeIds: List<Int>,
@@ -110,6 +115,10 @@ fun FrameModelerCanvas(
     viewport: ModelerViewport,
     onViewportChange: (ModelerViewport) -> Unit,
     onTap: (ModelerTap) -> Unit,
+    onMarqueeSelect: (minX: Double, minY: Double, maxX: Double, maxY: Double, additive: Boolean) -> Unit =
+        { _, _, _, _, _ -> },
+    additiveSelection: Boolean = false,
+    onCursorWorldChange: (Pair<Double, Double>?) -> Unit = {},
     onNodeDragStart: (Int) -> Unit = {},
     onNodeDrag: (Int, Double, Double) -> Unit = { _, _, _ -> },
     onNodeDragEnd: () -> Unit = {},
@@ -128,6 +137,10 @@ fun FrameModelerCanvas(
     val currentMembers by rememberUpdatedState(members)
     val currentSlabs by rememberUpdatedState(slabs)
     val currentOnTap by rememberUpdatedState(onTap)
+    val currentOnMarquee by rememberUpdatedState(onMarqueeSelect)
+    val currentAdditive by rememberUpdatedState(additiveSelection)
+    val currentOnCursor by rememberUpdatedState(onCursorWorldChange)
+    val currentLayers by rememberUpdatedState(layers)
     val currentOnViewport by rememberUpdatedState(onViewportChange)
     val currentOnNodeDragStart by rememberUpdatedState(onNodeDragStart)
     val currentOnNodeDrag by rememberUpdatedState(onNodeDrag)
@@ -140,6 +153,11 @@ fun FrameModelerCanvas(
     val background = Color(0xFFFCFCFA)
     val textColor = Color(0xFF263238)
     var pointerPosition by remember { mutableStateOf<Offset?>(null) }
+    var marqueeRect by remember { mutableStateOf<Pair<Offset, Offset>?>(null) }
+
+    LaunchedEffect(pointerPosition, viewport) {
+        currentOnCursor(pointerPosition?.let { viewport.screenToWorld(it) })
+    }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val canvasW = constraints.maxWidth.toFloat()
@@ -209,21 +227,17 @@ fun FrameModelerCanvas(
             }
         }
 
-        val memberLengthLayouts = remember(members, nodes, viewport.scale) {
-            if (viewport.scale > 25f) {
-                members.associate { member ->
-                    val a = nodes.find { it.id == member.nodeI }
-                    val b = nodes.find { it.id == member.nodeJ }
-                    val length = if (a != null && b != null) hypot(b.x - a.x, b.y - a.y) else 0.0
-                    val text = String.format(java.util.Locale.ROOT, "%.2f m", length)
-                    val layout = textMeasurer.measure(
-                        text = text,
-                        style = TextStyle(color = Color(0xFF37474F), fontSize = 9.sp)
+        val dimensionTextLayouts = remember(dimensions, nodes) {
+            dimensions.associate { dim ->
+                val layout = textMeasurer.measure(
+                    text = dim.getDisplayText(nodes),
+                    style = TextStyle(
+                        color = Color(0xFF4A148C),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
                     )
-                    member.id to layout
-                }
-            } else {
-                emptyMap()
+                )
+                dim.id to layout
             }
         }
 
@@ -265,9 +279,9 @@ fun FrameModelerCanvas(
             }
         }
 
-        val nodeLayouts = remember(nodes, selectedNodeId) {
+        val nodeLayouts = remember(nodes, selectedNodeIds) {
             nodes.associate { node ->
-                val selected = node.id == selectedNodeId
+                val selected = node.id in selectedNodeIds
                 val color = if (selected) Color(0xFFEF6C00) else Color(0xFF263238)
                 val layout = textMeasurer.measure(
                     text = "${node.id}",
@@ -288,7 +302,7 @@ fun FrameModelerCanvas(
 
         val viewportGesture = when (tool) {
             ModelerTool.Move -> {
-                Modifier.pointerInput(tool) {
+                Modifier.pointerInput(tool, snapMm) {
                     var draggedNodeId: Int? = null
                     detectItemDragOrTransform(
                         onStart = { offset ->
@@ -327,7 +341,7 @@ fun FrameModelerCanvas(
                 }
             }
             ModelerTool.Member -> {
-                Modifier.pointerInput(tool) {
+                Modifier.pointerInput(tool, snapMm) {
                     var draggingFromNode = false
                     detectItemDragOrTransform(
                         onStart = { offset ->
@@ -370,8 +384,51 @@ fun FrameModelerCanvas(
                     )
                 }
             }
+            ModelerTool.Select -> {
+                Modifier.pointerInput(tool, snapMm) {
+                    detectMarqueeOrTransform(
+                        hitTest = { offset ->
+                            val (wx, wy) = currentViewport.screenToWorld(offset)
+                            val tap = buildTap(
+                                offset = offset,
+                                worldX = wx,
+                                worldY = wy,
+                                nodes = currentNodes,
+                                members = currentMembers,
+                                slabs = currentSlabs,
+                                scale = currentViewport.scale,
+                                snapMm = snapMm,
+                                density = density.density,
+                                allowNodes = currentLayers.joints,
+                                allowMembers = currentLayers.members,
+                                allowSlabs = currentLayers.slabs
+                            )
+                            tap.nodeId != null || tap.memberId != null || tap.panelId != null
+                        },
+                        onMarqueeUpdate = { start, current ->
+                            marqueeRect = start to current
+                        },
+                        onMarqueeEnd = { start, current ->
+                            marqueeRect = null
+                            val (ax, ay) = currentViewport.screenToWorld(start)
+                            val (bx, by) = currentViewport.screenToWorld(current)
+                            currentOnMarquee(
+                                min(ax, bx),
+                                min(ay, by),
+                                max(ax, bx),
+                                max(ay, by),
+                                currentAdditive
+                            )
+                        },
+                        onMarqueeCancel = { marqueeRect = null },
+                        onTransform = { centroid, pan, zoom ->
+                            currentOnViewport(currentViewport.transformed(centroid, pan, zoom))
+                        }
+                    )
+                }
+            }
             else -> {
-                Modifier.pointerInput(tool) {
+                Modifier.pointerInput(tool, snapMm) {
                     detectTransformGestures { centroid, pan, zoom, _ ->
                         currentOnViewport(currentViewport.transformed(centroid, pan, zoom))
                     }
@@ -392,7 +449,7 @@ fun FrameModelerCanvas(
                         }
                     }
                 }
-                .pointerInput(Unit) {
+                .pointerInput(snapMm) {
                     detectTapGestures { offset ->
                         if (offset.x.isFinite() && offset.y.isFinite()) {
                             val vp = currentViewport
@@ -406,7 +463,10 @@ fun FrameModelerCanvas(
                                 slabs = currentSlabs,
                                 scale = vp.scale,
                                 snapMm = snapMm,
-                                density = density.density
+                                density = density.density,
+                                allowNodes = currentLayers.joints,
+                                allowMembers = currentLayers.members,
+                                allowSlabs = currentLayers.slabs
                             )
                             currentOnTap(tap)
                         }
@@ -415,7 +475,6 @@ fun FrameModelerCanvas(
         ) {
             drawRect(background)
             val vp = viewport
-            val scale = vp.scale
             val snapTap = pointerPosition
                 ?.takeIf { tool != ModelerTool.Pan && tool != ModelerTool.Move }
                 ?.let { position ->
@@ -429,25 +488,37 @@ fun FrameModelerCanvas(
                         slabs = currentSlabs,
                         scale = vp.scale,
                         snapMm = snapMm,
-                        density = density.density
+                        density = density.density,
+                        allowNodes = currentLayers.joints,
+                        allowMembers = currentLayers.members,
+                        allowSlabs = currentLayers.slabs
                     )
                 }
 
-            drawGrid(
-                vp = vp,
-                canvasW = canvasW,
-                canvasH = canvasH,
-                gridSizeMm = gridSizeMm,
-                gridTextLayouts = gridTextLayouts,
-                textColor = textColor
-            )
+            if (layers.grid) {
+                drawGrid(
+                    vp = vp,
+                    canvasW = canvasW,
+                    canvasH = canvasH,
+                    gridSizeMm = gridSizeMm,
+                    gridTextLayouts = gridTextLayouts,
+                    textColor = textColor
+                )
+            }
 
-            drawSlabs(slabs, nodes, vp, slabTextLayouts)
-            drawMembers(members, nodes, selectedMemberId, vp, memberLengthLayouts, scale)
-            drawSupports(nodes, vp)
-            drawMemberLoads(members, nodes, memberLoads, vp, memberLoadLayouts)
-            drawNodalLoads(nodes, nodalLoads, vp, nodalLoadLayouts)
-            drawNodes(nodes, selectedNodeId, vp, nodeLayouts)
+            if (layers.slabs) drawSlabs(slabs, nodes, vp, slabTextLayouts)
+            if (layers.members) {
+                drawMembers(members, nodes, selectedMemberIds, vp)
+            }
+            if (layers.dimensions) {
+                drawDimensions(dimensions, nodes, vp, dimensionTextLayouts)
+            }
+            if (layers.supports) drawSupports(nodes, vp)
+            if (layers.loads) {
+                drawMemberLoads(members, nodes, memberLoads, vp, memberLoadLayouts)
+                drawNodalLoads(nodes, nodalLoads, vp, nodalLoadLayouts)
+            }
+            if (layers.joints) drawNodes(nodes, selectedNodeIds, vp, nodeLayouts)
             drawMemberDragPreview(nodes, pendingStartNodeId, memberDragPreview, vp)
             drawPending(
                 nodes = nodes,
@@ -457,6 +528,25 @@ fun FrameModelerCanvas(
                 pendingLayout = pendingLayout
             )
             drawSnapIndicator(pointerPosition, snapTap, vp)
+            marqueeRect?.let { (a, b) ->
+                val left = min(a.x, b.x)
+                val top = min(a.y, b.y)
+                val size = Size(abs(b.x - a.x), abs(b.y - a.y))
+                drawRect(
+                    color = Color(0xFF1565C0).copy(alpha = 0.08f),
+                    topLeft = Offset(left, top),
+                    size = size
+                )
+                drawRect(
+                    color = Color(0xFF1565C0),
+                    topLeft = Offset(left, top),
+                    size = size,
+                    style = Stroke(
+                        width = 1.5f,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f))
+                    )
+                )
+            }
         }
     }
 }
@@ -617,6 +707,74 @@ private suspend fun PointerInputScope.detectItemDragOrTransform(
     }
 }
 
+private suspend fun PointerInputScope.detectMarqueeOrTransform(
+    hitTest: (Offset) -> Boolean,
+    onMarqueeUpdate: (start: Offset, current: Offset) -> Unit,
+    onMarqueeEnd: (start: Offset, current: Offset) -> Unit,
+    onMarqueeCancel: () -> Unit,
+    onTransform: (centroid: Offset, pan: Offset, zoom: Float) -> Unit
+) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        val touchSlop = viewConfiguration.touchSlop
+        val startedOnItem = hitTest(down.position)
+        var marquee = false
+        var transforming = false
+        var lastPosition = down.position
+
+        try {
+            while (true) {
+                val event = awaitPointerEvent()
+                val pressed = event.changes.filter { it.pressed }
+
+                if (pressed.size >= 2) {
+                    if (!transforming) {
+                        transforming = true
+                        if (marquee) {
+                            onMarqueeCancel()
+                            marquee = false
+                        }
+                    }
+                    val centroid = event.calculateCentroid(useCurrent = false)
+                    val pan = event.calculatePan()
+                    val zoom = event.calculateZoom()
+                    if (centroid.x.isFinite() && centroid.y.isFinite() &&
+                        (zoom != 1f || pan != Offset.Zero)
+                    ) {
+                        onTransform(centroid, pan, zoom)
+                    }
+                    event.changes.forEach { it.consume() }
+                } else if (pressed.size == 1) {
+                    val change = pressed.first()
+                    lastPosition = change.position
+                    if (transforming) {
+                        val pan = change.position - change.previousPosition
+                        if (pan != Offset.Zero) onTransform(change.position, pan, 1f)
+                        change.consume()
+                    } else if (!startedOnItem) {
+                        if (!marquee &&
+                            (lastPosition - down.position).getDistance() > touchSlop
+                        ) {
+                            marquee = true
+                        }
+                        if (marquee) {
+                            change.consume()
+                            onMarqueeUpdate(down.position, lastPosition)
+                        }
+                    }
+                }
+
+                if (event.changes.none { it.pressed }) break
+            }
+        } catch (t: Throwable) {
+            if (marquee) onMarqueeCancel()
+            throw t
+        }
+
+        if (marquee) onMarqueeEnd(down.position, lastPosition)
+    }
+}
+
 private fun buildTap(
     offset: Offset,
     worldX: Double,
@@ -626,7 +784,10 @@ private fun buildTap(
     slabs: List<SlabPanel>,
     scale: Float,
     snapMm: Int,
-    density: Float
+    density: Float,
+    allowNodes: Boolean = true,
+    allowMembers: Boolean = true,
+    allowSlabs: Boolean = true
 ): ModelerTap {
     val nodeTolerance = 16f * density
     val snapM = snapMm / 1000.0
@@ -640,7 +801,7 @@ private fun buildTap(
         hypot((it.x - worldX).toFloat() * scale, (it.y - worldY).toFloat() * scale)
     } ?: Float.MAX_VALUE
 
-    if (nearestNode != null && nodeDistance <= nodeTolerance) {
+    if (allowNodes && nearestNode != null && nodeDistance <= nodeTolerance) {
         return ModelerTap(nearestNode.x, nearestNode.y, nodeId = nearestNode.id)
     }
 
@@ -661,7 +822,7 @@ private fun buildTap(
         }
     }
 
-    if (bestMember != null && bestDist <= worldTolerance) {
+    if (allowMembers && bestMember != null && bestDist <= worldTolerance) {
         val a = nodes.find { it.id == bestMember.nodeI }
         val b = nodes.find { it.id == bestMember.nodeJ }
         val endIsI = if (a != null && b != null) {
@@ -690,10 +851,12 @@ private fun buildTap(
         )
     }
 
-    val panel = slabs.firstOrNull { p ->
-        val pts = p.nodeIds.mapNotNull { id -> nodes.find { it.id == id } }
-        pts.size == 4 && pointInPolygon(worldX, worldY, pts)
-    }
+    val panel = if (allowSlabs) {
+        slabs.firstOrNull { p ->
+            val pts = p.nodeIds.mapNotNull { id -> nodes.find { it.id == id } }
+            pts.size == 4 && pointInPolygon(worldX, worldY, pts)
+        }
+    } else null
     if (panel != null) {
         return ModelerTap(worldX, worldY, panelId = panel.id)
     }
@@ -808,17 +971,15 @@ private fun DrawScope.drawSlabs(
 private fun DrawScope.drawMembers(
     members: List<FrameMember>,
     nodes: List<FrameNode>,
-    selectedMemberId: Int?,
-    vp: ModelerViewport,
-    memberLengthLayouts: Map<Int, TextLayoutResult>,
-    scale: Float
+    selectedMemberIds: Set<Int>,
+    vp: ModelerViewport
 ) {
     for (member in members) {
         val a = nodes.find { it.id == member.nodeI } ?: continue
         val b = nodes.find { it.id == member.nodeJ } ?: continue
         val p1 = vp.worldToScreen(a.x, a.y)
         val p2 = vp.worldToScreen(b.x, b.y)
-        val selected = member.id == selectedMemberId
+        val selected = member.id in selectedMemberIds
         drawLine(
             color = if (selected) Color(0xFFFF8F00) else Color(0xFF1565C0),
             start = p1,
@@ -826,17 +987,53 @@ private fun DrawScope.drawMembers(
             strokeWidth = if (selected) 8f else 5f,
             cap = StrokeCap.Round
         )
-        if (scale > 25f) {
-            val mid = Offset((p1.x + p2.x) / 2f, (p1.y + p2.y) / 2f)
-            memberLengthLayouts[member.id]?.let { layout ->
-                drawText(layout, topLeft = Offset(mid.x + 4f, mid.y - 14f))
-            }
-        }
         if (member.releaseI || member.releaseJ) {
             val angle = atan2(p2.y - p1.y, p2.x - p1.x)
             if (member.releaseI) drawHingeAt(p1, angle)
             if (member.releaseJ) drawHingeAt(p2, angle)
         }
+    }
+}
+
+private fun DrawScope.drawDimensions(
+    dimensions: List<Dimension>,
+    nodes: List<FrameNode>,
+    vp: ModelerViewport,
+    textLayouts: Map<Int, TextLayoutResult>
+) {
+    if (dimensions.isEmpty()) return
+    val nodeById = nodes.associateBy { it.id }
+    val dimColor = Color(0xFF6A1B9A)
+    for (dim in dimensions) {
+        val n1 = nodeById[dim.point1Id] ?: continue
+        val n2 = nodeById[dim.point2Id] ?: continue
+        val p1 = vp.worldToScreen(n1.x, n1.y)
+        val p2 = vp.worldToScreen(n2.x, n2.y)
+        val dx = p2.x - p1.x
+        val dy = p2.y - p1.y
+        val len = hypot(dx, dy)
+        if (len < 24f) continue
+        val ux = dx / len
+        val uy = dy / len
+        val offsetPx = dim.offsetDistance.toFloat() * vp.scale
+        val offX = -uy * offsetPx
+        val offY = ux * offsetPx
+        val d1 = Offset(p1.x + offX, p1.y + offY)
+        val d2 = Offset(p2.x + offX, p2.y + offY)
+        val arrow = 7f
+        drawLine(dimColor, p1, d1, 1.2f)
+        drawLine(dimColor, p2, d2, 1.2f)
+        drawLine(dimColor, d1, d2, 1.2f)
+        drawLine(dimColor, d1, Offset(d1.x + ux * arrow, d1.y + uy * arrow), 1.6f)
+        drawLine(dimColor, d2, Offset(d2.x - ux * arrow, d2.y - uy * arrow), 1.6f)
+        val layout = textLayouts[dim.id] ?: continue
+        val mid = Offset((d1.x + d2.x) / 2f, (d1.y + d2.y) / 2f)
+        val textW = layout.size.width.toFloat()
+        val textH = layout.size.height.toFloat()
+        drawText(
+            layout,
+            topLeft = Offset(mid.x - textW / 2f, mid.y - textH - 3f)
+        )
     }
 }
 
@@ -1016,13 +1213,13 @@ private fun DrawScope.drawArrowHead(tip: Offset, from: Offset, color: Color) {
 
 private fun DrawScope.drawNodes(
     nodes: List<FrameNode>,
-    selectedNodeId: Int?,
+    selectedNodeIds: Set<Int>,
     vp: ModelerViewport,
     nodeLayouts: Map<Int, TextLayoutResult>
 ) {
     for (node in nodes) {
         val p = vp.worldToScreen(node.x, node.y)
-        val selected = node.id == selectedNodeId
+        val selected = node.id in selectedNodeIds
         val r = if (selected) 9f else 7f
         drawCircle(if (selected) Color(0xFFFFF3E0) else Color.White, r, p)
         drawCircle(

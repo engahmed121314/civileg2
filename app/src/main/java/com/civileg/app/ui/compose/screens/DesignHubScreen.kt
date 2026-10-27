@@ -53,6 +53,7 @@ private val designHubItems = listOf(
     DesignHubItem(AppScreen.WaffleSlab,    R.string.home_waffle_slab, R.string.home_waffle_slab_sub, listOf("ECP", "ACI"),  Color(0xFF1B5E20), Icons.Default.GridView),
     DesignHubItem(AppScreen.HordiSlab,     R.string.home_hordi_slab, R.string.home_hordi_slab_sub, listOf("ECP", "ACI"),   Color(0xFF455A64), Icons.Default.ViewAgenda),
     DesignHubItem(AppScreen.ShearWall,     R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI"),    Color(0xFF880E4F), Icons.Default.SensorDoor),
+    DesignHubItem(AppScreen.PostTensioned, R.string.home_post_tensioned, R.string.home_post_tensioned_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF00695C), Icons.Default.LinearScale),
 
 )
 

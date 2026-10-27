@@ -339,6 +339,16 @@ private fun calculateMomentDiagram(span: Double, wu: Double, supportType: String
                 x to m
             }
         }
+        "FIXED_HINGED" -> {
+            // Propped cantilever (fixed at left, hinged at right)
+            // M(x) = wu*L²/8 * [ (1-x/L) * (1 - 2*x/L) ]  -- negative at fixed end, zero at hinge
+            // Fixed end moment = -wu*L²/8
+            (0..n).map { i ->
+                val x = i.toFloat() / n
+                val m = (wu * span * span / 8f * (1 - x) * (1 - 2 * x)).toFloat()
+                x to m
+            }
+        }
         "CANTILEVER" -> {
             // M(x) = -wu * x² / 2
             (0..n).map { i ->
@@ -374,6 +384,16 @@ private fun calculateShearDiagram(span: Double, wu: Double, supportType: String)
             (0..n).map { i ->
                 val x = i.toFloat() / n
                 val v = (wu * span / 2f * (1f - 2f * x)).toFloat()
+                x to v
+            }
+        }
+        "FIXED_HINGED" -> {
+            // Propped cantilever: V(x) = wu*L/2 - wu*x (at fixed end) = wu*L/2, at hinge = -wu*L/2
+            // Actually: reaction at fixed end = 5/8 wu*L, at hinge = 3/8 wu*L
+            // V(x) = 5/8 wu*L - wu*x
+            (0..n).map { i ->
+                val x = i.toFloat() / n
+                val v = (wu * span * 5f / 8f - wu * span * x).toFloat()
                 x to v
             }
         }

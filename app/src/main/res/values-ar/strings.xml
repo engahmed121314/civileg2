@@ -1230,6 +1230,8 @@
     <string name="frame_member_type">نوع العضو</string>
     <string name="frame_concrete_section_props">خصائص الخرسانة</string>
     <string name="frame_steel_section">قطاع معدني</string>
+    <string name="frame_steel_section_auto">تلقائي</string>
+    <string name="frame_steel_section_auto_hint">سيُختار القطاع الأمثل تلقائياً عند التحليل.</string>
     <string name="frame_section_name_hint">اسم القطاع</string>
     <string name="frame_nodal_loads_tab">أحمال العقد</string>
     <string name="frame_member_loads_tab">أحمال الأعضاء</string>
@@ -1719,4 +1721,7 @@
     <string name="boq_working_space">مسافة العمل (م)</string>
     <string name="boq_blinding_thickness">سمك الخرسانة العادية (م)</string>
     <string name="boq_backfill_width">عرض خندق الحفر (م)</string>
+    <string name="home_post_tensioned">ما بعد الشد</string>
+    <string name="home_post_tensioned_sub">تصميم الكمرات والبلاطات مسبقة الإجهاد</string>
+    <string name="screen_post_tensioned_title">تصميم ما بعد الشد</string>
 </resources>

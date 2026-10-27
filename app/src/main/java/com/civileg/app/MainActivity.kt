@@ -266,6 +266,9 @@ fun AppNavigation(
                 composable(AppScreen.ShearWall.route) {
                     ShearWallScreen(onNavigateBack = { navController.popBackStack() })
                 }
+                composable(AppScreen.PostTensioned.route) {
+                    PostTensionedScreen(onNavigateBack = { navController.popBackStack() })
+                }
 
 
                 // ═══ QUICK TOOLS ═══

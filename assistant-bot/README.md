@@ -55,6 +55,24 @@ python assistant-bot/bridge.py
 - أي نص آخر يُنفَّذ عبر `opencode run` داخل `civileg2`.
 - الإعداد في `assistant-bot/config.env` (جاهز، ولا يُرفع لـ Git).
 
+## بناء APK وإرسال لينك التثبيت لتليجرام
+
+سكريبت واحد يبني الـ APK، يرفعه لاستضافة خارجية (catbox.moe)، ويرسل الرابط + الملف نفسه لبوت تليجرام:
+
+```bat
+:: دبل كليك
+assistant-bot\publish-apk.bat
+
+:: أو من التيرمينال
+pwsh -File assistant-bot/publish-apk.ps1
+pwsh -File assistant-bot/publish-apk.ps1 -SkipBuild    :: بدون إعادة بناء
+pwsh -File assistant-bot/publish-apk.ps1 -NoDocument   :: رابط فقط بدون ملف
+```
+
+- يقرأ `BOT_TOKEN` و`ALLOWED_CHAT_ID` من `config.env` (لا يُرفع لـ Git).
+- الرابط المباشر من `files.catbox.moe` صالح للفتح من أي جهاز.
+- إن كان الـ APK أكبر من 50MB يُرسل الرابط فقط (حد تليجرام للبوت).
+
 ## ملاحظات أمان
 
 - ملفات `.env` و `config.env` فيها التوكن السري — **لا ترفعها لـ Git**.

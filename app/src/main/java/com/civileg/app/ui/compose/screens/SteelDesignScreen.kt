@@ -110,8 +110,18 @@ fun SteelDesignScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.resetResult() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.reset))
+                    Box {
+                        var showMenu by remember { mutableStateOf(false) }
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.reset)) },
+                                onClick = { showMenu = false; viewModel.resetResult() },
+                                leadingIcon = { Icon(Icons.Default.Refresh, null) }
+                            )
+                        }
                     }
                 }
             )
@@ -879,6 +889,37 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                     }
                 }
             }
+
+            item {
+                Card(elevation = CardDefaults.cardElevation(2.dp)) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        Text(
+                            stringResource(R.string.steel_section_drawing),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                        ProfessionalSteelDrawing(
+                            sectionName = section.sectionName,
+                            sectionType = section.displayName,
+                            depth = section.depth,
+                            flangeWidth = section.width,
+                            webThickness = section.webThickness,
+                            flangeThickness = section.flangeThickness,
+                            memberLength = (length.toDoubleOrNull() ?: 3.0) * 1000.0,
+                            radius = section.rootRadius,
+                            area = section.area,
+                            ix = section.ix,
+                            sx = section.sx,
+                            zx = section.zx,
+                            weightPerMeter = section.weight,
+                            isColumn = selectedMemberType == SteelMemberType.COLUMN,
+                            viewMode = 0,
+                            modifier = Modifier.fillMaxWidth().height(320.dp)
+                        )
+                    }
+                }
+            }
         }
 
         item { SteelModuleSectionHeader(stringResource(R.string.steel_applied_loads), R.drawable.ic_frame) }
@@ -1053,7 +1094,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             flangeThickness = res.sectionType.flangeThickness,
                             memberLength = (length.toDoubleOrNull() ?: 3.0) * 1000.0,
                             isSafe = res.isSafe,
-                            utilizationRatio = res.utilizationRatio * 100,
+                            utilizationRatio = res.utilizationRatio,
                             viewMode = selectedViewMode,
                             modifier = Modifier.fillMaxSize(),
                             sectionType = res.sectionType.displayName,
@@ -1099,7 +1140,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                     flangeThickness = res.sectionType.flangeThickness,
                     memberLength = (length.toDoubleOrNull() ?: 3.0) * 1000.0,
                     isSafe = res.isSafe,
-                    utilizationRatio = res.utilizationRatio * 100,
+                    utilizationRatio = res.utilizationRatio,
                     viewMode = selectedViewMode,
                     modifier = Modifier.fillMaxSize(),
                     sectionType = res.sectionType.displayName,

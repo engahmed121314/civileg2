@@ -19,7 +19,8 @@ object AppIntegrityChecker {
     //   keytool -list -v -keystore your-release-key.jks -alias your-alias
     // Then paste the SHA-256 value here (e.g., "AB:CD:EF:...:12:34")
     // When empty, signature verification is effectively disabled (any APK passes).
-    private const val EXPECTED_SIGNER_FINGERPRINT = ""
+    private const val EXPECTED_SIGNER_FINGERPRINT =
+        "86:5A:19:F8:B4:D1:3E:29:67:8D:FE:7E:F0:B6:C7:13:CA:A7:54:9E:D0:04:19:22:34:93:F4:70:D3:D2:89:C5"
 
     private val SUSPICIOUS_PATHS = arrayOf(
         "/system/app/Superuser.apk",

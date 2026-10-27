@@ -100,7 +100,7 @@ class ECPFooting : FootingDesign {
         val A_actual = B * L / 1e6
 
         // 7. ضغط التربة مع الانحراف
-        // ECP 203-2020 §7-1: Bearing pressure with eccentricity
+        // ECP 203-2020 §7-1: Bearing pressure with eccentricity (service level)
         val q_avg = if (A_actual > 0) P_service / A_actual else 0.0
         val ex = if (P_service > 0) Mx_service / P_service else 0.0
         val ey = if (P_service > 0) My_service / P_service else 0.0
@@ -113,6 +113,9 @@ class ECPFooting : FootingDesign {
             q_avg * (1 - 6 * ex / B_m_dim.coerceAtLeast(0.001)),
             q_avg * (1 - 6 * ey / L_m_dim.coerceAtLeast(0.001))
         )
+
+        // Factored soil pressure for flexure and one-way shear design (ultimate level)
+        val q_factored = q_avg * factor
 
         // ECP 203-2020 §7-1: Bearing check — q_max ≤ SBC, q_min ≥ 0 (no uplift)
         if (q_max > soilBearingCapacity) {
@@ -130,15 +133,15 @@ class ECPFooting : FootingDesign {
         }
         val dSafe = d.coerceAtLeast(50.0)  // Minimum 50mm effective depth for calculations
 
-        // 9. عزم الانحناء في الاتجاه القصير والطويل
+        // 9. عزم الانحناء في الاتجاه القصير والطويل (factored pressure)
         val cantX = (B - columnWidth) / 2.0 / 1000.0  // م
         val cantY = (L - columnDepth) / 2.0 / 1000.0  // م
-        val Mu_x = q_avg * (L / 1000.0) * cantX * cantX / 2.0  // kN.m
-        val Mu_y = q_avg * (B / 1000.0) * cantY * cantY / 2.0  // kN.m
+        val Mu_x = q_factored * (L / 1000.0) * cantX * cantX / 2.0  // kN.m
+        val Mu_y = q_factored * (B / 1000.0) * cantY * cantY / 2.0  // kN.m
 
-        // 10. فحص القص الأحادي عند بعد d/2 من وجه العمود (ECP 203-2020 البند 4-3-1-2)
-        val Vu_x = q_avg * (L / 1000.0) * max(cantX - dSafe / 2000.0, 0.0)  // kN
-        val Vu_y = q_avg * (B / 1000.0) * max(cantY - dSafe / 2000.0, 0.0)  // kN
+        // 10. فحص القص الأحادي عند بعد d/2 من وجه العمود (ECP 203-2020 البند 4-3-1-2) — factored pressure
+        val Vu_x = q_factored * (L / 1000.0) * max(cantX - dSafe / 2000.0, 0.0)  // kN
+        val Vu_y = q_factored * (B / 1000.0) * max(cantY - dSafe / 2000.0, 0.0)  // kN
 
         // One-way shear capacity ECP 203-2020 §4-3-1-2: qcu = 0.24 * sqrt(fcu/γc)
         val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
@@ -204,7 +207,9 @@ class ECPFooting : FootingDesign {
                 && q_min >= 0
                 && Vu_x <= Vc_x
                 && Vu_y <= Vc_y
-                && punchingCheck.isSafe,
+                && punchingCheck.isSafe
+                && reinfX.isSafe
+                && reinfY.isSafe,
             warnings = warnings,
             codeNotes = codeNotes
         )
@@ -324,7 +329,8 @@ class ECPFooting : FootingDesign {
 
         // 6. المسافة بين القضبان (ECP 203 البند 7-1-3-3)
         val maxSpacing = min(250.0, min(3.0 * d, 750.0))
-        val finalSpacing = max(nominalSpacing, 100.0).coerceAtMost(maxSpacing)
+        val minSpacing = 100.0
+        val finalSpacing = nominalSpacing.coerceIn(minSpacing, maxSpacing)
         val actualBars = ceil(1000.0 / finalSpacing).toInt()
         val asProvided = actualBars * barArea
 

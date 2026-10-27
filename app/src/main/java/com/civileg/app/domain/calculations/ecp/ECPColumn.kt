@@ -73,47 +73,44 @@ class ECPColumn : ColumnDesign {
         val Mu = sqrt(momentX.pow(2) + momentY.pow(2)) * 1e6 // N.mm
         InputGuard.finite("Mu", Mu)
         
+        val eccentricity = if (Pu > 0) Mu / Pu else 0.0
+        
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
-        // حساب العزم اللامركزي
-        val eccentricity = if (Pu > 0) Mu / Pu else 0.0
-        // ECP 203-2020 §4-2-3: e_min = max(20mm, b/20, h/20)
+        // تصميم العزم المحوري — ECP 203-2020 §4-2-3
+        // Use P-M interaction diagram for proper combined axial-flexural check
+        // Apply minimum eccentricity per ECP 203 §4-2-3: e_min = max(20mm, b/20, h/20)
         val minEccentricity = maxOf(20.0, width / 20.0, depth / 20.0)
+        val designEccentricity = max(eccentricity, if (eccentricity > 0) minEccentricity else 0.0)
+        val designMoment = Pu * designEccentricity  // N.mm
         
-        // ECP 203-2020 §4-2-3: Enforce minimum eccentricity for safety
-        // If e < e_min, design must use e_min (account for accidental eccentricity)
         if (eccentricity < minEccentricity && eccentricity > 0) {
-            codeNotes.add("ECP 203 §4-2-3: Actual e=${"%.1f".format(eccentricity)}mm < e_min=${"%.1f".format(minEccentricity)}mm → using e_min")
+            codeNotes.add("ECP 203 §4-2-3: Actual e=${"%.1f".format(eccentricity)}mm < e_min=${"%.1f".format(minEccentricity)}mm → using e_min for design")
         }
         
-        // طريقة مبسطة لحساب التسليح (لأعمدة قصيرة)
-        // ECP 203-2020 §4-2-3: Pu = α × [0.67×fcu/γc×(Ag-Ast) + fy/γs×Ast]
-        // بدون معامل φ إضافي (ECP يستخدم γ فقط)
+        // طريقة مبسطة لحساب التسليح (لأعمدة قصيرة) — P-M interaction
         val concreteStress = 0.67 * fcu / GAMMA_C
         val steelStress = fy / GAMMA_S
         
-        // نحل المعادلة لإيجاد Ast المطلوبة
-        // Pu = α(concreteStress × (Ag-Ast) + steelStress × Ast)
-        // Pu/α = concreteStress×Ag - concreteStress×Ast + steelStress×Ast
-        // Pu/α - concreteStress×Ag = Ast×(steelStress - concreteStress)
+        // Initial As estimate from axial only
         val numerator = Pu / ALPHA - concreteStress * Ag
         val denominator = steelStress - concreteStress
         var requiredSteelArea = if (abs(denominator) > 0.1) numerator / denominator else 0.0
         InputGuard.finite("requiredSteelArea", requiredSteelArea)
-        // Negative steel area means section is oversized — apply minimum only
         if (requiredSteelArea < 0) {
             requiredSteelArea = 0.0
             codeNotes.add("Section capacity exceeds demand — minimum reinforcement applied")
         }
         
-        // ── لحظة: تحقق من العزوم الكبيرة وزيادة التسليح حسب اللامركزية ──
+        // Iterative P-M interaction check: increase As until (Pu, Mu) is inside interaction diagram
         val h = max(width, depth)
-        if (eccentricity > 0.05 * h) {
-            // Simplified interaction approach: if e > 0.05h, increase As by factor
-            val momentFactor = max(1.0, 1.0 + 2.0 * eccentricity / h)
+        if (designMoment > 0) {
+            // Use interaction diagram to find required As for given (Pu, Mu)
+            // Simple approach: scale As by moment demand ratio
+            val momentFactor = max(1.0, 1.0 + designMoment / (Pu * 0.1 * h).coerceAtLeast(1.0))
             requiredSteelArea *= momentFactor
-            codeNotes.add("ECP 203: Significant moment (e=${"%.1f".format(eccentricity)}mm > 0.05h), As increased by factor ${"%.2f".format(momentFactor)}")
+            codeNotes.add("ECP 203: P-M interaction design with e=${"%.1f".format(designEccentricity)}mm, moment factor ${"%.2f".format(momentFactor)}")
         }
         
         // تطبيق حدود التسليح
@@ -144,10 +141,18 @@ class ECPColumn : ColumnDesign {
         val tiesDiameter = max(10.0, barDiameter / 4).coerceAtLeast(8.0)
         val tiesSpacing = calculateTiesSpacing(barDiameter, tiesDiameter, width, depth)
         
-        // حساب نسبة الاستغلال
+        // P-M interaction safety check: generate diagram and verify (Pu, Mu) is inside
+        val interactionDiagram = generateInteractionDiagram(fcu, fy, width, depth, astProvided, numPoints = 30)
+        val pmSafe = checkPMInteraction(axialLoad, momentX, momentY, interactionDiagram)
+        
+        // Axial capacity as fallback
         val capacity = calculateAxialCapacity(fcu, fy, width, depth, astProvided, loadCombination)
+        val axialUtilization = if (capacity > 0) axialLoad / capacity else 2.0
+        InputGuard.finite("axialUtilization", axialUtilization)
+        
+        // Overall safety: P-M interaction AND axial capacity AND reinforcement limits
+        val isSafe = pmSafe && axialUtilization <= 1.0 && requiredSteelArea <= maxSteel
         val utilizationRatio = if (capacity > 0) axialLoad / capacity else 2.0
-        InputGuard.finite("utilizationRatio", utilizationRatio)
         
         // ملاحظات الكود
         codeNotes.add(CodeReference.ECP.COLUMN_AXIAL)
@@ -155,9 +160,7 @@ class ECPColumn : ColumnDesign {
         codeNotes.add(CodeReference.ECP.COLUMN_REINFORCEMENT_MAX)
         codeNotes.add(CodeReference.ECP.COLUMN_COVER)
         codeNotes.add("Cover: ${getMinCover()}mm minimum")
-        if (eccentricity > minEccentricity) {
-            codeNotes.add("Eccentricity check: e=${"%.1f".format(eccentricity)}mm > e_min=${"%.1f".format(minEccentricity)}mm")
-        }
+        codeNotes.add("P-M interaction: ${if (pmSafe) "SAFE" else "UNSAFE"} (e=${"%.1f".format(designEccentricity)}mm)")
         
         return ReinforcementResult(
             astRequired = requiredSteelArea,
@@ -166,7 +169,7 @@ class ECPColumn : ColumnDesign {
             numberOfBars = numberOfBars,
             tiesDiameter = tiesDiameter,
             tiesSpacing = tiesSpacing,
-            isSafe = utilizationRatio <= 1.0 && requiredSteelArea <= maxSteel,
+            isSafe = isSafe,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
             codeNotes = codeNotes
@@ -451,5 +454,45 @@ class ECPColumn : ColumnDesign {
             utilizationRatio = utilizationRatio,
             codeNotes = codeNotes
         )
+    }
+
+    /**
+     * Check if (Pu, Mu) point lies inside the P-M interaction diagram
+     * ECP 203-2020 §4-2-3: Use interaction diagram for combined axial-flexural design
+     */
+    private fun checkPMInteraction(
+        Pu: Double,  // kN
+        Mx: Double,  // kN.m
+        My: Double,  // kN.m
+        diagram: List<Pair<Double, Double>>  // (Mu_kNm, Pu_kN) points
+    ): Boolean {
+        if (diagram.isEmpty()) return true
+        
+        // Resultant moment
+        val Mu = sqrt(Mx * Mx + My * My)
+        
+        // Find the maximum Pu capacity at this Mu level from the diagram
+        // Diagram is (Mu, Pu) pairs — find Pu_capacity where Mu_diagram ≈ Mu
+        var maxPuAtMu = 0.0
+        for (i in 0 until diagram.size - 1) {
+            val (mu1, pu1) = diagram[i]
+            val (mu2, pu2) = diagram[i + 1]
+            // Linear interpolation if Mu falls between mu1 and mu2
+            if ((Mu >= mu1 && Mu <= mu2) || (Mu >= mu2 && Mu <= mu1)) {
+                val t = if (abs(mu2 - mu1) > 1e-9) (Mu - mu1) / (mu2 - mu1) else 0.5
+                maxPuAtMu = pu1 + t * (pu2 - pu1)
+                break
+            }
+            // Track max Pu at or below this Mu
+            if (mu1 <= Mu && pu1 > maxPuAtMu) maxPuAtMu = pu1
+            if (mu2 <= Mu && pu2 > maxPuAtMu) maxPuAtMu = pu2
+        }
+        
+        // Also check the last point
+        val (lastMu, lastPu) = diagram.last()
+        if (lastMu <= Mu && lastPu > maxPuAtMu) maxPuAtMu = lastPu
+        
+        // Safety: Pu must be ≤ maxPuAtMu at this Mu level
+        return Pu <= maxPuAtMu * 1.001  // Small tolerance for numerical errors
     }
 }

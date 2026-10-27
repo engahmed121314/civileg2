@@ -192,41 +192,41 @@ fun ProfessionalFootingDrawing(
             color = Color(0x55AAAAAA)
         )
 
-        // ── Bottom reinforcement X-direction (blue lines, vertical) ──
+        // ── Bottom reinforcement X-direction (blue lines, horizontal along X) ──
         if (rebarXCount > 1) {
-            val barAreaLeft = fLeft + (cover * scale).toFloat()
-            val barAreaRight = fRight - (cover * scale).toFloat()
-            val step = (barAreaRight - barAreaLeft) / (rebarXCount - 1)
+            val barAreaTop = fTop + (cover * scale).toFloat()
+            val barAreaBottom = fBottom - (cover * scale).toFloat()
+            val step = (barAreaBottom - barAreaTop) / (rebarXCount - 1)
             for (i in 0 until rebarXCount) {
-                val bx = barAreaLeft + i * step
+                val by = barAreaTop + i * step
                 drawLine(
                     barXColor,
-                    Offset(bx, fTop + (cover * scale).toFloat()),
-                    Offset(bx, fBottom - (cover * scale).toFloat()),
+                    Offset(fLeft + (cover * scale).toFloat(), by),
+                    Offset(fRight - (cover * scale).toFloat(), by),
                     strokeWidth = cfg.strokeRebar
                 )
             }
         }
         // Bar mark for X
-        drawTextAnnotated("\u2460", fRight + 16f, fCenterY + 3f, barXColor, cfg.annotationTextSmall, bold = true)
+        drawTextAnnotated("\u2460", fLeft - 16f, fBottom + 14f, barXColor, cfg.annotationTextSmall, bold = true)
 
-        // ── Bottom reinforcement Y-direction (lighter, horizontal) ─
+        // ── Bottom reinforcement Y-direction (lighter, vertical along Y) ─
         if (rebarYCount > 1) {
-            val barAreaTop = fTop + (cover * scale).toFloat()
-            val barAreaBottom = fBottom - (cover * scale).toFloat()
-            val step = (barAreaBottom - barAreaTop) / (rebarYCount - 1)
+            val barAreaLeft = fLeft + (cover * scale).toFloat()
+            val barAreaRight = fRight - (cover * scale).toFloat()
+            val step = (barAreaRight - barAreaLeft) / (rebarYCount - 1)
             for (i in 0 until rebarYCount) {
-                val by = barAreaTop + i * step
+                val bx = barAreaLeft + i * step
                 drawLine(
                     barYColor,
-                    Offset(fLeft + (cover * scale).toFloat(), by),
-                    Offset(fRight - (cover * scale).toFloat(), by),
+                    Offset(bx, fTop + (cover * scale).toFloat()),
+                    Offset(bx, fBottom - (cover * scale).toFloat()),
                     strokeWidth = 1.0f
                 )
             }
         }
         // Bar mark for Y
-        drawTextAnnotated("\u2461", fLeft - 16f, fBottom + 14f, barYColor, cfg.annotationTextSmall, bold = true)
+        drawTextAnnotated("\u2461", fRight + 16f, fCenterY + 3f, barYColor, cfg.annotationTextSmall, bold = true)
 
         // ── Column(s) ─────────────────────────────────────────────
         val colDrawW = (safeColW * scale).toFloat()
@@ -567,10 +567,10 @@ fun ProfessionalFootingDrawing(
         val tblLeft = margin
         val tblWidth = w - 2 * margin
 
-        val xSpacing = if (rebarXCount > 1) (lyMm / (rebarXCount - 1)).toInt() else lyMm.toInt()
-        val ySpacing = if (rebarYCount > 1) (lxMm / (rebarYCount - 1)).toInt() else lxMm.toInt()
-        val barLengthX = lyMm.toInt()
-        val barLengthY = lxMm.toInt()
+        val xSpacing = if (rebarXCount > 1) (lxMm / (rebarXCount - 1)).toInt() else lxMm.toInt()
+        val ySpacing = if (rebarYCount > 1) (lyMm / (rebarYCount - 1)).toInt() else lyMm.toInt()
+        val barLengthX = lxMm.toInt()
+        val barLengthY = lyMm.toInt()
 
         val headers = listOf("Mark", "Direction", "Dia (mm)", "Count", "Spacing (mm)", "Length (mm)")
         val colWidths = listOf(

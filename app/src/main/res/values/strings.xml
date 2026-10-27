@@ -1235,6 +1235,8 @@
     <string name="frame_member_type">Member Type</string>
     <string name="frame_concrete_section_props">Concrete Props</string>
     <string name="frame_steel_section">Steel Section</string>
+    <string name="frame_steel_section_auto">Auto</string>
+    <string name="frame_steel_section_auto_hint">The optimal section is selected automatically during analysis.</string>
     <string name="frame_section_name_hint">Section Name</string>
     <string name="frame_nodal_loads_tab">Node Loads</string>
     <string name="frame_member_loads_tab">Member Loads</string>
@@ -1802,4 +1804,7 @@
     <string name="boq_working_space">Working Space (m)</string>
     <string name="boq_blinding_thickness">Blinding Thickness (m)</string>
     <string name="boq_backfill_width">Trench Width for Excavation (m)</string>
+    <string name="home_post_tensioned">Post-Tensioned</string>
+    <string name="home_post_tensioned_sub">Prestressed Beam &amp; Slab Design</string>
+    <string name="screen_post_tensioned_title">Post-Tensioned Design</string>
 </resources>

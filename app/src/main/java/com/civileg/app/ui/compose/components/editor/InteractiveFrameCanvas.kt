@@ -2,9 +2,11 @@ package com.civileg.app.ui.compose.components.editor
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
@@ -56,10 +58,17 @@ fun InteractiveFrameCanvas(
     var cursorWorldX by remember { mutableDoubleStateOf(0.0) }
     var cursorWorldY by remember { mutableDoubleStateOf(0.0) }
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .onSizeChanged { canvasSize = it }
+    ) {
         val density = LocalDensity.current
-        val canvasW = with(density) { this@BoxWithConstraints.maxWidth.toPx() }
-        val canvasH = with(density) { this@BoxWithConstraints.maxHeight.toPx() }
+        val canvasW = canvasSize.width.toFloat()
+        val canvasH = canvasSize.height.toFloat()
+        if (canvasW <= 0f || canvasH <= 0f) return@Box
 
         val basePixelsPerMeter = remember(nodes, canvasW, canvasH) {
             if (nodes.isNotEmpty()) {

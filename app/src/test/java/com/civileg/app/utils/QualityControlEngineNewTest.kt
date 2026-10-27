@@ -1,5 +1,6 @@
 package com.civileg.app.utils
 
+import com.civileg.app.domain.entities.DesignCode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -96,6 +97,18 @@ class QualityControlEngineNewTest {
         )
         assertFalse(outcome.passed)
         assertFalse(outcome.checks[0].passed)
+    }
+
+    @Test
+    fun retainingWallQc_lowConcreteStrength_fails() {
+        val outcome = QualityControlEngineNew.retainingWallQc(
+            wallHeight = 5.0, wallThickness = 300.0, soilType = "SAND",
+            backfillUnitWeight = 18.0, backfillFrictionAngle = 30.0, backfillCohesion = 0.0,
+            surchargeLoad = 10.0, groundwaterLevel = 3.0, foundationDepth = 1.5,
+            foundationWidth = 4.0, foundationSoilBearing = 200.0,
+            concreteStrength = 20.0, steelGrade = 400.0, seismicCoefficient = 0.1
+        )
+        assertFalse(outcome.passed)
     }
 
     // ==================================================================
@@ -202,15 +215,26 @@ class QualityControlEngineNewTest {
         assertFalse(outcome.passed)
     }
 
+    @Test
+    fun precastQc_lowConcreteStrength_fails() {
+        val outcome = QualityControlEngineNew.precastQc(
+            elementType = "Beam", elementDimensions = "300x600x6000", concreteStrength = 20.0,
+            steelGrade = 400.0, coverThickness = 40.0, surfaceFinish = "Fair",
+            liftingAnchors = true, connectionDetails = "Bolted", transportDamage = false,
+            erectionTolerance = 5.0, groutStrength = 50.0
+        )
+        assertFalse(outcome.passed)
+    }
+
     // ==================================================================
     // POST-TENSION
     // ==================================================================
     @Test
     fun postTensionQc_withinElongationTolerance_passes() {
         val outcome = QualityControlEngineNew.postTensionQc(
-            tendonType = "7-wire strand", tendonDiameter = 15.2, jackingForce = 1500.0,
+            tendonType = "7-wire strand", tendonDiameter = 15.2, jackingForce = 200.0,
             elongation = 180.0, expectedElongation = 180.0, groutStrength = 35.0,
-            groutFlow = 30.0, anchorageType = "Wedge", ductMaterial = "HDPE",
+            groutFlow = 20.0, anchorageType = "Wedge", ductMaterial = "HDPE",
             corrosionProtection = "Galvanized", stressLoss = 15.0,
             frictionCoefficient = 0.20, wobbleCoefficient = 0.002
         )
@@ -221,9 +245,21 @@ class QualityControlEngineNewTest {
     @Test
     fun postTensionQc_excessElongationDeviation_fails() {
         val outcome = QualityControlEngineNew.postTensionQc(
-            tendonType = "7-wire strand", tendonDiameter = 15.2, jackingForce = 1500.0,
+            tendonType = "7-wire strand", tendonDiameter = 15.2, jackingForce = 200.0,
             elongation = 210.0, expectedElongation = 180.0, groutStrength = 35.0,
-            groutFlow = 30.0, anchorageType = "Wedge", ductMaterial = "HDPE",
+            groutFlow = 20.0, anchorageType = "Wedge", ductMaterial = "HDPE",
+            corrosionProtection = "Galvanized", stressLoss = 15.0,
+            frictionCoefficient = 0.20, wobbleCoefficient = 0.002
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun postTensionQc_jackingForceAboveLimit_fails() {
+        val outcome = QualityControlEngineNew.postTensionQc(
+            tendonType = "7-wire strand", tendonDiameter = 15.2, jackingForce = 1500.0,
+            elongation = 180.0, expectedElongation = 180.0, groutStrength = 35.0,
+            groutFlow = 20.0, anchorageType = "Wedge", ductMaterial = "HDPE",
             corrosionProtection = "Galvanized", stressLoss = 15.0,
             frictionCoefficient = 0.20, wobbleCoefficient = 0.002
         )
@@ -236,7 +272,7 @@ class QualityControlEngineNewTest {
     @Test
     fun groutingQc_compliantGrout_passes() {
         val outcome = QualityControlEngineNew.groutingQc(
-            groutType = "Cementitious", flowTime = 30.0, shrinkage = 0.05,
+            groutType = "Cementitious", flowTime = 20.0, shrinkage = 0.05,
             compressiveStrength = 40.0, viscosity = 500.0, gelTime = 10.0,
             bondStrength = 2.0, injectionPressure = 0.35, injectionVolume = 100.0,
             curingTime = 7.0, substrateCondition = "Clean"
@@ -248,7 +284,7 @@ class QualityControlEngineNewTest {
     @Test
     fun groutingQc_lowFlowTime_fails() {
         val outcome = QualityControlEngineNew.groutingQc(
-            groutType = "Cementitious", flowTime = 10.0, shrinkage = 0.05,
+            groutType = "Cementitious", flowTime = 5.0, shrinkage = 0.05,
             compressiveStrength = 40.0, viscosity = 500.0, gelTime = 10.0,
             bondStrength = 2.0, injectionPressure = 0.35, injectionVolume = 100.0,
             curingTime = 7.0, substrateCondition = "Clean"
@@ -307,6 +343,18 @@ class QualityControlEngineNewTest {
             concreteStrength = 30.0, steelGrade = 400.0, wallThickness = 250.0,
             floorThickness = 200.0, roofThickness = 150.0, waterproofingType = "Crystalline",
             leakTestResult = true, hydrostaticTest = false, valveType = "Gate",
+            drainageSystem = true
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun waterTanksQc_thinWall_fails() {
+        val outcome = QualityControlEngineNew.waterTanksQc(
+            tankType = "Rectangular", tankCapacity = 500.0, tankDimensions = "20x10x3",
+            concreteStrength = 30.0, steelGrade = 400.0, wallThickness = 150.0,
+            floorThickness = 200.0, roofThickness = 150.0, waterproofingType = "Crystalline",
+            leakTestResult = true, hydrostaticTest = true, valveType = "Gate",
             drainageSystem = true
         )
         assertFalse(outcome.passed)
@@ -384,6 +432,16 @@ class QualityControlEngineNewTest {
         assertFalse(outcome.passed)
     }
 
+    @Test
+    fun siteWorksQc_missingFence_fails() {
+        val outcome = QualityControlEngineNew.siteWorksQc(
+            gradingLevel = 100.0, slope = 0.5, fenceType = "None", gateType = "Swing",
+            lightingType = "LED", landscapingType = "Grass", pavementType = "Interlock",
+            drainageSystem = true, safetySigns = true, fireExtinguishers = true, firstAidKit = true
+        )
+        assertFalse(outcome.passed)
+    }
+
     // ==================================================================
     // FIRE PROTECTION
     // ==================================================================
@@ -406,6 +464,142 @@ class QualityControlEngineNewTest {
             fireRating = "2 hr", coverageArea = 500.0, applicationMethod = "Spray",
             curingTime = 24.0, ambientTemperature = 50.0, humidity = 60.0,
             surfacePreparation = "SSPC-SP6"
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun fireProtectionQc_missingFireRating_fails() {
+        val outcome = QualityControlEngineNew.fireProtectionQc(
+            protectionType = "Intumescent", coatingThickness = 0.8, adhesionStrength = 1.2,
+            fireRating = "None", coverageArea = 500.0, applicationMethod = "Spray",
+            curingTime = 24.0, ambientTemperature = 25.0, humidity = 60.0,
+            surfacePreparation = "SSPC-SP6"
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun masonryQc_lowMortarStrength_fails() {
+        val outcome = QualityControlEngineNew.masonryQc(
+            masonryType = "Block", blockDimensions = "200x200x400", mortarType = "M10",
+            mortarStrength = 3.0, wallThickness = 200.0, plasterThickness = 15.0,
+            plasterType = "Cement", surfaceFlatness = 2.0, verticality = 3.0,
+            adhesionStrength = 0.4, curingMethod = "Wet", jointThickness = 10.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun flooringQc_lowCompressiveStrength_fails() {
+        val outcome = QualityControlEngineNew.flooringQc(
+            flooringType = "Granite", slabThickness = 150.0, surfaceFlatness = 2.0,
+            compressiveStrength = 20.0, tensileStrength = 3.0, jointSpacing = 5.0,
+            jointWidth = 6.0, finishType = "Polished", curingMethod = "Wet", levelness = 5.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun soilImprovementQc_tightSpacing_fails() {
+        val outcome = QualityControlEngineNew.soilImprovementQc(
+            improvementType = "Stone Columns", improvementDepth = 8.0,
+            improvementDiameter = 0.8, spacing = 1.0, preImprovementBearing = 80.0,
+            postImprovementBearing = 160.0, preImprovementSPT = 8, postImprovementSPT = 18,
+            settlementBefore = 50.0, settlementAfter = 20.0,
+            improvementMaterial = "Crushed Stone", qualityControlTest = "Plate Load"
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun drainageQc_zeroFlowRate_fails() {
+        val outcome = QualityControlEngineNew.drainageQc(
+            pipeMaterial = "RCP", pipeDiameter = 600.0, pipeLength = 100.0, slope = 1.5,
+            jointType = "Rubber Gasket", leakTestResult = true, manholeSpacing = 40.0,
+            manholeDepth = 3.0, flowRate = 0.0, invertLevel = 0.0, backfillCompaction = 96.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun paintingQc_lowDft_fails() {
+        val outcome = QualityControlEngineNew.paintingQc(
+            paintType = "Epoxy", dft = 50.0, adhesionStrength = 2.0, colorUniformity = true,
+            surfacePreparation = "SSPC-SP6", numberOfCoats = 2, coatingThickness = 0.15,
+            fireRating = "None", curingTime = 24.0, ambientTemperature = 25.0, humidity = 60.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun retainingWallQc_aciAllowsLowerCylinderStrength() {
+        val outcome = QualityControlEngineNew.retainingWallQc(
+            wallHeight = 5.0, wallThickness = 300.0, soilType = "SAND",
+            backfillUnitWeight = 18.0, backfillFrictionAngle = 30.0, backfillCohesion = 0.0,
+            surchargeLoad = 10.0, groundwaterLevel = 3.0, foundationDepth = 1.5,
+            foundationWidth = 4.0, foundationSoilBearing = 200.0,
+            concreteStrength = 25.0, steelGrade = 400.0, seismicCoefficient = 0.1,
+            designCode = DesignCode.ACI
+        )
+        assertTrue(outcome.passed)
+    }
+
+    @Test
+    fun retainingWallQc_ecpRejectsLowerCubeStrength() {
+        val outcome = QualityControlEngineNew.retainingWallQc(
+            wallHeight = 5.0, wallThickness = 300.0, soilType = "SAND",
+            backfillUnitWeight = 18.0, backfillFrictionAngle = 30.0, backfillCohesion = 0.0,
+            surchargeLoad = 10.0, groundwaterLevel = 3.0, foundationDepth = 1.5,
+            foundationWidth = 4.0, foundationSoilBearing = 200.0,
+            concreteStrength = 25.0, steelGrade = 400.0, seismicCoefficient = 0.1,
+            designCode = DesignCode.ECP
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun waterTanksQc_aciAllows200mmWall() {
+        val outcome = QualityControlEngineNew.waterTanksQc(
+            tankType = "Rectangular", tankCapacity = 500.0, tankDimensions = "20x10x3",
+            concreteStrength = 30.0, steelGrade = 400.0, wallThickness = 200.0,
+            floorThickness = 200.0, roofThickness = 150.0, waterproofingType = "Crystalline",
+            leakTestResult = true, hydrostaticTest = true, valveType = "Gate",
+            drainageSystem = true, designCode = DesignCode.ACI
+        )
+        assertTrue(outcome.passed)
+    }
+
+    @Test
+    fun waterTanksQc_ecpRequires250mmWall() {
+        val outcome = QualityControlEngineNew.waterTanksQc(
+            tankType = "Rectangular", tankCapacity = 500.0, tankDimensions = "20x10x3",
+            concreteStrength = 30.0, steelGrade = 400.0, wallThickness = 200.0,
+            floorThickness = 200.0, roofThickness = 150.0, waterproofingType = "Crystalline",
+            leakTestResult = true, hydrostaticTest = true, valveType = "Gate",
+            drainageSystem = true, designCode = DesignCode.ECP
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun precastQc_aciAllowsLowerCylinderStrength() {
+        val outcome = QualityControlEngineNew.precastQc(
+            elementType = "Beam", elementDimensions = "300x600x6000", concreteStrength = 25.0,
+            steelGrade = 400.0, coverThickness = 40.0, surfaceFinish = "Fair",
+            liftingAnchors = true, connectionDetails = "Bolted", transportDamage = false,
+            erectionTolerance = 5.0, groutStrength = 50.0, designCode = DesignCode.ACI
+        )
+        assertTrue(outcome.passed)
+    }
+
+    @Test
+    fun precastQc_ecpRejectsLowerCubeStrength() {
+        val outcome = QualityControlEngineNew.precastQc(
+            elementType = "Beam", elementDimensions = "300x600x6000", concreteStrength = 25.0,
+            steelGrade = 400.0, coverThickness = 40.0, surfaceFinish = "Fair",
+            liftingAnchors = true, connectionDetails = "Bolted", transportDamage = false,
+            erectionTolerance = 5.0, groutStrength = 50.0, designCode = DesignCode.ECP
         )
         assertFalse(outcome.passed)
     }

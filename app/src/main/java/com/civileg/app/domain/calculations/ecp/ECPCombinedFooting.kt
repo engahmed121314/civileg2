@@ -322,11 +322,8 @@ class ECPCombinedFooting {
 
         // Transverse bottom steel - bars distributed along footing length
         // Place concentrated under each column (within transverse effective width)
-        val transBarCount = max(
-            ceil(transWidthCol1 / 1000.0 * (width * 1000.0) / 200.0).toInt(),
-            5
-        ).coerceAtMost(15)
-        val transBottomBarResult = selectFootingBars(transBottomAsMm2, transBarCount, minSpacing = 100.0, maxSpacing = 200.0)
+        val transSpreadingWidthMm = (width * 1000.0).toInt()
+        val transBottomBarResult = selectFootingBars(transBottomAsMm2, transSpreadingWidthMm, minSpacing = 100.0, maxSpacing = 200.0)
 
         // ==================== 13. Quantities ====================
         val concreteVolume = length * width * tMeters  // m^3

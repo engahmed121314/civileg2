@@ -507,6 +507,8 @@ class SBCFlatSlab : FlatSlabDesign {
         InputGuard.positive("fy", fy)
         InputGuard.positive("effectiveDepth", effectiveDepth)
         InputGuard.positive("stripWidth", stripWidth)
+        
+        val warnings = mutableListOf<String>()
 
         if (moment <= 0.001 || effectiveDepth <= 0) {
             val minAs = getMinReinforcementRatio(fy) * stripWidth * effectiveDepth
@@ -518,31 +520,33 @@ class SBCFlatSlab : FlatSlabDesign {
         val Mu = moment * 1e6  // N.mm
         val b = stripWidth     // mm
         val d = effectiveDepth
-        val fs = fy / GAMMA_S
-
-        // K = Mu / (fcu × b × d²) — SBC uses fcu directly
-        val K = Mu / (fcu * b * d * d)
-
-        // K_bal with fcu directly
-        val epsilonY = fy / (ES * GAMMA_S)
-        val aOverD = 0.9 * EPSILON_CU / (EPSILON_CU + epsilonY)
-        val K_bal = (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
-
-        // Lever arm
-        val leverArm = if (0.25 - K / 0.893 > 0) {
-            d * (0.5 + sqrt(0.25 - K / 0.893))
-        } else d * 0.7
-
-        // As = Mu / (fs × z)
-        var As = Mu / (fs * leverArm)
-
-        // Minimum reinforcement per SBC 304
+        
+        // SBC 304 follows ACI 318: f'c = 0.8 * fcu, phi_flexure = 0.9
+        val fc_prime = 0.8 * fcu
+        val phiFlexure = 0.9
+        val phiShear = 0.75
+        
+        // Rn = Mu / (phi * f'c * b * d^2) — ACI 318 §22.2
+        val Rn = Mu / (phiFlexure * fc_prime * b * d * d)
+        
+        // rho = (0.85 * f'c / fy) * (1 - sqrt(1 - 2*Rn/(0.85*f'c))) — ACI equation
+        val discriminant = 1.0 - 2.0 * Rn / (0.85 * fc_prime)
+        val rho = if (discriminant > 0.0) {
+            (0.85 * fc_prime / fy) * (1.0 - sqrt(discriminant))
+        } else {
+            warnings.add("SBC Flat Slab: Rn exceeds max - increase depth")
+            0.0
+        }
+        
+        var As = rho * b * d
+        
+        // Minimum reinforcement per SBC 304 / ACI 318-13.3.1: max(0.6/fy, 0.0018) * b * d
         val minAs1 = 0.6 / fy * b * d
-        val minAs2 = 0.0018 * b * effectiveDepth  // SBC uses 0.18% (ACI-based)
+        val minAs2 = 0.0018 * b * effectiveDepth
         val minAs = max(minAs1, minAs2)
         val isMinSteel = As < minAs
         if (isMinSteel) As = minAs
-
+        
         // Select bar diameter and spacing
         val availableBars = listOf(8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0)
         var selectedDia = 12.0
