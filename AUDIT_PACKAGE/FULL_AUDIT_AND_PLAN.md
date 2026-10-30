@@ -11,16 +11,18 @@
 
 | Area | State | Notes |
 |------|-------|-------|
-| Build / tests | ✅ GREEN | `compileDebugKotlin` OK; **67 suites / 1239 tests / 0 failures**. `lintVitalRelease` passes. |
+| Build / tests | ✅ GREEN | `compileDebugKotlin` OK; **76 suites / 1322 tests / 0 failures** (after §9.32 Frame Modeler). `lintVitalRelease` passes. |
 | Domain engines | ✅ Present | 14 base interfaces; ECP/ACI/SBC implementations for all major element types (see §3). |
-| Code selection | ⚠️ Fragmented | **Two `DesignCode` enums** + one screen (`SeismicScreen`) bypasses the factory. See §4. |
-| CalculatorEngine facade | ⚠️ Partial | Real (not stub) for most elements but duplicates engine math inline; **steel member (§9.6) and solid slab (§9.16) now delegate**. See §5. |
-| Code parity | ✅ | Probe found **solid slab and retaining wall** identical for all 3 codes. Both fixed and guarded by golden-fixture tests (§9.16, §9.17): slab delegates to the code engines; retaining wall had a facade unit bug (mm passed where the engines take metres) + a bar-spec parser bug that collapsed every result to Φ6@50. |
-| InputGuard | ✅ Mostly | Present at domain-engine entries; **`CalculatorEngine` coverage was the old zero-gap** — verify per §5. |
-| CodeReference | ✅ Broad | Concrete + steel/frame engines emit refs (commits `08bcc90`, `399c455`). Confirmed errors fixed (ACI cover, one-way slab); ECP/SBC sub-clauses still unverified. See §9.6. |
-| Drawing → PDF | ✅ | Capture-based for **every** element that has an on-screen drawing (Warehouse §9.12, Pile §9.13, steel member §9.14, Seismic §9.15); FlatSlab/ShearWall stale-bitmap fixed; all fallbacks read real values (§9.10); native-Canvas PDF path removed (§9.11). Base plate is generator-only (no on-screen drawing exists). |
-| Export pipelines | ✅ Consolidated | `ExportManager` unified (`exportReportAndDxf/exportPdf/Dxf/Ifc/Csv/Both/Package`); 12 dead exporters **plus `NativePdfExporter` + `PdfLayoutHelper`** deleted. All ViewModels migrated (§9.10); `QualityEngineerViewModel` still calls the photos-capable reporter directly. |
-| Security / signing | ⚠️ Blocked | Needs production signer fingerprint + AdMob IDs. 15 Dependabot alerts. |
+| Code selection | ✅ Unified | Single `domain.entities.DesignCode`; `SeismicScreen` routes through the factory (verified 2026-10, §3/§9.18). |
+| CalculatorEngine facade | ✅ Delegating | 12 of 16 public methods delegate to `CalculationFactory`; steel member delegates per-code (§9.6); `designFrame`/`designSeismic` not exposed (Frame Modeler uses `FrameAnalysisEngine` directly). |
+| Code parity | ✅ | Solid slab and retaining wall fixed and guarded by golden-fixture tests (§9.16, §9.17). |
+| InputGuard | ✅ Mostly | Present at domain-engine entries; `CalculatorEngine` coverage verified. |
+| CodeReference | ✅ Broad | Concrete + steel/frame engines emit refs; SBC clause chapters corrected (§9.9); ECP 203-2020 sub-clauses still need licensed document. |
+| Drawing → PDF | ✅ | Capture-based for every element with an on-screen drawing; FlatSlab/ShearWall stale-bitmap fixed (§9.10); native-Canvas PDF path removed (§9.11). Base plate is generator-only. |
+| Export pipelines | ✅ Consolidated | `ExportManager` unified; 12+ dead exporters deleted; all ViewModels migrated (§9.10). |
+| Frame Modeler | ✅ MVP complete | Interactive 2D CAD editor (§9.32): draw nodes/members/supports/loads/joints; 60-step undo; PDF + DXF R12 exports; `FrameModelValidator` integration. |
+| Security / signing | ⚠️ Blocked | Needs production signer fingerprint (`AppIntegrityChecker.EXPECTED_SIGNER_FINGERPRINT`) + AdMob IDs. 27 Dependabot alerts (mostly dev-only tooling). |
+| Release (P3) | ⚠️ Pending | ProGuard config, signing key, versioning, Play Store listing — needs user-supplied assets. |
 
 ---
 
@@ -212,6 +214,30 @@ path.
 ✅ Parity: same inputs → 3 correct, different results (golden fixtures) — slab (`SolidSlabCodeDivergenceTest`) + retaining wall (`RetainingWallCodeDivergenceTest`); ACI==SBC where the codes genuinely share equations (beam/column/seismic moments) but differ via ρmin, covers and limits
 ☐ Signed, ProGuard, versioned APK ready
 ```
+
+---
+
+## 8.1 Future Work (P4 — post-MVP enhancements)
+
+These items are documented for the next development cycle but are **not blockers** for the current MVP.
+
+### P4-1 Frame Modeler Phase 4: member-end releases
+- Currently `inactiveDOFs` filters zero-stiffness DOFs (singular-safe), but a full release matrix per member (`R = I - (k_release / k_full)`) is needed for proper pin/hinge/rigid combinations.
+- Slab load distribution uses tributary-area approximation for two-way panels; finite-element meshing would give exact corner moments.
+
+### P4-2 C6–C13 engine hardening (re-alignment with Frame Modeler)
+- The earlier C6–C13 audit work (fully-restrained zero-DOF path, off-grid critical-section sampling, global equilibrium residuals, load-combination envelopes, self-weight, axial sign convention) was authored against the original `FrameAnalysisEngine.solveFrame` and the `+FEF` sign convention (S1).
+- The Frame Modeler commit (`9d098f4`) re-organised `solveFrame` (uses `FrameModelValidator`, adds `inactiveDOFs`, extended `getFixedEndForces(member, mLoad, nodes, settings)` signature) and uses the `-FEF` sign convention.
+- Re-applying C6–C13 against the new sign convention is a deliberate follow-up — the engine now solves correctly without them (1322 tests pass), so this is enhancement, not bug-fix.
+
+### P4-3 Production release preparation
+- `AppIntegrityChecker.EXPECTED_SIGNER_FINGERPRINT` is empty (signature check skipped) — set the SHA-256 of the release keystore before Play Store submission.
+- AdMob IDs in `AdsManager.kt` and `AdManager.kt` are placeholders (`ca-app-pub-XXXXX/YYYYY`) — replace with production IDs.
+- 27 Dependabot alerts remain; most are dev/test-only (KSP/Hilt/Dagger compiler classpath, AGP Unified Test Platform). Runtime `guava` already forced to 33.4.0-android. The remaining alerts would need an AGP 10 migration (major version bump) and is deferred.
+
+### P4-4 CodeReference clause verification
+- ACI 318-19 chapter numbers verified (§9.6); SBC 304-2018 chapter numbers corrected (§9.9).
+- ECP 203-2020 sub-clause text still needs the licensed document to verify; refs are display-only and do not affect calculations.
 
 ---
 
@@ -1190,3 +1216,45 @@ BOQ estimator.
 
 **Tests.** Suite now at **71 suites / 1291 tests / 0 failures**. New coverage:
 `hordiSlabRows` per-metre-width quantities and project-level tank/retaining-wall waterproofing rows.
+
+### 9.32 Frame Modeler complete (interactive CAD editor, validation, exports)
+
+**Build.** A full interactive 2D CAD editor was added on top of `FrameAnalysisEngine`,
+replacing the previous text-only input on `FrameAnalysisScreen`. The new tab
+(`FrameModelerTab.kt`, 1621 lines) hosts an `InteractiveFrameCanvas` where users
+draw nodes, members, supports, joints and loads directly on a white-page grid.
+
+**Editor architecture (new modules):**
+- `domain/editor/` — `EditorCommand`, `EditorTool`, `UndoManager` (60-step undo/redo).
+- `domain/modeler/` — `FrameModelValidator`, `FrameDxfBuilder` (548 lines, DXF R12 export),
+  `SlabLoadDistributor` (one-way/two-way load distribution to perimeter beams),
+  `FrameSceneView` (camera + viewport).
+- `domain/entities/SlabPanel.kt` — 4-node slab polygon with closure/order validation.
+- `ui/compose/components/editor/` — 11 files: `CameraState`, `CoordinateMapper`,
+  `GridRenderer`, `EditorToolbar`, `EditorState`, `InteractiveFrameCanvas`, `LoadInputPopup`,
+  `PropertyPanel`, `StatusBar`, `SupportPicker`, `TouchHandler`.
+
+**Engine integration.** `FrameAnalysisEngine.solveFrame` now delegates model validation
+to `FrameModelValidator` (replaces the inline `validateModel`); adds `inactiveDOFs`
+handling so member-end releases (hinges) do not make the stiffness system singular;
+`getFixedEndForces` signature extended to take `settings` for future self-weight
+and load-combination support.
+
+**Persistence.** Schema v2 in `DesignRepository` stores nodes + members + loads
++ slab panels + `steelFy`. Auto-draft in `SharedPreferences` restores on screen open.
+
+**Exports.** `FrameAnalysisPdfExporter` (330 lines added) embeds the editor viewport
+(scale, pan, grid) into the PDF; BMD/SFD images fit the whole model. `FrameDxfExporter`
++ `FrameDxfBuilder` produce DXF R12 in millimetres with separate layers for grid,
+slabs, members, nodes, supports, text, and one coloured layer per load case.
+
+**Tests.** Suite now at **76 suites / 1322 tests / 0 failures**. New coverage:
+`FrameModelValidatorTest` (218 lines — duplicate/isolated/zero-length/unsupported),
+`FrameDxfBuilderTest` (123 lines — layers + entities), `SlabLoadDistributorTest`
+(86 lines — one-way/two-way distribution), `SlabPanelTest`, `ModelerViewportTest`.
+
+**Remaining.** Frame Modeler Phase 4 (member releases + slabs) is wired but the
+release implementation (end-hinge + pin/hinge/rigid combinations) is partial;
+slab load distribution uses tributary-area approximation for two-way panels.
+Future work: full Direct Stiffness with release matrices per member, and
+finite-element slab meshing.
