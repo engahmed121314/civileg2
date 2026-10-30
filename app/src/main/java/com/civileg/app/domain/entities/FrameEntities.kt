@@ -317,31 +317,10 @@ data class FrameAnalysisResult(
     val concreteDesignResults: List<ConcreteMemberDesignResult> = emptyList(),
     val steelDesignResults: List<SteelMemberDesignResult> = emptyList(),
     val isSolved: Boolean = false,
-    val errorMessage: String? = null,
-    // ── المرحلة الثانية (C8): متبقيات الاتزان العام (يُتوقع ≈ 0) ──
-    val equilibriumFx: Double = 0.0,
-    val equilibriumFy: Double = 0.0,
-    val equilibriumMz: Double = 0.0,
-    // ── المرحلة الثانية (C9): مغلف القوى عبر توافيق الأحمال ──
-    val loadEnvelopes: List<MemberForceEnvelope> = emptyList()
+    val errorMessage: String? = null
 ) : Parcelable {
     val hasResults: Boolean get() = isSolved && errorMessage == null
 }
-
-/**
- * مغلف القوى الداخلية لعضو واحد عبر جميع توافيق الأحمال (C9)
- */
-@Parcelize
-data class MemberForceEnvelope(
-    val memberId: Int,
-    val maxMoment: Double,          // kN.m — أقصى عزم (موجب/ساغنج)
-    val minMoment: Double,          // kN.m — أدنى عزم (سالب/هوجنج)
-    val maxShear: Double,           // kN
-    val minShear: Double,           // kN
-    val maxAxial: Double,           // kN — شد (+)
-    val minAxial: Double,           // kN — ضغط (−)
-    val governingCombination: String // اسم التوفيق الحاكم
-) : Parcelable
 
 /**
  * إعدادات التحليل
@@ -350,16 +329,12 @@ data class MemberForceEnvelope(
 data class FrameAnalysisSettings(
     val designCode: DesignCode = DesignCode.ECP,
     val steelFy: Double = 355.0,      // MPa - إجهاد الخضوع للحديد
-    // C11: القيمة ≈ 25 GPa (Ec للخرسانة) — التعليق القديم "(25 MPa default)" كان خاطئاً.
-    // ملاحظة: المحرك لا يستخدم هذا الحقل — يحسب Ec من fcu لكل عضو: Ec = 4700·√fcu (MPa).
-    val eColumn: Double = 25e6,      // kN/m² (≈ 25 GPa) - معامل مرونة الخرسانة (غير مستخدم في المحرك)
+    val eColumn: Double = 25e6,      // kN/m² (25 MPa default) - معامل المرونة للخرسانة
     val eSteel: Double = 200e6,      // kN/m² (200 GPa) - معامل المرونة للحديد
     val loadCombinations: List<LoadCombinationFrame> = listOf(
         LoadCombinationFrame("1.4DL + 1.6LL", 1.4, 1.6, 0.0),
         LoadCombinationFrame("1.2DL + 1.6LL + 0.5WL", 1.2, 1.6, 0.5)
-    ),
-    // C10: تضمين الوزن الذاتي للأعضاء كحمولة موزعة (خرسانة γ=25 kN/m³، حديد من وزن المقطع)
-    val includeSelfWeight: Boolean = false
+    )
 ) : Parcelable
 
 @Parcelize
