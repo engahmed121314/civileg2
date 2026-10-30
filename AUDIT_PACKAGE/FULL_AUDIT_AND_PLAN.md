@@ -1324,3 +1324,53 @@ Robolectric's `android-all-instrumented` 14/15 jars were pre-seeded into
 
 **Tests.** Full suite: **76 suites / 1347 tests / 0 failures / 0 errors** —
 compile + full rerun. This closes §8.1 P4-2 (C6-C13 re-alignment).
+
+---
+
+### 9.34 Engine superset pass — input validation, gravity-direction self-weight, cross-verification
+
+**Context.** §9.33 (parallel session) and an independent local review reached the
+same four defect fixes (S1 sign, S2 diagram formula, S3 moment table, eSteel
+units — the moment table now confirmed by **three independent derivations**:
+direct integration of `EI·v'' = M(x)`, the force method, and that session's
+exact 2-element FEM). This pass layers the remaining review findings on top.
+
+**Cross-verification.** Both engine variants were compiled standalone
+(kotlinc 2.2.20 + JUnit, no Gradle cache involvement) and run against both
+test suites: the §9.33 engine passed 42/42 of its own tests but **failed 2**
+of the review suite (silently clamping out-of-range load positions instead of
+rejecting them, and rejecting fully-fixed isolated joints as errors); the
+superset engine below passed **97/97** across both suites combined. Final
+merged suite: **57 tests, all passing**.
+
+**Additions in this pass.**
+- **C1/C4/C5 supplementary input validation** (not covered by
+  `FrameModelValidator`): non-finite node coordinates, non-finite nodal/member
+  load values, point/moment load positions outside `[0, L]` (rejected loudly —
+  not silently clamped), invalid concrete sections (b/h/fcu ≤ 0 or non-finite),
+  unknown steel section names. 13 validation tests restored.
+- **Fully-fixed isolated joints are non-fatal.** A joint disconnected from all
+  members but fully restrained contributes only restrained DOFs and cannot
+  make the system singular; the engine now treats it as a modelling warning
+  (filtered from `DISCONNECTED_JOINT` before the fatal check) while free
+  isolated joints remain fatal — matching the pre-Modeler Phase-1 semantics
+  without touching the Modeler's own validator UX.
+- **C10 gravity-direction fix.** The §9.33 `selfWeightLoads` applied a
+  transverse UDL to *every* member — on a vertical column that is a
+  **horizontal** load of magnitude w·L, not gravity. Horizontal members now
+  get an exact UDL; inclined/vertical members get two vertical nodal loads
+  (`w·L/2` per end) — statically exact for reactions (locked by
+  `solveFrame_selfWeightOnVerticalColumn_isGravityNotHorizontal`: ΣRy = 18 kN,
+  ΣRx = 0, axial compression only). The internal axial diagram of inclined
+  members remains an approximation (documented in-code).
+- **C8 member-load applied side** uses the raw physical loads with
+  local→global decomposition (UDL at midspan, point at its position,
+  triangular at 2L/3, moments as-is) — equivalent to the §9.33 P_eq-vector
+  formulation, both verified to ~1e-12 residuals on the portal benchmark.
+- `memberLoadEquivalentForces` public API kept (§9.33) alongside
+  `getMemberStiffnessProps`.
+- Test class = 57 tests: the §9.33 classical benchmarks + 13 validation
+  tests + steel-units props test + the two Frame-Modeler release-condensation
+  tests + the C10 gravity-direction regression. Verified standalone:
+  `OK (57 tests)`; app main sources compile through `:app:compileDebugKotlin`
+  + KSP/Hilt.
