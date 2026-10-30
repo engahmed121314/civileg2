@@ -1258,3 +1258,69 @@ release implementation (end-hinge + pin/hinge/rigid combinations) is partial;
 slab load distribution uses tributary-area approximation for two-way panels.
 Future work: full Direct Stiffness with release matrices per member, and
 finite-element slab meshing.
+
+### 9.33 Phase 1 + Phase 2 merged onto the Frame Modeler engine (C6-C13 re-aligned)
+
+**Finding (pre-merge).** The Frame Modeler commit (9d098f4) had silently regressed
+the Phase 1 sign convention, and its own tests were adapted to the bug:
+
+- `solveFrame_simplySupportedBeam_correctMaxMoment` asserted **104.9** for a
+  simply supported beam with UDL w=10, L=6 — the classical value is **45** (=wL²/8).
+  The test comment even said "Engine max moment accounts for section properties".
+- Root cause 1 (S1): the equivalent-nodal-load assembly was inverted
+  (`F -= FEF_global` where FEF is P_eq-style), so U was solved with reversed loads.
+- Root cause 2 (S2): the diagram formula used `M = +m_i + v_i·x` instead of
+  `-m_i + v_i·x`, flipping every end moment.
+- Root cause 3 (S3): the applied-moment FEF table was q0-style while the
+  UDL/point/linear tables were P_eq-style — mixed conventions in one function.
+  The correct table was re-derived and verified numerically with an exact
+  2-element FEM (`scripts/verify_moment_fef.py`):
+  q0 = [0, +6Mab/L³, +M·b(2a-b)/L², 0, -6Mab/L³, +M·a(2b-a)/L²].
+- eSteel unit bug: `getE` multiplied `settings.eSteel` (already kN/m²) by 1e3.
+- S4 regression: steel fallback used `ipeSections[13]` (IPE 400) instead of
+  by-name lookup (IPE 300 is index 10).
+- C2 regression: absolute pivot tolerance (1e-15) and no residual check.
+
+**Merge applied (all on top of the Frame Modeler structure — condensation,
+releases, FrameModelValidator and inactiveDOFs fully preserved):**
+
+- S1 restored: `F += FEF_global`; S2 restored: `M(x) = -m_i + v_i·x`; the
+  applied-moment table flipped to P_eq-style; Point/Moment positions clamped
+  (S3) so end loads transfer to the support instead of being dropped.
+- S4 restored (by-name fallback chain) and eSteel used as-is (kN/m²).
+- C1: output NaN/Infinity guards on reactions, member forces and diagrams.
+- C2: relative pivot tolerance (`scale × 1e-12`) + `relativeResidual` check.
+- C6: fully-restrained and all-inactive models now solve via
+  `finalizeFullyRestrainedSolution` (U=0, q_end=-FEF, R=-F).
+- C7: diagram samples rebuilt as a TreeSet — load positions + a±ε + L/4, L/2,
+  3L/4 + a 20-point grid.
+- C8: `computeGlobalEquilibrium` sums reactions + nodal loads + the member
+  P_eq vectors (fefGlobal) at their node positions; residuals stored on
+  `FrameAnalysisResult.equilibriumFx/Fy/Mz` and enforced (1e-3 relative).
+- C9: `computeLoadEnvelopes` solves per combination and takes signed max/min
+  from each combination's **diagrams** (the earlier draft used end moments,
+  which is wrong for simply supported members).
+- C10: `selfWeightLoads` — concrete γ=25 kN/m³, steel from `weight` (kg/m) × g.
+- C11: eColumn/eSteel documented as kN/m²; `getMemberStiffnessProps` and
+  `memberLoadEquivalentForces` re-exposed as public API (C11 tests).
+- C12: `N(x) = -n_i` (tension positive).
+- The 104.9 test now asserts 45 and gained full classical assertions
+  (reactions 30/30, M(0)=M(L)=0, V(0)=+30, V(L)=-30).
+
+**Entities.** `FrameAnalysisResult` gained `equilibriumFx/Fy/Mz` +
+`loadEnvelopes`; new `MemberForceEnvelope`; `FrameAnalysisSettings` gained
+`includeSelfWeight`. `releaseI/releaseJ` and every Frame Modeler field kept.
+
+**Build config.** `settings.gradle.kts` restored to the canonical
+google + mavenCentral + gradlePluginPortal + foojay repositories (the Aliyun
+mirrors were a sandbox-only workaround that had been committed by mistake).
+
+**Verification.** The engine test class was rewritten to 42 tests asserting
+classical benchmarks (M=wL²/8=45, M_end=-wL²/12, PL/8 point, the FEM-verified
+moment table, off-grid peaks 41.8 with two-sided shear +19/-11, envelope 207,
+self-weight 82.5/92.8125, axial ±100/∓80, equilibrium residuals ≈0 at 1e-6).
+Robolectric's `android-all-instrumented` 14/15 jars were pre-seeded into
+~/.m2 (network rate-limits blocked the runtime fetch).
+
+**Tests.** Full suite: **76 suites / 1347 tests / 0 failures / 0 errors** —
+compile + full rerun. This closes §8.1 P4-2 (C6-C13 re-alignment).
