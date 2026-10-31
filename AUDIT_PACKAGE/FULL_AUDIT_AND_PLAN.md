@@ -17,7 +17,7 @@
 | CalculatorEngine facade | ✅ Delegating | 12 of 16 public methods delegate to `CalculationFactory`; steel member delegates per-code (§9.6); `designFrame`/`designSeismic` not exposed (Frame Modeler uses `FrameAnalysisEngine` directly). |
 | Code parity | ✅ | Solid slab and retaining wall fixed and guarded by golden-fixture tests (§9.16, §9.17). |
 | InputGuard | ✅ Mostly | Present at domain-engine entries; `CalculatorEngine` coverage verified. |
-| CodeReference | ✅ Broad | Concrete + steel/frame engines emit refs; SBC clause chapters corrected (§9.9); ECP 203-2020 sub-clauses still need licensed document. |
+| CodeReference | ✅ Broad+driving | 111+42 constants across ECP/ACI/SBC (parity-enforced); **P4-4 (§9.38)**: new `CodeProvisions` makes the clauses drive calculations (load factors, φ/γ, ρmin, Vc, covers) per the user's code selection. SBC clause chapters corrected (§9.9); ECP 203-2020 sub-clause wording still benefits from the licensed document. |
 | Drawing → PDF | ✅ | Capture-based for every element with an on-screen drawing; FlatSlab/ShearWall stale-bitmap fixed (§9.10); native-Canvas PDF path removed (§9.11). Base plate is generator-only. |
 | Export pipelines | ✅ Consolidated | `ExportManager` unified; 12+ dead exporters deleted; all ViewModels migrated (§9.10). |
 | Frame Modeler | ✅ MVP complete | Interactive 2D CAD editor (§9.32): draw nodes/members/supports/loads/joints; 60-step undo; PDF + DXF R12 exports; `FrameModelValidator` integration. |
@@ -253,9 +253,18 @@ These items are documented for the next development cycle but are **not blockers
 - Remaining (user-supplied, not codeable): real AdMob account IDs, release-keystore SHA-256,
   store listing assets. Dependabot residue needs the AGP 10 migration (deferred).
 
-### P4-4 CodeReference clause verification
-- ACI 318-19 chapter numbers verified (§9.6); SBC 304-2018 chapter numbers corrected (§9.9).
-- ECP 203-2020 sub-clause text still needs the licensed document to verify; refs are display-only and do not affect calculations.
+### P4-4 CodeReference clause verification — ✅ CLOSED for coverage & calculation-drive (§9.38); exact ECP sub-clause wording still benefits from the licensed text
+- Catalog completed: +14 keys × 3 codes (load combinations, covers, slab min-thickness/min-steel, staircases,
+  flat slabs, waffle, hordi/joist, strap footings, shear-wall flexure) — parity test auto-extends.
+- **Clauses now drive calculations**: new `CodeProvisions` object is the single source of the code-dependent
+  numbers (load factors, φ/γ, ρmin, concrete shear, covers), each annotated with its clause. Consumers:
+  `ConcreteFrameDesign` (Frame Modeler design step — fully tri-code), `CalculatorEngine` (hordi + solid-slab
+  load factors).
+- Fixed three real calculation bugs (§9.38): hordi path applied ECP 1.4D+1.6L to every code;
+  `ConcreteFrameDesign` ran ECP-formula flexure for ACI/SBC and labelled SBC results with ACI clauses.
+- ACI/SBC chapter numbers verified (§9.6/§9.9); ECP numbering follows the codebase's established
+  convention — exact sub-clause wording remains pending the licensed ECP 203-2020 text (display-only refs;
+  the calculation-driving parameters are the audited engine formulas).
 
 ---
 
@@ -1553,5 +1562,82 @@ including the `SHA256: ` prefix form). No unit tests reference the three touched
 standalone additions is unaffected. Runtime behaviour with default properties is
 byte-identical to before (same test IDs, empty fingerprint), so CI expectations are unchanged.
 
-**P4-4 remains blocked** on the licensed ECP 203-2020 text (display-only refs; resolution
-test already guards every key — §9.6).
+**P4-4 status at the time of §9.37:** blocked on the licensed ECP 203-2020 text —
+subsequently closed for coverage & calculation-drive in §9.38 (this session).
+
+### 9.38 Phase 4 (P4-4): code clauses completed for ECP/ACI/SBC and wired into the calculations
+
+**User request.** «أكمل بنود الكود المصري والسعودي والأمريكي واجعلها تؤثر في الحسابات حسب
+اختيار المستخدم» — complete the clause catalog for the three codes and make the clauses
+affect the calculations according to the user's selection.
+
+**Audit findings first.** The engines were already code-differentiated (ECP partial factors
+γc/γs vs ACI/SBC φ), but three real gaps were found where the user's selection did *not*
+reach the numbers:
+1. `CalculatorEngine.calculateSlab` HOLLOW_BLOCK path applied **ECP's 1.4D+1.6L to every
+   code** — ACI/SBC hordi designs were factored with Egyptian load factors.
+2. `ConcreteFrameDesign.designFlexure` used the **ECP lever-arm formula (0.87·fy, 0.893
+   constant) for its ACI/SBC branch** — American/Saudi Frame-Modeler members were sized
+   with Egyptian math, mislabelled as ACI.
+3. `ConcreteFrameDesign` treated **SBC as a fall-through to the ACI branch** and stamped
+   SBC results with literal «ACI 318-19 — Chapter 22» notes.
+Plus its ECP shear used an unaudited `0.5·√(fcu/γc)` instead of the audited ECPBeam
+`qcu = 0.24·√(fcu/γc)` (§4-3-1-2).
+
+**Change 1 — catalog completion (`CodeReference`, +14 keys × 3 codes):** load combinations
+(ECP §2-3-1 1.4D+1.6L / ACI §5.3.1 / SBC §5.3.1 1.2D+1.6L), beam/slab covers (SBC 40-50mm
+hot/saline exposure vs ACI 20-40mm), slab min-thickness + shrinkage steel, staircase
+flexure/shear/deflection (inclined one-way slab), flat-slab DDM + punching, waffle, hordi/
+joist, strap footings, shear-wall in-plane flexure. ACI/SBC numbers verified against the
+ACI 318-19 / SBC 304-2018 (ACI-318-14-aligned) chapter structure; ECP follows the codebase's
+established numbering convention. The parity test (`CodeReferenceTest`) auto-extends —
+all three key sets must stay identical (now ~53 keys each).
+
+**Change 2 — new `CodeProvisions` (domain/entities):** the single source of the
+code-dependent calculation parameters, each carrying its clause reference —
+`loadFactorDead/Live`, `flexureApproach` (PARTIAL_FACTORS vs PHI_STRENGTH), `gammaC/gammaS`,
+`phiFlexure/phiShear`, `coverBeam/Slab/Column`, `columnRhoMin/Max`, plus the
+calculation functions `beamRhoMin`, `concreteShearCapacity`, `requiredFlexuralSteel`,
+`momentCapacity`, `minShearReinforcementRatio`. Formulas mirror the audited engines
+exactly: ECP ρmin = max(0.26√fcu/fy, 0.0013), qcu = 0.24·√(fcu/γc), K-method z-form;
+ACI/SBC ρmin = max(0.25√f'c/fy, 1.4/fy), φVc = 0.75·0.17·√f'c·b·d, Whitney ρ with
+β1-based ρbal (0.75·ρbal tension-controlled cap); f'c = 0.8·fcu throughout.
+
+**Change 3 — `ConcreteFrameDesign` rewritten tri-code:** flexure via
+`CodeProvisions.requiredFlexuralSteel` (ECP K-method / ACI-SBC Whitney — the ECP-formula-
+for-ACI bug is gone), ρmin and bar-spacing cover per code, shear via
+`CodeProvisions.concreteShearCapacity` (ECP qcu / φVc) with per-code stirrup formulas
+(ECP: Asv·fy/γs, ACI/SBC: φ·Av·fy·d/s), capacity via `CodeProvisions.momentCapacity`,
+and **every note now comes from `CodeReference.getReference(code, …)`/provisions refs** —
+SBC users see SBC 304 clauses (with the Saudi 50mm cover), never ACI text.
+
+**Change 4 — facade load factors driven by provisions:** the hordi path now reads
+`CodeProvisions.forCode(domainCode)` (fixing the ECP-factors-for-all-codes bug — ACI/SBC
+hordi designs get 1.2D+1.6L), and the solid-slab path's `when` was replaced by the same
+provisions call (behaviour identical, single source).
+
+**Change 5 — staircase clause wiring:** the three staircase engines now emit their
+governing clauses (`STAIRCASE_FLEXURE/SHEAR/DEFLECTION`) at the top of `codeNotes` —
+each engine cites its own code.
+
+**Golden verification (all recomputed independently in Python before the Kotlin was
+written):** b=250, d=440-450, fcu=25, fy=400, Mu=150 kN·m → ECP As = 1176.0 mm²
+(K=0.12397, z=366.7) vs ACI As = 1069.3 mm² (ρ=0.009720) — **the codes genuinely diverge**;
+ρmin 0.00325 vs 0.0035 (light-load case: demand 137.6 vs 128.0, provided ≥ 357.5/385.0);
+Vc 107.8 vs 62.7 kN; load factors 1.4/1.6 vs 1.2/1.6; SBC covers 50/40mm.
+
+**Verification chain.** `verify_p44_clauses.py` — 120/120 static checks (three-object key
+parity, every new key resolves with its code prefix, formula mirror-checks, bug-pattern
+absence, hordi/facade wiring, golden recomputation, brace balance of all 9 touched files).
+**Standalone kotlinc 2.0.21 + JUnit 4 (via Aliyun mirror — Maven Central was 429-limited):
+compile clean, 23/23 tests green** — `CodeReferenceTest` (4, parity + resolution +
+SBC chapter pins), `CodeProvisionsTest` (10, incl. DesignCode-factor consistency),
+`ConcreteFrameDesignTest` (9, tri-code divergence + goldens + SBC-never-cites-ACI). The
+three modified staircase engines compiled standalone as well. Full Gradle build remains
+network-blocked locally; CI compile is the authoritative check.
+
+**Behavioural changes (deliberate, correctness):** ACI/SBC hordi slabs now factored 1.2/1.6
+(was ECP 1.4/1.6 → slightly lighter factored load = correct per code); Frame-Modeler ACI/SBC
+members now sized with Whitney/φ (As ≈ −9% vs the old ECP-formula path for the golden case)
+and cite their own clauses; Frame-Modeler ECP shear now uses the audited qcu (was 2× too
+generous via 0.5·√(fcu/γc)).

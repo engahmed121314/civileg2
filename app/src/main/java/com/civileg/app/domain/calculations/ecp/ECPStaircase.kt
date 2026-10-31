@@ -107,6 +107,11 @@ class ECPStaircase : StaircaseDesign {
         codeNotes.add("2R+G = ${String.format("%.0f", 2 * riserMm + goingMm)} mm")
         codeNotes.add("Slope angle θ = ${String.format("%.1f", slopeAngle)}°")
 
+        // ── P4-4 (§9.38): بنود الكود الحاكمة للسلم (بلاطة مائلة أحادية الاتجاه) ──
+        codeNotes.add(CodeReference.ECP.STAIRCASE_FLEXURE)
+        codeNotes.add(CodeReference.ECP.STAIRCASE_SHEAR)
+        codeNotes.add(CodeReference.ECP.STAIRCASE_DEFLECTION)
+
         // ========== 2. سماكة البلاطة ==========
         // ECP 203-2020 §6-2: Minimum waist slab thickness for stair
         val waistThickness = max(input.waistThickness, MIN_WAIST)

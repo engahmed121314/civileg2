@@ -6,7 +6,14 @@ import kotlin.math.*
 
 /**
  * تصميم العناصر الخرسانية في الإطار (تسليح الانحناء + القص)
- * يدعم ECP 203-2020 و ACI 318-19
+ *
+ * ── P4-4 (§9.38): ثلاثي الأكواد فعلياً عبر CodeProvisions ──
+ * يدعم ECP 203-2020 و ACI 318-19 و SBC 304-2018:
+ *  - ECP: معاملات جزئية (γc=1.5، γs=1.15) وطريقة K بذراع العزم — §4-2-1/§4-2-2
+ *  - ACI: معامل اختزال φ (0.9 انحناء / 0.75 قص) مع كتلة إجهاد Whitney — Ch.9/Ch.22
+ *  - SBC: منهجية ACI (SBC 304 يتبع ACI 318-14) مع الأغطية السعودية §20.5.1
+ * كل ملاحظة كود تُستخرج من CodeReference حسب الكود المختار — لم يعد SBC
+ * يُعرض بملاحظات ACI.
  */
 object ConcreteFrameDesign {
 
@@ -16,11 +23,6 @@ object ConcreteFrameDesign {
         16.0 to 201.1, 18.0 to 254.5, 20.0 to 314.2, 22.0 to 380.1,
         25.0 to 490.9, 28.0 to 615.8, 32.0 to 804.2, 36.0 to 1017.9, 40.0 to 1256.6
     )
-
-    private const val GAMMA_C_ECP = 1.5
-    private const val GAMMA_S_ECP = 1.15
-    private const val GAMMA_C_ACI = 1.5  // φ factor applied separately
-    private const val BETA1_LIMIT = 0.85
 
     /**
      * تصميم جميع الأعضاء الخرسانية في الإطار
@@ -52,9 +54,9 @@ object ConcreteFrameDesign {
     ): ConcreteMemberDesignResult {
         // ── InputGuard (ADR-010) ──
         InputGuard.notNull("member", member)
+        val p = CodeProvisions.forCode(code)
         val section = member.concreteSection ?: ConcreteSectionProps(250.0, 500.0)
         val b = section.width
-        val h = section.depth
         val d = section.effectiveDepth
         val fcu = section.fcu
         val fy = section.fy
@@ -65,15 +67,28 @@ object ConcreteFrameDesign {
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
+
+        // ── ملاحظات البنود حسب الكود المختار (لم تعد ثابتة على كود واحد) ──
         codeNotes.add(CodeReference.getReference(code, "FRAME_FLEXURE"))
         codeNotes.add(CodeReference.getReference(code, "FRAME_SHEAR"))
+        codeNotes.add(p.refLoadCombination)
+        when (p.flexureApproach) {
+            CodeProvisions.FlexureApproach.PARTIAL_FACTORS ->
+                codeNotes.add("ECP: γc=${p.gammaC}، γs=${p.gammaS} (معاملات جزئية) — ${p.refBeamFlexure}")
+            CodeProvisions.FlexureApproach.PHI_STRENGTH ->
+                codeNotes.add("${if (code == DesignCode.SBC) "SBC" else "ACI"}: φflexure=${p.phiFlexure}، φshear=${p.phiShear} — ${p.refBeamShear}")
+        }
+        codeNotes.add("الغطاء الخرساني: ${p.coverBeam.toInt()}mm — ${p.refBeamCover}")
 
         // === FLEXURE DESIGN ===
-        val (asReq, isSafeMoment, kBal) = designFlexure(maxM, b, d, fcu, fy, code, warnings, codeNotes)
+        val (asReq, _, singlyOk) = designFlexure(maxM, b, d, fcu, fy, code, codeNotes)
+        if (!singlyOk) {
+            warnings.add("القسم يحتاج تسليح مضغوط (معادلة من درجتين) — زد العمق أو السماكة")
+        }
 
         // Select bars (top and bottom for beams)
         val (barDia, numTop, numBot, asTop, asBot) = selectBars(
-            member.memberType, asReq, b, d, fcu, fy, code, warnings
+            member.memberType, asReq, b, d, fcu, fy, code, warnings, codeNotes
         )
 
         // === SHEAR DESIGN ===
@@ -82,12 +97,9 @@ object ConcreteFrameDesign {
         )
 
         // === CHECKS ===
-        val muCapacity = calculateMomentCapacity(b, d, asBot, fcu, fy, code)
+        val muCapacity = CodeProvisions.momentCapacity(code, b, d, asBot, fcu, fy)
         val momentUtil = if (muCapacity > 0) maxM / muCapacity else 999.0
         val shearUtil = if (vuCap > 0) maxV / vuCap else 999.0
-
-        if (code == DesignCode.ECP) codeNotes.add("ECP 203-2020 - البند 6-2")
-        else codeNotes.add("ACI 318-19 - Chapter 22")
 
         return ConcreteMemberDesignResult(
             memberId = member.id,
@@ -116,81 +128,48 @@ object ConcreteFrameDesign {
     }
 
     /**
-     * تصميم الانحناء - حساب مساحة الحديد المطلوبة
-     * @return (As required mm², isSafe, K_bal)
+     * تصميم الانحناء — عبر CodeProvisions.requiredFlexuralSteel
+     * (ECP: طريقة K / ACI,SBC: Whitney مع φ — الصيغة تتغير كلياً حسب الكود)
+     * @return (As required mm², Kbal/ρbal, singly-reinforced sufficient)
      */
     private fun designFlexure(
         Mu: Double, b: Double, d: Double, fcu: Double, fy: Double,
-        code: DesignCode, warnings: MutableList<String>, codeNotes: MutableList<String>
-    ): Triple<Double, Boolean, Double> {
-        if (Mu <= 0) return Triple(0.0, true, 0.0)
+        code: DesignCode, codeNotes: MutableList<String>
+    ): Triple<Double, Double, Boolean> {
+        if (Mu <= 0) return Triple(0.0, 0.0, true)
 
-        val gammaC = if (code == DesignCode.ECP) GAMMA_C_ECP else GAMMA_C_ACI
-        val gammaS = if (code == DesignCode.ECP) GAMMA_S_ECP else 1.0 // ACI uses φ differently
+        val (asReq, limitParam, singlyOk) = CodeProvisions.requiredFlexuralSteel(code, Mu, b, d, fcu, fy)
 
-        // K = M / (f'c * b * d²)
-        val K = Mu * 1e6 / (fcu * b * d * d) // Mu in kN.m -> N.mm
-
-        // K_bal calculation per code
-        val Kbal = calculateKbal(fcu, fy, code, gammaC, gammaS)
-
-        codeNotes.add("K = $K, K_bal = $Kbal")
-
-        if (K <= Kbal) {
-            // Singly reinforced
-            val z = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
-            val zClamped = min(z, 0.95 * d)
-            val As = Mu * 1e6 / (0.87 * fy * zClamped)
-            return Triple(As, true, Kbal)
+        if (code == DesignCode.ECP) {
+            codeNotes.add("ECP §4-2-1: K_bal = ${String.format("%.4f", limitParam)}")
         } else {
-            // Need compression reinforcement (doubly reinforced)
-            warnings.add("القسم يحتاج تسليح مضغوط (معادلة من درجتين)")
-            val Kp = 0.156 // K' for compression steel design
-            val As1 = Kp * fcu * b * d * d / (0.87 * fy * d)
-            val M2 = Mu * 1e6 - Kp * fcu * b * d * d
-            val dPrime = 50.0 // assume 50mm to compression steel
-            val As2 = M2 / (0.87 * fy * (d - dPrime))
-            return Triple(As1 + As2, true, Kbal)
+            codeNotes.add("${if (code == DesignCode.SBC) "SBC 304" else "ACI 318"}: ρ_max = ${String.format("%.4f", limitParam)} (tension-controlled)")
         }
+
+        return Triple(asReq, limitParam, singlyOk)
     }
 
     /**
-     * حساب K_bal حسب الكود
-     */
-    private fun calculateKbal(fcu: Double, fy: Double, code: DesignCode, gammaC: Double, gammaS: Double): Double {
-        return if (code == DesignCode.ECP) {
-            // ECP 203: K_bal depends on fcu and fy
-            val alpha = 0.67 / gammaC
-            val beta = if (fcu <= 30.0) 0.85 else max(0.85 - 0.05 * ((fcu - 30.0) / 7.0), 0.65)
-            val xb = 600.0 * beta / (600.0 + fy / gammaS)
-            alpha * xb * (1.0 - 0.5 * xb)
-        } else {
-            // ACI 318-19: use ρ_bal approach
-            val beta1 = if (fcu <= 28.0) 0.85 else max(0.85 - 0.05 * ((fcu - 28.0) / 7.0), 0.65)
-            val aBalOverD = beta1 * 87000.0 / (87000.0 + fy)
-            val rhoBal = 0.85 * fcu / fy * aBalOverD
-            rhoBal * fy / fcu * (1.0 - 0.59 * rhoBal * fy / fcu) * 1.5
-        }
-    }
-
-    /**
-     * اختيار التسليح (عدد وأقطار الأسياخ)
+     * اختيار التسليح (عدد وأقطار الأسياخ) — ρmin والغطاء حسب الكود
      */
     private fun selectBars(
         memberType: FrameMemberType,
         asRequired: Double,
         b: Double, d: Double, fcu: Double, fy: Double,
-        code: DesignCode, warnings: MutableList<String>
+        code: DesignCode, warnings: MutableList<String>, codeNotes: MutableList<String>
     ): Tuple4<Double, Int, Int, Double, Double> {
-        val asMin = if (code == DesignCode.ECP) {
-            max(0.15 / 100.0 * b * d, 0.22 * sqrt(fcu) / fy * b * d)
-        } else {
-            0.26 * (fcu / fy) * b * d
-        }
-        
-        val targetAs = max(asRequired, asMin)
+        val p = CodeProvisions.forCode(code)
 
-        // Try bars from 12mm to 25mm
+        // ── التسليح الأدنى حسب الكود (ECP ≠ ACI/SBC — صيغتان مختلفتان) ──
+        val rhoMin = CodeProvisions.beamRhoMin(code, fcu, fy)
+        val asMin = rhoMin * b * d
+
+        val targetAs = max(asRequired, asMin)
+        if (asRequired < asMin && asRequired > 0) {
+            codeNotes.add("التسليح الأدنى حكم التصميم: ρmin=${String.format("%.5f", rhoMin)} — ${p.refBeamRhoMin}")
+        }
+
+        // Try bars from 12mm to 25mm — الخلوص يقاس من الغطاء الخرساني لكل كود
         val barDias = listOf(12.0, 16.0, 18.0, 20.0, 22.0, 25.0)
         val areaPerBar = REBAR_AREAS
 
@@ -201,7 +180,8 @@ object ConcreteFrameDesign {
         for (dia in barDias) {
             val areaOne = areaPerBar[dia] ?: continue
             val n = ceil(targetAs / areaOne).toInt().coerceAtLeast(2)
-            val maxForDia = ((b - 2 * 50.0) / (dia + 25.0)).toInt()
+            // عرض متاح داخل الغطاء الخرساني للكود المختار (SBC 50mm خارجي)
+            val maxForDia = ((b - 2 * p.coverBeam) / (dia + 25.0)).toInt()
             if (n <= maxForDia && n <= 8) {
                 selectedDia = dia
                 numBars = n
@@ -223,15 +203,18 @@ object ConcreteFrameDesign {
         val asTop = numTop * (areaPerBar[selectedDia] ?: 201.1)
         val asBot = asProvided
 
-        if (asBot < asMin) warnings.add("مساحة التسليح أقل من الحد الأدنى (${asMin.toInt()} mm²)")
-        val asMax = 0.04 * b * d
+        if (asBot < asMin) warnings.add("مساحة التسليح أقل من الحد الأدنى (${asMin.toInt()} mm²) — ${p.refBeamRhoMin}")
+        // الحد الأقصى: ECP 4% من b·d (§4-2-1-2) / ACI,SBC حد عملي 2.5% (tension-controlled)
+        val asMax = if (code == DesignCode.ECP) 0.04 * b * d else 0.025 * b * d
         if (asBot > asMax) warnings.add("مساحة التسليح تتجاوز الحد الأقصى (${asMax.toInt()} mm²)")
 
         return Tuple4(selectedDia, numTop, numBot, asTop, asBot)
     }
 
     /**
-     * تصميم القص
+     * تصميم القص — السعة الخرسانية وصيغة الكانات حسب الكود:
+     *  - ECP §4-3-1-2: qcu = 0.24·√(fcu/γc) — بدون φ إضافي
+     *  - ACI §22.5.5.1 / SBC: φVc = 0.75·0.17·√f'c·b·d
      */
     private fun designShear(
         Vu: Double, b: Double, d: Double, fcu: Double, fy: Double,
@@ -240,50 +223,50 @@ object ConcreteFrameDesign {
     ): Triple<Double, Double, Double> {
         if (Vu <= 0) return Triple(0.0, 0.0, 0.0)
 
-        val gammaC = if (code == DesignCode.ECP) GAMMA_C_ECP else GAMMA_C_ACI
-        val gammaS = if (code == DesignCode.ECP) GAMMA_S_ECP else 1.0
+        val p = CodeProvisions.forCode(code)
 
-        // Concrete shear capacity
-        val vc = 0.5 * sqrt(fcu / gammaC) * b * d / 1000.0 // kN (simplified)
+        // ── السعة الخرسانية حسب الكود ──
+        val vc = CodeProvisions.concreteShearCapacity(code, b, d, fcu) // kN
 
-        // Axial load effect
+        // Axial load effect (compression raises Vc — تقريب متحفظ موحد)
         val vcAdjusted = if (Nu > 0) {
-            vc * (1.0 + Nu / (6.0 * b * d * fcu / 1e6))
+            vc * (1.0 + min(0.25, Nu / (6.0 * b * d * fcu / 1e6)))
         } else vc
+
+        codeNotes.add(
+            if (code == DesignCode.ECP)
+                "ECP §4-3-1-2: qcu = ${String.format("%.3f", 0.24 * sqrt(fcu / 1.5))} MPa → Vc = ${String.format("%.1f", vcAdjusted)} kN"
+            else
+                "${if (code == DesignCode.SBC) "SBC 304 §22.5" else "ACI 318 §22.5.5.1"}: φVc = ${String.format("%.1f", vcAdjusted)} kN"
+        )
 
         val vuCapacity = if (Vu <= vcAdjusted) {
             // Minimum shear reinforcement
-            val sMax = min(d / 2.0, 300.0)
+            val sMax = min(d / 2.0, if (code == DesignCode.ECP) 200.0 else 300.0)
             Triple(8.0, sMax, vcAdjusted)
         } else {
             // Calculate required steel shear reinforcement
             val vsRequired = Vu - vcAdjusted
-            // Vs = (Asv * fy * d) / (s * gammaS)
-            // Try 8mm stirrups
+            // ECP: qsu through Asv·fy/γs / (b·s) — ACI,SBC: Vs = Av·fy·d/s مع φ
             val stirrupDia = 8.0
-            val asv = 2.0 * 3.14159 * (stirrupDia / 2.0).pow(2) // 2 legs
-            val s = (asv * fy / gammaS * d / vsRequired) // spacing in mm
+            val asv = 2.0 * PI * (stirrupDia / 2.0).pow(2) // 2 legs
+            val s = if (code == DesignCode.ECP) {
+                asv * (fy / 1.15) * d / vsRequired / 1000.0
+            } else {
+                p.phiShear * asv * fy * d / vsRequired / 1000.0
+            }
             val sClamped = min(max(s, 75.0), min(d, 400.0))
 
-            val vsActual = asv * fy / gammaS * d / sClamped / 1000.0
+            val vsActual = if (code == DesignCode.ECP) {
+                asv * (fy / 1.15) * d / sClamped / 1000.0
+            } else {
+                p.phiShear * asv * fy * d / sClamped / 1000.0
+            }
             val totalVc = vcAdjusted + vsActual
             Triple(stirrupDia, sClamped, totalVc)
         }
 
         return vuCapacity
-    }
-
-    private fun calculateMomentCapacity(
-        b: Double, d: Double, As: Double, fcu: Double, fy: Double, code: DesignCode
-    ): Double {
-        if (As <= 0) return 0.0
-        val gammaC = if (code == DesignCode.ECP) GAMMA_C_ECP else GAMMA_C_ACI
-        val gammaS = if (code == DesignCode.ECP) GAMMA_S_ECP else 1.0
-        val rho = As / (b * d)
-        val alpha = 0.67 / gammaC
-        val a = As * fy / gammaS / (0.67 * fcu / gammaC * b)
-        val phi = if (code == DesignCode.ECP) 1.0 else 0.9
-        return phi * As * fy / gammaS * (d - a / 2.0) / 1e6 // kN.m
     }
 }
 

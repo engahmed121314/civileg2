@@ -1155,7 +1155,10 @@ class CalculatorEngine @Inject constructor(
             
             if (type == SlabType.HOLLOW_BLOCK) {
                 val hordiDesign = CalculationFactory.getHordiSlabDesign(domainCode)
-                val wu = (1.4 * deadLoad + 1.6 * liveLoad)
+                // P4-4 (§9.38): معاملات التحميل من CodeProvisions حسب الكود المختار
+                // (كانت 1.4D+1.6L ثابتة لكل الأكواد — ECP فقط)
+                val hordiProv = CodeProvisions.forCode(domainCode)
+                val wu = (hordiProv.loadFactorDead * deadLoad + hordiProv.loadFactorLive * liveLoad)
                 val s = ribSpacing / 1000.0
                 val wuRib = wu * s
                 val span = max(lx, ly)
@@ -1246,10 +1249,9 @@ class CalculatorEngine @Inject constructor(
             val longM = max(lx, ly)
             val shortSpan = shortM * 1000.0
             val longSpan = longM * 1000.0
-            val wu = when (domainCode) {                       // kN/m² — D+L factored per code
-                DesignCode.ECP -> 1.4 * deadLoad + 1.6 * liveLoad                        // ECP 203 §2-3-1
-                DesignCode.ACI, DesignCode.SBC -> 1.2 * deadLoad + 1.6 * liveLoad        // ACI 318 §5.3 / SBC 304
-            }
+            // kN/m² — D+L factored per code — P4-4: driven by CodeProvisions (§9.38)
+            val prov = CodeProvisions.forCode(domainCode)
+            val wu = prov.loadFactorDead * deadLoad + prov.loadFactorLive * liveLoad    // من CodeProvisions — ECP §2-3-1 / ACI,SBC §5.3.1
             val isTwoWay = longM <= 2.0 * shortM
 
             val mainRes: SlabDesignResult
