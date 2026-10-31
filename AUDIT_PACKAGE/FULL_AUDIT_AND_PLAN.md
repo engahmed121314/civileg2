@@ -212,7 +212,7 @@ path.
 ☐ CodeReference keys verified against code text
 ☐ Zero crashes with null/empty/invalid inputs
 ✅ Parity: same inputs → 3 correct, different results (golden fixtures) — slab (`SolidSlabCodeDivergenceTest`) + retaining wall (`RetainingWallCodeDivergenceTest`); ACI==SBC where the codes genuinely share equations (beam/column/seismic moments) but differ via ρmin, covers and limits
-☐ Signed, ProGuard, versioned APK ready
+◐ Versioned + R8 APK builds & QA-signs locally (v1.6.0, §9.39); the Play-release signature is pending the user's keystore secrets
 ```
 
 ---
@@ -1641,3 +1641,87 @@ network-blocked locally; CI compile is the authoritative check.
 members now sized with Whitney/φ (As ≈ −9% vs the old ECP-formula path for the golden case)
 and cite their own clauses; Frame-Modeler ECP shear now uses the audited qcu (was 2× too
 generous via 0.5·√(fcu/γc)).
+
+### 9.39 Full-app review + first complete local APK build (debug + R8 release, QA-signed)
+
+**User request.** «قم بأخباري بباقي الخطه مع المراجعه الكليه للتطبيق وبناء نسخه apk كامله» —
+report the remaining plan, perform a comprehensive app review, and build a complete APK.
+
+**Build environment unlocked (the real work of this session).** The sandbox had *no*
+working path to a Gradle build (Maven Central & Plugin Portal both 429-throttled by IP
+quota; box ships a JRE-only Java 21 — no javac; no Android SDK). Recipe, all under
+`/home/z/my-project` (survives container recycling), nothing committed to the repo:
+1. **Android SDK** `/home/z/my-project/android-sdk` — cmdline-tools 11076708 + licenses +
+   `platforms;android-36` + `build-tools;36.0.0` + `platform-tools` (dl.google.com 200 ✓);
+   `local.properties:sdk.dir` repointed to it (file is untracked since §9.37).
+2. **Full JDK 21** `/home/z/my-project/jdk21` (Temurin via api.adoptium.net; JRE-only box →
+   Gradle daemon toolchain provisioning + javac both need it). Wired via
+   `org.gradle.java.home` + `org.gradle.java.installations.paths`.
+3. **Mirror layer** `GRADLE_USER_HOME=/home/z/my-project/gradle-home` with
+   `init.d/mirrors.gradle`: prepends `maven-central.storage-download.googleapis.com`
+(GCS full Central snapshot, clean 404s) before settings' own repos. Aliyun variants
+   were tried and **rejected**: they return 502 (not 404) for unhosted artifacts, which
+   Gradle treats as a hard repo failure and disables the repo mid-resolution (two
+   cascade failures observed: `font-asian`, `commons-logging`).
+4. **Plugin markers** `/home/z/my-project/gradle-home/local-m2` (file repo, first in
+   pluginManagement): real marker POMs where a mirror had them (ksp — GCS;
+   kotlin-android + compose — GCS; agp + safeargs — aliyun-google), handcrafted with the
+   conventional coordinates (`groupId` = plugin id, `artifactId` = id + `.gradle.plugin`)
+   for hilt + foojay. Root cause found by experiment: a marker POM whose `<groupId>` does
+   not match the requested module is silently unusable — Gradle logs "Resolved plugin"
+   then fails the block with "Plugin not found" (bit us via a `${aid%.*}` shell bug that
+   produced `com.google.devtools.ksp.gradle` instead of `com.google.devtools.ksp`).
+5. **Memory profile** (3.9 GB box, no swap, active OOM-killer; 2 vCPU): the project's
+   `-Xmx4096m` CI profile is impossible here. Two OOM daemon kills (RSS 2.0–2.9 GB) and
+   one Kotlin-daemon "Not enough memory" later, the working split for THIS box:
+   `org.gradle.jvmargs=-Xmx2816m` for R8/lint phases, `-Xmx896m` + `kotlin 1280m` for
+   compile phases, `workers.max=1`, `parallel=false`. R8 is not incremental — one fat
+   heap for minify, then resume (R8 up-to-date) for lintVital/package.
+
+**Deliverables** (in `/home/z/my-project/download/`):
+- `CivilEG2-v1.6.0-debug.apk` — 40.9 MB, `com.civileg.app.debug` v1.6.0-debug (code 6).
+- `CivilEG2-v1.6.0-release-QA-signed.apk` — 23.2 MB (R8 −43%), `com.civileg.app` v1.6.0,
+  zipaligned, signed with a **local QA key** (`/home/z/my-project/keys/qa-release.jks`,
+  SHA-256 `4dbc87be1633426a71fdfd831ead2be9f389da632c39086d504b8facb134e097`) —
+  explicitly **NOT the Play release key**: it cannot update the store listing; it exists
+  for on-device smoke-testing of the minified build. `app-release-unsigned.apk` stays in
+  `app/build/outputs/apk/release/` for signing with the real keystore (locally via
+  `keystore.properties`, or in CI via the `build-apk.yml` secrets once configured).
+
+**Comprehensive review — current state (measured this session, not from memory).**
+- *Codebase:* 371 Kotlin files / 139,826 LOC in `:app` main + `:core:calculations`;
+  355 `@Composable`, 30 ViewModels, 45 DxfDrawable references, 2,031 `InputGuard` call
+  sites, 169 `CodeReference` + 12 `CodeProvisions` consumers; exactly **1 TODO** in the
+  whole tree (a documented ACI-pile fallback note inside a test file).
+- *Tests:* **78 suites / 1,391 @Test / 0 failures / 0 errors / 0 skipped**, executed
+  locally on the current tree (§9.38 included) — `:app:testDebugUnitTest --rerun`, tally
+  from the JUnit XML. Robolectric (the only Robolectric suite, `QualityDaoTest`, SDK 34)
+  passed 3/3.
+- *Build health:* `assembleDebug` green (5m03s local); `assembleRelease` green with R8
+  full mode + resource shrinking + **lintVital** (abortOnError=true) — no fatal lint;
+  4 ABIs (arm64-v8a/armeabi-v7a/x86/x86_64); minSdk 26 / target & compile 36.
+- *Security posture:* minimal permissions (INTERNET, NETWORK_STATE, BILLING, media/legacy
+  storage guarded), `allowBackup=false` + dataExtractionRules, AdMob defaults are
+  Google TEST IDs, `EXPECTED_SIGNER_FINGERPRINT` empty → fail-open until the user sets
+  it, Guava constrained to 33.4.0-android (CVE-2023-2976/2020-8908). Open item: the
+  **GitHub token remains embedded in the remote URL** — still awaiting user revocation.
+- *CI on HEAD `c426f71`:* "Android CI with Gradle" (push→assembleDebug) ✅ success;
+  "Dependency Submission" ✅. `android.yml` (lint/tests/debug artifact) is
+  workflow_dispatch-only; `build-apk.yml` (signed release APK) errors out until
+  KEYSTORE_BASE64/KEY_ALIAS/KEY_PASSWORD/KEYSTORE_PASSWORD secrets exist — by design.
+
+**Remaining plan (everything that is left, nothing hidden):**
+1. P4-3 user-supplied values: real AdMob IDs, release-keystore SHA-256, store listing
+   assets (§9.37 recipe + `local.properties.template`).
+2. Play signing path: set the four signing secrets (CI) or `keystore.properties` (local
+   machine) → `build-apk.yml` produces the real release APK; Data Safety form must
+   declare ad serving (checklist §1b).
+3. Licensed ECP 203-2020 text: only remaining P4-4 residue — display-only sub-clause
+   wording; the calculation-driving parameters are locked to the audited engine
+   formulas via `CodeProvisions`.
+4. Manual QA pass: PDF+DXF for every element × 3 codes on a real device, plus a
+   smoke-test of the QA-signed minified APK (R8 is green statically but has never run
+   on a device — no emulator in this sandbox).
+5. Dependabot residue → AGP 10 migration (deliberately deferred; alerts are in dev/test
+   tooling classpaths only, not shipped).
+6. Revoke the exposed GitHub token (urgent, user action).
