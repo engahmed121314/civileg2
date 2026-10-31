@@ -1417,6 +1417,7 @@ private fun MemberLoadDialog(
                                 MemberLoadType.PointLoad -> t("حمل مركز", "Point load")
                                 MemberLoadType.Moment -> t("عزم", "Moment")
                                 MemberLoadType.LinearVarying -> t("موزع متغير", "Varying load")
+                                MemberLoadType.Trapezoidal -> t("شبه منحرف (بلاطة)", "Trapezoidal (slab)")
                             },
                             fontSize = 12.sp
                         )
@@ -1431,6 +1432,7 @@ private fun MemberLoadDialog(
                                             MemberLoadType.PointLoad -> t("حمل مركز", "Point load")
                                             MemberLoadType.Moment -> t("عزم", "Moment")
                                             MemberLoadType.LinearVarying -> t("موزع متغير", "Varying load")
+                                            MemberLoadType.Trapezoidal -> t("شبه منحرف (بلاطة)", "Trapezoidal (slab)")
                                         },
                                         fontSize = 12.sp
                                     )

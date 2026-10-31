@@ -616,6 +616,30 @@ object FrameAnalysisPdfExporter {
                     )
                     canvas.drawText("w=${fmt(load.value)} (varying)", (x1 + x2) / 2f, (y1 + y2) / 2f - 12f, loadPaint)
                 }
+                MemberLoadType.Trapezoidal -> {
+                    // المرحلة الثالثة: شبه منحرف متماثل — خطا ارتفاع + هضبة + أسهم
+                    val memberLen = max(member.getLength(nodes), 1e-9)
+                    val tA = (load.position / memberLen).toFloat().coerceIn(0.02f, 0.5f)
+                    val r1x = x1 + dx * tA + nx * offset
+                    val r1y = y1 + dy * tA + ny * offset
+                    val r2x = x2 - dx * tA + nx * offset
+                    val r2y = y2 - dy * tA + ny * offset
+                    canvas.drawLine(x1 + nx * 3f, y1 + ny * 3f, r1x, r1y, loadPaint)
+                    canvas.drawLine(x2 + nx * 3f, y2 + ny * 3f, r2x, r2y, loadPaint)
+                    canvas.drawLine(r1x, r1y, r2x, r2y, loadPaint)
+                    for (i in 0..5) {
+                        val t = tA + (1f - 2f * tA) * i / 5f
+                        val px = x1 + dx * t + nx * offset
+                        val py = y1 + dy * t + ny * offset
+                        canvas.drawLine(px, py, px - nx * 10f, py - ny * 10f, loadPaint)
+                    }
+                    canvas.drawText(
+                        "w=${fmt(load.value)} a=${fmt(load.position)} (trap)",
+                        (x1 + x2) / 2f + 6f,
+                        (y1 + y2) / 2f + ny * (offset + 12f),
+                        loadPaint
+                    )
+                }
             }
         }
 

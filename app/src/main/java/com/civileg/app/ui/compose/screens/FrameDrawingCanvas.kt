@@ -1128,6 +1128,50 @@ private fun DrawScope.drawMemberLoadArrows(
             topLeft = Offset(tipX - 12, tipY + 4),
             style = TextStyle(color = Color(0xFFD32F2F), fontSize = 10.sp, fontWeight = FontWeight.Bold)
         )
+    } else if (mLoad.loadType == MemberLoadType.Trapezoidal) {
+        // المرحلة الثالثة: شبه منحرف متماثل — أسهم تصاعدية الكثافة نحو المنتصف
+        val p1 = toScreen(ni.x, ni.y)
+        val p2 = toScreen(nj.x, nj.y)
+        val dx = p2.x - p1.x
+        val dy = p2.y - p1.y
+        val L = sqrt(dx * dx + dy * dy)
+        if (L < 1f) return
+        val nx = -dy / L
+        val ny = dx / L
+        val memberLength = sqrt((nj.x - ni.x).pow(2) + (nj.y - ni.y).pow(2))
+        val aFrac = if (memberLength > 0) (mLoad.position / memberLength).toFloat().coerceIn(0.02f, 0.5f) else 0.25f
+        val arrowLen = 25f
+        val arrowColor = Color(0xFFD32F2F)
+        // خطا الارتفاع + الهضبة
+        val rise1 = Offset(p1.x + dx * aFrac + nx * arrowLen, p1.y + dy * aFrac + ny * arrowLen)
+        val rise2 = Offset(p2.x - dx * aFrac + nx * arrowLen, p2.y - dy * aFrac + ny * arrowLen)
+        drawLine(arrowColor, Offset(p1.x + nx * 3f, p1.y + ny * 3f), rise1, strokeWidth = 1.5f)
+        drawLine(arrowColor, Offset(p2.x + nx * 3f, p2.y + ny * 3f), rise2, strokeWidth = 1.5f)
+        drawLine(arrowColor, rise1, rise2, strokeWidth = 1.5f)
+        // أسهم: أقصر عند الطرفين وأطول عند الهضبة (تعكس الشكل)
+        val numArrows = 8
+        for (i in 1..numArrows) {
+            val t = i.toFloat() / (numArrows + 1)
+            val frac = min(t / aFrac, 1f).coerceAtMost(min((1f - t) / aFrac, 1f))
+            val baseX = p1.x + dx * t
+            val baseY = p1.y + dy * t
+            val len = 6f + 19f * frac
+            val tipX = baseX + nx * len
+            val tipY = baseY + ny * len
+            drawLine(arrowColor, Offset(baseX, baseY), Offset(tipX, tipY), strokeWidth = 1.5f)
+            val headSize = 4f
+            val angle = atan2(ny, nx)
+            drawLine(arrowColor, Offset(tipX, tipY), Offset(tipX - headSize * cos(angle - 0.5f), tipY - headSize * sin(angle - 0.5f)), strokeWidth = 1.5f)
+            drawLine(arrowColor, Offset(tipX, tipY), Offset(tipX - headSize * cos(angle + 0.5f), tipY - headSize * sin(angle + 0.5f)), strokeWidth = 1.5f)
+        }
+        val midX = (p1.x + p2.x) / 2 + nx * (arrowLen + 8f)
+        val midY = (p1.y + p2.y) / 2 + ny * (arrowLen + 8f)
+        drawText(
+            textMeasurer = textMeasurer,
+            text = "w=" + String.format(java.util.Locale.ROOT, "%.1f", mLoad.value) + " a=" + String.format(java.util.Locale.ROOT, "%.1f", mLoad.position),
+            topLeft = Offset(midX - 20, midY - 6),
+            style = TextStyle(color = arrowColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        )
     }
 }
 

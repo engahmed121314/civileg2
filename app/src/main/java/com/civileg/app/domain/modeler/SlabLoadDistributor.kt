@@ -7,7 +7,6 @@ import com.civileg.app.domain.entities.MemberLoadType
 import com.civileg.app.domain.entities.SlabDistribution
 import com.civileg.app.domain.entities.SlabPanel
 import kotlin.math.abs
-import kotlin.math.max
 import kotlin.math.min
 
 object SlabLoadDistributor {
@@ -55,7 +54,6 @@ object SlabLoadDistributor {
         val pairA = (edges[0].length + edges[2].length) / 2.0
         val pairB = (edges[1].length + edges[3].length) / 2.0
         val longIsA = pairA >= pairB
-        val longSpan = max(pairA, pairB)
         val shortSpan = min(pairA, pairB)
         if (shortSpan < 1e-9) {
             return Result(emptyList(), 0.0, listOf("Slab panel ${panel.id} has an invalid span"))
@@ -87,7 +85,46 @@ object SlabLoadDistributor {
             }
         }
 
+        /**
+         * المرحلة الثالثة (P4-1): حمل شبه منحرف متماثل على حافة البلاطة.
+         *
+         *   p(x) = w·min(1, min(x, L_edge−x)/a) على الكمرة الحاملة
+         *
+         * التوزيع الكلاسيكي الدقيق (خطوط 45° من الأركان):
+         *   - الكمرات الطويلة: شبه منحرف — ارتفاع a = S/2 من كل طرف، هضبة q·S/2
+         *     بين S/2 و L−S/2. حمله الكلي = q·SL/2 − q·S²/4 (مثلثا أركان
+         *     + شبه المنحرف) — مطابق للقيمة الجدولية.
+         *   - الكمرات القصيرة: طولها = S → a = S/2 = L_edge/2 يتحول الشكل إلى
+         *     مثلث متماثل ذروته q·S/2 عند منتصف بحرها. حمله الكلي = q·S²/4.
+         *   مجموع الأربعة = q·S·L = الحمل الكلي للبلاطة بالضبط (للمستطيلات).
+         *
+         * يثبِّت a عند L_edge/2 إذا تجاوزها (ألواح غير مستطيلة) — الصواب
+         * الاستاتيكي للكلية محفوظ دائماً: W = w·(L_edge − a).
+         */
+        fun addTrapezoid(index: Int, w: Double, aIdeal: Double) {
+            val edge = edges[index]
+            val memberId = edge.memberId
+            if (memberId == null) {
+                warnings += "No supporting member on slab edge ${edge.startId}-${edge.endId}"
+                return
+            }
+            if (w <= 1e-9) return
+            val member = members.firstOrNull { it.id == memberId } ?: return
+            val Ledge = member.getLength(nodes)
+            if (Ledge <= 1e-9) return
+            val a = aIdeal.coerceAtMost(Ledge / 2.0)
+            loads += MemberLoad(
+                memberId = memberId,
+                loadType = MemberLoadType.Trapezoidal,
+                value = w,
+                position = a,
+                loadCase = panel.loadCase
+            )
+        }
+
         if (panel.distribution == SlabDistribution.OneWay) {
+            // اتجاه واحد: الحمل كله في الاتجاه القصير على الكمرتين الطويلتين —
+            // UDL منتظم بالفعل (صواب كلاسيكي تام، لا تقريب).
             val loadOnLongEdges = q * shortSpan / 2.0
             if (longIsA) {
                 addTo(0, loadOnLongEdges)
@@ -97,19 +134,23 @@ object SlabLoadDistributor {
                 addTo(3, loadOnLongEdges)
             }
         } else {
-            val shortEdgeUdl = q * shortSpan / 4.0
-            val longEdgeUdl = q * (shortSpan / 2.0 - shortSpan * shortSpan / (4.0 * longSpan))
+            // المرحلة الثالثة: التوزيع ثنائي الاتجاه بالأشكال الكلاسيكية الدقيقة
+            // (كان: UDL مكافئ يبالغ في عزم منتصف الكمرات القصيرة بنسبة ~50%
+            //  لأنه يفقد شكل الحمل الفعلي: مثلث متماثل ذروته q·S/2).
+            //   w = q·S/2 على الحواف الأربع، والارتفاع a = S/2 (هندسة 45°).
+            val w = q * shortSpan / 2.0
+            val a = shortSpan / 2.0
             if (longIsA) {
-                // Edges 0 and 2 are the long pair.
-                addTo(0, longEdgeUdl)
-                addTo(2, longEdgeUdl)
-                addTo(1, shortEdgeUdl)
-                addTo(3, shortEdgeUdl)
+                // 0/2 طويلان (شبه منحرف)، 1/3 قصيران (مثلث متماثل لأن a = L/2 لهما)
+                addTrapezoid(0, w, a)
+                addTrapezoid(2, w, a)
+                addTrapezoid(1, w, a)
+                addTrapezoid(3, w, a)
             } else {
-                addTo(1, longEdgeUdl)
-                addTo(3, longEdgeUdl)
-                addTo(0, shortEdgeUdl)
-                addTo(2, shortEdgeUdl)
+                addTrapezoid(1, w, a)
+                addTrapezoid(3, w, a)
+                addTrapezoid(0, w, a)
+                addTrapezoid(2, w, a)
             }
         }
 

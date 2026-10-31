@@ -1085,4 +1085,258 @@ class FrameAnalysisEngineTest {
             11.93, result.memberDiagrams.single().maxMoment, 0.2)
     }
 
+    // ══════════════════════════════════════════════════════════════════════
+    // المرحلة الثالثة (P4-1): حمل شبه المنحرف المتماثل — الشكل الكلاسيكي
+    // الدقيق لتوزيع أحمال البلاطات ثنائية الاتجاه على كمرات الحواف.
+    // الصيغ مُتحقَّقة ثلاثياً (ريمان + تكامل عددي + حدود كلاسيكية) في
+    // scripts/verify_trapezoid.py قبل كتابة هذه الاختبارات.
+    // ══════════════════════════════════════════════════════════════════════
+
+    @Test
+    fun solveFrame_trapezoidalLoad_fixedFixedBeam_endMomentsAndShears() {
+        // w=20, a=1.5, L=6:
+        //   W    = w(L−a)  = 20×4.5 = 90 kN
+        //   Mfix = w(L²/12 − a²/6 + a³/12L) = 20×(3 − 0.375 + 0.046875) = 53.4375 kN.m
+        //   fixed-fixed: M(0) = M(L) = −Mfix (هوجنج)، M_mid = M_SS_mid − Mfix = 82.5 − 53.4375 = 29.0625
+        //   V(0) = +W/2 = 45، V(L) = −45، ΣRy = 90
+        val nodes = listOf(
+            FrameNode(1, 0.0, 0.0, SupportType.Fixed),
+            FrameNode(2, 6.0, 0.0, SupportType.Fixed)
+        )
+        val members = listOf(
+            FrameMember(1, 1, 2, FrameMaterialType.Concrete, FrameMemberType.Beam,
+                ConcreteSectionProps(300.0, 500.0, 25.0, 400.0, 50.0))
+        )
+        val loads = listOf(MemberLoad(1, MemberLoadType.Trapezoidal, 20.0, 1.5, "DL"))
+
+        val result = FrameAnalysisEngine.solveFrame(nodes, members, emptyList(), loads, FrameAnalysisSettings())
+        assertTrue("Fixed-fixed trapezoid should solve: ${result.errorMessage}", result.isSolved)
+
+        val md = result.memberDiagrams[0].momentDiagram
+        assertEquals("M(0) = −Mfix = −53.4375 (hogging)", -53.4375, md.first().value, 0.01)
+        assertEquals("M(L) = −Mfix = −53.4375 (hogging)", -53.4375, md.last().value, 0.01)
+        val mid = md.minByOrNull { kotlin.math.abs(it.x - 3.0) }!!
+        assertEquals("M(L/2) = 29.0625 (sagging)", 29.0625, mid.value, 0.01)
+
+        // C7: عينات عند نقطتي انكسار الشكل x=a و x=L−a (تتطابق مع ربع/ثلاثة أرباع البحر هنا)
+        assertTrue("Sample at x=a=1.5 must exist", md.any { kotlin.math.abs(it.x - 1.5) < 1e-9 })
+        assertTrue("Sample at x=L−a=4.5 must exist", md.any { kotlin.math.abs(it.x - 4.5) < 1e-9 })
+
+        val sd = result.memberDiagrams[0].shearDiagram
+        assertEquals("V(0) = +W/2 = +45", 45.0, sd.first().value, 0.01)
+        assertEquals("V(L) = −W/2 = −45", -45.0, sd.last().value, 0.01)
+
+        val f = result.memberEndForces[0]
+        assertEquals("|m_i| = Mfix = 53.4375", 53.4375, kotlin.math.abs(f.mi_z), 0.01)
+        assertEquals("|m_j| = Mfix = 53.4375", 53.4375, kotlin.math.abs(f.mj_z), 0.01)
+
+        assertEquals("ΣRy = W = 90", 90.0, result.nodeResults.sumOf { it.reactionFy }, 0.05)
+        assertEquals("C8: ΣFx residual ≈ 0", 0.0, result.equilibriumFx, 1e-6)
+        assertEquals("C8: ΣFy residual ≈ 0", 0.0, result.equilibriumFy, 1e-6)
+        assertEquals("C8: ΣMz residual ≈ 0", 0.0, result.equilibriumMz, 1e-6)
+    }
+
+    @Test
+    fun solveFrame_trapezoidalLoad_simplySupported_classicalValues() {
+        // SS: M_mid = wL²/8 − wa²/6 = 90 − 7.5 = 82.5 ، ردود الفعل 45/45
+        val nodes = listOf(
+            FrameNode(1, 0.0, 0.0, SupportType.Pin),
+            FrameNode(2, 6.0, 0.0, SupportType.Roller)
+        )
+        val members = listOf(
+            FrameMember(1, 1, 2, FrameMaterialType.Concrete, FrameMemberType.Beam,
+                ConcreteSectionProps(300.0, 500.0, 25.0, 400.0, 50.0))
+        )
+        val loads = listOf(MemberLoad(1, MemberLoadType.Trapezoidal, 20.0, 1.5, "DL"))
+
+        val result = FrameAnalysisEngine.solveFrame(nodes, members, emptyList(), loads, FrameAnalysisSettings())
+        assertTrue("SS trapezoid should solve: ${result.errorMessage}", result.isSolved)
+
+        val md = result.memberDiagrams[0].momentDiagram
+        assertEquals("M(0) = 0 (SS)", 0.0, md.first().value, 1e-9)
+        assertEquals("M(L) = 0 (SS)", 0.0, md.last().value, 1e-9)
+        val mid = md.minByOrNull { kotlin.math.abs(it.x - 3.0) }!!
+        assertEquals("M(L/2) = 82.5 (classical)", 82.5, mid.value, 0.05)
+        assertEquals("maxMoment = 82.5", 82.5, result.memberDiagrams[0].maxMoment, 0.05)
+
+        val sd = result.memberDiagrams[0].shearDiagram
+        assertEquals("V(0) = +45", 45.0, sd.first().value, 0.01)
+        assertEquals("V(L) = −45", -45.0, sd.last().value, 0.01)
+
+        assertEquals("R1 = 45", 45.0, result.nodeResults[0].reactionFy, 0.05)
+        assertEquals("R2 = 45", 45.0, result.nodeResults[1].reactionFy, 0.05)
+        assertEquals("ΣRy = W = 90", 90.0, result.nodeResults.sumOf { it.reactionFy }, 0.05)
+    }
+
+    @Test
+    fun solveFrame_trapezoidalLoad_symmetricTriangle_classicalValues() {
+        // a = L/2 → مثلث متماثل ذروته w عند المنتصف:
+        //   fixed-fixed: Mfix = 5wL²/96 = 37.5 ، M_mid = 60 − 37.5 = 22.5
+        //   SS: M_mid = wL²/12 = 60 ، ردود الفعل = wL/4 = 30/30
+        val sec = ConcreteSectionProps(300.0, 500.0, 25.0, 400.0, 50.0)
+        val loads = listOf(MemberLoad(1, MemberLoadType.Trapezoidal, 20.0, 3.0, "DL"))
+        val settings = FrameAnalysisSettings()
+
+        val fixed = FrameAnalysisEngine.solveFrame(
+            listOf(FrameNode(1, 0.0, 0.0, SupportType.Fixed), FrameNode(2, 6.0, 0.0, SupportType.Fixed)),
+            listOf(FrameMember(1, 1, 2, FrameMaterialType.Concrete, FrameMemberType.Beam, sec)),
+            emptyList(), loads, settings
+        )
+        assertTrue("Fixed-fixed triangle should solve: ${fixed.errorMessage}", fixed.isSolved)
+        assertEquals("M(0) = −5wL²/96 = −37.5 (classical triangle)",
+            -37.5, fixed.memberDiagrams[0].momentDiagram.first().value, 0.01)
+        assertEquals("M(L) = −5wL²/96 = −37.5",
+            -37.5, fixed.memberDiagrams[0].momentDiagram.last().value, 0.01)
+        assertEquals("M_mid = 22.5", 22.5,
+            fixed.memberDiagrams[0].momentDiagram.minByOrNull { kotlin.math.abs(it.x - 3.0) }!!.value, 0.01)
+        assertEquals("ΣRy = wL/2 = 60", 60.0, fixed.nodeResults.sumOf { it.reactionFy }, 0.05)
+
+        val ss = FrameAnalysisEngine.solveFrame(
+            listOf(FrameNode(1, 0.0, 0.0, SupportType.Pin), FrameNode(2, 6.0, 0.0, SupportType.Roller)),
+            listOf(FrameMember(1, 1, 2, FrameMaterialType.Concrete, FrameMemberType.Beam, sec)),
+            emptyList(), loads, settings
+        )
+        assertTrue("SS triangle should solve: ${ss.errorMessage}", ss.isSolved)
+        assertEquals("SS M_mid = wL²/12 = 60 (classical triangle)", 60.0,
+            ss.memberDiagrams[0].momentDiagram.minByOrNull { kotlin.math.abs(it.x - 3.0) }!!.value, 0.05)
+        assertEquals("SS reactions = wL/4 = 30 each", 30.0,
+            ss.nodeResults[0].reactionFy, 0.05)
+    }
+
+    @Test
+    fun solveFrame_trapezoidalLoad_smallRiseApproachesUdl() {
+        // a → 0 يتحول شبه المنحرف إلى UDL — قارن بنموذج UDL توأم على نفس الكمرة
+        val sec = ConcreteSectionProps(300.0, 500.0, 25.0, 400.0, 50.0)
+        val nodes = listOf(FrameNode(1, 0.0, 0.0, SupportType.Fixed), FrameNode(2, 6.0, 0.0, SupportType.Fixed))
+        val members = listOf(FrameMember(1, 1, 2, FrameMaterialType.Concrete, FrameMemberType.Beam, sec))
+
+        val trap = FrameAnalysisEngine.solveFrame(nodes, members, emptyList(),
+            listOf(MemberLoad(1, MemberLoadType.Trapezoidal, 20.0, 0.01, "DL")), FrameAnalysisSettings())
+        val udl = FrameAnalysisEngine.solveFrame(nodes, members, emptyList(),
+            listOf(MemberLoad(1, MemberLoadType.UDL, 20.0, 0.0, "DL")), FrameAnalysisSettings())
+        assertTrue(trap.isSolved && udl.isSolved)
+
+        val mTrap = trap.memberDiagrams[0].momentDiagram
+        val mUdl = udl.memberDiagrams[0].momentDiagram
+        assertEquals("M(0) → −wL²/12 = −60", -60.0, mTrap.first().value, 0.01)
+        assertEquals("|ΔM(0)| trap vs UDL < 0.01",
+            0.0, kotlin.math.abs(mTrap.first().value - mUdl.first().value), 0.01)
+        val midTrap = mTrap.minByOrNull { kotlin.math.abs(it.x - 3.0) }!!
+        val midUdl = mUdl.minByOrNull { kotlin.math.abs(it.x - 3.0) }!!
+        assertEquals("|ΔM_mid| trap vs UDL < 0.01",
+            0.0, kotlin.math.abs(midTrap.value - midUdl.value), 0.01)
+        assertEquals("ΣRy(trap) = w(L−a) = 119.8", 119.8,
+            trap.nodeResults.sumOf { it.reactionFy }, 0.05)
+        assertEquals("ΣRy(udl) = wL = 120", 120.0,
+            udl.nodeResults.sumOf { it.reactionFy }, 0.05)
+    }
+
+    @Test
+    fun solveFrame_trapezoidalInvalidRise_returnsError() {
+        val sec = ConcreteSectionProps(300.0, 500.0, 25.0, 400.0, 50.0)
+        val nodes = listOf(FrameNode(1, 0.0, 0.0, SupportType.Pin), FrameNode(2, 6.0, 0.0, SupportType.Roller))
+        val members = listOf(FrameMember(1, 1, 2, FrameMaterialType.Concrete, FrameMemberType.Beam, sec))
+
+        for (badA in listOf(0.0, -1.0, 3.5)) {
+            val result = FrameAnalysisEngine.solveFrame(nodes, members, emptyList(),
+                listOf(MemberLoad(1, MemberLoadType.Trapezoidal, 20.0, badA, "DL")), FrameAnalysisSettings())
+            assertFalse("a=$badA must be rejected (isSolved)", result.isSolved)
+            assertNotNull("a=$badA must produce an error message", result.errorMessage)
+            assertTrue("a=$badA error must name the load type: ${result.errorMessage}",
+                result.errorMessage!!.contains("Trapezoidal"))
+        }
+        // الحد الصالح الأعلى a = L/2 يحل (المثلث المتماثل)
+        val ok = FrameAnalysisEngine.solveFrame(nodes, members, emptyList(),
+            listOf(MemberLoad(1, MemberLoadType.Trapezoidal, 20.0, 3.0, "DL")), FrameAnalysisSettings())
+        assertTrue("a = L/2 = 3.0 must solve (symmetric triangle): ${ok.errorMessage}", ok.isSolved)
+    }
+
+    @Test
+    fun solveFrame_trapezoidalLoad_portal_globalEquilibrium() {
+        // بوابة كاملة بحمل شبه منحرف على الكمر — C8 يجب أن يبقى ≈ 0
+        val (nodes, members, _) = FrameAnalysisEngine.createSimplePortalFrame(span = 6.0, height = 4.0, udl = 0.0)
+        // الكمر هو العضو 3 (من العقدة 4 إلى 3) — استبدل حمله UDL بشبه منحرف
+        val beam = members.first { it.memberType == FrameMemberType.Beam }
+        val loads = listOf(MemberLoad(beam.id, MemberLoadType.Trapezoidal, 20.0, 1.5, "DL"))
+
+        val result = FrameAnalysisEngine.solveFrame(nodes, members, emptyList(), loads, FrameAnalysisSettings())
+        assertTrue("Portal with trapezoid should solve: ${result.errorMessage}", result.isSolved)
+
+        assertEquals("ΣRy = W = 90 (gravity only)", 90.0,
+            result.nodeResults.sumOf { it.reactionFy }, 0.05)
+        // ملاحظة: البوابة تحت حمل رأسي تطوّر ردود أفقية فردية متوازنة داخلياً
+        // (frame action: ضغط محوري في الكمر + قص في الأعمدة) — R1x = −R2x ≠ 0،
+        // لكن المجموع الجبري (صافي الحمل الأفقي الخارجي) يجب أن يبقى صفراً.
+        assertEquals("ΣRx (signed) = 0 (no net horizontal load)", 0.0,
+            result.nodeResults.sumOf { it.reactionFx }, 1e-9)
+        assertEquals("C8 resFx ≈ 0", 0.0, result.equilibriumFx, 1e-6)
+        assertEquals("C8 resFy ≈ 0", 0.0, result.equilibriumFy, 1e-6)
+        assertEquals("C8 resMz ≈ 0", 0.0, result.equilibriumMz, 1e-6)
+    }
+
+    @Test
+    fun solveFrame_trapezoidalLoad_envelopeScalesWithLoadFactor() {
+        // C9: حمل DL فقط بشكل شبه منحرف — التوفيق الحاكم 1.4DL يعطي
+        // قيماً = 1.4 × الحل الأساسي (الشكل لا يتغير، الشدة only تتدرّج)
+        val nodes = listOf(
+            FrameNode(1, 0.0, 0.0, SupportType.Pin),
+            FrameNode(2, 6.0, 0.0, SupportType.Roller)
+        )
+        val members = listOf(
+            FrameMember(1, 1, 2, FrameMaterialType.Concrete, FrameMemberType.Beam,
+                ConcreteSectionProps(300.0, 500.0, 25.0, 400.0, 50.0))
+        )
+        val loads = listOf(MemberLoad(1, MemberLoadType.Trapezoidal, 20.0, 1.5, "DL"))
+
+        val result = FrameAnalysisEngine.solveFrame(nodes, members, emptyList(), loads, FrameAnalysisSettings())
+        assertTrue(result.isSolved)
+
+        val env = result.loadEnvelopes.single()
+        assertEquals("Envelope maxMoment = 1.4 × 82.5 = 115.5", 115.5, env.maxMoment, 0.3)
+        assertEquals("Envelope minMoment = 0 (SS sagging only)", 0.0, env.minMoment, 1e-9)
+        assertEquals("Envelope maxShear = 1.4 × 45 = 63", 63.0, env.maxShear, 0.3)
+        assertEquals("Envelope minShear = 1.4 × (−45) = −63", -63.0, env.minShear, 0.3)
+        assertEquals("Governing combination = 1.4DL + 1.6LL", "1.4DL + 1.6LL", env.governingCombination)
+    }
+
+    @Test
+    fun solveFrame_mixedReleasesAtSharedNode_releasedMemberIsIsolated() {
+        // P4-1 lock-in: عقدة مشتركة بين عضو مفصل عندها وعضو صلب —
+        // المفصل لا ينقل عزماً ولا يقوّي/يضعف حل العضو الآخر:
+        //   عقدة 1 (0,0) Pin، عقدة 2 (5,0) Roller، عقدة 3 (11,0) Pin
+        //   M1 (1→2، مفصل عند 2): بلا أحمال → مخططاته كلها صفرية
+        //   M2 (2→3، صلب): UDL 10 → يتسلك ككمرة بسيطة: M_mid = 45، ردود 30/30
+        val nodes = listOf(
+            FrameNode(1, 0.0, 0.0, SupportType.Pin),
+            FrameNode(2, 5.0, 0.0, SupportType.Roller),
+            FrameNode(3, 11.0, 0.0, SupportType.Pin)
+        )
+        val sec = ConcreteSectionProps(300.0, 500.0, 25.0, 400.0, 50.0)
+        val members = listOf(
+            FrameMember(1, 1, 2, FrameMaterialType.Concrete, FrameMemberType.Beam, sec, releaseJ = true),
+            FrameMember(2, 2, 3, FrameMaterialType.Concrete, FrameMemberType.Beam, sec)
+        )
+        val loads = listOf(MemberLoad(2, MemberLoadType.UDL, 10.0, 0.0, "DL"))
+
+        val result = FrameAnalysisEngine.solveFrame(nodes, members, emptyList(), loads, FrameAnalysisSettings())
+        assertTrue("Mixed-release frame should solve: ${result.errorMessage}", result.isSolved)
+
+        val m1 = result.memberDiagrams.first { it.memberId == 1 }
+        val m2 = result.memberDiagrams.first { it.memberId == 2 }
+        assertEquals("M1 (hinged, unloaded) maxMoment = 0", 0.0, m1.maxMoment, 1e-9)
+        assertEquals("M1 maxShear = 0", 0.0, m1.maxShear, 1e-9)
+        val f1 = result.memberEndForces.first { it.memberId == 1 }
+        assertEquals("M1 end moment at released joint 2 = 0 exactly", 0.0, f1.mj_z, 1e-9)
+        assertEquals("M1 end moment at joint 1 = 0 (no load, u=0)", 0.0, f1.mi_z, 1e-9)
+
+        assertEquals("M2 behaves as simply supported: M_mid = 45", 45.0, m2.maxMoment, 0.05)
+        assertEquals("M2 V(0) = +30", 30.0, m2.shearDiagram.first().value, 0.05)
+        assertEquals("M2 V(L) = −30", -30.0, m2.shearDiagram.last().value, 0.05)
+
+        assertEquals("R1 = 0 (M1 carries nothing)", 0.0,
+            result.nodeResults.first { it.nodeId == 1 }.reactionFy, 1e-9)
+        assertEquals("ΣRy = w·L2 = 60", 60.0, result.nodeResults.sumOf { it.reactionFy }, 0.05)
+        assertEquals("C8 resFy ≈ 0", 0.0, result.equilibriumFy, 1e-6)
+    }
+
 }

@@ -221,9 +221,19 @@ path.
 
 These items are documented for the next development cycle but are **not blockers** for the current MVP.
 
-### P4-1 Frame Modeler Phase 4: member-end releases
-- Currently `inactiveDOFs` filters zero-stiffness DOFs (singular-safe), but a full release matrix per member (`R = I - (k_release / k_full)`) is needed for proper pin/hinge/rigid combinations.
-- Slab load distribution uses tributary-area approximation for two-way panels; finite-element meshing would give exact corner moments.
+### P4-1 Frame Modeler Phase 4: member-end releases + exact two-way slab loads — ✅ CLOSED (§9.36)
+- Member-end releases: the §9.33 merge preserved the Frame Modeler's static-condensation
+  treatment (`condenseMember` zeroes released-DOF rows/cols in k and FEF — mathematically
+  exact, equivalent to any release-matrix formulation). §9.36 adds the missing lock-in test
+  for the mixed-release node (one hinged + one rigid member sharing a joint).
+- Two-way slab load distribution: §9.36 replaces the equivalent-UDL approximation with the
+  exact classical shapes via a new `MemberLoadType.Trapezoidal` (symmetric trapezoid on the
+  long beams, symmetric triangle on the short beams) — see §9.36 for the derivation and the
+  ~50% short-beam moment distortion this removes.
+- Remaining (documented, not blocking): elastic plate FEM for the slab's own corner moments
+  (the slab's design moments still come from the code-based design screens, which is the
+  standard practice); non-rectangular panels keep the averaged-pair span idealisation with
+  the rise clamped to L_edge/2 (statically exact in total).
 
 ### P4-2 C6–C13 engine hardening (re-alignment with Frame Modeler) — ✅ CLOSED (§9.33–§9.35)
 - The earlier C6–C13 audit work (fully-restrained zero-DOF path, off-grid critical-section sampling, global equilibrium residuals, load-combination envelopes, self-weight, axial sign convention) was authored against the original `FrameAnalysisEngine.solveFrame` and the `+FEF` sign convention (S1).
@@ -1410,3 +1420,78 @@ green: horizontal beam ΣRy = 82.5, vertical column ΣRy = 18 kN with compressio
 **Verification.** Focused Python replica (45°, 30°, vertical, horizontal — all exact,
 including zero equilibrium residuals); standalone `kotlinc 2.0.21` + JUnit 4 execution:
 `FrameAnalysisEngineTest` **OK (58 tests)**, `FrameModelValidatorTest` **OK (14 tests)**.
+
+---
+
+### 9.36 Phase 3 (P4-1 closed): Trapezoidal load type + exact two-way slab distribution
+
+**Context.** With Phase 1 + Phase 2 closed (§9.33–§9.35, origin/master 57/57 standalone),
+the last substantive engineering item in §8.1 P4 was the Frame Modeler Phase 4 pair:
+member-end releases and two-way slab load distribution. The expanded review this session
+re-verified the merged engine from scratch (58/58 + 14/14 + 3/3 standalone kotlinc/JUnit
+before any change) and located the real gap:
+
+- **Releases were already exact** (static condensation = the exact reduced stiffness; the
+  P4-1 "release matrix R = I − (k_release/k_full)" wording from 2fa3eb8 described the
+  pre-merge state and was stale). What was missing: a regression test for a *shared* node
+  with one released and one rigid member — added this pass.
+- **Two-way slab distribution was the real approximation**: `SlabLoadDistributor` emitted
+  *equivalent UDLs* (short beams q·S/4, long beams q·(S/2 − S²/4L)). For a simply supported
+  short beam this overstates midspan moment by ~50% (q·S³/32 vs the classical triangular
+  q·S³/48 = 2/3 of it), because it flattens the true symmetric-triangle load shape.
+
+**Change 1 — new `MemberLoadType.Trapezoidal` (engine):** symmetric trapezoid
+`p(x) = w·min(1, min(x, L−x)/a)` with `value = w` (kN/m, plateau) and `position = a`
+(0 < a ≤ L/2; a = L/2 degenerates to the symmetric triangle, a → 0 to a UDL):
+
+- **FEF (S1 convention)**: `W = w(L−a)`, `Mfix = w(L²/12 − a²/6 + a³/(12L))`,
+  `P_eq = [0, −W/2, −Mfix, 0, −W/2, +Mfix]`. Derived by closed-form integration of the
+  (already test-verified) PointLoad kernel and triple-checked in
+  `scripts/verify_trapezoid.py`: Riemann sum over 20k point loads (§1), boundary
+  continuity of the 3-branch diagram forms at x=a and x=L−a (§3), and the classical
+  limits a→0 → UDL (wL²/12) and a=L/2 → 5wL²/96 (§3). All 40+ numeric checks green
+  before any Kotlin was written.
+- **Diagrams (S2)**: V/M contributions as three-piece closed forms (connected at the
+  plateau boundaries); samples added at x=a and x=L−a (C7 kinks).
+- **C8**: total `W·(sinθ, −cosθ)` applied at midspan (symmetric-load centroid), exactly
+  the UDL pattern.
+- **C5**: loud rejection of a ≤ 0 or a > L/2 (`supplementaryValidation`), bilingual message.
+- **C9**: `value × factor` scaling preserves the shape (position untouched) — locked by a
+  dedicated envelope test (1.4DL governing, maxMoment 115.5 = 1.4×82.5).
+
+**Change 2 — exact classical two-way distribution (`SlabLoadDistributor`):** all four
+edges now carry `Trapezoidal(w = q·S/2, a = S/2)` (45° corner geometry):
+
+- Long beams: true trapezoid (rise S/2 from each end, plateau from S/2 to L−S/2) —
+  total `q·SL/2 − q·S²/4` (classical table value).
+- Short beams: their length is S, so a = S/2 = L_edge/2 collapses the plateau to a point —
+  the symmetric triangle, total `q·S²/4` (classical).
+- Rectangular 8×6 q=10 panel: 150 + 90 + 150 + 90 = 480 = q·area **exactly** (the old
+  equivalent-UDL code also totalled 480 but with the wrong shape). One-way panels keep
+  their UDL (already exact). Non-rectangular quads: rise clamped to `L_edge/2`
+  (statically exact in total, documented).
+
+**A physics correction found by the new tests (kept as documentation):** a portal under
+symmetric vertical load develops *individual* horizontal base reactions (R1x = −R2x ≠ 0 —
+frame action: beam axial compression + column shear), while their signed sum stays 0.
+The first draft of the portal test asserted the absolute sum = 0 and failed at 36.9 kN;
+a neutral scratch experiment (UDL/trapezoid/point on the same portal) confirmed the engine
+is right and the test now asserts the signed sum (≈1e-15).
+
+**UI/export surface (7 files, exhaustive `when` blocks extended — compile-checked
+statically; Gradle build still network-blocked):** entity enum + doc, `LoadInputPopup`
+(rise-a field), `FrameModelerTab` labels, `FrameModelerCanvas` (trapezoid outline: two
+rise lines + plateau + arrows), `FrameDrawingCanvas` (varying-length arrows), PDF
+exporter, DXF builder (LINE+arrow+text entities). Persistence is Gson-by-enum-name —
+old drafts/models read unchanged.
+
+**Tests.** Engine: +8 (fixed-fixed 53.4375/29.0625, SS 82.5, symmetric triangle 37.5/60,
+a→0 vs UDL twin, invalid rise 0/−1/3.5 → loud error, portal C8, envelope 1.4×, mixed
+releases at a shared node) → 66 total. Distributor: +1 (per-edge classical totals
+150/90) and the two-way test rewritten for the new shapes → 4 total. Validator: 14
+unchanged. **Standalone kotlinc 2.0.21 + JUnit: 84/84 green.** Static script
+`static_check_merge.py` refreshed to the current engine forms: 120/120.
+
+**Verification chain.** `verify_trapezoid.py` (closed forms) → standalone compile of
+engine + entities + slab panel + validator + distributor + all three test classes →
+84/84 → static checks (11 files, braces/exhaustiveness/placeholders) 120/120.

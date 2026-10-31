@@ -234,6 +234,7 @@ fun FrameModelerCanvas(
                     MemberLoadType.PointLoad -> "P=${load.value} kN"
                     MemberLoadType.Moment -> "M=${load.value}"
                     MemberLoadType.LinearVarying -> String.format(java.util.Locale.ROOT, "w=%.1f kN/m (varies)", load.value)
+                    MemberLoadType.Trapezoidal -> String.format(java.util.Locale.ROOT, "w=%.1f a=%.1f (trap)", load.value, load.position)
                 }
                 val color = loadCaseColor(load.loadCase)
                 val style = if (load.loadType == MemberLoadType.LinearVarying) {
@@ -967,6 +968,28 @@ private fun DrawScope.drawMemberLoads(
                 drawLine(color, Offset(p1.x + nx * offset, p1.y + ny * offset), Offset(p2.x + nx * offset, p2.y + ny * offset), 1.5f)
                 layout?.let {
                     drawText(it, topLeft = Offset((p1.x + p2.x) / 2f, (p1.y + p2.y) / 2f - 22f))
+                }
+            }
+            MemberLoadType.Trapezoidal -> {
+                // المرحلة الثالثة: إطار شبه المنحرف — خطا ارتفاع من الطرفين + هضبة
+                val memberLen = max(member.getLength(nodes), 1e-9)
+                val tA = (load.position / memberLen).toFloat().coerceIn(0f, 0.5f)
+                val rise1 = Offset(p1.x + dx * tA + nx * offset, p1.y + dy * tA + ny * offset)
+                val rise2 = Offset(p2.x - dx * tA + nx * offset, p2.y - dy * tA + ny * offset)
+                drawLine(color, Offset(p1.x + nx * 2f, p1.y + ny * 2f), rise1, 1.2f)
+                drawLine(color, Offset(p2.x + nx * 2f, p2.y + ny * 2f), rise2, 1.2f)
+                drawLine(color, rise1, rise2, 1.5f)
+                val steps = 6
+                for (i in 0..steps) {
+                    val t = tA + (1f - 2f * tA) * i / steps
+                    val x = p1.x + dx * t
+                    val y = p1.y + dy * t
+                    val px = p1.x + dx * t + nx * offset
+                    val py = p1.y + dy * t + ny * offset
+                    drawLine(color, Offset(px, py), Offset(x - nx * 10f, y - ny * 10f), 1.2f)
+                }
+                layout?.let {
+                    drawText(it, topLeft = Offset((p1.x + p2.x) / 2f + 6f, (p1.y + p2.y) / 2f + ny * (offset + 4f) - 6f))
                 }
             }
         }

@@ -392,6 +392,37 @@ object FrameDxfBuilder {
                     writer.circle(layer, px, py, 220.0)
                     writer.text(TEXT, px + 280.0, py + 220.0, 150.0, "M=${fmt(load.value)}")
                 }
+                MemberLoadType.Trapezoidal -> {
+                    // المرحلة الثالثة: خطا ارتفاع + هضبة + أسهم (شكل شبه المنحرف)
+                    val tA = (load.position / length).coerceIn(0.02, 0.5)
+                    val r1x = x1 + (x2 - x1) * tA + nx * offset
+                    val r1y = y1 + (y2 - y1) * tA + ny * offset
+                    val r2x = x2 - (x2 - x1) * tA + nx * offset
+                    val r2y = y2 - (y2 - y1) * tA + ny * offset
+                    writer.line(layer, x1 + nx * 60.0, y1 + ny * 60.0, r1x, r1y)
+                    writer.line(layer, x2 + nx * 60.0, y2 + ny * 60.0, r2x, r2y)
+                    writer.line(layer, r1x, r1y, r2x, r2y)
+                    for (step in 0..4) {
+                        val t = tA + (1.0 - 2.0 * tA) * step / 4.0
+                        val px = x1 + (x2 - x1) * t
+                        val py = y1 + (y2 - y1) * t
+                        writer.arrow(
+                            layer,
+                            px + nx * offset,
+                            py + ny * offset,
+                            px,
+                            py,
+                            160.0
+                        )
+                    }
+                    writer.text(
+                        TEXT,
+                        (r1x + r2x) / 2.0,
+                        (r1y + r2y) / 2.0 + ny * 220.0,
+                        155.0,
+                        "w=${fmt(load.value)} a=${fmt(load.position)} (trap)"
+                    )
+                }
             }
         }
     }

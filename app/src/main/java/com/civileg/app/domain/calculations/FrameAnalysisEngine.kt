@@ -473,6 +473,15 @@ object FrameAnalysisEngine {
                     return "موقع الحمل (${ml.position} م) خارج طول العضو #${ml.memberId} ($L م) / Load position out of range on member #${ml.memberId}"
                 }
             }
+            // المرحلة الثالثة: شبه المنحرف يتطلب 0 < a ≤ L/2 (a = L/2 هو المثلث
+            // المتماثل؛ a > L/2 يعني هضبة سالبة الطول — شكل هندسي غير صالح)
+            if (ml.loadType == MemberLoadType.Trapezoidal) {
+                val member = members.find { it.id == ml.memberId } ?: continue
+                val L = member.getLength(nodes)
+                if (ml.position <= 0.0 || ml.position > L / 2.0 + 1e-9) {
+                    return "طول ارتفاع شبه المنحرف (${ml.position} م) غير صالح للعضو #${ml.memberId} (المطلوب 0 < a ≤ L/2 = ${"%.3f".format(L / 2.0)} م) / Trapezoidal rise out of range on member #${ml.memberId}"
+                }
+            }
         }
         return null
     }
@@ -646,6 +655,17 @@ object FrameAnalysisEngine {
                     val fy = -ml.value * L * 0.5 * cosA
                     val px = iNode.x + (2.0 / 3.0) * L * cosA
                     val py = iNode.y + (2.0 / 3.0) * L * sinA
+                    sumFx += fx; sumFy += fy
+                    sumMzApplied += px * fy - py * fx
+                }
+                MemberLoadType.Trapezoidal -> {
+                    // المرحلة الثالثة: شبه منحرف متماثل — الكلية w(L−a) عند منتصف
+                    // البحر (مركز الثقل لعزم متماثل) كما في UDL تماماً.
+                    val totalT = ml.value * (L - ml.position)
+                    val fx = totalT * sinA
+                    val fy = -totalT * cosA
+                    val px = iNode.x + 0.5 * L * cosA
+                    val py = iNode.y + 0.5 * L * sinA
                     sumFx += fx; sumFy += fy
                     sumMzApplied += px * fy - py * fx
                 }
@@ -1045,6 +1065,34 @@ object FrameAnalysisEngine {
                     w * L * L / 20.0
                 )
             }
+            MemberLoadType.Trapezoidal -> {
+                // المرحلة الثالثة (P4-1): شبه منحرف متماثل — الشكل الكلاسيكي الدقيق
+                // لتوزيع أحمال البلاطات ثنائية الاتجاه على كمرات الحواف.
+                //   p(x) = w·min(1, min(x, L−x)/a)،  a = position ∈ (0, L/2]
+                //   a = L/2 → مثلث متماثل (ذروة w عند منتصف البحر) — حمل الكمرات القصيرة
+                //   a → 0  → UDL شدته w
+                //
+                // الاشتقاق (تحقق ثلاثي: مجموع ريمان لنواة الحمل المركزي المُتحقَّقة
+                // + تكامل عددي + الحدود الكلاسيكية 5wL²/96 و wL²/12 —
+                // scripts/verify_trapezoid.py):
+                //   W    = w·(L−a)                       (الحمل الكلي)
+                //   Mfix = w·(L²/12 − a²/6 + a³/(12L))   (عزم النهاية المثبتة)
+                //   P_eq = [0, −W/2, −Mfix, 0, −W/2, +Mfix]  (متماثل: قصّان متساويان،
+                //                                            عزمان متعاكسان)
+                // الحدود: a→L/2 يعطي 5wL²/96 (المثلث المتماثل الكلاسيكي) ✓
+                //         a→0 يعطي wL²/12 و wL/2 (UDL) ✓
+                val a = load.position
+                val total = w * (L - a)
+                val mFix = w * (L * L / 12.0 - a * a / 6.0 + a * a * a / (12.0 * L))
+                doubleArrayOf(
+                    0.0,
+                    -total / 2.0,
+                    -mFix,
+                    0.0,
+                    -total / 2.0,
+                    mFix
+                )
+            }
         }
         return condenseFixedEndForces(member, settings, nodes, raw)
     }
@@ -1084,6 +1132,12 @@ object FrameAnalysisEngine {
                 sampleSet.add(a)
                 sampleSet.add((a - LOAD_POS_EPS * 10).coerceIn(0.0, L))   // a⁻ε
                 sampleSet.add((a + LOAD_POS_EPS * 10).coerceIn(0.0, L))   // a⁺ε
+            }
+            if (mLoad.loadType == MemberLoadType.Trapezoidal) {
+                // المرحلة الثالثة: نقطتا انكسار توزّع شبه المنحرف (بداية/نهاية الهضبة)
+                val aT = mLoad.position.coerceIn(LOAD_POS_EPS, L / 2.0)
+                sampleSet.add(aT)
+                sampleSet.add(L - aT)
             }
         }
         // نقاط ربع البحر
@@ -1134,6 +1188,27 @@ object FrameAnalysisEngine {
                         val wAtX = mLoad.value * x / L
                         V -= wAtX * x / 2.0
                         M -= mLoad.value * x * x * x / (6.0 * L)
+                    }
+                    MemberLoadType.Trapezoidal -> {
+                        // المرحلة الثالثة: مساهمات شبه المنحرف المتماثل
+                        //   p(ξ) = w·min(1, min(ξ, L−ξ)/a)
+                        // Vc(x) = الحمل التراكمي يسار المقطع، Mc(x) = ∫p(ξ)(x−ξ)dξ
+                        // (صيغ ثلاثية الفروع متصلة عند x=a وx=L−a — مُتحقَّقة
+                        //  بتكامل عددي، scripts/verify_trapezoid.py §2)
+                        val wT = mLoad.value
+                        val aT = mLoad.position
+                        val totalT = wT * (L - aT)
+                        if (x <= aT) {
+                            V -= wT * x * x / (2.0 * aT)
+                            M -= wT * x * x * x / (6.0 * aT)
+                        } else if (x <= L - aT) {
+                            V -= wT * (x - aT / 2.0)
+                            M -= wT * (x * x / 2.0 - aT * x / 2.0 + aT * aT / 6.0)
+                        } else {
+                            val u = L - x
+                            V -= totalT - wT * u * u / (2.0 * aT)
+                            M -= wT * L * (L - aT) / 2.0 - wT * (L - aT) * u + wT * u * u * u / (6.0 * aT)
+                        }
                     }
                 }
             }

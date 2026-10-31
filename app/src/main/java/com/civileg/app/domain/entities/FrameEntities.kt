@@ -169,7 +169,7 @@ data class MemberLoad(
     val memberId: Int,
     val loadType: MemberLoadType = MemberLoadType.UDL,
     val value: Double = 0.0,     // kN/m أو kN حسب النوع
-    val position: Double = 0.0,  // موقع الحمولة من بداية العضو (متر)
+    val position: Double = 0.0,  // موقع الحمولة من بداية العضو (متر) — ولنوع Trapezoidal: طول الارتفاع من كل طرف (0 < position ≤ L/2)
     val loadCase: String = "DL"  // DL, LL, WL
 ) : Parcelable
 
@@ -178,7 +178,21 @@ enum class MemberLoadType(val displayNameAr: String, val displayNameEn: String) 
     UDL("توزيع منتظم", "Uniform Distributed Load"),
     PointLoad("حمولة مركزة", "Point Load"),
     Moment("عزم", "Applied Moment"),
-    LinearVarying("متغير خطياً", "Linearly Varying Load");
+    LinearVarying("متغير خطياً", "Linearly Varying Load"),
+    /**
+     * المرحلة الثالثة (P4-1): حمل شبه منحرف متماثل — الشكل الكلاسيكي الدقيق
+     * لتوزيع أحمال البلاطات ثنائية الاتجاه على كمرات الحواف.
+     *
+     * الشكل: صفر عند الطرفين، ارتفاع خطي على مسافة [position] من كل طرف،
+     * ثم هضبة شدتها [value] بين position و L-position.
+     *   p(x) = value · min(1, min(x, L−x)/position)
+     *   - position = L/2 يتحول إلى مثلث متماثل (ذروة value عند منتصف البحر)
+     *     → حمل الكمرات القصيرة في التوزيع ثنائي الاتجاه.
+     *   - position → 0 يتحول إلى UDL قيمته value.
+     *
+     * الوحدات: value = kN/m (هابط)، position = م (0 < position ≤ L/2).
+     */
+    Trapezoidal("شبه منحرف (بلاطة)", "Trapezoidal (two-way slab)");
 
     /** Locale-aware display name */
     val displayName: String get() = if (LocaleHelper.isArabic()) displayNameAr else displayNameEn
