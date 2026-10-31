@@ -21,8 +21,8 @@
 | Drawing → PDF | ✅ | Capture-based for every element with an on-screen drawing; FlatSlab/ShearWall stale-bitmap fixed (§9.10); native-Canvas PDF path removed (§9.11). Base plate is generator-only. |
 | Export pipelines | ✅ Consolidated | `ExportManager` unified; 12+ dead exporters deleted; all ViewModels migrated (§9.10). |
 | Frame Modeler | ✅ MVP complete | Interactive 2D CAD editor (§9.32): draw nodes/members/supports/loads/joints; 60-step undo; PDF + DXF R12 exports; `FrameModelValidator` integration. |
-| Security / signing | ⚠️ Blocked | Needs production signer fingerprint (`AppIntegrityChecker.EXPECTED_SIGNER_FINGERPRINT`) + AdMob IDs. 27 Dependabot alerts (mostly dev-only tooling). |
-| Release (P3) | ⚠️ Pending | ProGuard config, signing key, versioning, Play Store listing — needs user-supplied assets. |
+| Security / signing | ⚠️ Values pending | Fingerprint + AdMob IDs now build-time configurable via local.properties→BuildConfig (§9.37); actual release-keystore SHA-256 + production ad IDs are user-supplied. 27 Dependabot alerts (mostly dev-only tooling). |
+| Release (P3) | ⚠️ Pending | ProGuard rules ✓, signing infra ✓, versioning 1.6.0(6) ✓, config template ✓ (§9.37) — remaining: user assets (keystore SHA-256, AdMob IDs, store listing) + manual QA 15 elements × 3 codes. |
 
 ---
 
@@ -240,10 +240,18 @@ These items are documented for the next development cycle but are **not blockers
 - The Frame Modeler commit (`9d098f4`) re-organised `solveFrame` (uses `FrameModelValidator`, adds `inactiveDOFs`, extended `getFixedEndForces(member, mLoad, nodes, settings)` signature) and uses the `-FEF` sign convention.
 - Re-applying C6–C13 against the new sign convention is a deliberate follow-up — the engine now solves correctly without them (1322 tests pass), so this is enhancement, not bug-fix.
 
-### P4-3 Production release preparation
-- `AppIntegrityChecker.EXPECTED_SIGNER_FINGERPRINT` is empty (signature check skipped) — set the SHA-256 of the release keystore before Play Store submission.
-- AdMob IDs in `AdsManager.kt` and `AdManager.kt` are placeholders (`ca-app-pub-XXXXX/YYYYY`) — replace with production IDs.
-- 27 Dependabot alerts remain; most are dev/test-only (KSP/Hilt/Dagger compiler classpath, AGP Unified Test Platform). Runtime `guava` already forced to 33.4.0-android. The remaining alerts would need an AGP 10 migration (major version bump) and is deferred.
+### P4-3 Production release preparation — infrastructure ✅ DONE (§9.37); values are user-supplied
+- Signer fingerprint + AdMob IDs are now **build-time configured**: local.properties keys
+  (`signing.fingerprint.sha256`, `admob.app.id`, `admob.banner.id`, `admob.interstitial.id`,
+  `admob.native.id`, `admob.rewarded.id`) → 5 `buildConfigField`s → runtime consumers
+  (`AppIntegrityChecker` / `AdsManager` / `AdManager`). Defaults stay Google TEST IDs / empty
+  fingerprint (fail-open). See `local.properties.template` + `play-store/release-checklist.md` §1b.
+- `local.properties` (Windows SDK path, tracked since `c610fb0` despite .gitignore) untracked
+  from git — CI uses `ANDROID_HOME` and never depended on it.
+- Release checklist truth-up: “No ads SDK ✓” was **wrong** (AdMob + UMP present → the Play
+  Data Safety form must declare ad serving); target API 35 → 36.
+- Remaining (user-supplied, not codeable): real AdMob account IDs, release-keystore SHA-256,
+  store listing assets. Dependabot residue needs the AGP 10 migration (deferred).
 
 ### P4-4 CodeReference clause verification
 - ACI 318-19 chapter numbers verified (§9.6); SBC 304-2018 chapter numbers corrected (§9.9).
@@ -1495,3 +1503,55 @@ unchanged. **Standalone kotlinc 2.0.21 + JUnit: 84/84 green.** Static script
 **Verification chain.** `verify_trapezoid.py` (closed forms) → standalone compile of
 engine + entities + slab panel + validator + distributor + all three test classes →
 84/84 → static checks (11 files, braces/exhaustiveness/placeholders) 120/120.
+
+### 9.37 Phase 4 (P4-3 infrastructure): production configuration wired — fingerprint + AdMob IDs via BuildConfig
+
+**Context.** With Phases 1–3 closed (§9.33–§9.36), the executable remainder of §8.1 was
+P4-3 (P4-4 ECP clause verification still needs the licensed document). The audit complaints:
+`AppIntegrityChecker.EXPECTED_SIGNER_FINGERPRINT` was a hardcoded empty `const`, and the
+AdMob ad-unit IDs were hardcoded Google-test consts duplicated across TWO managers
+(`utils/AdsManager.kt`, `ads/AdManager.kt`) — whose comments even claimed the IDs were
+configurable from local.properties; they were not (only the manifest APP ID was).
+
+**Change 1 — build-time configuration (`app/build.gradle.kts`):** five new `buildConfigField`s
+in `defaultConfig`, all fed from the git-ignored `local.properties` with safe defaults —
+`BANNER/INTERSTITIAL/NATIVE/REWARDED_AD_UNIT_ID` (default: Google test IDs) and
+`EXPECTED_SIGNER_FINGERPRINT` (default `""` = fail-open). A shared `admobId(key, testId)`
+helper blank-checks each property so an empty value falls back to the test ID instead of
+crashing the ad SDK. The production swap is now a properties edit + rebuild — no code change
+at release time.
+
+**Change 2 — consumers:** `AppIntegrityChecker` reads the fingerprint from `BuildConfig` and
+now **normalizes both sides before comparing** (uppercase → strip `SHA256:` prefix → drop
+`:`/spaces), so every keytool copy-paste variant matches (`SHA256: AB:CD…`, `ab:cd…`, bare
+hex); empty stays fail-open with the loud log. `AdsManager` + `AdManager` expose their IDs as
+`get()` properties backed by BuildConfig — public API unchanged (`AdComponents.kt` and
+`SplashActivity.kt` untouched, still compile against the same names).
+
+**Change 3 — repo hygiene:** `local.properties` had been git-tracked since `c610fb0` (a
+Windows SDK path!) despite being listed twice in `.gitignore` — untracked via
+`git rm --cached`. CI never depended on it (runners provide `ANDROID_HOME`; the green run
+on `d8a5000` predates this change and `assembleDebug` cannot resolve a Windows path on
+Linux). New committed `local.properties.template` documents every supported key
+(sdk.dir, six AdMob keys, the fingerprint, signing pointers).
+
+**Change 4 — release checklist truth-up (`play-store/release-checklist.md`):** new §1b
+(production configuration: the property keys, the exact `keytool -list -v` command, and the
+rebuild requirement — BuildConfig is baked at compile time, not read at runtime); the
+“**No ads SDK ✓**” line was factually wrong and now states AdMob + UMP are present and the
+Play **Data Safety form must declare ad serving**; target API 35 → 36; test line
+Android 15 → 16.
+
+**Verification (full Gradle build still network-blocked for KSP/Hilt):** new
+`scripts/verify_p43_config.py` — brace/paren/bracket balance of all four edited files;
+BuildConfig cross-reference gradle→Kotlin (5/5 declared, 5/5 used, imports present);
+zero hardcoded ad-unit IDs left in `app/src`; no TODO/XXXXX markers; `local.properties`
+confirmed untracked; every gradle-read key documented in the template; each edited property
+declared exactly once; fingerprint-normalization equivalence mirrored in Python (4 cases,
+including the `SHA256: ` prefix form). No unit tests reference the three touched classes
+(grep-verified) — the documented 76-suite / 1347-test surface (§9.34) plus the §9.35–§9.36
+standalone additions is unaffected. Runtime behaviour with default properties is
+byte-identical to before (same test IDs, empty fingerprint), so CI expectations are unchanged.
+
+**P4-4 remains blocked** on the licensed ECP 203-2020 text (display-only refs; resolution
+test already guards every key — §9.6).

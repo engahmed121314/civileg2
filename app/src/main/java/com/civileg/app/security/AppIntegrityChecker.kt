@@ -3,6 +3,7 @@ package com.civileg.app.security
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import com.civileg.app.BuildConfig
 import java.io.File
 import java.security.MessageDigest
 import java.util.Locale
@@ -13,13 +14,14 @@ import java.util.Locale
  */
 object AppIntegrityChecker {
 
-    // Expected signing certificate fingerprint (SHA-256) — set during release build
-    // IMPORTANT: Replace with the actual SHA-256 fingerprint of your release signing key
-    // before production deployment. Obtain it via:
+    // Expected signing certificate fingerprint (SHA-256).
+    // P4-3: configured at build time from local.properties `signing.fingerprint.sha256`
+    // via BuildConfig — no code change is needed at release time. Obtain the value via:
     //   keytool -list -v -keystore your-release-key.jks -alias your-alias
-    // Then paste the SHA-256 value here (e.g., "AB:CD:EF:...:12:34")
+    // (copy the SHA256 field, e.g. "AB:CD:EF:...:12:34" — lowercase/no-colons also accepted).
     // When empty, signature verification is effectively disabled (any APK passes).
-    private const val EXPECTED_SIGNER_FINGERPRINT = ""
+    private val EXPECTED_SIGNER_FINGERPRINT: String
+        get() = BuildConfig.EXPECTED_SIGNER_FINGERPRINT
 
     private val SUSPICIOUS_PATHS = arrayOf(
         "/system/app/Superuser.apk",
@@ -76,13 +78,28 @@ object AppIntegrityChecker {
      * Note: If EXPECTED_SIGNER_FINGERPRINT is empty, signature check is skipped.
      */
     fun isDeviceSecure(context: Context): Boolean {
-        if (EXPECTED_SIGNER_FINGERPRINT.isEmpty()) {
+        val expected = EXPECTED_SIGNER_FINGERPRINT
+        if (expected.isEmpty()) {
             Log.w("AppIntegrityChecker", "Release fingerprint not set — integrity check is disabled")
         }
         val currentFingerprint = getApkFingerprint(context)
-        val isSignatureValid = EXPECTED_SIGNER_FINGERPRINT.isEmpty() || currentFingerprint == EXPECTED_SIGNER_FINGERPRINT
-        
+        val isSignatureValid = expected.isEmpty() ||
+                normalizeFingerprint(currentFingerprint) == normalizeFingerprint(expected)
+
         return isSignatureValid && !isRooted(context) && !isEmulator() && !isDebuggerAttached() && !isHooked(context)
+    }
+
+    /**
+     * Normalize a SHA-256 fingerprint for comparison: strips an optional "SHA256:"
+     * prefix, removes ':'/space separators and uppercases — so "ab:cd:ef",
+     * "SHA256: AB:CD:EF" and "ABCDEF" all compare equal.
+     */
+    private fun normalizeFingerprint(fingerprint: String): String {
+        return fingerprint
+            .uppercase(Locale.US)
+            .removePrefix("SHA256:")
+            .replace(":", "")
+            .replace(" ", "")
     }
 
     /**

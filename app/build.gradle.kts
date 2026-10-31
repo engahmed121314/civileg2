@@ -42,7 +42,8 @@ android {
         resValue("string", "developer_copyright", "Copyright \u00a9 2024-2025 Eng. Ahmed Magdy. All rights reserved.")
         resValue("string", "support_email", "eng.ahmedmagdy121314@gmail.com")
 
-        // Load local properties for external IDs
+        // Load local properties for external IDs (local.properties is NOT committed —
+        // see local.properties.template for every supported key)
         val localProperties = Properties()
         val localPropertiesFile = rootProject.file("local.properties")
         if (localPropertiesFile.exists()) {
@@ -50,6 +51,27 @@ android {
         }
         val admobAppId = localProperties.getProperty("admob.app.id") ?: "ca-app-pub-3940256099942544~3347511713"
         manifestPlaceholders["admobAppId"] = admobAppId
+
+        // ── P4-3 production configuration (§9.37) ──────────────────────────
+        // AdMob ad-unit IDs: defaults are Google's well-known TEST IDs (serve test
+        // ads only, earn no revenue). For production set in local.properties:
+        //   admob.banner.id=ca-app-pub-XXXXX/YYYYY   (same for interstitial/native/rewarded)
+        fun admobId(key: String, testId: String): String =
+            localProperties.getProperty(key)?.takeIf { it.isNotBlank() } ?: testId
+        buildConfigField("String", "BANNER_AD_UNIT_ID", "\"${admobId("admob.banner.id", "ca-app-pub-3940256099942544/6300978111")}\"")
+        buildConfigField("String", "INTERSTITIAL_AD_UNIT_ID", "\"${admobId("admob.interstitial.id", "ca-app-pub-3940256099942544/1033173712")}\"")
+        buildConfigField("String", "NATIVE_AD_UNIT_ID", "\"${admobId("admob.native.id", "ca-app-pub-3940256099942544/2247696110")}\"")
+        buildConfigField("String", "REWARDED_AD_UNIT_ID", "\"${admobId("admob.rewarded.id", "ca-app-pub-3940256099942544/5224354917")}\"")
+
+        // Release signer fingerprint (SHA-256 of the release keystore certificate).
+        // Obtain via:  keytool -list -v -keystore your-release-key.jks -alias your-alias
+        // Set in local.properties:  signing.fingerprint.sha256=AB:CD:EF:...:12:34
+        // Empty (default) => signature verification is skipped until configured.
+        buildConfigField(
+            "String",
+            "EXPECTED_SIGNER_FINGERPRINT",
+            "\"${localProperties.getProperty("signing.fingerprint.sha256")?.trim() ?: ""}\""
+        )
     }
 
     buildFeatures {
