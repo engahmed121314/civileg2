@@ -225,7 +225,7 @@ These items are documented for the next development cycle but are **not blockers
 - Currently `inactiveDOFs` filters zero-stiffness DOFs (singular-safe), but a full release matrix per member (`R = I - (k_release / k_full)`) is needed for proper pin/hinge/rigid combinations.
 - Slab load distribution uses tributary-area approximation for two-way panels; finite-element meshing would give exact corner moments.
 
-### P4-2 C6–C13 engine hardening (re-alignment with Frame Modeler)
+### P4-2 C6–C13 engine hardening (re-alignment with Frame Modeler) — ✅ CLOSED (§9.33–§9.35)
 - The earlier C6–C13 audit work (fully-restrained zero-DOF path, off-grid critical-section sampling, global equilibrium residuals, load-combination envelopes, self-weight, axial sign convention) was authored against the original `FrameAnalysisEngine.solveFrame` and the `+FEF` sign convention (S1).
 - The Frame Modeler commit (`9d098f4`) re-organised `solveFrame` (uses `FrameModelValidator`, adds `inactiveDOFs`, extended `getFixedEndForces(member, mLoad, nodes, settings)` signature) and uses the `-FEF` sign convention.
 - Re-applying C6–C13 against the new sign convention is a deliberate follow-up — the engine now solves correctly without them (1322 tests pass), so this is enhancement, not bug-fix.
@@ -1374,3 +1374,39 @@ merged suite: **57 tests, all passing**.
   tests + the C10 gravity-direction regression. Verified standalone:
   `OK (57 tests)`; app main sources compile through `:app:compileDebugKotlin`
   + KSP/Hilt.
+
+### 9.35 Inclined-member self-weight bending (C10 completion on top of §9.34)
+
+**Context.** A continuation session re-verified the merged engine from scratch (independent
+Python replica + standalone kotlinc/JUnit) and reproduced the same four defect findings as
+§9.33/§9.34. Its local draft was **discarded in favour of the pushed superset** (ecf6ca0 +
+ecfdc25): notably, the remote's vertical-column regression test exposed a sign inversion in
+that draft's axial self-weight half (the node-J term was flipped, so the pair self-cancelled —
+ΣRy = 0 instead of w·L). This validates the reconciliation: **origin/master is the base**,
+re-verified here at 57/57 standalone before any change.
+
+**Improvement layered in this pass — rafter self-weight bending.** §9.34 applied
+inclined/vertical member self-weight as two *vertical* nodal loads: statically exact for
+reactions, but it produces **zero bending** in the member — a 45° canopy rafter carrying its
+own weight showed `maxMoment = 0`. The engine now uses the exact physical decomposition:
+
+- **Transverse component `w·cosθ`** → local UDL (this is the gravity component that bends
+  the member). Horizontal members: full `w` (unchanged). Vertical members: zero (unchanged).
+- **Axial component `w·sinθ·L`** → two nodal halves **along the member axis**
+  `(-w·sinθ·L/2)·(cosθ, sinθ)` at *both* ends. Horizontal: zero. Vertical: exactly the
+  previous two `w·L/2` downward loads (behaviour-identical).
+
+The resultant is exactly `(0, −w·L)` global for every inclination (verified: C8 equilibrium
+residuals ≈ 1e-15 on 30°/45° models), and the transverse sagging is now captured:
+`M_mid = w·cosθ·L²/8` (45°, L = 6 m, 300×500: **11.93 kN·m** where the nodal-only
+approach gave 0). Known approximation (unchanged, documented in-code): the axial diagram is
+lumped constant rather than linear.
+
+**Regression coverage.** New
+`solveFrame_selfWeightOnInclinedMember_producesBendingAndExactReactions` (ΣRy = 22.5 kN,
+ΣRx = 0, `M_mid` = 11.93 ± 0.2, `maxMoment > 1`). Existing C10 regressions unchanged and
+green: horizontal beam ΣRy = 82.5, vertical column ΣRy = 18 kN with compression-only axial.
+
+**Verification.** Focused Python replica (45°, 30°, vertical, horizontal — all exact,
+including zero equilibrium residuals); standalone `kotlinc 2.0.21` + JUnit 4 execution:
+`FrameAnalysisEngineTest` **OK (58 tests)**, `FrameModelValidatorTest` **OK (14 tests)**.

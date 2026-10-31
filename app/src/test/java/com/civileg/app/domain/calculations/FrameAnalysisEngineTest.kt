@@ -1049,4 +1049,40 @@ class FrameAnalysisEngineTest {
         }
     }
 
+    @Test
+    fun solveFrame_selfWeightOnInclinedMember_producesBendingAndExactReactions() {
+        // C10: عارضة مائلة 45° بطول 6 م على محورها (مفصلة أسفل + بكرة أعلى)،
+        // مقطع 300×500 خرسانة → w = 25×0.3×0.5 = 3.75 kN/m.
+        // التحليل الفيزيائي: العرضية w·cosθ = 2.6517 kN/m تولّد انحناءً
+        //   M_mid = w·cosθ·L²/8 = 2.6517×36/8 = 11.93 kN.m
+        // والمحورية w·sinθ·L تذهب للاعتكازين — إجمالي الجاذبية:
+        //   ΣRy = w·L = 22.5 kN و ΣRx = 0.
+        // (المقاربة العقدية الصرفة كانت تعطي M = 0 — إهمال انحناء الوزن الذاتي
+        //  للعوارض المائلة، وهو ما يكشفه هذا الاختبار.)
+        val d = 6.0 * 0.7071067811865476
+        val nodes = listOf(
+            FrameNode(1, 0.0, 0.0, SupportType.Pin),
+            FrameNode(2, d, d, SupportType.Roller)
+        )
+        val members = listOf(
+            FrameMember(1, 1, 2, FrameMaterialType.Concrete, FrameMemberType.Beam,
+                ConcreteSectionProps(300.0, 500.0))
+        )
+        val settings = FrameAnalysisSettings(includeSelfWeight = true, loadCombinations = emptyList())
+
+        val result = FrameAnalysisEngine.solveFrame(nodes, members, emptyList(), emptyList(), settings)
+        assertTrue("Should solve: ${result.errorMessage}", result.isSolved)
+
+        assertEquals("ΣRy = w·L = 22.5 kN (gravity, C10)", 22.5,
+            result.nodeResults.sumOf { it.reactionFy }, 0.05)
+        assertEquals("ΣRx = 0 — no horizontal resultant from gravity (C10)", 0.0,
+            result.nodeResults.sumOf { kotlin.math.abs(it.reactionFx) }, 1e-9)
+
+        // انحناء الوزن الذاتي للعضو المائل يجب أن يظهر فعلياً
+        assertTrue("Inclined self-weight must produce sagging (maxMoment > 1), got ${result.memberDiagrams.single().maxMoment}",
+            result.memberDiagrams.single().maxMoment > 1.0)
+        assertEquals("M_mid = w·cosθ·L²/8 ≈ 11.93 kN.m (C10 transverse component)",
+            11.93, result.memberDiagrams.single().maxMoment, 0.2)
+    }
+
 }

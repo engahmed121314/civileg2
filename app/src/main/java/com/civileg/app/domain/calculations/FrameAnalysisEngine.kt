@@ -667,10 +667,12 @@ object FrameAnalysisEngine {
      * خرسانة: w = γ·b·h = 25 × (b×h بالمتر المربع) kN/m
      * حديد:   w = (kg/m) × g/1000 = (kg/m) × 9.81/1000 kN/m
      *
-     * الأعضاء الأفقية: UDL محلي (يمثل الثقل تماماً).
-     * الأعضاء المائلة/الرأسية: الوزن الذاتي محوري كلياً أو جزئياً، والمحرك لا
-     * يدعم الأحمال المحورية الموزعة — لذا يُطبَّق كحملين عقيديين رأسيين
-     * (wL/2 لكل طرف) وهو صواب استاتيكي تام للارتكازات وردود الأفعال.
+     * تحليل فيزيائي للجاذبية (w هابط رأسياً لكل متر طولي من العضو):
+     *   - العرضية w·cosθ: UDL محلي هابط — يُلتقط انحناء الوزن الذاتي للكمرات
+     *     والعوارض المائلة بدقة (الأفقي: w كاملة، الرأسي: صفر).
+     *   - المحورية w·sinθ·L: حملان عقيديان على طول محور العضو (نصف لكل طرف)
+     *     لأن المحرك لا يدعم الأحمال المحورية الموزعة — صواب استاتيكي تام
+     *     للارتكازات وردود الأفعال، ومخطط N قريب من الثابت (تقريب موثّق).
      */
     private fun selfWeightLoads(
         members: List<FrameMember>,
@@ -694,19 +696,30 @@ object FrameAnalysisEngine {
             if (!wPerM.isFinite() || wPerM <= 0.0) continue
             val L = m.getLength(nodes)
             if (!L.isFinite() || L <= 0.0) continue
-            if (abs(m.getSinTheta(nodes)) < 1e-9) {
-                // عضو أفقي: UDL محلي = الحمل الثقلي بالضبط
+            val cosT = m.getCosTheta(nodes)
+            val sinT = m.getSinTheta(nodes)
+            // المركّبة العرضية w·cosθ: UDL محلي هابط — انحناء الوزن الذاتي
+            // للعوارض المائلة (rafters) يُلتقط فعلياً (كان يُهمل قبل هذا).
+            val transverse = wPerM * cosT
+            if (transverse > 1e-9) {
                 udlLoads.add(MemberLoad(
                     memberId = m.id,
                     loadType = MemberLoadType.UDL,
-                    value = wPerM,
+                    value = transverse,
                     position = 0.0,
                     loadCase = "DL"
                 ))
-            } else {
-                // عضو مائل/رأسي: حملان عقيديان رأسيان (نصف الوزن لكل طرف)
-                nodalLoads.add(NodalLoad(m.nodeI, fy = -wPerM * L / 2.0, loadCase = "DL"))
-                nodalLoads.add(NodalLoad(m.nodeJ, fy = -wPerM * L / 2.0, loadCase = "DL"))
+            }
+            // المركّبة المحورية w·sinθ·L على طول محور العضو — نصفان عقيديان
+            // (الأفقي: صفر، الرأسي: نصف الوزن هابطاً عند كل طرف — كما كان).
+            val axialHalfLocalX = -wPerM * sinT * L / 2.0
+            if (abs(axialHalfLocalX) > 1e-9) {
+                nodalLoads.add(NodalLoad(
+                    m.nodeI, fx = axialHalfLocalX * cosT, fy = axialHalfLocalX * sinT, mz = 0.0, loadCase = "DL"
+                ))
+                nodalLoads.add(NodalLoad(
+                    m.nodeJ, fx = axialHalfLocalX * cosT, fy = axialHalfLocalX * sinT, mz = 0.0, loadCase = "DL"
+                ))
             }
         }
         return udlLoads to nodalLoads
