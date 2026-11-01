@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.responsive.dimens
+
 import com.civileg.app.domain.entities.DesignCode
 
 import androidx.compose.foundation.background
@@ -115,7 +117,7 @@ fun BeamScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item { SectionHeader(stringResource(R.string.beam_section_support), R.drawable.ic_beam) }
@@ -360,6 +362,7 @@ fun BeamScreen(
                         else -> 780
                     }
                     InteractiveDrawingScreen(
+                        onExportDxf = { viewModel.exportToDxf(context) },
                         title = stringResource(R.string.column_drawing_title),
                         subtitle = stringResource(R.string.beam_drawing_subtitle),
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_elevation), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),

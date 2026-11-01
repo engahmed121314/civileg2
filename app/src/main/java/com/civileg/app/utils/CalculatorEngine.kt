@@ -912,62 +912,285 @@ class CalculatorEngine @Inject constructor(
         val domainCode = code
         val engine = CalculationFactory.getColumnDesign(domainCode)
 
-        val res = engine.calculateReinforcement(
+        val grossArea = if (isCircular) PI * width * width / 4.0 else width * depth
+
+        // ── Design axial load: include the column's own factored self-weight ──
+        // The screen input is the load delivered by the superstructure; the column's own
+        // weight is a dead action and must be factored by the code's dead-load factor.
+        val selfWeightKn = 25.0 * grossArea * clearHeight / 1e9
+        val deadFactor = if (domainCode == DesignCode.ECP) 1.4 else 1.2
+        val puDesign = pu + if (autoIncludeSelfWeight) deadFactor * selfWeightKn else 0.0
+
+        // ── Slenderness: λ = l0 / (h/√12) ──
+        // ECP 203 §4-2-3 uses 15 for braced columns; ACI 318 §6.2.5 / SBC 304 use 22.
+        val minDimension = if (isCircular) width else min(width, depth)
+        val radiusOfGyration = minDimension / sqrt(12.0)
+        val slenderness = clearHeight / radiusOfGyration.coerceAtLeast(1.0)
+        val slendernessLimit = if (domainCode == DesignCode.ECP) 15.0 else 22.0
+        val isSlender = slenderness > slendernessLimit
+
+        // First pass with the un-magnified moments.
+        var designMx = mx
+        var designMy = my
+        var res = engine.calculateReinforcement(
             fcu = fcu, fy = fy, width = width, depth = depth,
-            axialLoad = pu, momentX = mx, momentY = my,
+            axialLoad = puDesign, momentX = designMx, momentY = designMy,
             loadCombination = LoadCombination.DEAD_LIVE
         )
 
-        val ag = if (isCircular) PI * width * width / 4.0 else width * depth
-        val concreteVolume = ag * clearHeight / 1e9
-        val steelWeight = res.astProvided * clearHeight * 7850.0 / 1e9
+        // ── Second-order moment magnification (δ = 1/(1 − Pu/Pcr), capped at 2.5) ──
+        var momentMagnifier = 1.0
+        if (isSlender) {
+            momentMagnifier = columnMomentMagnifier(
+                code = domainCode, puKn = puDesign, clearHeightMm = clearHeight,
+                fcu = fcu, width = width, depth = depth,
+                reinforcementArea = res.astProvided, isCircular = isCircular
+            )
+            if (momentMagnifier > 1.0) {
+                designMx *= momentMagnifier
+                designMy *= momentMagnifier
+                res = engine.calculateReinforcement(
+                    fcu = fcu, fy = fy, width = width, depth = depth,
+                    axialLoad = puDesign, momentX = designMx, momentY = designMy,
+                    loadCombination = LoadCombination.DEAD_LIVE
+                )
+            }
+        }
+
+        // ── Axial capacity (kN). For circular columns the engine uses b×h, so pass an
+        // equivalent depth that reproduces πD²/4 instead of D².
+        val axialDepth = if (isCircular) width * PI / 4.0 else depth
+        val axialCapacity = engine.calculateAxialCapacity(
+            fcu = fcu, fy = fy, width = width, depth = axialDepth,
+            reinforcementArea = res.astProvided, loadCombination = LoadCombination.DEAD_LIVE
+        )
+
+        // ── Uniaxial moment capacities at the applied axial load ──
+        // Computed from a strain-compatibility interaction curve; independent of the
+        // moments the user happened to enter (a zero applied moment must not report a
+        // zero capacity).
+        val momentWidth = if (isCircular) width * sqrt(PI / 4.0) else width
+        val momentDepth = if (isCircular) width * sqrt(PI / 4.0) else depth
+        val mxCapacity = columnMomentCapacity(
+            code = domainCode, width = momentWidth, depth = momentDepth,
+            reinforcementArea = res.astProvided, barDiameter = res.barDiameter,
+            fcu = fcu, fy = fy, axialKn = puDesign
+        )
+        val myCapacity = columnMomentCapacity(
+            code = domainCode, width = momentDepth, depth = momentWidth,
+            reinforcementArea = res.astProvided, barDiameter = res.barDiameter,
+            fcu = fcu, fy = fy, axialKn = puDesign
+        )
+
+        // Bresler load-contour check for biaxial bending.
+        val biaxialUtilization = if (mxCapacity > 0 && myCapacity > 0) {
+            (designMx / mxCapacity).pow(1.5) + (designMy / myCapacity).pow(1.5)
+        } else 0.0
+        val momentSafe = biaxialUtilization <= 1.0 + 1e-9
+
+        val reinforcementRatio = res.astProvided / grossArea            // fraction
+        val reinforcementPercent = reinforcementRatio * 100.0            // %
+        val minReinforcement = engine.getMinReinforcementRatio() * grossArea
+        val maxReinforcement = engine.getMaxReinforcementRatio() * grossArea
+        val ratioSafe = res.astProvided >= minReinforcement - 1e-6 &&
+            res.astProvided <= maxReinforcement + 1e-6
+        val axialSafe = puDesign <= axialCapacity + 1e-6
+
+        val concreteVolume = grossArea * clearHeight / 1e9
+        val cover = if (domainCode == DesignCode.SBC) 50.0 else 40.0
+        val tiePerimeterMm = if (isCircular) {
+            PI * (width - 2.0 * cover).coerceAtLeast(50.0)
+        } else {
+            2.0 * ((width - 2.0 * cover).coerceAtLeast(50.0) +
+                (depth - 2.0 * cover).coerceAtLeast(50.0))
+        }
+        val tieSpacing = (res.tiesSpacing ?: 200.0).toDouble().coerceIn(75.0, 300.0)
+        val tieCount = (clearHeight / tieSpacing).toInt() + 1
+        val tieWeight = tieCount * tiePerimeterMm *
+            (PI / 4.0 * res.tiesDiameter * res.tiesDiameter) * 7850.0 / 1e9
+        val mainSteelWeight = res.astProvided * clearHeight * 7850.0 / 1e9
+        val steelWeight = mainSteelWeight + tieWeight
         val cost = concreteVolume * 120.0 + steelWeight * 1.5
 
+        val warnings = (res.warnings + buildList {
+            if (isSlender) {
+                add("Slender column (λ=${"%.1f".format(slenderness)} > ${"%.0f".format(slendernessLimit)}): moments magnified by δ=${"%.2f".format(momentMagnifier)}")
+            }
+            if (!momentSafe) add("Biaxial moment demand exceeds the section capacity — increase the section or reinforcement")
+            if (!ratioSafe) add("Reinforcement ratio ${"%.2f".format(reinforcementPercent)}% is outside the code limits")
+        }).distinct()
+
+        val isSafe = res.isSafe && axialSafe && momentSafe && ratioSafe
+
         return ColumnResult(
-            width = width, depth = depth, pu = pu, mx = mx, my = my,
+            width = width, depth = depth, pu = puDesign, mx = designMx, my = designMy,
             reinforcement = ReinforcementBar(
                 numBars = res.numberOfBars, diameter = res.barDiameter.toInt(),
-                spacing = (res.spacing ?: 200.0).toDouble(), weightKg = steelWeight
+                spacing = (res.spacing ?: 200.0).toDouble(), weightKg = mainSteelWeight
             ),
             stirrups = StirrupReinforcement(
                 diameter = res.tiesDiameter.toInt(),
-                spacing = (res.tiesSpacing ?: 200.0).toDouble()
+                spacing = tieSpacing,
+                weightKg = tieWeight
             ),
             safetyChecks = listOf(
-                DesignSafetyCheck("Axial Capacity", pu, (res.astProvided * fy / 1.15 + 0.67 * fcu / 1.5 * (width * depth - res.astProvided)) / 1000.0, "kN", res.isSafe),
-                DesignSafetyCheck("Utilization", res.utilizationRatio * 100, 100.0, "%", res.isSafe)
+                DesignSafetyCheck("Axial Capacity", puDesign, axialCapacity, "kN", axialSafe),
+                DesignSafetyCheck("Biaxial Moment", biaxialUtilization * 100.0, 100.0, "%", momentSafe),
+                DesignSafetyCheck("Reinforcement Ratio", reinforcementPercent,
+                    engine.getMaxReinforcementRatio() * 100.0, "%", ratioSafe),
+                DesignSafetyCheck("Slenderness", slenderness, slendernessLimit, "", !isSlender)
             ),
-            isSafe = res.isSafe,
-            concreteVolume = width * depth * clearHeight / 1e9,
-            steelWeight = res.astProvided * clearHeight * 7850.0 / 1e9,
-            cost = (width * depth * clearHeight / 1e9) * 120.0 + res.astProvided * clearHeight * 7850.0 / 1e9 * 1.5,
+            isSafe = isSafe,
+            concreteVolume = concreteVolume,
+            steelWeight = steelWeight,
+            cost = cost,
             code = code,
-            axialCapacity = res.astProvided * fy / 1.15 + 0.67 * fcu / 1.5 * (width * depth - res.astProvided) / 1000.0,
-            appliedAxial = pu,
-            // ── توسيع: حساب قدرة العزوم الفعلية وليس صفر ──
-            // Mn_x ≈ 0.5 × As × fy × d (simplified uniaxial moment capacity)
-            mxCapacity = if (mx > 0) res.astProvided * fy / 1.15 * (min(width, depth) - 60.0) / 1e6 else 0.0,
-            myCapacity = if (my > 0) res.astProvided * fy / 1.15 * (min(width, depth) - 60.0) / 1e6 else 0.0,
-            slenderness = clearHeight * 1000.0 / min(width, depth),
-            isSlender = clearHeight * 1000.0 / min(width, depth) > 30.0,
-            utilizationRatio = res.utilizationRatio,
-            isDuctile = res.isSafe,
-            // ── توسيع: طول منطقة الحصر حسب الكود ──
-            // ACI 18.7.5.5 / SBC 304-21: max(6db, 450mm) للمناطق الزلزالية
-            confinementLength = max(6.0 * res.barDiameter, 450.0),
-            warnings = res.warnings,
+            axialCapacity = axialCapacity,
+            appliedAxial = puDesign,
+            mxCapacity = mxCapacity,
+            myCapacity = myCapacity,
+            slenderness = slenderness,
+            isSlender = isSlender,
+            columnType = when {
+                isCircular -> "CIRCULAR"
+                hasCap -> "RECTANGULAR_WITH_CAP"
+                else -> "RECTANGULAR"
+            },
+            reinforcementArea = res.astProvided,
+            minReinforcementArea = minReinforcement,
+            maxReinforcementArea = maxReinforcement,
+            reinforcementRatio = reinforcementPercent,
+            momentCapacity = minOf(mxCapacity, myCapacity),
+            utilizationRatio = maxOf(biaxialUtilization, if (axialCapacity > 0) puDesign / axialCapacity else 2.0),
+            isDuctile = isSafe && ratioSafe,
+            // ACI 18.7.5.5 / SBC 304-21: max(6db, 450mm) in seismic zones.
+            confinementLength = if (isSeismic) max(6.0 * res.barDiameter, 450.0)
+                else max(6.0 * res.barDiameter, 300.0),
+            warnings = warnings,
             codeNotes = res.codeNotes,
             calculationSteps = columnSteps(
-                code, pu, mx, my, fcu, fy, res, width, depth, clearHeight
+                code, pu, puDesign, selfWeightKn, designMx, designMy, fcu, fy, res,
+                width, depth, clearHeight, slenderness, slendernessLimit,
+                momentMagnifier, axialCapacity, reinforcementPercent
             )
         )
     }
 
+    /**
+     * Critical buckling load / moment magnifier for a slender column.
+     * EI is taken per code (ECP 203 §4-2-3 / ACI 318 §6.6.4.4.4) and includes the
+     * provided reinforcement; K = 1.0 for a braced column.
+     */
+    private fun columnMomentMagnifier(
+        code: DesignCode,
+        puKn: Double,
+        clearHeightMm: Double,
+        fcu: Double,
+        width: Double,
+        depth: Double,
+        reinforcementArea: Double,
+        isCircular: Boolean
+    ): Double {
+        val b = if (isCircular) width * sqrt(PI / 4.0) else width
+        val h = if (isCircular) width * sqrt(PI / 4.0) else depth
+        val ig = b * h.pow(3) / 12.0
+        val ec = when (code) {
+            DesignCode.ECP -> 4400.0 * sqrt(fcu)
+            DesignCode.ACI, DesignCode.SBC -> 4700.0 * sqrt(0.8 * fcu)
+        }
+        val cover = if (code == DesignCode.SBC) 50.0 else 40.0
+        val dPrime = cover + 10.0
+        val d = h - dPrime
+        val steelInertia = reinforcementArea / 2.0 * ((d - dPrime) / 2.0).pow(2) * 2.0
+        val ei = 0.4 * ec * ig + 200000.0 * steelInertia
+        val pcrKn = PI.pow(2) * ei / (clearHeightMm * clearHeightMm) / 1000.0
+        if (pcrKn <= 0.0 || puKn >= pcrKn) return 2.5
+        return (1.0 / (1.0 - puKn / pcrKn)).coerceIn(1.0, 2.5)
+    }
+
+    /**
+     * Design moment capacity (kN·m) of a rectangular tied column at a given factored
+     * axial load, from a symmetric-reinforcement strain-compatibility interaction curve.
+     * The result depends on the section and axial load only — never on the applied moment.
+     */
+    private fun columnMomentCapacity(
+        code: DesignCode,
+        width: Double,
+        depth: Double,
+        reinforcementArea: Double,
+        barDiameter: Double,
+        fcu: Double,
+        fy: Double,
+        axialKn: Double
+    ): Double {
+        if (width <= 0.0 || depth <= 0.0 || reinforcementArea <= 0.0) return 0.0
+        val cover = if (code == DesignCode.SBC) 50.0 else 40.0
+        val dPrime = (cover + 10.0 + barDiameter / 2.0).coerceAtMost(depth * 0.45)
+        val d = depth - dPrime
+        val halfSteel = reinforcementArea / 2.0
+
+        val fcDesign = when (code) {
+            DesignCode.ECP -> 0.67 * fcu / 1.5
+            DesignCode.ACI, DesignCode.SBC -> 0.85 * 0.8 * fcu
+        }
+        val fsDesign = when (code) {
+            DesignCode.ECP -> fy / 1.15
+            DesignCode.ACI, DesignCode.SBC -> fy
+        }
+        val phi = if (code == DesignCode.ECP) 1.0 else 0.65
+        val beta1 = when {
+            code == DesignCode.ECP -> 0.80
+            0.8 * fcu <= 28.0 -> 0.85
+            else -> (0.85 - 0.05 * (0.8 * fcu - 28.0) / 7.0).coerceAtLeast(0.65)
+        }
+        val es = 200000.0
+        val epsilonCu = 0.003
+
+        fun axialAt(c: Double): Double {
+            val a = min(beta1 * c, depth)
+            val cc = fcDesign * width * a
+            val epsTop = epsilonCu * (c - dPrime) / c
+            val epsBot = epsilonCu * (c - d) / c
+            val fsTop = (epsTop * es).coerceIn(-fsDesign, fsDesign)
+            val fsBot = (epsBot * es).coerceIn(-fsDesign, fsDesign)
+            return cc + halfSteel * (fsTop + fsBot)
+        }
+
+        fun momentAt(c: Double): Double {
+            val a = min(beta1 * c, depth)
+            val cc = fcDesign * width * a
+            val epsTop = epsilonCu * (c - dPrime) / c
+            val epsBot = epsilonCu * (c - d) / c
+            val fsTop = (epsTop * es).coerceIn(-fsDesign, fsDesign)
+            val fsBot = (epsBot * es).coerceIn(-fsDesign, fsDesign)
+            val m = cc * (depth / 2.0 - a / 2.0) +
+                halfSteel * fsTop * (depth / 2.0 - dPrime) -
+                halfSteel * fsBot * (d - depth / 2.0)
+            return phi * m / 1e6
+        }
+
+        // Convert the factored demand to the code's nominal/design axial scale.
+        val target = if (code == DesignCode.ECP) axialKn * 1000.0 else axialKn / phi * 1000.0
+        val pureCompression = axialAt(depth * 20.0)
+        val cappedTarget = min(target, pureCompression * 0.98)
+        var lo = 1.0
+        var hi = depth * 20.0
+        repeat(60) {
+            val mid = (lo + hi) / 2.0
+            if (axialAt(mid) < cappedTarget) lo = mid else hi = mid
+        }
+        val c = (lo + hi) / 2.0
+        return momentAt(c).coerceAtLeast(0.0)
+    }
+
     private fun columnSteps(
-        code: DesignCode, pu: Double, mx: Double, my: Double,
+        code: DesignCode, pu: Double, puDesign: Double, selfWeightKn: Double,
+        mx: Double, my: Double,
         fcu: Double, fy: Double,
         res: com.civileg.app.domain.entities.ReinforcementResult,
-        width: Double, depth: Double, clearHeight: Double
+        width: Double, depth: Double, clearHeight: Double,
+        slenderness: Double, slendernessLimit: Double, momentMagnifier: Double,
+        axialCapacity: Double, reinforcementPercent: Double
     ): List<CalculationStep> {
         val ref = when (code) {
             DesignCode.ECP -> "ECP 203-2020 §4-2"
@@ -975,48 +1198,51 @@ class CalculatorEngine @Inject constructor(
             DesignCode.SBC -> "SBC 304-2018 §4"
         }
         val mResultant = sqrt(mx * mx + my * my)
-        val eMm = if (pu > 0) mResultant / pu * 1000.0 else 0.0
-        val lambda = clearHeight * 1000.0 / min(width, depth)
-        val slender = lambda > 30.0
-        val axialCapacity = (res.astProvided * fy / 1.15 +
-            0.67 * fcu / 1.5 * (width * depth - res.astProvided)) / 1000.0
+        val eMm = if (puDesign > 0) mResultant / puDesign * 1000.0 else 0.0
+        val slender = slenderness > slendernessLimit
+        val axialFormula = when (code) {
+            DesignCode.ECP -> "Pu = 0.8·(0.67fcu/γc·Ac + fy/γs·As)"
+            DesignCode.ACI -> "φPn = 0.65·0.80·(0.85f'c·Ac + fy·As)"
+            DesignCode.SBC -> "φPn = 0.65·0.80·(0.85f'c·Ac + fy·As)"
+        }
+        val deadFactor = if (code == DesignCode.ECP) 1.4 else 1.2
         return listOf(
             CalculationStep(
                 stepNumber = 1, title = "Ultimate Loads", subtitle = "Factored actions",
-                formula = "Pu, Mux, Muy",
-                formulaWithValues = "Pu = ${"%.1f".format(pu)} kN, Mux = ${"%.1f".format(mx)} kN·m, Muy = ${"%.1f".format(my)} kN·m",
-                result = "Mu = ${"%.1f".format(mResultant)} kN·m", unit = "kN·m",
+                formula = "Pu = Pu,applied + γD·self-weight",
+                formulaWithValues = "Pu = ${"%.0f".format(pu)} + ${"%.2f".format(deadFactor)}×${"%.2f".format(selfWeightKn)} = ${"%.0f".format(puDesign)} kN, Mux = ${"%.1f".format(mx)} kN·m, Muy = ${"%.1f".format(my)} kN·m",
+                result = "Pu = ${"%.0f".format(puDesign)} kN, Mu = ${"%.1f".format(mResultant)} kN·m", unit = "kN·m",
                 codeReference = ref, status = StepStatus.CALCULATION
             ),
             CalculationStep(
                 stepNumber = 2, title = "Eccentricity", subtitle = "e = Mu / Pu",
                 formula = "e = Mu / Pu",
-                formulaWithValues = "e = ${"%.1f".format(mResultant)} / ${"%.1f".format(pu)} = ${"%.0f".format(eMm)} mm",
+                formulaWithValues = "e = ${"%.1f".format(mResultant)} / ${"%.0f".format(puDesign)} = ${"%.0f".format(eMm)} mm",
                 result = "${"%.0f".format(eMm)} mm", unit = "mm",
                 codeReference = ref, status = StepStatus.CALCULATION
             ),
             CalculationStep(
                 stepNumber = 3, title = "Reinforcement", subtitle = "Required vs provided",
-                formula = "As,req → As,prov",
-                formulaWithValues = "As,req = ${"%.0f".format(res.astRequired)} mm², As,prov = ${"%.0f".format(res.astProvided)} mm²",
+                formula = "As,req → As,prov (ρ = As/Ag)",
+                formulaWithValues = "As,req = ${"%.0f".format(res.astRequired)} mm², As,prov = ${"%.0f".format(res.astProvided)} mm², ρ = ${"%.2f".format(reinforcementPercent)}%",
                 result = "${res.numberOfBars}Ø${res.barDiameter.toInt()}", unit = "mm²",
                 codeReference = ref, status = if (res.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL,
                 isPass = res.isSafe
             ),
             CalculationStep(
                 stepNumber = 4, title = "Axial Capacity", subtitle = "φPn",
-                formula = "φPn = 0.35fcu·Ac + 0.87fy·As",
-                formulaWithValues = "Ag = ${"%.0f".format(width * depth)} mm², As = ${"%.0f".format(res.astProvided)} mm²",
-                result = "φPn = ${"%.0f".format(axialCapacity)} kN · Pu = ${"%.0f".format(pu)} kN", unit = "kN",
+                formula = axialFormula,
+                formulaWithValues = "Ag = ${"%.0f".format(if (code == DesignCode.ECP) width * depth else width * depth)} mm², As = ${"%.0f".format(res.astProvided)} mm²",
+                result = "φPn = ${"%.0f".format(axialCapacity)} kN · Pu = ${"%.0f".format(puDesign)} kN", unit = "kN",
                 codeReference = ref,
-                status = if (axialCapacity >= pu) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL,
-                isPass = axialCapacity >= pu
+                status = if (axialCapacity >= puDesign) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL,
+                isPass = axialCapacity >= puDesign
             ),
             CalculationStep(
                 stepNumber = 5, title = "Slenderness", subtitle = "λ = l0 / i",
                 formula = "λ = l0 / (h/√12)",
-                formulaWithValues = "λ = ${"%.1f".format(lambda)} vs 30",
-                result = if (slender) "Slender — second-order effects required" else "Short column",
+                formulaWithValues = "λ = ${"%.1f".format(slenderness)} vs ${"%.0f".format(slendernessLimit)}; δ = ${"%.2f".format(momentMagnifier)}",
+                result = if (slender) "Slender — second-order effects applied (δ=${"%.2f".format(momentMagnifier)})" else "Short column",
                 unit = "", codeReference = ref,
                 status = if (slender) StepStatus.WARNING else StepStatus.CHECK_PASS,
                 isPass = !slender
@@ -1047,21 +1273,50 @@ class CalculatorEngine @Inject constructor(
         val wu = when (code) {
             DesignCode.ECP -> 1.4 * wDl + 1.6 * wLl
             DesignCode.ACI, DesignCode.SBC -> 1.2 * wDl + 1.6 * wLl
-            else -> 1.4 * wDl + 1.6 * wLl
         }
 
         val lM = span
-        val mu = customMoment ?: when (supportType) {
-            SupportType.CANTILEVER -> wu * lM.pow(2) / 2.0
-            SupportType.FIXED_FIXED -> wu * lM.pow(2) / 12.0
-            SupportType.FIXED_HINGED -> wu * lM.pow(2) / 8.0
-            else -> wu * lM.pow(2) / 8.0
-        }
 
-        val vu = customShear ?: when (supportType) {
-            SupportType.CANTILEVER -> wu * lM
-            else -> wu * lM / 2.0
+        // ── Support-dependent actions ──
+        // A fixed-ended beam carries a hogging moment wL²/12 at the supports and a
+        // sagging wL²/24 at midspan. A propped cantilever (fixed-hinged) carries
+        // wL²/8 at the fixed end, 9wL²/128 at midspan and 5wL/8 shear at the fixed end.
+        val topMoment: Double
+        val bottomMoment: Double
+        val vu: Double
+        if (customMoment != null || customShear != null) {
+            topMoment = customMoment?.takeIf { it > 0.0 } ?: 0.0
+            bottomMoment = if (topMoment > 0.0) 0.0 else customMoment ?: 0.0
+            vu = customShear ?: when (supportType) {
+                SupportType.CANTILEVER -> wu * lM
+                SupportType.FIXED_HINGED -> 5.0 * wu * lM / 8.0
+                else -> wu * lM / 2.0
+            }
+        } else {
+            when (supportType) {
+                SupportType.CANTILEVER -> {
+                    topMoment = wu * lM.pow(2) / 2.0
+                    bottomMoment = 0.0
+                    vu = wu * lM
+                }
+                SupportType.FIXED_FIXED -> {
+                    topMoment = wu * lM.pow(2) / 12.0
+                    bottomMoment = wu * lM.pow(2) / 24.0
+                    vu = wu * lM / 2.0
+                }
+                SupportType.FIXED_HINGED -> {
+                    topMoment = wu * lM.pow(2) / 8.0
+                    bottomMoment = 9.0 * wu * lM.pow(2) / 128.0
+                    vu = 5.0 * wu * lM / 8.0
+                }
+                else -> {
+                    topMoment = 0.0
+                    bottomMoment = wu * lM.pow(2) / 8.0
+                    vu = wu * lM / 2.0
+                }
+            }
         }
+        val mu = maxOf(topMoment, bottomMoment)
 
         val cover = when (code) {
             DesignCode.ECP -> 40.0
@@ -1069,50 +1324,93 @@ class CalculatorEngine @Inject constructor(
             DesignCode.SBC -> 50.0
             else -> 40.0
         }
-        val effectiveDepth = max(50.0, height - cover)
 
-        val flexRes = beamEngine.calculateFlexureReinforcement(
-            fcu = fcu, fy = fy, width = width, effectiveDepth = effectiveDepth,
-            totalDepth = height, designMoment = mu, loadCombination = LoadCombination.DEAD_LIVE
+        // ── Effective depth: cover + stirrup + half the main bar ──
+        var stirrupDiameter = 8.0
+        var effectiveDepth = height - cover - stirrupDiameter - preferredDiameter / 2.0
+        fun designFlexure(moment: Double, d: Double) = beamEngine.calculateFlexureReinforcement(
+            fcu = fcu, fy = fy, width = width, effectiveDepth = d.coerceAtLeast(50.0),
+            totalDepth = height, designMoment = moment, loadCombination = LoadCombination.DEAD_LIVE
         )
 
-        val shearRes = beamEngine.calculateShearReinforcement(
+        var topRes = designFlexure(topMoment, effectiveDepth)
+        var bottomRes = designFlexure(bottomMoment, effectiveDepth)
+        var shearRes = beamEngine.calculateShearReinforcement(
+            fcu = fcu, fy = fy, width = width, effectiveDepth = effectiveDepth.coerceAtLeast(50.0),
+            designShear = vu, axialLoad = 0.0, loadCombination = LoadCombination.DEAD_LIVE
+        )
+
+        // Re-run with the actual stirrup/bar diameters so d is not overstated.
+        stirrupDiameter = shearRes.stirrupDiameter.takeIf { it > 0.0 } ?: 8.0
+        val mainDiameter = maxOf(topRes.barDiameter, bottomRes.barDiameter, preferredDiameter.toDouble())
+        effectiveDepth = (height - cover - stirrupDiameter - mainDiameter / 2.0).coerceAtLeast(50.0)
+        topRes = designFlexure(topMoment, effectiveDepth)
+        bottomRes = designFlexure(bottomMoment, effectiveDepth)
+        shearRes = beamEngine.calculateShearReinforcement(
             fcu = fcu, fy = fy, width = width, effectiveDepth = effectiveDepth,
             designShear = vu, axialLoad = 0.0, loadCombination = LoadCombination.DEAD_LIVE
         )
 
-        val rho = flexRes.astProvided / (width * effectiveDepth)
+        val rho = maxOf(
+            topRes.astProvided, bottomRes.astProvided
+        ) / (width * effectiveDepth)
         val defCheck = beamEngine.checkDeflection(
             span = span, totalDepth = height, reinforcementRatio = rho,
             supportCondition = supportType.toDomain()
         )
 
+        // ── Provided shear capacity: Vc + Vs (or φ(Vc + Vs) for ACI/SBC) ──
+        val stirrupSpacing = shearRes.stirrupSpacing.takeIf { it > 0.0 } ?: 200.0
+        val stirrupDia = shearRes.stirrupDiameter.takeIf { it > 0.0 } ?: stirrupDiameter
+        val asvPerS = shearRes.providedShearReinforcement.takeIf { it > 0.0 }
+            ?: (shearRes.numLegs * PI / 4.0 * stirrupDia * stirrupDia / stirrupSpacing)
+        val steelShearStrength = when (code) {
+            DesignCode.ECP -> fy / 1.15
+            DesignCode.ACI, DesignCode.SBC -> fy
+        }
+        val vsKn = asvPerS * steelShearStrength * effectiveDepth / 1000.0
+        val shearPhi = if (code == DesignCode.ECP) 1.0 else 0.75
+        val totalShearCapacity = shearPhi * (shearRes.concreteShearCapacity + vsKn)
+        val shearSafe = vu <= totalShearCapacity + 1e-6
+
+        // ── Moment capacity from the provided steel (engine's own capacity) ──
+        fun capacityOf(res: com.civileg.app.domain.entities.ReinforcementResult, moment: Double, d: Double): Double {
+            if (res.utilizationRatio > 1e-9) return moment / res.utilizationRatio
+            val a = if (code == DesignCode.ECP) {
+                res.astProvided * fy / 1.15 / (0.67 * fcu / 1.5 * width)
+            } else {
+                res.astProvided * fy / (0.85 * 0.8 * fcu * width)
+            }
+            val lever = (d - a / 2.0).coerceAtLeast(0.1 * d)
+            val nominal = res.astProvided * (if (code == DesignCode.ECP) fy / 1.15 else fy) * lever / 1e6
+            return if (code == DesignCode.ECP) nominal else 0.9 * nominal
+        }
+        val topCapacity = capacityOf(topRes, topMoment, effectiveDepth)
+        val bottomCapacity = capacityOf(bottomRes, bottomMoment, effectiveDepth)
+        val flexureSafe = topMoment <= topCapacity + 1e-6 && bottomMoment <= bottomCapacity + 1e-6
+
         val concreteVolume = (width / 1000.0) * (height / 1000.0) * span
-        val mainBarWeight = flexRes.astProvided * span * 7850.0 / 1e6
-        val topBarArea = max(0.1 * flexRes.astProvided, 2.0 * PI * 12.0 * 12.0 / 4.0)
-        val topBarWeight = topBarArea * span * 7850.0 / 1e6
-        
+        val topBarWeight = topRes.astProvided * span * 7850.0 / 1e6
+        val bottomBarWeight = bottomRes.astProvided * span * 7850.0 / 1e6
+
         val stirrupPerimeter = 2.0 * ((width - 2 * cover) + (height - 2 * cover)) / 1000.0
-        val stirrupSpacingM = (shearRes.stirrupSpacing.takeIf { it > 0 } ?: 200.0) / 1000.0
-        val numStirrups = max(5, (span / stirrupSpacingM).roundToInt() + 1)
-        val stirrupDia = shearRes.stirrupDiameter.takeIf { it > 0 } ?: 8.0
-        val singleStirrupWeight = stirrupPerimeter * (PI / 4.0 * stirrupDia * stirrupDia) * 7850.0 / 1e9
+        val numStirrups = max(5, (span / (stirrupSpacing / 1000.0)).roundToInt() + 1)
+        val singleStirrupWeight = stirrupPerimeter * (PI / 4.0 * stirrupDia * stirrupDia) * 7850.0 / 1e6
         val stirrupWeight = numStirrups * singleStirrupWeight
 
-        val totalSteelWeight = mainBarWeight + topBarWeight + stirrupWeight
+        val totalSteelWeight = topBarWeight + bottomBarWeight + stirrupWeight
         val cost = concreteVolume * 120.0 + totalSteelWeight * 1.5
 
-        val topNumBars = max(2, ceil(topBarArea / (PI / 4.0 * 12.0 * 12.0)).toInt())
-
         val safetyChecks = listOf(
-            DesignSafetyCheck("Flexure Capacity", flexRes.astProvided, flexRes.astRequired, "mm²", flexRes.isSafe),
-            DesignSafetyCheck("Shear Capacity", shearRes.providedShearReinforcement, shearRes.requiredShearReinforcement, "kN", shearRes.isSafe),
+            DesignSafetyCheck("Flexure - Top", topMoment, topCapacity, "kN·m", topMoment <= topCapacity + 1e-6),
+            DesignSafetyCheck("Flexure - Bottom", bottomMoment, bottomCapacity, "kN·m", bottomMoment <= bottomCapacity + 1e-6),
+            DesignSafetyCheck("Shear Capacity", vu, totalShearCapacity, "kN", shearSafe),
             DesignSafetyCheck("Deflection Check", defCheck.calculatedDeflection, defCheck.allowableDeflection, "mm", defCheck.isSafe)
         )
 
-        val warnings = (flexRes.warnings + shearRes.warnings + defCheck.warnings +
+        val warnings = (topRes.warnings + bottomRes.warnings + shearRes.warnings + defCheck.warnings +
             listOfNotNull(defCheck.message.takeIf { it.isNotBlank() })).distinct()
-        val codeNotes = (flexRes.codeNotes + shearRes.codeNotes).distinct()
+        val codeNotes = (topRes.codeNotes + bottomRes.codeNotes + shearRes.codeNotes).distinct()
         val ref = when (code) {
             DesignCode.ECP -> "ECP 203-2020 §4"
             DesignCode.ACI -> "ACI 318-19 §9"
@@ -1122,41 +1420,45 @@ class CalculatorEngine @Inject constructor(
             CalculationStep(
                 stepNumber = 1, title = "Ultimate Load",
                 formula = "wu = γD·(DL+self) + γL·LL",
-                formulaWithValues = "wu = ${"%.2f".format(wu)} kN/m",
+                formulaWithValues = "wu = ${"%.2f".format(wu)} kN/m (self-weight ${"%.2f".format(selfWeight)} kN/m)",
                 result = "wu = ${"%.2f".format(wu)} kN/m", unit = "kN/m",
                 codeReference = ref
             ),
             CalculationStep(
                 stepNumber = 2, title = "Design Moment",
-                formula = "Mu = wu·L²/8 (support-dependent)",
-                formulaWithValues = "Mu = ${"%.2f".format(wu)} × ${"%.2f".format(span)}² / factor = ${"%.1f".format(mu)} kN·m",
+                formula = "Support/midspan coefficients (support-dependent)",
+                formulaWithValues = "Mtop = ${"%.2f".format(topMoment)} kN·m, Mbottom = ${"%.2f".format(bottomMoment)} kN·m",
                 result = "Mu = ${"%.1f".format(mu)} kN·m", unit = "kN·m",
                 codeReference = ref
             ),
             CalculationStep(
                 stepNumber = 3, title = "Design Shear",
-                formula = "Vu = wu·L/2",
-                formulaWithValues = "Vu = ${"%.2f".format(wu)} × ${"%.2f".format(span)} / 2 = ${"%.1f".format(vu)} kN",
+                formula = when (supportType) {
+                    SupportType.CANTILEVER -> "Vu = wu·L"
+                    SupportType.FIXED_HINGED -> "Vu = 5·wu·L/8"
+                    else -> "Vu = wu·L/2"
+                },
+                formulaWithValues = "Vu = ${"%.2f".format(wu)} × ${"%.2f".format(span)} × coeff = ${"%.1f".format(vu)} kN",
                 result = "Vu = ${"%.1f".format(vu)} kN", unit = "kN",
                 codeReference = ref
             ),
             CalculationStep(
                 stepNumber = 4, title = "Flexural Steel",
-                formula = "As = Mu / (0.87fy·j·d)",
-                formulaWithValues = "As,req = ${"%.0f".format(flexRes.astRequired)} mm² → As,prov = ${"%.0f".format(flexRes.astProvided)} mm²",
-                result = "${flexRes.numberOfBars}Ø${flexRes.barDiameter.toInt()}", unit = "mm²",
+                formula = "As = Mu / (fy·lever arm)",
+                formulaWithValues = "Top: ${"%.0f".format(topRes.astRequired)} → ${"%.0f".format(topRes.astProvided)} mm²; Bottom: ${"%.0f".format(bottomRes.astRequired)} → ${"%.0f".format(bottomRes.astProvided)} mm²",
+                result = "Top ${topRes.numberOfBars}Ø${topRes.barDiameter.toInt()} · Bottom ${bottomRes.numberOfBars}Ø${bottomRes.barDiameter.toInt()}", unit = "mm²",
                 codeReference = ref,
-                isPass = flexRes.isSafe,
-                status = if (flexRes.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                isPass = flexureSafe,
+                status = if (flexureSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
             ),
             CalculationStep(
                 stepNumber = 5, title = "Shear Reinforcement",
-                formula = "s = Asv·fy·d / Vs",
-                formulaWithValues = "Ø${shearRes.stirrupDiameter.toInt()} @ ${"%.0f".format(shearRes.stirrupSpacing)} mm",
-                result = "Ø${shearRes.stirrupDiameter.toInt()}@${"%.0f".format(shearRes.stirrupSpacing)}", unit = "mm",
+                formula = "V = φ(Vc + Vs); Vs = Asv/s·fy·d",
+                formulaWithValues = "Vc = ${"%.1f".format(shearRes.concreteShearCapacity)} kN, Vs = ${"%.1f".format(vsKn)} kN, ø${stirrupDia.toInt()}@${"%.0f".format(stirrupSpacing)} mm",
+                result = "V = ${"%.1f".format(totalShearCapacity)} kN vs Vu = ${"%.1f".format(vu)} kN", unit = "kN",
                 codeReference = ref,
-                isPass = shearRes.isSafe,
-                status = if (shearRes.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                isPass = shearSafe,
+                status = if (shearSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
             ),
             CalculationStep(
                 stepNumber = 6, title = "Deflection",
@@ -1172,18 +1474,19 @@ class CalculatorEngine @Inject constructor(
         return BeamResult(
             width = width, depth = height, mu = mu, vu = vu,
             reinforcementBottom = ReinforcementBar(
-                numBars = flexRes.numberOfBars, diameter = flexRes.barDiameter.toInt(),
-                weightKg = mainBarWeight
+                numBars = bottomRes.numberOfBars, diameter = bottomRes.barDiameter.toInt(),
+                weightKg = bottomBarWeight
             ),
             reinforcementTop = ReinforcementBar(
-                numBars = topNumBars, diameter = 12, weightKg = topBarWeight
+                numBars = topRes.numberOfBars, diameter = topRes.barDiameter.toInt(),
+                weightKg = topBarWeight
             ),
             stirrups = StirrupReinforcement(
-                diameter = stirrupDia.toInt(), spacing = shearRes.stirrupSpacing,
+                diameter = stirrupDia.toInt(), spacing = stirrupSpacing,
                 numLegs = shearRes.numLegs, weightKg = stirrupWeight
             ),
             safetyChecks = safetyChecks,
-            isSafe = flexRes.isSafe && shearRes.isSafe && defCheck.isSafe,
+            isSafe = flexureSafe && shearSafe && defCheck.isSafe,
             concreteVolume = concreteVolume,
             steelWeight = totalSteelWeight,
             cost = cost,
@@ -1192,13 +1495,18 @@ class CalculatorEngine @Inject constructor(
             appliedShear = vu,
             supportType = supportType,
             span = span,
-            momentCapacity = flexRes.astProvided * fy * (effectiveDepth - 0.4 * 0.2 * effectiveDepth) / 1e6,
-            shearCapacity = shearRes.concreteShearCapacity,
+            momentCapacity = if (topMoment >= bottomMoment) topCapacity else bottomCapacity,
+            shearCapacity = totalShearCapacity,
             steelRatio = rho,
             deflection = defCheck.calculatedDeflection,
             allowableDeflection = defCheck.allowableDeflection,
-            utilizationRatio = maxOf(flexRes.utilizationRatio, shearRes.utilizationRatio, defCheck.ratio),
-            neutralAxisDepth = flexRes.neutralAxisDepth,
+            utilizationRatio = maxOf(
+                topMoment / max(topCapacity, 1e-9),
+                bottomMoment / max(bottomCapacity, 1e-9),
+                vu / max(totalShearCapacity, 1e-9),
+                defCheck.ratio
+            ),
+            neutralAxisDepth = if (topMoment >= bottomMoment) topRes.neutralAxisDepth else bottomRes.neutralAxisDepth,
             warnings = warnings,
             codeNotes = codeNotes,
             calculationSteps = steps
@@ -1653,7 +1961,8 @@ class CalculatorEngine @Inject constructor(
         val vol1 = (res.footing1.width * res.footing1.length * res.footing1.thickness) / 1e9
         val vol2 = (res.footing2.width * res.footing2.length * res.footing2.thickness) / 1e9
         val strapLenM = distance / 1000.0 + 0.8 // main bars incl. anchorage into both footings
-        val volStrap = (res.strapBeam.width * res.strapBeam.depth * (distance / 1000.0)) / 1e9
+        // width/depth are mm and distance is mm → mm³/1e9 = m³.
+        val volStrap = (res.strapBeam.width * res.strapBeam.depth * distance) / 1e9
         val totalConcreteVol = vol1 + vol2 + volStrap
 
         val steel1 = res.footing1.reinforcement.numberOfBars *

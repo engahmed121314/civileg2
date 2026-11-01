@@ -56,9 +56,19 @@ import com.civileg.app.utils.SoilBearingResult
 import com.civileg.app.utils.BearingMethod
 import com.civileg.app.utils.QualityControlEngine
 import com.civileg.app.utils.QualityControlEngineNew
+import com.civileg.app.utils.QcLimits
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.SoilType
 import com.civileg.app.ui.compose.components.charts.DailyTrendChart
+import com.civileg.app.ui.compose.components.drawings.ConcreteQcDrawing
+import com.civileg.app.ui.compose.components.drawings.DisciplineQcGenericDrawing
+import com.civileg.app.ui.compose.components.drawings.DrainageQcDrawing
+import com.civileg.app.ui.compose.components.drawings.MasonryQcDrawing
+import com.civileg.app.ui.compose.components.drawings.QcDrawingLayer
+import com.civileg.app.ui.compose.components.drawings.QcDrawingMetric
+import com.civileg.app.ui.compose.components.drawings.ProfessionalPileDrawing
+import com.civileg.app.ui.compose.components.drawings.ProfessionalRetainingWallDrawing
+import com.civileg.app.ui.compose.components.drawings.ProfessionalTankDrawing
 import com.civileg.app.viewmodel.QualityEngineerViewModel
 import com.civileg.app.viewmodel.ReportsQCState
 import com.google.gson.Gson
@@ -262,6 +272,24 @@ private fun ConcreteQCTab(
                         modifier = Modifier.weight(1f)
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = uiState.airContent,
+                        onValueChange = { viewModel.updateConcreteField("airContent", it) },
+                        label = { Text("Air content (%)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = uiState.concreteTemp,
+                        onValueChange = { viewModel.updateConcreteField("concreteTemp", it) },
+                        label = { Text("Concrete temp (C)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 
@@ -279,10 +307,26 @@ private fun ConcreteQCTab(
                     detail = "المطلوب: ${uiState.fcu.ifEmpty { "25" }} MPa"
                 )
 
+                val slumpRange = QcLimits.slumpRange(uiState.designCode)
+
                 QualityCheckRow(
                     label = "الهبوط ضمن الحدود",
-                    passed = uiState.slump.toDoubleOrNull()?.let { it in 25.0..100.0 } ?: false,
-                    detail = "الحد: 25-100 مم (ACI 26.12.1.3)"
+                    passed = uiState.slump.toDoubleOrNull()?.let { it in slumpRange } ?: false,
+                    detail = "الحد: %.0f-%.0f مم (%s)".format(
+                        slumpRange.start, slumpRange.endInclusive, uiState.designCode.version
+                    )
+                )
+
+                QualityCheckRow(
+                    label = "محتوى الهواء ضمن الحدود",
+                    passed = uiState.airContent.toDoubleOrNull()?.let { it in 3.0..8.0 } ?: false,
+                    detail = "الحد: 3-8% (ASTM C231)"
+                )
+
+                QualityCheckRow(
+                    label = "درجة حرارة الخرسانة",
+                    passed = uiState.concreteTemp.toDoubleOrNull()?.let { it in 5.0..40.0 } ?: false,
+                    detail = "الحد: 5-40 °C (ACI 305.1 / 306.1)"
                 )
 
                 QualityCheckRow(
@@ -311,7 +355,8 @@ private fun ConcreteQCTab(
                     context = context,
                     title = "Concrete Quality Control",
                     subtitle = "Pour QC Report",
-                    outcome = uiState.outcome
+                    outcome = uiState.outcome,
+                    designCode = uiState.designCode
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -326,13 +371,21 @@ private fun ConcreteQCTab(
         // Drawing preview
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("معاينة الرسم - مقطع عمود/كمرة", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text("Concrete QC drawing - slump test / test cylinders", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
-                ConcreteDrawingElement(
+                ConcreteQcDrawing(
                     elementId = uiState.elementId,
-                    width = uiState.volume.toDoubleOrNull() ?: 1.0,
-                    height = 1.0,
-                    depth = 1.0
+                    volumeM3 = uiState.volume.toDoubleOrNull() ?: 0.0,
+                    slumpMm = uiState.slump.toDoubleOrNull() ?: 0.0,
+                    fcuDesignMpa = uiState.fcu.toDoubleOrNull() ?: 0.0,
+                    strength7DaysMpa = uiState.strength7Days.toDoubleOrNull() ?: 0.0,
+                    strength28DaysMpa = uiState.strength28Days.toDoubleOrNull() ?: 0.0,
+                    airContent = uiState.airContent.toDoubleOrNull() ?: 0.0,
+                    concreteTemp = uiState.concreteTemp.toDoubleOrNull() ?: 0.0,
+                    designCode = uiState.designCode,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(360.dp)
                 )
             }
         }
@@ -539,7 +592,8 @@ private fun SoilFoundationQCTab(
                     context = context,
                     title = "Soil & Foundation Quality Control",
                     subtitle = "Bearing Capacity Report",
-                    outcome = uiState.outcome
+                    outcome = uiState.outcome,
+                    designCode = uiState.designCode
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -676,7 +730,8 @@ private fun RebarQCTab(
                     context = context,
                     title = "Reinforcement Quality Control",
                     subtitle = "Rebar Detail Report",
-                    outcome = uiState.outcome
+                    outcome = uiState.outcome,
+                    designCode = uiState.designCode
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -822,7 +877,8 @@ private fun SteelStructureQCTab(
                     context = context,
                     title = "Steel Structure Quality Control",
                     subtitle = "Steel Member Report",
-                    outcome = uiState.outcome
+                    outcome = uiState.outcome,
+                    designCode = uiState.designCode
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -935,7 +991,8 @@ private fun RoadsQCTab(
                     context = context,
                     title = "Roads Quality Control",
                     subtitle = "Pavement QC Report",
-                    outcome = uiState.outcome
+                    outcome = uiState.outcome,
+                    designCode = uiState.designCode
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -1029,7 +1086,8 @@ private fun BridgesQCTab(
                     context = context,
                     title = "Bridges Quality Control",
                     subtitle = "Bridge QC Report",
-                    outcome = uiState.outcome
+                    outcome = uiState.outcome,
+                    designCode = uiState.designCode
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -1125,7 +1183,8 @@ private fun TunnelsQCTab(
                     context = context,
                     title = "Tunnels Quality Control",
                     subtitle = "Tunnel Support Report",
-                    outcome = uiState.outcome
+                    outcome = uiState.outcome,
+                    designCode = uiState.designCode
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -1289,7 +1348,8 @@ private fun BuildingsQCTab(
                     context = context,
                     title = "Buildings Quality Control",
                     subtitle = "High-Rise / Hospitals QC Report",
-                    outcome = uiState.outcome
+                    outcome = uiState.outcome,
+                    designCode = uiState.designCode
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -1473,11 +1533,11 @@ private enum class QcDiscipline(
         listOf(
             QcField("tendonType", "نوع الكابل", QcFieldType.TEXT, "7-wire strand"),
             QcField("tendonDiameter", "قطر الكابل (mm)", QcFieldType.NUMBER, "15.2"),
-            QcField("jackingForce", "قوة الشد (kN)", QcFieldType.NUMBER, "1500"),
+            QcField("jackingForce", "قوة الشد (kN)", QcFieldType.NUMBER, "200"),
             QcField("elongation", "الاستطالة (mm)", QcFieldType.NUMBER, "180"),
             QcField("expectedElongation", "الاستطالة المتوقعة (mm)", QcFieldType.NUMBER, "180"),
             QcField("groutStrength", "مقاومة الجراوت (MPa)", QcFieldType.NUMBER, "35"),
-            QcField("groutFlow", "سيولة الجراوت (sec)", QcFieldType.NUMBER, "30"),
+            QcField("groutFlow", "سيولة الجراوت (sec)", QcFieldType.NUMBER, "20"),
             QcField("anchorageType", "نوع المثبت", QcFieldType.TEXT, "Wedge"),
             QcField("ductMaterial", "مادة الممر", QcFieldType.TEXT, "HDPE"),
             QcField("corrosionProtection", "حماية التآكل", QcFieldType.TEXT, "Galvanized"),
@@ -1491,7 +1551,7 @@ private enum class QcDiscipline(
         "Grouting Quality Control", "Injection Works", "GROUTING",
         listOf(
             QcField("groutType", "نوع الجراوت", QcFieldType.TEXT, "Cementitious"),
-            QcField("flowTime", "زمن السيولة (sec)", QcFieldType.NUMBER, "30"),
+            QcField("flowTime", "زمن السيولة (sec)", QcFieldType.NUMBER, "20"),
             QcField("shrinkage", "الانكماش (%)", QcFieldType.NUMBER, "0.05"),
             QcField("compressiveStrength", "مقاومة الضغط (MPa)", QcFieldType.NUMBER, "40"),
             QcField("viscosity", "اللزوجة (cP)", QcFieldType.NUMBER, "500"),
@@ -1847,6 +1907,15 @@ private fun DisciplineQcTab(
     }
     var outcome by remember(discipline) { mutableStateOf<QualityControlEngine.QcOutcome?>(null) }
 
+    // Any numeric field that cannot be parsed would silently become 0.0 and
+    // change the result (a zero load or zero strength is not a valid entry).
+    // Block the calculation instead and flag the offending fields.
+    val invalidNumberKeys = discipline.fields
+        .filter { it.type == QcFieldType.NUMBER }
+        .map { it.key }
+        .filter { values[it]?.trim()?.toDoubleOrNull() == null }
+        .toSet()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1874,6 +1943,7 @@ private fun DisciplineQcTab(
                             value = values[field.key] ?: "",
                             onValueChange = { values[field.key] = it },
                             label = { Text(field.label) },
+                            isError = field.key in invalidNumberKeys,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -1902,13 +1972,17 @@ private fun DisciplineQcTab(
 
         Button(
             onClick = {
-                val result = computeDisciplineOutcome(discipline, values, designCode)
-                outcome = result
-                viewModel.persistDisciplineOutcome(discipline.category, discipline.elementId, designCode, result)
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        if (result.passed) "الفحص ناجح — تم حفظ السجل" else "الفحص يحتاج مراجعة — تم حفظ السجل"
-                    )
+                if (invalidNumberKeys.isEmpty()) {
+                    val result = computeDisciplineOutcome(discipline, values, designCode)
+                    outcome = result
+                    viewModel.persistDisciplineOutcome(discipline.category, discipline.elementId, designCode, result)
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            if (result.passed) "الفحص ناجح — تم حفظ السجل" else "الفحص يحتاج مراجعة — تم حفظ السجل"
+                        )
+                    }
+                } else {
+                    scope.launch { snackbarHostState.showSnackbar("أدخل قيمة رقمية صحيحة في جميع الحقول") }
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -1924,7 +1998,8 @@ private fun DisciplineQcTab(
                     context = context,
                     title = discipline.title,
                     subtitle = discipline.subtitle,
-                    outcome = outcome
+                    outcome = outcome,
+                    designCode = designCode
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -1934,6 +2009,7 @@ private fun DisciplineQcTab(
             Text("تصدير تقرير PDF")
         }
 
+        DisciplineDrawingCard(discipline, values, designCode, outcome?.passed == true)
         QcOutcomeCard(outcome)
     }
 }
@@ -2812,6 +2888,7 @@ private fun ResultRow(label: String, value: String) {
 @Composable
 private fun QcOutcomeCard(outcome: QualityControlEngine.QcOutcome?) {
     outcome ?: return
+    val passedCount = outcome.checks.count { it.passed }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2829,13 +2906,64 @@ private fun QcOutcomeCard(outcome: QualityControlEngine.QcOutcome?) {
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
+            if (outcome.checks.isNotEmpty()) {
+                Text(
+                    "Checks: $passedCount / ${outcome.checks.size}",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (outcome.passed) Color(0xFF4CAF50) else Color(0xFFF44336)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                outcome.checks.forEach { check ->
+                    QualityCheckRow(
+                        label = check.name,
+                        passed = check.passed,
+                        detail = qcCheckDetail(check)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider()
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             outcome.details.forEach { (key, value) ->
                 ResultRow(key, value)
+            }
+            if (outcome.utilizationRatio.isFinite() && outcome.utilizationRatio > 0.0) {
+                ResultRow("Utilization ratio", "%.2f".format(outcome.utilizationRatio))
             }
             Spacer(modifier = Modifier.height(8.dp))
             Divider()
             Spacer(modifier = Modifier.height(8.dp))
             Text(outcome.summary, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+        }
+    }
+}
+
+/** Compact formatting for check values, limits and units. */
+private fun fmtQc(v: Double): String = when {
+    v.isNaN() || v.isInfinite() -> "-"
+    abs(v) >= 1000.0 -> "%.0f".format(v)
+    abs(v) >= 10.0 -> "%.1f".format(v)
+    else -> "%.2f".format(v)
+}
+
+/** "calculated / limit unit | reference" line for a single QC check. */
+private fun qcCheckDetail(check: com.civileg.app.domain.entities.GenericSafetyCheck): String {
+    val reference = check.reference
+    val unit = check.unit
+    return if (unit.isBlank() || unit == "-") {
+        reference ?: ""
+    } else {
+        buildString {
+            append(fmtQc(check.calculated))
+            append(" / ")
+            append(fmtQc(check.limit))
+            append(" ")
+            append(unit)
+            if (!reference.isNullOrBlank()) {
+                append("  |  ")
+                append(reference)
+            }
         }
     }
 }
@@ -2896,38 +3024,358 @@ private fun ProjectSettingsDialog(onDismiss: () -> Unit) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// Simple Drawing Previews (placeholder for PDF export)
+// Discipline drawing previews (input-driven, mirrors the QC checks)
 // ═══════════════════════════════════════════════════════════════════════
 
+
 @Composable
-private fun ConcreteDrawingElement(
-    elementId: String,
-    width: Double,
-    height: Double,
-    depth: Double
+private fun DisciplineDrawingCard(
+    discipline: QcDiscipline,
+    values: Map<String, String>,
+    designCode: DesignCode,
+    passed: Boolean
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp)
-            .background(Color.White)
-            .border(1.dp, Color.Gray)
-            .padding(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("📐 Concrete Element: $elementId", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text("Discipline Drawing Preview", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Width: ${"%.2f".format(width)} m", fontSize = 14.sp, color = Color.Gray)
-            Text("Height: ${"%.2f".format(height)} m", fontSize = 14.sp, color = Color.Gray)
-            Text("Depth: ${"%.2f".format(depth)} m", fontSize = 14.sp, color = Color.Gray)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("📋 Reinforcement: Main bars Ø16-20, Stirrups Ø8-10", fontSize = 12.sp, color = Color(0xFFB71C1C))
-            Text("📋 Cover: 40mm, Clear spacing: max(Ø, 25mm)", fontSize = 12.sp, color = Color(0xFFB71C1C))
+            when (discipline) {
+                QcDiscipline.RETAINING_WALLS -> {
+                    val baseWidth = values.num("foundationWidth", 4.0) * 1000.0
+                    ProfessionalRetainingWallDrawing(
+                        wallHeight = values.num("wallHeight", 5.0),
+                        wallTopThickness = values.num("wallThickness", 300.0) * 0.8,
+                        wallBottomThickness = values.num("wallThickness", 300.0),
+                        baseWidth = baseWidth,
+                        baseThickness = 300.0,
+                        toeLength = baseWidth * 0.25,
+                        heelLength = baseWidth * 0.35,
+                        mainRebarDia = 16.0,
+                        mainRebarSpacing = 200.0,
+                        distRebarDia = 12.0,
+                        distRebarSpacing = 250.0,
+                        baseRebarDia = 16.0,
+                        baseRebarSpacing = 200.0,
+                        cover = 50.0,
+                        backfillAngle = values.num("backfillFrictionAngle", 30.0),
+                        fsOverturning = 2.0,
+                        fsSliding = 1.5,
+                        allowableBearingPressure = values.num("foundationSoilBearing", 200.0),
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(320.dp)
+                    )
+                }
+                QcDiscipline.PILING -> {
+                    val n = values.intg("numberOfPiles", 9).coerceAtLeast(1)
+                    val spacing = values.num("pileSpacing", 1.8) * 1000.0
+                    val capSize = maxOf(spacing * (ceil(sqrt(n.toDouble())).toInt() + 1), 2000.0)
+                    ProfessionalPileDrawing(
+                        pileDiameter = values.num("pileDiameter", 600.0),
+                        pileLength = values.num("pileLength", 15.0),
+                        numberOfPiles = n,
+                        pileSpacing = spacing,
+                        pattern = values.str("pileGroupPattern", "3x3"),
+                        capWidth = capSize,
+                        capLength = capSize,
+                        capThickness = 1000.0,
+                        columnWidth = values.num("columnWidth", 600.0),
+                        columnLength = values.num("columnLength", 600.0),
+                        longitBars = 8,
+                        longitDia = 20,
+                        tiesDia = 10,
+                        tiesSpacing = 200,
+                        capRebarDia = 16,
+                        capRebarCount = 12,
+                        soilType = values.str("soilType", "SAND"),
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+                QcDiscipline.WATER_TANKS -> {
+                    val dims = values.str("tankDimensions", "20x10x3")
+                        .split(Regex("[xX*]"))
+                        .mapNotNull { it.trim().toDoubleOrNull() }
+                    val length = dims.getOrNull(0) ?: 20.0
+                    val width = dims.getOrNull(1) ?: 10.0
+                    val height = dims.getOrNull(2) ?: 3.0
+                    ProfessionalTankDrawing(
+                        tankType = values.str("tankType", "Rectangular"),
+                        length = length,
+                        width = width,
+                        height = height,
+                        wallThickness = values.num("wallThickness", 250.0),
+                        baseThickness = values.num("floorThickness", 200.0),
+                        waterLevel = height * 0.9,
+                        verticalRebarDia = 16.0,
+                        verticalRebarSpacing = 200.0,
+                        horizontalRebarDia = 12.0,
+                        horizontalRebarSpacing = 200.0,
+                        foundationDepth = 0.5,
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+                QcDiscipline.MASONRY -> {
+                    MasonryQcDrawing(
+                        blockDimensions = values.str("blockDimensions", "200x200x400"),
+                        mortarType = values.str("mortarType", "M10"),
+                        jointThickness = values.num("jointThickness", 10.0),
+                        wallThickness = values.num("wallThickness", 200.0),
+                        plasterThickness = values.num("plasterThickness", 15.0),
+                        surfaceFlatness = values.num("surfaceFlatness", 2.0),
+                        verticality = values.num("verticality", 3.0),
+                        mortarStrength = values.num("mortarStrength", 10.0),
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(360.dp)
+                    )
+                }
+                QcDiscipline.DRAINAGE -> {
+                    DrainageQcDrawing(
+                        pipeMaterial = values.str("pipeMaterial", "RCP"),
+                        pipeDiameter = values.num("pipeDiameter", 600.0),
+                        pipeLength = values.num("pipeLength", 100.0),
+                        slope = values.num("slope", 1.5),
+                        manholeSpacing = values.num("manholeSpacing", 40.0),
+                        manholeDepth = values.num("manholeDepth", 3.0),
+                        invertLevel = values.num("invertLevel", 0.0),
+                        backfillCompaction = values.num("backfillCompaction", 96.0),
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+                QcDiscipline.EARTHWORKS -> {
+                    val depth = values.num("excavationDepth", 3.0)
+                    DisciplineQcGenericDrawing(
+                        title = "EARTHWORKS QC - EXCAVATION SECTION",
+                        subtitle = "${values.str("soilType", "SAND")} | " +
+                            values.str("backfillType", "Backfill"),
+                        layers = listOf(
+                            QcDrawingLayer("Backfill layer", values.num("layerThickness", 250.0)),
+                            QcDrawingLayer("Compacted subgrade", depth * 400.0),
+                            QcDrawingLayer("Natural ground", depth * 600.0)
+                        ),
+                        metrics = listOf(
+                            QcDrawingMetric("Excavation depth", "%.2f m".format(depth)),
+                            QcDrawingMetric("Slope angle", "%.0f deg".format(values.num("slopeAngle", 45.0))),
+                            QcDrawingMetric("Field density", "%.1f kN/m3".format(values.num("fieldDensity", 19.0))),
+                            QcDrawingMetric("Moisture", "%.1f %%".format(values.num("fieldMoisture", 12.5)))
+                        ),
+                        passed = passed,
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+                QcDiscipline.WATERPROOFING -> {
+                    DisciplineQcGenericDrawing(
+                        title = "WATERPROOFING QC - LAYER SECTION",
+                        subtitle = values.str("waterproofingType", "Membrane"),
+                        layers = listOf(
+                            QcDrawingLayer("Protection layer", 50.0),
+                            QcDrawingLayer("Waterproof membrane", values.num("membraneThickness", 2.0)),
+                            QcDrawingLayer("Primer / coating", values.num("coatingThickness", 1.5)),
+                            QcDrawingLayer("Concrete substrate", 150.0)
+                        ),
+                        metrics = listOf(
+                            QcDrawingMetric("Membrane", "%.1f mm".format(values.num("membraneThickness", 2.0))),
+                            QcDrawingMetric("Overlap", "%.0f mm".format(values.num("overlapWidth", 100.0))),
+                            QcDrawingMetric("Adhesion", "%.2f MPa".format(values.num("adhesionStrength", 0.6))),
+                            QcDrawingMetric("Leak test", if (values.bool("leakTestResult")) "PASS" else "FAIL")
+                        ),
+                        passed = passed,
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+                QcDiscipline.FLOORING -> {
+                    DisciplineQcGenericDrawing(
+                        title = "FLOORING QC - SLAB SECTION",
+                        subtitle = "${values.str("flooringType", "Floor")} | " +
+                            values.str("finishType", "Finish"),
+                        layers = listOf(
+                            QcDrawingLayer("Finish", 10.0),
+                            QcDrawingLayer("Screed / bedding", 50.0),
+                            QcDrawingLayer("Slab", values.num("slabThickness", 150.0))
+                        ),
+                        metrics = listOf(
+                            QcDrawingMetric("Slab thickness", "%.0f mm".format(values.num("slabThickness", 150.0))),
+                            QcDrawingMetric("Flatness", "%.1f mm/2m".format(values.num("surfaceFlatness", 2.0))),
+                            QcDrawingMetric("Compressive", "%.0f MPa".format(values.num("compressiveStrength", 30.0))),
+                            QcDrawingMetric("Joint spacing", "%.1f m".format(values.num("jointSpacing", 5.0)))
+                        ),
+                        passed = passed,
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+                QcDiscipline.PRECAST -> {
+                    val dims = values.str("elementDimensions", "300x600x6000")
+                        .split(Regex("[xX*]"))
+                        .mapNotNull { it.trim().toDoubleOrNull() }
+                    val elementHeight = dims.getOrNull(1) ?: 600.0
+                    DisciplineQcGenericDrawing(
+                        title = "PRECAST QC - ELEMENT SECTION",
+                        subtitle = "${values.str("elementType", "Element")} | " +
+                            values.str("elementDimensions", "-"),
+                        layers = listOf(
+                            QcDrawingLayer("Precast concrete", elementHeight),
+                            QcDrawingLayer("Cover zone", values.num("coverThickness", 40.0) * 2.0),
+                            QcDrawingLayer("Grout bed", 30.0)
+                        ),
+                        metrics = listOf(
+                            QcDrawingMetric("Concrete", "%.0f MPa".format(values.num("concreteStrength", 40.0))),
+                            QcDrawingMetric("Cover", "%.0f mm".format(values.num("coverThickness", 40.0))),
+                            QcDrawingMetric("Erection tol.", "%.0f mm".format(values.num("erectionTolerance", 5.0))),
+                            QcDrawingMetric("Transport", if (values.bool("transportDamage")) "DAMAGED" else "OK")
+                        ),
+                        passed = passed,
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+                QcDiscipline.POST_TENSION -> {
+                    val tendonType = values.str("tendonType", "7-wire strand")
+                    val fpu = when {
+                        tendonType.contains("strand", true) -> 1860.0
+                        tendonType.contains("wire", true) -> 1670.0
+                        tendonType.contains("bar", true) -> 1030.0
+                        else -> 1860.0
+                    }
+                    DisciplineQcGenericDrawing(
+                        title = "POST-TENSION QC - TENDON SECTION",
+                        subtitle = "$tendonType | ${values.str("anchorageType", "Anchorage")}",
+                        layers = listOf(
+                            QcDrawingLayer("Duct", 10.0),
+                            QcDrawingLayer("Grout", 8.0),
+                            QcDrawingLayer("Tendon", values.num("tendonDiameter", 15.2))
+                        ),
+                        metrics = listOf(
+                            QcDrawingMetric("Tendon dia.", "%.1f mm".format(values.num("tendonDiameter", 15.2))),
+                            QcDrawingMetric("Jacking force", "%.0f kN".format(values.num("jackingForce", 1500.0))),
+                            QcDrawingMetric("Fpu", "%.0f MPa".format(fpu)),
+                            QcDrawingMetric("Elongation", "%.1f mm".format(values.num("elongation", 180.0))),
+                            QcDrawingMetric("Expected", "%.1f mm".format(values.num("expectedElongation", 180.0))),
+                            QcDrawingMetric("Stress loss", "%.1f %%".format(values.num("stressLoss", 15.0)))
+                        ),
+                        passed = passed,
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+                QcDiscipline.GROUTING -> {
+                    DisciplineQcGenericDrawing(
+                        title = "GROUTING QC - INJECTION SECTION",
+                        subtitle = values.str("groutType", "Grout"),
+                        layers = listOf(
+                            QcDrawingLayer(
+                                "Grout",
+                                (values.num("injectionVolume", 100.0).coerceAtLeast(1.0) / 100.0)
+                            ),
+                            QcDrawingLayer("Hole / void", 120.0)
+                        ),
+                        metrics = listOf(
+                            QcDrawingMetric("Flow time", "%.1f s".format(values.num("flowTime", 30.0))),
+                            QcDrawingMetric("Viscosity", "%.0f cP".format(values.num("viscosity", 500.0))),
+                            QcDrawingMetric("Gel time", "%.0f min".format(values.num("gelTime", 10.0))),
+                            QcDrawingMetric("Pressure", "%.2f MPa".format(values.num("injectionPressure", 0.35))),
+                            QcDrawingMetric("Volume", "%.0f L".format(values.num("injectionVolume", 100.0)))
+                        ),
+                        passed = passed,
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+                QcDiscipline.SOIL_IMPROVEMENT -> {
+                    val depth = values.num("improvementDepth", 8.0)
+                    DisciplineQcGenericDrawing(
+                        title = "SOIL IMPROVEMENT QC - SECTION",
+                        subtitle = "${values.str("improvementType", "Improvement")} | " +
+                            values.str("improvementMaterial", "Material"),
+                        layers = listOf(
+                            QcDrawingLayer("Improvement zone", depth * 1000.0),
+                            QcDrawingLayer("Natural soil", depth * 600.0)
+                        ),
+                        metrics = listOf(
+                            QcDrawingMetric("Depth", "%.1f m".format(depth)),
+                            QcDrawingMetric("Diameter", "%.2f m".format(values.num("improvementDiameter", 0.8))),
+                            QcDrawingMetric("Spacing", "%.2f m".format(values.num("spacing", 2.0))),
+                            QcDrawingMetric("Bearing", "%.0f kPa".format(values.num("postImprovementBearing", 160.0))),
+                            QcDrawingMetric("Settlement", "%.0f mm".format(values.num("settlementAfter", 20.0)))
+                        ),
+                        passed = passed,
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+                QcDiscipline.PAINTING -> {
+                    val dft = values.num("dft", 150.0)
+                    DisciplineQcGenericDrawing(
+                        title = "PAINTING QC - COATING BUILD-UP",
+                        subtitle = "${values.str("paintType", "Paint")} | " +
+                            values.str("surfacePreparation", "Surface"),
+                        layers = listOf(
+                            QcDrawingLayer("Topcoat", dft / 1000.0),
+                            QcDrawingLayer("Primer", dft / 2000.0),
+                            QcDrawingLayer("Steel substrate", 5.0)
+                        ),
+                        metrics = listOf(
+                            QcDrawingMetric("DFT", "%.0f um".format(dft)),
+                            QcDrawingMetric("Adhesion", "%.2f MPa".format(values.num("adhesionStrength", 2.0))),
+                            QcDrawingMetric("Coats", "%.0f".format(values.num("numberOfCoats", 2.0))),
+                            QcDrawingMetric("Fire rating", values.str("fireRating", "None")),
+                            QcDrawingMetric("Humidity", "%.0f %%".format(values.num("humidity", 60.0)))
+                        ),
+                        passed = passed,
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+                QcDiscipline.SITE_WORKS -> {
+                    DisciplineQcGenericDrawing(
+                        title = "SITE WORKS QC - PAVEMENT SECTION",
+                        subtitle = "${values.str("pavementType", "Pavement")} | " +
+                            values.str("fenceType", "Fence"),
+                        layers = listOf(
+                            QcDrawingLayer("Pavement", 80.0),
+                            QcDrawingLayer("Base course", 200.0),
+                            QcDrawingLayer("Subgrade", 300.0)
+                        ),
+                        metrics = listOf(
+                            QcDrawingMetric("Grading level", "%.2f m".format(values.num("gradingLevel", 100.0))),
+                            QcDrawingMetric("Slope", "%.2f %%".format(values.num("slope", 0.5))),
+                            QcDrawingMetric("Drainage", if (values.bool("drainageSystem")) "YES" else "NO"),
+                            QcDrawingMetric("Safety signs", if (values.bool("safetySigns")) "YES" else "NO"),
+                            QcDrawingMetric("First aid", if (values.bool("firstAidKit")) "YES" else "NO")
+                        ),
+                        passed = passed,
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+                QcDiscipline.FIRE_PROTECTION -> {
+                    DisciplineQcGenericDrawing(
+                        title = "FIRE PROTECTION QC - COATING SECTION",
+                        subtitle = "${values.str("protectionType", "Protection")} | " +
+                            values.str("fireRating", "-"),
+                        layers = listOf(
+                            QcDrawingLayer("Intumescent coating", values.num("coatingThickness", 0.8)),
+                            QcDrawingLayer("Primer", 0.05),
+                            QcDrawingLayer("Steel substrate", 10.0)
+                        ),
+                        metrics = listOf(
+                            QcDrawingMetric(
+                                "Coating",
+                                "%.0f um".format(values.num("coatingThickness", 0.8) * 1000.0)
+                            ),
+                            QcDrawingMetric("Fire rating", values.str("fireRating", "-")),
+                            QcDrawingMetric("Adhesion", "%.2f MPa".format(values.num("adhesionStrength", 1.2))),
+                            QcDrawingMetric("Coverage", "%.0f m2".format(values.num("coverageArea", 500.0))),
+                            QcDrawingMetric("Humidity", "%.0f %%".format(values.num("humidity", 60.0)))
+                        ),
+                        passed = passed,
+                        designCode = designCode,
+                        modifier = Modifier.fillMaxWidth().height(340.dp)
+                    )
+                }
+            }
         }
     }
 }
-

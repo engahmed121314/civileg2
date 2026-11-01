@@ -18,6 +18,7 @@ import com.civileg.app.domain.calculations.SteelFrameDesign
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.modeler.FrameModelValidator
 import com.civileg.app.domain.modeler.FrameSceneView
+import com.civileg.app.domain.modeler.ModelerClipboard
 import com.civileg.app.domain.modeler.FrameValidationIssue
 import com.civileg.app.domain.modeler.ModelerLayerVisibility
 import com.civileg.app.domain.modeler.SlabLoadDistributor
@@ -301,64 +302,48 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     // === Clipboard for Copy/Paste ===
-    private data class ClipboardData(
-        val nodes: List<FrameNode>,
-        val members: List<FrameMember>,
-        val nodalLoads: List<NodalLoad>,
-        val memberLoads: List<MemberLoad>
-    )
-
-    private var clipboard: ClipboardData? = null
+    private var clipboard: ModelerClipboard.Content? = null
+    private var pasteCount = 0
 
     fun copySelection() {
-        val nodes = getSelectedNodes()
-        val members = getSelectedMembers()
-        val nodeIds = nodes.map { it.id }.toSet()
-        val nodalLoads = _nodalLoads.value?.filter { it.nodeId in nodeIds } ?: emptyList()
-        val memberIds = _selectedMemberIds.value ?: emptySet()
-        val memberLoads = _memberLoads.value?.filter { it.memberId in memberIds } ?: emptyList()
-        clipboard = ClipboardData(nodes, members, nodalLoads, memberLoads)
+        val content = ModelerClipboard.capture(
+            nodes = _nodes.value.orEmpty(),
+            members = _members.value.orEmpty(),
+            nodalLoads = _nodalLoads.value.orEmpty(),
+            memberLoads = _memberLoads.value.orEmpty(),
+            slabs = _slabs.value.orEmpty(),
+            selectedNodeIds = _selectedNodeIds.value.orEmpty(),
+            selectedMemberIds = _selectedMemberIds.value.orEmpty()
+        )
+        // A copy with nothing selected must not silently wipe a previous clipboard.
+        if (!content.isEmpty) {
+            clipboard = content
+            pasteCount = 0
+        }
     }
 
     fun pasteClipboard(): Boolean {
-        return clipboard?.let { data ->
-            recordUndo()
-            val nodeIdMap = mutableMapOf<Int, Int>()
-            val newNodes = data.nodes.map { node ->
-                val newId = (_nodes.value?.maxOfOrNull { it.id } ?: 0) + 1 + nodeIdMap.size
-                nodeIdMap[node.id] = newId
-                node.copy(id = newId, x = node.x + 1.0, y = node.y + 1.0)
-            }
-            _nodes.value = (_nodes.value ?: emptyList()) + newNodes
+        val content = clipboard ?: return false
+        val result = ModelerClipboard.paste(
+            content = content,
+            existingNodes = _nodes.value.orEmpty(),
+            existingMembers = _members.value.orEmpty(),
+            existingSlabs = _slabs.value.orEmpty(),
+            offsetMeters = PASTE_OFFSET_METERS * (pasteCount + 1)
+        )
+        if (result.isEmpty) return false
 
-            val memberIdMap = mutableMapOf<Int, Int>()
-            val newMembers = data.members.map { member ->
-                val newId = (_members.value?.maxOfOrNull { it.id } ?: 0) + 1 + memberIdMap.size
-                memberIdMap[member.id] = newId
-                val newNodeI = nodeIdMap[member.nodeI] ?: return@map null
-                val newNodeJ = nodeIdMap[member.nodeJ] ?: return@map null
-                memberIdMap[member.id] = newId
-                member.copy(id = newId, nodeI = newNodeI, nodeJ = newNodeJ)
-            }.filterNotNull()
-            _members.value = (_members.value ?: emptyList()) + newMembers
-
-            val newNodalLoads = data.nodalLoads.map { load ->
-                val newNodeId = nodeIdMap[load.nodeId] ?: return@map null
-                load.copy(nodeId = newNodeId)
-            }.filterNotNull()
-            _nodalLoads.value = (_nodalLoads.value ?: emptyList()) + newNodalLoads
-
-            val newMemberLoads = data.memberLoads.map { load ->
-                val newMemberId = memberIdMap[load.memberId] ?: return@map null
-                load.copy(memberId = newMemberId)
-            }.filterNotNull()
-            _memberLoads.value = (_memberLoads.value ?: emptyList()) + newMemberLoads
-
-            _selectedNodeIds.value = newNodes.map { it.id }.toSet()
-            _selectedMemberIds.value = newMembers.map { it.id }.toSet()
-            regenerateDimensions()
-            true
-        } ?: false
+        recordUndo()
+        _nodes.value = _nodes.value.orEmpty() + result.nodes
+        _members.value = _members.value.orEmpty() + result.members
+        _nodalLoads.value = _nodalLoads.value.orEmpty() + result.nodalLoads
+        _memberLoads.value = _memberLoads.value.orEmpty() + result.memberLoads
+        _slabs.value = _slabs.value.orEmpty() + result.slabs
+        _selectedNodeIds.value = result.nodes.map { it.id }.toSet()
+        _selectedMemberIds.value = result.members.map { it.id }.toSet()
+        pasteCount++
+        regenerateDimensions()
+        return true
     }
 
     fun hasClipboard(): Boolean = clipboard != null
@@ -494,13 +479,14 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     fun updateNode(nodeId: Int, x: Double, y: Double, support: SupportType) {
-        recordUndo()
         val current = _nodes.value?.toMutableList() ?: return
-        val idx = current.indexOfFirst { it.id == nodeId }
-        if (idx >= 0) {
-            current[idx] = current[idx].copy(x = x, y = y, support = support)
-            _nodes.value = current
-        }
+        val index = current.indexOfFirst { it.id == nodeId }
+        if (index < 0) return
+        val updated = current[index].copy(x = x, y = y, support = support)
+        if (updated == current[index]) return
+        recordUndo()
+        current[index] = updated
+        _nodes.value = current
     }
 
     fun setNodeSupport(nodeId: Int, support: SupportType) {
@@ -509,17 +495,21 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     fun removeNode(nodeId: Int) {
+        if (_nodes.value.orEmpty().none { it.id == nodeId }) return
         recordUndo()
         val removedMemberIds = _members.value.orEmpty()
             .filter { it.nodeI == nodeId || it.nodeJ == nodeId }
             .map { it.id }
             .toSet()
         _nodes.value = _nodes.value?.filter { it.id != nodeId }
-        // Remove connected members and loads
+        // Remove connected members, their loads, the node load and any slab using the node.
         _members.value = _members.value?.filter { it.nodeI != nodeId && it.nodeJ != nodeId }
         _memberLoads.value = _memberLoads.value?.filter { it.memberId !in removedMemberIds }
         _nodalLoads.value = _nodalLoads.value?.filter { it.nodeId != nodeId }
         _slabs.value = _slabs.value?.filter { !it.nodeIds.contains(nodeId) }
+        _selectedNodeIds.value = _selectedNodeIds.value.orEmpty() - nodeId
+        _selectedMemberIds.value = _selectedMemberIds.value.orEmpty() - removedMemberIds
+        regenerateDimensions()
     }
 
     // ========================================================================
@@ -566,34 +556,41 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     fun updateMember(member: FrameMember) {
-        recordUndo()
         val current = _members.value?.toMutableList() ?: return
-        val idx = current.indexOfFirst { it.id == member.id }
-        if (idx >= 0) {
-            current[idx] = member
-            _members.value = current
+        val index = current.indexOfFirst { it.id == member.id }
+        if (index < 0) return
+        val previous = current[index]
+        if (previous == member) return
+        recordUndo()
+        current[index] = member
+        _members.value = current
+        // Dimensions are derived from member end joints, so they must follow endpoint edits.
+        if (previous.nodeI != member.nodeI || previous.nodeJ != member.nodeJ) {
+            regenerateDimensions()
         }
     }
 
     fun updateMemberReleases(memberId: Int, releaseI: Boolean, releaseJ: Boolean) {
-        recordUndo()
         val current = _members.value?.toMutableList() ?: return
-        val idx = current.indexOfFirst { it.id == memberId }
-        if (idx >= 0) {
-            current[idx] = current[idx].copy(releaseI = releaseI, releaseJ = releaseJ)
-            _members.value = current
-        }
+        val index = current.indexOfFirst { it.id == memberId }
+        if (index < 0) return
+        val updated = current[index].copy(releaseI = releaseI, releaseJ = releaseJ)
+        if (updated == current[index]) return
+        recordUndo()
+        current[index] = updated
+        _members.value = current
     }
 
     fun removeMember(memberId: Int) {
+        if (_members.value.orEmpty().none { it.id == memberId }) return
         recordUndo()
         _members.value = _members.value?.filter { it.id != memberId }
         _memberLoads.value = _memberLoads.value?.filter { it.memberId != memberId }
+        _selectedMemberIds.value = _selectedMemberIds.value.orEmpty() - memberId
         regenerateDimensions()
     }
 
     private fun regenerateDimensions() {
-        val nodes = _nodes.value ?: emptyList()
         val members = _members.value ?: emptyList()
         val dims = mutableListOf<Dimension>()
         var dimId = 1
@@ -621,17 +618,19 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     fun removeNodalLoad(index: Int) {
+        val current = _nodalLoads.value ?: return
+        if (index !in current.indices) return
         recordUndo()
-        _nodalLoads.value = _nodalLoads.value?.filterIndexed { i, _ -> i != index }
+        _nodalLoads.value = current.filterIndexed { i, _ -> i != index }
     }
 
     fun updateNodalLoad(index: Int, load: NodalLoad) {
-        recordUndo()
         val current = _nodalLoads.value?.toMutableList() ?: return
-        if (index in current.indices) {
-            current[index] = load
-            _nodalLoads.value = current
-        }
+        if (index !in current.indices) return
+        if (current[index] == load) return
+        recordUndo()
+        current[index] = load
+        _nodalLoads.value = current
     }
 
     fun addMemberLoad(memberId: Int, loadType: MemberLoadType, value: Double, position: Double, loadCase: String) {
@@ -642,17 +641,19 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     fun removeMemberLoad(index: Int) {
+        val current = _memberLoads.value ?: return
+        if (index !in current.indices) return
         recordUndo()
-        _memberLoads.value = _memberLoads.value?.filterIndexed { i, _ -> i != index }
+        _memberLoads.value = current.filterIndexed { i, _ -> i != index }
     }
 
     fun updateMemberLoad(index: Int, load: MemberLoad) {
-        recordUndo()
         val current = _memberLoads.value?.toMutableList() ?: return
-        if (index in current.indices) {
-            current[index] = load
-            _memberLoads.value = current
-        }
+        if (index !in current.indices) return
+        if (current[index] == load) return
+        recordUndo()
+        current[index] = load
+        _memberLoads.value = current
     }
 
     // ========================================================================
@@ -687,18 +688,19 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     fun removeSlabPanel(panelId: Int) {
+        if (_slabs.value.orEmpty().none { it.id == panelId }) return
         recordUndo()
         _slabs.value = _slabs.value?.filter { it.id != panelId }
     }
 
     fun updateSlabPanel(panel: SlabPanel) {
-        recordUndo()
         val current = _slabs.value?.toMutableList() ?: return
-        val idx = current.indexOfFirst { it.id == panel.id }
-        if (idx >= 0) {
-            current[idx] = panel
-            _slabs.value = current
-        }
+        val index = current.indexOfFirst { it.id == panel.id }
+        if (index < 0) return
+        if (current[index] == panel) return
+        recordUndo()
+        current[index] = panel
+        _slabs.value = current
     }
 
     fun slabMemberLoads(nodes: List<FrameNode>, members: List<FrameMember>): List<MemberLoad> {
@@ -989,6 +991,7 @@ class FrameAnalysisViewModel @Inject constructor(
 
     private companion object {
         const val DRAFT_KEY = "frame_modeler_draft_v1"
+        const val PASTE_OFFSET_METERS = 1.0
     }
 }
 

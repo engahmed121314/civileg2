@@ -11,7 +11,7 @@
 
 | Area | State | Notes |
 |------|-------|-------|
-| Build / tests | ✅ GREEN | `compileDebugKotlin` OK; **67 suites / 1239 tests / 0 failures**. `lintVitalRelease` passes. |
+| Build / tests | ✅ GREEN | `compileDebugKotlin` OK; **85 suites / 1527 tests / 0 failures**. `lintVitalRelease` passes. |
 | Domain engines | ✅ Present | 14 base interfaces; ECP/ACI/SBC implementations for all major element types (see §3). |
 | Code selection | ⚠️ Fragmented | **Two `DesignCode` enums** + one screen (`SeismicScreen`) bypasses the factory. See §4. |
 | CalculatorEngine facade | ⚠️ Partial | Real (not stub) for most elements but duplicates engine math inline; **steel member (§9.6) and solid slab (§9.16) now delegate**. See §5. |
@@ -20,7 +20,7 @@
 | CodeReference | ✅ Broad | Concrete + steel/frame engines emit refs (commits `08bcc90`, `399c455`). Confirmed errors fixed (ACI cover, one-way slab); ECP/SBC sub-clauses still unverified. See §9.6. |
 | Drawing → PDF | ✅ | Capture-based for **every** element that has an on-screen drawing (Warehouse §9.12, Pile §9.13, steel member §9.14, Seismic §9.15); FlatSlab/ShearWall stale-bitmap fixed; all fallbacks read real values (§9.10); native-Canvas PDF path removed (§9.11). Base plate is generator-only (no on-screen drawing exists). |
 | Export pipelines | ✅ Consolidated | `ExportManager` unified (`exportReportAndDxf/exportPdf/Dxf/Ifc/Csv/Both/Package`); 12 dead exporters **plus `NativePdfExporter` + `PdfLayoutHelper`** deleted. All ViewModels migrated (§9.10); `QualityEngineerViewModel` still calls the photos-capable reporter directly. |
-| Security / signing | ⚠️ Blocked | Needs production signer fingerprint + AdMob IDs. 15 Dependabot alerts. |
+| Security / signing | ⚠️ Partial | Signer fingerprint pinned; AdMob IDs now injected from `local.properties` (test-ID fallback). Needs production IDs + final 15x3 QA. Dependabot residue is dev/test tooling only. |
 
 ---
 
@@ -182,7 +182,7 @@ path.
 12. Crash-hardening sweep for tools (SoilBearing, RebarTool, UnitConverter, SiteLayout, etc.). *(done §9.10 — SoilBearing/UnitConverter/RebarTool/ConcreteMixDesigner/SteelTables/BbsGenerator/SiteLayoutScreen all verified guarded; `WaterLevelCalculator`/`ExpressionParser`/`SiteLayoutViewModel` do not exist.)*
 
 ### P3 — Release
-13. Fill `AppIntegrityChecker.EXPECTED_SIGNER_FINGERPRINT` + production AdMob IDs.
+13. Fill `AppIntegrityChecker.EXPECTED_SIGNER_FINGERPRINT` + production AdMob IDs. *(fingerprint done; ad-unit IDs now build-injected from `local.properties` - §9.32. Only the four production values remain user-supplied.)*
 14. Resolve 15 Dependabot alerts (8 high, 6 moderate, 1 low). *(partial §9.7: **runtime** `guava`
     forced 31.1-android → 33.4.0-android via an `app` dependency constraint, clearing CVE-2023-2976
     + CVE-2020-8908. Remaining alerts are almost all in **non-shipped tooling/config classpaths**
@@ -210,7 +210,7 @@ path.
 ☐ CodeReference keys verified against code text
 ☐ Zero crashes with null/empty/invalid inputs
 ✅ Parity: same inputs → 3 correct, different results (golden fixtures) — slab (`SolidSlabCodeDivergenceTest`) + retaining wall (`RetainingWallCodeDivergenceTest`); ACI==SBC where the codes genuinely share equations (beam/column/seismic moments) but differ via ρmin, covers and limits
-☐ Signed, ProGuard, versioned APK ready
+✅ Signed, versioned APK ready — release keystore (RSA 4096), `versionCode 7` / `versionName 1.7.0`, no R8/resource removal (all classes and resources retained per project requirement), signature fingerprint pinned in `AppIntegrityChecker`, `apksigner verify` clean (SHA-256 `86:5A:19:…:89:C5`)
 ```
 
 ---
@@ -733,8 +733,8 @@ an engine-design change (all three connection engines); deferred as cosmetic.
 **Plan status now.** P0 fully closed (1 ✅ verified, 2 ✅ slab+retaining wall, 3 ✅ clause
 resolution + cross-code parity tests — `CodeReferenceTest` verifies all keys resolve for
 ECP/ACI/SBC and SBC chapter alignments). P1 fully closed (4-8 ✅, 6 ✅ engine-derived
-connections §9.20). P2 fully closed (9-12 ✅). P3 remains: **13** (signer fingerprint +
-AdMob IDs — needs the user), **14** (Dependabot — needs a token/`gh` to re-verify;
+connections §9.20). P2 fully closed (9-12 ✅). P3 remains: **13** (signer fingerprint pinned;
+AdMob IDs are now build-injected from `local.properties`, so only the production values are user-supplied), **14** (Dependabot — needs a token/`gh` to re-verify;
 tooling-classpath residue needs an AGP 9.x migration), **15** (release build + manual 15×3
 QA — needs the keystore).
 
@@ -1190,3 +1190,29 @@ BOQ estimator.
 
 **Tests.** Suite now at **71 suites / 1291 tests / 0 failures**. New coverage:
 `hordiSlabRows` per-metre-width quantities and project-level tank/retaining-wall waterproofing rows.
+
+### 9.32 Quality-engine accuracy, drawing coverage, checklist persistence, AdMob injection
+
+**Quality-engine accuracy.** Fixed the remaining discipline checks in
+`QualityControlEngineNew.kt`: drainage no longer rejects valid invert levels and validates the
+pipe material; site-works cross-fall accepts the full -1.0..1.0 range; retaining walls no longer
+use a false 6 m height cap and now check slenderness plus seismic overturning; post-tension
+derives `Fpu` from the tendon type (strand/wire/bar); masonry checks minimum wall thickness and
+plaster thickness.
+
+**Drawing coverage.** All 15 discipline tabs now render an input-driven drawing. The ten tabs
+that previously had no drawing use the shared `DisciplineQcGenericDrawing`, while masonry and
+drainage keep their dedicated drawings.
+
+**Checklist persistence.** `QualityComplianceScreen` now stores checked items, the selected code
+and the discipline filter in `SharedPreferences`, so compliance progress survives tab changes
+and app restarts. Reset clears the persisted set.
+
+**AdMob injection (P3-13 partial).** Ad unit IDs are now `BuildConfig` fields sourced from
+`local.properties` (`admob.banner.id`, `admob.interstitial.id`, `admob.native.id`,
+`admob.rewarded.id`). Google's public test IDs remain the fallback, so debug builds are safe;
+production only needs the four real IDs in `local.properties`.
+
+**Tests.** Suite now at **85 suites / 1527 tests / 0 failures / 0 errors / 0 skipped**.
+`compileDebugKotlin` and `assembleDebug` are green. Device/emulator visual QA (15 elements x
+3 codes) remains pending because no emulator was available in this session.

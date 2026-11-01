@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.responsive.dimens
+
 import com.civileg.app.domain.entities.DesignCode
 
 import androidx.compose.foundation.Canvas
@@ -129,7 +131,7 @@ fun StairScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item { SectionHeader(stringResource(R.string.stair_dimensions), R.drawable.ic_stairs) }
@@ -444,6 +446,7 @@ fun StairScreen(
                         else -> (780 * wRatio).toInt().coerceIn(500, 1100)
                     }
                     InteractiveDrawingScreen(
+                        onExportDxf = { viewModel.exportToDxf(context) },
                         title = stringResource(R.string.stair_drawing_title),
                         subtitle = stringResource(R.string.stair_drawing_subtitle),
                         drawingHeightDp = drawingHeight,

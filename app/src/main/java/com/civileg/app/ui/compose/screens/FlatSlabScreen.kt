@@ -518,6 +518,7 @@ item {
                         var selectedViewMode by remember { mutableStateOf(0) }
                         val drawingHeight = if (config.smallestScreenWidthDp >= 600) 580 else 480
                         InteractiveDrawingScreen(
+                            onExportDxf = { viewModel.exportToDxf(context) },
                             title = stringResource(R.string.fs_title),
                             subtitle = "Flat Slab Panel Plan",
                             drawingHeightDp = drawingHeight,

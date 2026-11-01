@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.civileg.app.BuildConfig
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
@@ -44,10 +45,10 @@ object AdManager {
     // Production Ad Unit IDs — made immutable (val) to prevent runtime tampering.
     // Production IDs should be injected via BuildConfig (e.g. BuildConfig.BANNER_AD_UNIT_ID)
     // rather than set directly. Current values are Google's well-known test IDs.
-    val BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
-    val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
-    val NATIVE_AD_UNIT_ID = "ca-app-pub-3940256099942544/2247696110"
-    val REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
+    val BANNER_AD_UNIT_ID = BuildConfig.ADMOB_BANNER_AD_UNIT_ID
+    val INTERSTITIAL_AD_UNIT_ID = BuildConfig.ADMOB_INTERSTITIAL_AD_UNIT_ID
+    val NATIVE_AD_UNIT_ID = BuildConfig.ADMOB_NATIVE_AD_UNIT_ID
+    val REWARDED_AD_UNIT_ID = BuildConfig.ADMOB_REWARDED_AD_UNIT_ID
 
     // ═══════════════════════════════════════════════════════════
     // Ad Frequency Control — Prevents ad fatigue

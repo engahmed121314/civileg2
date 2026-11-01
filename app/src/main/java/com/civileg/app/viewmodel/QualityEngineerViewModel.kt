@@ -53,6 +53,8 @@ data class ConcreteQCState(
     val sampleId: String = "",
     val strength7Days: String = "",
     val strength28Days: String = "",
+    val airContent: String = "4.0",
+    val concreteTemp: String = "25",
     val outcome: QualityControlEngine.QcOutcome? = null
 )
 
@@ -314,6 +316,8 @@ class QualityEngineerViewModel @Inject constructor(
             "sampleId" -> _concreteState.value.copy(sampleId = value)
             "strength7Days" -> _concreteState.value.copy(strength7Days = value)
             "strength28Days" -> _concreteState.value.copy(strength28Days = value)
+            "airContent" -> _concreteState.value.copy(airContent = value)
+            "concreteTemp" -> _concreteState.value.copy(concreteTemp = value)
             else -> _concreteState.value
         }
     }
@@ -408,11 +412,13 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun saveConcretePour(context: Context) {
         val s = _concreteState.value
-        val volume = InputGuard.nonNegative("volume", s.volume.toDoubleOrNull() ?: 0.0)
+        val volume = InputGuard.positive("volume", s.volume.toDoubleOrNull() ?: 0.0)
         val slump = InputGuard.inRange("slump", s.slump.toDoubleOrNull() ?: 0.0, 0.0, 500.0)
         val fcu = InputGuard.positive("fcu", s.fcu.toDoubleOrNull() ?: 25.0)
         val s7 = InputGuard.nonNegative("strength7Days", s.strength7Days.toDoubleOrNull() ?: 0.0)
         val s28 = InputGuard.nonNegative("strength28Days", s.strength28Days.toDoubleOrNull() ?: 0.0)
+        val air = InputGuard.inRange("airContent", s.airContent.toDoubleOrNull() ?: 4.0, 0.0, 10.0)
+        val temp = InputGuard.inRange("concreteTemp", s.concreteTemp.toDoubleOrNull() ?: 25.0, 0.0, 50.0)
         val elementId = InputGuard.notBlank("elementId", s.elementId.ifBlank { s.sampleId.ifBlank { "CONCRETE" } })
         
         val outcome = QualityControlEngine.concreteQc(
@@ -422,7 +428,9 @@ class QualityEngineerViewModel @Inject constructor(
             slumpMm = slump,
             fcuDesignMpa = fcu,
             strength7DaysMpa = s7,
-            strength28DaysMpa = s28
+            strength28DaysMpa = s28,
+            airContent = air,
+            concreteTemp = temp
         )
         _concreteState.value = s.copy(outcome = outcome)
         persist(
@@ -459,8 +467,10 @@ class QualityEngineerViewModel @Inject constructor(
 
         // Persist as a quality record (reuse the concrete-style summary path)
         val checks = listOf(
-            GenericSafetyCheck("Allowable bearing capacity", result.allowableBearingCapacity, 0.0, "kPa", result.isSafe),
-            GenericSafetyCheck("Estimated settlement", result.settlement, 25.0, "mm", result.settlement <= 25.0)
+            GenericSafetyCheck("Allowable bearing capacity > 0", result.allowableBearingCapacity, 0.0, "kPa",
+                result.allowableBearingCapacity > 0.0, "Terzaghi / Meyerhof"),
+            GenericSafetyCheck("Estimated settlement ≤ 25 mm", result.settlement, 25.0, "mm",
+                result.settlement <= 25.0, "Serviceability limit")
         )
         val outcome = QualityControlEngine.QcOutcome(
             title = "Soil & Foundation Quality Control",
@@ -473,7 +483,7 @@ class QualityEngineerViewModel @Inject constructor(
                 "Allowable q_all" to "%.1f kPa".format(result.allowableBearingCapacity),
                 "Settlement" to "%.1f mm".format(result.settlement)
             ),
-            passed = result.isSafe,
+            passed = checks.all { it.passed },
             utilizationRatio = if (result.allowableBearingCapacity > 0) result.netBearingCapacity / result.allowableBearingCapacity else 0.0,
             summary = "Soil bearing capacity (${method.name}) — ${if (result.isSafe) "safe" else "unsafe"}"
         )
@@ -579,7 +589,7 @@ class QualityEngineerViewModel @Inject constructor(
         val freq = InputGuard.inRange("naturalFrequency", s.naturalFrequency.toDoubleOrNull() ?: 2.5, 0.1, 10.0)
         
         val outcome = QualityControlEngine.bridgeQc(
-            code = DesignCode.ECP,
+            code = s.designCode,
             concreteStrengthMpa = concStrength,
             spanM = span,
             naturalFrequencyHz = freq
@@ -1176,6 +1186,7 @@ class QualityEngineerViewModel @Inject constructor(
         title: String,
         subtitle: String,
         outcome: QualityControlEngine.QcOutcome?,
+        designCode: DesignCode = DesignCode.ECP,
         drawingBitmap: android.graphics.Bitmap? = null,
         onComplete: (File?) -> Unit = {}
     ) {
@@ -1215,7 +1226,7 @@ class QualityEngineerViewModel @Inject constructor(
                     reportType = ProfessionalEnglishPdfReporter.ReportType.GENERIC,
                     title = title,
                     subtitle = subtitle,
-                    designCode = "ECP 203-2020 / ACI 318-19 / SBC 304-2018",
+                    designCode = designCode.version,
                     inputs = inputMap,
                     results = resultMap,
                     safetyChecks = safetyChecks,

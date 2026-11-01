@@ -126,6 +126,31 @@ class FlatSlabViewModel @Inject constructor(
     /**
      * Export results to PDF report.
      */
+    /** Standalone DXF sheet for the current flat slab design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val res = _result.value ?: return null
+        val input = lastInput ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.slabSection(
+            title = "FLAT SLAB ${input.panelType.displayName}",
+            spanMm = input.lx,
+            thicknessMm = input.slabThickness,
+            coverMm = input.clearCover,
+            mainBarDiaMm = res.columnStripBotRebar.diameter.toDouble(),
+            mainSpacingMm = res.columnStripBotRebar.spacing.toDouble()
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "FlatSlab",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(
         context: android.content.Context,
         onComplete: (java.io.File?) -> Unit
@@ -206,14 +231,7 @@ class FlatSlabViewModel @Inject constructor(
                         res, input.lx / 1000.0, input.ly / 1000.0, "FS1"
                     ),
                     drawingBitmap = drawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
-                        title = "FLAT SLAB ${input.panelType.displayName}",
-                        spanMm = input.lx,
-                        thicknessMm = input.slabThickness,
-                        coverMm = input.clearCover,
-                        mainBarDiaMm = res.columnStripBotRebar.diameter.toDouble(),
-                        mainSpacingMm = res.columnStripBotRebar.spacing.toDouble()
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
                 pendingDrawingBitmap = null  // consume after use

@@ -11,11 +11,14 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -56,6 +59,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
+import com.civileg.app.ui.responsive.LocalWindowSize
+import com.civileg.app.ui.responsive.WindowWidthClass
+import com.civileg.app.ui.responsive.dimens
 
 // ══════════════════════════════════════════════════════════════════════
 // Color palette extensions for the Home Screen
@@ -171,6 +177,7 @@ fun HomeScreen(
     projectViewModel: ProjectViewModel = hiltViewModel()
 ) {
     val isDark = isSystemInDarkTheme()
+    val dimensions = MaterialTheme.dimens
     val allDesigns by projectViewModel.allDesigns.observeAsState(initial = emptyList())
     val allProjects by projectViewModel.allProjects.observeAsState(initial = emptyList())
     val designCount = allDesigns.size
@@ -288,35 +295,35 @@ fun HomeScreen(
         }
     ) { padding ->
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            columns = GridCells.Adaptive(minSize = dimensions.gridMinItemWidth),
+            horizontalArrangement = Arrangement.spacedBy(dimensions.cardSpacing),
+            verticalArrangement = Arrangement.spacedBy(dimensions.cardSpacing),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .background(
                     if (isDark) Color(0xFF0F0F1A) else Color(0xFFF5F6FA)
                 )
-                .padding(horizontal = 14.dp)
+                .padding(horizontal = dimensions.screenHorizontalPadding)
         ) {
             // ══════════════════════════════════════════
             // A. HEADER SECTION
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 HeaderSection(isDark = isDark)
             }
 
             // ══════════════════════════════════════════
             // B. QUICK STATS ROW
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 QuickStatsRow(isDark = isDark, designCount = designCount, codeCount = uniqueCodes, typeCount = uniqueTypes)
             }
 
             // ══════════════════════════════════════════
             // C. MAIN DESIGN MODULES GRID
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionHeader(
                     icon = Icons.Default.Engineering,
                     title = stringResource(R.string.home_section_design_title),
@@ -335,7 +342,7 @@ fun HomeScreen(
             // ══════════════════════════════════════════
             // D. QUICK TOOLS SECTION (horizontal)
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionHeader(
                     icon = Icons.Default.Build,
                     title = stringResource(R.string.home_section_tools_title),
@@ -343,7 +350,7 @@ fun HomeScreen(
                 )
             }
 
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 QuickToolsRow(
                     isDark = isDark,
                     onToolClick = { onNavigateTo(it) }
@@ -353,7 +360,7 @@ fun HomeScreen(
             // ══════════════════════════════════════════
             // E. RECENT PROJECTS SECTION
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionHeader(
                     icon = Icons.Default.History,
                     title = stringResource(R.string.home_section_recent_title),
@@ -361,7 +368,7 @@ fun HomeScreen(
                 )
             }
 
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 RecentProjectsSection(
                     projects = recentProjects,
                     isDark = isDark
@@ -371,12 +378,12 @@ fun HomeScreen(
             // ══════════════════════════════════════════
             // F. FOOTER
             // ══════════════════════════════════════════
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 FooterSection(isDark = isDark)
             }
 
             // Bottom spacer
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Spacer(modifier = Modifier.height(20.dp))
             }
         }
@@ -584,7 +591,7 @@ private fun StatCard(
     )
 
     Card(
-        modifier = modifier.height(90.dp),
+        modifier = modifier.heightIn(min = MaterialTheme.dimens.statCardMinHeight),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isDark) Color(0xFF1E1E30) else Color.White
@@ -655,7 +662,7 @@ private fun EnhancedModuleCard(
 
     Card(
         onClick = onClick,
-        modifier = Modifier.height(170.dp),
+        modifier = Modifier.heightIn(min = MaterialTheme.dimens.moduleCardMinHeight),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -746,24 +753,50 @@ private fun EnhancedModuleCard(
 // D. QUICK TOOLS ROW (horizontal scroll)
 // ══════════════════════════════════════════════════════════════════════
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun QuickToolsRow(
     isDark: Boolean,
     onToolClick: (String) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        quickTools.forEach { tool ->
-            QuickToolCard(
-                tool = tool,
-                isDark = isDark,
-                onClick = { onToolClick(tool.route) }
-            )
+    val windowSize = LocalWindowSize.current
+    val spacing = MaterialTheme.dimens.cardSpacing
+
+    // Phones keep the familiar horizontal carousel. Tablets have enough room
+    // to wrap the tools into a balanced flow/grid, which removes the extra
+    // horizontal scrolling gesture.
+    if (windowSize.widthClass == WindowWidthClass.COMPACT) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing)
+        ) {
+            quickTools.forEach { tool ->
+                QuickToolCard(
+                    tool = tool,
+                    isDark = isDark,
+                    onClick = { onToolClick(tool.route) }
+                )
+            }
+        }
+    } else {
+        FlowRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing),
+            verticalArrangement = Arrangement.spacedBy(spacing),
+            maxItemsInEachRow = 6
+        ) {
+            quickTools.forEach { tool ->
+                QuickToolCard(
+                    tool = tool,
+                    isDark = isDark,
+                    onClick = { onToolClick(tool.route) }
+                )
+            }
         }
     }
 }
@@ -778,7 +811,7 @@ private fun QuickToolCard(
 
     Card(
         onClick = onClick,
-        modifier = Modifier.width(130.dp),
+        modifier = Modifier.width(MaterialTheme.dimens.quickToolWidth),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

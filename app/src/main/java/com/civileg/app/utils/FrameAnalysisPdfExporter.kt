@@ -143,7 +143,9 @@ object FrameAnalysisPdfExporter {
             memTable.addCell(Cell().add(Paragraph(m.materialType.displayNameEn).setFontSize(7f)))
             val secDesc = if (m.materialType == FrameMaterialType.Concrete && m.concreteSection != null)
                 "b=${m.concreteSection!!.width} h=${m.concreteSection!!.depth} mm"
-            else m.steelSectionName ?: "N/A"
+            else m.steelSectionName?.trim()?.takeUnless {
+                it.isEmpty() || it.equals("Auto", ignoreCase = true)
+            } ?: "Auto"
             memTable.addCell(Cell().add(Paragraph(secDesc).setFontSize(7f)))
             val releases = when {
                 m.releaseI && m.releaseJ -> "I + J"

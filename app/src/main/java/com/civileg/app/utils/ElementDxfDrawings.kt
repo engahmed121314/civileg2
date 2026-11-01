@@ -34,6 +34,7 @@ object ElementDxfDrawings {
         ex.stirrupRect(coverMm, coverMm, widthMm - 2 * coverMm, depthMm - 2 * coverMm)
         ex.perimeterPoints(coverMm, coverMm, widthMm - 2 * coverMm, depthMm - 2 * coverMm, mainBarCount)
             .forEach { (x, y) -> ex.rebar(x, y, mainBarDiaMm) }
+        dimensionOutline(ex, widthMm, depthMm)
         ex.notes(
             title,
             widthMm,
@@ -82,6 +83,7 @@ object ElementDxfDrawings {
         ex.stirrupRect(coverMm, coverMm, widthMm - 2 * coverMm, depthMm - 2 * coverMm)
         ex.perimeterPoints(coverMm, coverMm, widthMm - 2 * coverMm, depthMm - 2 * coverMm, mainBarCount)
             .forEach { (x, y) -> ex.rebar(x, y, mainBarDiaMm) }
+        dimensionOutline(ex, widthMm, depthMm)
         ex.notes(
             title,
             widthMm,
@@ -111,6 +113,7 @@ object ElementDxfDrawings {
             ex.rebar(x, topY, temperatureBarDiaMm)
             x += mainSpacingMm.coerceAtLeast(50.0)
         }
+        dimensionOutline(ex, spanMm, thicknessMm)
         ex.notes(
             title,
             spanMm,
@@ -143,6 +146,7 @@ object ElementDxfDrawings {
             ex.rebar(x, barY, barDiaMm)
             x += barSpacingMm.coerceAtLeast(50.0)
         }
+        dimensionOutline(ex, widthMm, thicknessMm + columnStubHeightMm)
         ex.notes(
             title,
             widthMm,
@@ -175,6 +179,7 @@ object ElementDxfDrawings {
             ex.hLine(coverMm, y, widthMm - coverMm, "STIRRUPS")
             y += horizontalSpacingMm.coerceAtLeast(50.0)
         }
+        dimensionOutline(ex, widthMm, heightMm)
         ex.notes(
             title,
             widthMm,
@@ -210,6 +215,7 @@ object ElementDxfDrawings {
                 x += barSpacingMm.coerceAtLeast(50.0)
             }
         }
+        dimensionOutline(ex, lengthMm, thicknessMm + columnStubHeightMm)
         ex.notes(
             title,
             lengthMm,
@@ -242,6 +248,7 @@ object ElementDxfDrawings {
             ex.hLine(coverMm, y, diameterMm - coverMm, "STIRRUPS")
             y += tieSpacingMm.coerceAtLeast(50.0)
         }
+        dimensionOutline(ex, diameterMm, lengthMm)
         ex.notes(title, diameterMm, lengthMm, "Ø${fmt(diameterMm)} mm", "TIES Ø${fmt(tieDiaMm)}")
     }
 
@@ -267,6 +274,7 @@ object ElementDxfDrawings {
             ex.rebar(barX, y, barDiaMm)
             y += barSpacingMm.coerceAtLeast(50.0)
         }
+        dimensionOutline(ex, baseWidthMm, totalH)
         ex.notes(
             title,
             baseWidthMm,
@@ -306,6 +314,7 @@ object ElementDxfDrawings {
             ex.rebar(coverMm + t * runMm, waistThicknessMm / 2.0 + t * totalRise, barDiaMm)
             d += barSpacingMm.coerceAtLeast(50.0)
         }
+        dimensionOutline(ex, runMm, totalRise + waistThicknessMm)
         ex.notes(title, runMm, totalRise + waistThicknessMm, "$steps steps", "MAIN Ø${fmt(barDiaMm)} @ ${fmt(barSpacingMm)}")
     }
 
@@ -332,6 +341,7 @@ object ElementDxfDrawings {
             ex.rebar(widthMm - coverMm - ins, y, barDiaMm)
             y += barSpacingMm.coerceAtLeast(50.0)
         }
+        dimensionOutline(ex, widthMm, heightMm)
         ex.notes(title, widthMm, heightMm, "WALL t=${fmt(wallThicknessMm)} mm", "MAIN Ø${fmt(barDiaMm)} @ ${fmt(barSpacingMm)}")
     }
 
@@ -356,6 +366,7 @@ object ElementDxfDrawings {
         ex.rect(0.0, heightMm - flangeThicknessMm, widthMm, flangeThicknessMm, "COLUMNS")
         // web
         ex.rect(fw, flangeThicknessMm, webThicknessMm, heightMm - 2 * flangeThicknessMm, "COLUMNS")
+        dimensionOutline(ex, widthMm, heightMm)
         ex.notes(
             title, widthMm, heightMm,
             "h=${fmt(heightMm)} mm", "b=${fmt(widthMm)} mm",
@@ -387,6 +398,7 @@ object ElementDxfDrawings {
             plateLengthMm - 2 * edgeDistanceMm,
             boltCount
         ).forEach { (x, y) -> ex.rebar(x, y, boltDiaMm, "REBAR") }
+        dimensionOutline(ex, plateWidthMm, plateLengthMm)
         ex.notes(title, plateWidthMm, plateLengthMm, "PLATE t=${fmt(plateThicknessMm)} mm", "$boltCount x Ø${fmt(boltDiaMm)}")
     }
 
@@ -403,6 +415,7 @@ object ElementDxfDrawings {
     ): DxfDrawable = DxfDrawable { ex ->
         ex.sheetFrame(widthMm, heightMm)
         ex.rect(0.0, 0.0, widthMm, heightMm, "0")
+        dimensionOutline(ex, widthMm, heightMm)
         ex.notes(
             title, widthMm, heightMm,
             "W=${fmt(widthMm)} mm", "H=${fmt(heightMm)} mm",
@@ -413,6 +426,13 @@ object ElementDxfDrawings {
     // ───────────────────────────────────────────────────────────────────────────
     // PRIVATE DRAWING HELPERS
     // ───────────────────────────────────────────────────────────────────────────
+
+    /** Overall width/height dimensions placed below and to the left of the element. */
+    private fun dimensionOutline(ex: DxfExporter, widthMm: Double, heightMm: Double) {
+        val dim = (minOf(widthMm, heightMm) * 0.22).coerceIn(30.0, 180.0)
+        ex.addDimensionH(0.0, widthMm, -dim, fmt(widthMm), offset = dim)
+        ex.addDimensionV(0.0, heightMm, -dim, fmt(heightMm), offset = dim)
+    }
 
     private fun fmt(v: Double): String =
         if (v == v.toLong().toDouble()) v.toLong().toString() else String.format(java.util.Locale.US, "%.1f", v)
@@ -440,12 +460,10 @@ object ElementDxfDrawings {
         addLine2D(x, y1, x, y2, layer)
     }
 
-    /** Drawing border sized to the element, so the model is comfortably framed. */
+    /** Kept for call-site compatibility: the full sheet is drawn by [notes]. */
     private fun DxfExporter.sheetFrame(contentWidth: Double, contentHeight: Double) {
-        val pad = (maxOf(contentWidth, contentHeight) * 0.12).coerceAtLeast(25.0)
-        val w = contentWidth + 2 * pad
-        val h = contentHeight + 2 * pad
-        rect(pad, pad, w - 2 * pad, h - 2 * pad, "0")
+        // Intentionally empty — [notes] draws the sheet border and title block once
+        // the element dimensions are known, avoiding a duplicated outline.
     }
 
     private fun DxfExporter.notes(
@@ -456,11 +474,17 @@ object ElementDxfDrawings {
         line2: String,
         summaryLines: List<String> = emptyList()
     ) {
+        addSheetFrame(
+            contentWidth = widthMm,
+            contentHeight = heightMm,
+            title = title,
+            subtitle = line1,
+            scaleText = "AS SHOWN"
+        )
         val th = (minOf(widthMm, heightMm) / 12.0).coerceIn(15.0, 60.0)
-        addText(0.0, -th * 2.2, title, th, "TEXT")
-        addText(0.0, -th * 4.0, line1, th * 0.8, "TEXT")
-        addText(widthMm * 0.55, -th * 4.0, line2, th * 0.8, "TEXT")
-        var y = -th * 5.8
+        var y = -th * 2.0
+        if (line2.isNotBlank()) addText(widthMm * 0.55, y, line2, th * 0.8, "TEXT")
+        y -= th * 1.8
         summaryLines.take(5).forEach { line ->
             addText(0.0, y, line, th * 0.7, "TEXT")
             y -= th * 1.4

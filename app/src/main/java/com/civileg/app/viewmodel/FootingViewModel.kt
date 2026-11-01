@@ -132,6 +132,31 @@ class FootingViewModel @Inject constructor(
         }
     }
 
+    /** Standalone DXF sheet for the current footing design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val res = _result.value ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.footingSection(
+            title = "FOOTING ${res.type.displayName}",
+            widthMm = res.width.toDouble(),
+            thicknessMm = res.thickness.toDouble(),
+            coverMm = 70.0,
+            barDiaMm = res.barDiameter.toDouble(),
+            barSpacingMm = res.reinforcementBottom.spacing.toDouble(),
+            columnWidthMm = res.column1Size.first.toDouble()
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: Context, onComplete: (File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "Footing",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
         val res = _result.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
@@ -217,15 +242,7 @@ class FootingViewModel @Inject constructor(
                     }.getOrDefault(emptyList()),
                     boqRows = BoqEstimator.footingRows(res, "F1", excavationDepthM, workingSpaceM, blindingThicknessM),
                     drawingBitmap = drawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.footingSection(
-                        title = "FOOTING ${res.type.displayName}",
-                        widthMm = res.width.toDouble(),
-                        thicknessMm = res.thickness.toDouble(),
-                        coverMm = 70.0,
-                        barDiaMm = res.barDiameter.toDouble(),
-                        barSpacingMm = res.reinforcementBottom.spacing.toDouble(),
-                        columnWidthMm = res.column1Size.first.toDouble()
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
 

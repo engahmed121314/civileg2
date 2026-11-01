@@ -116,6 +116,31 @@ class WaffleSlabViewModel @Inject constructor(
     /**
      * Export results to PDF report.
      */
+    /** Standalone DXF sheet for the current waffle slab design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val res = _result.value ?: return null
+        val input = lastInput ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.slabSection(
+            title = "WAFFLE SLAB",
+            spanMm = input.lx,
+            thicknessMm = input.ribHeight + input.toppingThickness,
+            coverMm = input.clearCover,
+            mainBarDiaMm = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 12.0,
+            mainSpacingMm = res.ribDesign?.flexureReinforcement?.spacing?.toDouble() ?: 150.0
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "WaffleSlab",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(
         context: Context,
         onComplete: (File?) -> Unit
@@ -208,14 +233,7 @@ class WaffleSlabViewModel @Inject constructor(
                         res, input.lx / 1000.0, input.ly / 1000.0, "WS1"
                     ),
                     drawingBitmap = drawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
-                        title = "WAFFLE SLAB",
-                        spanMm = input.lx,
-                        thicknessMm = input.ribHeight + input.toppingThickness,
-                        coverMm = input.clearCover,
-                        mainBarDiaMm = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 12.0,
-                        mainSpacingMm = res.ribDesign?.flexureReinforcement?.spacing?.toDouble() ?: 150.0
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
 

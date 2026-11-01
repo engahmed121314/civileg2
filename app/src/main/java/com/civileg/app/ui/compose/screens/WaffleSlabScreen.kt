@@ -449,6 +449,7 @@ fun WaffleSlabScreen(
                     item {
                         val drawingHeight = if (config.smallestScreenWidthDp >= 600) 580 else 480
                         InteractiveDrawingScreen(
+                            onExportDxf = { viewModel.exportToDxf(context) },
                             title = stringResource(R.string.waffle_slab_title),
                             subtitle = "Two-Way Ribbed Slab Detail",
                             viewModes = viewModeLabels,

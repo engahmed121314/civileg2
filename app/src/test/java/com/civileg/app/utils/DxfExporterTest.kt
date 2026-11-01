@@ -41,6 +41,39 @@ class DxfExporterTest {
     }
 
     @Test
+    fun document_hasCompleteAc1027StructureAndUniqueHandles() {
+        val drawing = ElementDxfDrawings.beamSection(
+            title = "BEAM B1", widthMm = 300.0, depthMm = 600.0, coverMm = 40.0,
+            mainBarDiaMm = 16.0, mainBarCount = 4, stirrupDiaMm = 8.0, stirrupSpacingMm = 150.0
+        )
+        val dxf = DxfExporter().renderToString(drawing)
+
+        // Every section a modern CAD application expects.
+        listOf("HEADER", "TABLES", "BLOCKS", "ENTITIES", "OBJECTS").forEach { section ->
+            assertTrue("missing $section section", dxf.contains("0\nSECTION\n2\n$section\n"))
+        }
+        assertTrue(dxf.contains("1\nAC1027\n"))
+        assertTrue(dxf.contains("0\nTABLE\n2\nSTYLE\n"))
+        assertTrue(dxf.contains("0\nTABLE\n2\nLAYER\n"))
+        assertTrue(dxf.contains("0\nTABLE\n2\nBLOCK_RECORD\n"))
+        assertTrue(dxf.contains("0\nTABLE\n2\nDIMSTYLE\n"))
+        assertTrue(dxf.contains("2\n*Model_Space\n"))
+        assertTrue(dxf.contains("2\n*Paper_Space\n"))
+
+        // Regression: the old writer emitted an empty text-height tag (42) in STYLE,
+        // which made ezdxf/AutoCAD reject the whole file.
+        assertTrue("empty 42 tag in STYLE table", !dxf.contains("\n42\n\n"))
+
+        // Entity handles must be unique or CAD readers silently drop objects.
+        val handles = dxf.lines().map { it.trim() }.chunked(2)
+            .filter { it.size == 2 && (it[0] == "5" || it[0] == "105") }
+            .map { it[1] }
+        assertTrue("no handles emitted", handles.size > 30)
+        val duplicates = handles.groupBy { it }.filter { it.value.size > 1 }
+        assertEquals("duplicate DXF handles: $duplicates", handles.size, handles.distinct().size)
+    }
+
+    @Test
     fun everyFactory_producesNonEmptyEntitySection() {
         val drawings = listOf(
             ElementDxfDrawings.beamElevation("BEAM", 6000.0, 600.0, 40.0, 16.0, 8.0, 150.0),

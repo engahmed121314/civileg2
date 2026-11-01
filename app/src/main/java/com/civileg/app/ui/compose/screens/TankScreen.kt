@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.responsive.dimens
+
 import com.civileg.app.domain.entities.DesignCode
 
 import androidx.compose.foundation.background
@@ -167,7 +169,7 @@ fun TankScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item { SectionHeader(stringResource(R.string.tank_type_section), R.drawable.ic_water) }
@@ -487,6 +489,7 @@ fun TankScreen(
                         else -> (780 * wRatio).toInt().coerceIn(500, 1000)
                     }
                     InteractiveDrawingScreen(
+                        onExportDxf = { viewModel.exportToDxf(context) },
                         title = stringResource(R.string.tank_drawing_title),
                         subtitle = stringResource(R.string.tank_drawing_subtitle),
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_perspective), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement)),

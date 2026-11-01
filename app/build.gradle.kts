@@ -50,6 +50,32 @@ android {
         }
         val admobAppId = localProperties.getProperty("admob.app.id") ?: "ca-app-pub-3940256099942544~3347511713"
         manifestPlaceholders["admobAppId"] = admobAppId
+
+        // Ad unit IDs are injected from local.properties so production IDs never live in source.
+        // Google's public test IDs remain the fallback for debug/test builds.
+        fun adUnit(key: String, testId: String): String =
+            localProperties.getProperty(key)?.takeIf { it.isNotBlank() } ?: testId
+
+        buildConfigField(
+            "String",
+            "ADMOB_BANNER_AD_UNIT_ID",
+            "\"${adUnit("admob.banner.id", "ca-app-pub-3940256099942544/6300978111")}\""
+        )
+        buildConfigField(
+            "String",
+            "ADMOB_INTERSTITIAL_AD_UNIT_ID",
+            "\"${adUnit("admob.interstitial.id", "ca-app-pub-3940256099942544/1033173712")}\""
+        )
+        buildConfigField(
+            "String",
+            "ADMOB_NATIVE_AD_UNIT_ID",
+            "\"${adUnit("admob.native.id", "ca-app-pub-3940256099942544/2247696110")}\""
+        )
+        buildConfigField(
+            "String",
+            "ADMOB_REWARDED_AD_UNIT_ID",
+            "\"${adUnit("admob.rewarded.id", "ca-app-pub-3940256099942544/5224354917")}\""
+        )
     }
 
     buildFeatures {
@@ -95,8 +121,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // Keep every class and resource in the APK (no R8 shrinking / resource removal).
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -105,7 +132,6 @@ android {
             signingConfigs.findByName("release")?.let {
                 signingConfig = it
             }
-            // Optimize APK size
             isDebuggable = false
             isJniDebuggable = false
             isProfileable = false
@@ -143,6 +169,7 @@ android {
 
     // Unit test configuration (Robolectric needs Android resources)
     testOptions {
+        animationsDisabled = true
         unitTests {
             isIncludeAndroidResources = true
         }
@@ -242,6 +269,7 @@ dependencies {
     testImplementation(libs.room.testing)
     testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.compose.ui.test)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

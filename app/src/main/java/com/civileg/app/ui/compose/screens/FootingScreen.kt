@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.responsive.dimens
+
 import com.civileg.app.domain.entities.DesignCode
 
 import androidx.compose.foundation.background
@@ -125,7 +127,7 @@ fun FootingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item { SectionHeader(stringResource(R.string.footing_inputs), R.drawable.ic_footing) }
@@ -495,6 +497,7 @@ fun FootingScreen(
                         Pair(0.0, 0.0)
                     }
                     InteractiveDrawingScreen(
+                        onExportDxf = { viewModel.exportToDxf(context) },
                         title = stringResource(R.string.footing_drawing_title),
                         subtitle = stringResource(R.string.footing_reinforcement_detail),
                         drawingHeightDp = drawingHeight,

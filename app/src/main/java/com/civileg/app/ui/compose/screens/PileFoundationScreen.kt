@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.responsive.dimens
+
 import com.civileg.app.domain.entities.DesignCode
 
 import androidx.compose.foundation.background
@@ -148,7 +150,7 @@ fun PileFoundationScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // ─── HEADER ─────────────────────────────────────────
@@ -859,6 +861,7 @@ fun PileFoundationScreen(
                     val configuration = LocalConfiguration.current
                     val drawingHeight = if (configuration.smallestScreenWidthDp >= 600) 580 else 480
                     InteractiveDrawingScreen(
+                        onExportDxf = { viewModel.exportToDxf(context) },
                         title = stringResource(R.string.pile_detail_drawing),
                         subtitle = stringResource(R.string.pile_drawing_sub),
                         drawingHeightDp = drawingHeight,

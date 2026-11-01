@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
@@ -38,6 +39,7 @@ fun InteractiveDrawingScreen(
     onViewModeChanged: (Int) -> Unit = {},
     drawingHeightDp: Int = 0, // 0 = auto from device
     onExportPdf: (() -> Unit)? = null,
+    onExportDxf: (() -> Unit)? = null,
     designCode: DesignCode = DesignCode.ECP,
     modifier: Modifier = Modifier,
     drawingContent: @Composable () -> Unit
@@ -92,6 +94,7 @@ fun InteractiveDrawingScreen(
                 onToggleInfo = { showInfo = !showInfo },
                 showInfo = showInfo,
                 onExportPdf = onExportPdf,
+                onExportDxf = onExportDxf,
                 hPadding = toolbarHPadding,
                 vPadding = toolbarVPadding,
                 titleFontSize = titleFontSize,
@@ -171,6 +174,7 @@ private fun DrawingToolbar(
     onToggleInfo: () -> Unit,
     showInfo: Boolean,
     onExportPdf: (() -> Unit)? = null,
+    onExportDxf: (() -> Unit)? = null,
     hPadding: Dp = 12.dp,
     vPadding: Dp = 8.dp,
     titleFontSize: TextUnit = 14.sp,
@@ -209,6 +213,28 @@ private fun DrawingToolbar(
         }
 
         Row {
+            // DXF (CAD) export button — restores the standalone CAD drawing export
+            if (onExportDxf != null) {
+                TextButton(
+                    onClick = onExportDxf,
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                    modifier = Modifier.height(buttonSize)
+                ) {
+                    Icon(
+                        Icons.Default.Architecture,
+                        contentDescription = "Export DXF (AutoCAD)",
+                        tint = Color(0xFFFFB300),
+                        modifier = Modifier.size((iconSize.value * 0.9f).dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "DXF",
+                        color = Color(0xFFFFB300),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
             // PDF Export button
             if (onExportPdf != null) {
                 IconButton(onClick = onExportPdf, modifier = Modifier.size(buttonSize)) {

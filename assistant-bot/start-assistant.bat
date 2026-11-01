@@ -1,20 +1,23 @@
 @echo off
-REM CivilEG2 Assistant Bot — full stack launcher (Windows)
-REM Starts: 1) opencode serve (port 4096)  2) opencode-telegram bot
-setlocal
+REM CivilEG2 Assistant Bot - start the full stack (server + bot).
+REM Preferred: the scheduled task "CivilEG2-Assistant-Bot" (starts at logon).
+REM This script starts that task, or falls back to the hidden supervisor.
 
-set OPENCODE_BIN=%LOCALAPPDATA%\OpenCode\opencode-cli.exe
-if not exist "%OPENCODE_BIN%" (
-    echo [ERROR] opencode CLI not found at %OPENCODE_BIN%
-    pause
-    exit /b 1
+setlocal
+set TASK=CivilEG2-Assistant-Bot
+set KEEPALIVE=%~dp0keep-alive.ps1
+
+schtasks /Query /TN "%TASK%" >nul 2>&1
+if %errorlevel%==0 (
+    echo [1/1] Starting scheduled task "%TASK%" ...
+    schtasks /Run /TN "%TASK%" >nul
+    echo Done. The supervisor will keep opencode serve and the bot running.
+    echo Bot: @Civieg22_bot  ^|  close this window safely.
+    timeout /t 4 /nobreak >nul
+    exit /b 0
 )
 
-echo [1/2] Starting opencode serve on port 4096 (hidden, no popup) ...
-powershell -NoProfile -WindowStyle Hidden -Command "Start-Process -FilePath '%OPENCODE_BIN%' -ArgumentList 'serve','--port','4096','--hostname','127.0.0.1' -WindowStyle Hidden"
-timeout /t 5 /nobreak >nul
-
-echo [2/2] Starting Telegram assistant bot (hidden, no popup) ...
-echo     Bot: @Civieg22_bot  ^|  stop via Task Manager or Scheduled Task.
-powershell -NoProfile -WindowStyle Hidden -Command "Start-Process -FilePath 'C:\Program Files\nodejs\node.exe' -ArgumentList '\"C:\Users\ahmed\AppData\Roaming\npm\node_modules\@grinev\opencode-telegram-bot\dist\cli.js\"' -WindowStyle Hidden"
-echo Started hidden. This window can be closed.
+echo [1/1] Scheduled task not found - starting hidden supervisor ...
+powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "%KEEPALIVE%"
+echo Done. Bot: @Civieg22_bot  ^|  close this window safely.
+timeout /t 4 /nobreak >nul

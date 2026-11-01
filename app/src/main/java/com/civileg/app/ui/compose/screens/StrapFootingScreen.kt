@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.responsive.dimens
+
 import com.civileg.app.domain.entities.DesignCode
 
 import androidx.compose.foundation.Canvas
@@ -106,7 +108,7 @@ fun StrapFootingScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -344,6 +346,13 @@ fun StrapFootingScreen(
                             Icon(Icons.Default.PictureAsPdf, null)
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.export_pdf))
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.exportToDxf(context) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("DXF", fontWeight = FontWeight.Bold)
                         }
                     }
                 }

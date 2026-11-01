@@ -139,6 +139,32 @@ class BeamViewModel @Inject constructor(
         }
     }
 
+    /** Standalone DXF sheet for the current beam design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val res = _result.value ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.beamSection(
+            title = "BEAM ${lastSupportType.displayName}",
+            widthMm = res.width.toDouble(),
+            depthMm = res.depth.toDouble(),
+            coverMm = 50.0,
+            mainBarDiaMm = res.reinforcementBottom.diameter.toDouble(),
+            mainBarCount = res.reinforcementBottom.numBars,
+            stirrupDiaMm = res.stirrups.diameter.toDouble(),
+            stirrupSpacingMm = res.stirrups.spacing.toDouble()
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "Beam_${lastSupportType.displayName}",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val res = _result.value ?: return
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -257,16 +283,7 @@ class BeamViewModel @Inject constructor(
                     }.getOrDefault(emptyList()),
                     boqRows = BoqEstimator.beamRows(res, "B1"),
                     drawingBitmap = drawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.beamSection(
-                        title = "BEAM ${lastSupportType.displayName}",
-                        widthMm = res.width.toDouble(),
-                        depthMm = res.depth.toDouble(),
-                        coverMm = 50.0,
-                        mainBarDiaMm = res.reinforcementBottom.diameter.toDouble(),
-                        mainBarCount = res.reinforcementBottom.numBars,
-                        stirrupDiaMm = res.stirrups.diameter.toDouble(),
-                        stirrupSpacingMm = res.stirrups.spacing.toDouble()
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
 

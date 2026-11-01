@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
+import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.domain.entities.ProjectSummary
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.github.mikephil.charting.charts.PieChart
@@ -67,8 +68,8 @@ fun ProjectSummaryScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding, vertical = MaterialTheme.dimens.screenVerticalPadding),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.sectionSpacing)
         ) {
             Text(projectName, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
             

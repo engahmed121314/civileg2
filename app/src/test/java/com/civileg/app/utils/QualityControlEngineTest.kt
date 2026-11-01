@@ -253,4 +253,58 @@ class QualityControlEngineTest {
         )
         assertFalse(outcome.passed)
     }
+
+    @Test
+    fun buildingQc_baseShearBelowMinimum_fails() {
+        val outcome = QualityControlEngine.buildingQc(
+            code = DesignCode.ACI,
+            numFloors = 2,
+            floorHeightM = 3.0,
+            totalWeightKn = 5000.0,
+            importanceFactor = 1.0,
+            sds = 0.02,
+            responseR = 5.0,
+            storyDrift = 0.015
+        )
+        assertFalse(outcome.passed)
+        // The raw (unclamped) base-shear coefficient is below C_s,min.
+        assertFalse(outcome.checks[1].passed)
+    }
+
+    // ==================================================================
+    // CONCRETE - air content and temperature
+    // ==================================================================
+    @Test
+    fun concreteQc_highAirContent_fails() {
+        val outcome = QualityControlEngine.concreteQc(
+            code = DesignCode.ACI,
+            elementId = "C3",
+            volumeM3 = 10.0,
+            slumpMm = 75.0,
+            fcuDesignMpa = 25.0,
+            strength7DaysMpa = 20.0,
+            strength28DaysMpa = 30.0,
+            airContent = 9.5,
+            concreteTemp = 25.0
+        )
+        assertFalse(outcome.passed)
+        assertFalse(outcome.checks[4].passed)
+    }
+
+    @Test
+    fun concreteQc_highTemperature_fails() {
+        val outcome = QualityControlEngine.concreteQc(
+            code = DesignCode.ACI,
+            elementId = "C4",
+            volumeM3 = 10.0,
+            slumpMm = 75.0,
+            fcuDesignMpa = 25.0,
+            strength7DaysMpa = 20.0,
+            strength28DaysMpa = 30.0,
+            airContent = 4.0,
+            concreteTemp = 45.0
+        )
+        assertFalse(outcome.passed)
+        assertFalse(outcome.checks[5].passed)
+    }
 }

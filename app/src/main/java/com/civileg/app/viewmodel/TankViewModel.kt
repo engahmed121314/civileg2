@@ -105,6 +105,31 @@ class TankViewModel @Inject constructor(
         }
     }
 
+    /** Standalone DXF sheet for the current tank design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val res = _result.value ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.tankSection(
+            title = "TANK ${res.type.displayName}",
+            widthMm = res.width * 1000.0,
+            heightMm = res.height * 1000.0,
+            wallThicknessMm = res.wallThickness,
+            coverMm = 40.0,
+            barDiaMm = res.wallReinforcement.diameter.toDouble(),
+            barSpacingMm = res.wallReinforcement.spacing.toDouble()
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: Context, onComplete: (File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "Tank",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
         val res = _result.value ?: return
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -197,15 +222,7 @@ class TankViewModel @Inject constructor(
                         } else 0.0
                     ),
                     drawingBitmap = drawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.tankSection(
-                        title = "TANK ${res.type.displayName}",
-                        widthMm = res.width * 1000.0,
-                        heightMm = res.height * 1000.0,
-                        wallThicknessMm = res.wallThickness,
-                        coverMm = 40.0,
-                        barDiaMm = res.wallReinforcement.diameter.toDouble(),
-                        barSpacingMm = res.wallReinforcement.spacing.toDouble()
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
 

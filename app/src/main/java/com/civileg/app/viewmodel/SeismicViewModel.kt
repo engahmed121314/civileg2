@@ -157,6 +157,34 @@ class SeismicViewModel @Inject constructor(
         }
     }
 
+    /** Standalone DXF sheet for the current seismic summary (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val state = _uiState.value
+        val res = state.result ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.generic(
+            title = "SEISMIC LOAD SUMMARY - Zone ${state.seismicZone}",
+            widthMm = 600.0,
+            heightMm = 400.0,
+            summaryLines = listOf(
+                "Base shear V = ${"%.1f".format(res.baseShear)} kN",
+                "Z = ${"%.3f".format(res.zoneFactor)}  S = ${"%.3f".format(res.soilFactor)}",
+                "I = ${"%.2f".format(res.importanceFactor)}  R = ${"%.1f".format(res.responseModification)}",
+                "Code: ${res.codeReference}"
+            )
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: Context, onComplete: (File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "Seismic",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
         val state = _uiState.value
         val res = state.result ?: return
@@ -220,17 +248,7 @@ class SeismicViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = true,
                     drawingBitmap = drawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.generic(
-                        title = "SEISMIC LOAD SUMMARY - Zone ${state.seismicZone}",
-                        widthMm = 600.0,
-                        heightMm = 400.0,
-                        summaryLines = listOf(
-                            "Base shear V = ${"%.1f".format(res.baseShear)} kN",
-                            "Z = ${"%.3f".format(res.zoneFactor)}  S = ${"%.3f".format(res.soilFactor)}",
-                            "I = ${"%.2f".format(res.importanceFactor)}  R = ${"%.1f".format(res.responseModification)}",
-                            "Code: ${res.codeReference}"
-                        )
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
 

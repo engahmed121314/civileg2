@@ -1806,5 +1806,7 @@
     <string name="boq_backfill_width">Trench Width for Excavation (m)</string>
     <string name="home_post_tensioned">Post-Tensioned</string>
     <string name="home_post_tensioned_sub">Prestressed Beam &amp; Slab Design</string>
+    <string name="home_advanced_design">Advanced Design</string>
+    <string name="home_advanced_design_sub">Composite, Fire, Deep Beam, Piles &amp; Settlement</string>
     <string name="screen_post_tensioned_title">Post-Tensioned Design</string>
 </resources>

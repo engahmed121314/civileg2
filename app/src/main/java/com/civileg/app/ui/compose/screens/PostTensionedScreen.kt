@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.responsive.dimens
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -123,7 +125,7 @@ fun PostTensionedScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .background(MaterialTheme.colorScheme.background)
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
             item {

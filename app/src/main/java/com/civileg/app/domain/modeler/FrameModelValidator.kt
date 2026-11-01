@@ -6,6 +6,7 @@ import com.civileg.app.domain.entities.MemberLoad
 import com.civileg.app.domain.entities.NodalLoad
 import com.civileg.app.domain.entities.SlabPanel
 import com.civileg.app.utils.LocaleHelper
+import kotlin.math.abs
 import kotlin.math.hypot
 
 enum class FrameValidationCode {
@@ -21,7 +22,9 @@ enum class FrameValidationCode {
     MISSING_LOAD_TARGET,
     EMPTY_LOAD_CASE,
     INVALID_SLAB,
-    SLAB_EDGE_WITHOUT_MEMBER
+    SLAB_EDGE_WITHOUT_MEMBER,
+    DUPLICATE_SLAB,
+    DEGENERATE_SLAB
 }
 
 data class FrameValidationIssue(
@@ -38,6 +41,7 @@ object FrameModelValidator {
 
     private const val DUPLICATE_TOLERANCE_M = 1e-4
     private const val ZERO_LENGTH_TOLERANCE_M = 1e-6
+    private const val ZERO_AREA_TOLERANCE_M2 = 1e-6
 
     fun validate(
         nodes: List<FrameNode>,
@@ -192,6 +196,20 @@ object FrameModelValidator {
             }
         }
 
+        val duplicateSlabGroups = slabs
+            .filter { it.nodeIds.size == 4 && it.nodeIds.distinct().size == 4 }
+            .groupBy { it.nodeIds.sorted() }
+            .filterValues { it.size > 1 }
+        for ((joints, group) in duplicateSlabGroups) {
+            val ids = group.map { it.id }.sorted()
+            issues += FrameValidationIssue(
+                FrameValidationCode.DUPLICATE_SLAB,
+                "البلاطات ${ids.joinToString()} تشغل نفس العقد ${joints.joinToString()}",
+                "Slabs ${ids.joinToString()} share the same joints ${joints.joinToString()}",
+                nodeIds = joints
+            )
+        }
+
         for (panel in slabs) {
             if (panel.nodeIds.size != 4 || panel.nodeIds.distinct().size != 4) {
                 issues += FrameValidationIssue(
@@ -211,6 +229,23 @@ object FrameModelValidator {
                     nodeIds = panel.nodeIds
                 )
                 continue
+            }
+            if (segmentsProperlyIntersect(points[0], points[1], points[2], points[3]) ||
+                segmentsProperlyIntersect(points[1], points[2], points[3], points[0])
+            ) {
+                issues += FrameValidationIssue(
+                    FrameValidationCode.DEGENERATE_SLAB,
+                    "البلاطة ${panel.id} أضلاعها متقاطعة (ترتيب العقد غير صحيح)",
+                    "Slab ${panel.id} has crossing edges (joints are not in perimeter order)",
+                    nodeIds = panel.nodeIds
+                )
+            } else if (quadArea(points) <= ZERO_AREA_TOLERANCE_M2) {
+                issues += FrameValidationIssue(
+                    FrameValidationCode.DEGENERATE_SLAB,
+                    "البلاطة ${panel.id} مساحتها صفر (العقد على استقامة واحدة)",
+                    "Slab ${panel.id} has zero area (its joints are collinear)",
+                    nodeIds = panel.nodeIds
+                )
             }
             for (i in points.indices) {
                 val a = points[i]
@@ -244,5 +279,35 @@ object FrameModelValidator {
         }
 
         return issues
+    }
+
+    /** Unsigned area of a quadrilateral given in perimeter order (shoelace formula). */
+    private fun quadArea(points: List<FrameNode>): Double {
+        var twiceArea = 0.0
+        for (i in points.indices) {
+            val a = points[i]
+            val b = points[(i + 1) % points.size]
+            twiceArea += a.x * b.y - b.x * a.y
+        }
+        return abs(twiceArea) / 2.0
+    }
+
+    /** True only for a proper crossing, so shared endpoints never trigger the check. */
+    private fun segmentsProperlyIntersect(
+        a: FrameNode,
+        b: FrameNode,
+        c: FrameNode,
+        d: FrameNode
+    ): Boolean {
+        fun cross(o: FrameNode, p: FrameNode, q: FrameNode): Double =
+            (p.x - o.x) * (q.y - o.y) - (p.y - o.y) * (q.x - o.x)
+
+        val d1 = cross(c, d, a)
+        val d2 = cross(c, d, b)
+        val d3 = cross(a, b, c)
+        val d4 = cross(a, b, d)
+        val straddlesFirst = (d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)
+        val straddlesSecond = (d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0)
+        return straddlesFirst && straddlesSecond
     }
 }

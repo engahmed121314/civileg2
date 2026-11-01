@@ -430,8 +430,8 @@ object QualityControlEngine {
         val checks = listOf(
             GenericSafetyCheck("Story drift ≤ 2.0% (allowable)", storyDrift * 100.0, allowableDrift * 100.0, "%",
                 storyDrift <= allowableDrift, "ASCE 7-16 Table 12.12-1"),
-            GenericSafetyCheck("Base shear coefficient C_s ≥ C_s,min", cs, csMin, "-",
-                cs >= csMin, "ASCE 7-16 §12.8.1.1"),
+            GenericSafetyCheck("Base shear coefficient C_s,raw ≥ C_s,min", csRaw, csMin, "-",
+                csRaw >= csMin, "ASCE 7-16 §12.8.1.1"),
             GenericSafetyCheck("Fundamental period T_a ≥ 0.1 s", ta, 0.1, "s",
                 ta >= 0.1, "ASCE 7-16 §12.8.2"),
             GenericSafetyCheck("Structure height ≤ 100 m (ELF applicability)", hn, 100.0, "m",
@@ -450,6 +450,7 @@ object QualityControlEngine {
             "Response factor R" to "%.1f".format(r),
             "Fundamental period T_a" to "%.3f s".format(ta),
             "Base shear coefficient C_s" to "%.4f".format(cs),
+            "Base shear coefficient C_s,raw" to "%.4f".format(csRaw),
             "Base shear V" to "%.0f kN".format(baseShear)
         )
         return QcOutcome(

@@ -24,7 +24,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.civileg.app.ui.compose.components.ProfessionalBottomNavBar
+import com.civileg.app.ui.compose.components.ProfessionalNavigationRail
 import com.civileg.app.ui.compose.screens.*
+import com.civileg.app.ui.responsive.LocalWindowSize
+import com.civileg.app.ui.responsive.WindowWidthClass
+import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.ui.screens.*
 import com.civileg.app.ui.theme.CivilEngineerTheme
 import com.civileg.app.ui.theme.ThemeMode
@@ -113,6 +117,8 @@ fun AppNavigation(
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
     var selectedBottomTab by remember { mutableIntStateOf(0) }
+    val windowSize = LocalWindowSize.current
+    val useNavigationRail = windowSize.widthClass != WindowWidthClass.COMPACT
 
     // Map bottom nav tabs to routes
     val bottomTabRoutes = listOf("home", "design_hub", "steel", "tools_hub", "more_hub")
@@ -167,20 +173,47 @@ fun AppNavigation(
             }
         }
     ) {
-        Scaffold(
-            bottomBar = {
-                ProfessionalBottomNavBar(
+        Row(modifier = Modifier.fillMaxSize()) {
+            if (useNavigationRail) {
+                ProfessionalNavigationRail(
                     selectedTab = selectedBottomTab,
                     onTabSelected = { navigateToTab(it) },
-                    designCount = designCount
+                    designCount = designCount,
+                    onOpenSettings = {
+                        scope.launch { drawerState.close() }
+                        navController.navigate(AppScreen.Settings.route)
+                    }
                 )
             }
-        ) { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = AppScreen.Home.route,
-                modifier = Modifier.padding(innerPadding)
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             ) {
+                Scaffold(
+                    bottomBar = {
+                        if (!useNavigationRail) {
+                            ProfessionalBottomNavBar(
+                                selectedTab = selectedBottomTab,
+                                onTabSelected = { navigateToTab(it) },
+                                designCount = designCount
+                            )
+                        }
+                    }
+                ) { innerPadding ->
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        NavHost(
+                            navController = navController,
+                            startDestination = AppScreen.Home.route,
+                            modifier = Modifier
+                                .widthIn(max = MaterialTheme.dimens.contentMaxWidth)
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                        ) {
                 // ═══ MAIN TABS ═══
                 composable(AppScreen.Home.route) {
                     selectedBottomTab = 0
@@ -269,6 +302,9 @@ fun AppNavigation(
                 composable(AppScreen.PostTensioned.route) {
                     PostTensionedScreen(onNavigateBack = { navController.popBackStack() })
                 }
+                composable(AppScreen.AdvancedDesign.route) {
+                    AdvancedDesignScreen(onNavigateBack = { navController.popBackStack() })
+                }
 
 
                 // ═══ QUICK TOOLS ═══
@@ -350,6 +386,9 @@ fun AppNavigation(
                         projectName = project?.name ?: "Master BBS",
                         onNavigateBack = { navController.popBackStack() }
                     )
+                }
+                        }
+                    }
                 }
             }
         }

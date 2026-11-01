@@ -215,4 +215,76 @@ class FrameModelValidatorTest {
 
         assertTrue(issues.any { it.code == FrameValidationCode.INVALID_SLAB })
     }
+
+    private fun rectangleModel(): Pair<List<FrameNode>, List<FrameMember>> {
+        val nodes = listOf(
+            FrameNode(1, 0.0, 0.0, SupportType.Fixed),
+            FrameNode(2, 4.0, 0.0, SupportType.Fixed),
+            FrameNode(3, 4.0, 3.0, SupportType.Free),
+            FrameNode(4, 0.0, 3.0, SupportType.Free)
+        )
+        val members = listOf(
+            beam(1, 1, 2),
+            beam(2, 2, 3),
+            beam(3, 3, 4),
+            beam(4, 4, 1)
+        )
+        return nodes to members
+    }
+
+    @Test
+    fun duplicateSlabsOnTheSameJoints_areRejected() {
+        val (nodes, members) = rectangleModel()
+        val slabs = listOf(
+            SlabPanel(id = 1, nodeIds = listOf(1, 2, 3, 4)),
+            SlabPanel(id = 2, nodeIds = listOf(2, 1, 4, 3))
+        )
+
+        val issues = FrameModelValidator.validate(nodes, members, slabs = slabs)
+
+        assertEquals(1, issues.count { it.code == FrameValidationCode.DUPLICATE_SLAB })
+        assertFalse(issues.any { it.code == FrameValidationCode.DEGENERATE_SLAB })
+    }
+
+    @Test
+    fun collinearSlabWithZeroArea_isRejected() {
+        val nodes = listOf(
+            FrameNode(1, 0.0, 0.0, SupportType.Fixed),
+            FrameNode(2, 2.0, 0.0, SupportType.Fixed),
+            FrameNode(3, 4.0, 0.0, SupportType.Free),
+            FrameNode(4, 6.0, 0.0, SupportType.Free)
+        )
+        val members = listOf(
+            beam(1, 1, 2),
+            beam(2, 2, 3),
+            beam(3, 3, 4),
+            beam(4, 4, 1)
+        )
+        val slab = SlabPanel(id = 1, nodeIds = listOf(1, 2, 3, 4))
+
+        val issues = FrameModelValidator.validate(nodes, members, slabs = listOf(slab))
+
+        assertTrue(issues.any { it.code == FrameValidationCode.DEGENERATE_SLAB })
+    }
+
+    @Test
+    fun slabWithCrossingEdges_isRejected() {
+        val nodes = listOf(
+            FrameNode(1, 0.0, 0.0, SupportType.Fixed),
+            FrameNode(2, 4.0, 0.0, SupportType.Fixed),
+            FrameNode(3, 0.0, 3.0, SupportType.Free),
+            FrameNode(4, 4.0, 3.0, SupportType.Free)
+        )
+        val members = listOf(
+            beam(1, 1, 2),
+            beam(2, 2, 3),
+            beam(3, 3, 4),
+            beam(4, 4, 1)
+        )
+        val slab = SlabPanel(id = 1, nodeIds = listOf(1, 2, 3, 4))
+
+        val issues = FrameModelValidator.validate(nodes, members, slabs = listOf(slab))
+
+        assertTrue(issues.any { it.code == FrameValidationCode.DEGENERATE_SLAB })
+    }
 }

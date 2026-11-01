@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Remove
@@ -168,6 +170,7 @@ fun FrameModelerTab(
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     var cursorWorld by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var layerMask by rememberSaveable { mutableIntStateOf(ModelerLayerVisibility.ALL) }
+    var toolbarExpanded by rememberSaveable { mutableStateOf(true) }
     val layers = ModelerLayerVisibility.fromMask(layerMask)
     val snackbarHostState = remember { SnackbarHostState() }
     val snackbarScope = rememberCoroutineScope()
@@ -404,27 +407,36 @@ fun FrameModelerTab(
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    IconButton(onClick = { toolbarExpanded = !toolbarExpanded }) {
+                        Icon(
+                            imageVector = if (toolbarExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (toolbarExpanded) {
+                                t("إخفاء أدوات النمذجة", "Hide modeling tools")
+                            } else {
+                                t("إظهار أدوات النمذجة", "Show modeling tools")
+                            },
+                            tint = Color(0xFF1565C0)
+                        )
+                    }
+                    Text(
+                        text = toolLabel(tool),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1565C0),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 2.dp, end = 8.dp)
+                    )
                     IconButton(
                         onClick = { viewModel.undo() },
                         enabled = historyVersion >= 0 && viewModel.canUndo
-                    ) { Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = Color(0xFF1565C0)) }
+                    ) { Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = t("تراجع", "Undo"), tint = Color(0xFF1565C0)) }
                     IconButton(
                         onClick = { viewModel.redo() },
                         enabled = historyVersion >= 0 && viewModel.canRedo
-                    ) { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo", tint = Color(0xFF1565C0)) }
-                    IconButton(
-                        onClick = {
-                            viewModel.copySelection()
-                            clipboardVersion++
-                        },
-                        enabled = selectedNodeIds.isNotEmpty() || selectedMemberIds.isNotEmpty()
-                    ) { Icon(Icons.Default.ContentCopy, contentDescription = t("نسخ", "Copy"), tint = Color(0xFF1565C0)) }
-                    IconButton(
-                        onClick = { viewModel.pasteClipboard() },
-                        enabled = clipboardVersion >= 0 && viewModel.hasClipboard()
-                    ) { Icon(Icons.Default.ContentPaste, contentDescription = t("لصق", "Paste"), tint = Color(0xFF1565C0)) }
+                    ) { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = t("إعادة", "Redo"), tint = Color(0xFF1565C0)) }
                     IconButton(onClick = { fitRequest++ }) {
-                        Icon(Icons.Default.FitScreen, contentDescription = "Fit", tint = Color(0xFF1565C0))
+                        Icon(Icons.Default.FitScreen, contentDescription = t("ملاءمة العرض", "Fit view"), tint = Color(0xFF1565C0))
                     }
                     IconButton(
                         enabled = nodes.isNotEmpty() && !isDxfExporting,
@@ -438,7 +450,9 @@ fun FrameModelerTab(
                                         members = members,
                                         nodalLoads = nodalLoads,
                                         memberLoads = memberLoads,
-                                        slabs = slabs
+                                        slabs = slabs,
+                                        dimensions = dimensions,
+                                        layers = layers
                                     )
                                     withContext(Dispatchers.Main) {
                                         try {
@@ -490,26 +504,6 @@ fun FrameModelerTab(
                             )
                         }
                     }
-                    Spacer(Modifier.width(4.dp))
-                    IconButton(onClick = { zoomBy(1.35f) }, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Default.Add, contentDescription = t("تكبير", "Zoom in"), tint = Color(0xFF1565C0))
-                    }
-                    Spacer(Modifier.width(4.dp))
-                    IconButton(onClick = { zoomBy(1f / 1.35f) }, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Default.Remove, contentDescription = t("تصغير", "Zoom out"), tint = Color(0xFF1565C0))
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    ToolChip(t("تحديد", "Select"), ModelerTool.Select, tool) { tool = it; pendingStart = null }
-                    ToolChip(t("تحريك العرض", "Pan"), ModelerTool.Pan, tool) { tool = it; pendingStart = null }
-                    ToolChip(t("تحريك", "Move"), ModelerTool.Move, tool) { tool = it; pendingStart = null }
-                    ToolChip(t("عقدة", "Joint"), ModelerTool.Joint, tool) { tool = it; pendingStart = null }
-                    ToolChip(t("عضو", "Member"), ModelerTool.Member, tool) { tool = it }
-                    ToolChip(t("استناد", "Support"), ModelerTool.Support, tool) { tool = it; pendingStart = null }
-                    ToolChip(t("مفصل", "Hinge"), ModelerTool.Hinge, tool) { tool = it; pendingStart = null }
-                    ToolChip(t("حمل عقدة", "Nodal load"), ModelerTool.NodalLoad, tool) { tool = it; pendingStart = null }
-                    ToolChip(t("حمل عضو", "Member load"), ModelerTool.MemberLoad, tool) { tool = it; pendingStart = null }
-                    ToolChip(t("بلاطة", "Slab"), ModelerTool.Slab, tool) { tool = it; pendingStart = null }
-                    ToolChip(t("حذف", "Erase"), ModelerTool.Erase, tool) { tool = it; pendingStart = null }
                 }
 
                 AnimatedVisibility(
@@ -545,42 +539,89 @@ fun FrameModelerTab(
                     }
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                AnimatedVisibility(
+                    visible = toolbarExpanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
                 ) {
-                    GridDropdown(
-                        label = t("الشبكة", "Grid"),
-                        options = gridOptions,
-                        selectedMm = gridMm,
-                        onSelect = { gridMm = it }
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    GridDropdown(
-                        label = t("الالتقاط", "Snap"),
-                        options = snapOptions,
-                        selectedMm = snapMm,
-                        onSelect = { snapMm = it }
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    LayerDropdown(
-                        layers = layers,
-                        onToggle = { mask -> layerMask = mask }
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = t(
-                            "تشغيل الشبكة: ${nodes.size} عقدة / ${members.size} عضو / ${slabs.size} بلاطة",
-                            "Model: ${nodes.size} joints / ${members.size} members / ${slabs.size} slabs"
-                        ),
-                        fontSize = 10.sp,
-                        color = Color.Gray,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    viewModel.copySelection()
+                                    clipboardVersion++
+                                },
+                                enabled = selectedNodeIds.isNotEmpty() || selectedMemberIds.isNotEmpty()
+                            ) { Icon(Icons.Default.ContentCopy, contentDescription = t("نسخ", "Copy"), tint = Color(0xFF1565C0)) }
+                            IconButton(
+                                onClick = { viewModel.pasteClipboard() },
+                                enabled = clipboardVersion >= 0 && viewModel.hasClipboard()
+                            ) { Icon(Icons.Default.ContentPaste, contentDescription = t("لصق", "Paste"), tint = Color(0xFF1565C0)) }
+                            Spacer(Modifier.width(4.dp))
+                            IconButton(onClick = { zoomBy(1.35f) }, modifier = Modifier.size(48.dp)) {
+                                Icon(Icons.Default.Add, contentDescription = t("تكبير", "Zoom in"), tint = Color(0xFF1565C0))
+                            }
+                            Spacer(Modifier.width(4.dp))
+                            IconButton(onClick = { zoomBy(1f / 1.35f) }, modifier = Modifier.size(48.dp)) {
+                                Icon(Icons.Default.Remove, contentDescription = t("تصغير", "Zoom out"), tint = Color(0xFF1565C0))
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            ToolChip(t("تحديد", "Select"), ModelerTool.Select, tool) { tool = it; pendingStart = null }
+                            ToolChip(t("تحريك العرض", "Pan"), ModelerTool.Pan, tool) { tool = it; pendingStart = null }
+                            ToolChip(t("تحريك", "Move"), ModelerTool.Move, tool) { tool = it; pendingStart = null }
+                            ToolChip(t("عقدة", "Joint"), ModelerTool.Joint, tool) { tool = it; pendingStart = null }
+                            ToolChip(t("عضو", "Member"), ModelerTool.Member, tool) { tool = it }
+                            ToolChip(t("استناد", "Support"), ModelerTool.Support, tool) { tool = it; pendingStart = null }
+                            ToolChip(t("مفصل", "Hinge"), ModelerTool.Hinge, tool) { tool = it; pendingStart = null }
+                            ToolChip(t("حمل عقدة", "Nodal load"), ModelerTool.NodalLoad, tool) { tool = it; pendingStart = null }
+                            ToolChip(t("حمل عضو", "Member load"), ModelerTool.MemberLoad, tool) { tool = it; pendingStart = null }
+                            ToolChip(t("بلاطة", "Slab"), ModelerTool.Slab, tool) { tool = it; pendingStart = null }
+                            ToolChip(t("حذف", "Erase"), ModelerTool.Erase, tool) { tool = it; pendingStart = null }
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            GridDropdown(
+                                label = t("الشبكة", "Grid"),
+                                options = gridOptions,
+                                selectedMm = gridMm,
+                                onSelect = { gridMm = it }
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            GridDropdown(
+                                label = t("الالتقاط", "Snap"),
+                                options = snapOptions,
+                                selectedMm = snapMm,
+                                onSelect = { snapMm = it }
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            LayerDropdown(
+                                layers = layers,
+                                onToggle = { mask -> layerMask = mask }
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = t(
+                                    "النموذج: ${nodes.size} عقدة / ${members.size} عضو / ${slabs.size} بلاطة",
+                                    "Model: ${nodes.size} joints / ${members.size} members / ${slabs.size} slabs"
+                                ),
+                                fontSize = 10.sp,
+                                color = Color.Gray,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -738,11 +779,11 @@ fun FrameModelerTab(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(t("???? ??????", "Start drawing"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(t("ابدأ الرسم", "Start drawing"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Spacer(Modifier.height(4.dp))
                         Text(
                             t(
-                                "???? ???? �????� ?? ???? ??? ??????. ????? ???? ???????.",
+                                "اختر أداة «عقدة» وانقر على الشبكة، ثم ارسم الأعضاء.",
                                 "Choose the Joint tool and tap the grid, then draw members."
                             ),
                             fontSize = 12.sp,
@@ -1422,7 +1463,7 @@ private fun MemberPropertiesDialog(
                     Spacer(Modifier.height(4.dp))
                     Text(
                         t(
-                            "????? ????? ?????? ?? ???? ???????? ????????.",
+                            "تُؤخذ خصائص القطاع من جدول القطاعات القياسي.",
                             "Section properties are taken from the standard steel table."
                         ),
                         fontSize = 9.sp,
@@ -1493,6 +1534,20 @@ private fun memberLength(member: FrameMember, nodes: List<FrameNode>): Double {
     val a = nodes.find { it.id == member.nodeI } ?: return 0.0
     val b = nodes.find { it.id == member.nodeJ } ?: return 0.0
     return kotlin.math.hypot(b.x - a.x, b.y - a.y)
+}
+
+private fun toolLabel(tool: ModelerTool): String = when (tool) {
+    ModelerTool.Select -> t("تحديد", "Select")
+    ModelerTool.Pan -> t("تحريك العرض", "Pan")
+    ModelerTool.Move -> t("تحريك", "Move")
+    ModelerTool.Joint -> t("عقدة", "Joint")
+    ModelerTool.Member -> t("عضو", "Member")
+    ModelerTool.Support -> t("استناد", "Support")
+    ModelerTool.Hinge -> t("مفصل", "Hinge")
+    ModelerTool.NodalLoad -> t("حمل عقدة", "Nodal load")
+    ModelerTool.MemberLoad -> t("حمل عضو", "Member load")
+    ModelerTool.Slab -> t("بلاطة", "Slab")
+    ModelerTool.Erase -> t("حذف", "Erase")
 }
 
 private fun fmtLoad(value: Double): String = formatCoord(value)

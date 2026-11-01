@@ -27,6 +27,7 @@ scripts/
 tool-results/
 worklog.md
 *.hprof
+artifacts/
 
 # Signing — NEVER commit keystore or passwords
 *.jks

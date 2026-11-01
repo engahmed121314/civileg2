@@ -36,6 +36,8 @@ def find_opencode():
         if p:
             return p
     candidates = [
+        os.path.join(os.environ.get("APPDATA", ""), "npm",
+                     "node_modules", "opencode-ai", "bin", "opencode.exe"),
         os.path.join(os.environ.get("LOCALAPPDATA", ""),
                      "OpenCode", "opencode-cli.exe"),
         os.path.expanduser("~/.opencode/bin/opencode"),

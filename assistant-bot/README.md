@@ -16,22 +16,37 @@
 أداة ناضجة مثبتة لديك (`@grinev/opencode-telegram-bot`): جلسات، مشاريع،
 تبديل موديلات، بث مباشر للتقدم، واجهة **عربية**، مرفقات diff.
 
-### التشغيل (خطوتان)
+### التشغيل (تلقائي)
 
-**الطريقة السريعة:** دبل كليك على `assistant-bot/start-assistant.bat`
-يشغّل `opencode serve` ثم البوت — أغلق النافذة للإيقاف.
+البوت يعمل تلقائياً عند تسجيل الدخول عبر مهمة مجدولة اسمها
+`CivilEG2-Assistant-Bot`، ويشرف عليها `keep-alive.ps1`:
+يفحص كل دقيقة ويشغّل `opencode serve` (المنفذ **4097**) والبوت إن سقطا.
 
-**يدوياً (نافذتي تيرمينال):**
+**تشغيل يدوي:** دبل كليك على `assistant-bot/start-assistant.bat`
+(يشغّل المهمة المجدولة، أو المشرف مباشرة إن لم تكن موجودة).
+
+**يدوياً من التيرمينال:**
 ```bat
-:: نافذة 1 — خادم opencode المحلي
-"%LOCALAPPDATA%\OpenCode\opencode-cli.exe" serve --port 4096 --hostname 127.0.0.1
+:: خادم opencode المحلي (v1.18+ من npm)
+"%APPDATA%\npm\node_modules\opencode-ai\bin\opencode.exe" serve --port 4097 --hostname 127.0.0.1
 
-:: نافذة 2 — البوت
-opencode-telegram
+:: البوت
+node "%APPDATA%\npm\node_modules\@grinev\opencode-telegram-bot\dist\cli.js"
 ```
 
 الإعداد جاهز في `%APPDATA%\opencode-telegram-bot\.env`:
-التوكن + الـ Chat ID + اللغة العربية + موديل `muse-spark-1.3`.
+التوكن + الـ Chat ID + اللغة العربية + الموديل.
+
+### بعد تحديث الحزمة (npm update)
+
+شغّل مرة واحدة:
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File assistant-bot\patch-bot.ps1
+```
+يعيد تطبيق إصلاحين مهمّين:
+1. **عدم إسقاط الرسائل** التي وصلت أثناء توقف البوت (`drop_pending_updates=false`).
+2. قبول الرسائل المتأخرة حتى **12 ساعة** بدل 60 ثانية (كانت تُهمَل بصمت بعد إعادة التشغيل).
+
 
 ### أوامر مفيدة داخل تليجرام
 

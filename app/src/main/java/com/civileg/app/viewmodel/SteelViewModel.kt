@@ -215,6 +215,37 @@ class SteelViewModel @Inject constructor(
         viewModelScope.launch { repository.saveSteelWarehouseDesign(projectId, name, result) }
     }
 
+    /** Standalone DXF sheet for the current steel member design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val res = _result.value ?: return null
+        val stored = lastMemberInputs ?: return null
+        val memberTypeLabel = stored.memberType.name
+        return com.civileg.app.utils.ElementDxfDrawings.steelISection(
+            title = "${stored.section.sectionName} - $memberTypeLabel",
+            heightMm = stored.section.depth,
+            widthMm = stored.section.width,
+            webThicknessMm = stored.section.webThickness,
+            flangeThicknessMm = stored.section.flangeThickness,
+            summaryLines = listOf(
+                "Pu = ${String.format("%.1f", stored.inputs.axialLoad)} kN / ${String.format("%.1f", res.axialCapacity)} kN",
+                "Mu = ${String.format("%.1f", stored.inputs.moment)} kN.m / ${String.format("%.1f", res.flexuralCapacity)} kN.m",
+                "Vu = ${String.format("%.1f", stored.inputs.shear)} kN / ${String.format("%.1f", res.shearCapacity)} kN",
+                "Utilization = ${(res.utilizationRatio * 100).toInt()}% - ${if (res.isSafe) "SAFE" else "UNSAFE"}"
+            )
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "SteelMember",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val res = _result.value ?: return
         val stored = lastMemberInputs ?: return
@@ -375,19 +406,7 @@ class SteelViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.steelISection(
-                        title = "${stored.section.sectionName} - $memberTypeLabel",
-                        heightMm = stored.section.depth,
-                        widthMm = stored.section.width,
-                        webThicknessMm = stored.section.webThickness,
-                        flangeThicknessMm = stored.section.flangeThickness,
-                        summaryLines = listOf(
-                            "Pu = ${String.format("%.1f", stored.inputs.axialLoad)} kN / ${String.format("%.1f", res.axialCapacity)} kN",
-                            "Mu = ${String.format("%.1f", stored.inputs.moment)} kN.m / ${String.format("%.1f", res.flexuralCapacity)} kN.m",
-                            "Vu = ${String.format("%.1f", stored.inputs.shear)} kN / ${String.format("%.1f", res.shearCapacity)} kN",
-                            "Utilization = ${(res.utilizationRatio * 100).toInt()}% - ${if (res.isSafe) "SAFE" else "UNSAFE"}"
-                        )
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
 

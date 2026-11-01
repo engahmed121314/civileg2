@@ -118,6 +118,32 @@ class RetainingWallViewModel @Inject constructor(
         }
     }
 
+    /** Standalone DXF sheet for the current retaining wall design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val currentResult = _result.value ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.retainingWallSection(
+            title = "RETAINING WALL",
+            baseWidthMm = currentResult.baseWidth,
+            baseThicknessMm = currentResult.stemThickness * 1.2,
+            stemHeightMm = currentResult.height * 1000.0,
+            stemThicknessMm = currentResult.stemThickness,
+            coverMm = 50.0,
+            barDiaMm = currentResult.stemReinforcement.diameter.toDouble(),
+            barSpacingMm = currentResult.stemReinforcement.spacing.toDouble()
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "RetainingWall",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val currentResult = _result.value ?: return
         viewModelScope.launch {
@@ -218,16 +244,7 @@ class RetainingWallViewModel @Inject constructor(
                             waterproofingAreaM2 = currentResult.height * wallLengthM
                         ),
                         drawingBitmap = drawingBitmap,
-                        drawing = com.civileg.app.utils.ElementDxfDrawings.retainingWallSection(
-                            title = "RETAINING WALL",
-                            baseWidthMm = currentResult.baseWidth,
-                            baseThicknessMm = currentResult.stemThickness * 1.2,
-                            stemHeightMm = currentResult.height * 1000.0,
-                            stemThicknessMm = currentResult.stemThickness,
-                            coverMm = 50.0,
-                            barDiaMm = currentResult.stemReinforcement.diameter.toDouble(),
-                            barSpacingMm = currentResult.stemReinforcement.spacing.toDouble()
-                        ),
+                        drawing = buildDxfDrawing(),
                         outputPath = file.absolutePath
                     ).pdfFile
                     generated

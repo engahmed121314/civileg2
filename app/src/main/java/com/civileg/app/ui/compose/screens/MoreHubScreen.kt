@@ -2,7 +2,10 @@ package com.civileg.app.ui.compose.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -20,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
+import com.civileg.app.ui.responsive.dimens
 
 private data class MoreItem(
     val titleRes: Int,
@@ -44,6 +48,7 @@ fun MoreHubScreen(
     onNavigateBack: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val dimensions = MaterialTheme.dimens
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -57,15 +62,17 @@ fun MoreHubScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 300.dp),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(dimensions.screenHorizontalPadding),
+            horizontalArrangement = Arrangement.spacedBy(dimensions.cardSpacing),
+            verticalArrangement = Arrangement.spacedBy(dimensions.cardSpacing)
         ) {
-            item {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     stringResource(R.string.hub_more_management),
                     style = MaterialTheme.typography.titleMedium,
@@ -74,14 +81,15 @@ fun MoreHubScreen(
                 )
             }
 
-            items(moreItems.size) { index ->
-                val item = moreItems[index]
+            items(moreItems) { item ->
                 val isDark = MaterialTheme.colorScheme.surface.luminance < 0.5f
                 val cardBg = if (isDark) Color(0xFF1E1E30) else Color.White
 
                 Card(
                     onClick = { onNavigateTo(item.route) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 76.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = cardBg),
                     elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -90,7 +98,7 @@ fun MoreHubScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(item.accentColor.copy(alpha = 0.04f))
-                            .padding(16.dp),
+                            .padding(dimensions.cardPadding),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
@@ -126,7 +134,7 @@ fun MoreHubScreen(
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+            item(span = { GridItemSpan(maxLineSpan) }) { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }

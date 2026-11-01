@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
+import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.R
 import com.civileg.app.db.Design
 import com.civileg.app.db.DesignType
@@ -178,8 +179,8 @@ fun ArchiveScreen(
             LazyColumn(
                 modifier = Modifier
                     .padding(padding)
-                    .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.cardSpacing),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 item {

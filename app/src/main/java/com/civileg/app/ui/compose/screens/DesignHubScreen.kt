@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
+import com.civileg.app.ui.responsive.dimens
 
 private data class DesignHubItem(
     val screen: AppScreen,
@@ -54,6 +55,7 @@ private val designHubItems = listOf(
     DesignHubItem(AppScreen.HordiSlab,     R.string.home_hordi_slab, R.string.home_hordi_slab_sub, listOf("ECP", "ACI"),   Color(0xFF455A64), Icons.Default.ViewAgenda),
     DesignHubItem(AppScreen.ShearWall,     R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI"),    Color(0xFF880E4F), Icons.Default.SensorDoor),
     DesignHubItem(AppScreen.PostTensioned, R.string.home_post_tensioned, R.string.home_post_tensioned_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF00695C), Icons.Default.LinearScale),
+    DesignHubItem(AppScreen.AdvancedDesign, R.string.home_advanced_design, R.string.home_advanced_design_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF37474F), Icons.Default.Architecture),
 
 )
 
@@ -64,6 +66,7 @@ fun DesignHubScreen(
     onNavigateBack: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val dimensions = MaterialTheme.dimens
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -78,16 +81,16 @@ fun DesignHubScreen(
         }
     ) { padding ->
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Adaptive(minSize = dimensions.gridMinItemWidth),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(dimensions.screenHorizontalPadding),
+            horizontalArrangement = Arrangement.spacedBy(dimensions.cardSpacing),
+            verticalArrangement = Arrangement.spacedBy(dimensions.cardSpacing)
         ) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     stringResource(R.string.hub_design_choose),
                     style = MaterialTheme.typography.titleMedium,
@@ -98,7 +101,7 @@ fun DesignHubScreen(
             items(designHubItems) { item ->
                 DesignHubCard(item = item, onClick = { onNavigateTo(item.screen.route) })
             }
-            item(span = { GridItemSpan(2) }) { Spacer(modifier = Modifier.height(16.dp)) }
+            item(span = { GridItemSpan(maxLineSpan) }) { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }
@@ -109,7 +112,7 @@ private fun DesignHubCard(item: DesignHubItem, onClick: () -> Unit) {
 
     Card(
         onClick = onClick,
-        modifier = Modifier.height(155.dp),
+        modifier = Modifier.heightIn(min = MaterialTheme.dimens.hubCardMinHeight),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isDark) Color(0xFF1E1E30) else Color.White

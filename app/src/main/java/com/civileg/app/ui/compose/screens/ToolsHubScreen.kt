@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
+import com.civileg.app.ui.responsive.dimens
 
 private data class ToolItem(
     val titleRes: Int,
@@ -55,6 +56,7 @@ fun ToolsHubScreen(
     onNavigateBack: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val dimensions = MaterialTheme.dimens
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -69,16 +71,16 @@ fun ToolsHubScreen(
         }
     ) { padding ->
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Adaptive(minSize = dimensions.gridMinItemWidth),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(dimensions.screenHorizontalPadding),
+            horizontalArrangement = Arrangement.spacedBy(dimensions.cardSpacing),
+            verticalArrangement = Arrangement.spacedBy(dimensions.cardSpacing)
         ) {
-            item(span = { GridItemSpan(2) }) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     stringResource(R.string.hub_tools_quick_title),
                     style = MaterialTheme.typography.titleMedium,
@@ -91,7 +93,7 @@ fun ToolsHubScreen(
                 ToolHubCard(tool = tool, onClick = { onNavigateTo(tool.route) })
             }
 
-            item(span = { GridItemSpan(2) }) { Spacer(modifier = Modifier.height(16.dp)) }
+            item(span = { GridItemSpan(maxLineSpan) }) { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }
@@ -103,7 +105,7 @@ private fun ToolHubCard(tool: ToolItem, onClick: () -> Unit) {
 
     Card(
         onClick = onClick,
-        modifier = Modifier.height(150.dp),
+        modifier = Modifier.heightIn(min = MaterialTheme.dimens.hubCardMinHeight),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

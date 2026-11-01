@@ -55,7 +55,7 @@ class QualityControlEngineNewTest {
             capConcreteCover = 75.0, columnWidth = 600.0, columnLength = 600.0
         )
         assertTrue(outcome.passed)
-        assertEquals(7, outcome.checks.size)
+        assertEquals(11, outcome.checks.size)
     }
 
     @Test
@@ -83,7 +83,7 @@ class QualityControlEngineNewTest {
             concreteStrength = 30.0, steelGrade = 400.0, seismicCoefficient = 0.1
         )
         assertTrue(outcome.passed)
-        assertEquals(7, outcome.checks.size)
+        assertEquals(10, outcome.checks.size)
     }
 
     @Test
@@ -124,7 +124,7 @@ class QualityControlEngineNewTest {
             applicationTemperature = 25.0, curingTime = 24.0
         )
         assertTrue(outcome.passed)
-        assertEquals(8, outcome.checks.size)
+        assertEquals(11, outcome.checks.size)
     }
 
     @Test
@@ -151,7 +151,7 @@ class QualityControlEngineNewTest {
             adhesionStrength = 0.4, curingMethod = "Wet", jointThickness = 10.0
         )
         assertTrue(outcome.passed)
-        assertEquals(7, outcome.checks.size)
+        assertEquals(11, outcome.checks.size)
     }
 
     @Test
@@ -176,7 +176,7 @@ class QualityControlEngineNewTest {
             jointWidth = 6.0, finishType = "Polished", curingMethod = "Wet", levelness = 5.0
         )
         assertTrue(outcome.passed)
-        assertEquals(8, outcome.checks.size)
+        assertEquals(9, outcome.checks.size)
     }
 
     @Test
@@ -201,7 +201,7 @@ class QualityControlEngineNewTest {
             erectionTolerance = 5.0, groutStrength = 50.0
         )
         assertTrue(outcome.passed)
-        assertEquals(8, outcome.checks.size)
+        assertEquals(10, outcome.checks.size)
     }
 
     @Test
@@ -239,7 +239,7 @@ class QualityControlEngineNewTest {
             frictionCoefficient = 0.20, wobbleCoefficient = 0.002
         )
         assertTrue(outcome.passed)
-        assertEquals(8, outcome.checks.size)
+        assertEquals(10, outcome.checks.size)
     }
 
     @Test
@@ -278,7 +278,7 @@ class QualityControlEngineNewTest {
             curingTime = 7.0, substrateCondition = "Clean"
         )
         assertTrue(outcome.passed)
-        assertEquals(8, outcome.checks.size)
+        assertEquals(10, outcome.checks.size)
     }
 
     @Test
@@ -305,7 +305,7 @@ class QualityControlEngineNewTest {
             improvementMaterial = "Crushed Stone", qualityControlTest = "Plate Load"
         )
         assertTrue(outcome.passed)
-        assertEquals(8, outcome.checks.size)
+        assertEquals(10, outcome.checks.size)
     }
 
     @Test
@@ -333,7 +333,7 @@ class QualityControlEngineNewTest {
             drainageSystem = true
         )
         assertTrue(outcome.passed)
-        assertEquals(8, outcome.checks.size)
+        assertEquals(11, outcome.checks.size)
     }
 
     @Test
@@ -371,7 +371,7 @@ class QualityControlEngineNewTest {
             manholeDepth = 3.0, flowRate = 150.0, invertLevel = 0.0, backfillCompaction = 96.0
         )
         assertTrue(outcome.passed)
-        assertEquals(8, outcome.checks.size)
+        assertEquals(10, outcome.checks.size)
     }
 
     @Test
@@ -395,7 +395,7 @@ class QualityControlEngineNewTest {
             fireRating = "None", curingTime = 24.0, ambientTemperature = 25.0, humidity = 60.0
         )
         assertTrue(outcome.passed)
-        assertEquals(8, outcome.checks.size)
+        assertEquals(10, outcome.checks.size)
     }
 
     @Test
@@ -419,7 +419,7 @@ class QualityControlEngineNewTest {
             drainageSystem = true, safetySigns = true, fireExtinguishers = true, firstAidKit = true
         )
         assertTrue(outcome.passed)
-        assertEquals(8, outcome.checks.size)
+        assertEquals(11, outcome.checks.size)
     }
 
     @Test
@@ -454,7 +454,7 @@ class QualityControlEngineNewTest {
             surfacePreparation = "SSPC-SP6"
         )
         assertTrue(outcome.passed)
-        assertEquals(8, outcome.checks.size)
+        assertEquals(9, outcome.checks.size)
     }
 
     @Test
@@ -602,5 +602,235 @@ class QualityControlEngineNewTest {
             erectionTolerance = 5.0, groutStrength = 50.0, designCode = DesignCode.ECP
         )
         assertFalse(outcome.passed)
+    }
+
+    // ==================================================================
+    // INPUT-DRIVEN REGRESSION TESTS
+    // Every input must be able to change the outcome.
+    // ==================================================================
+
+    @Test
+    fun pilingQc_lateralOverload_fails() {
+        val outcome = QualityControlEngineNew.pilingQc(
+            pileType = "BORED", pileDiameter = 600.0, pileLength = 15.0, numberOfPiles = 9,
+            pileSpacing = 1.8, axialLoad = 400.0, lateralLoad = 10000.0, momentLoad = 50.0,
+            cu = 75.0, phi = 30.0, gammaSoil = 18.0, waterTableDepth = 3.0,
+            safetyFactor = 2.5, pileGroupPattern = "3x3", scourDepth = 0.5,
+            capConcreteCover = 75.0, columnWidth = 600.0, columnLength = 600.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun pilingQc_patternMismatch_fails() {
+        val outcome = QualityControlEngineNew.pilingQc(
+            pileType = "BORED", pileDiameter = 600.0, pileLength = 15.0, numberOfPiles = 9,
+            pileSpacing = 1.8, axialLoad = 400.0, lateralLoad = 80.0, momentLoad = 50.0,
+            cu = 75.0, phi = 30.0, gammaSoil = 18.0, waterTableDepth = 3.0,
+            safetyFactor = 2.5, pileGroupPattern = "2x2", scourDepth = 0.5,
+            capConcreteCover = 75.0, columnWidth = 600.0, columnLength = 600.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun retainingWallQc_highSeismicCoefficient_fails() {
+        val outcome = QualityControlEngineNew.retainingWallQc(
+            wallHeight = 5.0, wallThickness = 300.0, soilType = "SAND",
+            backfillUnitWeight = 18.0, backfillFrictionAngle = 30.0, backfillCohesion = 0.0,
+            surchargeLoad = 10.0, groundwaterLevel = 3.0, foundationDepth = 1.5,
+            foundationWidth = 4.0, foundationSoilBearing = 200.0,
+            concreteStrength = 30.0, steelGrade = 400.0, seismicCoefficient = 0.35
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun retainingWallQc_lowSteelGrade_fails() {
+        val outcome = QualityControlEngineNew.retainingWallQc(
+            wallHeight = 5.0, wallThickness = 300.0, soilType = "SAND",
+            backfillUnitWeight = 18.0, backfillFrictionAngle = 30.0, backfillCohesion = 0.0,
+            surchargeLoad = 10.0, groundwaterLevel = 3.0, foundationDepth = 1.5,
+            foundationWidth = 4.0, foundationSoilBearing = 200.0,
+            concreteStrength = 30.0, steelGrade = 280.0, seismicCoefficient = 0.1
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun waterproofingQc_wetSubstrate_fails() {
+        val outcome = QualityControlEngineNew.waterproofingQc(
+            waterproofingType = "Bituminous Membrane", membraneThickness = 2.0,
+            coatingThickness = 1.5, adhesionStrength = 0.6, overlapWidth = 100.0,
+            leakTestResult = true, cornerDetails = true, drainageLayer = true,
+            protectionLayer = true, substrateCondition = "Wet",
+            applicationTemperature = 25.0, curingTime = 24.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun masonryQc_invalidBlockDimensions_fails() {
+        val outcome = QualityControlEngineNew.masonryQc(
+            masonryType = "Block", blockDimensions = "200x", mortarType = "M10",
+            mortarStrength = 10.0, wallThickness = 200.0, plasterThickness = 15.0,
+            plasterType = "Cement", surfaceFlatness = 2.0, verticality = 3.0,
+            adhesionStrength = 0.4, curingMethod = "Wet", jointThickness = 10.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun flooringQc_unknownFinish_fails() {
+        val outcome = QualityControlEngineNew.flooringQc(
+            flooringType = "Granite", slabThickness = 150.0, surfaceFlatness = 2.0,
+            compressiveStrength = 30.0, tensileStrength = 3.0, jointSpacing = 5.0,
+            jointWidth = 6.0, finishType = "Unknown", curingMethod = "Wet", levelness = 5.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun precastQc_lowSteelGrade_fails() {
+        val outcome = QualityControlEngineNew.precastQc(
+            elementType = "Beam", elementDimensions = "300x600x6000", concreteStrength = 40.0,
+            steelGrade = 280.0, coverThickness = 40.0, surfaceFinish = "Fair",
+            liftingAnchors = true, connectionDetails = "Bolted", transportDamage = false,
+            erectionTolerance = 5.0, groutStrength = 50.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun postTensionQc_unknownAnchorage_fails() {
+        val outcome = QualityControlEngineNew.postTensionQc(
+            tendonType = "7-wire strand", tendonDiameter = 15.2, jackingForce = 1500.0,
+            elongation = 180.0, expectedElongation = 180.0, groutStrength = 35.0,
+            groutFlow = 20.0, anchorageType = "Unknown", ductMaterial = "HDPE",
+            corrosionProtection = "Galvanized", stressLoss = 15.0,
+            frictionCoefficient = 0.20, wobbleCoefficient = 0.002
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun groutingQc_shortCuring_fails() {
+        val outcome = QualityControlEngineNew.groutingQc(
+            groutType = "Cementitious", flowTime = 20.0, shrinkage = 0.05,
+            compressiveStrength = 40.0, viscosity = 500.0, gelTime = 10.0,
+            bondStrength = 2.0, injectionPressure = 0.35, injectionVolume = 100.0,
+            curingTime = 2.0, substrateCondition = "Clean"
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun soilImprovementQc_insufficientSettlementReduction_fails() {
+        val outcome = QualityControlEngineNew.soilImprovementQc(
+            improvementType = "Stone Columns", improvementDepth = 8.0,
+            improvementDiameter = 0.8, spacing = 2.0, preImprovementBearing = 80.0,
+            postImprovementBearing = 160.0, preImprovementSPT = 8, postImprovementSPT = 18,
+            settlementBefore = 100.0, settlementAfter = 80.0,
+            improvementMaterial = "Crushed Stone", qualityControlTest = "Plate Load"
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun waterTanksQc_dimensionsMismatch_fails() {
+        val outcome = QualityControlEngineNew.waterTanksQc(
+            tankType = "Rectangular", tankCapacity = 500.0, tankDimensions = "40x20x5",
+            concreteStrength = 30.0, steelGrade = 400.0, wallThickness = 250.0,
+            floorThickness = 200.0, roofThickness = 150.0, waterproofingType = "Crystalline",
+            leakTestResult = true, hydrostaticTest = true, valveType = "Gate",
+            drainageSystem = true
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun drainageQc_unknownJointType_fails() {
+        val outcome = QualityControlEngineNew.drainageQc(
+            pipeMaterial = "RCP", pipeDiameter = 600.0, pipeLength = 100.0, slope = 1.5,
+            jointType = "Unknown", leakTestResult = true, manholeSpacing = 40.0,
+            manholeDepth = 3.0, flowRate = 150.0, invertLevel = 0.0, backfillCompaction = 96.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun paintingQc_intumescentWithoutFireRating_fails() {
+        val outcome = QualityControlEngineNew.paintingQc(
+            paintType = "Intumescent", dft = 150.0, adhesionStrength = 2.0,
+            colorUniformity = true, surfacePreparation = "SSPC-SP6", numberOfCoats = 2,
+            coatingThickness = 0.15, fireRating = "None", curingTime = 24.0,
+            ambientTemperature = 25.0, humidity = 60.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun siteWorksQc_missingFirstAidKit_fails() {
+        val outcome = QualityControlEngineNew.siteWorksQc(
+            gradingLevel = 100.0, slope = 0.5, fenceType = "Chain Link",
+            gateType = "Swing", lightingType = "LED", landscapingType = "Grass",
+            pavementType = "Interlock", drainageSystem = true, safetySigns = true,
+            fireExtinguishers = true, firstAidKit = false
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun fireProtectionQc_highHumidity_fails() {
+        val outcome = QualityControlEngineNew.fireProtectionQc(
+            protectionType = "Intumescent", coatingThickness = 0.8, adhesionStrength = 1.2,
+            fireRating = "2 hr", coverageArea = 500.0, applicationMethod = "Spray",
+            curingTime = 24.0, ambientTemperature = 25.0, humidity = 95.0,
+            surfacePreparation = "SSPC-SP6"
+        )
+        assertFalse(outcome.passed)
+    }
+    @Test
+    fun masonryQc_thinWallOrPlaster_fails() {
+        val outcome = QualityControlEngineNew.masonryQc(
+            masonryType = "Block", blockDimensions = "200x200x400", mortarType = "M10",
+            mortarStrength = 10.0, wallThickness = 90.0, plasterThickness = 30.0,
+            plasterType = "Cement", surfaceFlatness = 2.0, verticality = 3.0,
+            adhesionStrength = 0.4, curingMethod = "Wet", jointThickness = 10.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun drainageQc_unknownPipeMaterial_fails() {
+        val outcome = QualityControlEngineNew.drainageQc(
+            pipeMaterial = "Bamboo", pipeDiameter = 600.0, pipeLength = 100.0, slope = 1.5,
+            jointType = "Rubber Gasket", leakTestResult = true, manholeSpacing = 40.0,
+            manholeDepth = 3.0, flowRate = 150.0, invertLevel = -2.0, backfillCompaction = 96.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun retainingWallQc_slenderWall_fails() {
+        val outcome = QualityControlEngineNew.retainingWallQc(
+            wallHeight = 7.0, wallThickness = 300.0, soilType = "SAND",
+            backfillUnitWeight = 18.0, backfillFrictionAngle = 30.0, backfillCohesion = 0.0,
+            surchargeLoad = 10.0, groundwaterLevel = 3.0, foundationDepth = 1.5,
+            foundationWidth = 5.0, foundationSoilBearing = 250.0,
+            concreteStrength = 30.0, steelGrade = 400.0, seismicCoefficient = 0.1
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun siteWorksQc_negativeCrossFallWithinTolerance_passes() {
+        val outcome = QualityControlEngineNew.siteWorksQc(
+            gradingLevel = -5.0, slope = -0.5, fenceType = "Chain Link",
+            gateType = "Swing", lightingType = "LED", landscapingType = "Grass",
+            pavementType = "Interlock", drainageSystem = true, safetySigns = true,
+            fireExtinguishers = true, firstAidKit = true
+        )
+        assertTrue(outcome.passed)
     }
 }

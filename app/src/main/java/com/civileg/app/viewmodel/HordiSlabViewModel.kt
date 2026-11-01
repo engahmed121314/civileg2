@@ -110,6 +110,31 @@ class HordiSlabViewModel @Inject constructor(
     /**
      * Export results to PDF report.
      */
+    /** Standalone DXF sheet for the current hordi slab design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val res = _result.value ?: return null
+        val params = lastInputParams ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.slabSection(
+            title = "HORDI SLAB",
+            spanMm = params.span,
+            thicknessMm = params.totalThickness,
+            coverMm = 25.0,
+            mainBarDiaMm = res.barDiameter.toDouble(),
+            mainSpacingMm = res.barSpacing.toDouble()
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "HordiSlab",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(
         context: Context,
         onComplete: (File?) -> Unit
@@ -185,14 +210,7 @@ class HordiSlabViewModel @Inject constructor(
                         params.span / 1000.0, params.totalThickness / 1000.0, steelWeightKg, "H1"
                     ),
                     drawingBitmap = drawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
-                        title = "HORDI SLAB",
-                        spanMm = params.span,
-                        thicknessMm = params.totalThickness,
-                        coverMm = 25.0,
-                        mainBarDiaMm = res.barDiameter.toDouble(),
-                        mainSpacingMm = res.barSpacing.toDouble()
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
 

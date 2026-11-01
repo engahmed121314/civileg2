@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.responsive.dimens
+
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -167,7 +169,7 @@ fun InventoryScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(filteredItems) { item ->

@@ -154,6 +154,31 @@ class SlabViewModel @Inject constructor(
         }
     }
 
+    /** Standalone DXF sheet for the current slab design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val res = _result.value ?: return null
+        val inputs = lastInputs ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.slabSection(
+            title = "SLAB ${inputs.type.displayName}",
+            spanMm = inputs.lx * 1000.0,
+            thicknessMm = res.thickness.toDouble(),
+            coverMm = 25.0,
+            mainBarDiaMm = res.reinforcementMain.diameter.toDouble(),
+            mainSpacingMm = res.reinforcementMain.spacing.toDouble()
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "Slab",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val res = _result.value ?: return
         val inputs = lastInputs ?: return
@@ -245,14 +270,7 @@ class SlabViewModel @Inject constructor(
                     }.getOrDefault(emptyList()),
                     boqRows = BoqEstimator.slabRows(res, inputs.lx, inputs.ly, "S1"),
                     drawingBitmap = drawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.slabSection(
-                        title = "SLAB ${inputs.type.displayName}",
-                        spanMm = inputs.lx * 1000.0,
-                        thicknessMm = res.thickness.toDouble(),
-                        coverMm = 25.0,
-                        mainBarDiaMm = res.reinforcementMain.diameter.toDouble(),
-                        mainSpacingMm = res.reinforcementMain.spacing.toDouble()
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
 

@@ -226,6 +226,33 @@ class ShearWallViewModel @Inject constructor(
         }
     }
 
+    /** Standalone DXF sheet for the current shear wall design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val state = _uiState.value
+        val res = state.result ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.wallElevation(
+            title = "SHEAR WALL ${state.wallType.displayName}",
+            widthMm = state.wallLength.toDoubleOrNull() ?: 3000.0,
+            heightMm = (state.storyHeight.toDoubleOrNull() ?: 3.0) * 1000.0,
+            coverMm = 40.0,
+            verticalBarDiaMm = res.verticalReinforcement.diameter.toDouble(),
+            verticalSpacingMm = res.verticalReinforcement.spacing.toDouble(),
+            horizontalBarDiaMm = res.horizontalReinforcement.diameter.toDouble(),
+            horizontalSpacingMm = res.horizontalReinforcement.spacing.toDouble()
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: Context, onComplete: (File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "ShearWall",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
         val state = _uiState.value
         val res = state.result ?: return
@@ -286,16 +313,7 @@ class ShearWallViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     drawingBitmap = pendingDrawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.wallElevation(
-                        title = "SHEAR WALL ${state.wallType.displayName}",
-                        widthMm = state.wallLength.toDoubleOrNull() ?: 3000.0,
-                        heightMm = (state.storyHeight.toDoubleOrNull() ?: 3.0) * 1000.0,
-                        coverMm = 40.0,
-                        verticalBarDiaMm = res.verticalReinforcement.diameter.toDouble(),
-                        verticalSpacingMm = res.verticalReinforcement.spacing.toDouble(),
-                        horizontalBarDiaMm = res.horizontalReinforcement.diameter.toDouble(),
-                        horizontalSpacingMm = res.horizontalReinforcement.spacing.toDouble()
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
                 pendingDrawingBitmap = null  // consume after use

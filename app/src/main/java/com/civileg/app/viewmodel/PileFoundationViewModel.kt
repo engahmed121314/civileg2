@@ -152,6 +152,33 @@ class PileFoundationViewModel @Inject constructor(
     /**
      * Export the current result to PDF.
      */
+    /** Standalone DXF sheet for the current pile design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val res = _result.value ?: return null
+        val reinf = res.pileReinforcement
+        return com.civileg.app.utils.ElementDxfDrawings.pileElevation(
+            title = "PILE ${res.pileType}",
+            lengthMm = res.pileLengthM * 1000.0,
+            diameterMm = res.pileDiameterMm,
+            coverMm = 75.0,
+            mainBarDiaMm = reinf.longitudinalDiameter.toDouble(),
+            mainBarCount = reinf.longitudinalBars,
+            tieDiaMm = reinf.tiesDiameter.toDouble(),
+            tieSpacingMm = reinf.tiesSpacing.toDouble()
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: Context, onComplete: (File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "Pile",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
         val res = _result.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
@@ -267,16 +294,7 @@ class PileFoundationViewModel @Inject constructor(
                     }.getOrDefault(emptyList()),
                     boqRows = com.civileg.app.utils.BoqEstimator.pileRows(res, "PG1", excavationDepthM, workingSpaceM, blindingThicknessM),
                     drawingBitmap = drawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.pileElevation(
-                        title = "PILE ${res.pileType}",
-                        lengthMm = res.pileLengthM * 1000.0,
-                        diameterMm = res.pileDiameterMm,
-                        coverMm = 75.0,
-                        mainBarDiaMm = reinf.longitudinalDiameter.toDouble(),
-                        mainBarCount = reinf.longitudinalBars,
-                        tieDiaMm = reinf.tiesDiameter.toDouble(),
-                        tieSpacingMm = reinf.tiesSpacing.toDouble()
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
 

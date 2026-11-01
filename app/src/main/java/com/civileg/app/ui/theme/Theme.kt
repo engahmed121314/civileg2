@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.civileg.app.ui.responsive.AppResponsiveProvider
 
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryLight,
@@ -75,11 +76,13 @@ fun CivilEngineerTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    AppResponsiveProvider {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }
 
 // دالة مساعدة للحصول على الألوان حسب الثيم

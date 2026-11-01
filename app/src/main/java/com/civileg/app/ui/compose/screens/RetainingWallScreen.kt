@@ -438,6 +438,7 @@ fun RetainingWallScreen(
                         else -> (780 * wRatio).toInt().coerceIn(500, 1000)
                     }
                     InteractiveDrawingScreen(
+                        onExportDxf = { viewModel.exportToDxf(context) },
                         title = stringResource(R.string.rw_drawing_title),
                         subtitle = stringResource(R.string.rw_drawing_subtitle),
                         viewModes = listOf(stringResource(R.string.view_all), stringResource(R.string.view_section), stringResource(R.string.rw_view_soil_pressure), stringResource(R.string.view_reinforcement)),

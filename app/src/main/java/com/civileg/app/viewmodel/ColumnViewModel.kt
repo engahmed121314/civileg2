@@ -242,6 +242,32 @@ class ColumnViewModel @Inject constructor(
         }
     }
 
+    /** Standalone DXF sheet for the current column design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val res = _uiState.value.result ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.columnSection(
+            title = "COLUMN ${res.columnType}",
+            widthMm = res.width.toDouble(),
+            depthMm = res.depth.toDouble(),
+            coverMm = 40.0,
+            mainBarDiaMm = res.reinforcement.diameter.toDouble(),
+            mainBarCount = res.reinforcement.numBars,
+            tieDiaMm = res.stirrups.diameter.toDouble(),
+            tieSpacingMm = res.stirrups.spacing.toDouble()
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: Context, onComplete: (File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "Column",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
         val state = _uiState.value
         val res = state.result ?: return
@@ -338,16 +364,7 @@ class ColumnViewModel @Inject constructor(
                     }.getOrDefault(emptyList()),
                     boqRows = BoqEstimator.columnRows(res, h, "C1"),
                     drawingBitmap = drawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.columnSection(
-                        title = "COLUMN ${res.columnType}",
-                        widthMm = res.width.toDouble(),
-                        depthMm = res.depth.toDouble(),
-                        coverMm = 40.0,
-                        mainBarDiaMm = res.reinforcement.diameter.toDouble(),
-                        mainBarCount = res.reinforcement.numBars,
-                        tieDiaMm = res.stirrups.diameter.toDouble(),
-                        tieSpacingMm = res.stirrups.spacing.toDouble()
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
 

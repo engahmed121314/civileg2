@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
+import android.content.Context
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.civileg.app.utils.ComplianceMatrix
@@ -25,11 +27,36 @@ import com.civileg.app.utils.ComplianceMatrix
 @Composable
 fun QualityComplianceScreen() {
     val standards = remember { ComplianceMatrix.getStandards() }
-    var selectedCode by remember { mutableStateOf(standards.firstOrNull()?.code ?: "ECP") }
-    var disciplineFilter by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val prefs = remember {
+        context.getSharedPreferences("quality_compliance_checklist", Context.MODE_PRIVATE)
+    }
+    var selectedCode by remember {
+        val saved = prefs.getString("selected_code", null)
+        mutableStateOf(
+            standards.firstOrNull { it.code == saved }?.code
+                ?: standards.firstOrNull()?.code
+                ?: "ECP"
+        )
+    }
+    var disciplineFilter by remember {
+        mutableStateOf(prefs.getString("discipline_filter", null))
+    }
     var showResetConfirm by remember { mutableStateOf(false) }
 
-    val checked = remember { mutableStateMapOf<String, Boolean>() }
+    val checked = remember {
+        mutableStateMapOf<String, Boolean>().apply {
+            prefs.getStringSet("checked_keys", emptySet())
+                ?.forEach { put(it, true) }
+        }
+    }
+
+    LaunchedEffect(selectedCode, disciplineFilter) {
+        prefs.edit()
+            .putString("selected_code", selectedCode)
+            .putString("discipline_filter", disciplineFilter)
+            .apply()
+    }
 
     val standard = standards.firstOrNull { it.code == selectedCode }
     val standardCode = standard?.code ?: ""
@@ -180,7 +207,15 @@ fun QualityComplianceScreen() {
                         ) {
                             Checkbox(
                                 checked = isChecked,
-                                onCheckedChange = { checked[key] = it }
+                                onCheckedChange = { isCheckedNow ->
+                                    if (isCheckedNow) checked[key] = true else checked.remove(key)
+                                    prefs.edit()
+                                        .putStringSet(
+                                            "checked_keys",
+                                            checked.filterValues { it }.keys
+                                        )
+                                        .apply()
+                                }
                             )
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -235,7 +270,11 @@ fun QualityComplianceScreen() {
             title = { Text("إعادة ضبط القائمة") },
             text = { Text("سيتم إلغاء جميع الخانات المحددة. هل تريد المتابعة؟") },
             confirmButton = {
-                TextButton(onClick = { checked.clear(); showResetConfirm = false }) {
+                TextButton(onClick = {
+                    checked.clear()
+                    prefs.edit().remove("checked_keys").apply()
+                    showResetConfirm = false
+                }) {
                     Text("نعم، أعد الضبط")
                 }
             },

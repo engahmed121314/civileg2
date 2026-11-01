@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.responsive.dimens
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -240,7 +242,7 @@ fun SeismicScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // ═══ Section 1: Code Selector ═════════════════════════════════════
@@ -774,6 +776,14 @@ fun SeismicScreen(
                                 Spacer(Modifier.width(8.dp))
                                 Text(stringResource(R.string.pdf_report))
                             }
+                        }
+
+                        OutlinedButton(
+                            onClick = { viewModel.exportToDxf(context) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("DXF", fontWeight = FontWeight.Bold)
                         }
 
                         Button(

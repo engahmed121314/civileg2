@@ -99,6 +99,25 @@ class StrapFootingViewModel @Inject constructor(
         }
     }
 
+    /** Standalone DXF sheet for the current strap footing design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val res = _result.value ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.generic(
+            "STRAP FOOTING", res.footing1.length, res.footing1.width
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: Context, onComplete: (File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "StrapFooting",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
         val res = _result.value ?: return
         viewModelScope.launch {
@@ -149,9 +168,7 @@ class StrapFootingViewModel @Inject constructor(
                         res, lastDistanceMm / 1000.0, "SF1"
                     ),
                     drawingBitmap = drawingBitmap,
-                    drawing = com.civileg.app.utils.ElementDxfDrawings.generic(
-                        "STRAP FOOTING", res.footing1.length, res.footing1.width
-                    ),
+                    drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile
                 onComplete(generated)

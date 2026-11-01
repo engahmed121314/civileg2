@@ -389,6 +389,7 @@ fun HordiSlabScreen(
                     item {
                         val drawingHeight = if (config.smallestScreenWidthDp >= 600) 580 else 480
                         InteractiveDrawingScreen(
+                            onExportDxf = { viewModel.exportToDxf(context) },
                             title = stringResource(R.string.hordi_slab_title),
                             subtitle = "Ribbed Slab Detail",
                             viewModes = viewModeLabels,

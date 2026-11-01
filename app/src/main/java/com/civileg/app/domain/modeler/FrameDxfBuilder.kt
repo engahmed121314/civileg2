@@ -49,6 +49,7 @@ private const val MM = 1000.0
                 .distinct()
         )
         val baseLayers = listOf(
+            Layer("0", 7),
             Layer(GRID, 8),
             Layer(SLABS, 4),
             Layer(MEMBERS, 5),
@@ -61,10 +62,10 @@ private const val MM = 1000.0
         val writer = DxfWriter()
         val bounds = modelBounds(nodes)
         writeHeader(writer, bounds)
-        writeLayerTable(writer, baseLayers + loadLayers.values)
-        writer.pair(0, "SECTION")
-        writer.pair(2, "BLOCKS")
-        writer.pair(0, "ENDSEC")
+        val modelSpaceHandle = writeTables(writer, baseLayers + loadLayers.values)
+        writeBlocks(writer, modelSpaceHandle)
+        writer.ownerHandle = modelSpaceHandle
+
         writer.pair(0, "SECTION")
         writer.pair(2, "ENTITIES")
 
@@ -96,6 +97,7 @@ private const val MM = 1000.0
         }
 
         writer.pair(0, "ENDSEC")
+        writeObjects(writer)
         writer.pair(0, "EOF")
         return writer.toString()
     }
@@ -109,7 +111,9 @@ private const val MM = 1000.0
         writer.pair(0, "SECTION")
         writer.pair(2, "HEADER")
         writer.pair(9, "\$ACADVER")
-        writer.pair(1, "AC1027") // AutoCAD 2013 / R2007
+        writer.pair(1, "AC1027") // AutoCAD 2013 (R2013)
+        writer.pair(9, "\$HANDSEED")
+        writer.pair(5, "FFFFFFFF")
         writer.pair(9, "\$INSUNITS")
         writer.pair(70, 4) // 4 = millimeters
         writer.pair(9, "\$EXTMIN")
@@ -145,52 +149,39 @@ private const val MM = 1000.0
         writer.pair(0, "ENDSEC")
     }
 
-    private fun writeLayerTable(writer: DxfWriter, layers: List<Layer>) {
+    private fun writeTables(writer: DxfWriter, layers: List<Layer>): String {
         writer.pair(0, "SECTION")
         writer.pair(2, "TABLES")
-        writer.pair(0, "TABLE")
-        writer.pair(2, "LTYPE")
-        writer.pair(70, 3)
-        writer.pair(0, "LTYPE")
-        writer.pair(2, "CONTINUOUS")
-        writer.pair(70, 0)
-        writer.pair(3, "Solid line")
-        writer.pair(72, 65)
-        writer.pair(73, 0)
-        writer.pair(40, 0.0)
-        writer.pair(0, "LTYPE")
-        writer.pair(2, "DASHED")
-        writer.pair(70, 0)
-        writer.pair(3, "Dashed line")
-        writer.pair(72, 65)
-        writer.pair(73, 0)
-        writer.pair(40, 12.7)
-        writer.pair(49, -6.35)
-        writer.pair(49, 6.35)
-        writer.pair(0, "LTYPE")
-        writer.pair(2, "DOTTED")
-        writer.pair(70, 0)
-        writer.pair(3, "Dotted line")
-        writer.pair(72, 65)
-        writer.pair(73, 0)
-        writer.pair(40, 0.0)
-        writer.pair(49, 3.175)
+
+        val ltypeTable = writer.newHandle()
+        writer.tableHeader("LTYPE", ltypeTable, 3)
+        writer.linetype(ltypeTable, "Continuous", "Solid line", 0.0, emptyList())
+        writer.linetype(ltypeTable, "DASHED", "Dashed __ __ __", 12.7, listOf(-6.35, 6.35))
+        writer.linetype(ltypeTable, "DOTTED", "Dotted . . .", 6.35, listOf(0.0, -6.35))
         writer.pair(0, "ENDTAB")
-        writer.pair(0, "TABLE")
-        writer.pair(2, "LAYER")
-        writer.pair(70, layers.size)
+
+        val layerTable = writer.newHandle()
+        writer.tableHeader("LAYER", layerTable, layers.size)
         layers.forEach { layer ->
             writer.pair(0, "LAYER")
+            writer.pair(5, writer.newHandle())
+            writer.pair(330, layerTable)
+            writer.pair(100, "AcDbSymbolTableRecord")
+            writer.pair(100, "AcDbLayerTableRecord")
             writer.pair(2, layer.name)
             writer.pair(70, 0)
             writer.pair(62, layer.color)
-            writer.pair(6, "CONTINUOUS")
+            writer.pair(6, "Continuous")
         }
         writer.pair(0, "ENDTAB")
-        writer.pair(0, "TABLE")
-        writer.pair(2, "STYLE")
-        writer.pair(70, 1)
+
+        val styleTable = writer.newHandle()
+        writer.tableHeader("STYLE", styleTable, 1)
         writer.pair(0, "STYLE")
+        writer.pair(5, writer.newHandle())
+        writer.pair(330, styleTable)
+        writer.pair(100, "AcDbSymbolTableRecord")
+        writer.pair(100, "AcDbTextStyleTableRecord")
         writer.pair(2, "STANDARD")
         writer.pair(70, 0)
         writer.pair(40, 0.0)
@@ -201,6 +192,90 @@ private const val MM = 1000.0
         writer.pair(3, "txt")
         writer.pair(4, "")
         writer.pair(0, "ENDTAB")
+
+        val appIdTable = writer.newHandle()
+        writer.tableHeader("APPID", appIdTable, 1)
+        writer.pair(0, "APPID")
+        writer.pair(5, writer.newHandle())
+        writer.pair(330, appIdTable)
+        writer.pair(100, "AcDbSymbolTableRecord")
+        writer.pair(100, "AcDbRegAppTableRecord")
+        writer.pair(2, "ACAD")
+        writer.pair(70, 0)
+        writer.pair(0, "ENDTAB")
+
+        val blockRecordTable = writer.newHandle()
+        writer.tableHeader("BLOCK_RECORD", blockRecordTable, 1)
+        val modelSpaceHandle = writer.newHandle()
+        writer.pair(0, "BLOCK_RECORD")
+        writer.pair(5, modelSpaceHandle)
+        writer.pair(330, blockRecordTable)
+        writer.pair(100, "AcDbSymbolTableRecord")
+        writer.pair(100, "AcDbBlockTableRecord")
+        writer.pair(2, "*Model_Space")
+        writer.pair(0, "ENDTAB")
+
+        writer.pair(0, "ENDSEC")
+        return modelSpaceHandle
+    }
+
+    /**
+     * Minimal but complete BLOCKS section: a *Model_Space block that owns all model entities.
+     * Required by every DXF version from R13 onwards.
+     */
+    private fun writeBlocks(writer: DxfWriter, modelSpaceHandle: String) {
+        writer.pair(0, "SECTION")
+        writer.pair(2, "BLOCKS")
+
+        writer.pair(0, "BLOCK")
+        writer.pair(5, writer.newHandle())
+        writer.pair(330, modelSpaceHandle)
+        writer.pair(100, "AcDbEntity")
+        writer.pair(8, "0")
+        writer.pair(100, "AcDbBlockBegin")
+        writer.pair(2, "*Model_Space")
+        writer.pair(70, 0)
+        writer.pair(10, 0.0)
+        writer.pair(20, 0.0)
+        writer.pair(30, 0.0)
+        writer.pair(3, "*Model_Space")
+        writer.pair(1, "")
+
+        writer.pair(0, "ENDBLK")
+        writer.pair(5, writer.newHandle())
+        writer.pair(330, modelSpaceHandle)
+        writer.pair(100, "AcDbEntity")
+        writer.pair(8, "0")
+        writer.pair(100, "AcDbBlockEnd")
+
+        writer.pair(0, "ENDSEC")
+    }
+
+    /**
+     * Root OBJECTS dictionary. AC1027 files must expose at least the named-object dictionary;
+     * ACAD_GROUP keeps the file compatible with AutoCAD's object model.
+     */
+    private fun writeObjects(writer: DxfWriter) {
+        writer.pair(0, "SECTION")
+        writer.pair(2, "OBJECTS")
+
+        val rootDictionary = writer.newHandle()
+        writer.pair(0, "DICTIONARY")
+        writer.pair(5, rootDictionary)
+        writer.pair(330, "0")
+        writer.pair(100, "AcDbDictionary")
+        writer.pair(281, 1)
+
+        val groupDictionary = writer.newHandle()
+        writer.pair(3, "ACAD_GROUP")
+        writer.pair(350, groupDictionary)
+
+        writer.pair(0, "DICTIONARY")
+        writer.pair(5, groupDictionary)
+        writer.pair(330, rootDictionary)
+        writer.pair(100, "AcDbDictionary")
+        writer.pair(281, 1)
+
         writer.pair(0, "ENDSEC")
     }
 
@@ -227,9 +302,7 @@ private const val MM = 1000.0
             val points = slab.nodeIds.mapNotNull { nodeById[it] }
             if (points.size != 4) return@forEach
             val vertices = points.map { it.x * MM to it.y * MM }
-            // Close the polygon by repeating the first vertex
-            val closedVertices = vertices + vertices.first()
-            writer.polyline(SLABS, closedVertices)
+            writer.polyline(SLABS, vertices, closed = true)
             writer.text(
                 layer = TEXT,
                 x = points.sumOf { it.x } / 4.0 * MM,
@@ -555,6 +628,16 @@ private const val MM = 1000.0
 
     private class DxfWriter {
         private val builder = StringBuilder()
+        private var nextHandle = 0x10
+
+        /** Handle of the owning BLOCK_RECORD (the *Model_Space block record for model entities). */
+        var ownerHandle: String = "0"
+
+        fun newHandle(): String {
+            val handle = Integer.toHexString(nextHandle).uppercase(Locale.US)
+            nextHandle++
+            return handle
+        }
 
         fun pair(code: Int, value: String) {
             builder.append(code).append('\n').append(value.replace('\n', ' ')).append('\n')
@@ -570,9 +653,51 @@ private const val MM = 1000.0
                 .append('\n')
         }
 
-        fun line(layer: String, x1: Double, y1: Double, x2: Double, y2: Double) {
-            pair(0, "LINE")
+        fun tableHeader(name: String, handle: String, count: Int) {
+            pair(0, "TABLE")
+            pair(2, name)
+            pair(5, handle)
+            pair(330, "0")
+            pair(100, "AcDbSymbolTable")
+            pair(70, count)
+        }
+
+        fun linetype(
+            tableHandle: String,
+            name: String,
+            description: String,
+            patternLength: Double,
+            dashes: List<Double>
+        ) {
+            pair(0, "LTYPE")
+            pair(5, newHandle())
+            pair(330, tableHandle)
+            pair(100, "AcDbSymbolTableRecord")
+            pair(100, "AcDbLinetypeTableRecord")
+            pair(2, name)
+            pair(70, 0)
+            pair(3, description)
+            pair(72, 65)
+            pair(73, dashes.size)
+            pair(40, patternLength)
+            dashes.forEach { dash ->
+                pair(49, dash)
+                pair(74, 0)
+            }
+        }
+
+        /** Writes the mandatory DXF 2000+ entity preamble (handle, owner, subclass markers). */
+        private fun entity(type: String, layer: String, subclass: String) {
+            pair(0, type)
+            pair(5, newHandle())
+            pair(330, ownerHandle)
+            pair(100, "AcDbEntity")
             pair(8, layer)
+            pair(100, subclass)
+        }
+
+        fun line(layer: String, x1: Double, y1: Double, x2: Double, y2: Double) {
+            entity("LINE", layer, "AcDbLine")
             pair(10, x1)
             pair(20, y1)
             pair(30, 0.0)
@@ -582,8 +707,7 @@ private const val MM = 1000.0
         }
 
         fun circle(layer: String, x: Double, y: Double, radius: Double) {
-            pair(0, "CIRCLE")
-            pair(8, layer)
+            entity("CIRCLE", layer, "AcDbCircle")
             pair(10, x)
             pair(20, y)
             pair(30, 0.0)
@@ -591,35 +715,40 @@ private const val MM = 1000.0
         }
 
         fun text(layer: String, x: Double, y: Double, height: Double, value: String) {
-            pair(0, "TEXT")
-            pair(8, layer)
+            entity("TEXT", layer, "AcDbText")
             pair(10, x)
             pair(20, y)
             pair(30, 0.0)
             pair(40, height)
             pair(1, value)
             pair(7, "STANDARD")
+            pair(100, "AcDbText")
         }
 
         fun mtext(layer: String, x: Double, y: Double, height: Double, value: String, width: Double = 5000.0) {
-            pair(0, "MTEXT")
-            pair(8, layer)
+            entity("MTEXT", layer, "AcDbMText")
             pair(10, x)
             pair(20, y)
             pair(30, 0.0)
             pair(40, height)
             pair(41, width)
+            pair(71, 1)
             pair(1, value)
             pair(7, "STANDARD")
         }
 
-        fun polyline(layer: String, points: List<Pair<Double, Double>>) {
-            // LWPOLYLINE (Lightweight Polyline) - AC1027 preferred
-            pair(0, "LWPOLYLINE")
-            pair(8, layer)
-            pair(90, points.size) // vertex count
-            pair(70, if (points.first() == points.last()) 1 else 0) // closed flag
-            points.forEach { (x, y) ->
+        fun polyline(layer: String, points: List<Pair<Double, Double>>, closed: Boolean = false) {
+            if (points.isEmpty()) return
+            // A closed LWPOLYLINE must not repeat its first vertex: the 70 flag closes it.
+            val vertices = if (closed && points.size > 1 && points.first() == points.last()) {
+                points.dropLast(1)
+            } else {
+                points
+            }
+            entity("LWPOLYLINE", layer, "AcDbPolyline")
+            pair(90, vertices.size) // vertex count
+            pair(70, if (closed) 1 else 0) // closed flag
+            vertices.forEach { (x, y) ->
                 pair(10, x)
                 pair(20, y)
             }

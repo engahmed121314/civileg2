@@ -1584,6 +1584,13 @@ private fun ResultsTab(
                         Row { Text(stringResource(R.string.frame_axial), fontSize = 11.sp); UtilizationBar(sr.axialUtilization, Modifier.weight(1f)) }
                         Spacer(Modifier.height(2.dp))
                         Row { Text(stringResource(R.string.frame_combined), fontSize = 11.sp); UtilizationBar(sr.combinedUtilization, Modifier.weight(1f)) }
+
+                        if (sr.warnings.isNotEmpty()) {
+                            Spacer(Modifier.height(4.dp))
+                            for (w in sr.warnings) {
+                                Text("⚠ $w", fontSize = 10.sp, color = Color(0xFFF44336))
+                            }
+                        }
                     }
                 }
             }

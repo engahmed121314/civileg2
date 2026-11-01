@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -46,7 +47,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -128,11 +128,12 @@ fun ProfessionalBottomNavBar(
             )
 
             // ── Tab row with indicator ──
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
             ) {
+                val barWidth = maxWidth
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -152,12 +153,13 @@ fun ProfessionalBottomNavBar(
                 }
 
                 // ── Animated sliding indicator bar ──
-                val screenWidthDp = LocalConfiguration.current.screenWidthDp
+                // Use the real measured width so the indicator stays centred in
+                // RTL, split-screen and tablet windows.
                 val tabCenterFraction = (selectedTab.toFloat() + 0.5f) / bottomNavItems.size
-                val targetOffset = tabCenterFraction * screenWidthDp - 16f // 16 dp = half of 32 dp indicator
+                val targetOffset = barWidth * tabCenterFraction - 16.dp
 
                 val animatedOffset by animateDpAsState(
-                    targetValue = targetOffset.dp,
+                    targetValue = targetOffset,
                     animationSpec = spring(
                         dampingRatio = 0.8f,
                         stiffness = 350f

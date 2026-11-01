@@ -77,14 +77,15 @@ while ($true) {
             }
             $one = $procs[0]
             $age = ((Get-Date) - $one.CreationDate).TotalSeconds
-            if ($age -lt 180) {
+            # Node can take 3+ minutes to boot on this machine (AV scanning).
+            if ($age -lt 300) {
                 $failCount = 0
             } elseif (Bot-TgConnected $one.ProcessId) {
                 $failCount = 0
             } else {
                 $failCount++
-                Log "bot PID $($one.ProcessId) has no Telegram socket (fail $failCount/2)"
-                if ($failCount -ge 2) {
+                Log "bot PID $($one.ProcessId) has no Telegram socket (fail $failCount/3)"
+                if ($failCount -ge 3) {
                     Log "bot hung -> restarting"
                     Stop-Process -Id $one.ProcessId -Force -ErrorAction SilentlyContinue
                     Start-Sleep -Seconds 3

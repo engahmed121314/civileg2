@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.responsive.dimens
+
 import kotlin.math.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -105,7 +107,7 @@ fun ColumnScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -463,6 +465,7 @@ fun ColumnScreen(
                         else -> (700 * wRatio).toInt().coerceIn(450, 1000)
                     }
                     InteractiveDrawingScreen(
+                        onExportDxf = { viewModel.exportToDxf(context) },
                         title = stringResource(R.string.column_drawing_title),
                         subtitle = stringResource(R.string.column_drawing_subtitle),
                         drawingHeightDp = drawingHeight,

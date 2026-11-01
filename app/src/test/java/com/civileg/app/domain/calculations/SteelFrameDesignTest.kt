@@ -58,6 +58,15 @@ class SteelFrameDesignTest {
     }
 
     @Test
+    fun nullSectionSelectsTheLightestSection() {
+        val result = SteelFrameDesign.designSingleMember(
+            steelMember(null), null, null, DesignCode.ECP, 355.0
+        )
+
+        assertEquals(lightestSectionName(), result.selectedSection)
+    }
+
+    @Test
     fun missingSectionFallsBackToAutomaticSelection() {
         val result = SteelFrameDesign.designSingleMember(
             steelMember("IPE 9999"), null, null, DesignCode.ECP, 355.0

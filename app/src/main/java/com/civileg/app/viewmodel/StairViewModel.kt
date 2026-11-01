@@ -118,6 +118,39 @@ class StairViewModel @Inject constructor(
         }
     }
 
+    /** Standalone DXF sheet for the current stair design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val currentResult = _result.value ?: return null
+        val totalHeight = currentResult.span * (currentResult.riser / currentResult.tread)
+        val nRisers = (totalHeight / currentResult.riser).toInt().coerceAtLeast(1)
+        val pdfCover = when (currentResult.code) {
+            DesignCode.ACI -> 38.0
+            DesignCode.SBC -> 40.0
+            else -> 25.0
+        }
+        return com.civileg.app.utils.ElementDxfDrawings.stairSection(
+            title = "STAIR ${currentResult.type.displayName}",
+            runMm = nRisers.toDouble() * currentResult.tread,
+            riseMm = currentResult.riser,
+            steps = nRisers,
+            waistThicknessMm = currentResult.thickness,
+            coverMm = pdfCover,
+            barDiaMm = currentResult.reinforcement.diameter.toDouble(),
+            barSpacingMm = currentResult.reinforcement.spacing
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "Stair",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val currentResult = _result.value ?: return
         viewModelScope.launch {
@@ -204,16 +237,7 @@ class StairViewModel @Inject constructor(
                         }.getOrDefault(emptyList()),
                         boqRows = BoqEstimator.stairRows(currentResult, lastStairWidthMm / 1000.0, "ST1"),
                         drawingBitmap = drawingBitmap,
-                        drawing = com.civileg.app.utils.ElementDxfDrawings.stairSection(
-                            title = "STAIR ${currentResult.type.displayName}",
-                            runMm = nRisers.toDouble() * currentResult.tread,
-                            riseMm = currentResult.riser,
-                            steps = nRisers,
-                            waistThicknessMm = currentResult.thickness,
-                            coverMm = pdfCover,
-                            barDiaMm = currentResult.reinforcement.diameter.toDouble(),
-                            barSpacingMm = currentResult.reinforcement.spacing
-                        ),
+                        drawing = buildDxfDrawing(),
                         outputPath = file.absolutePath
                     ).pdfFile
                     generated

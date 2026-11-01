@@ -1723,5 +1723,7 @@
     <string name="boq_backfill_width">عرض خندق الحفر (م)</string>
     <string name="home_post_tensioned">ما بعد الشد</string>
     <string name="home_post_tensioned_sub">تصميم الكمرات والبلاطات مسبقة الإجهاد</string>
+    <string name="home_advanced_design">التصميم المتقدم</string>
+    <string name="home_advanced_design_sub">كمرات مركبة، حريق، كمرات عميقة، خوازيق، هبوط</string>
     <string name="screen_post_tensioned_title">تصميم ما بعد الشد</string>
 </resources>

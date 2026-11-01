@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.responsive.dimens
+
 import com.civileg.app.domain.entities.DesignCode
 
 import androidx.compose.foundation.background
@@ -140,7 +142,7 @@ fun SlabScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
@@ -541,6 +543,7 @@ fun SlabScreen(
                     var selectedViewMode by remember { mutableStateOf(0) }
                     val drawingHeight = if (configuration.smallestScreenWidthDp >= 600) 580 else 480
                     InteractiveDrawingScreen(
+                        onExportDxf = { viewModel.exportToDxf(context) },
                         title = stringResource(R.string.slab_drawing_title),
                         subtitle = stringResource(R.string.slab_reinforcement_subtitle),
                         viewModes = when (selectedType) {
