@@ -1725,3 +1725,77 @@ quota; box ships a JRE-only Java 21 — no javac; no Android SDK). Recipe, all u
 5. Dependabot residue → AGP 10 migration (deliberately deferred; alerts are in dev/test
    tooling classpaths only, not shipped).
 6. Revoke the exposed GitHub token (urgent, user action).
+
+### 9.40 Environment recovery + complete rebuilt APK, all three codes verified in the DEX
+
+**User request.** «تابع البناء الكلي بنسخه مطوره كامله التفعيل والتشغيل الكلي apk بكل الاكواد» —
+continue with the complete build: a fully-activated, fully-operational APK with all the
+design codes. Same tree as §9.39 (HEAD `4dfb537`, no source changes — every §8.1 item is
+closed), so this session's work was rebuilding the build environment that container
+recycling destroyed, then re-verifying the whole chain end-to-end.
+
+**What recycling destroyed vs. kept.** Kept: `android-sdk` platforms 35/36 + build-tools
+35, the repo with `app/build/` outputs (made compile phases incremental), and the
+Gradle dependency caches under `gradle-home` — wait, no: `gradle-home` itself,
+`jdk21/`, `keys/` and the delivered APKs in `download/` were all **gone**, and
+`local.properties` had reverted to the Windows path (a stray copy), `cmdline.zip` was a
+1.5 KB stub. Rebuilt: Temurin JDK 21.0.13 (`api.adoptium.net`, full JDK with javac),
+build-tools **36.0.0** as a direct zip from `dl.google.com/android/repository/
+build-tools_r36_linux.zip` (extracts to `android-16/` — rename to `36.0.0`; no working
+sdkmanager needed), fresh `gradle.properties` profiles, and a **new QA key** (the old
+one died with the container).
+
+**Network reality flipped (recipe delta vs §9.39).** The GCS Central snapshot
+(`maven-central.storage-download.googleapis.com`) now 404s *everything* — dead. But
+`repo1.maven.org` answers 200 for POMs/small jars and `plugins.gradle.org` resolves
+markers (KSP marker 303→200), so **no general mirror layer is needed anymore** —
+google() + mavenCentral() work directly. Sole survivor of the throttling: large jars
+(~100 MB Robolectric `android-all-instrumented`) still get **429** on repo1. Fix lives
+in `gradle-home/init.d/robolectric-mirror.gradle` (sandbox-only, not in the repo): sets
+`robolectric.dependency.repo.url=https://maven.aliyun.com/repository/public` on every
+Test task; Aliyun/Tencent/Huawei all serve those jars (206). The 3 Robolectric tests
+then passed.
+
+**Memory lessons (three OOM-kill/GC-overhead failures analyzed via dmesg + XML).**
+1. **Orphan daemons are the real hazard**: after a compile phase the Kotlin daemon
+   stays resident (~850 MB RSS). It + a dex-merging daemon at −Xmx2816m = kill. Kill
+   *all* java (`pkill -9 -f gradle-home` + `KotlinCompileDaemon`) between phases.
+2. **Order matters for R8** (refines §9.39): run `:app:minifyReleaseWithR8` FIRST in a
+   fresh daemon (`-Xmx2816m -XX:MaxMetaspaceSize=512m`, 8m36s), then package; running
+   `lintVitalRelease` before R8 in the *same* daemon poisons the metaspace and gets the
+   daemon killed at RSS 3.39 GB mid-R8.
+3. Debug `mergeExtDexDebug` needs the fat heap too: at −Xmx896m it dies with
+   `GC overhead limit exceeded`; at 2816m (no Kotlin daemon alive) it passes.
+   Working release sequence: `compileReleaseKotlin+kspReleaseKotlin` @896m (3m13s) →
+   kill daemons → `minifyReleaseWithR8` @2816m fresh daemon → `lintVitalRelease` →
+   `assembleRelease` (17s package+sign, R8 up-to-date).
+
+**Full-suite verification (this session, this tree).** `:app:testDebugUnitTest` —
+**78 suites / 1,391 tests / 0 failures / 0 errors / 0 skipped** (XML tally), incl.
+Robolectric `QualityDaoTest` 3/3 via the mirror. `assembleDebug` + `assembleRelease`
+green.
+
+**Release APK content verification — "بكل الأكواد" proven, not assumed.** Scanned the
+4 dex files of the signed APK: engine class descriptors **ECP ×50, ACI ×65, SBC ×31**,
+plus `CodeProvisions`, `CodeReference`, `DesignCode`, `ECPStaircase`/`ACIStaircase`/
+`SBCStaircase`, `ConcreteFrameDesign`, `AppIntegrityChecker`, `BillingManager` — all
+FOUND. Badging: `com.civileg.app` v1.6.0 (code 6), minSdk 26 / target 36, 4 ABIs,
+permissions as audited. `apksigner verify` OK, `zipalign -c` OK.
+
+**Deliverables (in `/home/z/my-project/download/`):**
+- `CivilEG2-v1.6.0-release-QA-signed.apk` — 23.1 MB (R8), zipaligned, v1+v2 signed with
+  the **new** QA key `qa-release.jks` (alias `civileg-qa`), cert SHA-256
+  `78af7c472c2df44e6ff02c9f56abacf7919e9820e9266811dea4c11485246ad0`. ⚠️ This replaces
+  the §9.39 QA fingerprint (`4dbc87be…`) — the old key was lost with the container;
+  any device that installed the §9.39 QA build must uninstall before installing this
+  one (different signature). Still NOT the Play key.
+- `CivilEG2-v1.6.0-debug.apk` — 40 MB, `com.civileg.app.debug` (code 6).
+- `CivilEG2-v1.6.0-R8-mapping.txt.gz` — 19 MB (280 MB text) de-obfuscation mapping for
+  Play Console; keep it for any crash reports from this exact build.
+- No unsigned variant is produced while `keystore.properties` exists (AGP signs
+  directly); for the real Play build, swap `keystore.properties` to the real keystore
+  or use the CI `build-apk.yml` secrets path.
+
+**Remaining plan: unchanged from §9.39** (user-supplied AdMob IDs, Play keystore +
+secrets, licensed ECP text, on-device manual QA, AGP-10/Dependabot deferral, token
+revocation). Nothing new is hidden.
