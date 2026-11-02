@@ -71,3 +71,44 @@ build.release.err
 __pycache__/
 *.pyc
 
+# ── غير مرتبطة بتطبيق أندرويد (إخفاء من العرض) ─────────────────────────
+# واجهة ويب Next.js / TypeScript
+src/
+next.config.ts
+tailwind.config.ts
+postcss.config.mjs
+eslint.config.mjs
+package.json
+package-lock.json
+bun.lock
+next-env.d.ts
+tsconfig.json
+public/
+examples/
+prisma/
+
+# سكريبتات وأدوات خارجية
+deployment_script.ps1
+calculation_engine.py
+assistant-bot/
+.zscripts/
+mini-services/
+scripts/
+
+# توثيق وتدقيق (مرجعي فقط)
+AUDIT_PACKAGE/
+CODE_OF_CONDUCT.md
+play-store/
+
+# إعدادات IDE (تُتجاهل بالكامل)
+.idea/
+.vscode/
+.PVS-Studio/
+
+# مخرجات البناء (تُتجاهل بالكامل)
+build/
+core/calculations/build/
+artifacts/
+node_modules/
+.next/
+
