@@ -11,16 +11,18 @@
 
 | Area | State | Notes |
 |------|-------|-------|
-| Build / tests | ✅ GREEN | `compileDebugKotlin` OK; **85 suites / 1527 tests / 0 failures**. `lintVitalRelease` passes. |
+| Build / tests | ✅ GREEN | `compileDebugKotlin` OK; **76 suites / 1322 tests / 0 failures** (after §9.32 Frame Modeler). `lintVitalRelease` passes. |
 | Domain engines | ✅ Present | 14 base interfaces; ECP/ACI/SBC implementations for all major element types (see §3). |
-| Code selection | ⚠️ Fragmented | **Two `DesignCode` enums** + one screen (`SeismicScreen`) bypasses the factory. See §4. |
-| CalculatorEngine facade | ⚠️ Partial | Real (not stub) for most elements but duplicates engine math inline; **steel member (§9.6) and solid slab (§9.16) now delegate**. See §5. |
-| Code parity | ✅ | Probe found **solid slab and retaining wall** identical for all 3 codes. Both fixed and guarded by golden-fixture tests (§9.16, §9.17): slab delegates to the code engines; retaining wall had a facade unit bug (mm passed where the engines take metres) + a bar-spec parser bug that collapsed every result to Φ6@50. |
-| InputGuard | ✅ Mostly | Present at domain-engine entries; **`CalculatorEngine` coverage was the old zero-gap** — verify per §5. |
-| CodeReference | ✅ Broad | Concrete + steel/frame engines emit refs (commits `08bcc90`, `399c455`). Confirmed errors fixed (ACI cover, one-way slab); ECP/SBC sub-clauses still unverified. See §9.6. |
-| Drawing → PDF | ✅ | Capture-based for **every** element that has an on-screen drawing (Warehouse §9.12, Pile §9.13, steel member §9.14, Seismic §9.15); FlatSlab/ShearWall stale-bitmap fixed; all fallbacks read real values (§9.10); native-Canvas PDF path removed (§9.11). Base plate is generator-only (no on-screen drawing exists). |
-| Export pipelines | ✅ Consolidated | `ExportManager` unified (`exportReportAndDxf/exportPdf/Dxf/Ifc/Csv/Both/Package`); 12 dead exporters **plus `NativePdfExporter` + `PdfLayoutHelper`** deleted. All ViewModels migrated (§9.10); `QualityEngineerViewModel` still calls the photos-capable reporter directly. |
-| Security / signing | ⚠️ Partial | Signer fingerprint pinned; AdMob IDs now injected from `local.properties` (test-ID fallback). Needs production IDs + final 15x3 QA. Dependabot residue is dev/test tooling only. |
+| Code selection | ✅ Unified | Single `domain.entities.DesignCode`; `SeismicScreen` routes through the factory (verified 2026-10, §3/§9.18). |
+| CalculatorEngine facade | ✅ Delegating | 12 of 16 public methods delegate to `CalculationFactory`; steel member delegates per-code (§9.6); `designFrame`/`designSeismic` not exposed (Frame Modeler uses `FrameAnalysisEngine` directly). |
+| Code parity | ✅ | Solid slab and retaining wall fixed and guarded by golden-fixture tests (§9.16, §9.17). |
+| InputGuard | ✅ Mostly | Present at domain-engine entries; `CalculatorEngine` coverage verified. |
+| CodeReference | ✅ Broad+driving | 111+42 constants across ECP/ACI/SBC (parity-enforced); **P4-4 (§9.38)**: new `CodeProvisions` makes the clauses drive calculations (load factors, φ/γ, ρmin, Vc, covers) per the user's code selection. SBC clause chapters corrected (§9.9); ECP 203-2020 sub-clause wording still benefits from the licensed document. |
+| Drawing → PDF | ✅ | Capture-based for every element with an on-screen drawing; FlatSlab/ShearWall stale-bitmap fixed (§9.10); native-Canvas PDF path removed (§9.11). Base plate is generator-only. |
+| Export pipelines | ✅ Consolidated | `ExportManager` unified; 12+ dead exporters deleted; all ViewModels migrated (§9.10). |
+| Frame Modeler | ✅ MVP complete | Interactive 2D CAD editor (§9.32): draw nodes/members/supports/loads/joints; 60-step undo; PDF + DXF R12 exports; `FrameModelValidator` integration. |
+| Security / signing | ⚠️ Values pending | Fingerprint + AdMob IDs now build-time configurable via local.properties→BuildConfig (§9.37); actual release-keystore SHA-256 + production ad IDs are user-supplied. 27 Dependabot alerts (mostly dev-only tooling). |
+| Release (P3) | ⚠️ Pending | ProGuard rules ✓, signing infra ✓, versioning 1.6.0(6) ✓, config template ✓ (§9.37) — remaining: user assets (keystore SHA-256, AdMob IDs, store listing) + manual QA 15 elements × 3 codes. |
 
 ---
 
@@ -182,7 +184,7 @@ path.
 12. Crash-hardening sweep for tools (SoilBearing, RebarTool, UnitConverter, SiteLayout, etc.). *(done §9.10 — SoilBearing/UnitConverter/RebarTool/ConcreteMixDesigner/SteelTables/BbsGenerator/SiteLayoutScreen all verified guarded; `WaterLevelCalculator`/`ExpressionParser`/`SiteLayoutViewModel` do not exist.)*
 
 ### P3 — Release
-13. Fill `AppIntegrityChecker.EXPECTED_SIGNER_FINGERPRINT` + production AdMob IDs. *(fingerprint done; ad-unit IDs now build-injected from `local.properties` - §9.32. Only the four production values remain user-supplied.)*
+13. Fill `AppIntegrityChecker.EXPECTED_SIGNER_FINGERPRINT` + production AdMob IDs.
 14. Resolve 15 Dependabot alerts (8 high, 6 moderate, 1 low). *(partial §9.7: **runtime** `guava`
     forced 31.1-android → 33.4.0-android via an `app` dependency constraint, clearing CVE-2023-2976
     + CVE-2020-8908. Remaining alerts are almost all in **non-shipped tooling/config classpaths**
@@ -210,8 +212,59 @@ path.
 ☐ CodeReference keys verified against code text
 ☐ Zero crashes with null/empty/invalid inputs
 ✅ Parity: same inputs → 3 correct, different results (golden fixtures) — slab (`SolidSlabCodeDivergenceTest`) + retaining wall (`RetainingWallCodeDivergenceTest`); ACI==SBC where the codes genuinely share equations (beam/column/seismic moments) but differ via ρmin, covers and limits
-✅ Signed, versioned APK ready — release keystore (RSA 4096), `versionCode 7` / `versionName 1.7.0`, no R8/resource removal (all classes and resources retained per project requirement), signature fingerprint pinned in `AppIntegrityChecker`, `apksigner verify` clean (SHA-256 `86:5A:19:…:89:C5`)
+◐ Versioned + R8 APK builds & QA-signs locally (v1.6.0, §9.39); the Play-release signature is pending the user's keystore secrets
 ```
+
+---
+
+## 8.1 Future Work (P4 — post-MVP enhancements)
+
+These items are documented for the next development cycle but are **not blockers** for the current MVP.
+
+### P4-1 Frame Modeler Phase 4: member-end releases + exact two-way slab loads — ✅ CLOSED (§9.36)
+- Member-end releases: the §9.33 merge preserved the Frame Modeler's static-condensation
+  treatment (`condenseMember` zeroes released-DOF rows/cols in k and FEF — mathematically
+  exact, equivalent to any release-matrix formulation). §9.36 adds the missing lock-in test
+  for the mixed-release node (one hinged + one rigid member sharing a joint).
+- Two-way slab load distribution: §9.36 replaces the equivalent-UDL approximation with the
+  exact classical shapes via a new `MemberLoadType.Trapezoidal` (symmetric trapezoid on the
+  long beams, symmetric triangle on the short beams) — see §9.36 for the derivation and the
+  ~50% short-beam moment distortion this removes.
+- Remaining (documented, not blocking): elastic plate FEM for the slab's own corner moments
+  (the slab's design moments still come from the code-based design screens, which is the
+  standard practice); non-rectangular panels keep the averaged-pair span idealisation with
+  the rise clamped to L_edge/2 (statically exact in total).
+
+### P4-2 C6–C13 engine hardening (re-alignment with Frame Modeler) — ✅ CLOSED (§9.33–§9.35)
+- The earlier C6–C13 audit work (fully-restrained zero-DOF path, off-grid critical-section sampling, global equilibrium residuals, load-combination envelopes, self-weight, axial sign convention) was authored against the original `FrameAnalysisEngine.solveFrame` and the `+FEF` sign convention (S1).
+- The Frame Modeler commit (`9d098f4`) re-organised `solveFrame` (uses `FrameModelValidator`, adds `inactiveDOFs`, extended `getFixedEndForces(member, mLoad, nodes, settings)` signature) and uses the `-FEF` sign convention.
+- Re-applying C6–C13 against the new sign convention is a deliberate follow-up — the engine now solves correctly without them (1322 tests pass), so this is enhancement, not bug-fix.
+
+### P4-3 Production release preparation — infrastructure ✅ DONE (§9.37); values are user-supplied
+- Signer fingerprint + AdMob IDs are now **build-time configured**: local.properties keys
+  (`signing.fingerprint.sha256`, `admob.app.id`, `admob.banner.id`, `admob.interstitial.id`,
+  `admob.native.id`, `admob.rewarded.id`) → 5 `buildConfigField`s → runtime consumers
+  (`AppIntegrityChecker` / `AdsManager` / `AdManager`). Defaults stay Google TEST IDs / empty
+  fingerprint (fail-open). See `local.properties.template` + `play-store/release-checklist.md` §1b.
+- `local.properties` (Windows SDK path, tracked since `c610fb0` despite .gitignore) untracked
+  from git — CI uses `ANDROID_HOME` and never depended on it.
+- Release checklist truth-up: “No ads SDK ✓” was **wrong** (AdMob + UMP present → the Play
+  Data Safety form must declare ad serving); target API 35 → 36.
+- Remaining (user-supplied, not codeable): real AdMob account IDs, release-keystore SHA-256,
+  store listing assets. Dependabot residue needs the AGP 10 migration (deferred).
+
+### P4-4 CodeReference clause verification — ✅ CLOSED for coverage & calculation-drive (§9.38); exact ECP sub-clause wording still benefits from the licensed text
+- Catalog completed: +14 keys × 3 codes (load combinations, covers, slab min-thickness/min-steel, staircases,
+  flat slabs, waffle, hordi/joist, strap footings, shear-wall flexure) — parity test auto-extends.
+- **Clauses now drive calculations**: new `CodeProvisions` object is the single source of the code-dependent
+  numbers (load factors, φ/γ, ρmin, concrete shear, covers), each annotated with its clause. Consumers:
+  `ConcreteFrameDesign` (Frame Modeler design step — fully tri-code), `CalculatorEngine` (hordi + solid-slab
+  load factors).
+- Fixed three real calculation bugs (§9.38): hordi path applied ECP 1.4D+1.6L to every code;
+  `ConcreteFrameDesign` ran ECP-formula flexure for ACI/SBC and labelled SBC results with ACI clauses.
+- ACI/SBC chapter numbers verified (§9.6/§9.9); ECP numbering follows the codebase's established
+  convention — exact sub-clause wording remains pending the licensed ECP 203-2020 text (display-only refs;
+  the calculation-driving parameters are the audited engine formulas).
 
 ---
 
@@ -733,8 +786,8 @@ an engine-design change (all three connection engines); deferred as cosmetic.
 **Plan status now.** P0 fully closed (1 ✅ verified, 2 ✅ slab+retaining wall, 3 ✅ clause
 resolution + cross-code parity tests — `CodeReferenceTest` verifies all keys resolve for
 ECP/ACI/SBC and SBC chapter alignments). P1 fully closed (4-8 ✅, 6 ✅ engine-derived
-connections §9.20). P2 fully closed (9-12 ✅). P3 remains: **13** (signer fingerprint pinned;
-AdMob IDs are now build-injected from `local.properties`, so only the production values are user-supplied), **14** (Dependabot — needs a token/`gh` to re-verify;
+connections §9.20). P2 fully closed (9-12 ✅). P3 remains: **13** (signer fingerprint +
+AdMob IDs — needs the user), **14** (Dependabot — needs a token/`gh` to re-verify;
 tooling-classpath residue needs an AGP 9.x migration), **15** (release build + manual 15×3
 QA — needs the keystore).
 
@@ -1191,28 +1244,558 @@ BOQ estimator.
 **Tests.** Suite now at **71 suites / 1291 tests / 0 failures**. New coverage:
 `hordiSlabRows` per-metre-width quantities and project-level tank/retaining-wall waterproofing rows.
 
-### 9.32 Quality-engine accuracy, drawing coverage, checklist persistence, AdMob injection
+### 9.32 Frame Modeler complete (interactive CAD editor, validation, exports)
 
-**Quality-engine accuracy.** Fixed the remaining discipline checks in
-`QualityControlEngineNew.kt`: drainage no longer rejects valid invert levels and validates the
-pipe material; site-works cross-fall accepts the full -1.0..1.0 range; retaining walls no longer
-use a false 6 m height cap and now check slenderness plus seismic overturning; post-tension
-derives `Fpu` from the tendon type (strand/wire/bar); masonry checks minimum wall thickness and
-plaster thickness.
+**Build.** A full interactive 2D CAD editor was added on top of `FrameAnalysisEngine`,
+replacing the previous text-only input on `FrameAnalysisScreen`. The new tab
+(`FrameModelerTab.kt`, 1621 lines) hosts an `InteractiveFrameCanvas` where users
+draw nodes, members, supports, joints and loads directly on a white-page grid.
 
-**Drawing coverage.** All 15 discipline tabs now render an input-driven drawing. The ten tabs
-that previously had no drawing use the shared `DisciplineQcGenericDrawing`, while masonry and
-drainage keep their dedicated drawings.
+**Editor architecture (new modules):**
+- `domain/editor/` — `EditorCommand`, `EditorTool`, `UndoManager` (60-step undo/redo).
+- `domain/modeler/` — `FrameModelValidator`, `FrameDxfBuilder` (548 lines, DXF R12 export),
+  `SlabLoadDistributor` (one-way/two-way load distribution to perimeter beams),
+  `FrameSceneView` (camera + viewport).
+- `domain/entities/SlabPanel.kt` — 4-node slab polygon with closure/order validation.
+- `ui/compose/components/editor/` — 11 files: `CameraState`, `CoordinateMapper`,
+  `GridRenderer`, `EditorToolbar`, `EditorState`, `InteractiveFrameCanvas`, `LoadInputPopup`,
+  `PropertyPanel`, `StatusBar`, `SupportPicker`, `TouchHandler`.
 
-**Checklist persistence.** `QualityComplianceScreen` now stores checked items, the selected code
-and the discipline filter in `SharedPreferences`, so compliance progress survives tab changes
-and app restarts. Reset clears the persisted set.
+**Engine integration.** `FrameAnalysisEngine.solveFrame` now delegates model validation
+to `FrameModelValidator` (replaces the inline `validateModel`); adds `inactiveDOFs`
+handling so member-end releases (hinges) do not make the stiffness system singular;
+`getFixedEndForces` signature extended to take `settings` for future self-weight
+and load-combination support.
 
-**AdMob injection (P3-13 partial).** Ad unit IDs are now `BuildConfig` fields sourced from
-`local.properties` (`admob.banner.id`, `admob.interstitial.id`, `admob.native.id`,
-`admob.rewarded.id`). Google's public test IDs remain the fallback, so debug builds are safe;
-production only needs the four real IDs in `local.properties`.
+**Persistence.** Schema v2 in `DesignRepository` stores nodes + members + loads
++ slab panels + `steelFy`. Auto-draft in `SharedPreferences` restores on screen open.
 
-**Tests.** Suite now at **85 suites / 1527 tests / 0 failures / 0 errors / 0 skipped**.
-`compileDebugKotlin` and `assembleDebug` are green. Device/emulator visual QA (15 elements x
-3 codes) remains pending because no emulator was available in this session.
+**Exports.** `FrameAnalysisPdfExporter` (330 lines added) embeds the editor viewport
+(scale, pan, grid) into the PDF; BMD/SFD images fit the whole model. `FrameDxfExporter`
++ `FrameDxfBuilder` produce DXF R12 in millimetres with separate layers for grid,
+slabs, members, nodes, supports, text, and one coloured layer per load case.
+
+**Tests.** Suite now at **76 suites / 1322 tests / 0 failures**. New coverage:
+`FrameModelValidatorTest` (218 lines — duplicate/isolated/zero-length/unsupported),
+`FrameDxfBuilderTest` (123 lines — layers + entities), `SlabLoadDistributorTest`
+(86 lines — one-way/two-way distribution), `SlabPanelTest`, `ModelerViewportTest`.
+
+**Remaining.** Frame Modeler Phase 4 (member releases + slabs) is wired but the
+release implementation (end-hinge + pin/hinge/rigid combinations) is partial;
+slab load distribution uses tributary-area approximation for two-way panels.
+Future work: full Direct Stiffness with release matrices per member, and
+finite-element slab meshing.
+
+### 9.33 Phase 1 + Phase 2 merged onto the Frame Modeler engine (C6-C13 re-aligned)
+
+**Finding (pre-merge).** The Frame Modeler commit (9d098f4) had silently regressed
+the Phase 1 sign convention, and its own tests were adapted to the bug:
+
+- `solveFrame_simplySupportedBeam_correctMaxMoment` asserted **104.9** for a
+  simply supported beam with UDL w=10, L=6 — the classical value is **45** (=wL²/8).
+  The test comment even said "Engine max moment accounts for section properties".
+- Root cause 1 (S1): the equivalent-nodal-load assembly was inverted
+  (`F -= FEF_global` where FEF is P_eq-style), so U was solved with reversed loads.
+- Root cause 2 (S2): the diagram formula used `M = +m_i + v_i·x` instead of
+  `-m_i + v_i·x`, flipping every end moment.
+- Root cause 3 (S3): the applied-moment FEF table was q0-style while the
+  UDL/point/linear tables were P_eq-style — mixed conventions in one function.
+  The correct table was re-derived and verified numerically with an exact
+  2-element FEM (`scripts/verify_moment_fef.py`):
+  q0 = [0, +6Mab/L³, +M·b(2a-b)/L², 0, -6Mab/L³, +M·a(2b-a)/L²].
+- eSteel unit bug: `getE` multiplied `settings.eSteel` (already kN/m²) by 1e3.
+- S4 regression: steel fallback used `ipeSections[13]` (IPE 400) instead of
+  by-name lookup (IPE 300 is index 10).
+- C2 regression: absolute pivot tolerance (1e-15) and no residual check.
+
+**Merge applied (all on top of the Frame Modeler structure — condensation,
+releases, FrameModelValidator and inactiveDOFs fully preserved):**
+
+- S1 restored: `F += FEF_global`; S2 restored: `M(x) = -m_i + v_i·x`; the
+  applied-moment table flipped to P_eq-style; Point/Moment positions clamped
+  (S3) so end loads transfer to the support instead of being dropped.
+- S4 restored (by-name fallback chain) and eSteel used as-is (kN/m²).
+- C1: output NaN/Infinity guards on reactions, member forces and diagrams.
+- C2: relative pivot tolerance (`scale × 1e-12`) + `relativeResidual` check.
+- C6: fully-restrained and all-inactive models now solve via
+  `finalizeFullyRestrainedSolution` (U=0, q_end=-FEF, R=-F).
+- C7: diagram samples rebuilt as a TreeSet — load positions + a±ε + L/4, L/2,
+  3L/4 + a 20-point grid.
+- C8: `computeGlobalEquilibrium` sums reactions + nodal loads + the member
+  P_eq vectors (fefGlobal) at their node positions; residuals stored on
+  `FrameAnalysisResult.equilibriumFx/Fy/Mz` and enforced (1e-3 relative).
+- C9: `computeLoadEnvelopes` solves per combination and takes signed max/min
+  from each combination's **diagrams** (the earlier draft used end moments,
+  which is wrong for simply supported members).
+- C10: `selfWeightLoads` — concrete γ=25 kN/m³, steel from `weight` (kg/m) × g.
+- C11: eColumn/eSteel documented as kN/m²; `getMemberStiffnessProps` and
+  `memberLoadEquivalentForces` re-exposed as public API (C11 tests).
+- C12: `N(x) = -n_i` (tension positive).
+- The 104.9 test now asserts 45 and gained full classical assertions
+  (reactions 30/30, M(0)=M(L)=0, V(0)=+30, V(L)=-30).
+
+**Entities.** `FrameAnalysisResult` gained `equilibriumFx/Fy/Mz` +
+`loadEnvelopes`; new `MemberForceEnvelope`; `FrameAnalysisSettings` gained
+`includeSelfWeight`. `releaseI/releaseJ` and every Frame Modeler field kept.
+
+**Build config.** `settings.gradle.kts` restored to the canonical
+google + mavenCentral + gradlePluginPortal + foojay repositories (the Aliyun
+mirrors were a sandbox-only workaround that had been committed by mistake).
+
+**Verification.** The engine test class was rewritten to 42 tests asserting
+classical benchmarks (M=wL²/8=45, M_end=-wL²/12, PL/8 point, the FEM-verified
+moment table, off-grid peaks 41.8 with two-sided shear +19/-11, envelope 207,
+self-weight 82.5/92.8125, axial ±100/∓80, equilibrium residuals ≈0 at 1e-6).
+Robolectric's `android-all-instrumented` 14/15 jars were pre-seeded into
+~/.m2 (network rate-limits blocked the runtime fetch).
+
+**Tests.** Full suite: **76 suites / 1347 tests / 0 failures / 0 errors** —
+compile + full rerun. This closes §8.1 P4-2 (C6-C13 re-alignment).
+
+---
+
+### 9.34 Engine superset pass — input validation, gravity-direction self-weight, cross-verification
+
+**Context.** §9.33 (parallel session) and an independent local review reached the
+same four defect fixes (S1 sign, S2 diagram formula, S3 moment table, eSteel
+units — the moment table now confirmed by **three independent derivations**:
+direct integration of `EI·v'' = M(x)`, the force method, and that session's
+exact 2-element FEM). This pass layers the remaining review findings on top.
+
+**Cross-verification.** Both engine variants were compiled standalone
+(kotlinc 2.2.20 + JUnit, no Gradle cache involvement) and run against both
+test suites: the §9.33 engine passed 42/42 of its own tests but **failed 2**
+of the review suite (silently clamping out-of-range load positions instead of
+rejecting them, and rejecting fully-fixed isolated joints as errors); the
+superset engine below passed **97/97** across both suites combined. Final
+merged suite: **57 tests, all passing**.
+
+**Additions in this pass.**
+- **C1/C4/C5 supplementary input validation** (not covered by
+  `FrameModelValidator`): non-finite node coordinates, non-finite nodal/member
+  load values, point/moment load positions outside `[0, L]` (rejected loudly —
+  not silently clamped), invalid concrete sections (b/h/fcu ≤ 0 or non-finite),
+  unknown steel section names. 13 validation tests restored.
+- **Fully-fixed isolated joints are non-fatal.** A joint disconnected from all
+  members but fully restrained contributes only restrained DOFs and cannot
+  make the system singular; the engine now treats it as a modelling warning
+  (filtered from `DISCONNECTED_JOINT` before the fatal check) while free
+  isolated joints remain fatal — matching the pre-Modeler Phase-1 semantics
+  without touching the Modeler's own validator UX.
+- **C10 gravity-direction fix.** The §9.33 `selfWeightLoads` applied a
+  transverse UDL to *every* member — on a vertical column that is a
+  **horizontal** load of magnitude w·L, not gravity. Horizontal members now
+  get an exact UDL; inclined/vertical members get two vertical nodal loads
+  (`w·L/2` per end) — statically exact for reactions (locked by
+  `solveFrame_selfWeightOnVerticalColumn_isGravityNotHorizontal`: ΣRy = 18 kN,
+  ΣRx = 0, axial compression only). The internal axial diagram of inclined
+  members remains an approximation (documented in-code).
+- **C8 member-load applied side** uses the raw physical loads with
+  local→global decomposition (UDL at midspan, point at its position,
+  triangular at 2L/3, moments as-is) — equivalent to the §9.33 P_eq-vector
+  formulation, both verified to ~1e-12 residuals on the portal benchmark.
+- `memberLoadEquivalentForces` public API kept (§9.33) alongside
+  `getMemberStiffnessProps`.
+- Test class = 57 tests: the §9.33 classical benchmarks + 13 validation
+  tests + steel-units props test + the two Frame-Modeler release-condensation
+  tests + the C10 gravity-direction regression. Verified standalone:
+  `OK (57 tests)`; app main sources compile through `:app:compileDebugKotlin`
+  + KSP/Hilt.
+
+### 9.35 Inclined-member self-weight bending (C10 completion on top of §9.34)
+
+**Context.** A continuation session re-verified the merged engine from scratch (independent
+Python replica + standalone kotlinc/JUnit) and reproduced the same four defect findings as
+§9.33/§9.34. Its local draft was **discarded in favour of the pushed superset** (ecf6ca0 +
+ecfdc25): notably, the remote's vertical-column regression test exposed a sign inversion in
+that draft's axial self-weight half (the node-J term was flipped, so the pair self-cancelled —
+ΣRy = 0 instead of w·L). This validates the reconciliation: **origin/master is the base**,
+re-verified here at 57/57 standalone before any change.
+
+**Improvement layered in this pass — rafter self-weight bending.** §9.34 applied
+inclined/vertical member self-weight as two *vertical* nodal loads: statically exact for
+reactions, but it produces **zero bending** in the member — a 45° canopy rafter carrying its
+own weight showed `maxMoment = 0`. The engine now uses the exact physical decomposition:
+
+- **Transverse component `w·cosθ`** → local UDL (this is the gravity component that bends
+  the member). Horizontal members: full `w` (unchanged). Vertical members: zero (unchanged).
+- **Axial component `w·sinθ·L`** → two nodal halves **along the member axis**
+  `(-w·sinθ·L/2)·(cosθ, sinθ)` at *both* ends. Horizontal: zero. Vertical: exactly the
+  previous two `w·L/2` downward loads (behaviour-identical).
+
+The resultant is exactly `(0, −w·L)` global for every inclination (verified: C8 equilibrium
+residuals ≈ 1e-15 on 30°/45° models), and the transverse sagging is now captured:
+`M_mid = w·cosθ·L²/8` (45°, L = 6 m, 300×500: **11.93 kN·m** where the nodal-only
+approach gave 0). Known approximation (unchanged, documented in-code): the axial diagram is
+lumped constant rather than linear.
+
+**Regression coverage.** New
+`solveFrame_selfWeightOnInclinedMember_producesBendingAndExactReactions` (ΣRy = 22.5 kN,
+ΣRx = 0, `M_mid` = 11.93 ± 0.2, `maxMoment > 1`). Existing C10 regressions unchanged and
+green: horizontal beam ΣRy = 82.5, vertical column ΣRy = 18 kN with compression-only axial.
+
+**Verification.** Focused Python replica (45°, 30°, vertical, horizontal — all exact,
+including zero equilibrium residuals); standalone `kotlinc 2.0.21` + JUnit 4 execution:
+`FrameAnalysisEngineTest` **OK (58 tests)**, `FrameModelValidatorTest` **OK (14 tests)**.
+
+---
+
+### 9.36 Phase 3 (P4-1 closed): Trapezoidal load type + exact two-way slab distribution
+
+**Context.** With Phase 1 + Phase 2 closed (§9.33–§9.35, origin/master 57/57 standalone),
+the last substantive engineering item in §8.1 P4 was the Frame Modeler Phase 4 pair:
+member-end releases and two-way slab load distribution. The expanded review this session
+re-verified the merged engine from scratch (58/58 + 14/14 + 3/3 standalone kotlinc/JUnit
+before any change) and located the real gap:
+
+- **Releases were already exact** (static condensation = the exact reduced stiffness; the
+  P4-1 "release matrix R = I − (k_release/k_full)" wording from 2fa3eb8 described the
+  pre-merge state and was stale). What was missing: a regression test for a *shared* node
+  with one released and one rigid member — added this pass.
+- **Two-way slab distribution was the real approximation**: `SlabLoadDistributor` emitted
+  *equivalent UDLs* (short beams q·S/4, long beams q·(S/2 − S²/4L)). For a simply supported
+  short beam this overstates midspan moment by ~50% (q·S³/32 vs the classical triangular
+  q·S³/48 = 2/3 of it), because it flattens the true symmetric-triangle load shape.
+
+**Change 1 — new `MemberLoadType.Trapezoidal` (engine):** symmetric trapezoid
+`p(x) = w·min(1, min(x, L−x)/a)` with `value = w` (kN/m, plateau) and `position = a`
+(0 < a ≤ L/2; a = L/2 degenerates to the symmetric triangle, a → 0 to a UDL):
+
+- **FEF (S1 convention)**: `W = w(L−a)`, `Mfix = w(L²/12 − a²/6 + a³/(12L))`,
+  `P_eq = [0, −W/2, −Mfix, 0, −W/2, +Mfix]`. Derived by closed-form integration of the
+  (already test-verified) PointLoad kernel and triple-checked in
+  `scripts/verify_trapezoid.py`: Riemann sum over 20k point loads (§1), boundary
+  continuity of the 3-branch diagram forms at x=a and x=L−a (§3), and the classical
+  limits a→0 → UDL (wL²/12) and a=L/2 → 5wL²/96 (§3). All 40+ numeric checks green
+  before any Kotlin was written.
+- **Diagrams (S2)**: V/M contributions as three-piece closed forms (connected at the
+  plateau boundaries); samples added at x=a and x=L−a (C7 kinks).
+- **C8**: total `W·(sinθ, −cosθ)` applied at midspan (symmetric-load centroid), exactly
+  the UDL pattern.
+- **C5**: loud rejection of a ≤ 0 or a > L/2 (`supplementaryValidation`), bilingual message.
+- **C9**: `value × factor` scaling preserves the shape (position untouched) — locked by a
+  dedicated envelope test (1.4DL governing, maxMoment 115.5 = 1.4×82.5).
+
+**Change 2 — exact classical two-way distribution (`SlabLoadDistributor`):** all four
+edges now carry `Trapezoidal(w = q·S/2, a = S/2)` (45° corner geometry):
+
+- Long beams: true trapezoid (rise S/2 from each end, plateau from S/2 to L−S/2) —
+  total `q·SL/2 − q·S²/4` (classical table value).
+- Short beams: their length is S, so a = S/2 = L_edge/2 collapses the plateau to a point —
+  the symmetric triangle, total `q·S²/4` (classical).
+- Rectangular 8×6 q=10 panel: 150 + 90 + 150 + 90 = 480 = q·area **exactly** (the old
+  equivalent-UDL code also totalled 480 but with the wrong shape). One-way panels keep
+  their UDL (already exact). Non-rectangular quads: rise clamped to `L_edge/2`
+  (statically exact in total, documented).
+
+**A physics correction found by the new tests (kept as documentation):** a portal under
+symmetric vertical load develops *individual* horizontal base reactions (R1x = −R2x ≠ 0 —
+frame action: beam axial compression + column shear), while their signed sum stays 0.
+The first draft of the portal test asserted the absolute sum = 0 and failed at 36.9 kN;
+a neutral scratch experiment (UDL/trapezoid/point on the same portal) confirmed the engine
+is right and the test now asserts the signed sum (≈1e-15).
+
+**UI/export surface (7 files, exhaustive `when` blocks extended — compile-checked
+statically; Gradle build still network-blocked):** entity enum + doc, `LoadInputPopup`
+(rise-a field), `FrameModelerTab` labels, `FrameModelerCanvas` (trapezoid outline: two
+rise lines + plateau + arrows), `FrameDrawingCanvas` (varying-length arrows), PDF
+exporter, DXF builder (LINE+arrow+text entities). Persistence is Gson-by-enum-name —
+old drafts/models read unchanged.
+
+**Tests.** Engine: +8 (fixed-fixed 53.4375/29.0625, SS 82.5, symmetric triangle 37.5/60,
+a→0 vs UDL twin, invalid rise 0/−1/3.5 → loud error, portal C8, envelope 1.4×, mixed
+releases at a shared node) → 66 total. Distributor: +1 (per-edge classical totals
+150/90) and the two-way test rewritten for the new shapes → 4 total. Validator: 14
+unchanged. **Standalone kotlinc 2.0.21 + JUnit: 84/84 green.** Static script
+`static_check_merge.py` refreshed to the current engine forms: 120/120.
+
+**Verification chain.** `verify_trapezoid.py` (closed forms) → standalone compile of
+engine + entities + slab panel + validator + distributor + all three test classes →
+84/84 → static checks (11 files, braces/exhaustiveness/placeholders) 120/120.
+
+### 9.37 Phase 4 (P4-3 infrastructure): production configuration wired — fingerprint + AdMob IDs via BuildConfig
+
+**Context.** With Phases 1–3 closed (§9.33–§9.36), the executable remainder of §8.1 was
+P4-3 (P4-4 ECP clause verification still needs the licensed document). The audit complaints:
+`AppIntegrityChecker.EXPECTED_SIGNER_FINGERPRINT` was a hardcoded empty `const`, and the
+AdMob ad-unit IDs were hardcoded Google-test consts duplicated across TWO managers
+(`utils/AdsManager.kt`, `ads/AdManager.kt`) — whose comments even claimed the IDs were
+configurable from local.properties; they were not (only the manifest APP ID was).
+
+**Change 1 — build-time configuration (`app/build.gradle.kts`):** five new `buildConfigField`s
+in `defaultConfig`, all fed from the git-ignored `local.properties` with safe defaults —
+`BANNER/INTERSTITIAL/NATIVE/REWARDED_AD_UNIT_ID` (default: Google test IDs) and
+`EXPECTED_SIGNER_FINGERPRINT` (default `""` = fail-open). A shared `admobId(key, testId)`
+helper blank-checks each property so an empty value falls back to the test ID instead of
+crashing the ad SDK. The production swap is now a properties edit + rebuild — no code change
+at release time.
+
+**Change 2 — consumers:** `AppIntegrityChecker` reads the fingerprint from `BuildConfig` and
+now **normalizes both sides before comparing** (uppercase → strip `SHA256:` prefix → drop
+`:`/spaces), so every keytool copy-paste variant matches (`SHA256: AB:CD…`, `ab:cd…`, bare
+hex); empty stays fail-open with the loud log. `AdsManager` + `AdManager` expose their IDs as
+`get()` properties backed by BuildConfig — public API unchanged (`AdComponents.kt` and
+`SplashActivity.kt` untouched, still compile against the same names).
+
+**Change 3 — repo hygiene:** `local.properties` had been git-tracked since `c610fb0` (a
+Windows SDK path!) despite being listed twice in `.gitignore` — untracked via
+`git rm --cached`. CI never depended on it (runners provide `ANDROID_HOME`; the green run
+on `d8a5000` predates this change and `assembleDebug` cannot resolve a Windows path on
+Linux). New committed `local.properties.template` documents every supported key
+(sdk.dir, six AdMob keys, the fingerprint, signing pointers).
+
+**Change 4 — release checklist truth-up (`play-store/release-checklist.md`):** new §1b
+(production configuration: the property keys, the exact `keytool -list -v` command, and the
+rebuild requirement — BuildConfig is baked at compile time, not read at runtime); the
+“**No ads SDK ✓**” line was factually wrong and now states AdMob + UMP are present and the
+Play **Data Safety form must declare ad serving**; target API 35 → 36; test line
+Android 15 → 16.
+
+**Verification (full Gradle build still network-blocked for KSP/Hilt):** new
+`scripts/verify_p43_config.py` — brace/paren/bracket balance of all four edited files;
+BuildConfig cross-reference gradle→Kotlin (5/5 declared, 5/5 used, imports present);
+zero hardcoded ad-unit IDs left in `app/src`; no TODO/XXXXX markers; `local.properties`
+confirmed untracked; every gradle-read key documented in the template; each edited property
+declared exactly once; fingerprint-normalization equivalence mirrored in Python (4 cases,
+including the `SHA256: ` prefix form). No unit tests reference the three touched classes
+(grep-verified) — the documented 76-suite / 1347-test surface (§9.34) plus the §9.35–§9.36
+standalone additions is unaffected. Runtime behaviour with default properties is
+byte-identical to before (same test IDs, empty fingerprint), so CI expectations are unchanged.
+
+**P4-4 status at the time of §9.37:** blocked on the licensed ECP 203-2020 text —
+subsequently closed for coverage & calculation-drive in §9.38 (this session).
+
+### 9.38 Phase 4 (P4-4): code clauses completed for ECP/ACI/SBC and wired into the calculations
+
+**User request.** «أكمل بنود الكود المصري والسعودي والأمريكي واجعلها تؤثر في الحسابات حسب
+اختيار المستخدم» — complete the clause catalog for the three codes and make the clauses
+affect the calculations according to the user's selection.
+
+**Audit findings first.** The engines were already code-differentiated (ECP partial factors
+γc/γs vs ACI/SBC φ), but three real gaps were found where the user's selection did *not*
+reach the numbers:
+1. `CalculatorEngine.calculateSlab` HOLLOW_BLOCK path applied **ECP's 1.4D+1.6L to every
+   code** — ACI/SBC hordi designs were factored with Egyptian load factors.
+2. `ConcreteFrameDesign.designFlexure` used the **ECP lever-arm formula (0.87·fy, 0.893
+   constant) for its ACI/SBC branch** — American/Saudi Frame-Modeler members were sized
+   with Egyptian math, mislabelled as ACI.
+3. `ConcreteFrameDesign` treated **SBC as a fall-through to the ACI branch** and stamped
+   SBC results with literal «ACI 318-19 — Chapter 22» notes.
+Plus its ECP shear used an unaudited `0.5·√(fcu/γc)` instead of the audited ECPBeam
+`qcu = 0.24·√(fcu/γc)` (§4-3-1-2).
+
+**Change 1 — catalog completion (`CodeReference`, +14 keys × 3 codes):** load combinations
+(ECP §2-3-1 1.4D+1.6L / ACI §5.3.1 / SBC §5.3.1 1.2D+1.6L), beam/slab covers (SBC 40-50mm
+hot/saline exposure vs ACI 20-40mm), slab min-thickness + shrinkage steel, staircase
+flexure/shear/deflection (inclined one-way slab), flat-slab DDM + punching, waffle, hordi/
+joist, strap footings, shear-wall in-plane flexure. ACI/SBC numbers verified against the
+ACI 318-19 / SBC 304-2018 (ACI-318-14-aligned) chapter structure; ECP follows the codebase's
+established numbering convention. The parity test (`CodeReferenceTest`) auto-extends —
+all three key sets must stay identical (now ~53 keys each).
+
+**Change 2 — new `CodeProvisions` (domain/entities):** the single source of the
+code-dependent calculation parameters, each carrying its clause reference —
+`loadFactorDead/Live`, `flexureApproach` (PARTIAL_FACTORS vs PHI_STRENGTH), `gammaC/gammaS`,
+`phiFlexure/phiShear`, `coverBeam/Slab/Column`, `columnRhoMin/Max`, plus the
+calculation functions `beamRhoMin`, `concreteShearCapacity`, `requiredFlexuralSteel`,
+`momentCapacity`, `minShearReinforcementRatio`. Formulas mirror the audited engines
+exactly: ECP ρmin = max(0.26√fcu/fy, 0.0013), qcu = 0.24·√(fcu/γc), K-method z-form;
+ACI/SBC ρmin = max(0.25√f'c/fy, 1.4/fy), φVc = 0.75·0.17·√f'c·b·d, Whitney ρ with
+β1-based ρbal (0.75·ρbal tension-controlled cap); f'c = 0.8·fcu throughout.
+
+**Change 3 — `ConcreteFrameDesign` rewritten tri-code:** flexure via
+`CodeProvisions.requiredFlexuralSteel` (ECP K-method / ACI-SBC Whitney — the ECP-formula-
+for-ACI bug is gone), ρmin and bar-spacing cover per code, shear via
+`CodeProvisions.concreteShearCapacity` (ECP qcu / φVc) with per-code stirrup formulas
+(ECP: Asv·fy/γs, ACI/SBC: φ·Av·fy·d/s), capacity via `CodeProvisions.momentCapacity`,
+and **every note now comes from `CodeReference.getReference(code, …)`/provisions refs** —
+SBC users see SBC 304 clauses (with the Saudi 50mm cover), never ACI text.
+
+**Change 4 — facade load factors driven by provisions:** the hordi path now reads
+`CodeProvisions.forCode(domainCode)` (fixing the ECP-factors-for-all-codes bug — ACI/SBC
+hordi designs get 1.2D+1.6L), and the solid-slab path's `when` was replaced by the same
+provisions call (behaviour identical, single source).
+
+**Change 5 — staircase clause wiring:** the three staircase engines now emit their
+governing clauses (`STAIRCASE_FLEXURE/SHEAR/DEFLECTION`) at the top of `codeNotes` —
+each engine cites its own code.
+
+**Golden verification (all recomputed independently in Python before the Kotlin was
+written):** b=250, d=440-450, fcu=25, fy=400, Mu=150 kN·m → ECP As = 1176.0 mm²
+(K=0.12397, z=366.7) vs ACI As = 1069.3 mm² (ρ=0.009720) — **the codes genuinely diverge**;
+ρmin 0.00325 vs 0.0035 (light-load case: demand 137.6 vs 128.0, provided ≥ 357.5/385.0);
+Vc 107.8 vs 62.7 kN; load factors 1.4/1.6 vs 1.2/1.6; SBC covers 50/40mm.
+
+**Verification chain.** `verify_p44_clauses.py` — 120/120 static checks (three-object key
+parity, every new key resolves with its code prefix, formula mirror-checks, bug-pattern
+absence, hordi/facade wiring, golden recomputation, brace balance of all 9 touched files).
+**Standalone kotlinc 2.0.21 + JUnit 4 (via Aliyun mirror — Maven Central was 429-limited):
+compile clean, 23/23 tests green** — `CodeReferenceTest` (4, parity + resolution +
+SBC chapter pins), `CodeProvisionsTest` (10, incl. DesignCode-factor consistency),
+`ConcreteFrameDesignTest` (9, tri-code divergence + goldens + SBC-never-cites-ACI). The
+three modified staircase engines compiled standalone as well. Full Gradle build remains
+network-blocked locally; CI compile is the authoritative check.
+
+**Behavioural changes (deliberate, correctness):** ACI/SBC hordi slabs now factored 1.2/1.6
+(was ECP 1.4/1.6 → slightly lighter factored load = correct per code); Frame-Modeler ACI/SBC
+members now sized with Whitney/φ (As ≈ −9% vs the old ECP-formula path for the golden case)
+and cite their own clauses; Frame-Modeler ECP shear now uses the audited qcu (was 2× too
+generous via 0.5·√(fcu/γc)).
+
+### 9.39 Full-app review + first complete local APK build (debug + R8 release, QA-signed)
+
+**User request.** «قم بأخباري بباقي الخطه مع المراجعه الكليه للتطبيق وبناء نسخه apk كامله» —
+report the remaining plan, perform a comprehensive app review, and build a complete APK.
+
+**Build environment unlocked (the real work of this session).** The sandbox had *no*
+working path to a Gradle build (Maven Central & Plugin Portal both 429-throttled by IP
+quota; box ships a JRE-only Java 21 — no javac; no Android SDK). Recipe, all under
+`/home/z/my-project` (survives container recycling), nothing committed to the repo:
+1. **Android SDK** `/home/z/my-project/android-sdk` — cmdline-tools 11076708 + licenses +
+   `platforms;android-36` + `build-tools;36.0.0` + `platform-tools` (dl.google.com 200 ✓);
+   `local.properties:sdk.dir` repointed to it (file is untracked since §9.37).
+2. **Full JDK 21** `/home/z/my-project/jdk21` (Temurin via api.adoptium.net; JRE-only box →
+   Gradle daemon toolchain provisioning + javac both need it). Wired via
+   `org.gradle.java.home` + `org.gradle.java.installations.paths`.
+3. **Mirror layer** `GRADLE_USER_HOME=/home/z/my-project/gradle-home` with
+   `init.d/mirrors.gradle`: prepends `maven-central.storage-download.googleapis.com`
+(GCS full Central snapshot, clean 404s) before settings' own repos. Aliyun variants
+   were tried and **rejected**: they return 502 (not 404) for unhosted artifacts, which
+   Gradle treats as a hard repo failure and disables the repo mid-resolution (two
+   cascade failures observed: `font-asian`, `commons-logging`).
+4. **Plugin markers** `/home/z/my-project/gradle-home/local-m2` (file repo, first in
+   pluginManagement): real marker POMs where a mirror had them (ksp — GCS;
+   kotlin-android + compose — GCS; agp + safeargs — aliyun-google), handcrafted with the
+   conventional coordinates (`groupId` = plugin id, `artifactId` = id + `.gradle.plugin`)
+   for hilt + foojay. Root cause found by experiment: a marker POM whose `<groupId>` does
+   not match the requested module is silently unusable — Gradle logs "Resolved plugin"
+   then fails the block with "Plugin not found" (bit us via a `${aid%.*}` shell bug that
+   produced `com.google.devtools.ksp.gradle` instead of `com.google.devtools.ksp`).
+5. **Memory profile** (3.9 GB box, no swap, active OOM-killer; 2 vCPU): the project's
+   `-Xmx4096m` CI profile is impossible here. Two OOM daemon kills (RSS 2.0–2.9 GB) and
+   one Kotlin-daemon "Not enough memory" later, the working split for THIS box:
+   `org.gradle.jvmargs=-Xmx2816m` for R8/lint phases, `-Xmx896m` + `kotlin 1280m` for
+   compile phases, `workers.max=1`, `parallel=false`. R8 is not incremental — one fat
+   heap for minify, then resume (R8 up-to-date) for lintVital/package.
+
+**Deliverables** (in `/home/z/my-project/download/`):
+- `CivilEG2-v1.6.0-debug.apk` — 40.9 MB, `com.civileg.app.debug` v1.6.0-debug (code 6).
+- `CivilEG2-v1.6.0-release-QA-signed.apk` — 23.2 MB (R8 −43%), `com.civileg.app` v1.6.0,
+  zipaligned, signed with a **local QA key** (`/home/z/my-project/keys/qa-release.jks`,
+  SHA-256 `4dbc87be1633426a71fdfd831ead2be9f389da632c39086d504b8facb134e097`) —
+  explicitly **NOT the Play release key**: it cannot update the store listing; it exists
+  for on-device smoke-testing of the minified build. `app-release-unsigned.apk` stays in
+  `app/build/outputs/apk/release/` for signing with the real keystore (locally via
+  `keystore.properties`, or in CI via the `build-apk.yml` secrets once configured).
+
+**Comprehensive review — current state (measured this session, not from memory).**
+- *Codebase:* 371 Kotlin files / 139,826 LOC in `:app` main + `:core:calculations`;
+  355 `@Composable`, 30 ViewModels, 45 DxfDrawable references, 2,031 `InputGuard` call
+  sites, 169 `CodeReference` + 12 `CodeProvisions` consumers; exactly **1 TODO** in the
+  whole tree (a documented ACI-pile fallback note inside a test file).
+- *Tests:* **78 suites / 1,391 @Test / 0 failures / 0 errors / 0 skipped**, executed
+  locally on the current tree (§9.38 included) — `:app:testDebugUnitTest --rerun`, tally
+  from the JUnit XML. Robolectric (the only Robolectric suite, `QualityDaoTest`, SDK 34)
+  passed 3/3.
+- *Build health:* `assembleDebug` green (5m03s local); `assembleRelease` green with R8
+  full mode + resource shrinking + **lintVital** (abortOnError=true) — no fatal lint;
+  4 ABIs (arm64-v8a/armeabi-v7a/x86/x86_64); minSdk 26 / target & compile 36.
+- *Security posture:* minimal permissions (INTERNET, NETWORK_STATE, BILLING, media/legacy
+  storage guarded), `allowBackup=false` + dataExtractionRules, AdMob defaults are
+  Google TEST IDs, `EXPECTED_SIGNER_FINGERPRINT` empty → fail-open until the user sets
+  it, Guava constrained to 33.4.0-android (CVE-2023-2976/2020-8908). Open item: the
+  **GitHub token remains embedded in the remote URL** — still awaiting user revocation.
+- *CI on HEAD `c426f71`:* "Android CI with Gradle" (push→assembleDebug) ✅ success;
+  "Dependency Submission" ✅. `android.yml` (lint/tests/debug artifact) is
+  workflow_dispatch-only; `build-apk.yml` (signed release APK) errors out until
+  KEYSTORE_BASE64/KEY_ALIAS/KEY_PASSWORD/KEYSTORE_PASSWORD secrets exist — by design.
+
+**Remaining plan (everything that is left, nothing hidden):**
+1. P4-3 user-supplied values: real AdMob IDs, release-keystore SHA-256, store listing
+   assets (§9.37 recipe + `local.properties.template`).
+2. Play signing path: set the four signing secrets (CI) or `keystore.properties` (local
+   machine) → `build-apk.yml` produces the real release APK; Data Safety form must
+   declare ad serving (checklist §1b).
+3. Licensed ECP 203-2020 text: only remaining P4-4 residue — display-only sub-clause
+   wording; the calculation-driving parameters are locked to the audited engine
+   formulas via `CodeProvisions`.
+4. Manual QA pass: PDF+DXF for every element × 3 codes on a real device, plus a
+   smoke-test of the QA-signed minified APK (R8 is green statically but has never run
+   on a device — no emulator in this sandbox).
+5. Dependabot residue → AGP 10 migration (deliberately deferred; alerts are in dev/test
+   tooling classpaths only, not shipped).
+6. Revoke the exposed GitHub token (urgent, user action).
+
+### 9.40 Environment recovery + complete rebuilt APK, all three codes verified in the DEX
+
+**User request.** «تابع البناء الكلي بنسخه مطوره كامله التفعيل والتشغيل الكلي apk بكل الاكواد» —
+continue with the complete build: a fully-activated, fully-operational APK with all the
+design codes. Same tree as §9.39 (HEAD `4dfb537`, no source changes — every §8.1 item is
+closed), so this session's work was rebuilding the build environment that container
+recycling destroyed, then re-verifying the whole chain end-to-end.
+
+**What recycling destroyed vs. kept.** Kept: `android-sdk` platforms 35/36 + build-tools
+35, the repo with `app/build/` outputs (made compile phases incremental), and the
+Gradle dependency caches under `gradle-home` — wait, no: `gradle-home` itself,
+`jdk21/`, `keys/` and the delivered APKs in `download/` were all **gone**, and
+`local.properties` had reverted to the Windows path (a stray copy), `cmdline.zip` was a
+1.5 KB stub. Rebuilt: Temurin JDK 21.0.13 (`api.adoptium.net`, full JDK with javac),
+build-tools **36.0.0** as a direct zip from `dl.google.com/android/repository/
+build-tools_r36_linux.zip` (extracts to `android-16/` — rename to `36.0.0`; no working
+sdkmanager needed), fresh `gradle.properties` profiles, and a **new QA key** (the old
+one died with the container).
+
+**Network reality flipped (recipe delta vs §9.39).** The GCS Central snapshot
+(`maven-central.storage-download.googleapis.com`) now 404s *everything* — dead. But
+`repo1.maven.org` answers 200 for POMs/small jars and `plugins.gradle.org` resolves
+markers (KSP marker 303→200), so **no general mirror layer is needed anymore** —
+google() + mavenCentral() work directly. Sole survivor of the throttling: large jars
+(~100 MB Robolectric `android-all-instrumented`) still get **429** on repo1. Fix lives
+in `gradle-home/init.d/robolectric-mirror.gradle` (sandbox-only, not in the repo): sets
+`robolectric.dependency.repo.url=https://maven.aliyun.com/repository/public` on every
+Test task; Aliyun/Tencent/Huawei all serve those jars (206). The 3 Robolectric tests
+then passed.
+
+**Memory lessons (three OOM-kill/GC-overhead failures analyzed via dmesg + XML).**
+1. **Orphan daemons are the real hazard**: after a compile phase the Kotlin daemon
+   stays resident (~850 MB RSS). It + a dex-merging daemon at −Xmx2816m = kill. Kill
+   *all* java (`pkill -9 -f gradle-home` + `KotlinCompileDaemon`) between phases.
+2. **Order matters for R8** (refines §9.39): run `:app:minifyReleaseWithR8` FIRST in a
+   fresh daemon (`-Xmx2816m -XX:MaxMetaspaceSize=512m`, 8m36s), then package; running
+   `lintVitalRelease` before R8 in the *same* daemon poisons the metaspace and gets the
+   daemon killed at RSS 3.39 GB mid-R8.
+3. Debug `mergeExtDexDebug` needs the fat heap too: at −Xmx896m it dies with
+   `GC overhead limit exceeded`; at 2816m (no Kotlin daemon alive) it passes.
+   Working release sequence: `compileReleaseKotlin+kspReleaseKotlin` @896m (3m13s) →
+   kill daemons → `minifyReleaseWithR8` @2816m fresh daemon → `lintVitalRelease` →
+   `assembleRelease` (17s package+sign, R8 up-to-date).
+
+**Full-suite verification (this session, this tree).** `:app:testDebugUnitTest` —
+**78 suites / 1,391 tests / 0 failures / 0 errors / 0 skipped** (XML tally), incl.
+Robolectric `QualityDaoTest` 3/3 via the mirror. `assembleDebug` + `assembleRelease`
+green.
+
+**Release APK content verification — "بكل الأكواد" proven, not assumed.** Scanned the
+4 dex files of the signed APK: engine class descriptors **ECP ×50, ACI ×65, SBC ×31**,
+plus `CodeProvisions`, `CodeReference`, `DesignCode`, `ECPStaircase`/`ACIStaircase`/
+`SBCStaircase`, `ConcreteFrameDesign`, `AppIntegrityChecker`, `BillingManager` — all
+FOUND. Badging: `com.civileg.app` v1.6.0 (code 6), minSdk 26 / target 36, 4 ABIs,
+permissions as audited. `apksigner verify` OK, `zipalign -c` OK.
+
+**Deliverables (in `/home/z/my-project/download/`):**
+- `CivilEG2-v1.6.0-release-QA-signed.apk` — 23.1 MB (R8), zipaligned, v1+v2 signed with
+  the **new** QA key `qa-release.jks` (alias `civileg-qa`), cert SHA-256
+  `78af7c472c2df44e6ff02c9f56abacf7919e9820e9266811dea4c11485246ad0`. ⚠️ This replaces
+  the §9.39 QA fingerprint (`4dbc87be…`) — the old key was lost with the container;
+  any device that installed the §9.39 QA build must uninstall before installing this
+  one (different signature). Still NOT the Play key.
+- `CivilEG2-v1.6.0-debug.apk` — 40 MB, `com.civileg.app.debug` (code 6).
+- `CivilEG2-v1.6.0-R8-mapping.txt.gz` — 19 MB (280 MB text) de-obfuscation mapping for
+  Play Console; keep it for any crash reports from this exact build.
+- No unsigned variant is produced while `keystore.properties` exists (AGP signs
+  directly); for the real Play build, swap `keystore.properties` to the real keystore
+  or use the CI `build-apk.yml` secrets path.
+
+**Remaining plan: unchanged from §9.39** (user-supplied AdMob IDs, Play keystore +
+secrets, licensed ECP text, on-device manual QA, AGP-10/Dependabot deferral, token
+revocation). Nothing new is hidden.

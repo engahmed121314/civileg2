@@ -8,9 +8,24 @@
 ### 1. Signing & Build
 - [ ] Generate release keystore (see keystore-setup-guide.md)
 - [ ] Create keystore.properties file (NOT committed to git)
+- [ ] Set `signing.fingerprint.sha256` in local.properties (see §1b below) so
+      AppIntegrityChecker verifies the release signature at runtime
 - [ ] Build release APK: `./gradlew assembleRelease`
 - [ ] Verify APK is signed correctly: `apksigner verify --print-certs app/build/outputs/apk/release/*.apk`
 - [ ] Test the signed APK on a physical device
+
+### 1b. Production Configuration (AdMob IDs + signer fingerprint)
+All production IDs are configured in **local.properties only** (never committed —
+see `local.properties.template` for every supported key). Defaults are Google's
+TEST IDs: test ads, zero revenue, safe for development.
+- [ ] `admob.app.id` — AdMob App ID (`~` format) from the AdMob console
+- [ ] `admob.banner.id`, `admob.interstitial.id`, `admob.native.id`,
+      `admob.rewarded.id` — real ad-unit IDs (`/` format)
+- [ ] `signing.fingerprint.sha256` — SHA-256 of the release keystore certificate:
+      `keytool -list -v -keystore your-release-key.jks -alias your-alias`
+      (colon-separated or bare hex, any case — normalized at compare time)
+- [ ] Rebuild AFTER editing local.properties — the values are baked into
+      BuildConfig at compile time, not read at runtime
 
 ### 2. Google Play Console Setup
 - [ ] Create Google Play Developer account ($25 one-time fee)
@@ -45,16 +60,19 @@
 - [ ] Link must be publicly accessible (not password-protected)
 
 ### 6. App Content
-- [ ] Target API Level: 35 (Android 15) ✓
+- [ ] Target API Level: 36 (Android 16) ✓
 - [ ] Min SDK: 26 (Android 8.0) ✓
-- [ ] No ads SDK ✓
-- [ ] No analytics SDK that shares data ✓
+- [x] Ads SDK present (AdMob banner/interstitial + UMP consent) — the Play
+      Console **Data Safety form MUST declare** Google ad serving (ad ID,
+      diagnostics; "Yes" to serving ads / sharing data for advertising); UMP
+      consent flow is already integrated for EEA/UK users
+- [ ] No analytics SDK that shares data beyond the ads SDK ✓
 - [ ] Permissions declared and justified ✓
-- [ ] No hardcoded API keys or secrets ✓
+- [ ] No hardcoded API keys or secrets ✓ (IDs live in git-ignored local.properties)
 
 ### 7. Testing
 - [ ] Test on Android 8.0 (minSdk)
-- [ ] Test on Android 15 (targetSdk)
+- [ ] Test on Android 16 (targetSdk 36)
 - [ ] Test in both Arabic and English
 - [ ] Test all design modules (beam, column, slab, footing, stair, tank, retaining wall)
 - [ ] Test PDF export in both languages

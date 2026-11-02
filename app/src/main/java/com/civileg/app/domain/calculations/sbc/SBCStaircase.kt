@@ -111,6 +111,11 @@ class SBCStaircase : StaircaseDesign {
         codeNotes.add("R = ${String.format("%.1f", riserMm)} mm, G = ${String.format("%.1f", goingMm)} mm")
         codeNotes.add("2R+G = ${String.format("%.0f", 2 * riserMm + goingMm)} mm")
 
+        // ── P4-4 (§9.38): البنود الحاكمة (السلم بلاطة مائلة أحادية الاتجاه) ──
+        codeNotes.add(CodeReference.SBC.STAIRCASE_FLEXURE)
+        codeNotes.add(CodeReference.SBC.STAIRCASE_SHEAR)
+        codeNotes.add(CodeReference.SBC.STAIRCASE_DEFLECTION)
+
         // ========== 2. مقاومة الخرسانة (SBC) ==========
         val waistThickness = max(input.waistThickness, MIN_WAIST)
         val cover = COVER_INTERIOR // SBC: 40mm interior

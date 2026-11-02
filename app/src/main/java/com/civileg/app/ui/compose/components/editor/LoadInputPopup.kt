@@ -127,11 +127,18 @@ fun MemberLoadDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (selectedType == MemberLoadType.PointLoad || selectedType == MemberLoadType.Moment) {
+                if (selectedType == MemberLoadType.PointLoad || selectedType == MemberLoadType.Moment ||
+                    selectedType == MemberLoadType.Trapezoidal) {
                     OutlinedTextField(
                         value = posStr,
                         onValueChange = { posStr = it },
-                        label = { Text("الموقع من البداية (m)") },
+                        label = {
+                            Text(
+                                if (selectedType == MemberLoadType.Trapezoidal)
+                                    "طول الارتفاع من كل طرف a (m)"
+                                else "الموقع من البداية (m)"
+                            )
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
                     )

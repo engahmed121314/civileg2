@@ -30,25 +30,18 @@ import kotlinx.coroutines.flow.asStateFlow
 object AdManager {
 
     // ═══════════════════════════════════════════════════════════
-    // Ad Unit IDs — Production IDs loaded from BuildConfig or local.properties
+    // Ad Unit IDs — P4-3: loaded from BuildConfig (fed by local.properties
+    // `admob.banner.id` / `admob.interstitial.id` / `admob.native.id` /
+    // `admob.rewarded.id`), defaulting to Google's well-known TEST IDs which
+    // only serve test ads and earn no revenue. See local.properties.template
+    // and play-store/release-checklist.md for the one-line production swap.
     // ═══════════════════════════════════════════════════════════
     private const val TEST_DEVICE_ID = "YOUR_TEST_DEVICE_ID"
 
-    // Production Ad Unit IDs — Replace with real AdMob IDs from your AdMob console
-    // before production release. Current values are Google's well-known test IDs
-    // which only serve test ads and earn no revenue.
-    // To configure: Add these to local.properties:
-    //   admob.banner.id=ca-app-pub-XXXXX/YYYYY
-    //   admob.interstitial.id=ca-app-pub-XXXXX/YYYYY
-    //   admob.native.id=ca-app-pub-XXXXX/YYYYY
-    //   admob.rewarded.id=ca-app-pub-XXXXX/YYYYY
-    // Production Ad Unit IDs — made immutable (val) to prevent runtime tampering.
-    // Production IDs should be injected via BuildConfig (e.g. BuildConfig.BANNER_AD_UNIT_ID)
-    // rather than set directly. Current values are Google's well-known test IDs.
-    val BANNER_AD_UNIT_ID = BuildConfig.ADMOB_BANNER_AD_UNIT_ID
-    val INTERSTITIAL_AD_UNIT_ID = BuildConfig.ADMOB_INTERSTITIAL_AD_UNIT_ID
-    val NATIVE_AD_UNIT_ID = BuildConfig.ADMOB_NATIVE_AD_UNIT_ID
-    val REWARDED_AD_UNIT_ID = BuildConfig.ADMOB_REWARDED_AD_UNIT_ID
+    val BANNER_AD_UNIT_ID: String get() = BuildConfig.BANNER_AD_UNIT_ID
+    val INTERSTITIAL_AD_UNIT_ID: String get() = BuildConfig.INTERSTITIAL_AD_UNIT_ID
+    val NATIVE_AD_UNIT_ID: String get() = BuildConfig.NATIVE_AD_UNIT_ID
+    val REWARDED_AD_UNIT_ID: String get() = BuildConfig.REWARDED_AD_UNIT_ID
 
     // ═══════════════════════════════════════════════════════════
     // Ad Frequency Control — Prevents ad fatigue

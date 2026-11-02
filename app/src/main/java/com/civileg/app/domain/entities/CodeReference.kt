@@ -64,6 +64,37 @@ object CodeReference {
         // الإطارات الخرسانية
         const val FRAME_FLEXURE = "ECP 203-2020: Section 4-2-1 (Frame Members)"
         const val FRAME_SHEAR = "ECP 203-2020: Section 4-2-2 (Frame Members)"
+
+        // ── P4-4 (§9.38): بنود إضافية لسد فجوات العناصر المتبقية ──
+        // توليفات الأحمال
+        const val LOAD_COMBINATION = "ECP 203-2020: Section 2-3-1 (1.4D + 1.6L)"
+
+        // الأغطية الخرسانية
+        const val BEAM_COVER = "ECP 203-2020: Section 4-1-4 (Beams ≥ 40mm)"
+        const val SLAB_COVER = "ECP 203-2020: Section 4-1-4 (Slabs ≥ 25mm)"
+
+        // السماكات الدنيا والتسليح الأدنى للبلاطات
+        const val SLAB_MIN_THICKNESS = "ECP 203-2020: Section 6-3-1 (Minimum Thickness)"
+        const val SLAB_MIN_STEEL = "ECP 203-2020: Section 6-1-3 (Shrinkage Reinforcement ≥ 0.15%)"
+
+        // السلالم (بلاطة مائلة أحادية الاتجاه)
+        const val STAIRCASE_FLEXURE = "ECP 203-2020: Section 6-2-1 (Staircase — Inclined One-Way Slab)"
+        const val STAIRCASE_SHEAR = "ECP 203-2020: Section 4-2-2 / qcu §4-3-1-2 (Staircase Shear)"
+        const val STAIRCASE_DEFLECTION = "ECP 203-2020: Section 6-3 (Staircase Deflection)"
+
+        // البلاطات اللاكمرية (Flat Slabs)
+        const val FLAT_SLAB_METHOD = "ECP 203-2020: Section 6-5 (Flat Slabs — Empirical Method)"
+        const val FLAT_SLAB_PUNCHING = "ECP 203-2020: Section 6-5 (Punching Shear — Two-Way Shear)"
+
+        // البلاطات المفرغة (Waffle) والهوردي (Hordi/Joist)
+        const val WAFFLE_SLAB = "ECP 203-2020: Section 6-6 (Paneled/Ribbed Slabs)"
+        const val HORDI_JOIST_SLAB = "ECP 203-2020: Section 6-1-2 (Hollow-Block / Ribbed Slabs)"
+
+        // القواعد الشداد
+        const val STRAP_FOOTING = "ECP 203-2020: Section 7-2 (Strap Footings)"
+
+        // حوائط القص — الانحناء داخل المستوى
+        const val SHEAR_WALL_FLEXURE = "ECP 203-2020: Section 8-3 (Shear Walls — In-Plane Flexure)"
     }
     
     // === الكود الأمريكي ACI 318-19 ===
@@ -124,6 +155,37 @@ object CodeReference {
         // الإطارات الخرسانية
         const val FRAME_FLEXURE = "ACI 318-19: Chapter 9 (Frame Members)"
         const val FRAME_SHEAR = "ACI 318-19: Chapter 22 (Frame Members)"
+
+        // ── P4-4 (§9.38): clauses for the remaining element types ──
+        // Load combinations
+        const val LOAD_COMBINATION = "ACI 318-19: Section 5.3.1 (1.2D + 1.6L)"
+
+        // Concrete cover
+        const val BEAM_COVER = "ACI 318-19: Table 20.5.1.3.1 (Beams ≥ 40mm)"
+        const val SLAB_COVER = "ACI 318-19: Table 20.5.1.3.1 (Slabs ≥ 20mm)"
+
+        // Slab minimum thickness / minimum steel
+        const val SLAB_MIN_THICKNESS = "ACI 318-19: Tables 7.3.1.1 / 8.3.1.1 (Minimum Thickness)"
+        const val SLAB_MIN_STEEL = "ACI 318-19: Sections 7.6.1.1 / 24.4.3.2 (Shrinkage & Temperature)"
+
+        // Staircases (inclined one-way slabs)
+        const val STAIRCASE_FLEXURE = "ACI 318-19: Chapter 7 (Staircase — Inclined One-Way Slab)"
+        const val STAIRCASE_SHEAR = "ACI 318-19: Section 22.5 (Staircase Shear)"
+        const val STAIRCASE_DEFLECTION = "ACI 318-19: Table 24.2.2 (Staircase Deflection)"
+
+        // Flat slabs
+        const val FLAT_SLAB_METHOD = "ACI 318-19: Section 8.10 (Direct Design Method)"
+        const val FLAT_SLAB_PUNCHING = "ACI 318-19: Section 22.6.5 (Punching Shear — Two-Way Shear)"
+
+        // Waffle and joist/hordi slabs
+        const val WAFFLE_SLAB = "ACI 318-19: Chapter 8 + Section 9.8 (Two-Way Ribbed / Joist Construction)"
+        const val HORDI_JOIST_SLAB = "ACI 318-19: Section 9.8 (Joist Construction)"
+
+        // Strap footings
+        const val STRAP_FOOTING = "ACI 318-19: Chapter 13 (Foundations — Strap/Ground Beams)"
+
+        // Shear walls — in-plane flexure
+        const val SHEAR_WALL_FLEXURE = "ACI 318-19: Chapter 11 (Walls — In-Plane Forces)"
     }
     
     // === الكود السعودي SBC 304-2018 ===
@@ -189,6 +251,37 @@ object CodeReference {
         // الإطارات الخرسانية
         const val FRAME_FLEXURE = "SBC 304-2018: Section 9 / 22.2 (Frame Members)"
         const val FRAME_SHEAR = "SBC 304-2018: Section 22.5 (Frame Members)"
+
+        // ── P4-4 (§9.38): بنود العناصر المتبقية — SBC 304 يتبع ترقيم ACI 318-14 ──
+        // توليفات الأحمال
+        const val LOAD_COMBINATION = "SBC 304-2018: Section 5.3.1 (1.2D + 1.6L)"
+
+        // الأغطية الخرسانية (بيئة السعودية الحارة/المالحة)
+        const val BEAM_COVER = "SBC 304-2018: Section 20.5.1 (Beams: 40mm interior / 50mm exterior)"
+        const val SLAB_COVER = "SBC 304-2018: Section 20.5.1 (Slabs: 30mm interior / 40mm exterior)"
+
+        // السماكات الدنيا والتسليح الأدنى للبلاطات
+        const val SLAB_MIN_THICKNESS = "SBC 304-2018: Tables 7.3.1.1 / 8.3.1.1 (Minimum Thickness)"
+        const val SLAB_MIN_STEEL = "SBC 304-2018: Sections 7.6.1 / 24.4.3.2 (Shrinkage & Temperature)"
+
+        // السلالم (بلاطة مائلة أحادية الاتجاه)
+        const val STAIRCASE_FLEXURE = "SBC 304-2018: Chapter 7 (Staircase — Inclined One-Way Slab)"
+        const val STAIRCASE_SHEAR = "SBC 304-2018: Section 22.5 (Staircase Shear)"
+        const val STAIRCASE_DEFLECTION = "SBC 304-2018: Table 24.2.2 (Staircase Deflection)"
+
+        // البلاطات اللاكمرية
+        const val FLAT_SLAB_METHOD = "SBC 304-2018: Section 8.10 (Direct Design Method)"
+        const val FLAT_SLAB_PUNCHING = "SBC 304-2018: Section 22.6.5 (Punching Shear — Two-Way Shear)"
+
+        // البلاطات المفرغة والهوردي
+        const val WAFFLE_SLAB = "SBC 304-2018: Chapter 8 + Section 9.8 (Two-Way Ribbed / Joist Construction)"
+        const val HORDI_JOIST_SLAB = "SBC 304-2018: Section 9.8 (Joist Construction)"
+
+        // القواعد الشداد
+        const val STRAP_FOOTING = "SBC 304-2018: Chapter 13 (Foundations — Strap/Ground Beams)"
+
+        // حوائط القص — الانحناء داخل المستوى
+        const val SHEAR_WALL_FLEXURE = "SBC 304-2018: Chapter 11 (Walls — In-Plane Forces)"
     }
     
     // دالة مساعدة للحصول على المرجع حسب الكود

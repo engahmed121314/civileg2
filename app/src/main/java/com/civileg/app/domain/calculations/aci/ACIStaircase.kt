@@ -113,6 +113,11 @@ class ACIStaircase : StaircaseDesign {
         codeNotes.add("2R+G = ${String.format("%.0f", 2 * riserMm + goingMm)} mm")
         codeNotes.add("Slope angle θ = ${String.format("%.1f", slopeAngle)}°")
 
+        // ── P4-4 (§9.38): governing code clauses (stair = inclined one-way slab) ──
+        codeNotes.add(CodeReference.ACI.STAIRCASE_FLEXURE)
+        codeNotes.add(CodeReference.ACI.STAIRCASE_SHEAR)
+        codeNotes.add(CodeReference.ACI.STAIRCASE_DEFLECTION)
+
         // ========== 2. مقاومة الخرسانة ==========
         val waistThickness = max(input.waistThickness, MIN_WAIST)
         val cover = COVER_INTERIOR

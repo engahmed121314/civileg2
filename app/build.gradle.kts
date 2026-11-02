@@ -42,7 +42,8 @@ android {
         resValue("string", "developer_copyright", "Copyright \u00a9 2024-2025 Eng. Ahmed Magdy. All rights reserved.")
         resValue("string", "support_email", "eng.ahmedmagdy121314@gmail.com")
 
-        // Load local properties for external IDs
+        // Load local properties for external IDs (local.properties is NOT committed —
+        // see local.properties.template for every supported key)
         val localProperties = Properties()
         val localPropertiesFile = rootProject.file("local.properties")
         if (localPropertiesFile.exists()) {
@@ -51,30 +52,25 @@ android {
         val admobAppId = localProperties.getProperty("admob.app.id") ?: "ca-app-pub-3940256099942544~3347511713"
         manifestPlaceholders["admobAppId"] = admobAppId
 
-        // Ad unit IDs are injected from local.properties so production IDs never live in source.
-        // Google's public test IDs remain the fallback for debug/test builds.
-        fun adUnit(key: String, testId: String): String =
+        // ── P4-3 production configuration (§9.37) ──────────────────────────
+        // AdMob ad-unit IDs: defaults are Google's well-known TEST IDs (serve test
+        // ads only, earn no revenue). For production set in local.properties:
+        //   admob.banner.id=ca-app-pub-XXXXX/YYYYY   (same for interstitial/native/rewarded)
+        fun admobId(key: String, testId: String): String =
             localProperties.getProperty(key)?.takeIf { it.isNotBlank() } ?: testId
+        buildConfigField("String", "BANNER_AD_UNIT_ID", "\"${admobId("admob.banner.id", "ca-app-pub-3940256099942544/6300978111")}\"")
+        buildConfigField("String", "INTERSTITIAL_AD_UNIT_ID", "\"${admobId("admob.interstitial.id", "ca-app-pub-3940256099942544/1033173712")}\"")
+        buildConfigField("String", "NATIVE_AD_UNIT_ID", "\"${admobId("admob.native.id", "ca-app-pub-3940256099942544/2247696110")}\"")
+        buildConfigField("String", "REWARDED_AD_UNIT_ID", "\"${admobId("admob.rewarded.id", "ca-app-pub-3940256099942544/5224354917")}\"")
 
+        // Release signer fingerprint (SHA-256 of the release keystore certificate).
+        // Obtain via:  keytool -list -v -keystore your-release-key.jks -alias your-alias
+        // Set in local.properties:  signing.fingerprint.sha256=AB:CD:EF:...:12:34
+        // Empty (default) => signature verification is skipped until configured.
         buildConfigField(
             "String",
-            "ADMOB_BANNER_AD_UNIT_ID",
-            "\"${adUnit("admob.banner.id", "ca-app-pub-3940256099942544/6300978111")}\""
-        )
-        buildConfigField(
-            "String",
-            "ADMOB_INTERSTITIAL_AD_UNIT_ID",
-            "\"${adUnit("admob.interstitial.id", "ca-app-pub-3940256099942544/1033173712")}\""
-        )
-        buildConfigField(
-            "String",
-            "ADMOB_NATIVE_AD_UNIT_ID",
-            "\"${adUnit("admob.native.id", "ca-app-pub-3940256099942544/2247696110")}\""
-        )
-        buildConfigField(
-            "String",
-            "ADMOB_REWARDED_AD_UNIT_ID",
-            "\"${adUnit("admob.rewarded.id", "ca-app-pub-3940256099942544/5224354917")}\""
+            "EXPECTED_SIGNER_FINGERPRINT",
+            "\"${localProperties.getProperty("signing.fingerprint.sha256")?.trim() ?: ""}\""
         )
     }
 
@@ -121,9 +117,8 @@ android {
 
     buildTypes {
         release {
-            // Keep every class and resource in the APK (no R8 shrinking / resource removal).
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -132,6 +127,7 @@ android {
             signingConfigs.findByName("release")?.let {
                 signingConfig = it
             }
+            // Optimize APK size
             isDebuggable = false
             isJniDebuggable = false
             isProfileable = false
@@ -169,7 +165,6 @@ android {
 
     // Unit test configuration (Robolectric needs Android resources)
     testOptions {
-        animationsDisabled = true
         unitTests {
             isIncludeAndroidResources = true
         }
@@ -269,12 +264,7 @@ dependencies {
     testImplementation(libs.room.testing)
     testImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.compose.ui.test)
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    androidTestImplementation(libs.androidx.compose.ui.test.manifest)
-    androidTestImplementation(libs.androidx.test.rules)
 
     // Security: force patched Guava pulled transitively by play-services-ads-lite.
     // Resolved 31.1-android is affected by CVE-2023-2976 and CVE-2020-8908.
