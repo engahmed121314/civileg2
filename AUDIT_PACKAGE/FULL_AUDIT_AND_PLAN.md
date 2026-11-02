@@ -1799,3 +1799,88 @@ permissions as audited. `apksigner verify` OK, `zipalign -c` OK.
 **Remaining plan: unchanged from §9.39** (user-supplied AdMob IDs, Play keystore +
 secrets, licensed ECP text, on-device manual QA, AGP-10/Dependabot deferral, token
 revocation). Nothing new is hidden.
+
+### 9.41 Full-application review + scale-up & development roadmap (2026-11-02)
+
+**User request.** «افحص التطبيق كليا وتقري وخطة وتوصيات دقيقة للتوسع والتطور» — audit the whole
+application, then deliver a report, a plan, and precise recommendations for scaling and
+development. Full Arabic deliverable: `AUDIT_PACKAGE/REVIEW_AND_SCALEUP_PLAN_AR.md`
+(this section is its English counterpart inside the master audit log).
+
+**Method — measured, not remembered.** Installed a build environment in the sandbox (Temurin
+JDK 21, Android SDK platforms 35/36 + build-tools 36.0.0, Gradle 9.6 via the wrapper), imported
+the sandbox MITM CA into the JDK truststore (`keytool -importcert … cacerts`) because the first
+wrapper run died on `PKIX path building failed`, then ran the real task graph:
+`:app:testDebugUnitTest` and `:app:lintDebug`. Nothing in this section is inferred from §9.39/§9.40.
+
+**Verified results (this tree, this session).**
+- `:app:testDebugUnitTest` — **BUILD SUCCESSFUL in 3m56s**; XML tally: **78 suites / 1,391 tests /
+  0 failures / 0 errors / 0 skipped**.
+- `:app:lintDebug` — **BUILD FAILED in 2m57s**: `Lint found 3 errors, 1715 warnings and 26 hints`
+  → `abortOnError = true` aborts the build. The 3 errors are `SuspiciousIndentation`
+  (`ACIAdvancedBeam.kt:762`, `SBCAdvancedBeam.kt:1809`, `InteractionDiagram.kt:89`); semantics are
+  correct Kotlin (operator-led continuation lines), so this is a **permanently red gate**, not a
+  numerical bug — and the reason CI's lint step has always been `continue-on-error: true`.
+- Build log itself surfaced two live configuration defects: Room **cannot export its schema**
+  (`Schema export directory was not provided …` at `AppDatabase.kt:35`) although `exportSchema = true`,
+  and the KSP `arg()` block inside `defaultConfig` is **not consumed by any processor**
+  (`options were not recognized by any processor: [dagger.hilt.internal.*]`).
+
+**Measured baseline.** 371 Kotlin files / 139,727 LOC in `app/src/main` (not "260+ / 80,000" as the
+README says); 78 test files / 18,998 LOC; `core:calculations` 27 files / 2,828 LOC; Next.js `src/`
+64 files / 8,219 LOC; 35 Compose screens (+3 canvas files); 30 ViewModels; 89 engine files
+(ECP 25 / ACI 20 / SBC 20 / base 14 / other 10); Room v12 with 20 entities and 16 DAOs; 1,657 EN
+vs 1,575 AR strings. Clean-code discipline is genuinely good: 0 `TODO/FIXME`, 0 `GlobalScope`,
+0 `runBlocking`, 1,459 `stringResource(...)` vs 191 literal `Text("…")`.
+
+
+**Blockers found (P0 — full evidence table in the Arabic report §5.1).**
+1. Purchase verification is a stub: `BillingManager.kt:32` `LICENSE_KEY = ""`; premium is a DataStore
+   boolean (`PreferencesManager.kt:23,109`) with no signature check and no server validation.
+2. `ProjectSyncManager.kt:27` POSTs every design to `https://siteengineerpro.com/api/sync` with no
+   auth, while `play-store/privacy-policy.html:36` states design data is *never transmitted to any
+   server* — a direct policy/Data-Safety contradiction.
+3. Data-loss risk: `.fallbackToDestructiveMigration(true)` in **both** DB builders
+   (`AppDatabase.kt:73`, `AppModule.kt:37`), stale schema export (only `schemas/…/7.json` for a v12
+   DB), and zero migration tests (`MigrationTestHelper` = 0 refs).
+4. iText `8.0.5` (AGPLv3) in a closed-source commercial app (`libs.versions.toml:21`), used by 7
+   export files.
+5. No effective quality gate: `android.yml` is `workflow_dispatch`-only, `gradle.yml` builds a debug
+   APK on push without tests/lint, the sole instrumented test asserts the wrong package
+   (`com.example.civileg2`), and no coverage tool exists.
+
+**Scale/quality findings (P1/P2 highlights).** Duplicate calculation stack: 14 file names exist in
+both `core/` and `app/domain/calculations`, and `EngineeringSanityEngine`, `SafeMath`,
+`BeamGeometryEngine`, `FlatSlabGeometryEngine`, `UnifiedTankDesign`, `UnifiedRetainingWallDesign`
+have **zero** references — the sanity engine that would cross-check results is not wired at all.
+26 engine files (including every `*Advanced*` layer, 1.4k–1.9k LOC each) have no direct test, while
+1,228 `assertTrue` + 241 `assertNotNull` assertions and 19 compiler warnings ("Check for instance is
+always 'true'") show the suite is partly smoke-testing. `CalculatorEngine.kt` hardcodes
+`concreteVolume * 120.0 + steelWeight * 1.5` in six places (lines 862, 1041, 1449, 1496, 1741, 2035), `*WaffleSlabDesign` uses `500.0/m³`, `ACITank`/`SBCTank` use 5,000/m³ + 55,000/ton, and
+`FoundationDesignComparator` uses 800/1,200 instead of `PriceManager`, and builds top steel as
+`max(0.1·As, 2Ø12)` regardless of code. Seven overlapping PDF/CSV paths exist (3,444 + 865 + 1,031 +
+518 + 256 + 191 LOC) plus a dead `ExcelExporter` (neither public function is called). Dead weight:
+`ui/views/` (8 files, 1,936 LOC, 0 refs), `ExportViewModel`/`SoilBearingViewModel`/`SoilSettlementViewModel`
+(814 LOC, 0 refs → their features are unreachable from the UI), Glide (0 refs) with `dataBinding`/`viewBinding` still
+enabled (build log shows `dataBindingGenBaseClassesDebug` running). i18n gaps: 82 missing AR keys
+(mostly `frame_*`), 22 hardcoded safety-check labels and 53 hardcoded step titles, and lint's
+**1,158 `DefaultLocale`** warnings from 615 `"%.2f".format(...)` calls (locale-dependent digits in
+engineering traces/CSV). No crash reporting, no baseline profiles, 133 `Icon(...)` calls without
+`contentDescription`, no edge-to-edge/predictive back for targetSdk 36.
+
+**Roadmap (P5).** P5-1 close P0 blockers (2 weeks) → P5-2 engineering-correctness programme: golden
+vectors per code, advanced-layer coverage, sanity engine wired, single pricing source (2–3 weeks) →
+P5-3 modularisation `:core:engine` + `:feature:*`, dead-code purge, detekt/ktlint, baseline profiles
+(3–4 weeks) → P5-4 UX/i18n/accessibility (2 weeks) → P5-5 authenticated cloud + real sync/conflict
+resolution + web viewer (3–4 weeks) → P5-6 market/code expansion: Eurocode 2, ACI 318-25, imperial
+units, FR/TR/ES, regional pricing, XLSX/IFC4 (4–6 weeks) → P5-7 release engineering & telemetry,
+P5-8 commercial growth. Each phase in the Arabic report carries tasks, acceptance criteria, effort
+and KPIs (§11–§13), plus a two-week quick-win list (§12) and a v2.0 Definition of Done (§15).
+
+**Docs truth-up applied this session.** README badges/stats corrected to the measured values
+(Kotlin 2.2.20, Compose BOM 2025.06.01, 371 files / 139,727 LOC, 35 screens, 1,391 tests), the
+"strap footing planned" note removed (it shipped), and the Play checklist's "no in-app purchases"
+line corrected (two subscriptions exist in `BillingManager`). README/checklist edits are factual
+only; the privacy-policy contradiction (P0-2) is deliberately **not** silently rewritten — it is
+flagged for an explicit product/legal decision (either remove the sync or disclose it).
+

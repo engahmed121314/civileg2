@@ -51,7 +51,10 @@ TEST IDs: test ads, zero revenue, safe for development.
 ### 4. Content Rating
 - [ ] Complete content rating questionnaire (see content-rating-answers.txt)
 - [ ] Expected rating: "Everyone"
-- [ ] IAP rating: Not applicable (no in-app purchases)
+- [ ] IAP rating: **Required** — the app ships two auto-renewing subscriptions
+      (`civileg_premium_monthly`, `civileg_premium_yearly` in `billing/BillingManager.kt`), so
+      declare "In-app purchases" in Play Console, complete the payments declaration, and list both
+      products under *Monetize → Products → Subscriptions* before review
 
 ### 5. Privacy Policy
 - [ ] Host privacy-policy.html online (GitHub Pages recommended)

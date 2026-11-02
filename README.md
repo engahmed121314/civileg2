@@ -6,8 +6,8 @@
 
 [![Android CI](https://github.com/engahmed121314/civileg2/actions/workflows/android.yml/badge.svg)](https://github.com/engahmed121314/civileg2/actions/workflows/android.yml)
 [![API Level](https://img.shields.io/badge/minSDK-26-green.svg)](https://developer.android.com/about/versions)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-blue.svg)](https://kotlinlang.org)
-[![Compose BOM](https://img.shields.io/badge/Compose-2024.12.01-5846BE.svg)](https://developer.android.com/jetpack/compose)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.20-blue.svg)](https://kotlinlang.org)
+[![Compose BOM](https://img.shields.io/badge/Compose-2025.06.01-5846BE.svg)](https://developer.android.com/jetpack/compose)
 
 **English** | [العربية](#العربية)
 
@@ -30,7 +30,7 @@ The app supports **three design codes**: the Egyptian Code (ECP 203/201), the Am
 - **Beam Design** — Simply supported, fixed, cantilever, and roller-hinged beams with moment and shear diagrams, deflection checks, and reinforcement calculations per selected support type and design code
 - **Column Design** — Short and slender columns with effective length factor (K), axial load, uniaxial and biaxial bending (Bresler + load contour methods), full P-M interaction diagrams, 6 cross-section shapes (rectangular, circular, L-shaped, T-shaped, composite, tubular)
 - **Slab Design** — One-way and two-way slabs including solid, ribbed/hollow-block, waffle, flat plate, flat slab with drop panels, post-tensioned, and precast — with moment coefficients, ACI Direct Design Method, and deflection verification (including hot climate adjustment for SBC)
-- **Footing Design** — Isolated, combined, strip, raft, and pile cap footings with bearing pressure checks (net SBC with eccentricity), punching shear, one-way shear, and reinforcement detailing. *Note: Strap footing and settlement estimates are planned for a future release.*
+- **Footing Design** — Isolated, combined, strip, raft, and pile cap footings with bearing pressure checks (net SBC with eccentricity), punching shear, one-way shear, and reinforcement detailing. Strap footings are handled by the dedicated strap-footing module (ECP/ACI/SBC); settlement (immediate/consolidation/total) is reported by the pile-foundation design.
 - **Retaining Wall Design** — Cantilever retaining walls with Rankine active/passive earth pressure, surcharge loads, water table effects, sliding/overturning/bearing safety checks, and full stem/toe/heel reinforcement design with tapered stem support
 - **Staircase Design** — Straight and dog-leg (quarter-turn) stairs with waist slab calculations on slope, comfort formula (2R+G), main and distribution reinforcement, shear stirrups, and deflection checks
 - **Water Tank Design** — Rectangular and circular tanks (ground-level, elevated, and underground) with hydrostatic pressure analysis, hoop tension for circular tanks, crack-width checks (ECP: 0.2mm, ACI/SBC: stress-based), uplift check for buried tanks, and water-retaining minimum reinforcement
@@ -107,18 +107,19 @@ app/src/main/java/com/civileg/app/
 │   │   │   ├── drawings/        # Professional engineering drawings
 │   │   │   ├── charts/          # Analysis charts & diagrams
 │   │   │   └── interactive/     # Interactive section views
-│   │   └── screens/             # 22 design & tool screens
+│   │   └── screens/             # 35 design & tool screens
 │   └── (traditional views)      # Legacy View-based screens
-├── viewmodel/                   # 16 MVVM ViewModels
+├── viewmodel/                   # 30 MVVM ViewModels
 ├── utils/                       # PDF/CSV export, steel tables, converters
 └── pricing/                     # Material pricing & cost management
 ```
 
 ### Project Stats
 
-- **260+ Kotlin source files**
-- **80,000+ lines of code**
-- **22 design & tool screens** with full input, calculation, and drawing output
+- **371 Kotlin source files** (~161,500 lines incl. tests and `core`)
+- **139,727 lines of production code** in `app/src/main` (+2,828 in `core:calculations`)
+- **35 design & tool screens** with full input, calculation, and drawing output
+- **1,391 unit tests** across 78 suites (`./gradlew :app:testDebugUnitTest`)
 - **3 international design codes** with code-specific load factors and formulas
 - **Strategy Pattern** for polymorphic design code dispatch via `CalculationFactory`
 
@@ -239,9 +240,10 @@ The output APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
 
 ### إحصائيات المشروع
 
-- **أكثر من 260 ملف Kotlin**
-- **أكثر من 80,000 سطر برمجي**
-- **22 شاشة تصميم وأدوات** مع مدخلات وحسابات ورسومات كاملة
+- **371 ملف Kotlin** (~161,500 سطرًا مع الاختبارات و`core`)
+- **139,727 سطر كود إنتاجي** في `app/src/main` (+2,828 في `core:calculations`)
+- **35 شاشة تصميم وأدوات** مع مدخلات وحسابات ورسومات كاملة
+- **1,391 اختبار وحدة** في 78 حزمة (`./gradlew :app:testDebugUnitTest`)
 - **3 كودات تصميم دولية** مع معاملات أحمال وصيغ خاصة بكل كود
 - **نمط الاستراتيجية** للإرسال متعدد الأشكال عبر `CalculationFactory`
 

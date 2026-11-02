@@ -70,3 +70,6 @@ build.release.err
 __pycache__/
 *.pyc
 
+
+# Sandbox build environment (JDK/SDK/Gradle caches)
+.buildenv/
