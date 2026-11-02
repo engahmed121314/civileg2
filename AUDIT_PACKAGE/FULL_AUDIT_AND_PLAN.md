@@ -1833,7 +1833,6 @@ README says); 78 test files / 18,998 LOC; `core:calculations` 27 files / 2,828 L
 vs 1,575 AR strings. Clean-code discipline is genuinely good: 0 `TODO/FIXME`, 0 `GlobalScope`,
 0 `runBlocking`, 1,459 `stringResource(...)` vs 191 literal `Text("…")`.
 
-
 **Blockers found (P0 — full evidence table in the Arabic report §5.1).**
 1. Purchase verification is a stub: `BillingManager.kt:32` `LICENSE_KEY = ""`; premium is a DataStore
    boolean (`PreferencesManager.kt:23,109`) with no signature check and no server validation.
@@ -1855,10 +1854,12 @@ both `core/` and `app/domain/calculations`, and `EngineeringSanityEngine`, `Safe
 have **zero** references — the sanity engine that would cross-check results is not wired at all.
 26 engine files (including every `*Advanced*` layer, 1.4k–1.9k LOC each) have no direct test, while
 1,228 `assertTrue` + 241 `assertNotNull` assertions and 19 compiler warnings ("Check for instance is
-always 'true'") show the suite is partly smoke-testing. `CalculatorEngine.kt` hardcodes
-`concreteVolume * 120.0 + steelWeight * 1.5` in six places (lines 862, 1041, 1449, 1496, 1741, 2035), `*WaffleSlabDesign` uses `500.0/m³`, `ACITank`/`SBCTank` use 5,000/m³ + 55,000/ton, and
-`FoundationDesignComparator` uses 800/1,200 instead of `PriceManager`, and builds top steel as
-`max(0.1·As, 2Ø12)` regardless of code. Seven overlapping PDF/CSV paths exist (3,444 + 865 + 1,031 +
+always 'true'") show the suite is partly smoke-testing. Pricing is hardcoded in 10+ places with
+contradictory values: `CalculatorEngine.kt` repeats `concreteVolume * 120.0 + steelWeight * 1.5`
+six times (lines 862, 1041, 1449, 1496, 1741, 2035), `*WaffleSlabDesign` uses `500.0/m³`,
+`ACITank`/`SBCTank` use 5,000/m³ + 55,000/ton (55 EGP/kg — 36× the 1.5 EGP/kg above), and
+`FoundationDesignComparator` uses 800/1,200 — all bypassing `PriceManager`; top steel is likewise
+hardcoded as `max(0.1·As, 2Ø12)` regardless of code. Seven overlapping PDF/CSV paths exist (3,444 + 865 + 1,031 +
 518 + 256 + 191 LOC) plus a dead `ExcelExporter` (neither public function is called). Dead weight:
 `ui/views/` (8 files, 1,936 LOC, 0 refs), `ExportViewModel`/`SoilBearingViewModel`/`SoilSettlementViewModel`
 (814 LOC, 0 refs → their features are unreachable from the UI), Glide (0 refs) with `dataBinding`/`viewBinding` still
