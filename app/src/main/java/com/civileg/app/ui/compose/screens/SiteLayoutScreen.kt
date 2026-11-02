@@ -1,6 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.ui.responsive.dimens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -42,7 +43,7 @@ fun SiteLayoutScreen() {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
-    Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding, vertical = MaterialTheme.dimens.screenVerticalPadding)) {
         Text(stringResource(R.string.site_layout_title), style = MaterialTheme.typography.headlineSmall)
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

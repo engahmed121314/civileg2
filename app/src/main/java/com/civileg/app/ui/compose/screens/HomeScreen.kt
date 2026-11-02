@@ -160,7 +160,8 @@ private val quickTools = listOf(
     QuickTool(R.string.home_rebar_tool,   R.string.home_rebar_sub,        Icons.Default.LinearScale, StatCardGreen.copy(alpha=0.1f), StatCardGreen, AppScreen.RebarTool.route),
     QuickTool(R.string.home_concrete_mix, R.string.home_concrete_mix_sub,  Icons.Default.Science, ToolCalcBg, ToolCalcAccent, AppScreen.ConcreteMix.route),
     QuickTool(R.string.home_quality_engineer, R.string.home_quality_engineer_sub, Icons.Default.Verified, ToolSteelBg, ToolSteelAccent, AppScreen.QualityEngineer.route),
-    QuickTool(R.string.home_wind_load,    R.string.home_wind_load_sub,     Icons.Default.Air, ToolConvBg, ToolConvAccent, AppScreen.WindLoad.route)
+    QuickTool(R.string.home_wind_load,    R.string.home_wind_load_sub,     Icons.Default.Air, ToolConvBg, ToolConvAccent, AppScreen.WindLoad.route),
+    QuickTool(R.string.home_section_tools_title, R.string.home_site_layout_sub, Icons.Default.Architecture, ToolQtyBg, ToolQtyAccent, AppScreen.BuildingDesigner.route)
 )
 
 // Recent projects now loaded from DB via ViewModel in HomeScreen composable

@@ -26,13 +26,13 @@ object DxfQuickExport {
             .trim('_')
             .ifBlank { "Drawing" }
 
-    private fun write(context: Context, drawing: DxfDrawable, baseName: String): File? {
+    private fun write(context: Context, drawing: DxfDrawable, baseName: String, bbsEntries: List<BbsEntry> = emptyList()): File? {
         val directory = File(
             context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir,
             "DXF"
         ).apply { mkdirs() }
         val file = File(directory, "${safeName(baseName)}_${System.currentTimeMillis()}.dxf")
-        return DxfExporter().exportDxf(drawing, file.absolutePath)
+        return DxfExporter().exportDxf(drawing, file.absolutePath, bbsEntries)
     }
 
     private fun share(context: Context, file: File, baseName: String) {
@@ -65,6 +65,7 @@ object DxfQuickExport {
         drawing: DxfDrawable?,
         baseName: String,
         scope: CoroutineScope,
+        bbsEntries: List<BbsEntry> = emptyList(),
         onComplete: (File?) -> Unit = {}
     ) {
         if (drawing == null) {
@@ -72,7 +73,7 @@ object DxfQuickExport {
             return
         }
         scope.launch {
-            val file = withContext(Dispatchers.IO) { write(context, drawing, baseName) }
+            val file = withContext(Dispatchers.IO) { write(context, drawing, baseName, bbsEntries) }
             withContext(Dispatchers.Main) {
                 if (file != null) {
                     share(context, file, baseName)

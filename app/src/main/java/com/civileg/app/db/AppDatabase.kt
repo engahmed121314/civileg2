@@ -26,9 +26,10 @@ import androidx.room.TypeConverters
         ShearWallDesignEntity::class,
         QualityRecord::class,
         InspectionTestPlan::class,
-        NonConformity::class
+        NonConformity::class,
+        BuildingLayoutEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -50,6 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pileFoundationDao(): PileFoundationDao
     abstract fun shearWallDao(): ShearWallDao
     abstract fun qualityDao(): QualityDao
+    abstract fun buildingLayoutDao(): BuildingLayoutDao
     
     companion object {
         @Volatile

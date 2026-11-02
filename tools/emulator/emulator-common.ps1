@@ -125,7 +125,10 @@ function Save-Screenshot {
     )
     $remote = "/sdcard/_agent_screenshot.png"
     & $script:Adb -s $Serial shell screencap -p $remote 2>$null | Out-Null
+    $oldPref = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     & $script:Adb -s $Serial pull $remote $Path 2>$null | Out-Null
+    $ErrorActionPreference = $oldPref
     & $script:Adb -s $Serial shell rm -f $remote 2>$null | Out-Null
 }
 
@@ -136,7 +139,10 @@ function Save-UiDump {
     )
     $remote = "/sdcard/_agent_ui.xml"
     & $script:Adb -s $Serial shell uiautomator dump $remote 2>$null | Out-Null
+    $oldPref = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     & $script:Adb -s $Serial pull $remote $Path 2>$null | Out-Null
+    $ErrorActionPreference = $oldPref
     & $script:Adb -s $Serial shell rm -f $remote 2>$null | Out-Null
 }
 

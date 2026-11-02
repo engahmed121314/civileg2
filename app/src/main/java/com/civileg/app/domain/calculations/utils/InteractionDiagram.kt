@@ -85,10 +85,10 @@ object InteractionDiagramSolver {
 
         // محصلة العزوم حول محور المنتصف
         // Mn = Cc*(h/2 - a/2) + Fs_top*(h/2 - d_top) + Fs_bot*(d_bot - h/2) + Fs_side*(d_side - h/2)
-        val Mn = Cc * (h / 2.0 - a / 2.0)
-            + Fs_top * (h / 2.0 - d_top)
-            + Fs_bot * (d_bot - h / 2.0)
-            + Fs_side * (d_side - h / 2.0)
+        val Mn = Cc * (h / 2.0 - a / 2.0) +
+            Fs_top * (h / 2.0 - d_top) +
+            Fs_bot * (d_bot - h / 2.0) +
+            Fs_side * (d_side - h / 2.0)
 
         return InteractionPoint(
             P = Pn / 1000.0,  // kN

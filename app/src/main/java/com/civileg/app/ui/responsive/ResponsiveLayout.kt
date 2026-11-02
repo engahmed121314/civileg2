@@ -3,7 +3,6 @@ package com.civileg.app.ui.responsive
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -75,14 +74,14 @@ fun FormContent(
     maxWidth: Dp = MaterialTheme.dimens.formMaxWidth,
     content: @Composable BoxScope.() -> Unit
 ) {
-    BoxWithConstraints(
-        modifier = modifier.fillMaxWidth()
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter
     ) {
         Box(
             modifier = Modifier
                 .widthIn(max = maxWidth)
-                .fillMaxWidth()
-                .align(Alignment.TopCenter),
+                .fillMaxWidth(),
             content = content
         )
     }

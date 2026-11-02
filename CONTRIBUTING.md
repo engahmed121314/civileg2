@@ -1,85 +1,122 @@
-# Contributing to CivilEG 2
+# Contributing to Civil Engineer Pro | دليل المساهمة في المهندس المدني برو
 
-Thank you for your interest in contributing to CivilEG 2! This document provides guidelines for contributing to this Android civil engineering design application.
+[English](#english) | [العربية](#العربية)
 
-## Getting Started
+---
 
-1. **Fork** the repository
-2. **Clone** your fork locally
-3. **Create a branch** for your feature or fix: `git checkout -b feature/your-feature`
-4. **Make your changes** following the coding standards below
-5. **Test** your changes thoroughly
-6. **Commit** with clear, descriptive messages
-7. **Push** to your fork and open a Pull Request
+<div id="english">
 
-## Project Structure
+## English
 
+Thank you for your interest in contributing to **Civil Engineer Pro**! We welcome community contributions to help improve civil engineering tools for engineers, students, and practitioners worldwide.
+
+### Code of Conduct
+
+By participating in this project, you agree to treat everyone with respect, adhere to constructive communication, and prioritize user safety and calculation accuracy above all else.
+
+### How Can You Contribute?
+
+- 🐛 **Report Bugs**: Notice calculation inaccuracies or app crashes? [Open a Bug Report](.github/ISSUE_TEMPLATE/bug_report.md).
+- 💡 **Suggest Features**: Have an idea for a new design code or element? [Submit a Feature Request](.github/ISSUE_TEMPLATE/feature_request.md).
+- 📝 **Improve Documentation**: Enhance equations explanations, add code references, or improve translations.
+- 💻 **Submit Code**: Add new calculation modules, write tests, improve UI/UX, or optimize performance.
+
+---
+
+### Development Setup
+
+#### Prerequisites
+- **JDK 17** (Temurin recommended)
+- **Android Studio Meerkat** or newer
+- **Android SDK** with Platform API 36
+- **Git**
+
+#### Steps
+```bash
+# 1. Fork and clone
+git clone https://github.com/engahmed121314/civileg.git
+cd civileg
+
+# 2. Open project in Android Studio
+# Allow Gradle Sync to download dependencies
+
+# 3. Build debug APK
+./gradlew assembleDebug
+
+# 4. Run tests
+./gradlew testDebugUnitTest
 ```
-app/src/main/java/com/civileg/app/
-├── domain/           # Business logic (calculations, entities, use cases)
-│   ├── calculations/  # Design code implementations (ECP, ACI, SBC, AISC)
-│   │   ├── base/       # Abstract base classes
-│   │   ├── ecp/        # Egyptian Code of Practice
-│   │   ├── aci/        # ACI 318
-│   │   ├── sbc/        # Saudi Building Code
-│   │   └── utils/      # Shared calculation utilities
-│   ├── entities/       # Data classes (SteelEntities, ReinforcementResult, etc.)
-│   ├── usecases/       # Use case classes (CalculateElementBoq, AnalyzeRebarInventory)
-│   └── validators/     # Input validation
-├── ui/                # UI layer
-│   ├── compose/        # Jetpack Compose screens and components
-│   │   ├── screens/    # Full screen composables
-│   │   └── components/ # Reusable UI components and drawings
-│   └── [element]/      # Legacy View-based UI (being migrated)
-├── viewmodel/         # MVVM ViewModels
-├── db/                # Room database (DAOs, entities)
-├── di/                # Hilt dependency injection modules
-├── utils/             # Utilities (PDF generation, export, calculation helpers)
-└── security/          # App integrity and encryption
-```
 
-## Coding Standards
+---
 
-- **Language**: Kotlin (primary), follow [Kotlin Coding Conventions](https://kotlinlang.org/docs/coding-conventions.html)
+### Project Architecture & Conventions
+
+- **Language**: Kotlin 2.1+ following official Kotlin style guides
 - **Architecture**: MVVM with Clean Architecture layers
-- **UI**: Jetpack Compose (migrate legacy Views when possible)
-- **DI**: Hilt for dependency injection
-- **Database**: Room for local persistence
-- **Language Support**: All user-facing strings must be bilingual (Arabic + English)
-- **Engineering Units**: Always use consistent units (mm for dimensions, m for spans/lengths, MPa/MPa for stresses)
+  - `domain/calculations/`: Calculation engines segregated by code (`ecp/`, `aci/`, `sbc/`) implementing base interfaces in `base/`.
+  - `domain/entities/`: Immutable data transfer objects.
+  - `ui/compose/`: Declarative UI using Jetpack Compose + Material 3.
+  - `viewmodel/`: State management exposing immutable `StateFlow`.
+  - `db/`: Room database with DAOs and TypeConverters.
+- **Dependency Injection**: Hilt (Dagger).
+- **Internationalization**: All strings MUST exist in both `values/strings.xml` (English) and `values-ar/strings.xml` (Arabic).
+- **Engineering Calculations**: Must include reference citations (e.g., *ECP 203 Clause 4-2-1*, *ACI 318-19 Table 22.2.2.4.3*, *SBC 304 Clause 10.3*).
 
-## Design Codes Supported
+---
 
-| Code | Status | Description |
-|------|--------|-------------|
-| ECP 203/205 | ✅ Active | Egyptian Code of Practice for Concrete/Steel |
-| ACI 318 | ✅ Active | American Concrete Institute |
-| SBC 304 | ✅ Active | Saudi Building Code |
-| AISC 360 | ✅ Active | American Institute of Steel Construction |
+### Pull Request (PR) Workflow
 
-## Pull Request Guidelines
+1. Fork the repo and create a dedicated branch: `git checkout -b feat/add-strap-footing`
+2. Follow commit conventions: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
+3. Ensure all tests pass: `./gradlew testDebugUnitTest`
+4. Verify hand calculations for any algorithmic updates.
+5. Submit PR targeting `master` branch using our PR template.
 
-- Keep PRs focused on a single concern
-- Include a clear description of the change
-- Reference any related issues
-- Ensure all new text is bilingual (Arabic + English)
-- Test calculations against known hand-calculated examples
-- Do not modify build configuration unless necessary
+---
 
-## Reporting Bugs
+### Security Guidelines
 
-When reporting bugs, please include:
-1. Device and Android version
-2. App version
-3. Steps to reproduce
-4. Expected vs actual behavior
-5. Screenshots if applicable
+Do **NOT** post security vulnerabilities in public issues or PRs. Please refer to [SECURITY.md](SECURITY.md) to report security issues privately to **engahmed121314@gmail.com**.
 
-## Development Setup
+</div>
 
-1. Android Studio Koala or newer
-2. Gradle 8.x with AGP 8.x
-3. Min SDK: 24, Target SDK: 34
-4. Kotlin DSL for Gradle scripts
+---
 
-Thank you for helping make CivilEG 2 better!
+<div id="العربية" dir="rtl">
+
+## العربية
+
+شكراً لاهتمامك بالمساهمة في مشروع **المهندس المدني برو**! نرحب بمساهمات المجتمع التقني والهندسي لتطوير أفضل أدوات التصميم الإنشائي للمهندسين والطلاب حول العالم.
+
+### كيف يمكنك المساهمة؟
+
+- 🐛 **الإبلاغ عن أخطاء**: واجهت مشكلة في الحسابات أو توقف للتطبيق؟ [افتح بلاغ خطأ](.github/ISSUE_TEMPLATE/bug_report.md).
+- 💡 **اقتراح ميزات جديدة**: لديك فكرة لكود تصميم جديد أو عنصر إنشائي؟ [قدّم طلب ميزة](.github/ISSUE_TEMPLATE/feature_request.md).
+- 📝 **تحسين التوثيق**: توضيح معادلات التصميم، إضافة مراجع بنود الأكواد، أو تحسين الترجمات.
+- 💻 **كتابة كود برمجي**: إضافة كودات جديدة، كتابة اختبارات دقيقة، أو تحسين الواجهات والأداء.
+
+---
+
+### بيئة التطوير
+
+- **JDK 17**
+- **Android Studio Meerkat** أو أحدث
+- **Android SDK API 36**
+
+```bash
+git clone https://github.com/engahmed121314/civileg.git
+cd civileg
+./gradlew assembleDebug
+./gradlew testDebugUnitTest
+```
+
+---
+
+### معايير الكود والإرشادات
+
+1. **ثنائية اللغة**: جميع النصوص والعناصر يجب أن تتوفر باللغتين العربية والإنجليزية.
+2. **التحقق الهندسي**: أي تعديل في خوارزميات التصميم يجب تدعيمه بحسابات يدوية واختبارات وحدة (Unit Tests).
+3. **الأمان**: عدم كشف أو تضمين مفاتيح خاصة أو استدعاءات خارجية غير آمنة.
+4. **المعمارية**: الالتزام بنمط Clean Architecture + MVVM + Hilt.
+
+</div>

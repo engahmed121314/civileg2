@@ -1,229 +1,372 @@
 <div align="center">
 
-# Civil Engineer Pro
+<img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp" alt="Civil Engineer Pro Logo" width="120"/>
 
-### Your Complete Structural Engineering Companion
+# 🏗️ Civil Engineer Pro — المهندس المدني برو
 
-[![Android CI](https://github.com/engahmed121314/civileg2/actions/workflows/android.yml/badge.svg)](https://github.com/engahmed121314/civileg2/actions/workflows/android.yml)
-[![API Level](https://img.shields.io/badge/minSDK-26-green.svg)](https://developer.android.com/about/versions)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-blue.svg)](https://kotlinlang.org)
-[![Compose BOM](https://img.shields.io/badge/Compose-2024.12.01-5846BE.svg)](https://developer.android.com/jetpack/compose)
+### Your Complete Structural Engineering Companion | رفيقك الشامل في التصميم الإنشائي
 
-**English** | [العربية](#العربية)
+<br/>
+
+[![Android CI](https://github.com/engahmed121314/civileg/actions/workflows/android.yml/badge.svg)](https://github.com/engahmed121314/civileg/actions/workflows/android.yml)
+[![API Level](https://img.shields.io/badge/minSDK-26-brightgreen?logo=android)](https://developer.android.com/about/versions)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Compose BOM](https://img.shields.io/badge/Compose_BOM-2024.12.01-5846BE?logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Security](https://img.shields.io/badge/Security-Play_Integrity-blue?logo=google)](SECURITY.md)
+
+<br/>
+
+**[English](#-english) | [العربية](#-العربية)**
 
 </div>
 
 ---
 
-## English
+## 📸 Screenshots | لقطات الشاشة
 
-### Overview
+<div align="center">
 
-**Civil Engineer Pro** is a comprehensive Android application for structural engineers, civil engineering students, and construction professionals. It provides structural design and analysis tools for reinforced concrete, steel structures, seismic analysis, and quantity surveying — compliant with major international design codes.
+| Home Screen | Beam Design | Column Design |
+|:-----------:|:-----------:|:-------------:|
+| ![Home](download/screenshots/01_home_screen.png) | ![Beam](download/screenshots/02_beam_design.png) | ![Column](download/screenshots/03_column_design.png) |
 
-The app supports **three design codes**: the Egyptian Code (ECP 203/201), the American Concrete Institute code (ACI 318), and the Saudi Building Code (SBC 304/306).
+| Steel Design | Frame Analysis | Seismic Analysis |
+|:------------:|:--------------:|:----------------:|
+| ![Steel](download/screenshots/04_steel_design.png) | ![Frame](download/screenshots/05_frame_analysis.png) | ![Seismic](download/screenshots/06_seismic_analysis.png) |
 
-### Key Features
+| Water Tank | Settings | Full Showcase |
+|:----------:|:--------:|:-------------:|
+| ![Tank](download/screenshots/07_water_tank_design.png) | ![Settings](download/screenshots/08_settings.png) | ![All](download/screenshots/showcase_all.png) |
 
-#### Reinforced Concrete Design
+</div>
 
-- **Beam Design** — Simply supported, fixed, cantilever, and roller-hinged beams with moment and shear diagrams, deflection checks, and reinforcement calculations per selected support type and design code
-- **Column Design** — Short and slender columns with effective length factor (K), axial load, uniaxial and biaxial bending (Bresler + load contour methods), full P-M interaction diagrams, 6 cross-section shapes (rectangular, circular, L-shaped, T-shaped, composite, tubular)
-- **Slab Design** — One-way and two-way slabs including solid, ribbed/hollow-block, waffle, flat plate, flat slab with drop panels, post-tensioned, and precast — with moment coefficients, ACI Direct Design Method, and deflection verification (including hot climate adjustment for SBC)
-- **Footing Design** — Isolated, combined, strip, raft, and pile cap footings with bearing pressure checks (net SBC with eccentricity), punching shear, one-way shear, and reinforcement detailing. *Note: Strap footing and settlement estimates are planned for a future release.*
-- **Retaining Wall Design** — Cantilever retaining walls with Rankine active/passive earth pressure, surcharge loads, water table effects, sliding/overturning/bearing safety checks, and full stem/toe/heel reinforcement design with tapered stem support
-- **Staircase Design** — Straight and dog-leg (quarter-turn) stairs with waist slab calculations on slope, comfort formula (2R+G), main and distribution reinforcement, shear stirrups, and deflection checks
-- **Water Tank Design** — Rectangular and circular tanks (ground-level, elevated, and underground) with hydrostatic pressure analysis, hoop tension for circular tanks, crack-width checks (ECP: 0.2mm, ACI/SBC: stress-based), uplift check for buried tanks, and water-retaining minimum reinforcement
+---
 
-#### Steel Structure Design
+# 🌐 English
 
-- **Steel Member Design** — AISC 360-16 LRFD method for tension (gross yielding, net rupture, block shear), compression (flexural/torsional/local buckling), bending (LTB, weak axis), and combined loading (H1-1a/H1-1b interaction equations). Three code paths: ECP 205, AISC 360-16, and SBC 306
-- **Base Plate Design** — Concentrically and eccentrically loaded base plates, pocket base plates, and anchor bolt design (grades 4.6–10.9, embedment lengths)
-- **Bolt & Weld Design** — Bolt capacity (shear, bearing, tension, combined shear-tension, slip-critical, block shear) and fillet weld capacity with electrode types (E60XX–E90XX) per AISC/ECP
-- **Steel Warehouse Design** — Complete portal frame warehouse design with main frame members, 4-view engineering drawings (front elevation, plan, side elevation, 3D isometric), bending moment diagrams, BMD with filled area, and PDF report generation
+## Overview
 
-#### Seismic Analysis
+**Civil Engineer Pro** is a comprehensive Android application for structural engineers, civil engineering students, and construction professionals. It provides precise structural design and analysis tools for **reinforced concrete**, **steel structures**, **seismic analysis**, and **quantity surveying** — fully compliant with major international design codes.
 
-- **Equivalent Static Method** — Seismic base shear calculation per ECP 201, ASCE 7-16, and SBC 301 with zone factors, soil parameters, and force distribution
-- **Design Response Spectrum** — Code-based spectral acceleration curves (4-branch for ECP, T0/Ts-based for ASCE 7) with design period marker
+The app supports **3 international design codes**: the **Egyptian Code (ECP 203/201/205)**, the **American Concrete Institute (ACI 318 / ASCE 7-16 / AISC 360-16)**, and the **Saudi Building Code (SBC 304/301/306)**.
 
-#### Frame Analysis
+> **Disclaimer:** This application is for *educational and preliminary design purposes only*. All results must be verified by a licensed structural engineer. The developer is not responsible for any errors or damages.
 
-- **2D Frame Analysis** — Full 2D stiffness matrix method solver supporting multiple node types (pin, roller, fixed), member types (beam, column, brace), and load types (UDL, point load, moment, linearly varying)
-- **Force Diagrams** — Bending moment, shear force, and axial force diagrams for all frame members
-- **Interactive Drawing Canvas** — Real-time visualization with pinch-to-zoom (0.5x–5x), pan, and tap-to-inspect
+---
 
-#### Additional Tools
+## ✨ Key Features
 
-- **Bill of Quantities (BOQ)** — Automatic quantity takeoff (concrete, steel, formwork, excavation) with cost estimation across 40+ material prices and 8 currencies (EGP, USD, SAR, AED, KWD, QAR, OMR, BHD)
-- **Scientific Calculator** — Engineering calculator with trigonometric and logarithmic functions
-- **Unit Converter** — Length, area, volume, weight, force, pressure/stress, and moment conversions
-- **Rebar Inventory** — Track reinforcement bar inventory (15 diameters, 5 grades) with weight/cost calculations and cutting optimization plans
-- **PDF Export** — Professional design reports with Arabic text support and engineering drawings
-- **CSV Export** — Data export compatible with spreadsheet applications
-- **Design Archive** — Save and organize past design projects with results and safety status
+### 🧱 Reinforced Concrete Design
 
-### Supported Design Codes
+| Module | Description |
+|--------|-------------|
+| **Beam Design** | Simply supported, fixed, cantilever & roller-hinged beams — moment/shear diagrams, deflection checks, full reinforcement calculations |
+| **Column Design** | Short & slender columns — effective length (K), axial + uniaxial/biaxial bending (Bresler + load contour), P-M interaction diagrams, 6 cross-sections |
+| **Slab Design** | One-way & two-way: solid, ribbed, waffle, flat plate, flat slab, post-tensioned, precast — ACI Direct Design Method + deflection |
+| **Footing Design** | Isolated, combined, strip, raft, pile cap — SBC bearing pressure with eccentricity, punching shear, one-way shear, reinforcement detailing |
+| **Retaining Wall** | Cantilever walls — Rankine earth pressure, surcharge, water table, sliding/overturning/bearing safety checks, stem/toe/heel reinforcement |
+| **Staircase Design** | Straight & dog-leg stairs — waist slab on slope, comfort formula (2R+G), main+distribution reinforcement, shear stirrups, deflection |
+| **Water Tank Design** | Rectangular & circular (ground/elevated/underground) — hydrostatic analysis, hoop tension, crack-width checks, uplift, water-retaining minimums |
+
+### 🔩 Steel Structure Design
+
+| Module | Description |
+|--------|-------------|
+| **Steel Members** | AISC 360-16 LRFD — tension, compression (buckling), bending (LTB), combined loads (H1-1a/H1-1b) — ECP 205 / AISC / SBC 306 |
+| **Base Plate Design** | Concentric & eccentric loads, pocket bases, anchor bolt design (grades 4.6–10.9) |
+| **Bolt & Weld** | Bolt capacity (shear/bearing/tension/combined/slip-critical/block shear) + fillet weld (E60XX–E90XX) |
+| **Steel Warehouse** | Complete portal frame — 4-view drawings (front/plan/side/3D isometric), BMD, PDF report |
+
+### 🌍 Seismic Analysis
+
+- **Equivalent Static Method** — base shear per ECP 201, ASCE 7-16, SBC 301
+- **Design Response Spectrum** — spectral acceleration curves with design period marker
+
+### 📐 2D Frame Analysis
+
+- Full stiffness matrix solver — pin/roller/fixed nodes, UDL/point/moment/varying loads
+- Bending moment, shear force & axial force diagrams
+- Interactive canvas with pinch-to-zoom (0.5×–5×) and tap-to-inspect
+
+### 🛠️ Additional Tools
+
+| Tool | Description |
+|------|-------------|
+| **Bill of Quantities (BOQ)** | Auto quantity takeoff (concrete/steel/formwork/excavation) — 40+ material prices, 8 currencies |
+| **Scientific Calculator** | Engineering calculator with trig & logarithmic functions |
+| **Unit Converter** | Length, area, volume, weight, force, pressure/stress, moment |
+| **Rebar Inventory** | 15 diameters × 5 grades — weight/cost + cutting optimization |
+| **PDF Export** | Professional reports with Arabic text support + engineering drawings |
+| **CSV Export** | Spreadsheet-compatible data export |
+| **Design Archive** | Save & organize past projects with results and safety status |
+
+---
+
+## 📋 Supported Design Codes
 
 | Code | Standards | Country |
 |------|-----------|---------|
-| **ECP** | ECP 203 (concrete), ECP 201 (seismic), ECP 205 (steel) | Egypt |
-| **ACI** | ACI 318-19 (concrete), ASCE 7-16 (seismic), AISC 360-16 (steel) | USA / International |
-| **SBC** | SBC 304 (concrete), SBC 301 (seismic), SBC 306 (steel) | Saudi Arabia |
+| **ECP** | ECP 203 (Concrete), ECP 201 (Seismic), ECP 205 (Steel) | 🇪🇬 Egypt |
+| **ACI / AISC** | ACI 318-19, ASCE 7-16, AISC 360-16 | 🇺🇸 USA / International |
+| **SBC** | SBC 304 (Concrete), SBC 301 (Seismic), SBC 306 (Steel) | 🇸🇦 Saudi Arabia |
 
-### Technical Architecture
+---
+
+## 🏛️ Technical Architecture
 
 | Component | Technology |
-|-----------|-----------|
+|-----------|------------|
 | **Language** | Kotlin 2.1.0 |
 | **UI Framework** | Jetpack Compose + Material 3 |
 | **Dependency Injection** | Hilt (Dagger) |
 | **Database** | Room (SQLite) — 11 entities, 11 DAOs |
 | **Navigation** | Jetpack Navigation Compose |
-| **Build System** | Gradle 8.13 with Version Catalog |
-| **Min SDK** | 26 (Android 8.0) |
-| **Target SDK** | 35 (Android 15) |
-| **JDK** | 17 |
+| **Build System** | Gradle 8.13 + Version Catalog |
+| **Min SDK** | API 26 (Android 8.0 Oreo) |
+| **Target SDK** | API 36 (Android 16) |
+| **JDK** | 17 (Temurin) |
+| **Architecture** | MVVM + Strategy Pattern (`CalculationFactory`) |
 
 ### Project Structure
 
 ```
 app/src/main/java/com/civileg/app/
-├── di/                          # Hilt dependency injection modules
-├── db/                          # Room database, DAOs, entities
+├── di/                    # Hilt dependency injection modules
+├── db/                    # Room database, DAOs (11), entities (11)
 ├── domain/
 │   ├── calculations/
-│   │   ├── aci/                 # ACI 318 design implementations
-│   │   ├── ecp/                 # ECP 203/201 design implementations
-│   │   ├── sbc/                 # SBC design implementations
-│   │   ├── base/                # Abstract base design classes
-│   │   └── utils/               # Interaction diagrams, utilities
-│   ├── entities/                # Domain entities and data classes
-│   ├── validators/              # Input validation logic
-│   └── usecases/                # Business logic use cases
-├── ui/
-│   ├── compose/
-│   │   ├── components/          # Reusable Compose components
-│   │   │   ├── drawings/        # Professional engineering drawings
-│   │   │   ├── charts/          # Analysis charts & diagrams
-│   │   │   └── interactive/     # Interactive section views
-│   │   └── screens/             # 22 design & tool screens
-│   └── (traditional views)      # Legacy View-based screens
-├── viewmodel/                   # 16 MVVM ViewModels
-├── utils/                       # PDF/CSV export, steel tables, converters
-└── pricing/                     # Material pricing & cost management
+│   │   ├── aci/           # ACI 318 / AISC / ASCE implementations
+│   │   ├── ecp/           # ECP 203/201/205 implementations
+│   │   ├── sbc/           # SBC 304/301/306 implementations
+│   │   ├── base/          # Abstract base design classes
+│   │   └── utils/         # P-M interaction diagrams, utilities
+│   ├── entities/          # Domain data classes
+│   ├── validators/        # Input validation logic
+│   └── usecases/          # Business logic use cases
+├── ui/compose/
+│   ├── components/
+│   │   ├── drawings/      # Professional engineering drawings (Canvas)
+│   │   ├── charts/        # Analysis charts & diagrams
+│   │   └── interactive/   # Interactive section views
+│   └── screens/           # 22 design & tool screens
+├── viewmodel/             # 16 MVVM ViewModels
+├── utils/                 # PDF/CSV export, steel tables, converters
+└── pricing/               # Material pricing & cost management
 ```
 
-### Project Stats
+### Project Statistics
 
-- **260+ Kotlin source files**
-- **80,000+ lines of code**
-- **22 design & tool screens** with full input, calculation, and drawing output
-- **3 international design codes** with code-specific load factors and formulas
-- **Strategy Pattern** for polymorphic design code dispatch via `CalculationFactory`
+- 📁 **260+ Kotlin source files**
+- 📝 **80,000+ lines of code**
+- 🖥️ **22 design & tool screens**
+- 📐 **3 international design codes**
+- 🏗️ **7 RC + 4 Steel + 2 Seismic + 5 tool modules**
 
-### Building the Project
+---
 
-#### Prerequisites
-- JDK 17
-- Android SDK with API 35
-- Gradle 8.13 (handled by the Gradle Wrapper)
+## 🔒 Security & Protection
 
-#### Build Commands
+| Measure | Details |
+|---------|---------|
+| **Play Integrity API** | Tamper detection & genuine device verification |
+| **AES-256 Encryption** | Sensitive local data encrypted at rest |
+| **R8 / ProGuard** | Advanced obfuscation protecting design formulas |
+| **No Cloud Dependency** | All calculations run 100% offline on-device |
+| **No Data Collection** | Zero user data transmitted or stored externally |
+| **Secure In-App Billing** | Google Play Billing with server-side verification |
+
+> Found a security issue? Please report it privately at **engahmed121314@gmail.com** — see [SECURITY.md](SECURITY.md).
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **JDK 17** (Temurin recommended)
+- **Android Studio Meerkat** or newer
+- **Android SDK** with API 36
+- **Gradle 8.13** (handled automatically by the wrapper)
+
+### Build Instructions
+
 ```bash
-# Clone the repository
-git clone https://github.com/engahmed121314/civileg2.git
-cd civileg2
+# 1. Clone the repository
+git clone https://github.com/engahmed121314/civileg.git
+cd civileg
 
-# Build debug APK
+# 2. Build debug APK
 ./gradlew assembleDebug
 
-# Build release APK
-./gradlew assembleRelease
+# 3. Install on connected device / emulator
+./gradlew installDebug
 
-# Run tests
-./gradlew test
+# 4. Run unit tests
+./gradlew testDebugUnitTest
 
-# Clean build
+# 5. Build release AAB (requires signing config)
+./gradlew bundleRelease
+
+# 6. Clean build
 ./gradlew clean assembleDebug
 ```
 
-The output APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
+**Output:** `app/build/outputs/apk/debug/app-debug.apk`
 
-### Disclaimer
+### Emulator Workflow (Windows)
 
-> This application is for **educational and preliminary design purposes only**. All calculations should be verified by a licensed structural engineer. The developer is not responsible for any errors or damages resulting from the use of this application.
+```powershell
+# Full workflow: boot → build → install → screenshots → tests
+powershell -File tools\emulator\Test-App.ps1
+
+# Individual steps
+powershell -File tools\emulator\Start-Emulator.ps1
+powershell -File tools\emulator\Build-App.ps1
+powershell -File tools\emulator\Install-App.ps1 -Launch
+powershell -File tools\emulator\Run-Tests.ps1
+powershell -File tools\emulator\Stop-Emulator.ps1
+```
+
+> AVD: `civileg2_api36` (Android 16 / API 36, Pixel 6) — see [`tools/emulator/README.md`](tools/emulator/README.md)
 
 ---
 
-### Security & Monetization (Pro Features)
+## 🤝 Contributing
 
-- **Google AdMob Integration** — Optimized ad placement (Banners, Interstitials, Native Ads) with GDPR/UMP consent flow.
-- **Google Play Billing** — Secure in-app purchases for premium features and ad-free experience.
-- **Play Integrity API** — Protection against unauthorized modifications and ensuring app security on genuine devices.
-- **Advanced Obfuscation** — R8/ProGuard rules to protect business logic and design formulas.
+Contributions are welcome! Please follow these steps:
+
+1. **Fork** the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m 'feat: add amazing feature'`
+4. Push to the branch: `git push origin feature/your-feature`
+5. Open a **Pull Request** using the [PR template](.github/PULL_REQUEST_TEMPLATE.md)
+
+### Reporting Issues
+
+- 🐛 **Bug reports** → [Bug Report Template](.github/ISSUE_TEMPLATE/bug_report.md)
+- 💡 **Feature requests** → [Feature Request Template](.github/ISSUE_TEMPLATE/feature_request.md)
+
+### Code Guidelines
+
+- Follow the existing MVVM + Strategy pattern architecture
+- All UI strings must be **bilingual** (Arabic + English in `strings.xml`)
+- New calculation modules must be tested against hand calculations
+- ProGuard rules must be updated for any new public API
 
 ---
 
-<div id="العربية">
+## 📦 CI/CD Pipeline
 
-## العربية
+The project uses **GitHub Actions** for continuous integration:
 
-### نظرة عامة
+| Job | Trigger | Description |
+|-----|---------|-------------|
+| **Lint** | Push / PR | Android Lint analysis |
+| **Unit Tests** | After Lint | JVM unit tests (`testDebugUnitTest`) |
+| **Debug Build** | After Tests | Build & upload debug APK artifact |
+| **Release AAB** | On `v*` tag | Sign & upload release bundle |
+| **Dependabot** | Weekly | Gradle dependency updates |
 
-**مهندس مدني برو** هو تطبيق أندرويد شامل مصمم للمهندسين الإنشائيين وطلاب الهندسة المدنية ومحترفي البناء. يوفر أدوات تصميم وتحليل إنشائي للخرسانة المسلحة والمنشآت الفولاذية والتحليل الزلزالي وجداول الكميات — متوافق مع كودات التصميم الدولية الرئيسية.
+---
 
-يدعم التطبيق **ثلاثة كودات تصميم**: الكود المصري (ECP 203/201)، وكود معهد الخرسانة الأمريكي (ACI 318)، وكود البناء السعودي (SBC 304/306).
+## 📄 License
 
-### الميزات الرئيسية
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
-#### تصميم الخرسانة المسلحة
+```
+Copyright (c) 2024 Ahmed (engahmed121314)
+```
 
-- **تصميم الكمرات** — كمرات بسيطة الإسناد وثابتة وشاربية وقلابة مع مخططات العزوم والقص ومعاملات الأحمال الخاصة بكل كود تصميم وفحص الانحناء وحسابات التسليح التفصيلية
-- **تصميم الأعمدة** — أعمدة قصيرة ونحيفة مع معامل الطول الفعّال (K)، الحمل المحوري، الانحناء أحادي وثنائي المحور (طريقة Bresler وخطوط العزم المتساوية)، مخططات التفاعل P-M، 6 أشكال مقطعية (مستطيل، دائري، L، T، مركب، أنبوبي)
-- **تصميم البلاطات** — بلاطات باتجاه واحد واتجاهين: صلبة ومرقيقة (هوردي) ووافل وبلاطة مسطحة وبلاطة مسطحة مع ألواح تسليح وبلاطات ما بعد الشد ومسبقة الصب — بمعاملات العزوم وطريقة ACI المباشرة وفحص الانحناء (مع معامل المناخ الحار لـ SBC)
-- **تصميم الأساسات** — منفصلة ومركبة وشارية ولبشة وقبعات خازوق مع فحص ضغط التربة (صافي قدرة التربة مع اللامركزية) وقص الثقب وقص أحادي الاتجاه وتفاصيل التسليح
-- **تصميم حوائط السند** — حوائط سند قنطرية مع ضغط تربة رانكين النشط والسلبي، أحمال الرصف، تأثير منسوب المياه الجوفية، فحص سلامة الانزلاق والانقلاب والضغط، وتصميم كامل لتسليح الساق والكعب والر球星 مع دعم الساق المتدرج
-- **تصميم السلالم** — سلالم مستقيمة ورجل كلب مع حسابات لوح السلم على الميل، معادلة الراحة (2R+G)، تسليح رئيسي وتوزيعي، كانات قص، وفحص الانحناء
-- **تصميم خزانات المياه** — خزانات مستطيلة ودائرية (أرضية ومرتفعة وتحت أرض) مع تحليل ضغط الماء الساكن، قوى الإحاطة للخزانات الدائرية، فحص عرض الشروخ (ECP: 0.2mm، ACI/SBC: قائم على إجهاد الحديد)، فحص الطفو للخزانات المدفونة
+---
 
-#### تصميم المنشآت الفولاذية
+## 📞 Contact & Support
 
-- **تصميم الأعضاء الفولاذية** — طريقة AISC 360-16 LRFD للشد (خضوع المقطع الكامل، تمزق المقطع الصافي، قص الكتلة) والضغط (انبعاج مرن/ليفي/محلي) والانحناء (LTB، المحور الضعيف) والأحمال المركبة (معادلات التفاعل H1-1a/H1-1b). ثلاثة مسارات: ECP 205، AISC 360-16، SBC 306
-- **تصميم لوحات القاعدة** — لوحات قاعدة محملة مركزياً ولامركزياً، قواعد جيبية، وتصميم براغي التثبيت
-- **تصميم البراغي واللحامات** — سعة البراغي (قص، تحمل، شد، مركب، انزلاق حرج، قص كتلة) وسعة اللحامات التفصيلية مع أنواع الأقطاب الكهربائية
-- **تصميم المستودعات الفولاذية** — تصميم كامل لإطارات المستودعات مع أعضاء الإطار الرئيسي ورسومات هندسية بـ 4 مناظر (واجهة أمامية، مسقط أفقي، واجهة جانبية، ثلاثي الأبعاد) ومخططات عزوم الانحناء وتقارير PDF
+| Channel | Details |
+|---------|---------|
+| 👤 **Developer** | Eng. Ahmed Magdy |
+| 📧 **Email** | [engahmed121314@gmail.com](mailto:engahmed121314@gmail.com) |
+| 📱 **Phone** | +20 101 262 8353 |
+| 🐛 **Issues** | [GitHub Issues](https://github.com/engahmed121314/civileg/issues) |
+| 🔒 **Security** | [Security Policy](SECURITY.md) |
 
-#### التحليل الزلزالي
+---
+---
 
-- **طريقة القوى الثابتة المكافئة** — حساب قوة القص القاعدي الزلزالية حسب ECP 201 و ASCE 7-16 و SBC 301
-- **منحنى طيف التصميم** — منحنيات التسارع الطيفي حسب الكود مع علامة الدورة الزمنية التصميمية
+# 🌐 العربية
 
-#### تحليل الهياكل الإطارية
+<div align="right">
 
-- **تحليل إطارات ثنائية الأبعاد** — محلل بطريقة مصفوفة الصلابة يدعم أنواع عقد متعددة (مفصل، بكرة، تثبيت) وأنواع أعضاء (كمرة، عمود، tale) وأنواع أحمال (موزع منتظم، مركّز، عزم، متغير خطياً)
-- **مخططات القوى** — مخططات عزم الانحناء وقوة القص والقوة المحورية لجميع أعضاء الهيكل
-- **لوحة رسم تفاعلية** — تصور فوري مع التقريب بالضغط (0.5x–5x) والسحب والنقر للفحص
+## نظرة عامة
 
-#### أدوات إضافية
+**المهندس المدني برو** هو تطبيق أندرويد شامل مصمم للمهندسين الإنشائيين وطلاب الهندسة المدنية ومحترفي البناء. يوفر أدوات تصميم وتحليل دقيقة للـ**خرسانة المسلحة** و**المنشآت الفولاذية** و**التحليل الزلزالي** و**جداول الكميات** — متوافق تماماً مع كودات التصميم الدولية الرئيسية.
 
-- **جداول الكميات** — جرد تلقائي للكميات (خرسانة، حديد، قالب، حفر) مع تقدير التكاليف عبر 40+ سعر مادة و8 عملات
-- **آلة حاسبة علمية** — آلة حاسبة هندسية بدوال المثلثات واللوغاريتمات
-- **محول الوحدات** — تحويلات الطول والمساحة والحجم والوزن والقوة والإجهاد/الضغط والعزم
-- **جرد حديد التسليح** — تتبع مخزون حديد التسليح مع حسابات الوزن والتكلفة وخطط القص المثلى
-- **تصدير PDF** — تقارير تصميم احترافية مع دعم النص العربي والرسومات الهندسية
-- **تصدير CSV** — تصدير البيانات بتنسيق متوافق مع جداول البيانات
-- **أرشيف التصاميم** — حفظ وتنظيم مشاريع التصميم السابقة مع النتائج وحالة السلامة
+يدعم التطبيق **3 كودات تصميم دولية**: **الكود المصري (ECP 203/201/205)**، **الكود الأمريكي (ACI 318 / ASCE 7-16 / AISC 360-16)**، و**الكود السعودي (SBC 304/301/306)**.
 
-### كودات التصميم المدعومة
+> **إخلاء المسؤولية:** هذا التطبيق لأغراض *تعليمية والتصميم المبدئي فقط*. يجب التحقق من جميع النتائج بواسطة مهندس إنشائي مرخص.
+
+---
+
+## ✨ الميزات الرئيسية
+
+### 🧱 تصميم الخرسانة المسلحة
+
+| الوحدة | الوصف |
+|--------|-------|
+| **تصميم الكمرات** | بسيطة ومثبتة وشاربية وقلابة — مخططات العزوم والقص، فحص الانحناء، حسابات التسليح الكاملة |
+| **تصميم الأعمدة** | قصيرة ونحيفة — معامل الطول الفعّال (K)، انحناء أحادي وثنائي المحور (Bresler)، مخططات P-M، 6 أشكال مقطعية |
+| **تصميم البلاطات** | صلبة ومرقيقة ووافل ومسطحة وما بعد الشد ومسبقة الصب — طريقة ACI المباشرة + فحص الانحناء |
+| **تصميم الأساسات** | منفصلة ومركبة وشارية ولبشة وقبعات خازوق — ضغط التربة، قص الثقب، قص أحادي، تفاصيل التسليح |
+| **حوائط السند** | حوائط قنطرية — ضغط رانكين، رصف، منسوب المياه، فحص الانزلاق/الانقلاب/الضغط |
+| **تصميم السلالم** | مستقيمة ورجل كلب — لوح السلم على الميل، معادلة الراحة (2R+G)، تسليح رئيسي وتوزيعي |
+| **تصميم الخزانات** | مستطيلة ودائرية (أرضية/مرتفعة/تحت أرض) — ضغط هيدروستاتيكي، قوى إحاطة، فحوص الشروخ، الطفو |
+
+### 🔩 تصميم المنشآت الفولاذية
+
+| الوحدة | الوصف |
+|--------|-------|
+| **الأعضاء الفولاذية** | AISC 360-16 LRFD — شد وضغط (انبعاج) وانحناء (LTB) وأحمال مركبة (H1-1a/H1-1b) |
+| **لوحات القاعدة** | محملة مركزياً ولامركزياً، قواعد جيبية، براغي التثبيت |
+| **البراغي واللحامات** | سعة البراغي والانزلاق الحرج وقص الكتلة + اللحامات التفصيلية |
+| **المستودعات الفولاذية** | تصميم كامل لإطارات البوابة — رسومات 4 مناظر (أمامي/مسقط/جانبي/ثلاثي)، تقرير PDF |
+
+### 🌍 التحليل الزلزالي
+
+- **طريقة القوى الثابتة المكافئة** — قوة القص القاعدي حسب ECP 201 و ASCE 7-16 و SBC 301
+- **منحنى طيف التصميم** — منحنيات التسارع الطيفي مع علامة الدورة الزمنية
+
+### 📐 تحليل الإطارات ثنائية الأبعاد
+
+- محلل مصفوفة الصلابة — عقد مفصلية/بكرة/ثابتة، أحمال UDL/مركزة/عزم/متغيرة خطياً
+- مخططات العزم والقص والقوة المحورية
+- لوحة رسم تفاعلية مع تقريب بالضغط (0.5×–5×) والنقر للفحص
+
+### 🛠️ أدوات إضافية
+
+| الأداة | الوصف |
+|--------|-------|
+| **جداول الكميات** | جرد تلقائي (خرسانة/حديد/قالب/حفر) — 40+ سعر مادة، 8 عملات |
+| **الآلة الحاسبة العلمية** | دوال المثلثات واللوغاريتمات |
+| **محول الوحدات** | طول وسطح وحجم ووزن وقوة وإجهاد وعزم |
+| **جرد التسليح** | 15 قطر × 5 درجات — وزن/تكلفة + خطط القص المثلى |
+| **تصدير PDF** | تقارير احترافية مع دعم كامل للنص العربي |
+| **تصدير CSV** | تصدير البيانات بتنسيق جداول البيانات |
+| **أرشيف التصاميم** | حفظ وتنظيم المشاريع السابقة مع النتائج وحالة السلامة |
+
+---
+
+## 📋 كودات التصميم المدعومة
 
 | الكود | المعايير | الدولة |
-|--------|---------|--------|
-| **ECP** | ECP 203 (خرسانة)، ECP 201 (زلازل)، ECP 205 (فولاذ) | مصر |
-| **ACI** | ACI 318-19 (خرسانة)، ASCE 7-16 (زلازل)، AISC 360-16 (فولاذ) | أمريكا / دولي |
-| **SBC** | SBC 304 (خرسانة)، SBC 301 (زلازل)، SBC 306 (فولاذ) | السعودية |
+|-------|---------|--------|
+| **ECP** | ECP 203 (خرسانة)، ECP 201 (زلازل)، ECP 205 (فولاذ) | 🇪🇬 مصر |
+| **ACI / AISC** | ACI 318-19، ASCE 7-16، AISC 360-16 | 🇺🇸 أمريكا / دولي |
+| **SBC** | SBC 304 (خرسانة)، SBC 301 (زلازل)، SBC 306 (فولاذ) | 🇸🇦 السعودية |
 
-### البنية التقنية
+---
+
+## 🏛️ البنية التقنية
 
 | المكوّن | التقنية |
 |---------|---------|
@@ -232,55 +375,140 @@ The output APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
 | **حقن التبعيات** | Hilt (Dagger) |
 | **قاعدة البيانات** | Room (SQLite) — 11 كيان، 11 واجهة DAO |
 | **التنقل** | Jetpack Navigation Compose |
-| **نظام البناء** | Gradle 8.13 مع Version Catalog |
-| **الحد الأدنى للمصدر** | 26 (Android 8.0) |
-| **المصدر المستهدف** | 35 (Android 15) |
-| **JDK** | 17 |
+| **نظام البناء** | Gradle 8.13 + Version Catalog |
+| **الحد الأدنى للمصدر** | API 26 (Android 8.0 Oreo) |
+| **المصدر المستهدف** | API 36 (Android 16) |
+| **JDK** | 17 (Temurin) |
+| **المعمارية** | MVVM + نمط الاستراتيجية (`CalculationFactory`) |
 
 ### إحصائيات المشروع
 
-- **أكثر من 260 ملف Kotlin**
-- **أكثر من 80,000 سطر برمجي**
-- **22 شاشة تصميم وأدوات** مع مدخلات وحسابات ورسومات كاملة
-- **3 كودات تصميم دولية** مع معاملات أحمال وصيغ خاصة بكل كود
-- **نمط الاستراتيجية** للإرسال متعدد الأشكال عبر `CalculationFactory`
+- 📁 **أكثر من 260 ملف Kotlin**
+- 📝 **أكثر من 80,000 سطر برمجي**
+- 🖥️ **22 شاشة تصميم وأدوات**
+- 📐 **3 كودات تصميم دولية**
+- 🏗️ **7 وحدات خرسانة + 4 فولاذ + 2 زلازل + 5 أدوات**
 
-### بناء المشروع
+---
 
-#### المتطلبات المسبقة
-- JDK 17
-- Android SDK مع API 35
-- Gradle 8.13 (يتم التعامل معه عبر Gradle Wrapper)
+## 🔒 الأمان والحماية
 
-#### أوامر البناء
+| الإجراء | التفاصيل |
+|---------|---------|
+| **Play Integrity API** | كشف التلاعب والتحقق من الأجهزة الأصيلة |
+| **تشفير AES-256** | تشفير البيانات الحساسة المحلية |
+| **R8 / ProGuard** | تشفير متقدم لحماية خوارزميات التصميم والمعادلات الهندسية |
+| **بدون اتصال بالإنترنت** | جميع الحسابات تعمل 100% محلياً على الجهاز |
+| **لا جمع بيانات** | لا يتم نقل أو تخزين بيانات المستخدم خارجياً |
+| **فوترة آمنة** | Google Play Billing مع التحقق من جانب الخادم |
+
+> اكتشفت ثغرة أمنية؟ يرجى الإبلاغ عنها بسرية على **engahmed121314@gmail.com** — راجع [SECURITY.md](SECURITY.md).
+
+---
+
+## 🚀 البدء السريع
+
+### المتطلبات المسبقة
+
+- **JDK 17** (يُنصح بـ Temurin)
+- **Android Studio Meerkat** أو أحدث
+- **Android SDK** مع API 36
+- **Gradle 8.13** (يتم التعامل معه تلقائياً عبر Gradle Wrapper)
+
+### أوامر البناء
+
 ```bash
-git clone https://github.com/engahmed121314/civileg2.git
-cd civileg2
+# 1. استنساخ المستودع
+git clone https://github.com/engahmed121314/civileg.git
+cd civileg
 
+# 2. بناء APK التطوير
 ./gradlew assembleDebug
-./gradlew assembleRelease
-./gradlew test
+
+# 3. تثبيت على الجهاز/المحاكي
+./gradlew installDebug
+
+# 4. تشغيل الاختبارات
+./gradlew testDebugUnitTest
+
+# 5. بناء AAB للإصدار (يتطلب إعداد التوقيع)
+./gradlew bundleRelease
+
+# 6. بناء نظيف
 ./gradlew clean assembleDebug
 ```
 
-### إخلاء المسؤولية
+**المخرج:** `app/build/outputs/apk/debug/app-debug.apk`
 
-> هذا التطبيق لأغراض **تعليمية والتصميم المبدئي فقط**. يجب التحقق من جميع الحسابات بواسطة مهندس إنشائي مرخص. المطور غير مسؤول عن أي أخطاء أو أضرار ناتجة عن استخدام هذا التطبيق.
+### سير عمل المحاكي (Windows)
+
+```powershell
+# سير عمل كامل: تشغيل → بناء → تثبيت → لقطات → اختبارات
+powershell -File tools\emulator\Test-App.ps1
+```
+
+---
+
+## 🤝 المساهمة
+
+المساهمات مرحب بها! اتبع الخطوات التالية:
+
+1. **Fork** المستودع
+2. أنشئ فرعاً: `git checkout -b feature/ميزتك`
+3. ارفع تعديلاتك: `git commit -m 'feat: إضافة ميزة رائعة'`
+4. ادفع الفرع: `git push origin feature/ميزتك`
+5. افتح **Pull Request** باستخدام [قالب PR](.github/PULL_REQUEST_TEMPLATE.md)
+
+### الإبلاغ عن المشاكل
+
+- 🐛 **الأخطاء** → [نموذج تقرير الخطأ](.github/ISSUE_TEMPLATE/bug_report.md)
+- 💡 **طلبات الميزات** → [نموذج طلب الميزة](.github/ISSUE_TEMPLATE/feature_request.md)
 
 ---
 
-### الحماية والربح (ميزات النسخة الاحترافية)
+## 📦 خط أنابيب CI/CD
 
-- **تكامل Google AdMob** — توزيع احترافي للإعلانات (Banners, Interstitials, Native Ads) مع نظام طلب الموافقة UMP.
-- **نظام الدفع Google Play Billing** — مشتريات آمنة داخل التطبيق لفتح الميزات المميزة وإزالة الإعلانات.
-- **حماية Play Integrity** — تأمين التطبيق ضد التلاعب وضمان تشغيله على أجهزة أصلية فقط.
-- **تشفير متقدم للكود** — قواعد R8/ProGuard متطورة لحماية خوارزميات التصميم والمعادلات الهندسية.
+| المهمة | المُشغِّل | الوصف |
+|--------|---------|-------|
+| **Lint** | Push / PR | تحليل Android Lint |
+| **اختبارات الوحدة** | بعد Lint | اختبارات JVM |
+| **بناء Debug** | بعد الاختبارات | بناء ورفع APK |
+| **إصدار AAB** | عند وسم `v*` | توقيع ورفع حزمة الإصدار |
+| **Dependabot** | أسبوعياً | تحديثات تبعيات Gradle |
 
 ---
+
+## 📄 الرخصة
+
+هذا المشروع مرخص تحت **رخصة MIT** — راجع ملف [LICENSE](LICENSE) للتفاصيل.
+
+```
+حقوق النشر © 2024 Ahmed (engahmed121314)
+```
+
+---
+
+## 📞 التواصل والدعم
+
+| القناة | التفاصيل |
+|--------|---------|
+| 👤 **المطور** | المهندس أحمد مجدي |
+| 📧 **البريد الإلكتروني** | [engahmed121314@gmail.com](mailto:engahmed121314@gmail.com) |
+| 📱 **الهاتف** | 01012628353+ |
+| 🐛 **المشاكل** | [GitHub Issues](https://github.com/engahmed121314/civileg/issues) |
+| 🔒 **الأمان** | [سياسة الأمان](SECURITY.md) |
 
 </div>
 
+---
+
 <div align="center">
-  <p>Made with passion for Civil Engineers Worldwide</p>
-  <p>صُنع بشغف لمهندسي المدني حول العالم</p>
+
+**Made with ❤️ for Civil Engineers Worldwide**
+**صُنع بشغف لمهندسي المدني حول العالم**
+
+[![GitHub stars](https://img.shields.io/github/stars/engahmed121314/civileg?style=social)](https://github.com/engahmed121314/civileg/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/engahmed121314/civileg?style=social)](https://github.com/engahmed121314/civileg/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/engahmed121314/civileg)](https://github.com/engahmed121314/civileg/issues)
+
 </div>

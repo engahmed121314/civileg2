@@ -78,7 +78,7 @@ data class BottomNavItem(
 private val bottomNavItems = listOf(
     BottomNavItem(R.string.nav_home,      Icons.Default.Home,      "home"),
     BottomNavItem(R.string.nav_design_hub, Icons.Default.AccountBalance, "design"),
-    BottomNavItem(R.string.nav_steel,    Icons.Default.Build,    "steel"),
+    BottomNavItem(R.string.home_section_tools_title, Icons.Default.Build, "building_designer"),
     BottomNavItem(R.string.nav_tools,    Icons.Default.Calculate, "tools"),
     BottomNavItem(R.string.nav_more,     Icons.Default.MoreHoriz,  "more")
 )

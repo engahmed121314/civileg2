@@ -1805,8 +1805,8 @@ class SBCAdvancedBeam {
                 val totalLength = beamType.totalLength
                 for (i in 0..numPoints) {
                     val x = totalLength * i / numPoints
-                    val m = (load * totalLength / 2.0) * x - (load * x * x / 2.0)
-                        - load * totalLength * totalLength / 10.0 * sin(PI * x / totalLength)
+                    val m = (load * totalLength / 2.0) * x - (load * x * x / 2.0) -
+                        load * totalLength * totalLength / 10.0 * sin(PI * x / totalLength)
                     points.add(x to m)
                 }
             }

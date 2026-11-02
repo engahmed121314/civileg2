@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.db.PourLog
+import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.db.SiteInspection
 import com.civileg.app.viewmodel.ExecutionViewModel
 import java.text.SimpleDateFormat
@@ -71,8 +72,11 @@ fun ExecutionLogScreen(
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.sectionSpacing)
         ) {
             item {
                 Text(stringResource(R.string.concrete_pour_logs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

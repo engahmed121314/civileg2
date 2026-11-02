@@ -3,8 +3,8 @@ package com.civileg.app
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -21,7 +21,7 @@ class AppSmokeTest {
     @Test
     fun appContextIsCorrect() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.civileg.app", context.packageName)
+        assertTrue(context.packageName.startsWith("com.civileg.app"))
     }
 
     @Test

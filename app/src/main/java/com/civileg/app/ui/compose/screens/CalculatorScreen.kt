@@ -57,13 +57,17 @@ fun CalculatorScreen(
             )
         }
     ) { padding ->
+        Box(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentAlignment = Alignment.TopCenter
+        ) {
         Column(
             modifier = Modifier
+                .widthIn(max = MaterialTheme.dimens.formMaxWidth)
                 .fillMaxSize()
-                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
-                .padding(12.dp),
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Display Area
@@ -232,6 +236,7 @@ fun CalculatorScreen(
                     }
                 }
             }
+        }
         }
     }
 }

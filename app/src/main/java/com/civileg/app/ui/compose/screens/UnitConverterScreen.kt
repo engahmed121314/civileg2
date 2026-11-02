@@ -69,10 +69,14 @@ fun UnitConverterScreen(
             )
         }
     ) { padding ->
+        Box(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentAlignment = Alignment.TopCenter
+        ) {
         Column(
             modifier = Modifier
+                .widthIn(max = MaterialTheme.dimens.formMaxWidth)
                 .fillMaxSize()
-                .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding, vertical = MaterialTheme.dimens.screenVerticalPadding),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.sectionSpacing)
@@ -157,6 +161,7 @@ fun UnitConverterScreen(
                     )
                 }
             }
+        }
         }
     }
 }

@@ -50,6 +50,17 @@ class DxfExporter {
         /** Layer name -> ACI colour used for the standard structural layers. */
         private val STANDARD_LAYERS = linkedMapOf(
             "0" to 7,
+            "0_GRID_AXES" to 8,
+            "0_CONCRETE_OUTLINE" to 7,
+            "0_CONCRETE_HIDDEN" to 8,
+            "0_REBAR_BOTTOM" to 1,
+            "0_REBAR_TOP" to 5,
+            "0_REBAR_DISTRIBUTION" to 3,
+            "0_STIRRUPS_OUTER" to 2,
+            "0_STIRRUPS_INNER" to 40,
+            "0_DIMENSIONS" to 4,
+            "0_ANNOTATIONS" to 7,
+            "0_BBS_TABLE" to 3,
             "AXES" to 1,
             "COLUMNS" to 4,
             "BEAMS" to 5,
@@ -430,6 +441,56 @@ class DxfExporter {
     }
 
     // ───────────────────────────────────────────────────────────────────────────
+    // ADVANCED REBAR & ANNOTATION DRAWING HELPERS
+    // ───────────────────────────────────────────────────────────────────────────
+
+    /** Add a solid/circular rebar dot representation. */
+    fun addRebarDot(x: Double, y: Double, dia: Double, layer: String = "0_REBAR_BOTTOM") {
+        addCircle(x, y, dia / 2.0, layer)
+        if (dia > 6.0) {
+            addCircle(x, y, dia / 4.0, layer)
+        }
+    }
+
+    /** Add a rectangular closed stirrup with 135-degree end hooks. */
+    fun addStirrupWithHooks(
+        x: Double, y: Double, width: Double, height: Double,
+        hookLen: Double = 75.0, layer: String = "0_STIRRUPS_OUTER"
+    ) {
+        addPolyline(
+            listOf(
+                x to y,
+                x + width to y,
+                x + width to y + height,
+                x to y + height
+            ),
+            layer = layer,
+            closed = true
+        )
+        val hDx = hookLen * 0.7071
+        val hDy = hookLen * 0.7071
+        addLine2D(x, y + height, x + hDx, y + height - hDy, layer)
+        addLine2D(x, y + height, x + hDx * 0.5, y + height - hDy * 1.2, layer)
+    }
+
+    /** Add a leader annotation line with arrow point + text label. */
+    fun addLeaderCallout(
+        startX: Double, startY: Double,
+        elbowX: Double, elbowY: Double,
+        text: String,
+        layer: String = "0_ANNOTATIONS",
+        height: Double = 80.0
+    ) {
+        addLine2D(startX, startY, elbowX, elbowY, layer)
+        val armX = if (elbowX >= startX) elbowX + height * 2.5 else elbowX - height * 2.5
+        addLine2D(elbowX, elbowY, armX, elbowY, layer)
+        val tick = height * 0.3
+        addCircle(startX, startY, tick, layer)
+        val textX = if (elbowX >= startX) elbowX + height * 0.2 else armX + height * 0.2
+        addText(textX, elbowY + height * 0.25, text, height, layer)
+    }
+
+    // ───────────────────────────────────────────────────────────────────────────
     // BAR BENDING SCHEDULE
     // ───────────────────────────────────────────────────────────────────────────
 
@@ -441,35 +502,79 @@ class DxfExporter {
         val x = 0.0
         val rowHeight = 300.0
         var y = -2500.0
-        val colX = doubleArrayOf(0.0, 1200.0, 1900.0, 2600.0, 3300.0, 4900.0, 6300.0)
+        val colWidths = doubleArrayOf(1200.0, 900.0, 900.0, 900.0, 800.0, 1600.0, 1400.0)
+        val totalWidth = colWidths.sum()
 
-        addText(x, y, "BAR BENDING SCHEDULE", 220.0, "BBS")
-        y -= rowHeight
-        val headers = listOf("Member", "Bar", "Dia (mm)", "Shape", "Qty", "Length/bar (mm)", "Total (kg)")
-        headers.forEachIndexed { i, h -> addText(x + colX[i], y, h, 160.0, "BBS") }
+        // Table Header Banner
+        addPolyline(
+            listOf(
+                x to y + rowHeight,
+                x + totalWidth to y + rowHeight,
+                x + totalWidth to y,
+                x to y
+            ),
+            layer = "0_BBS_TABLE",
+            closed = true
+        )
+        addText(x + 50.0, y + rowHeight * 0.3, "BAR BENDING SCHEDULE (BBS)", 220.0, "0_BBS_TABLE")
         y -= rowHeight
 
+        val headers = listOf("Member", "Bar Mark", "Dia (mm)", "Shape", "Qty", "Length/bar (mm)", "Total (kg)")
+        var currentX = x
+        val colX = DoubleArray(colWidths.size)
+        headers.forEachIndexed { i, h ->
+            colX[i] = currentX
+            addText(currentX + 30.0, y + 60.0, h, 140.0, "0_BBS_TABLE")
+            currentX += colWidths[i]
+        }
+        val headerY = y
+        y -= rowHeight
+
+        val startY = headerY + rowHeight
         for (entry in entries) {
             val cells = listOf(
                 entry.memberMark,
                 entry.barMark,
-                entry.diameter.toString(),
-                entry.shapeCode.toString(),
-                entry.count.toString(),
+                "${entry.diameter}",
+                "Code ${entry.shapeCode}",
+                "${entry.count}",
                 String.format(Locale.US, "%.0f", entry.totalLengthPerBar),
                 String.format(Locale.US, "%.2f", entry.totalWeightKg)
             )
-            cells.forEachIndexed { i, cell -> addText(x + colX[i], y, cell, 150.0, "BBS") }
+            cells.forEachIndexed { i, cell ->
+                addText(colX[i] + 30.0, y + 60.0, cell, 130.0, "0_BBS_TABLE")
+            }
+            // Row divider line
+            addLine2D(x, y, x + totalWidth, y, "0_BBS_TABLE")
             y -= rowHeight
         }
 
-        val total = entries.sumOf { it.totalWeightKg }
+        // Table outer border and vertical column divider lines
+        val endY = y + rowHeight
+        addPolyline(
+            listOf(
+                x to startY,
+                x + totalWidth to startY,
+                x + totalWidth to endY,
+                x to endY
+            ),
+            layer = "0_BBS_TABLE",
+            closed = true
+        )
+        var divX = x
+        for (w in colWidths) {
+            divX += w
+            addLine2D(divX, startY, divX, endY, "0_BBS_TABLE")
+        }
+
+        // Summary row
+        val totalWeight = entries.sumOf { it.totalWeightKg }
         addText(
-            x + colX[5],
-            y - rowHeight * 0.4,
-            "TOTAL STEEL: ${String.format(Locale.US, "%.2f", total)} kg",
+            x + 50.0,
+            y - rowHeight * 0.3,
+            "TOTAL STEEL WEIGHT = ${String.format(Locale.US, "%.2f", totalWeight)} kg",
             180.0,
-            "BBS"
+            "0_BBS_TABLE"
         )
     }
 

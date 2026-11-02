@@ -109,5 +109,13 @@
 -keep class com.google.android.play.core.integrity.** { *; }
 -dontwarn com.google.android.play.core.integrity.**
 
-# --- Security: Keep application and model classes ---
--keep class com.civileg.app.** { *; }
+# --- Security: Calculation classes protection ---
+# Preserve public API for calculations while allowing internal logic and equations to be obfuscated
+# Note: Do not keep all app classes indiscriminately (-keep class com.civileg.app.**)
+# as that disables R8 optimization and obfuscation for the entire application.
+-keep class com.civileg.app.CivilEngApplication { *; }
+-keep class com.civileg.app.MainActivity { *; }
+-keep class com.civileg.app.ui.splash.SplashActivity { *; }
+-keep class com.civileg.app.domain.calculations.CalculationFactory { *; }
+-keep interface com.civileg.app.domain.calculations.base.* { *; }
+

@@ -77,23 +77,28 @@ object AdManager {
         if (interstitialAd != null) return
 
         isInterstitialLoading = true
-        InterstitialAd.load(context, INTERSTITIAL_AD_UNIT_ID, buildAdRequest(),
-            object : InterstitialAdLoadCallback() {
-                override fun onAdLoaded(ad: InterstitialAd) {
-                    interstitialAd = ad
-                    isInterstitialLoading = false
+        try {
+            InterstitialAd.load(context, INTERSTITIAL_AD_UNIT_ID, buildAdRequest(),
+                object : InterstitialAdLoadCallback() {
+                    override fun onAdLoaded(ad: InterstitialAd) {
+                        interstitialAd = ad
+                        isInterstitialLoading = false
+                    }
+                    override fun onAdFailedToLoad(error: LoadAdError) {
+                        interstitialAd = null
+                        isInterstitialLoading = false
+                    }
                 }
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    interstitialAd = null
-                    isInterstitialLoading = false
-                }
-            }
-        )
+            )
+        } catch (t: Throwable) {
+            interstitialAd = null
+            isInterstitialLoading = false
+        }
     }
 
     /**
      * Show interstitial ad. Call when navigating from design input → results.
-     * Respects frequency control.
+     * Respects frequency control and fails safely without blocking.
      */
     fun showInterstitialAd(
         activity: Activity,
@@ -117,17 +122,22 @@ object AdManager {
             return
         }
 
-        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-            override fun onAdDismissedFullScreenContent() {
-                interstitialAd = null
-                onAdDismissed()
+        try {
+            ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                override fun onAdDismissedFullScreenContent() {
+                    interstitialAd = null
+                    onAdDismissed()
+                }
+                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                    interstitialAd = null
+                    onAdFailed()
+                }
             }
-            override fun onAdFailedToShowFullScreenContent(adError: AdError) {
-                interstitialAd = null
-                onAdFailed()
-            }
+            ad.show(activity)
+        } catch (t: Throwable) {
+            interstitialAd = null
+            onAdFailed()
         }
-        ad.show(activity)
     }
 
     // ═══════════════════════════════════════════════════════════

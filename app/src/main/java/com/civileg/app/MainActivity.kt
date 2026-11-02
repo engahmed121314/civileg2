@@ -29,7 +29,6 @@ import com.civileg.app.ui.compose.screens.*
 import com.civileg.app.ui.responsive.LocalWindowSize
 import com.civileg.app.ui.responsive.WindowWidthClass
 import com.civileg.app.ui.responsive.dimens
-import com.civileg.app.ui.screens.*
 import com.civileg.app.ui.theme.CivilEngineerTheme
 import com.civileg.app.ui.theme.ThemeMode
 import com.civileg.app.utils.LocaleHelper
@@ -121,7 +120,7 @@ fun AppNavigation(
     val useNavigationRail = windowSize.widthClass != WindowWidthClass.COMPACT
 
     // Map bottom nav tabs to routes
-    val bottomTabRoutes = listOf("home", "design_hub", "steel", "tools_hub", "more_hub")
+    val bottomTabRoutes = listOf("home", "design_hub", "building_designer", "tools_hub", "more_hub")
 
     fun navigateToTab(index: Int) {
         selectedBottomTab = index
@@ -339,6 +338,9 @@ fun AppNavigation(
                 }
                 composable(AppScreen.WindLoad.route) {
                     WindLoadScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.BuildingDesigner.route) {
+                    BuildingDesignerScreen(onNavigateBack = { navController.popBackStack() })
                 }
 
                 // ═══ PROJECT & SETTINGS ═══

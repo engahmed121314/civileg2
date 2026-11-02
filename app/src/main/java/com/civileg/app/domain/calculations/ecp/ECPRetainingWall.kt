@@ -111,12 +111,12 @@ class ECPRetainingWall : RetainingWallDesign {
             // Water table at or above stem top: fully submerged
             val gammaEff = gamma - 9.81
             val hWaterStem = stemH
-            stemMomentUnfactored = (Ka * gammaEff * stemH.pow(3) / 6) 
-                + (0.5 * 9.81 * hWaterStem.pow(2) * (2.0/3.0) * stemH)  // water pressure moment
-                + (Ka * q * stemH.pow(2) / 2)
-            stemShearUnfactored = Ka * gammaEff * stemH.pow(2) / 2 
-                + 9.81 * hWaterStem * stemH
-                + Ka * q * stemH
+            stemMomentUnfactored = (Ka * gammaEff * stemH.pow(3) / 6) +
+                (0.5 * 9.81 * hWaterStem.pow(2) * (2.0/3.0) * stemH) + // water pressure moment
+                (Ka * q * stemH.pow(2) / 2)
+            stemShearUnfactored = Ka * gammaEff * stemH.pow(2) / 2 +
+                9.81 * hWaterStem * stemH +
+                Ka * q * stemH
         } else if (zwtRelative >= stemH) {
             // Water table below stem base: dry stem
             stemMomentUnfactored = (Ka * gamma * stemH.pow(3) / 6) + (Ka * q * stemH.pow(2) / 2)

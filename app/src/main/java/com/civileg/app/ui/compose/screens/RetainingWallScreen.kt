@@ -44,6 +44,7 @@ import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.RetainingWallViewModel
 import com.civileg.app.R
+import com.civileg.app.ui.responsive.dimens
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
@@ -122,7 +123,10 @@ fun RetainingWallScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+            contentPadding = PaddingValues(
+                horizontal = MaterialTheme.dimens.screenHorizontalPadding,
+                vertical = MaterialTheme.dimens.screenVerticalPadding
+            )
         ) {
             item {
                 Text(stringResource(R.string.rw_data_input), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)

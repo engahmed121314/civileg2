@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.common.BbsTableCard
@@ -108,8 +109,11 @@ fun FlatSlabScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(
+                    horizontal = MaterialTheme.dimens.screenHorizontalPadding,
+                    vertical = MaterialTheme.dimens.screenVerticalPadding
+                ),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.cardSpacing)
             ) {
                 // ── Panel Type Selector ─────────────────────────────
                 item {

@@ -204,6 +204,10 @@ object PriceManager {
         
         return result
     }
+
+    fun getPricesMap(context: Context): Map<String, Double> {
+        return getAllPrices(context).mapValues { it.value.price }
+    }
     
     fun updatePrice(context: Context, materialId: String, newPrice: Double) {
         val prices = getAllPrices(context).toMutableMap()

@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.civileg.app.R
+import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.utils.RebarCalculator
 import com.civileg.app.utils.RebarCalculator.STANDARD_DIAMETERS
 import com.civileg.app.utils.RebarCalculator.DesignCode
@@ -78,6 +79,7 @@ fun RebarToolScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding)
         ) {
             ScrollableTabRow(
                 selectedTabIndex = selectedTab,

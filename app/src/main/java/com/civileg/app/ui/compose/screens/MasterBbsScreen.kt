@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.utils.BbsEntry
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.MasterBbsViewModel
@@ -57,8 +58,11 @@ fun MasterBbsScreen(
             }
         } else {
             LazyColumn(
-                modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.cardSpacing)
             ) {
                 item {
                     Text(projectName, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)

@@ -12,23 +12,34 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class SplashActivity : AppCompatActivity() {
-    
+
+    private val isNavigated = java.util.concurrent.atomic.AtomicBoolean(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
-        
-        // Initialize Consent and Mobile Ads
-        AdsManager.initConsent(this) {
-            Log.d("SplashActivity", "Ads consent process completed")
-            // Proceed to MainActivity after consent is handled
+
+        // Failsafe timeout: ensure user is never blocked on splash screen (unblock)
+        lifecycleScope.launch {
+            delay(1500)
+            navigateToMain()
+        }
+
+        try {
+            // Initialize Consent and Mobile Ads with safe fallback
+            AdsManager.initConsent(this) {
+                Log.d("SplashActivity", "Ads consent process completed")
+                navigateToMain()
+            }
+        } catch (t: Throwable) {
+            Log.w("SplashActivity", "Ads consent init skipped safely: ${t.message}")
             navigateToMain()
         }
     }
 
     private fun navigateToMain() {
+        if (isNavigated.getAndSet(true)) return
         lifecycleScope.launch {
-            // Ensure minimum splash time for branding
-            delay(1000) 
             startActivity(Intent(this@SplashActivity, MainActivity::class.java))
             finish()
         }

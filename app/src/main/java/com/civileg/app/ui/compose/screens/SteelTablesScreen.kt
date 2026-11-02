@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import com.civileg.app.utils.SteelTables
 import com.civileg.app.utils.SteelTables.SectionProperties
 import com.civileg.app.R
+import com.civileg.app.ui.responsive.dimens
 import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -149,6 +150,7 @@ fun SteelTablesScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding)
         ) {
             // Search Bar
             OutlinedTextField(

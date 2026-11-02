@@ -46,4 +46,5 @@ sealed class AppScreen(val route: String, val titleResId: Int, val iconRes: Int)
     object ConcreteMix : AppScreen("concrete_mix", R.string.home_concrete_mix, R.drawable.ic_calculator)
     object QualityEngineer : AppScreen("quality_engineer", R.string.home_quality_engineer, R.drawable.ic_verified)
     object WindLoad : AppScreen("wind_load", R.string.home_wind_load, R.drawable.ic_frame)
+    object BuildingDesigner : AppScreen("building_designer", R.string.home_section_tools_title, R.drawable.ic_design)
 }

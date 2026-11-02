@@ -48,6 +48,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.domain.calculations.aci.SteelFlexuralResult
 import com.civileg.app.domain.calculations.ecp.BoltDesignResult
 import com.civileg.app.domain.calculations.ecp.BlockShearResult
@@ -668,8 +669,8 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
     var selectedViewMode by remember { mutableIntStateOf(0) }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier.fillMaxSize().padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.sectionSpacing)
     ) {
         item { SteelModuleSectionHeader(stringResource(R.string.steel_section_dictionary), R.drawable.ic_steel) }
 
