@@ -1885,3 +1885,69 @@ line corrected (two subscriptions exist in `BillingManager`). README/checklist e
 only; the privacy-policy contradiction (P0-2) is deliberately **not** silently rewritten — it is
 flagged for an explicit product/legal decision (either remove the sync or disclose it).
 
+
+### 9.42 Second-pass review (2026-11-02) — hand-wired features proven unreachable
+
+**User request.** «افحص التطبيق مرة اخري» — re-scan the application. Full Arabic report:
+`AUDIT_PACKAGE/RESCAN_2026-11-02.md`. This pass re-ran the build graph and added a
+reference-graph analysis (every top-level declaration vs. every reference outside its file,
+Hilt modules excluded, each hit then confirmed by `grep`).
+
+**Re-verified (unchanged).** `:app:testDebugUnitTest` → 78 suites / 1,391 tests / 0 failures /
+0 errors / 0 skipped (tallied from `TEST-*.xml` again). `:app:lintDebug` → still red
+(3 `SuspiciousIndentation` + 1,715 warnings). Room schema export still missing, migration tests
+still absent, iText AGPL still shipped.
+
+**New P0 — both revenue paths are dead code.**
+- `BillingManager` has **zero references repo-wide** outside its own file (no Hilt injection, no
+  `startConnection()`, no paywall strings — `premium|subscription` count in `values/strings.xml` = 0).
+  `ads/AdPreferences` (the only caller of `AdManager.setPremiumUser`) is equally unreferenced, so
+  `_isPremiumUser` is permanently `false` and the purchase flow cannot even be reached.
+- No ad is ever rendered: all four composables in `ads/AdComponents.kt` (`AdBannerSection`,
+  `AdBannerCompact`, `NativeAdPlaceholder`, `RemoveAdsBanner`) have 0 references, and
+  `utils/AdsManager.loadBanner()/showInterstitial()` have 0 callers — only the UMP consent +
+  `MobileAds.initialize` path runs from `SplashActivity`. Net: ad SDK initialises, nothing is shown.
+
+**New P0 — data safety.**
+- No backup and no transfer: `allowBackup="false"` plus `data_extraction_rules.xml` excluding
+  `sharedpref`, `database` and `file` from **both** cloud-backup and device-transfer, while the only
+  export/import path (`viewmodel/ExportViewModel.kt`, 450 LOC) is unreachable → changing phones
+  loses every project.
+- Zero transactions in 371 files (`@Transaction` = 0, `withTransaction` = 0) while e.g.
+  `DesignRepository.saveFootingDesign()` writes `designs` and then `footings` as two independent
+  inserts (lines 56–63) → archive/BOQ can diverge on a partial failure.
+
+**New P1.**
+- **45 unreachable files / 8,250 LOC**, including whole features: `ModelCheckEngine` (223, ETABS/SAFE
+  model verification), `FoundationDesignComparator` (476), `SoilBearingViewModel` (240),
+  `SBCJoistSlab` (259, duplicate of `SBCHordiSlabDesign`), 6 unused Compose components (~1,800),
+  8 legacy Views + 3 adapters, and a 10-line `AdvancedCalculatorEngine` stub returning `x*x`.
+- Two unjustified permissions: `FOREGROUND_SERVICE` (no `<service>` exists) and `READ_MEDIA_IMAGES`
+  (photo picker `PickVisualMedia` needs none); the manifest comment claiming it prevents screen
+  capture is wrong — `FLAG_SECURE` is the mechanism and it is not used anywhere.
+- `PriceManager.updatePricesFromInternet()` has 0 callers and its providers return hard-coded maps
+  ("in the real app there would be a real API call", `api.example.com` placeholder).
+- State loss: 0 `SavedStateHandle`, 41 `remember {` vs 15 `rememberSaveable`.
+- Silent errors: 61 `runCatching`, 260 `catch`, 37 `printStackTrace`, 38 hard-coded
+  `Dispatchers.IO` in ViewModels, no unified `UiState.Error`.
+- 5 of 6 `res/layout` files unused, which keeps `recyclerview`, `constraintlayout`,
+  `navigation-fragment-ktx`, `navigation-ui-ktx` and `Glide` (+KSP) on the classpath for nothing.
+- Arabic i18n: exactly 4 untranslated UI labels (`home_calculator_sub`, `home_unit_converter_sub`,
+  `home_steel_tables_sub`, `home_boq_sub`) plus the 82 missing `frame_*` keys.
+- **SBC load-factor contradiction (result correctness):** `DesignCode.getDeadLoadFactor()` returns
+  1.2 for SBC (used by `BeamDesignEngine` and `MomentShearForceDiagram`), while `SBCFlatSlab:672`
+  and `SBCWaffleSlabDesign:74` hard-code 1.4; `SBCSteelDesignEngine:1347` uses 1.2 again.
+- `CivilEGApplication.kt:28-31` still carries `VERSION_NAME="1.0.0"`, `VERSION_CODE=1` and a
+  mistyped developer email (`eng.ahmed121314@…`), all contradicting `build.gradle.kts`/manifest.
+
+**Corrections issued to §9.41.** The earlier "security ✅ CryptoUtils" line is wrong — `CryptoUtils`
+(AES-GCM + Keystore) is never called, so nothing is encrypted at rest; "ads ✅" is wrong — nothing is
+displayed; the P0-1 billing finding is deeper than "no verification" — billing is not wired at all;
+and the dead-code estimate (1,936 LOC in `views/`) is superseded by 8,250 LOC across 45 files.
+
+**Updated gate before any scale-up work:** P0-a wire billing + paywall + server verification,
+P0-b surface at least one ad placement, P0-c real encrypted export/import, P0-d single source of
+load combinations + SBC regression test, P0-e `withTransaction` on every element save (≈2–3 weeks),
+then P1-a…P1-f (dead-code purge, permissions, state restoration, error surface, pricing honesty,
+i18n/constants) ≈2 weeks.
+
