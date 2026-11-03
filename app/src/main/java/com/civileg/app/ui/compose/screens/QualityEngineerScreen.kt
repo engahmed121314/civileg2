@@ -18,9 +18,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.listSaver
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,6 +77,20 @@ import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.*
 
+private fun runQcInputAction(
+    scope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    action: () -> Unit
+) {
+    try {
+        action()
+    } catch (error: IllegalArgumentException) {
+        scope.launch {
+            snackbarHostState.showSnackbar(error.message ?: "Please check the entered values")
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QualityEngineerScreen(
@@ -88,8 +99,6 @@ fun QualityEngineerScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val saveableStateHolder = rememberSaveableStateHolder()
-    val reportsState by viewModel.reportsState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf(
         stringResource(R.string.quality_tab_concrete),
@@ -156,82 +165,35 @@ fun QualityEngineerScreen(
                 }
             }
 
-            QualityOverviewCard(reportsState)
-
-            saveableStateHolder.SaveableStateProvider(selectedTab) {
-                when (selectedTab) {
-                    0 -> ConcreteQCTab(viewModel, snackbarHostState, scope)
-                    1 -> SoilFoundationQCTab(viewModel, snackbarHostState, scope)
-                    2 -> RebarQCTab(viewModel, snackbarHostState, scope)
-                    3 -> SteelStructureQCTab(viewModel, snackbarHostState, scope)
-                    4 -> RoadsQCTab(viewModel, snackbarHostState, scope)
-                    5 -> BridgesQCTab(viewModel, snackbarHostState, scope)
-                    6 -> TunnelsQCTab(viewModel, snackbarHostState, scope)
-                    7 -> BuildingsQCTab(viewModel, snackbarHostState, scope)
-                    8 -> DisciplineQcTab(viewModel, QcDiscipline.EARTHWORKS, snackbarHostState, scope)
-                    9 -> DisciplineQcTab(viewModel, QcDiscipline.PILING, snackbarHostState, scope)
-                    10 -> DisciplineQcTab(viewModel, QcDiscipline.RETAINING_WALLS, snackbarHostState, scope)
-                    11 -> DisciplineQcTab(viewModel, QcDiscipline.WATERPROOFING, snackbarHostState, scope)
-                    12 -> DisciplineQcTab(viewModel, QcDiscipline.MASONRY, snackbarHostState, scope)
-                    13 -> DisciplineQcTab(viewModel, QcDiscipline.FLOORING, snackbarHostState, scope)
-                    14 -> DisciplineQcTab(viewModel, QcDiscipline.PRECAST, snackbarHostState, scope)
-                    15 -> DisciplineQcTab(viewModel, QcDiscipline.POST_TENSION, snackbarHostState, scope)
-                    16 -> DisciplineQcTab(viewModel, QcDiscipline.GROUTING, snackbarHostState, scope)
-                    17 -> DisciplineQcTab(viewModel, QcDiscipline.SOIL_IMPROVEMENT, snackbarHostState, scope)
-                    18 -> DisciplineQcTab(viewModel, QcDiscipline.WATER_TANKS, snackbarHostState, scope)
-                    19 -> DisciplineQcTab(viewModel, QcDiscipline.DRAINAGE, snackbarHostState, scope)
-                    20 -> DisciplineQcTab(viewModel, QcDiscipline.PAINTING, snackbarHostState, scope)
-                    21 -> DisciplineQcTab(viewModel, QcDiscipline.SITE_WORKS, snackbarHostState, scope)
-                    22 -> DisciplineQcTab(viewModel, QcDiscipline.FIRE_PROTECTION, snackbarHostState, scope)
-                    23 -> QualityReportsTab(viewModel, snackbarHostState, scope)
-                    24 -> QualityComplianceScreen()
-                }
+            when (selectedTab) {
+                0 -> ConcreteQCTab(viewModel, snackbarHostState, scope)
+                1 -> SoilFoundationQCTab(viewModel, snackbarHostState, scope)
+                2 -> RebarQCTab(viewModel, snackbarHostState, scope)
+                3 -> SteelStructureQCTab(viewModel, snackbarHostState, scope)
+                4 -> RoadsQCTab(viewModel, snackbarHostState, scope)
+                5 -> BridgesQCTab(viewModel, snackbarHostState, scope)
+                6 -> TunnelsQCTab(viewModel, snackbarHostState, scope)
+                7 -> BuildingsQCTab(viewModel, snackbarHostState, scope)
+                8 -> DisciplineQcTab(viewModel, QcDiscipline.EARTHWORKS, snackbarHostState, scope)
+                9 -> DisciplineQcTab(viewModel, QcDiscipline.PILING, snackbarHostState, scope)
+                10 -> DisciplineQcTab(viewModel, QcDiscipline.RETAINING_WALLS, snackbarHostState, scope)
+                11 -> DisciplineQcTab(viewModel, QcDiscipline.WATERPROOFING, snackbarHostState, scope)
+                12 -> DisciplineQcTab(viewModel, QcDiscipline.MASONRY, snackbarHostState, scope)
+                13 -> DisciplineQcTab(viewModel, QcDiscipline.FLOORING, snackbarHostState, scope)
+                14 -> DisciplineQcTab(viewModel, QcDiscipline.PRECAST, snackbarHostState, scope)
+                15 -> DisciplineQcTab(viewModel, QcDiscipline.POST_TENSION, snackbarHostState, scope)
+                16 -> DisciplineQcTab(viewModel, QcDiscipline.GROUTING, snackbarHostState, scope)
+                17 -> DisciplineQcTab(viewModel, QcDiscipline.SOIL_IMPROVEMENT, snackbarHostState, scope)
+                18 -> DisciplineQcTab(viewModel, QcDiscipline.WATER_TANKS, snackbarHostState, scope)
+                19 -> DisciplineQcTab(viewModel, QcDiscipline.DRAINAGE, snackbarHostState, scope)
+                20 -> DisciplineQcTab(viewModel, QcDiscipline.PAINTING, snackbarHostState, scope)
+                21 -> DisciplineQcTab(viewModel, QcDiscipline.SITE_WORKS, snackbarHostState, scope)
+                22 -> DisciplineQcTab(viewModel, QcDiscipline.FIRE_PROTECTION, snackbarHostState, scope)
+                23 -> QualityReportsTab(viewModel, snackbarHostState, scope)
+                24 -> QualityComplianceScreen()
             }
         }
         SnackbarHost(snackbarHostState)
-    }
-}
-
-@Composable
-private fun QualityOverviewCard(state: ReportsQCState) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                "لوحة ضبط الجودة | Quality dashboard",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                QualityMetric("الفحوص", state.totalInspections.toString())
-                QualityMetric("ناجح", state.passedInspections.toString())
-                QualityMetric("مرفوض", state.failedInspections.toString())
-                QualityMetric("NCR مفتوح", state.openNcrCount.toString())
-            }
-            Text(
-                "مهم: الحدود المعروضة أدوات فحص أولي. اعتمد معايير القبول من أحدث إصدار معتمد للمواصفات، " +
-                    "العقد وITP وخطة الفحص؛ اختيار ECP/ACI/SBC لا يحوّل تلقائيًا كل فحص إلى تحقق كودي. " +
-                    "وثّق نتائج الاختبارات الفعلية وراجع حالات عدم المطابقة قبل القبول.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onTertiaryContainer
-            )
-        }
-    }
-}
-
-@Composable
-private fun QualityMetric(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-        Text(label, style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -393,7 +355,11 @@ private fun ConcreteQCTab(
         }
 
         Button(
-            onClick = { viewModel.saveConcretePour(context) },
+            onClick = {
+                runQcInputAction(scope, snackbarHostState) {
+                    viewModel.saveConcretePour(context)
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Save, contentDescription = null)
@@ -456,10 +422,8 @@ private fun SoilFoundationQCTab(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.soilState.collectAsState()
-    var methodName by rememberSaveable { mutableStateOf(BearingMethod.TERZAGHI.name) }
-    var soilTypeName by rememberSaveable { mutableStateOf(SoilType.CLAY.name) }
-    val selectedMethod = BearingMethod.entries.first { it.name == methodName }
-    val selectedSoilType = SoilType.entries.first { it.name == soilTypeName }
+    var selectedMethod by remember { mutableStateOf(BearingMethod.TERZAGHI) }
+    var selectedSoilType by remember { mutableStateOf(SoilType.CLAY) }
 
     Column(
         modifier = Modifier
@@ -486,10 +450,7 @@ private fun SoilFoundationQCTab(
                     BearingMethod.entries.forEach { method ->
                         FilterChip(
                             selected = selectedMethod == method,
-                            onClick = {
-                                methodName = method.name
-                                viewModel.invalidateSoilCalculation()
-                            },
+                            onClick = { selectedMethod = method },
                             label = {
                                 Text(
                                     when (method) {
@@ -514,10 +475,7 @@ private fun SoilFoundationQCTab(
                     SoilType.entries.forEach { type ->
                         FilterChip(
                             selected = selectedSoilType == type,
-                            onClick = {
-                                soilTypeName = type.name
-                                viewModel.invalidateSoilCalculation()
-                            },
+                            onClick = { selectedSoilType = type },
                             label = {
                                 Text(
                                     when (type) {
@@ -614,7 +572,11 @@ private fun SoilFoundationQCTab(
         }
 
         Button(
-            onClick = { viewModel.calculateSoilBearing(selectedMethod, selectedSoilType) },
+            onClick = {
+                runQcInputAction(scope, snackbarHostState) {
+                    viewModel.calculateSoilBearing(selectedMethod, selectedSoilType)
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
@@ -905,7 +867,11 @@ private fun SteelStructureQCTab(
         }
 
         Button(
-            onClick = { viewModel.calculateSteelChecks(selectedSection) },
+            onClick = {
+                runQcInputAction(scope, snackbarHostState) {
+                    viewModel.calculateSteelChecks(selectedSection)
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
@@ -1095,7 +1061,7 @@ private fun BridgesQCTab(
                     OutlinedTextField(
                         value = uiState.concreteStrength,
                         onValueChange = { viewModel.updateBridgesField("concreteStrength", it) },
-                        label = { Text("قوة الخرسانة (MPa)") },
+                        label = { Text("مقاومة الخرسانة المقاسة (MPa)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1110,29 +1076,51 @@ private fun BridgesQCTab(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
+                    value = uiState.requiredConcreteStrength,
+                    onValueChange = { viewModel.updateBridgesField("requiredConcreteStrength", it) },
+                    label = { Text("مقاومة الخرسانة المطلوبة حسب المواصفات (MPa)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
                     value = uiState.naturalFrequency,
                     onValueChange = { viewModel.updateBridgesField("naturalFrequency", it) },
                     label = { Text("التردد الطبيعي (Hz)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                QualityCheckRow(
-                    label = "التردد الطبيعي مقبول",
-                    passed = (uiState.naturalFrequency.toDoubleOrNull() ?: 0.0) in 0.5..5.0,
-                    detail = "المطلوب: 0.5-5 Hz"
+                Text(
+                    "التردد الطبيعي مؤشر معلوماتي فقط؛ لا يُستخدم بديلًا عن قياس الهبوط أو حد القبول بالمشروع.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                QualityCheckRow(
-                    label = "قوة الخرسانة ≥ المطلوب",
-                    passed = (uiState.concreteStrength.toDoubleOrNull() ?: 0.0) >= 25.0,
-                    detail = "المطلوب: ≥ 25 MPa"
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = uiState.measuredDeflection,
+                        onValueChange = { viewModel.updateBridgesField("measuredDeflection", it) },
+                        label = { Text("الهبوط المقاس (mm)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = uiState.allowableDeflection,
+                        onValueChange = { viewModel.updateBridgesField("allowableDeflection", it) },
+                        label = { Text("حد الهبوط بالمشروع (mm)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
 
         Button(
-            onClick = { viewModel.calculateBridgeChecks() },
+            onClick = {
+                runQcInputAction(scope, snackbarHostState) {
+                    viewModel.calculateBridgeChecks()
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
@@ -1959,31 +1947,21 @@ private fun DisciplineQcTab(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
-    val valuesSaver = remember(discipline) {
-        listSaver<Map<String, String>, String>(
-            save = { state -> state.entries.flatMap { listOf(it.key, it.value) } },
-            restore = { saved ->
-                saved.chunked(2).mapNotNull { pair ->
-                    pair.getOrNull(1)?.let { pair[0] to it }
-                }.toMap()
-            }
-        )
-    }
-    var codeName by rememberSaveable(discipline) { mutableStateOf(DesignCode.ECP.name) }
-    val designCode = DesignCode.entries.firstOrNull { it.name == codeName } ?: DesignCode.ECP
-    var values by rememberSaveable(discipline, stateSaver = valuesSaver) {
-        mutableStateOf(discipline.fields.associate { it.key to it.default })
+    var designCode by remember(discipline) { mutableStateOf(DesignCode.ECP) }
+    val values = remember(discipline) {
+        mutableStateMapOf<String, String>().apply {
+            discipline.fields.forEach { put(it.key, it.default) }
+        }
     }
     var outcome by remember(discipline) { mutableStateOf<QualityControlEngine.QcOutcome?>(null) }
-    fun updateField(key: String, value: String) {
-        values = values + (key to value)
-        outcome = null
-    }
 
+    // Any numeric field that cannot be parsed would silently become 0.0 and
+    // change the result (a zero load or zero strength is not a valid entry).
+    // Block the calculation instead and flag the offending fields.
     val invalidNumberKeys = discipline.fields
         .filter { it.type == QcFieldType.NUMBER }
         .map { it.key }
-        .filter { values[it]?.trim()?.toDoubleOrNull()?.isFinite() != true }
+        .filter { values[it]?.trim()?.toDoubleOrNull() == null }
         .toSet()
 
     Column(
@@ -1995,12 +1973,7 @@ private fun DisciplineQcTab(
     ) {
         DesignCodeSelectorRow(
             selectedCode = designCode,
-            onCodeSelected = { codeName = it.name; outcome = null }
-        )
-        Text(
-            "حدود هذا الفحص مرجعية أولية؛ طابقها مع المواصفة وITP المعتمدين للمشروع قبل إصدار قبول أو رفض.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            onCodeSelected = { designCode = it; outcome = null }
         )
 
         Card(modifier = Modifier.fillMaxWidth()) {
@@ -2016,7 +1989,7 @@ private fun DisciplineQcTab(
                     when (field.type) {
                         QcFieldType.NUMBER -> OutlinedTextField(
                             value = values[field.key] ?: "",
-                            onValueChange = { updateField(field.key, it) },
+                            onValueChange = { values[field.key] = it },
                             label = { Text(field.label) },
                             isError = field.key in invalidNumberKeys,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -2024,7 +1997,7 @@ private fun DisciplineQcTab(
                         )
                         QcFieldType.TEXT -> OutlinedTextField(
                             value = values[field.key] ?: "",
-                            onValueChange = { updateField(field.key, it) },
+                            onValueChange = { values[field.key] = it },
                             label = { Text(field.label) },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -2036,7 +2009,7 @@ private fun DisciplineQcTab(
                             Text(field.label, style = MaterialTheme.typography.bodyMedium)
                             Switch(
                                 checked = (values[field.key] ?: "false").equals("true", true),
-                                onCheckedChange = { updateField(field.key, it.toString()) }
+                                onCheckedChange = { values[field.key] = it.toString() }
                             )
                         }
                     }
@@ -2048,28 +2021,13 @@ private fun DisciplineQcTab(
         Button(
             onClick = {
                 if (invalidNumberKeys.isEmpty()) {
-                    try {
-                        val result = computeDisciplineOutcome(discipline, values, designCode)
-                        outcome = result
-                        viewModel.persistDisciplineOutcome(
-                            discipline.category,
-                            discipline.elementId,
-                            designCode,
-                            result
+                    val result = computeDisciplineOutcome(discipline, values, designCode)
+                    outcome = result
+                    viewModel.persistDisciplineOutcome(discipline.category, discipline.elementId, designCode, result)
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            if (result.passed) "الفحص ناجح — تم حفظ السجل" else "الفحص يحتاج مراجعة — تم حفظ السجل"
                         )
-                        scope.launch {
-                            snackbarHostState.showSnackbar(
-                                if (result.passed) "الفحص ناجح — تم حفظ السجل"
-                                else "الفحص يحتاج مراجعة — تم حفظ السجل"
-                            )
-                        }
-                    } catch (error: IllegalArgumentException) {
-                        outcome = null
-                        scope.launch {
-                            snackbarHostState.showSnackbar(
-                                error.message ?: "راجع قيم المدخلات ونطاقاتها"
-                            )
-                        }
                     }
                 } else {
                     scope.launch { snackbarHostState.showSnackbar("أدخل قيمة رقمية صحيحة في جميع الحقول") }
@@ -2092,7 +2050,6 @@ private fun DisciplineQcTab(
                     designCode = designCode
                 )
             },
-            enabled = outcome != null,
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
@@ -2100,10 +2057,7 @@ private fun DisciplineQcTab(
             Text("تصدير تقرير PDF")
         }
 
-        if (outcome != null) {
-            DisciplineDrawingCard(discipline, values, designCode, outcome?.passed == true)
-        }
-
+        DisciplineDrawingCard(discipline, values, designCode, outcome?.passed == true)
         QcOutcomeCard(outcome)
     }
 }
@@ -2211,7 +2165,7 @@ private fun QualityReportsTab(
             uiState = uiState,
             onLoadDefault = { viewModel.loadDefaultItp() },
             onClear = { viewModel.clearItp() },
-            onUpdateStatus = { id, status -> viewModel.updateItpStatus(id, status, "", "", "") },
+            onUpdateStatus = { id, status -> viewModel.updateItpStatus(id, status) },
             onExport = { viewModel.exportItpCsv(context) }
         )
 

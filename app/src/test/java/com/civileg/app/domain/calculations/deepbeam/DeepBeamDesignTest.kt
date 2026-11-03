@@ -130,7 +130,8 @@ class DeepBeamDesignTest {
     fun `minimum reinforcement is zero point two five percent of b h`() {
         val result = design.design(input())
         assertEquals(0.0025 * 300.0 * 1000.0, result.minimumReinforcement, 1e-9)
-        assertEquals(result.minimumReinforcement, result.tieAreaProvided, 1e-9)
+        assertEquals(0.0, result.tieAreaProvided, 1e-9)
+        assertFalse(result.isSafe)
     }
 
     @Test
@@ -143,7 +144,7 @@ class DeepBeamDesignTest {
 
     @Test
     fun `well proportioned deep beam is safe`() {
-        val result = design.design(input())
+        val result = design.design(input(providedTie = 1200.0))
         assertTrue(result.isSafe)
         assertTrue(result.checks.all { it.passed })
         assertTrue(result.warnings.isEmpty())

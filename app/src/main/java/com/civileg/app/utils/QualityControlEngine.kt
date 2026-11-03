@@ -322,30 +322,50 @@ object QualityControlEngine {
     fun bridgeQc(
         code: DesignCode,
         concreteStrengthMpa: Double,
+        requiredConcreteStrengthMpa: Double,
         spanM: Double,
-        naturalFrequencyHz: Double
+        naturalFrequencyHz: Double,
+        measuredDeflectionMm: Double,
+        allowableDeflectionMm: Double
     ): QcOutcome {
-        val minConcrete = 30.0
-        val deflection = if (naturalFrequencyHz > 0) (15.76 / naturalFrequencyHz).pow(2) else Double.POSITIVE_INFINITY
-        val allowableDeflection = spanM * 1000.0 / 250.0
+        require(concreteStrengthMpa.isFinite() && concreteStrengthMpa > 0.0)
+        require(requiredConcreteStrengthMpa.isFinite() && requiredConcreteStrengthMpa > 0.0)
+        require(spanM.isFinite() && spanM > 0.0)
+        require(naturalFrequencyHz.isFinite() && naturalFrequencyHz > 0.0)
+        require(measuredDeflectionMm.isFinite() && measuredDeflectionMm >= 0.0)
+        require(allowableDeflectionMm.isFinite() && allowableDeflectionMm > 0.0)
 
         val checks = listOf(
-            GenericSafetyCheck("Concrete strength ≥ 30 MPa", concreteStrengthMpa, minConcrete, "MPa",
-                concreteStrengthMpa >= minConcrete, "ECP 203 / AASHTO LRFD"),
-            GenericSafetyCheck("Natural frequency ≥ 2.0 Hz", naturalFrequencyHz, 2.0, "Hz",
-                naturalFrequencyHz >= 2.0, "AASHTO LRFD §10"),
-            GenericSafetyCheck("Total deflection ≤ L/250", deflection, allowableDeflection, "mm",
-                deflection <= allowableDeflection, "AASHTO LRFD Table 2.5.2.6.3-1")
+            GenericSafetyCheck(
+                "Measured concrete strength ≥ specified strength",
+                concreteStrengthMpa,
+                requiredConcreteStrengthMpa,
+                "MPa",
+                concreteStrengthMpa >= requiredConcreteStrengthMpa,
+                "${codeName(code)} project mix specification"
+            ),
+            GenericSafetyCheck(
+                "Measured deflection ≤ project limit (L = $spanM m)",
+                measuredDeflectionMm,
+                allowableDeflectionMm,
+                "mm",
+                measuredDeflectionMm <= allowableDeflectionMm,
+                "${codeName(code)} project serviceability specification"
+            )
         )
 
         val passed = checks.all { it.passed }
-        val utilization = if (allowableDeflection > 0) deflection / allowableDeflection else 0.0
+        val utilization = maxOf(
+            requiredConcreteStrengthMpa / concreteStrengthMpa,
+            measuredDeflectionMm / allowableDeflectionMm
+        )
         val details = listOf(
-            "Concrete class" to "%.1f MPa".format(concreteStrengthMpa),
+            "Measured concrete strength" to "%.1f MPa".format(concreteStrengthMpa),
+            "Specified concrete strength" to "%.1f MPa".format(requiredConcreteStrengthMpa),
             "Span" to "%.2f m".format(spanM),
-            "Natural frequency" to "%.2f Hz".format(naturalFrequencyHz),
-            "Est. deflection δ" to if (deflection.isFinite()) "%.2f mm".format(deflection) else "-",
-            "Allowable L/250" to "%.2f mm".format(allowableDeflection)
+            "Natural frequency (informational)" to "%.2f Hz".format(naturalFrequencyHz),
+            "Measured deflection" to "%.2f mm".format(measuredDeflectionMm),
+            "Project deflection limit" to "%.2f mm".format(allowableDeflectionMm)
         )
         return QcOutcome(
             title = "Bridges Quality Control",

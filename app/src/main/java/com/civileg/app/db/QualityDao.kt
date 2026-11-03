@@ -95,16 +95,9 @@ interface QualityDao {
     fun getItpByDiscipline(discipline: String): Flow<List<InspectionTestPlan>>
 
     @Query(
-        "UPDATE inspection_test_plans SET status = :status, resultValue = :resultValue, " +
-            "checkedBy = :checkedBy, remarks = :remarks WHERE id = :id"
+        "UPDATE inspection_test_plans SET status = :status WHERE id = :id"
     )
-    suspend fun updateItpStatus(
-        id: Long,
-        status: String,
-        resultValue: String,
-        checkedBy: String,
-        remarks: String
-    )
+    suspend fun updateItpStatus(id: Long, status: String)
 
     @Query("DELETE FROM inspection_test_plans WHERE id = :id")
     suspend fun deleteItp(id: Long)

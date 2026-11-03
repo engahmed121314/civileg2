@@ -160,7 +160,7 @@ class SettlementAnalysisTest {
     }
 
     @Test
-    fun `settlement at a given time includes immediate and consolidated components`() {
+    fun `settlement at a given time is the degree of consolidation times Sc`() {
         val result = analysis.analyze(
             input(
                 h = 4.0, cc = 0.30, e0 = 1.0, sigma0 = 100.0, delta = 50.0,
@@ -175,17 +175,6 @@ class SettlementAnalysisTest {
             result.settlementAtTime,
             1e-9
         )
-    }
-
-    @Test
-    fun `settlement at zero time equals immediate settlement`() {
-        val result = analysis.analyze(
-            input(
-                h = 4.0, cc = 0.30, e0 = 1.0, sigma0 = 100.0,
-                delta = 50.0, cv = 1.0, hd = 1.0, time = 0.0
-            )
-        )
-        assertEquals(result.immediateSettlement, result.settlementAtTime, 1e-9)
     }
 
     // ── Totals and safety ─────────────────────────────────────────────

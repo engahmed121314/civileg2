@@ -191,7 +191,8 @@ class PileGroupAnalysis {
         notes.add("Interaction factor α = ${"%.3f".format(interactionFactor)} at s/d = ${"%.2f".format(spacingToDiameter)}")
         notes.add("Group settlement factor = ${"%.3f".format(groupSettlementFactor)}")
 
-        val isSafe = input.verticalLoad <= groupCapacity &&
+        val isSafe = input.horizontalLoad == 0.0 &&
+            input.verticalLoad <= groupCapacity &&
             maxPileLoad <= input.pileCapacity &&
             minPileLoad >= 0.0 &&
             groupSettlement <= input.allowableSettlement

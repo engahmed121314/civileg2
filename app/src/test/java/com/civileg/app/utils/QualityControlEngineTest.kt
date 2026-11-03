@@ -174,25 +174,59 @@ class QualityControlEngineTest {
     // BRIDGES
     // ==================================================================
     @Test
-    fun bridgeQc_adequateFrequency_passes() {
+    fun bridgeQc_projectStrengthAndDeflectionPass() {
         val outcome = QualityControlEngine.bridgeQc(
             code = DesignCode.ECP,
             concreteStrengthMpa = 30.0,
+            requiredConcreteStrengthMpa = 25.0,
             spanM = 20.0,
-            naturalFrequencyHz = 2.5
+            naturalFrequencyHz = 1.0,
+            measuredDeflectionMm = 40.0,
+            allowableDeflectionMm = 50.0
         )
         assertTrue(outcome.passed)
     }
 
     @Test
-    fun bridgeQc_lowFrequency_fails() {
+    fun bridgeQc_lowMeasuredStrength_fails() {
         val outcome = QualityControlEngine.bridgeQc(
             code = DesignCode.ECP,
-            concreteStrengthMpa = 30.0,
+            concreteStrengthMpa = 24.0,
+            requiredConcreteStrengthMpa = 25.0,
             spanM = 20.0,
-            naturalFrequencyHz = 1.0
+            naturalFrequencyHz = 2.5,
+            measuredDeflectionMm = 40.0,
+            allowableDeflectionMm = 50.0
         )
         assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun bridgeQc_deflectionOverProjectLimit_fails() {
+        val outcome = QualityControlEngine.bridgeQc(
+            code = DesignCode.SBC,
+            concreteStrengthMpa = 30.0,
+            requiredConcreteStrengthMpa = 25.0,
+            spanM = 20.0,
+            naturalFrequencyHz = 2.5,
+            measuredDeflectionMm = 51.0,
+            allowableDeflectionMm = 50.0
+        )
+        assertFalse(outcome.passed)
+    }
+
+    @Test
+    fun bridgeQc_frequencyDoesNotDetermineAcceptance() {
+        val outcome = QualityControlEngine.bridgeQc(
+            code = DesignCode.ACI,
+            concreteStrengthMpa = 30.0,
+            requiredConcreteStrengthMpa = 25.0,
+            spanM = 20.0,
+            naturalFrequencyHz = 0.5,
+            measuredDeflectionMm = 40.0,
+            allowableDeflectionMm = 50.0
+        )
+        assertTrue(outcome.passed)
     }
 
     // ==================================================================

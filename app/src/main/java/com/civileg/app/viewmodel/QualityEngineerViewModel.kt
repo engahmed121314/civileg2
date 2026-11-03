@@ -18,6 +18,7 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.utils.BearingMethod
 import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.utils.CsvEncoder
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.ItpTemplates
 import com.civileg.app.utils.QualityControlEngine
@@ -111,9 +112,12 @@ data class RoadsQCState(
 
 data class BridgesQCState(
     val designCode: DesignCode = DesignCode.ECP,
-    val concreteStrength: String = "30",
+    val concreteStrength: String = "",
+    val requiredConcreteStrength: String = "",
     val span: String = "20",
-    val naturalFrequency: String = "2.5",
+    val naturalFrequency: String = "",
+    val measuredDeflection: String = "",
+    val allowableDeflection: String = "",
     val outcome: QualityControlEngine.QcOutcome? = null
 )
 
@@ -240,9 +244,9 @@ class QualityEngineerViewModel @Inject constructor(
         }
     }
 
-    fun updateItpStatus(id: Long, status: String, resultValue: String, checkedBy: String, remarks: String) {
+    fun updateItpStatus(id: Long, status: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            runCatching { qualityDao.updateItpStatus(id, status, resultValue, checkedBy, remarks) }
+            runCatching { qualityDao.updateItpStatus(id, status) }
         }
     }
 
@@ -316,111 +320,126 @@ class QualityEngineerViewModel @Inject constructor(
         )
     }
 
-    fun invalidateSoilCalculation() {
-        _soilState.value = _soilState.value.copy(soilResult = null, outcome = null)
-    }
-
     // ---------------------------------------------------------------
     // Field updaters
     // ---------------------------------------------------------------
     fun updateConcreteField(field: String, value: String) {
-        _concreteState.value = when (field) {
-            "elementId" -> _concreteState.value.copy(elementId = value)
-            "volume" -> _concreteState.value.copy(volume = value)
-            "slump" -> _concreteState.value.copy(slump = value)
-            "fcu" -> _concreteState.value.copy(fcu = value)
-            "sampleId" -> _concreteState.value.copy(sampleId = value)
-            "strength7Days" -> _concreteState.value.copy(strength7Days = value)
-            "strength28Days" -> _concreteState.value.copy(strength28Days = value)
-            "airContent" -> _concreteState.value.copy(airContent = value)
-            "concreteTemp" -> _concreteState.value.copy(concreteTemp = value)
-            else -> _concreteState.value
-        }.copy(outcome = null)
+        val current = _concreteState.value
+        val updated = when (field) {
+            "elementId" -> current.copy(elementId = value)
+            "volume" -> current.copy(volume = value)
+            "slump" -> current.copy(slump = value)
+            "fcu" -> current.copy(fcu = value)
+            "sampleId" -> current.copy(sampleId = value)
+            "strength7Days" -> current.copy(strength7Days = value)
+            "strength28Days" -> current.copy(strength28Days = value)
+            "airContent" -> current.copy(airContent = value)
+            "concreteTemp" -> current.copy(concreteTemp = value)
+            else -> current
+        }
+        _concreteState.value = if (updated == current) current else updated.copy(outcome = null)
     }
 
     fun updateSoilField(field: String, value: String) {
-        _soilState.value = when (field) {
-            "cohesion" -> _soilState.value.copy(cohesion = value)
-            "frictionAngle" -> _soilState.value.copy(frictionAngle = value)
-            "unitWeight" -> _soilState.value.copy(unitWeight = value)
-            "waterTableDepth" -> _soilState.value.copy(waterTableDepth = value)
-            "foundationWidth" -> _soilState.value.copy(foundationWidth = value)
-            "foundationLength" -> _soilState.value.copy(foundationLength = value)
-            "foundationDepth" -> _soilState.value.copy(foundationDepth = value)
-            "safetyFactor" -> _soilState.value.copy(safetyFactor = value)
-            else -> _soilState.value
-        }.copy(soilResult = null, outcome = null)
+        val current = _soilState.value
+        val updated = when (field) {
+            "cohesion" -> current.copy(cohesion = value)
+            "frictionAngle" -> current.copy(frictionAngle = value)
+            "unitWeight" -> current.copy(unitWeight = value)
+            "waterTableDepth" -> current.copy(waterTableDepth = value)
+            "foundationWidth" -> current.copy(foundationWidth = value)
+            "foundationLength" -> current.copy(foundationLength = value)
+            "foundationDepth" -> current.copy(foundationDepth = value)
+            "safetyFactor" -> current.copy(safetyFactor = value)
+            else -> current
+        }
+        _soilState.value = if (updated == current) current else updated.copy(soilResult = null, outcome = null)
     }
 
     fun updateRebarField(field: String, value: String) {
-        _rebarState.value = when (field) {
-            "barDiameter" -> _rebarState.value.copy(barDiameter = value)
-            "numBars" -> _rebarState.value.copy(numBars = value)
-            "fy" -> _rebarState.value.copy(fy = value)
-            "fcu" -> _rebarState.value.copy(fcu = value)
-            "cover" -> _rebarState.value.copy(cover = value)
-            "beamWidth" -> _rebarState.value.copy(beamWidth = value)
-            "effectiveDepth" -> _rebarState.value.copy(effectiveDepth = value)
-            else -> _rebarState.value
-        }.copy(rebarChecks = null, outcome = null)
+        val current = _rebarState.value
+        val updated = when (field) {
+            "barDiameter" -> current.copy(barDiameter = value)
+            "numBars" -> current.copy(numBars = value)
+            "fy" -> current.copy(fy = value)
+            "fcu" -> current.copy(fcu = value)
+            "cover" -> current.copy(cover = value)
+            "beamWidth" -> current.copy(beamWidth = value)
+            "effectiveDepth" -> current.copy(effectiveDepth = value)
+            else -> current
+        }
+        _rebarState.value = if (updated == current) current else updated.copy(rebarChecks = null, outcome = null)
     }
 
     fun updateSteelField(field: String, value: String) {
-        _steelState.value = when (field) {
-            "sectionKey" -> _steelState.value.copy(sectionKey = value)
-            "appliedMoment" -> _steelState.value.copy(appliedMoment = value)
-            "appliedShear" -> _steelState.value.copy(appliedShear = value)
-            "steelFy" -> _steelState.value.copy(steelFy = value)
-            "span" -> _steelState.value.copy(span = value)
-            else -> _steelState.value
-        }.copy(steelChecks = null, outcome = null)
+        val current = _steelState.value
+        val updated = when (field) {
+            "sectionKey" -> current.copy(sectionKey = value)
+            "appliedMoment" -> current.copy(appliedMoment = value)
+            "appliedShear" -> current.copy(appliedShear = value)
+            "steelFy" -> current.copy(steelFy = value)
+            "span" -> current.copy(span = value)
+            else -> current
+        }
+        _steelState.value = if (updated == current) current else updated.copy(steelChecks = null, outcome = null)
     }
 
     fun updateRoadsField(field: String, value: String) {
-        _roadsState.value = when (field) {
-            "surfaceLayerThickness" -> _roadsState.value.copy(surfaceLayerThickness = value)
-            "baseLayerThickness" -> _roadsState.value.copy(baseLayerThickness = value)
-            "subbaseLayerThickness" -> _roadsState.value.copy(subbaseLayerThickness = value)
-            "compactionPercent" -> _roadsState.value.copy(compactionPercent = value)
-            "asphaltDensity" -> _roadsState.value.copy(asphaltDensity = value)
-            "airVoids" -> _roadsState.value.copy(airVoids = value)
-            "gmb" -> _roadsState.value.copy(gmb = value)
-            "gmm" -> _roadsState.value.copy(gmm = value)
-            else -> _roadsState.value
-        }.copy(outcome = null)
+        val current = _roadsState.value
+        val updated = when (field) {
+            "surfaceLayerThickness" -> current.copy(surfaceLayerThickness = value)
+            "baseLayerThickness" -> current.copy(baseLayerThickness = value)
+            "subbaseLayerThickness" -> current.copy(subbaseLayerThickness = value)
+            "compactionPercent" -> current.copy(compactionPercent = value)
+            "asphaltDensity" -> current.copy(asphaltDensity = value)
+            "airVoids" -> current.copy(airVoids = value)
+            "gmb" -> current.copy(gmb = value)
+            "gmm" -> current.copy(gmm = value)
+            else -> current
+        }
+        _roadsState.value = if (updated == current) current else updated.copy(outcome = null)
     }
 
     fun updateBridgesField(field: String, value: String) {
-        _bridgesState.value = when (field) {
-            "concreteStrength" -> _bridgesState.value.copy(concreteStrength = value)
-            "span" -> _bridgesState.value.copy(span = value)
-            "naturalFrequency" -> _bridgesState.value.copy(naturalFrequency = value)
-            else -> _bridgesState.value
-        }.copy(outcome = null)
+        val current = _bridgesState.value
+        val updated = when (field) {
+            "concreteStrength" -> current.copy(concreteStrength = value)
+            "requiredConcreteStrength" -> current.copy(requiredConcreteStrength = value)
+            "span" -> current.copy(span = value)
+            "naturalFrequency" -> current.copy(naturalFrequency = value)
+            "measuredDeflection" -> current.copy(measuredDeflection = value)
+            "allowableDeflection" -> current.copy(allowableDeflection = value)
+            else -> current
+        }
+        _bridgesState.value = if (updated == current) current else updated.copy(outcome = null)
     }
 
     fun updateTunnelsField(field: String, value: String) {
-        _tunnelsState.value = when (field) {
-            "rockClass" -> _tunnelsState.value.copy(rockClass = value)
-            "tunnelConvergence" -> _tunnelsState.value.copy(tunnelConvergence = value)
-            "tunnelDiameter" -> _tunnelsState.value.copy(tunnelDiameter = value)
-            "supportThickness" -> _tunnelsState.value.copy(supportThickness = value)
-            else -> _tunnelsState.value
-        }.copy(outcome = null)
+        val current = _tunnelsState.value
+        val updated = when (field) {
+            "rockClass" -> current.copy(rockClass = value)
+            "tunnelConvergence" -> current.copy(tunnelConvergence = value)
+            "tunnelDiameter" -> current.copy(tunnelDiameter = value)
+            "supportThickness" -> current.copy(supportThickness = value)
+            else -> current
+        }
+        _tunnelsState.value = if (updated == current) current else updated.copy(outcome = null)
     }
 
     fun updateBuildingsField(field: String, value: String) {
-        _buildingsState.value = when (field) {
-            "buildingType" -> _buildingsState.value.copy(buildingType = value)
-            "numFloors" -> _buildingsState.value.copy(numFloors = value)
-            "floorHeight" -> _buildingsState.value.copy(floorHeight = value)
-            "totalWeight" -> _buildingsState.value.copy(totalWeight = value)
-            "importanceFactor" -> _buildingsState.value.copy(importanceFactor = value)
-            "sds" -> _buildingsState.value.copy(sds = value)
-            "responseR" -> _buildingsState.value.copy(responseR = value)
-            "storyDrift" -> _buildingsState.value.copy(storyDrift = value)
-            else -> _buildingsState.value
-        }.copy(buildingChecks = null, outcome = null)
+        val current = _buildingsState.value
+        val updated = when (field) {
+            "buildingType" -> current.copy(buildingType = value)
+            "numFloors" -> current.copy(numFloors = value)
+            "floorHeight" -> current.copy(floorHeight = value)
+            "totalWeight" -> current.copy(totalWeight = value)
+            "importanceFactor" -> current.copy(importanceFactor = value)
+            "sds" -> current.copy(sds = value)
+            "responseR" -> current.copy(responseR = value)
+            "storyDrift" -> current.copy(storyDrift = value)
+            else -> current
+        }
+        _buildingsState.value = if (updated == current) current else updated.copy(buildingChecks = null, outcome = null)
     }
 
     // ---------------------------------------------------------------
@@ -428,13 +447,13 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun saveConcretePour(context: Context) {
         val s = _concreteState.value
-        val volume = InputGuard.positive("volume", s.volume.toDoubleOrNull() ?: 0.0)
-        val slump = InputGuard.inRange("slump", s.slump.toDoubleOrNull() ?: 0.0, 0.0, 500.0)
-        val fcu = InputGuard.positive("fcu", s.fcu.toDoubleOrNull() ?: 25.0)
-        val s7 = InputGuard.nonNegative("strength7Days", s.strength7Days.toDoubleOrNull() ?: 0.0)
-        val s28 = InputGuard.nonNegative("strength28Days", s.strength28Days.toDoubleOrNull() ?: 0.0)
-        val air = InputGuard.inRange("airContent", s.airContent.toDoubleOrNull() ?: 4.0, 0.0, 10.0)
-        val temp = InputGuard.inRange("concreteTemp", s.concreteTemp.toDoubleOrNull() ?: 25.0, 0.0, 50.0)
+        val volume = InputGuard.positive("volume", s.volume.toDoubleOrNull() ?: Double.NaN)
+        val slump = InputGuard.inRange("slump", s.slump.toDoubleOrNull() ?: Double.NaN, 0.0, 500.0)
+        val fcu = InputGuard.positive("fcu", s.fcu.toDoubleOrNull() ?: Double.NaN)
+        val s7 = InputGuard.nonNegative("strength7Days", s.strength7Days.toDoubleOrNull() ?: Double.NaN)
+        val s28 = InputGuard.nonNegative("strength28Days", s.strength28Days.toDoubleOrNull() ?: Double.NaN)
+        val air = InputGuard.inRange("airContent", s.airContent.toDoubleOrNull() ?: Double.NaN, 0.0, 10.0)
+        val temp = InputGuard.inRange("concreteTemp", s.concreteTemp.toDoubleOrNull() ?: Double.NaN, 0.0, 50.0)
         val elementId = InputGuard.notBlank("elementId", s.elementId.ifBlank { s.sampleId.ifBlank { "CONCRETE" } })
         
         val outcome = QualityControlEngine.concreteQc(
@@ -465,15 +484,23 @@ class QualityEngineerViewModel @Inject constructor(
         val input = SoilBearingInput(
             method = method,
             soilType = soilType,
-            foundationWidth = s.foundationWidth.toDoubleOrNull() ?: 1.5,
-            foundationLength = s.foundationLength.toDoubleOrNull() ?: 1.5,
-            foundationDepth = s.foundationDepth.toDoubleOrNull() ?: 1.0,
-            cohesion = s.cohesion.toDoubleOrNull() ?: 25.0,
-            frictionAngle = s.frictionAngle.toDoubleOrNull() ?: 30.0,
-            unitWeight = s.unitWeight.toDoubleOrNull() ?: 18.0,
-            waterTableDepth = s.waterTableDepth.toDoubleOrNull() ?: 5.0,
-            safetyFactor = s.safetyFactor.toDoubleOrNull() ?: 3.0
+            foundationWidth = s.foundationWidth.toDoubleOrNull() ?: Double.NaN,
+            foundationLength = s.foundationLength.toDoubleOrNull() ?: Double.NaN,
+            foundationDepth = s.foundationDepth.toDoubleOrNull() ?: Double.NaN,
+            cohesion = s.cohesion.toDoubleOrNull() ?: Double.NaN,
+            frictionAngle = s.frictionAngle.toDoubleOrNull() ?: Double.NaN,
+            unitWeight = s.unitWeight.toDoubleOrNull() ?: Double.NaN,
+            waterTableDepth = s.waterTableDepth.toDoubleOrNull() ?: Double.NaN,
+            safetyFactor = s.safetyFactor.toDoubleOrNull() ?: Double.NaN
         )
+        InputGuard.positive("foundationWidth", input.foundationWidth)
+        InputGuard.positive("foundationLength", input.foundationLength)
+        InputGuard.positive("foundationDepth", input.foundationDepth)
+        InputGuard.nonNegative("cohesion", input.cohesion)
+        InputGuard.inRange("frictionAngle", input.frictionAngle, 0.0, 89.0)
+        InputGuard.positive("unitWeight", input.unitWeight)
+        InputGuard.nonNegative("waterTableDepth", input.waterTableDepth)
+        InputGuard.positive("safetyFactor", input.safetyFactor)
         val result = when (method) {
             BearingMethod.TERZAGHI -> bearing.calculateTerzaghi(input)
             BearingMethod.MEYERHOF -> bearing.calculateMeyerhof(input)
@@ -549,10 +576,10 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun calculateSteelChecks(section: String) {
         val s = _steelState.value.copy(sectionKey = section)
-        val fy = InputGuard.positive("steelFy", s.steelFy.toDoubleOrNull() ?: 275.0)
-        val span = InputGuard.positive("span", s.span.toDoubleOrNull() ?: 5.0)
-        val mu = InputGuard.nonNegative("appliedMoment", s.appliedMoment.toDoubleOrNull() ?: 0.0)
-        val vu = InputGuard.nonNegative("appliedShear", s.appliedShear.toDoubleOrNull() ?: 0.0)
+        val fy = InputGuard.positive("steelFy", s.steelFy.toDoubleOrNull() ?: Double.NaN)
+        val span = InputGuard.positive("span", s.span.toDoubleOrNull() ?: Double.NaN)
+        val mu = InputGuard.nonNegative("appliedMoment", s.appliedMoment.toDoubleOrNull() ?: Double.NaN)
+        val vu = InputGuard.nonNegative("appliedShear", s.appliedShear.toDoubleOrNull() ?: Double.NaN)
         
         val outcome = QualityControlEngine.steelQc(
             code = s.designCode,
@@ -600,15 +627,33 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun calculateBridgeChecks() {
         val s = _bridgesState.value
-        val concStrength = InputGuard.positive("concreteStrength", s.concreteStrength.toDoubleOrNull() ?: 30.0)
-        val span = InputGuard.positive("span", s.span.toDoubleOrNull() ?: 20.0)
-        val freq = InputGuard.inRange("naturalFrequency", s.naturalFrequency.toDoubleOrNull() ?: 2.5, 0.1, 10.0)
-        
+        val concStrength = InputGuard.positive(
+            "concreteStrength",
+            s.concreteStrength.toDoubleOrNull() ?: Double.NaN
+        )
+        val requiredStrength = InputGuard.positive(
+            "requiredConcreteStrength",
+            s.requiredConcreteStrength.toDoubleOrNull() ?: Double.NaN
+        )
+        val span = InputGuard.positive("span", s.span.toDoubleOrNull() ?: Double.NaN)
+        val freq = InputGuard.positive("naturalFrequency", s.naturalFrequency.toDoubleOrNull() ?: Double.NaN)
+        val measuredDeflection = InputGuard.nonNegative(
+            "measuredDeflection",
+            s.measuredDeflection.toDoubleOrNull() ?: Double.NaN
+        )
+        val allowableDeflection = InputGuard.positive(
+            "allowableDeflection",
+            s.allowableDeflection.toDoubleOrNull() ?: Double.NaN
+        )
+
         val outcome = QualityControlEngine.bridgeQc(
             code = s.designCode,
             concreteStrengthMpa = concStrength,
+            requiredConcreteStrengthMpa = requiredStrength,
             spanM = span,
-            naturalFrequencyHz = freq
+            naturalFrequencyHz = freq,
+            measuredDeflectionMm = measuredDeflection,
+            allowableDeflectionMm = allowableDeflection
         )
         _bridgesState.value = s.copy(outcome = outcome)
         persist(QualityControlEngine.Category.BRIDGES, "BRIDGE", s.designCode, outcome)
@@ -765,18 +810,25 @@ class QualityEngineerViewModel @Inject constructor(
                 val records = qualityDao.getAllRecords().first()
                 val sb = StringBuilder()
                 sb.appendLine(
-                    "ID,Category,Element ID,Design Code,Passed,Utilization Ratio,Summary," +
-                        "Inspector,Location,Weather,Compliance Standard,Inspection Type,Created At,Notes"
+                    CsvEncoder.row(
+                        listOf(
+                            "ID", "Category", "Element ID", "Design Code", "Passed",
+                            "Utilization Ratio", "Summary", "Inspector", "Location", "Weather",
+                            "Compliance Standard", "Inspection Type", "Created At", "Notes"
+                        )
+                    )
                 )
                 records.forEach { r ->
-                    sb.append(
-                        "${r.id},${r.category},${r.elementId},${r.designCode},${r.passed}," +
-                            "${r.utilizationRatio},${r.summary.replace(",", ";")}," +
-                            "${r.inspectorName.replace(",", ";")},${r.location.replace(",", ";")}," +
-                            "${r.weatherConditions.replace(",", ";")},${r.complianceStandard.replace(",", ";")}," +
-                            "${r.inspectionType},${r.createdAt.time},${r.notes.replace(",", ";")}"
+                    sb.appendLine(
+                        CsvEncoder.row(
+                            listOf(
+                                r.id, r.category, r.elementId, r.designCode, r.passed,
+                                r.utilizationRatio, r.summary, r.inspectorName, r.location,
+                                r.weatherConditions, r.complianceStandard, r.inspectionType,
+                                r.createdAt.time, r.notes
+                            )
+                        )
                     )
-                    sb.appendLine()
                 }
                 file.writeText(sb.toString())
 
@@ -807,18 +859,24 @@ class QualityEngineerViewModel @Inject constructor(
                 val items = qualityDao.getAllItp().first()
                 val sb = StringBuilder()
                 sb.appendLine(
-                    "Discipline,Activity,Inspection Item,Reference,Acceptance Criteria," +
-                        "Frequency,Responsible,Status,Result,Checked By,Witness,Date,Remarks"
+                    CsvEncoder.row(
+                        listOf(
+                            "Discipline", "Activity", "Inspection Item", "Reference",
+                            "Acceptance Criteria", "Frequency", "Responsible", "Status",
+                            "Result", "Checked By", "Witness", "Date", "Remarks"
+                        )
+                    )
                 )
                 items.forEach { t ->
-                    sb.append(
-                        "${t.discipline},${t.activity.replace(",", ";")},${t.inspectionItem.replace(",", ";")}," +
-                            "${t.referenceCode.replace(",", ";")},${t.acceptanceCriteria.replace(",", ";")}," +
-                            "${t.frequency.replace(",", ";")},${t.responsibleParty.replace(",", ";")}," +
-                            "${t.status},${t.resultValue.replace(",", ";")},${t.checkedBy.replace(",", ";")}," +
-                            "${t.witness.replace(",", ";")},${t.inspectionDate.time},${t.remarks.replace(",", ";")}"
+                    sb.appendLine(
+                        CsvEncoder.row(
+                            listOf(
+                                t.discipline, t.activity, t.inspectionItem, t.referenceCode,
+                                t.acceptanceCriteria, t.frequency, t.responsibleParty, t.status,
+                                t.resultValue, t.checkedBy, t.witness, t.inspectionDate.time, t.remarks
+                            )
+                        )
                     )
-                    sb.appendLine()
                 }
                 file.writeText(sb.toString())
                 withContext(Dispatchers.Main) {
@@ -848,18 +906,24 @@ class QualityEngineerViewModel @Inject constructor(
                 val items = qualityDao.getAllNcr().first()
                 val sb = StringBuilder()
                 sb.appendLine(
-                    "NCR Number,Discipline,Element,Severity,Status,Reference,Description," +
-                        "Root Cause,Corrective Action,Responsible,Target Date,Closed By,Created At"
+                    CsvEncoder.row(
+                        listOf(
+                            "NCR Number", "Discipline", "Element", "Severity", "Status",
+                            "Reference", "Description", "Root Cause", "Corrective Action",
+                            "Responsible", "Target Date", "Closed By", "Created At"
+                        )
+                    )
                 )
                 items.forEach { n ->
-                    sb.append(
-                        "${n.ncrNumber},${n.discipline},${n.elementId},${n.severity},${n.status}," +
-                            "${n.referenceCode.replace(",", ";")},${n.description.replace(",", ";")}," +
-                            "${n.rootCause.replace(",", ";")},${n.correctiveAction.replace(",", ";")}," +
-                            "${n.responsibleParty.replace(",", ";")},${n.targetDate.time}," +
-                            "${n.closedBy.replace(",", ";")},${n.createdAt.time}"
+                    sb.appendLine(
+                        CsvEncoder.row(
+                            listOf(
+                                n.ncrNumber, n.discipline, n.elementId, n.severity, n.status,
+                                n.referenceCode, n.description, n.rootCause, n.correctiveAction,
+                                n.responsibleParty, n.targetDate.time, n.closedBy, n.createdAt.time
+                            )
+                        )
                     )
-                    sb.appendLine()
                 }
                 file.writeText(sb.toString())
                 withContext(Dispatchers.Main) {
