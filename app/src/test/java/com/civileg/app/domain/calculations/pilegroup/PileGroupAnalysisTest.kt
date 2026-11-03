@@ -173,6 +173,7 @@ class PileGroupAnalysisTest {
     fun `horizontal load is reported as a warning`() {
         val result = analysis.analyze(input(horizontal = 150.0))
         assertTrue(result.warnings.any { it.contains("Horizontal") })
+        assertFalse(result.isSafe)
     }
 
     @Test

@@ -50,16 +50,23 @@ class QualityDaoTest {
     @Test
     fun itp_insertAndUpdateStatus_roundTrips() = runBlocking {
         val id = dao.insertItp(
-            InspectionTestPlan(discipline = "EARTHWORKS", activity = "Compaction")
+            InspectionTestPlan(
+                discipline = "EARTHWORKS",
+                activity = "Compaction",
+                resultValue = "98%",
+                checkedBy = "Eng. Ahmed",
+                remarks = "approved"
+            )
         )
         assertEquals(1, dao.getItpByDiscipline("EARTHWORKS").first().size)
 
-        dao.updateItpStatus(id, "passed", "98%", "Eng. Ahmed", "approved")
+        dao.updateItpStatus(id, "passed")
 
         val item = dao.getItpByDiscipline("EARTHWORKS").first().first()
         assertEquals("passed", item.status)
         assertEquals("98%", item.resultValue)
         assertEquals("Eng. Ahmed", item.checkedBy)
+        assertEquals("approved", item.remarks)
     }
 
     @Test

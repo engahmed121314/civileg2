@@ -154,11 +154,7 @@ class DeepBeamDesign {
             tieForce * 1000.0 / (phiTie * input.fy)
         } else 0.0
         val minimumReinforcement = 0.0025 * input.width * input.depth
-        val tieAreaProvided = if (input.providedTieArea > 0.0) {
-            input.providedTieArea
-        } else {
-            maxOf(tieAreaRequired, minimumReinforcement)
-        }
+        val tieAreaProvided = input.providedTieArea
 
         // ── Shear capacity ──────────────────────────────────────────────
         val vcN = if (input.code == DeepBeamCode.ACI) {
