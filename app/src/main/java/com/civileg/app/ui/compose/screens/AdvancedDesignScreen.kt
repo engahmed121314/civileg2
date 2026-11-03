@@ -186,6 +186,11 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
     var deepResult by remember { mutableStateOf<DeepBeamResult?>(null) }
     var pileResult by remember { mutableStateOf<PileGroupResult?>(null) }
     var settlementResult by remember { mutableStateOf<SettlementResult?>(null) }
+    var compositeResultKey by remember { mutableStateOf<String?>(null) }
+    var fireResultKey by remember { mutableStateOf<String?>(null) }
+    var deepResultKey by remember { mutableStateOf<String?>(null) }
+    var pileResultKey by remember { mutableStateOf<String?>(null) }
+    var settlementResultKey by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
@@ -195,6 +200,8 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
     }
 
     fun calculateComposite() {
+        compositeResult = null
+        compositeResultKey = null
         runCatching {
             CompositeBeamInput(
                 code = form.compositeCode,
@@ -209,16 +216,21 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
                 liveLoadKPa = form.cLive.num("live load"),
                 superimposedDeadLoadKPa = form.cSuperDead.num("superimposed dead load"),
                 steelFlangeWidthMm = form.cFlangeWidth.num("flange width"),
-                partialShearConnectionRatio = form.cPartial.num("partial shear ratio").coerceIn(0.25, 1.0),
+                partialShearConnectionRatio = form.cPartial.num("partial shear ratio"),
                 deflectionLimitRatio = form.cDeflection.num("deflection limit"),
                 providedStuds = form.cStuds.intOrNull("provided studs")
             )
         }.mapCatching { CompositeBeamDesign.design(it) }
-            .onSuccess { compositeResult = it }
+            .onSuccess {
+                compositeResult = it
+                compositeResultKey = form.compositeInputKey()
+            }
             .onFailure { errorMessage = it.message ?: "Composite beam calculation failed" }
     }
 
     fun calculateFire() {
+        fireResult = null
+        fireResultKey = null
         runCatching {
             FireResistanceInput(
                 code = form.fireCode,
@@ -232,11 +244,16 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
                 reinforcementRatio = form.fireRho.num("reinforcement ratio")
             )
         }.mapCatching { FireResistanceDesign.design(it) }
-            .onSuccess { fireResult = it }
+            .onSuccess {
+                fireResult = it
+                fireResultKey = form.fireInputKey()
+            }
             .onFailure { errorMessage = it.message ?: "Fire resistance calculation failed" }
     }
 
     fun calculateDeep() {
+        deepResult = null
+        deepResultKey = null
         runCatching {
             DeepBeamInput(
                 code = form.deepCode,
@@ -256,11 +273,16 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
                 isContinuous = form.deepContinuous
             )
         }.mapCatching { DeepBeamDesign().design(it) }
-            .onSuccess { deepResult = it }
+            .onSuccess {
+                deepResult = it
+                deepResultKey = form.deepInputKey()
+            }
             .onFailure { errorMessage = it.message ?: "Deep beam calculation failed" }
     }
 
     fun calculatePile() {
+        pileResult = null
+        pileResultKey = null
         runCatching {
             PileGroupInput(
                 pilesX = form.pNx.int("piles X"),
@@ -280,11 +302,16 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
                 allowableSettlement = form.pAllowSettle.num("allowable settlement")
             )
         }.mapCatching { PileGroupAnalysis().analyze(it) }
-            .onSuccess { pileResult = it }
+            .onSuccess {
+                pileResult = it
+                pileResultKey = form.pileInputKey()
+            }
             .onFailure { errorMessage = it.message ?: "Pile group analysis failed" }
     }
 
     fun calculateSettlement() {
+        settlementResult = null
+        settlementResultKey = null
         runCatching {
             SettlementInput(
                 footingWidth = form.sWidth.num("footing width"),
@@ -305,7 +332,10 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
                 allowableSettlement = form.sAllowSettle.num("allowable settlement")
             )
         }.mapCatching { SettlementAnalysis().analyze(it) }
-            .onSuccess { settlementResult = it }
+            .onSuccess {
+                settlementResult = it
+                settlementResultKey = form.settlementInputKey()
+            }
             .onFailure { errorMessage = it.message ?: "Settlement analysis failed" }
     }
 
@@ -354,12 +384,33 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item { Spacer(Modifier.height(4.dp)) }
+                item { EngineeringBasisNotice(AdvancedModule.entries[moduleIndex], form) }
                 when (AdvancedModule.entries[moduleIndex]) {
-                    AdvancedModule.CompositeBeam -> compositeContent(form, compositeResult, ::calculateComposite)
-                    AdvancedModule.FireResistance -> fireContent(form, fireResult, ::calculateFire)
-                    AdvancedModule.DeepBeam -> deepContent(form, deepResult, ::calculateDeep)
-                    AdvancedModule.PileGroup -> pileContent(form, pileResult, ::calculatePile)
-                    AdvancedModule.Settlement -> settlementContent(form, settlementResult, ::calculateSettlement)
+                    AdvancedModule.CompositeBeam -> compositeContent(
+                        form,
+                        compositeResult?.takeIf { compositeResultKey == form.compositeInputKey() },
+                        ::calculateComposite
+                    )
+                    AdvancedModule.FireResistance -> fireContent(
+                        form,
+                        fireResult?.takeIf { fireResultKey == form.fireInputKey() },
+                        ::calculateFire
+                    )
+                    AdvancedModule.DeepBeam -> deepContent(
+                        form,
+                        deepResult?.takeIf { deepResultKey == form.deepInputKey() },
+                        ::calculateDeep
+                    )
+                    AdvancedModule.PileGroup -> pileContent(
+                        form,
+                        pileResult?.takeIf { pileResultKey == form.pileInputKey() },
+                        ::calculatePile
+                    )
+                    AdvancedModule.Settlement -> settlementContent(
+                        form,
+                        settlementResult?.takeIf { settlementResultKey == form.settlementInputKey() },
+                        ::calculateSettlement
+                    )
                 }
                 item { Spacer(Modifier.height(24.dp)) }
             }
@@ -416,7 +467,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.compositeContent(
     item {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             NumField("Flange width (mm)", form.cFlangeWidth, Modifier.weight(1f)) { form.cFlangeWidth = it }
-            NumField("Partial shear ratio", form.cPartial, Modifier.weight(1f)) { form.cPartial = it }
+            NumField("Partial shear ratio (0.4–1.0)", form.cPartial, Modifier.weight(1f)) { form.cPartial = it }
         }
     }
     item {
@@ -788,7 +839,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settlementContent(
         item {
             ResultCard("Time rate / معدل الهبوط الزمني") {
                 ResultRow("Degree of consolidation U", "${fmt(result.degreeOfConsolidation * 100.0, 1)} %")
-                ResultRow("Settlement at time t", "${fmt(result.settlementAtTime)} mm")
+                ResultRow("Total settlement at time t", "${fmt(result.settlementAtTime)} mm")
                 ResultRow("Time for 90% consolidation", "${fmt(result.timeFor90Consolidation)} years")
             }
         }
@@ -798,6 +849,63 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settlementContent(
 }
 
 // ───────────────────────────── Shared UI ─────────────────────────────────
+
+@Composable
+private fun EngineeringBasisNotice(module: AdvancedModule, form: AdvancedFormState) {
+    val (basis, limitations) = when (module) {
+        AdvancedModule.CompositeBeam -> {
+            val code = form.compositeCode
+            "${code.code} — ${code.label}" to
+                "نموذج أولي لكمرة بسيطة الارتكاز وحمل موزع. لا يغطي مراحل التنفيذ، الانبعاج الجانبي الالتوائي، الفتحات، أو تحقق البلاطة المركبة التفصيلي. راجع إصدار الكود ومواصفات المشروع."
+        }
+        AdvancedModule.FireResistance -> {
+            val code = form.fireCode
+            "${code.label} — prescriptive screening" to
+                "الفحص هنا للغطاء والبعد الأدنى وفق الجداول المضمّنة فقط؛ لا يحلل الأحمال أثناء الحريق أو انتقال الحرارة أو تفاصيل التسليح. SBC غير مدعوم هنا ولا يُفترض تكافؤه تلقائيًا مع ACI. تحقق من جداول وإصدار الكود المعتمد."
+        }
+        AdvancedModule.DeepBeam -> {
+            val code = form.deepCode
+            "${code.version} — simplified strut-and-tie" to
+                "النموذج المبسط يفترض حملًا نقطيًا بمنتصف البحر عند إدخاله، ولا يغني عن تحديد العقد ومناطق التحميل والارتكاز والتثبيت والتسليح الموزع. SBC غير مدعوم في هذا المحرك؛ لا تستخدم نتيجة كود آخر بدلًا منه."
+        }
+        AdvancedModule.PileGroup ->
+            "Rigid-cap preliminary analysis" to
+                "السعة الفردية مدخل من المستخدم؛ النموذج لا يصمم مقاومة التربة أو الأحمال الجانبية أو الهبوط التفاضلي. تحقق من تقرير التربة، تأثير المجموعة، الرفع، والزلازل."
+        AdvancedModule.Settlement ->
+            "Elastic + 1-D consolidation estimate" to
+                "التقدير يفترض طبقة انضغاطية ممثلة وطريقة انتشار إجهاد 2:1 عند عدم إدخال زيادة الإجهاد. لا يحسب الهبوط التفاضلي أو الزحف أو هبوط طبقات متعددة؛ طابق الوحدات وبيانات الجسات."
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        ),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                "نطاق الحساب والمرجع",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(basis, style = MaterialTheme.typography.labelMedium)
+            Text(
+                limitations,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+            Text(
+                "نتيجة فحص أولي وليست اعتمادًا أو شهادة مطابقة. لا تعتمد التصميم قبل مراجعة المدخلات والكود المحلي والرسومات بواسطة مهندس مختص.",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
 
 @Composable
 private fun SectionTitle(english: String, arabic: String) {
@@ -877,7 +985,8 @@ private fun StatusBanner(isSafe: Boolean) {
                 tint = color
             )
             Text(
-                if (isSafe) "SAFE / آمن" else "UNSAFE / غير آمن",
+                if (isSafe) "Checks passed / اجتازت الفحوص المعروضة"
+                else "Check failed / فشل فحص أو أكثر",
                 color = color,
                 fontWeight = FontWeight.Bold
             )
@@ -962,7 +1071,9 @@ private fun fmt(value: Double, decimals: Int = 2): String =
 private fun yesNo(value: Boolean): String = if (value) "Yes / نعم" else "No / لا"
 
 private fun String.num(name: String): Double =
-    trim().toDoubleOrNull() ?: throw IllegalArgumentException("Invalid number for $name")
+    trim().toDoubleOrNull()
+        ?.takeIf { it.isFinite() }
+        ?: throw IllegalArgumentException("Enter a finite number for $name")
 
 private fun String.int(name: String): Int =
     trim().toIntOrNull() ?: throw IllegalArgumentException("Invalid integer for $name")
@@ -973,3 +1084,27 @@ private fun String.intOrNull(name: String): Int? {
     val value = text.toIntOrNull() ?: throw IllegalArgumentException("Invalid integer for $name")
     return if (value <= 0) null else value
 }
+
+private fun AdvancedFormState.compositeInputKey(): String = listOf(
+    compositeCode, cSpan, cSpacing, cSlab, cSteelDepth, cSteelArea, cSteelInertia,
+    cSteelFy, cFcu, cLive, cSuperDead, cFlangeWidth, cPartial, cDeflection, cStuds
+).joinToString("|")
+
+private fun AdvancedFormState.fireInputKey(): String = listOf(
+    fireCode, fireElement, fireRating, fireCover, fireWidth, fireDepth, fireFcu, fireFy, fireRho
+).joinToString("|")
+
+private fun AdvancedFormState.deepInputKey(): String = listOf(
+    deepCode, deepContinuous, dSpan, dWidth, dDepth, dFcu, dFy, dDead, dLive, dPoint,
+    dCover, dBearing, dTieArea, dStirrupArea, dStirrupSpacing
+).joinToString("|")
+
+private fun AdvancedFormState.pileInputKey(): String = listOf(
+    pNx, pNy, pSx, pSy, pDia, pLength, pCapacity, pLoad, pMx, pMy, pH, pModulus,
+    pColW, pColD, pAllowSettle
+).joinToString("|")
+
+private fun AdvancedFormState.settlementInputKey(): String = listOf(
+    sWidth, sLength, sPressure, sModulus, sPoisson, sInfluence, sLayer, sCc, sCr,
+    sE0, sSigma0, sSigmaP, sCv, sDrainage, sTime, sAllowSettle
+).joinToString("|")

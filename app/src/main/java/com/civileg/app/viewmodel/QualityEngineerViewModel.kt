@@ -294,14 +294,30 @@ class QualityEngineerViewModel @Inject constructor(
     // Design code
     // ---------------------------------------------------------------
     fun updateDesignCode(code: DesignCode) {
-        _concreteState.value = _concreteState.value.copy(designCode = code)
-        _soilState.value = _soilState.value.copy(designCode = code)
-        _rebarState.value = _rebarState.value.copy(designCode = code)
-        _steelState.value = _steelState.value.copy(designCode = code)
-        _roadsState.value = _roadsState.value.copy(designCode = code)
-        _bridgesState.value = _bridgesState.value.copy(designCode = code)
-        _tunnelsState.value = _tunnelsState.value.copy(designCode = code)
-        _buildingsState.value = _buildingsState.value.copy(designCode = code)
+        _concreteState.value = _concreteState.value.copy(designCode = code, outcome = null)
+        _soilState.value = _soilState.value.copy(designCode = code, soilResult = null, outcome = null)
+        _rebarState.value = _rebarState.value.copy(
+            designCode = code,
+            rebarChecks = null,
+            outcome = null
+        )
+        _steelState.value = _steelState.value.copy(
+            designCode = code,
+            steelChecks = null,
+            outcome = null
+        )
+        _roadsState.value = _roadsState.value.copy(designCode = code, outcome = null)
+        _bridgesState.value = _bridgesState.value.copy(designCode = code, outcome = null)
+        _tunnelsState.value = _tunnelsState.value.copy(designCode = code, outcome = null)
+        _buildingsState.value = _buildingsState.value.copy(
+            designCode = code,
+            buildingChecks = null,
+            outcome = null
+        )
+    }
+
+    fun invalidateSoilCalculation() {
+        _soilState.value = _soilState.value.copy(soilResult = null, outcome = null)
     }
 
     // ---------------------------------------------------------------
@@ -319,7 +335,7 @@ class QualityEngineerViewModel @Inject constructor(
             "airContent" -> _concreteState.value.copy(airContent = value)
             "concreteTemp" -> _concreteState.value.copy(concreteTemp = value)
             else -> _concreteState.value
-        }
+        }.copy(outcome = null)
     }
 
     fun updateSoilField(field: String, value: String) {
@@ -333,7 +349,7 @@ class QualityEngineerViewModel @Inject constructor(
             "foundationDepth" -> _soilState.value.copy(foundationDepth = value)
             "safetyFactor" -> _soilState.value.copy(safetyFactor = value)
             else -> _soilState.value
-        }
+        }.copy(soilResult = null, outcome = null)
     }
 
     fun updateRebarField(field: String, value: String) {
@@ -346,7 +362,7 @@ class QualityEngineerViewModel @Inject constructor(
             "beamWidth" -> _rebarState.value.copy(beamWidth = value)
             "effectiveDepth" -> _rebarState.value.copy(effectiveDepth = value)
             else -> _rebarState.value
-        }
+        }.copy(rebarChecks = null, outcome = null)
     }
 
     fun updateSteelField(field: String, value: String) {
@@ -357,7 +373,7 @@ class QualityEngineerViewModel @Inject constructor(
             "steelFy" -> _steelState.value.copy(steelFy = value)
             "span" -> _steelState.value.copy(span = value)
             else -> _steelState.value
-        }
+        }.copy(steelChecks = null, outcome = null)
     }
 
     fun updateRoadsField(field: String, value: String) {
@@ -371,7 +387,7 @@ class QualityEngineerViewModel @Inject constructor(
             "gmb" -> _roadsState.value.copy(gmb = value)
             "gmm" -> _roadsState.value.copy(gmm = value)
             else -> _roadsState.value
-        }
+        }.copy(outcome = null)
     }
 
     fun updateBridgesField(field: String, value: String) {
@@ -380,7 +396,7 @@ class QualityEngineerViewModel @Inject constructor(
             "span" -> _bridgesState.value.copy(span = value)
             "naturalFrequency" -> _bridgesState.value.copy(naturalFrequency = value)
             else -> _bridgesState.value
-        }
+        }.copy(outcome = null)
     }
 
     fun updateTunnelsField(field: String, value: String) {
@@ -390,7 +406,7 @@ class QualityEngineerViewModel @Inject constructor(
             "tunnelDiameter" -> _tunnelsState.value.copy(tunnelDiameter = value)
             "supportThickness" -> _tunnelsState.value.copy(supportThickness = value)
             else -> _tunnelsState.value
-        }
+        }.copy(outcome = null)
     }
 
     fun updateBuildingsField(field: String, value: String) {
@@ -404,7 +420,7 @@ class QualityEngineerViewModel @Inject constructor(
             "responseR" -> _buildingsState.value.copy(responseR = value)
             "storyDrift" -> _buildingsState.value.copy(storyDrift = value)
             else -> _buildingsState.value
-        }
+        }.copy(buildingChecks = null, outcome = null)
     }
 
     // ---------------------------------------------------------------
