@@ -159,7 +159,7 @@ class SettlementAnalysis {
             drainagePath = input.drainagePath
         )
         val degreeU = degreeOfConsolidation(tv)
-        val settlementAtTime = consolidationSettlement * degreeU
+        val settlementAtTime = immediateSettlement + consolidationSettlement * degreeU
         val timeFor90 = if (input.coefficientOfConsolidation > 0.0 && input.drainagePath > 0.0) {
             0.848 * input.drainagePath * input.drainagePath / input.coefficientOfConsolidation
         } else {
