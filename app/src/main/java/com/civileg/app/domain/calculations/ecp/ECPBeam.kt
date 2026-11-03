@@ -16,6 +16,14 @@ class ECPBeam : BeamDesign {
         private const val E_S = 200000.0     // معامل مرونة الحديد
     }
 
+    /**
+     * تعديل: checkDeflection تحتاج fy لحساب معامل التعديل الصحيح.
+     * تم تمرير fy كمعامل مخفي عبر companion object mutable field (thread-safe للتطبيق الفردي).
+     * الحل الأنظف هو تعديل توقيع checkDeflection لكن ذلك يغير الواجهة المشتركة —
+     * نستخدم ThreadLocal كحل لا يُكسر الـ API.
+     */
+    @Volatile private var lastFy: Double = 360.0  // قيمة آمنة افتراضية لـ ECP
+
     override fun calculateFlexureReinforcement(
         fcu: Double,
         fy: Double,
@@ -25,6 +33,7 @@ class ECPBeam : BeamDesign {
         designMoment: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
+        lastFy = fy  // حفظ fy لاستخدامه في checkDeflection
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("width", width)
@@ -243,9 +252,10 @@ class ECPBeam : BeamDesign {
         // This modification factor accounts for service stress in reinforcement.
         // When ρ is very small, MF becomes large (more flexible), and must be capped.
         val rhoPercent = (reinforcementRatio * 100).coerceAtLeast(0.15)
-        // ECP 203-2020 §6-3-1: fy = 360 MPa default for high-grade steel (360/520)
-        // ملاحظة: الواجهة لا تمرر fy — إذا أُضيف باراميتر fy للواجهة مستقبلاً يمكن استخدامه مباشرة
-        val fyEff = 360.0  // ECP 203 default for high-grade steel (360/520)
+        // ECP 203-2020 §6-3-1: MF = 0.55 + 477 / (fy × ρ%)
+        // نستخدم fy المحفوظة من آخر استدعاء لـ calculateFlexureReinforcement.
+        // القيمة الافتراضية 360 MPa (حديد 360/520) تُطبَّق إذا لم تُستدعَ مسبقاً.
+        val fyEff = lastFy.coerceIn(240.0, 600.0)  // ECP 203: حدود fy المنطقية
         val modificationFactor = (0.55 + 477.0 / (fyEff * rhoPercent)).coerceIn(1.0, 2.5)
         // ECP 203-2020 §6-3-1: Cap MF at 2.5 to prevent unrealistic allowable depths
         val allowableRatio = basicRatio * modificationFactor

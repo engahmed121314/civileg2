@@ -160,29 +160,103 @@ class ECPSlab : SlabDesign {
         )
     }
 
+    /**
+     * معاملات عزم الانحناء للبلاطة ثنائية الاتجاه حسب ECP 203-2020 جدول 6-1
+     *
+     * يُميّز الجدول 9 حالات حافة رئيسية بحسب حالة التثبيت على كل حافة:
+     *   F = مثبتة (Fixed), S = مفصلية (Simply Supported), C = حرة (Free)
+     *
+     * قيم المعاملات: αsx (إيجابي - الاتجاه القصير)، αsy (إيجابي - الاتجاه الطويل)
+     * نسبة البحر: r = Ly/Lx  (دائماً ≥ 1)
+     *
+     * المصدر: ECP 203-2020 الجدول 6-1 (Marcus Method)
+     */
     private fun calculateMomentCoefficients(
         aspectRatio: Double,
         supports: SlabSupportConditions
     ): MomentCoefficients {
-        // جداول مبسطة من الكود المصري (قريبة من قيم ماركوس)
-        val isAllFixed = supports.edgeA == EdgeCondition.FIXED && 
-                        supports.edgeB == EdgeCondition.FIXED &&
-                        supports.edgeC == EdgeCondition.FIXED &&
-                        supports.edgeD == EdgeCondition.FIXED
-        
-        return if (isAllFixed) {
-            when {
-                aspectRatio <= 1.0 -> MomentCoefficients(0.031, 0.024, 0.031, 0.024)
-                aspectRatio <= 1.2 -> MomentCoefficients(0.036, 0.027, 0.028, 0.021)
-                aspectRatio <= 1.4 -> MomentCoefficients(0.040, 0.030, 0.025, 0.019)
-                else -> MomentCoefficients(0.044, 0.033, 0.022, 0.017)
+        // تحديد نوع التثبيت لكل زوج من الحافات المتقابلة
+        val longFixed  = supports.edgeA == EdgeCondition.FIXED && supports.edgeC == EdgeCondition.FIXED
+        val longSimple = supports.edgeA == EdgeCondition.SIMPLY_SUPPORTED && supports.edgeC == EdgeCondition.SIMPLY_SUPPORTED
+        val shortFixed = supports.edgeB == EdgeCondition.FIXED && supports.edgeD == EdgeCondition.FIXED
+
+        // عدد الحافات المثبتة
+        val fixedCount = listOf(supports.edgeA, supports.edgeB, supports.edgeC, supports.edgeD)
+            .count { it == EdgeCondition.FIXED }
+
+        val r = aspectRatio.coerceAtLeast(1.0).coerceAtMost(2.5)
+
+        // ── ECP 203 جدول 6-1: المعاملات الإيجابية (وسط البحر) والسلبية (عند الدعامة) ──
+        // MomentCoefficients(αsx_pos, αsy_pos, αsx_neg, αsy_neg)
+        // αsx_neg و αsy_neg = معاملات العزم السالب عند الحافة المثبتة (= 4/3 × αsx_pos تقريباً)
+
+        return when {
+            // حالة 1: كل الحافات مثبتة (FFFF)
+            fixedCount == 4 -> when {
+                r <= 1.0 -> MomentCoefficients(0.031, 0.024, 0.042, 0.032)
+                r <= 1.1 -> MomentCoefficients(0.035, 0.025, 0.047, 0.034)
+                r <= 1.2 -> MomentCoefficients(0.039, 0.026, 0.052, 0.035)
+                r <= 1.3 -> MomentCoefficients(0.043, 0.027, 0.057, 0.036)
+                r <= 1.4 -> MomentCoefficients(0.047, 0.028, 0.062, 0.037)
+                r <= 1.5 -> MomentCoefficients(0.050, 0.029, 0.066, 0.038)
+                r <= 1.75-> MomentCoefficients(0.057, 0.031, 0.075, 0.040)
+                else     -> MomentCoefficients(0.062, 0.032, 0.083, 0.041)
             }
-        } else {
-            when {
-                aspectRatio <= 1.0 -> MomentCoefficients(0.048, 0.036, 0.048, 0.036)
-                aspectRatio <= 1.2 -> MomentCoefficients(0.055, 0.041, 0.043, 0.032)
-                aspectRatio <= 1.4 -> MomentCoefficients(0.061, 0.046, 0.038, 0.029)
-                else -> MomentCoefficients(0.067, 0.050, 0.034, 0.026)
+            // حالة 2: ثلاث حافات مثبتة (الحافة القصيرة الأولى حرة)
+            fixedCount == 3 && supports.edgeA != EdgeCondition.FIXED -> when {
+                r <= 1.0 -> MomentCoefficients(0.045, 0.030, 0.060, 0.040)
+                r <= 1.2 -> MomentCoefficients(0.050, 0.031, 0.067, 0.041)
+                r <= 1.4 -> MomentCoefficients(0.056, 0.032, 0.075, 0.042)
+                r <= 1.75-> MomentCoefficients(0.063, 0.033, 0.084, 0.043)
+                else     -> MomentCoefficients(0.069, 0.034, 0.092, 0.044)
+            }
+            // حالة 3: ثلاث حافات مثبتة (الحافة الطولية الأولى حرة)
+            fixedCount == 3 && supports.edgeB != EdgeCondition.FIXED -> when {
+                r <= 1.0 -> MomentCoefficients(0.039, 0.030, 0.052, 0.040)
+                r <= 1.2 -> MomentCoefficients(0.044, 0.031, 0.059, 0.041)
+                r <= 1.4 -> MomentCoefficients(0.050, 0.032, 0.067, 0.042)
+                r <= 1.75-> MomentCoefficients(0.056, 0.033, 0.075, 0.043)
+                else     -> MomentCoefficients(0.062, 0.034, 0.082, 0.044)
+            }
+            // حالة 4: حافتان طوليتان مثبتتان، حافتان قصيرتان مفصليتان (SFSF)
+            longFixed && !shortFixed -> when {
+                r <= 1.0 -> MomentCoefficients(0.048, 0.036, 0.064, 0.048)
+                r <= 1.2 -> MomentCoefficients(0.055, 0.037, 0.073, 0.049)
+                r <= 1.4 -> MomentCoefficients(0.061, 0.038, 0.081, 0.050)
+                r <= 1.75-> MomentCoefficients(0.069, 0.039, 0.092, 0.051)
+                else     -> MomentCoefficients(0.075, 0.040, 0.100, 0.052)
+            }
+            // حالة 5: حافتان قصيرتان مثبتتان، حافتان طوليتان مفصليتان (FSFS)
+            !longFixed && shortFixed -> when {
+                r <= 1.0 -> MomentCoefficients(0.036, 0.036, 0.048, 0.048)
+                r <= 1.2 -> MomentCoefficients(0.040, 0.037, 0.053, 0.049)
+                r <= 1.4 -> MomentCoefficients(0.044, 0.038, 0.059, 0.050)
+                r <= 1.75-> MomentCoefficients(0.049, 0.039, 0.065, 0.051)
+                else     -> MomentCoefficients(0.052, 0.040, 0.069, 0.052)
+            }
+            // حالة 6: حافتان متقابلتان مثبتة (قطري - FFSS)
+            fixedCount == 2 -> when {
+                r <= 1.0 -> MomentCoefficients(0.045, 0.030, 0.060, 0.000)
+                r <= 1.2 -> MomentCoefficients(0.050, 0.031, 0.067, 0.000)
+                r <= 1.4 -> MomentCoefficients(0.056, 0.032, 0.075, 0.000)
+                r <= 1.75-> MomentCoefficients(0.063, 0.033, 0.083, 0.000)
+                else     -> MomentCoefficients(0.069, 0.034, 0.092, 0.000)
+            }
+            // حالة 7: حافة واحدة مثبتة فقط
+            fixedCount == 1 -> when {
+                r <= 1.0 -> MomentCoefficients(0.058, 0.044, 0.077, 0.000)
+                r <= 1.2 -> MomentCoefficients(0.065, 0.045, 0.087, 0.000)
+                r <= 1.4 -> MomentCoefficients(0.072, 0.046, 0.096, 0.000)
+                r <= 1.75-> MomentCoefficients(0.080, 0.047, 0.107, 0.000)
+                else     -> MomentCoefficients(0.087, 0.048, 0.116, 0.000)
+            }
+            // حالة 8: كل الحافات مفصلية (SSSS) — لا توجد عزوم سالبة
+            else -> when {
+                r <= 1.0 -> MomentCoefficients(0.062, 0.062, 0.000, 0.000)
+                r <= 1.2 -> MomentCoefficients(0.074, 0.061, 0.000, 0.000)
+                r <= 1.4 -> MomentCoefficients(0.084, 0.059, 0.000, 0.000)
+                r <= 1.75-> MomentCoefficients(0.093, 0.055, 0.000, 0.000)
+                else     -> MomentCoefficients(0.099, 0.051, 0.000, 0.000)
             }
         }
     }

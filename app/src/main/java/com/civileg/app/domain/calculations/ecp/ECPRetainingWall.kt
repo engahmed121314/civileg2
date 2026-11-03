@@ -146,8 +146,53 @@ class ECPRetainingWall : RetainingWallDesign {
             stemShearUnfactored = shearDry + shearSub + shearWater
         }
 
-        val Mu = LOAD_FACTOR_LIVE * stemMomentUnfactored
-        val Vu = LOAD_FACTOR_LIVE * stemShearUnfactored
+        // ECP 203-2020 §2-3-1:
+        //   ضغط التربة → حمل ميت  → γG = 1.4
+        //   ضغط الرياح / السطح   → حمل حي → γQ = 1.6
+        // يتم تطبيق 1.4 على مكوّن ضغط التربة و1.6 على مكوّن الحمل الحي (الرصف).
+        // stemMomentUnfactored يجمع: mEarth (ميت) + mSurcharge (حي) + mWater (هيدروستاتيك = ميت)
+        // نعيد الفصل بين المكوّنين لتطبيق المعاملات الصحيحة.
+        val h = input.wallHeight
+        val phi = input.frictionAngle
+        val q = input.surchargeLoad
+        val phiRadF = Math.toRadians(phi)
+        val KaF = tan(Math.PI / 4 - phiRadF / 2).pow(2)
+        val stemH = h - input.baseThickness
+        val zwtRelF = input.waterTableDepth - input.baseThickness
+
+        // مكوّن ضغط التربة وضغط الماء على الساق (حمل ميت — γG=1.4)
+        val deadMomentStem: Double
+        val deadShearStem: Double
+        if (zwtRelF <= 0) {
+            val gEff = input.soilDensity - 9.81
+            deadMomentStem = (KaF * gEff * stemH.pow(3) / 6) +
+                (0.5 * 9.81 * stemH.pow(2) * (2.0 / 3.0) * stemH)
+            deadShearStem  = KaF * gEff * stemH.pow(2) / 2 +
+                9.81 * stemH * stemH
+        } else if (zwtRelF >= stemH) {
+            deadMomentStem = KaF * input.soilDensity * stemH.pow(3) / 6
+            deadShearStem  = KaF * input.soilDensity * stemH.pow(2) / 2
+        } else {
+            val hDry = zwtRelF
+            val hSub = stemH - zwtRelF
+            val gEff = input.soilDensity - 9.81
+            val mDry = KaF * input.soilDensity * hDry.pow(3) / 6
+            val paTop = KaF * input.soilDensity * hDry
+            val paBas = KaF * gEff * hSub + paTop
+            val mSub  = paTop * hSub * hSub / 2.0 + (paBas - paTop) * hSub * hSub / 3.0
+            val mWater = 0.5 * 9.81 * hSub.pow(2) * (2.0 / 3.0) * hSub
+            deadMomentStem = mDry + mSub + mWater
+            val sDry = KaF * input.soilDensity * hDry.pow(2) / 2
+            val sSub = (paTop + paBas) / 2.0 * hSub
+            val sWater = 9.81 * hSub * hSub / 2.0
+            deadShearStem  = sDry + sSub + sWater
+        }
+        // مكوّن الرصف (حمل حي — γQ=1.6)
+        val liveMomentStem = KaF * q * stemH.pow(2) / 2
+        val liveShearStem  = KaF * q * stemH
+
+        val Mu = LOAD_FACTOR_DEAD * deadMomentStem + LOAD_FACTOR_LIVE * liveMomentStem
+        val Vu = LOAD_FACTOR_DEAD * deadShearStem  + LOAD_FACTOR_LIVE * liveShearStem
         val b = 1000.0
         val d = (tBase * 1000) - COVER_EARTH - 8.0
 
@@ -170,10 +215,11 @@ class ECPRetainingWall : RetainingWallDesign {
         val needStirrups = qu > qcu  // ECP 203: direct comparison
 
         // Toe design - q_avg و Δq : M = (q_avg + Δq/3)*toe²/2 حيث q_avg=(max+min)/2, Δq=max-min
+        // ضغط التربة على ناتئ الناتئ = حمل ميت → γG = 1.4 حسب ECP 203 §2-3-1
         val qAvg = (maxBearing + minBearing) / 2.0
         val deltaQ = maxBearing - minBearing
-        val toeMoment = max(0.0, (qAvg + deltaQ / 3.0) * toe * toe / 2.0)
-        val toeShear = max(0.0, (maxBearing + minBearing) / 2 * toe)
+        val toeMoment = max(0.0, (qAvg + deltaQ / 3.0) * toe * toe / 2.0) * LOAD_FACTOR_DEAD
+        val toeShear = max(0.0, (maxBearing + minBearing) / 2 * toe) * LOAD_FACTOR_DEAD
         val toeD = (tFooting * 1000) - COVER_EARTH - 8.0
         val toeK = toeMoment * 1e6 / (fcu * b * toeD * toeD)
         val toeZ = toeD * (0.5 + sqrt(max(0.0, 0.25 - toeK / 0.893)))
@@ -182,10 +228,11 @@ class ECPRetainingWall : RetainingWallDesign {
         val toeBars = RetainingWallDesign.selectBars(toeAsFinal)
         val toeRebarStr = "${toeBars.first}\u03A6${toeBars.second}"
 
-        // Heel design
-        val heelLoad = (H - tFooting) * gamma + q
-        val heelMoment = heelLoad * heel * heel / 2 * LOAD_FACTOR_DEAD
-        val heelShear = heelLoad * heel * LOAD_FACTOR_DEAD
+        // Heel design — حمل التربة فوق العقب (ميت γG=1.4) + الرصف (حي γQ=1.6)
+        val heelSoilLoad = (H - tFooting) * gamma
+        val heelLiveLoad = q
+        val heelMoment = (heelSoilLoad * LOAD_FACTOR_DEAD + heelLiveLoad * LOAD_FACTOR_LIVE) * heel * heel / 2
+        val heelShear  = (heelSoilLoad * LOAD_FACTOR_DEAD + heelLiveLoad * LOAD_FACTOR_LIVE) * heel
         val heelD = (tFooting * 1000) - COVER_EARTH - 8.0
         val heelK = heelMoment * 1e6 / (fcu * b * heelD * heelD)
         val heelZ = heelD * (0.5 + sqrt(max(0.0, 0.25 - heelK / 0.893)))
@@ -212,7 +259,8 @@ class ECPRetainingWall : RetainingWallDesign {
             "ECP 203: \u03B3c=${GAMMA_C}, \u03B3s=${GAMMA_S}",
             "Ka = ${"%.3f".format(Ka)} (Rankine)",
             "Cover = ${COVER_EARTH}mm (earth contact)",
-            "Min steel = ${"%.4f".format(MIN_STEEL_RATIO)} (${MIN_STEEL_RATIO * 100}%)"
+            "Min steel = ${"%.4f".format(MIN_STEEL_RATIO)} (${MIN_STEEL_RATIO * 100}%)",
+            "Load factors: \u03B3G=${LOAD_FACTOR_DEAD} (earth/water), \u03B3Q=${LOAD_FACTOR_LIVE} (surcharge) — ECP 203 §2-3-1"
         )
         if (hWater > 0) notes.add("Water table at ${"%.1f".format(zwt)}m - hydrostatic pressure included")
         notes.add(CodeReference.ECP.RW_LATERAL_EARTH)

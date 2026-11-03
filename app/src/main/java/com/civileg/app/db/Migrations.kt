@@ -372,6 +372,34 @@ object Migrations {
     }
 
     /**
+     * Migration from version 12 to 13.
+     * Adds the `building_layouts` table used by the Building Designer module.
+     *
+     * Without this migration, upgrading from v12 → v13 relied solely on
+     * fallbackToDestructiveMigration() which would wipe all user data.
+     * This explicit migration preserves all existing data. The CREATE TABLE
+     * uses IF NOT EXISTS so it is safe even if the table already exists
+     * (e.g. from a fresh install on v13).
+     */
+    val MIGRATION_12_13: Migration = object : Migration(12, 13) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS building_layouts (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "projectId INTEGER NOT NULL, " +
+                    "name TEXT NOT NULL DEFAULT '', " +
+                    "dataJson TEXT NOT NULL DEFAULT '{}', " +
+                    "createdAt INTEGER NOT NULL DEFAULT 0" +
+                    ")"
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_building_layouts_projectId " +
+                    "ON building_layouts(projectId)"
+            )
+        }
+    }
+
+    /**
      * Helper to create a no-op migration between consecutive versions.
      * Use only when no schema changes occurred between versions.
      */

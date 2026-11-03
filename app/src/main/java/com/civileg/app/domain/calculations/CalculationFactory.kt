@@ -105,13 +105,20 @@ object CalculationFactory {
 
     // ========== كمرات مزدوجة التسليح (Doubly Reinforced Beams) ==========
 
-    fun getDoublyReinforcedBeamDesign(code: DesignCode): Any {
+    /**
+     * يعيد محرك الكمرة المضاعفة المناسب.
+     * النوع المُعاد [DoublyReinforcedBeamResult] موحّد بدل Any — يمنع unsafe casts
+     * في جميع أماكن الاستخدام (ADR-010).
+     *
+     * استدعاء عادي: engine.design(Mu, b, h, fcu, fy)
+     */
+    fun getDoublyReinforcedBeamDesign(code: DesignCode): DoublyReinforcedBeamEngine {
         // ── InputGuard (ADR-010) ──
         InputGuard.notNull("code", code)
         return when (code) {
-            DesignCode.ECP -> ECPDoublyReinforcedBeam()
-            DesignCode.ACI -> ACIDoublyReinforcedBeam()
-            DesignCode.SBC -> SBCDoublyReinforcedBeam()
+            DesignCode.ECP -> DoublyReinforcedBeamEngine.ECP(ECPDoublyReinforcedBeam())
+            DesignCode.ACI -> DoublyReinforcedBeamEngine.ACI(ACIDoublyReinforcedBeam())
+            DesignCode.SBC -> DoublyReinforcedBeamEngine.SBC(SBCDoublyReinforcedBeam())
         }
     }
 
