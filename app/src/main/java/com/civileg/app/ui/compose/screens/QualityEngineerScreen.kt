@@ -839,7 +839,7 @@ private fun SteelStructureQCTab(
                 // Member type
                 Text("نوع العضو", style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
-                    memberTypes.forEachIndexed { index, (key, label) } {
+                    memberTypes.forEachIndexed { index, (key, label) ->
                         FilterChip(
                             selected = selectedMemberType == key,
                             onClick = {

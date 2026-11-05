@@ -170,6 +170,22 @@ class QualityControlEngineTest {
         assertFalse(outcome.passed)
     }
 
+    @Test
+    fun roadsQc_zeroAirVoids_failsWithoutSubstitutingHiddenDefaults() {
+        val outcome = QualityControlEngine.roadsQc(
+            surfaceThicknessMm = 50.0,
+            baseThicknessMm = 150.0,
+            subbaseThicknessMm = 200.0,
+            compactionPercent = 97.0,
+            asphaltDensityKnM3 = 23.0,
+            airVoidsPercent = 0.0
+        )
+
+        assertFalse(outcome.passed)
+        assertFalse(outcome.checks.last().passed)
+        assertEquals(0.0, outcome.checks.last().calculated, 0.0)
+    }
+
     // ==================================================================
     // BRIDGES
     // ==================================================================

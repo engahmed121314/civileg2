@@ -439,12 +439,9 @@ object QualityControlEngine {
         subbaseThicknessMm: Double,
         compactionPercent: Double,
         asphaltDensityKnM3: Double,
-        airVoidsPercent: Double,
-        gmb: Double = 2.35,
-        gmm: Double = 2.45
+        airVoidsPercent: Double
     ): QcOutcome {
-        val va = if (airVoidsPercent > 0) airVoidsPercent
-            else if (gmm > 0) (1.0 - gmb / gmm) * 100.0 else 0.0
+        val va = airVoidsPercent
 
         val checks = listOf(
             GenericSafetyCheck("Surface course 40–60 mm", surfaceThicknessMm, 60.0, "mm",
