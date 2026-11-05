@@ -18,8 +18,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -36,6 +37,7 @@ import com.civileg.app.utils.LocaleHelper
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.viewmodel.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 import com.civileg.app.security.AppIntegrityChecker
@@ -57,11 +59,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Perform security check
-        if (!AppIntegrityChecker.isDeviceSecure(this)) {
-            Log.w("Security", "Device security compromised - Root, Emulator or Hooking detected")
-            // In a strict financial/engineering app, we might finish() here.
-            // For this app, we will allow but log.
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                if (!AppIntegrityChecker.isDeviceSecure(applicationContext)) {
+                    Log.w("Security", "Device security compromised - Root, Emulator or Hooking detected")
+                }
+            } catch (error: Exception) {
+                Log.w("Security", "Device integrity check failed", error)
+            }
         }
 
         // Apply saved language before any UI is created
