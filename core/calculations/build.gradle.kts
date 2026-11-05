@@ -2,7 +2,6 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     alias(libs.plugins.google.services)
-    alias(libs.plugins.google.firebase.crashlytics)
 }
 
 android {
