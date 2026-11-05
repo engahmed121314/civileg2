@@ -2,9 +2,11 @@ package com.civileg.app.ui.compose.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateFloatAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.scale
+import kotlin.math.sin
+import kotlin.math.roundToInt
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -223,18 +225,20 @@ fun PremiumInputField(
         textStyle = MaterialTheme.typography.bodyMedium.copy(
             fontWeight = FontWeight.SemiBold
         ),
-        leadingIcon = leadingIcon?.let { icon -> {
+        leadingIcon = leadingIcon?.let { icon ->
             {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp),
-                    tint = if (enabled) PremiumColorsLight.primary else Color.Gray)
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = if (enabled) PremiumColorsLight.primary else Color.Gray
+                )
             }
-        }
         },
-        suffix = suffix?.let { s -> {
+        suffix = suffix?.let { s ->
             {
                 Text(s, fontSize = 11.sp, color = PremiumColorsLight.onSurfaceVariant)
             }
-        }
         },
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = PremiumColorsLight.primary,
@@ -517,10 +521,12 @@ fun PremiumActionButtons(
         // Export PDF button - Primary Geometric
         Button(
             onClick = onExportPdf,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .background(PremiumDesignSystem.PrimaryGradient, PremiumDesignSystem.ButtonShape),
             shape = PremiumDesignSystem.ButtonShape,
             colors = ButtonDefaults.buttonColors(
-                containerColor = PremiumColorsLight.primaryGradient
+                containerColor = Color.Transparent
             ),
             enabled = !isExporting
         ) {
@@ -698,15 +704,14 @@ fun PremiumIconButton(
     modifier: Modifier = Modifier,
     size: Dp = 44.dp,
     backgroundColor: Color = PremiumColorsLight.surface,
-    tintColor: Color = PremiumColorsLight.onSurface,
-    rippleColor: Color = PremiumColorsLight.primaryContainer
+    tintColor: Color = PremiumColorsLight.onSurface
 ) {
     Button(
         onClick = onClick,
-        modifier = Modifier.size(size).clip(PremiumDesignSystem.PillShape),
+        modifier = modifier.size(size).clip(PremiumDesignSystem.PillShape),
         colors = ButtonDefaults.buttonColors(
             containerColor = backgroundColor,
-            rippleColor = rippleColor
+            contentColor = tintColor
         )
     ) {
         Icon(
@@ -731,13 +736,13 @@ fun PremiumPulse(
 ) {
     val scale by animateFloatAsState(
         targetValue = 1f + (0.3f * sin((progress * 3.14159f / speed) * 2)),
-        animationSpec = tween(speed)
+        animationSpec = tween(speed.toInt())
     )
     
     Box(
         modifier = modifier
             .scale(scale)
-            .color(color)
+            .background(color)
     )
 }
 
@@ -788,19 +793,35 @@ fun PremiumAvatar(
     size: Dp = 48.dp,
     modifier: Modifier = Modifier
 ) {
-    Image(
-        painter = imageVector?.let { painterResource(it) } ?: rememberImagePainter(null),
-        contentDescription = name,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
+    Surface(
+        modifier = modifier
             .size(size)
             .clip(CircleShape)
             .border(
                 width = 2.dp,
                 color = PremiumColorsLight.primary,
                 shape = CircleShape
-            )
-    )
+            ),
+        color = PremiumColorsLight.primaryContainer
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            if (imageVector != null) {
+                Icon(
+                    imageVector = imageVector,
+                    contentDescription = name,
+                    tint = PremiumColorsLight.primary,
+                    modifier = Modifier.size(size * 0.6f)
+                )
+            } else {
+                Text(
+                    text = name.take(1).uppercase(),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = (size.value * 0.4f).sp,
+                    color = PremiumColorsLight.onPrimaryContainer
+                )
+            }
+        }
+    }
 }
 
 // ============================================================================
@@ -811,26 +832,21 @@ fun PremiumAvatar(
 fun PremiumSnackBar(
     message: String,
     action: (() -> Unit)? = null,
-    actionLabel: String? = null
+    actionLabel: String? = null,
+    modifier: Modifier = Modifier
 ) {
-    SnackbarHostState().showSnackBar(
-        Snackbar(
-            modifier = Modifier.fillMaxWidth(),
-            text = message,
-            actionLabel = actionLabel,
-            action = {
-                if (action != null) {
-                    Button(
-                        onClick = action,
-                        style = ButtonStyle(
-                            shape = RoundedCornerShape(8.dp),
-                            backgroundColor = Brush.color(PremiumColorsLight.primary)
-                        )
-                    )
+    Snackbar(
+        modifier = modifier.fillMaxWidth(),
+        containerColor = PremiumColorsLight.primaryContainer,
+        contentColor = PremiumColorsLight.onPrimaryContainer,
+        action = action?.let {
+            {
+                TextButton(onClick = it) {
+                    Text(actionLabel ?: stringResource(android.R.string.ok), color = PremiumColorsLight.primary)
                 }
-            },
-            snackBarColor = PremiumColorsLight.primaryContainer,
-            duration = SnackbarDuration.LengthLong,
-        )
-    )
+            }
+        }
+    ) {
+        Text(message)
+    }
 }
