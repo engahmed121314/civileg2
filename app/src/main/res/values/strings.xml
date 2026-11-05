@@ -1724,10 +1724,6 @@
     <string name="steel_dl_knm2">D.L (kN/m²)</string>
     <string name="steel_ll_knm2">L.L (kN/m²)</string>
     <string name="steel_wind_kmh">Wind (km/h)</string>
-    <string name="steel_view_front_elevation">Front Elevation</string>
-    <string name="steel_view_plan">Plan View</string>
-    <string name="steel_view_side_elevation">Side Elevation</string>
-    <string name="steel_view_3d_perspective">3D Perspective</string>
     <string name="steel_max_deflection">Max Deflection</string>
     <string name="steel_status_safe">SAFE ✓</string>
     <string name="steel_status_unsafe">UNSAFE ✗</string>
