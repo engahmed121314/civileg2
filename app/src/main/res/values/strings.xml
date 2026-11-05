@@ -309,7 +309,7 @@
     <string name="home_welcome">Civil Engineer</string>
     <string name="home_tagline">Professional multi-code engineering design</string>
     <string name="home_cta">Start your next structural project with precision and professionalism\nSupports Egyptian Code ECP 203, American ACI 318, and Saudi SBC 304</string>
-    <string name="home_version_badge">v2.0 — Professional Edition</string>
+    <string name="home_version_badge">v3.0 — Professional Edition</string>
     <string name="home_stat_saved">Saved Designs</string>
     <string name="home_stat_codes">Codes Used</string>
     <string name="home_stat_types">Element Types</string>
@@ -322,7 +322,7 @@
     <string name="home_no_designs">No saved designs</string>
     <string name="home_no_designs_sub">Start your first design and it will appear here</string>
     <string name="home_footer_title">Professional Civil Engineer Portfolio</string>
-    <string name="home_footer_team">Developed by CivilEG Team — Specialized Software Engineering</string>
+    <string name="home_footer_team">Developed by ENG.AHMED MAGDY — Specialized Software Engineering</string>
 
     <!-- Design Type Labels (for recent designs) -->
     <string name="design_type_beam">Beams</string>
@@ -360,6 +360,7 @@
     <string name="settings_currency_usd">US Dollar</string>
     <string name="settings_currency_aed">UAE Dirham</string>
     <string name="settings_supported_codes">Supported Codes</string>
+    <string name="developer_github">GitHub Profile</string>
     <string name="settings_disclaimer_notice">Notice: This application is for educational and preliminary design purposes only. All calculations should be verified by a licensed structural engineer.</string>
     <string name="settings_developer_team">Developed by CivilEG Team — Specialized Software Engineering</string>
 

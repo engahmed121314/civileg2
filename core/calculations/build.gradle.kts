@@ -1,6 +1,8 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.google.firebase.crashlytics)
 }
 
 android {
@@ -30,5 +32,6 @@ android {
 }
 
 dependencies {
+    implementation(libs.firebase.crashlytics)
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
 }

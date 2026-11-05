@@ -6,12 +6,12 @@ import org.junit.Assert.*
 import org.junit.Test
 
 /**
- * Tests for CalculationFactory — verifies all 21 strategy combinations are correctly instantiated.
+ * Tests for CalculationFactory across all supported design codes and element types.
  */
 class CalculationFactoryTest {
 
     @Test
-    fun `factory provides all 7 element types for all 3 codes`() {
+    fun `factory provides core element types for all 3 codes`() {
         val codes = DesignCode.entries
 
         for (code in codes) {
@@ -68,6 +68,17 @@ class CalculationFactoryTest {
             assertNotNull("SeismicDesign null for $code", CalculationFactory.getSeismicDesign(code))
             assertNotNull("DoublyReinforcedBeam null for $code", CalculationFactory.getDoublyReinforcedBeamDesign(code))
         }
+    }
+
+    @Test
+    fun `wall opening and soil structure factories route all codes independently`() {
+        assertTrue(CalculationFactory.getWallOpeningDesign(DesignCode.ECP) is com.civileg.app.domain.calculations.wallopenings.ECPWallOpening)
+        assertTrue(CalculationFactory.getWallOpeningDesign(DesignCode.ACI) is com.civileg.app.domain.calculations.wallopenings.ACIWallOpening)
+        assertTrue(CalculationFactory.getWallOpeningDesign(DesignCode.SBC) is com.civileg.app.domain.calculations.wallopenings.SBCWallOpening)
+
+        assertTrue(CalculationFactory.getSoilStructureDesign(DesignCode.ECP) is com.civileg.app.domain.calculations.soilstructure.ECPSoilStructure)
+        assertTrue(CalculationFactory.getSoilStructureDesign(DesignCode.ACI) is com.civileg.app.domain.calculations.soilstructure.ACISOilStructure)
+        assertTrue(CalculationFactory.getSoilStructureDesign(DesignCode.SBC) is com.civileg.app.domain.calculations.soilstructure.SBCSoilStructure)
     }
 
     @Test

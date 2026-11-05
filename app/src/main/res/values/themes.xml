@@ -1,22 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- ===== Premium Geometric Theme ===== -->
+    
     <style name="Theme.CivilEg" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Main colors -->
+        <!-- Main colors - Premium Geometric Palette -->
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/onPrimary</item>
         <item name="colorPrimaryContainer">@color/primaryContainer</item>
         <item name="colorOnPrimaryContainer">@color/onPrimaryContainer</item>
-
+        
         <item name="colorSecondary">@color/secondary</item>
         <item name="colorOnSecondary">@color/onSecondary</item>
         <item name="colorSecondaryContainer">@color/secondaryContainer</item>
         <item name="colorOnSecondaryContainer">@color/onSecondaryContainer</item>
-
+        
         <item name="colorTertiary">@color/tertiary</item>
         <item name="colorOnTertiary">@color/onTertiary</item>
         <item name="colorTertiaryContainer">@color/tertiaryContainer</item>
         <item name="colorOnTertiaryContainer">@color/onTertiaryContainer</item>
-
+        
         <!-- Status & Background -->
         <item name="android:windowBackground">@color/background</item>
         <item name="android:colorBackground">@color/background</item>
@@ -24,53 +26,129 @@
         <item name="colorOnSurface">@color/onSurface</item>
         <item name="colorSurfaceVariant">@color/surfaceVariant</item>
         <item name="colorOnSurfaceVariant">@color/onSurfaceVariant</item>
-
-        <item name="android:statusBarColor">@color/background</item>
-        <item name="android:windowLightStatusBar">true</item>
+        
+        <item name="android:statusBarColor">@color/primary</item>
+        <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@color/surface</item>
-
-        <!-- Components Style -->
-        <item name="materialCardViewStyle">@style/Widget.App.Card</item>
-        <item name="materialButtonStyle">@style/Widget.App.Button</item>
-        <item name="textInputStyle">@style/Widget.App.TextInputLayout</item>
+        
+        <!-- Components Style - Premium Geometric -->
+        <item name="materialCardViewStyle">@style/Widget.App.Card_Geometric</item>
+        <item name="materialButtonStyle">@style/Widget.App.Button_Geometric.Primary</item>
+        <item name="textInputStyle">@style/Widget.App.TextInputLayout_Geometric</item>
+        
+        <!-- Premium Component Overrides -->
+        <item name="colorControlNormal">@color/text_secondary</item>
+        <item name="colorControlActivated">@color/primary</item>
+        <item name="colorHint">@color/text_muted</item>
+        <item name="colorError">@color/danger</item>
+        <item name="colorOnError">@color/onError</item>
+        
+        <!-- Ripple Theme -->
+        <item name="colorRipple">@color/primaryContainer</item>
     </style>
-
-    <!-- Professional Component Styles -->
-    <style name="Widget.App.Card" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardElevation">2dp</item>
-        <item name="cardCornerRadius">16dp</item>
+    
+    <!-- Premium Dark Theme -->
+    <style name="Theme.CivilEg.Dark" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Dark geometric theme colors -->
+        <item name="colorPrimary">#0F172A</item>
+        <item name="colorOnPrimary">#F8FAFC</item>
+        <item name="colorPrimaryContainer">#1E293B</item>
+        <item name="colorOnPrimaryContainer">#F1F5F9</item>
+        
+        <item name="colorSecondary">#4A5C7E</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#1E293B</item>
+        <item name="colorOnSecondaryContainer">#F1F5F9</item>
+        
+        <item name="colorSurface">#0F172A</item>
+        <item name="colorOnSurface">#F8FAFC</item>
+        <item name="colorSurfaceVariant">#1E293B</item>
+        <item name="colorOnSurfaceVariant">#64748B</item>
+        
+        <item name="android:windowBackground">#0F172A</item>
+        <item name="android:statusBarColor">#0F172A</item>
+        <item name="android:navigationBarColor">#0F172A</item>
+    </style>
+    
+    <!-- Premium Component Styles -->
+    
+    <!-- Geometric Elevated Card (enhanced) -->
+    <style name="Widget.App.Card_Elevated" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardElevation">8dp</item>
+        <item name="cardCornerRadius">20dp</item>
         <item name="cardBackgroundColor">@color/surface</item>
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.MediumComponent</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.Geometric.LargeComponent</item>
     </style>
-
-    <style name="Widget.App.Button" parent="Widget.Material3.Button">
-        <item name="android:insetTop">0dp</item>
-        <item name="android:insetBottom">0dp</item>
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.SmallComponent</item>
-        <item name="android:paddingTop">12dp</item>
-        <item name="android:paddingBottom">12dp</item>
-        <item name="android:letterSpacing">0.02</item>
+    
+    <!-- Geometric Pill Card -->
+    <style name="Widget.App.Card_Pill" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardElevation">4dp</item>
+        <item name="cardCornerRadius">50dp</item>
+        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.Geometric.PillComponent</item>
     </style>
-
-    <style name="Widget.App.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
-        <item name="boxCornerRadiusTopStart">12dp</item>
-        <item name="boxCornerRadiusTopEnd">12dp</item>
-        <item name="boxCornerRadiusBottomStart">12dp</item>
-        <item name="boxCornerRadiusBottomEnd">12dp</item>
-        <item name="boxStrokeColor">@color/primary</item>
-        <item name="hintTextColor">@color/primary</item>
+    
+    <!-- Premium Toolbar -->
+    <style name="Widget.App.Toolbar_Geometric" parent="Widget.Material3.ActionBar">
+        <item name="titleTextAppearance">@style/TextAppearance.AppCompat.Title.Inverted</item>
+        <item name="subtitleTextAppearance">@style/TextAppearance.AppCompat.Subtitle.Inverted</item>
+        <item name="navigationIcon">@mipmap/ic_launcher_round</item>
+        <item name="android:background">@color/primary</item>
+        <item name="android:titleTextColor">@color/onPrimary</item>
+        <item name="android:subtitleTextColor">@color/onPrimaryVariant</item>
     </style>
-
-    <style name="ShapeAppearance.App.SmallComponent" parent="ShapeAppearance.Material3.SmallComponent">
-        <item name="cornerSize">12dp</item>
+    
+    <!-- Inverted Title Styles -->
+    <style name="TextAppearance.AppCompat.Title.Inverted" parent="TextAppearance.AppCompat.Title">
+        <item name="android:textColor">@color/onPrimary</item>
     </style>
-
-    <style name="ShapeAppearance.App.MediumComponent" parent="ShapeAppearance.Material3.MediumComponent">
-        <item name="cornerSize">16dp</item>
+    
+    <style name="TextAppearance.AppCompat.Subtitle.Inverted" parent="TextAppearance.AppCompat.Subtitle">
+        <item name="android:textColor">@color/onPrimaryVariant</item>
     </style>
-
-    <style name="CircleImageView">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">50%</item>
+    
+    <!-- Premium Bottom Navigation -->
+    <style name="Widget.App.BottomNav_Geometric" parent="Widget.Material3.NavigationBar">
+        <item name="android:background">@color/primaryContainer</item>
+        <item name="itemIconTint">@color/text_secondary</item>
+        <item name="itemTextColor">@color/text_secondary</item>
+    </style>
+    
+    <!-- Premium Material Components -->
+    
+    <!-- Enhanced EditText Style -->
+    <style name="Widget.App.EditText_Geometric" parent="Widget.Material3.EditText">
+        <item name="background">@null</item>
+        <item name="fontFamily">@font/inter_regular</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_muted</item>
+        <item name="android:paddingTop">@dimen/input_height</item>
+        <item name="android:paddingBottom">@dimen/input_height</item>
+        <item name="android:paddingStart">@dimen/input_padding_horizontal</item>
+        <item name="android:paddingEnd">@dimen/input_padding_horizontal</item>
+        <item name="android:cursorColor">@color/primary</item>
+        <item name="android:selectableItemBackground">?attr/selectableItemBackground</item>
+    </style>
+    
+    <!-- Enhanced CheckBox Style -->
+    <style name="Widget.App.CheckBox_Geometric" parent="Widget.Material3.CompoundButton.CheckBox">
+        <item name="android:buttonTint">@color/primary</item>
+    </style>
+    
+    <!-- Enhanced RadioButton Style -->
+    <style name="Widget.App.RadioButton_Geometric" parent="Widget.Material3.CompoundButton.RadioButton">
+        <item name="android:buttonTint">@color/primary</item>
+    </style>
+    
+    <!-- Premium Switch Style -->
+    <style name="Widget.App.Switch_Geometric" parent="Widget.Material3.CompoundButton.Switch">
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:trackColor">@color/grayLight</item>
+        <item name="android:thumbTint">@color/primary</item>
+    </style>
+    
+    <!-- Premium CheckedTextView -->
+    <style name="Widget.App.CheckedTextView" parent="Widget.Material3.CheckedTextView">
+        <item name="android:textColor">@color/primary</item>
     </style>
 </resources>

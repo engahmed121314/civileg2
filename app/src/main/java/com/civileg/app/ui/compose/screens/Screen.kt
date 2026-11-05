@@ -47,4 +47,8 @@ sealed class AppScreen(val route: String, val titleResId: Int, val iconRes: Int)
     object QualityEngineer : AppScreen("quality_engineer", R.string.home_quality_engineer, R.drawable.ic_verified)
     object WindLoad : AppScreen("wind_load", R.string.home_wind_load, R.drawable.ic_frame)
     object BuildingDesigner : AppScreen("building_designer", R.string.home_section_tools_title, R.drawable.ic_design)
+
+    // Structural Analysis — Wall Openings & Soil-Structure
+    object WallOpening : AppScreen("wall_opening", R.string.home_shear_wall, R.drawable.ic_wall)
+    object SoilStructure : AppScreen("soil_structure", R.string.home_footing, R.drawable.ic_footing)
 }

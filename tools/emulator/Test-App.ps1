@@ -37,10 +37,10 @@ $startedHere = $false
 $serial = Get-EmulatorSerial
 if (-not $serial) {
     Write-Step "No emulator running; starting one"
-    $startArgs = @("-TimeoutSeconds", "$BootTimeoutSeconds")
-    if ($Windowed) { $startArgs += "-Windowed" }
-    if ($ColdBoot -or $WipeData) { $startArgs += "-ColdBoot" }
-    if ($WipeData) { $startArgs += "-WipeData" }
+    $startArgs = @{ TimeoutSeconds = $BootTimeoutSeconds }
+    if ($Windowed) { $startArgs.Windowed = $true }
+    if ($ColdBoot -or $WipeData) { $startArgs.ColdBoot = $true }
+    if ($WipeData) { $startArgs.WipeData = $true }
     & (Join-Path $PSScriptRoot "Start-Emulator.ps1") @startArgs
     if ($LASTEXITCODE -ne 0) { throw "Failed to start emulator" }
     $startedHere = $true

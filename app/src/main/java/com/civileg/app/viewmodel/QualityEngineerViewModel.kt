@@ -91,8 +91,12 @@ data class SteelQCState(
     val sectionKey: String = "IPE 200",
     val appliedMoment: String = "",
     val appliedShear: String = "",
+    val axialLoad: String = "0",
     val steelFy: String = "275",
     val span: String = "",
+    val unbracedLength: String = "0",
+    val allowableDeflection: String = "0",
+    val memberType: String = "BEAM",
     val steelChecks: List<GenericSafetyCheck>? = null,
     val outcome: QualityControlEngine.QcOutcome? = null
 )
@@ -308,7 +312,11 @@ class QualityEngineerViewModel @Inject constructor(
         _steelState.value = _steelState.value.copy(
             designCode = code,
             steelChecks = null,
-            outcome = null
+            outcome = null,
+            axialLoad = "0",
+            unbracedLength = "0",
+            allowableDeflection = "0",
+            memberType = "BEAM"
         )
         _roadsState.value = _roadsState.value.copy(designCode = code, outcome = null)
         _bridgesState.value = _bridgesState.value.copy(designCode = code, outcome = null)
@@ -377,8 +385,12 @@ class QualityEngineerViewModel @Inject constructor(
             "sectionKey" -> current.copy(sectionKey = value)
             "appliedMoment" -> current.copy(appliedMoment = value)
             "appliedShear" -> current.copy(appliedShear = value)
+            "axialLoad" -> current.copy(axialLoad = value)
             "steelFy" -> current.copy(steelFy = value)
             "span" -> current.copy(span = value)
+            "unbracedLength" -> current.copy(unbracedLength = value)
+            "allowableDeflection" -> current.copy(allowableDeflection = value)
+            "memberType" -> current.copy(memberType = value)
             else -> current
         }
         _steelState.value = if (updated == current) current else updated.copy(steelChecks = null, outcome = null)
@@ -580,14 +592,22 @@ class QualityEngineerViewModel @Inject constructor(
         val span = InputGuard.positive("span", s.span.toDoubleOrNull() ?: Double.NaN)
         val mu = InputGuard.nonNegative("appliedMoment", s.appliedMoment.toDoubleOrNull() ?: Double.NaN)
         val vu = InputGuard.nonNegative("appliedShear", s.appliedShear.toDoubleOrNull() ?: Double.NaN)
-        
-        val outcome = QualityControlEngine.steelQc(
+        val pu = InputGuard.nonNegative("axialLoad", s.axialLoad.toDoubleOrNull() ?: 0.0)
+        val unbraced = InputGuard.nonNegative("unbracedLength", s.unbracedLength.toDoubleOrNull() ?: 0.0)
+        val allowDefl = InputGuard.nonNegative("allowableDeflection", s.allowableDeflection.toDoubleOrNull() ?: 0.0)
+        val memberType = s.memberType.takeIf { it.isNotBlank() } ?: "BEAM"
+
+        val outcome = QualityControlEngine.steelQcDetailed(
             code = s.designCode,
             sectionKey = section,
             fyMpa = fy,
             spanM = span,
             muKnM = mu,
-            vuKn = vu
+            vuKn = vu,
+            puKn = pu,
+            unbracedLengthMm = unbraced,
+            allowableDeflectionMm = allowDefl,
+            memberType = memberType
         )
         _steelState.value = s.copy(steelChecks = outcome.checks, outcome = outcome)
         persist(

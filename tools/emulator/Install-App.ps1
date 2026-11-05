@@ -40,11 +40,15 @@ if ($LASTEXITCODE -ne 0) {
     throw "adb install failed"
 }
 
-$path = (& $script:Adb -s $serial shell pm path $script:AppId 2>$null) -join ""
-if (-not $path) {
-    throw "Package $script:AppId is not installed after adb install"
+$appId = Get-InstalledAppId -Serial $serial
+if (-not $appId) {
+    throw "CivilEG2 is not installed after adb install"
 }
-Write-Ok "Installed $script:AppId"
+$path = (& $script:Adb -s $serial shell pm path $appId 2>$null) -join ""
+if (-not $path) {
+    throw "Package $appId is not accessible after adb install"
+}
+Write-Ok "Installed $appId"
 
 if ($Launch) {
     Start-App -Serial $serial

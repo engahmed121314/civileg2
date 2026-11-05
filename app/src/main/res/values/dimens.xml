@@ -1,22 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- ===== Premium Geometric Spacing System ===== -->
+    
+    <!-- Geometric Spacing Scale (4dp base unit - golden ratio proportions) -->
     <dimen name="spacing_xs">4dp</dimen>
     <dimen name="spacing_s">8dp</dimen>
     <dimen name="spacing_m">16dp</dimen>
     <dimen name="spacing_l">24dp</dimen>
     <dimen name="spacing_xl">32dp</dimen>
     <dimen name="spacing_xxl">48dp</dimen>
-
-    <dimen name="text_size_xs">12sp</dimen>
-    <dimen name="text_size_s">14sp</dimen>
-    <dimen name="text_size_m">16sp</dimen>
-    <dimen name="text_size_l">20sp</dimen>
-    <dimen name="text_size_xl">24sp</dimen>
-    <dimen name="text_size_xxl">32sp</dimen>
-
+    <dimen name="spacing_xxxl">64dp</dimen>
+    <dimen name="spacing_xxxxl">80dp</dimen>
+    
+    <!-- Enhanced Text Sizes -->
+    <dimen name="text_size_xs">11sp</dimen>
+    <dimen name="text_size_s">13sp</dimen>
+    <dimen name="text_size_m">14sp</dimen>
+    <dimen name="text_size_l">16sp</dimen>
+    <dimen name="text_size_lg">18sp</dimen>
+    <dimen name="text_size_xl">20sp</dimen>
+    <dimen name="text_size_xxl">24sp</dimen>
+    <dimen name="text_size_xxxl">32sp</dimen>
+    
+    <!-- Premium Geometric Corner Radii -->
+    <dimen name="card_radius_sm">8dp</dimen>
     <dimen name="card_radius">12dp</dimen>
-    <dimen name="card_elevation">4dp</dimen>
-    <dimen name="card_margin">12dp</dimen>
-    <dimen name="button_radius">12dp</dimen>
+    <dimen name="card_radius_md">16dp</dimen>
+    <dimen name="card_radius_lg">20dp</dimen>
+    <dimen name="card_radius_xl">24dp</dimen>
+    <dimen name="card_radius_pill">50dp</dimen>
+    <dimen name="card_radius_circle">50%</dimen>
+    
+    <!-- Premium Elevation System -->
+    <dimen name="card_elevation">2dp</dimen>
+    <dimen name="card_elevation_md">4dp</dimen>
+    <dimen name="card_elevation_lg">8dp</dimen>
+    <dimen name="card_elevation_xl">16dp</dimen>
+    <dimen name="shadow_sm">1dp</dimen>
+    <dimen name="shadow_md">2dp</dimen>
+    <dimen name="shadow_lg">4dp</dimen>
+    
+    <!-- Premium Input Dimensions -->
     <dimen name="input_radius">8dp</dimen>
+    <dimen name="input_height">48dp</dimen>
+    <dimen name="input_padding_horizontal">16dp</dimen>
+    
+    <!-- Premium Button Dimensions -->
+    <dimen name="button_height">48dp</dimen>
+    <dimen name="button_min_width">88dp</dimen>
+    <dimen name="button_padding_horizontal">16dp</dimen>
+    <dimen name="button_padding_vertical">12dp</dimen>
+    
+    <!-- Premium Component Spacing -->
+    <dimen name="icon_size_small">20dp</dimen>
+    <dimen name="icon_size_medium">24dp</dimen>
+    <dimen name="icon_size_large">32dp</dimen>
+    <dimen name="icon_size_xlarge">40dp</dimen>
+    
+    <!-- Premium Divider -->
+    <dimen name="divider_thickness">1dp</dimen>
+    <dimen name="divider_height">1dp</dimen>
+    
+    <!-- Premium Grid & Layout -->
+    <dimen name="grid_gutter">12dp</dimen>
+    <dimen name="grid_column">160dp</dimen>
+    
+    <!-- Premium Corner Cuts -->
+    <dimen name="corner_cut_size">4dp</dimen>
+    
+    <!-- Premium Ripple -->
+    <dimen name="ripple_duration">200ms</dimen>
 </resources>

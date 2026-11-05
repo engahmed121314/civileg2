@@ -2,6 +2,7 @@ package com.civileg.app.ui.compose.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateFloatAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -45,49 +46,56 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
+import com.civileg.app.ui.theme.PremiumTypography
+import com.civileg.app.ui.theme.PremiumColorsLight
+import com.civileg.app.ui.theme.PremiumColorsDark
+import com.civileg.app.ui.theme.PremiumTypography.ArabicTypography
+import com.civileg.app.ui.theme.PremiumTypography.EnglishTypography
 import kotlin.math.min
 
 // ============================================================================
-// DESIGN SYSTEM - Colors & Shapes
+// PREMIUM DESIGN SYSTEM - Colors & Shapes
 // ============================================================================
 
 object PremiumDesignSystem {
-    // Gradient colors
+    // Gradient colors - Premium Geometric Gradients
     val PrimaryGradient = Brush.horizontalGradient(
-        listOf(Color(0xFF1565C0), Color(0xFF1E88E5), Color(0xFF42A5F5))
+        listOf(PremiumColorsLight.accentGradientStart, PremiumColorsLight.accentGradientEnd)
     )
     val SuccessGradient = Brush.horizontalGradient(
-        listOf(Color(0xFF2E7D32), Color(0xFF43A047))
+        listOf(PremiumColorsLight.successGradientStart, PremiumColorsLight.successGradientEnd)
     )
     val DangerGradient = Brush.horizontalGradient(
-        listOf(Color(0xFFC62828), Color(0xFFE53935))
+        listOf(PremiumColorsLight.dangerGradientStart, PremiumColorsLight.dangerGradientEnd)
     )
     val WarningGradient = Brush.horizontalGradient(
-        listOf(Color(0xFFE65100), Color(0xFFF57C00))
+        listOf(PremiumColorsLight.warningBright, Color(0xFFFFF59D))
     )
     val InfoGradient = Brush.horizontalGradient(
-        listOf(Color(0xFF0277BD), Color(0xFF039BE5))
+        listOf(PremiumColorsLight.primary, PremiumColorsLight.primaryContainer)
     )
     val DarkCardGradient = Brush.verticalGradient(
-        listOf(Color(0xFF1E1E3F), Color(0xFF1A1A2E))
+        listOf(Color(0xFF0F172A), Color(0xFF1E293B))
     )
     val GlassEffect = Color(0x1AFFFFFF)
 
-    // Shapes
+    // Premium Geometric Shapes
     val CardShape = RoundedCornerShape(20.dp)
     val InputShape = RoundedCornerShape(14.dp)
     val ButtonShape = RoundedCornerShape(14.dp)
     val ChipShape = RoundedCornerShape(10.dp)
     val SmallCardShape = RoundedCornerShape(12.dp)
+    val PillShape = RoundedCornerShape(50.dp)
+    val GhostShape = RoundedCornerShape(16.dp)
 
-    // Status colors
+    // Status colors with animation
     @Composable
     fun statusColor(ratio: Float): Color = animateColorAsState(
         targetValue = when {
-            ratio > 1.0f -> Color(0xFFE53935)  // Red - Unsafe
-            ratio > 0.9f -> Color(0xFFFF9800)   // Orange - Warning
-            ratio > 0.4f -> Color(0xFF4CAF50)   // Green - Good
-            else -> Color(0xFF2196F3)            // Blue - Under-utilized
+            ratio > 1.0f -> PremiumColorsLight.unsafeBright
+            ratio > 0.9f -> PremiumColorsLight.warningBright
+            ratio > 0.4f -> PremiumColorsLight.safeBright
+            else -> PremiumColorsLight.primary
         },
         animationSpec = tween(800), label = "statusColor"
     ).value
@@ -115,10 +123,24 @@ object PremiumDesignSystem {
         ratio > 0.4f -> "✅"
         else -> "🔵"
     }
+
+    // Premium Geometric Gradient definitions
+    val gradientNavyToBlue = Brush.horizontalGradient(
+        listOf(PremiumColorsLight.navyDeep, PremiumColorsLight.navyMedium)
+    )
+    val gradientBlueToPurple = Brush.horizontalGradient(
+        listOf(PremiumColorsLight.navyMedium, PremiumColorsLight.outlineVariant)
+    )
+    val gradientPurpleToAmber = Brush.horizontalGradient(
+        listOf(PremiumColorsLight.outlineVariant, PremiumColorsLight.tertiary)
+    )
+    val gradientAmberToOrange = Brush.horizontalGradient(
+        listOf(PremiumColorsLight.tertiary, PremiumColorsLight.accent)
+    )
 }
 
 // ============================================================================
-// PREMIUM SECTION HEADER
+// PREMIUM SECTION HEADER WITH GEOMETRIC GRADIENT
 // ============================================================================
 
 @Composable
@@ -135,11 +157,11 @@ fun PremiumSectionHeader(
         if (icon != null) {
             Surface(
                 modifier = Modifier.size(36.dp),
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                shape = PremiumDesignSystem.InputShape,
+                color = PremiumColorsLight.primaryContainer.copy(alpha = 0.15f)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Icon(icon, contentDescription = null, tint = PremiumColorsLight.primary, modifier = Modifier.size(20.dp))
                 }
             }
             Spacer(modifier = Modifier.width(10.dp))
@@ -149,24 +171,24 @@ fun PremiumSectionHeader(
                 title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = PremiumColorsLight.onSurface
             )
             if (subtitle != null) {
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = PremiumColorsLight.onSurfaceVariant
                 )
             }
         }
-        // Decorative line
+        // Decorative geometric line
         Box(
             modifier = Modifier
                 .weight(0.3f)
                 .height(2.dp)
                 .background(
                     Brush.horizontalGradient(
-                        listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), Color.Transparent)
+                        listOf(PremiumColorsLight.primary.copy(alpha = 0.6f), Color.Transparent)
                     ),
                     RoundedCornerShape(1.dp)
                 )
@@ -175,7 +197,7 @@ fun PremiumSectionHeader(
 }
 
 // ============================================================================
-// PREMIUM INPUT FIELD
+// PREMIUM INPUT FIELD WITH GEOMETRIC SHAPES
 // ============================================================================
 
 @Composable
@@ -203,28 +225,30 @@ fun PremiumInputField(
         textStyle = MaterialTheme.typography.bodyMedium.copy(
             fontWeight = FontWeight.SemiBold
         ),
-        leadingIcon = leadingIcon?.let { icon ->
+        leadingIcon = leadingIcon?.let { icon -> {
             {
                 Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp),
-                    tint = if (enabled) MaterialTheme.colorScheme.primary else Color.Gray)
+                    tint = if (enabled) PremiumColorsLight.primary else Color.Gray)
             }
+        }
         },
-        suffix = suffix?.let { s ->
+        suffix = suffix?.let { s -> {
             {
-                Text(s, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(s, fontSize = 11.sp, color = PremiumColorsLight.onSurfaceVariant)
             }
+        }
         },
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-            focusedLabelColor = MaterialTheme.colorScheme.primary,
-            cursorColor = MaterialTheme.colorScheme.primary
+            focusedBorderColor = PremiumColorsLight.primary,
+            unfocusedBorderColor = PremiumColorsLight.outlineVariant.copy(alpha = 0.5f),
+            focusedLabelColor = PremiumColorsLight.primary,
+            cursorColor = PremiumColorsLight.primary
         )
     )
 }
 
 // ============================================================================
-// SAFETY STATUS CARD WITH ANIMATED RING
+// SAFETY STATUS CARD WITH ANIMATED GEOMETRIC RING
 // ============================================================================
 
 @Composable
@@ -245,7 +269,7 @@ fun SafetyStatusCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+            containerColor = PremiumColorsLight.surface.copy(alpha = 0.5f)
         ),
         shape = PremiumDesignSystem.CardShape,
         elevation = CardDefaults.cardElevation(4.dp)
@@ -256,10 +280,11 @@ fun SafetyStatusCard(
                 .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Animated circular progress
+            // Animated circular progress with geometric styling
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp)) {
-                // Background ring
+                // Background geometric ring
                 Canvas(modifier = Modifier.size(80.dp)) {
+                    // Draw geometric background arc
                     drawArc(
                         color = Color(0x1AFFFFFF),
                         startAngle = -90f,
@@ -267,7 +292,7 @@ fun SafetyStatusCard(
                         useCenter = false,
                         style = Stroke(width = 8.dp.toPx())
                     )
-                    // Progress arc
+                    // Progress arc with geometric color
                     drawArc(
                         color = statusColor,
                         startAngle = -90f,
@@ -276,7 +301,7 @@ fun SafetyStatusCard(
                         style = Stroke(width = 8.dp.toPx())
                     )
                 }
-                // Percentage text
+                // Percentage text in geometric circle
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         "${(utilizationRatio * 100).toInt()}%",
@@ -287,14 +312,14 @@ fun SafetyStatusCard(
                     Text(
                         "Utilization Ratio",
                         fontSize = 8.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = PremiumColorsLight.onSurfaceVariant
                     )
                 }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Status info
+            // Status info column
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -315,10 +340,10 @@ fun SafetyStatusCard(
                 Text(
                     resolvedTitle,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = PremiumColorsLight.onSurfaceVariant
                 )
 
-                // Mini progress bar
+                // Mini premium progress bar
                 Spacer(modifier = Modifier.height(8.dp))
                 Box(
                     modifier = Modifier
@@ -341,7 +366,7 @@ fun SafetyStatusCard(
 }
 
 // ============================================================================
-// RESULT DATA CARD
+// RESULT DATA CARD WITH PREMIUM GEOMETRIC STYLING
 // ============================================================================
 
 @Composable
@@ -350,18 +375,18 @@ fun ResultDataCard(
     results: List<Pair<String, String>>,
     modifier: Modifier = Modifier,
     icon: ImageVector = Icons.Default.Assessment,
-    accentColor: Color = MaterialTheme.colorScheme.primary
+    accentColor: Color = PremiumColorsLight.primary
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+            containerColor = PremiumColorsLight.surface.copy(alpha = 0.3f)
         ),
         shape = PremiumDesignSystem.CardShape,
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header
+            // Header with geometric accent
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
@@ -375,10 +400,10 @@ fun ResultDataCard(
 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 10.dp),
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                color = PremiumColorsLight.onSurface.copy(alpha = 0.1f)
             )
 
-            // Result rows
+            // Result rows with geometric padding
             results.forEach { (label, value) ->
                 Row(
                     modifier = Modifier
@@ -387,7 +412,7 @@ fun ResultDataCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(label, fontSize = 13.sp, color = PremiumColorsLight.onSurfaceVariant)
                     Surface(
                         shape = RoundedCornerShape(6.dp),
                         color = accentColor.copy(alpha = 0.08f)
@@ -396,7 +421,7 @@ fun ResultDataCard(
                             value,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = PremiumColorsLight.onSurface,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                         )
                     }
@@ -407,7 +432,7 @@ fun ResultDataCard(
 }
 
 // ============================================================================
-// SAFETY CHECK LIST
+// SAFETY CHECK LIST WITH PREMIUM GEOMETRIC BORDERS
 // ============================================================================
 
 @Composable
@@ -418,7 +443,7 @@ fun SafetyCheckList(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
+            containerColor = PremiumColorsLight.surface.copy(alpha = 0.3f)
         ),
         shape = PremiumDesignSystem.CardShape
     ) {
@@ -427,7 +452,7 @@ fun SafetyCheckList(
                 "Code Checks",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.primary
+                color = PremiumColorsLight.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -438,7 +463,7 @@ fun SafetyCheckList(
                         .padding(vertical = 4.dp)
                         .border(
                             width = 1.dp,
-                            color = if (isSafe) Color(0xFF2E7D32).copy(alpha = 0.3f) else Color(0xFFE53935).copy(alpha = 0.3f),
+                            color = if (isSafe) PremiumColorsLight.safe else PremiumColorsLight.unsafe,
                             shape = RoundedCornerShape(8.dp)
                         )
                         .padding(10.dp),
@@ -447,7 +472,7 @@ fun SafetyCheckList(
                     Icon(
                         if (isSafe) Icons.Default.CheckCircle else Icons.Default.Cancel,
                         contentDescription = null,
-                        tint = if (isSafe) Color(0xFF2E7D32) else Color(0xFFE53935),
+                        tint = if (isSafe) PremiumColorsLight.safe else PremiumColorsLight.unsafe,
                         modifier = Modifier.size(22.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
@@ -460,14 +485,14 @@ fun SafetyCheckList(
                         Text(
                             detail,
                             fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = PremiumColorsLight.onSurfaceVariant
                         )
                     }
                     Text(
                         if (isSafe) "PASS ✓" else "FAIL ✗",
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
-                        color = if (isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)
+                        color = if (isSafe) PremiumColorsLight.safe else PremiumColorsLight.unsafe
                     )
                 }
             }
@@ -476,7 +501,7 @@ fun SafetyCheckList(
 }
 
 // ============================================================================
-// PREMIUM ACTION BUTTONS ROW
+// PREMIUM ACTION BUTTONS ROW WITH GEOMETRIC STYLING
 // ============================================================================
 
 @Composable
@@ -491,13 +516,13 @@ fun PremiumActionButtons(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Export PDF button
+        // Export PDF button - Primary Geometric
         Button(
             onClick = onExportPdf,
             modifier = Modifier.weight(1f),
             shape = PremiumDesignSystem.ButtonShape,
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = PremiumColorsLight.primaryGradient
             ),
             enabled = !isExporting
         ) {
@@ -514,20 +539,20 @@ fun PremiumActionButtons(
             }
         }
 
-        // Save button
+        // Save button - Secondary Outline Geometric
         OutlinedButton(
             onClick = onSave,
             modifier = Modifier.weight(1f),
             shape = PremiumDesignSystem.ButtonShape,
             border = androidx.compose.foundation.BorderStroke(
-                1.5.dp, MaterialTheme.colorScheme.secondary
+                1.5.dp, PremiumColorsLight.secondary
             )
         ) {
             Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.secondary)
+                tint = PremiumColorsLight.secondary)
             Spacer(modifier = Modifier.width(6.dp))
             Text("Save", fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.secondary)
+                color = PremiumColorsLight.secondary)
         }
 
         extraActions()
@@ -535,7 +560,7 @@ fun PremiumActionButtons(
 }
 
 // ============================================================================
-// FORMULA CARD
+// FORMULA CARD WITH GEOMETRIC STYLING
 // ============================================================================
 
 @Composable
@@ -552,16 +577,16 @@ fun FormulaCard(
     ) {
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                containerColor = PremiumColorsLight.surfaceVariant.copy(alpha = 0.2f)
             ),
             shape = PremiumDesignSystem.CardShape
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Functions, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
+                        tint = PremiumColorsLight.secondary, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(resolvedTitle, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.secondary)
+                    Text(resolvedTitle, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = PremiumColorsLight.secondary)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 formulas.forEach { formula ->
@@ -570,7 +595,7 @@ fun FormulaCard(
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.5.sp,
                         modifier = Modifier.padding(vertical = 1.5.dp),
-                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.85f)
+                        color = PremiumColorsLight.secondary.copy(alpha = 0.85f)
                     )
                 }
             }
@@ -579,7 +604,7 @@ fun FormulaCard(
 }
 
 // ============================================================================
-// CODE SELECTOR CHIPS
+// CODE SELECTOR CHIPS WITH PREMIUM GEOMETRIC STYLING
 // ============================================================================
 
 @Composable
@@ -600,16 +625,16 @@ fun CodeSelectorChips(
                     .weight(1f)
                     .height(42.dp)
                     .clickable { onCodeSelected(code) },
-                shape = PremiumDesignSystem.ChipShape,
-                color = if (isSelected) MaterialTheme.colorScheme.primary
-                       else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = if (isSelected) PremiumDesignSystem.PillShape else PremiumDesignSystem.ChipShape,
+                color = if (isSelected) PremiumColorsLight.primary
+                   else PremiumColorsLight.surfaceVariant.copy(alpha = 0.5f),
                 shadowElevation = if (isSelected) 4.dp else 0.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
                         text = name,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                               else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (isSelected) PremiumColorsLight.onPrimary
+                           else PremiumColorsLight.onSurfaceVariant,
                         fontSize = 11.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                         textAlign = TextAlign.Center,
@@ -624,7 +649,7 @@ fun CodeSelectorChips(
 }
 
 // ============================================================================
-// LOADING OVERLAY
+// LOADING OVERLAY WITH PREMIUM GEOMETRIC DESIGN
 // ============================================================================
 
 @Composable
@@ -632,13 +657,13 @@ fun LoadingOverlay(message: String = "") {
     val resolvedMessage = if (message.isEmpty()) "Analyzing..." else message
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.Black.copy(alpha = 0.5f)
+        color = PremiumColorsLight.surface.copy(alpha = 0.9f)
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Card(
                 shape = PremiumDesignSystem.CardShape,
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = PremiumColorsLight.surface
                 ),
                 elevation = CardDefaults.cardElevation(8.dp)
             ) {
@@ -648,17 +673,166 @@ fun LoadingOverlay(message: String = "") {
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(48.dp),
-                        color = MaterialTheme.colorScheme.primary,
+                        color = PremiumColorsLight.primary,
                         strokeWidth = 4.dp
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         resolvedMessage,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = PremiumColorsLight.onSurface
                     )
                 }
             }
         }
     }
+}
+
+// ============================================================================
+// PREMIUM GEOMETRIC ICON BUTTON WITH RIPPLE EFFECT
+// ============================================================================
+
+@Composable
+fun PremiumIconButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    size: Dp = 44.dp,
+    backgroundColor: Color = PremiumColorsLight.surface,
+    tintColor: Color = PremiumColorsLight.onSurface,
+    rippleColor: Color = PremiumColorsLight.primaryContainer
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.size(size).clip(PremiumDesignSystem.PillShape),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = backgroundColor,
+            rippleColor = rippleColor
+        )
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tintColor,
+            modifier = Modifier.size(size - 8.dp)
+        )
+    }
+}
+
+// ============================================================================
+// PREMIUM PULSE ANIMATION
+// ============================================================================
+
+@Composable
+fun PremiumPulse(
+    progress: Float = 1f,
+    color: Color = PremiumColorsLight.primary,
+    modifier: Modifier = Modifier,
+    speed: Long = 800L
+) {
+    val scale by animateFloatAsState(
+        targetValue = 1f + (0.3f * sin((progress * 3.14159f / speed) * 2)),
+        animationSpec = tween(speed)
+    )
+    
+    Box(
+        modifier = modifier
+            .scale(scale)
+            .color(color)
+    )
+}
+
+// ============================================================================
+// PREMIUM GEOMETRIC PROGRESS BAR WITH SEGMENTS
+// ============================================================================
+
+@Composable
+fun PremiumProgressBar(
+    value: Float,
+    target: Float = 1f,
+    modifier: Modifier = Modifier,
+    segmentCount: Int = 8
+) {
+    val progress = value.coerceIn(0f, target)
+    val segmentProgress = progress / segmentCount
+    
+    Row(
+        modifier = modifier
+            .height(8.dp)
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        repeat(segmentCount) { index ->
+            val isActive = index < progress.roundToInt()
+            Box(
+                modifier = Modifier
+                    .width(14.dp)
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        if (isActive) PremiumColorsLight.primary
+                        else PremiumColorsLight.outlineVariant.copy(alpha = 0.3f)
+                    )
+            )
+        }
+    }
+}
+
+// ============================================================================
+// PREMIUM ANIMATED AVATAR WITH GEOMETRIC BOORDER
+// ============================================================================
+
+@Composable
+fun PremiumAvatar(
+    imageVector: ImageVector?,
+    name: String,
+    size: Dp = 48.dp,
+    modifier: Modifier = Modifier
+) {
+    Image(
+        painter = imageVector?.let { painterResource(it) } ?: rememberImagePainter(null),
+        contentDescription = name,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .border(
+                width = 2.dp,
+                color = PremiumColorsLight.primary,
+                shape = CircleShape
+            )
+    )
+}
+
+// ============================================================================
+// PREMIUM TOAST/SNACKBAR WITH GEOMETRIC STYLING
+// ============================================================================
+
+@Composable
+fun PremiumSnackBar(
+    message: String,
+    action: (() -> Unit)? = null,
+    actionLabel: String? = null
+) {
+    SnackbarHostState().showSnackBar(
+        Snackbar(
+            modifier = Modifier.fillMaxWidth(),
+            text = message,
+            actionLabel = actionLabel,
+            action = {
+                if (action != null) {
+                    Button(
+                        onClick = action,
+                        style = ButtonStyle(
+                            shape = RoundedCornerShape(8.dp),
+                            backgroundColor = Brush.color(PremiumColorsLight.primary)
+                        )
+                    )
+                }
+            },
+            snackBarColor = PremiumColorsLight.primaryContainer,
+            duration = SnackbarDuration.LengthLong,
+        )
+    )
 }

@@ -30,6 +30,7 @@ import com.civileg.app.ui.responsive.LocalWindowSize
 import com.civileg.app.ui.responsive.WindowWidthClass
 import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.ui.theme.CivilEngineerTheme
+import com.civileg.app.ui.theme.CivilEngineerPremiumTheme
 import com.civileg.app.ui.theme.ThemeMode
 import com.civileg.app.utils.LocaleHelper
 import com.civileg.app.viewmodel.ProjectViewModel
@@ -79,7 +80,7 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
 
-            CivilEngineerTheme(darkTheme = darkTheme) {
+            CivilEngineerPremiumTheme(darkTheme = darkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -285,6 +286,12 @@ fun AppNavigation(
                 }
                 composable(AppScreen.StrapFooting.route) {
                     StrapFootingScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.WallOpening.route) {
+                    WallOpeningScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.SoilStructure.route) {
+                    SoilStructureScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(AppScreen.FlatSlab.route) {
                     FlatSlabScreen(onNavigateBack = { navController.popBackStack() })

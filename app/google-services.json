@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "307964750045",
+    "project_id": "civil-eg",
+    "storage_bucket": "civil-eg.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:307964750045:android:be2886b25c468c5b36d334",
+        "android_client_info": {
+          "package_name": "com.civileg.app.debug"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpGY6-CDo0QlS-_gvuvUPGyXISj8qwzJY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -8,6 +8,8 @@ plugins {
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.compose.compiler)
     id("kotlin-parcelize")
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.google.firebase.crashlytics)
 }
 
 android {
@@ -202,6 +204,7 @@ dependencies {
     implementation(project(":core:calculations"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.firebase.crashlytics)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
 

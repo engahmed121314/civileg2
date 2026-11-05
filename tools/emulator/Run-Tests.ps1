@@ -38,18 +38,24 @@ function Get-TestSummary {
     foreach ($file in $files) {
         try {
             [xml]$xml = Get-Content -LiteralPath $file.FullName -Raw
-            $suite = $xml.testsuite
-            if (-not $suite) { continue }
-            $summary.Total += [int]$suite.tests
-            $summary.Failures += [int]$suite.failures
-            $summary.Errors += [int]$suite.errors
-            $summary.Skipped += [int]$suite.skipped
-            foreach ($case in $suite.testcase) {
-                $failed = $false
-                if ($case.failure) { $failed = $true }
-                if ($case.error) { $failed = $true }
-                if ($failed) {
-                    $summary.FailedTests += ("{0}.{1}" -f $case.classname, $case.name)
+            $suites = @()
+            if ($xml.testsuite) {
+                $suites = @($xml.testsuite)
+            } elseif ($xml.testsuites.testsuite) {
+                $suites = @($xml.testsuites.testsuite)
+            }
+            foreach ($suite in $suites) {
+                $summary.Total += [int]$suite.tests
+                $summary.Failures += [int]$suite.failures
+                $summary.Errors += [int]$suite.errors
+                $summary.Skipped += [int]$suite.skipped
+                foreach ($case in $suite.testcase) {
+                    $failed = $false
+                    if ($case.failure) { $failed = $true }
+                    if ($case.error) { $failed = $true }
+                    if ($failed) {
+                        $summary.FailedTests += ("{0}.{1}" -f $case.classname, $case.name)
+                    }
                 }
             }
         } catch {

@@ -251,25 +251,29 @@ object StrapFootingDesignEngine {
 
         val vcStrap = 0.17 * sqrt(fcu) * strapW * ds / 1000.0 // kN
         val stirrupDia = 8.0
+        val stirrupArea = 2.0 * barArea(stirrupDia)
         val stirrupSpacing: Double = if (vs > vcStrap) {
-            val sReq = 0.87 * fy * 2.0 * barArea(stirrupDia) * ds / ((vs - vcStrap) * 1000.0)
+            val sReq = 0.87 * fy * stirrupArea * ds / ((vs - vcStrap) * 1000.0)
             roundDown(min(sReq, 200.0), 25.0).coerceAtLeast(75.0)
         } else 200.0
+        val stirrupShearCapacity = 0.87 * fy * stirrupArea * ds / (stirrupSpacing * 1000.0)
+        val totalStrapShearCapacity = vcStrap + stirrupShearCapacity
 
         steps.add("Strap: M = R1·|c1−x1|·γ = ${"%.1f".format(r1)}×${"%.2f".format(e1)}×${"%.1f".format(loadFactor)} = ${"%.1f".format(ms)} kN.m")
         steps.add("Strap: V = |P1−R1|·γ = ${"%.1f".format(vs)} kN ; Asₜ = ${"%.0f".format(asStrap)} mm² → ${strapTop.numberOfBars}Ø${strapTop.barDiameter.toInt()}")
-        steps.add("Strap stirrups: Ø${stirrupDia.toInt()}@${"%.0f".format(stirrupSpacing)} mm")
+        steps.add("Strap stirrups: Ø${stirrupDia.toInt()}@${"%.0f".format(stirrupSpacing)} mm; Vn = ${"%.1f".format(totalStrapShearCapacity)} kN")
 
         // ── 8. التقييم ──
         val bearingOk = q1 <= qAllow * 1.001 && q2 <= qAllow * 1.001
         val punchingOk = punch1.first <= punch1.second && punch2.first <= punch2.second
         val flexureOk = bar1.isSafe && bar2.isSafe && strapTop.isSafe && strapBottom.isSafe
-        val shearOk = vs <= vcStrap || stirrupSpacing < 200.0
+        val shearOk = vs <= totalStrapShearCapacity
         val isSafe = bearingOk && punchingOk && flexureOk && shearOk
 
         if (!bearingOk) warnings.add("ضغط التربة يتجاوز المسموح — زد أبعاد القواعد.")
         if (!punchingOk) warnings.add("قص الاختراق يتجاوز المقاومة — زد سماكة القاعدة.")
         if (!flexureOk) warnings.add("تسليح الانحناء غير كافٍ — زد التسليح أو العمق.")
+        if (!shearOk) warnings.add("مقاومة القص للكمر الرابط غير كافية — زد التسليح العرضي أو العمق.")
 
         codeNotes.add("Strap Footing — Unified Engine (uniform soil pressure method)")
         codeNotes.add("ردود الفعل: R1 = ${"%.1f".format(r1)} kN, R2 = ${"%.1f".format(r2)} kN")
@@ -302,7 +306,7 @@ object StrapFootingDesignEngine {
             strapShear = vs,
             strapAsRequired = asStrap,
             strapAsProvided = strapTop.areaProvided,
-            strapShearCapacity = vcStrap,
+            strapShearCapacity = totalStrapShearCapacity,
             calculationSteps = steps
         )
     }

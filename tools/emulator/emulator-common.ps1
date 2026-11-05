@@ -42,6 +42,7 @@ $script:JavaHome = "C:\Program Files\Android\Android Studio\jbr"
 
 $script:AvdName = "civileg2_api36"
 $script:AppId = "com.civileg.app"
+$script:ApplicationNamespace = "com.civileg.app"
 $script:LauncherActivity = "com.civileg.app/.ui.splash.SplashActivity"
 $script:MainActivity = "com.civileg.app/.MainActivity"
 $script:ArtifactsRoot = Join-Path $script:RepoRoot "artifacts\emulator"
@@ -160,13 +161,31 @@ function Tap {
     & $script:Adb -s $Serial shell input tap $X $Y 2>$null | Out-Null
 }
 
+function Get-InstalledAppId {
+    param([string]$Serial)
+    $packages = & $script:Adb -s $Serial shell pm list packages 2>$null
+    foreach ($line in $packages) {
+        if ($line -match '^package:(com\.civileg\.app(?:\.debug)?)$') {
+            return $Matches[1]
+        }
+    }
+    return $null
+}
+
 function Start-App {
     param(
         [string]$Serial,
-        [string]$Activity = $script:LauncherActivity
+        [string]$Activity
     )
+    $appId = Get-InstalledAppId -Serial $Serial
+    if (-not $appId) {
+        throw "CivilEG2 is not installed on $Serial"
+    }
+    if (-not $Activity) {
+        $Activity = "$appId/$($script:ApplicationNamespace).ui.splash.SplashActivity"
+    }
     Write-Step "Launching $Activity"
-    & $script:Adb -s $Serial shell am force-stop $script:AppId 2>$null | Out-Null
+    & $script:Adb -s $Serial shell am force-stop $appId 2>$null | Out-Null
     & $script:Adb -s $Serial shell am start -W -n $Activity 2>$null | Out-Null
 }
 

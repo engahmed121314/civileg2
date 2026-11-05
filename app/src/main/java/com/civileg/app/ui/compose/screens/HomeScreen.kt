@@ -147,6 +147,8 @@ private val enhancedDesignModules = listOf(
     DesignModuleItem(AppScreen.PileFoundation, R.string.home_pile,     R.string.home_pile_sub,     listOf("ECP"),              StatCardGreen,   Icons.Default.Foundation),
     DesignModuleItem(AppScreen.FlatSlab,      R.string.home_flat_slab, R.string.home_flat_slab_sub, listOf("ECP", "ACI"),      CardAccentSlab,    Icons.Default.Dashboard),
     DesignModuleItem(AppScreen.ShearWall,     R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI"),    CardAccentWall,    Icons.Default.SensorDoor),
+    DesignModuleItem(AppScreen.WallOpening,   R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI", "SBC"), CardAccentWall, Icons.Default.SensorDoor),
+    DesignModuleItem(AppScreen.SoilStructure, R.string.home_footing,    R.string.home_footing_sub,    listOf("ECP", "ACI", "SBC"), CardAccentFooting, Icons.Default.Layers),
     DesignModuleItem(AppScreen.QualityEngineer, R.string.home_quality_engineer, R.string.home_quality_engineer_sub, listOf("ECP", "ACI", "SBC"), StatCardGreen, Icons.Default.Verified)
 )
 

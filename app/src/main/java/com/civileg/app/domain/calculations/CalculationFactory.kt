@@ -1,10 +1,12 @@
 package com.civileg.app.domain.calculations
 
-import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.calculations.base.SeismicDesign
 import com.civileg.app.domain.calculations.ecp.*
 import com.civileg.app.domain.calculations.aci.*
 import com.civileg.app.domain.calculations.sbc.*
+import com.civileg.app.domain.calculations.wallopenings.*
+import com.civileg.app.domain.calculations.soilstructure.*
 import com.civileg.app.domain.entities.DesignCode
 
 object CalculationFactory {
@@ -227,6 +229,30 @@ object CalculationFactory {
             DesignCode.ECP -> ECPSeismic()
             DesignCode.ACI -> ACISeismic()
             DesignCode.SBC -> SBCSeismic()
+        }
+    }
+
+    // ========== فتحات الحوائط (Wall Openings) ==========
+
+    fun getWallOpeningDesign(code: DesignCode): WallOpeningDesign {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.notNull("code", code)
+        return when (code) {
+            DesignCode.ECP -> ECPWallOpening()
+            DesignCode.ACI -> ACIWallOpening()
+            DesignCode.SBC -> SBCWallOpening()
+        }
+    }
+
+    // ========== تفاعل المنشأ مع التربة (Soil-Structure Interaction) ==========
+
+    fun getSoilStructureDesign(code: DesignCode): SoilStructureInteraction {
+        // ── InputGuard (ADR-010) ──
+        InputGuard.notNull("code", code)
+        return when (code) {
+            DesignCode.ECP -> ECPSoilStructure()
+            DesignCode.ACI -> ACISOilStructure()
+            DesignCode.SBC -> SBCSoilStructure()
         }
     }
 }

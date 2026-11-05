@@ -218,6 +218,28 @@ fun SettingsScreen(
                         Text("ECP 203 • ACI 318 • SBC 304", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
                     HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(stringResource(R.string.about_developer), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        Text(stringResource(R.string.developer_name), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                    HorizontalDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(stringResource(R.string.developer_github), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        TextButton(onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/engahmed121314"))
+                            context.startActivity(intent)
+                        }) {
+                            Text("github.com/engahmed121314", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    HorizontalDivider()
                     Text(
                         text = stringResource(R.string.settings_disclaimer_notice),
                         style = MaterialTheme.typography.bodySmall,

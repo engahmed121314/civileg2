@@ -52,6 +52,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.launch
 
+private data class BeamDiagramInputSnapshot(
+    val span: Double,
+    val deadLoad: Double,
+    val liveLoad: Double,
+    val code: DesignCode,
+    val support: CalculatorEngine.SupportType
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BeamScreen(
@@ -98,6 +106,7 @@ fun BeamScreen(
     var selectedSupport by remember { mutableStateOf(CalculatorEngine.SupportType.HINGED_HINGED) }
     var expandedSupport by remember { mutableStateOf(false) }
     var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var calculatedDiagramInputs by remember { mutableStateOf<BeamDiagramInputSnapshot?>(null) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -192,12 +201,22 @@ fun BeamScreen(
             item {
                 Button(
                     onClick = {
+                        val spanValue = span.toDoubleOrNull() ?: 5.0
+                        val deadLoadValue = deadLoad.toDoubleOrNull() ?: 0.0
+                        val liveLoadValue = liveLoad.toDoubleOrNull() ?: 0.0
+                        calculatedDiagramInputs = BeamDiagramInputSnapshot(
+                            spanValue,
+                            deadLoadValue,
+                            liveLoadValue,
+                            selectedCode,
+                            selectedSupport
+                        )
                         viewModel.calculateBeamPro(
                             width.toDoubleOrNull() ?: 250.0,
                             height.toDoubleOrNull() ?: 600.0,
-                            span.toDoubleOrNull() ?: 5.0,
-                            deadLoad.toDoubleOrNull() ?: 0.0,
-                            liveLoad.toDoubleOrNull() ?: 0.0,
+                            spanValue,
+                            deadLoadValue,
+                            liveLoadValue,
                             fcu.toDoubleOrNull() ?: 25.0,
                             fy.toDoubleOrNull() ?: 360.0,
                             barDiameter.toIntOrNull() ?: 16,
@@ -407,21 +426,30 @@ fun BeamScreen(
                 }
 
                 item {
-                    val diagramCode = when (selectedCode) {
-                        DesignCode.ECP -> com.civileg.app.domain.entities.DesignCode.ECP
-                        DesignCode.ACI -> com.civileg.app.domain.entities.DesignCode.ACI
-                        DesignCode.SBC -> com.civileg.app.domain.entities.DesignCode.SBC
-                    }
-                    MomentShearForceDiagram(
+                    val currentInputs = BeamDiagramInputSnapshot(
                         span = span.toDoubleOrNull() ?: 5.0,
-                        supportType = res.supportType.name,
                         deadLoad = deadLoad.toDoubleOrNull() ?: 0.0,
                         liveLoad = liveLoad.toDoubleOrNull() ?: 0.0,
-                        appliedMoment = res.appliedMoment,
-                        appliedShear = res.appliedShear,
-                        designCode = diagramCode,
-                        modifier = Modifier.fillMaxWidth()
+                        code = selectedCode,
+                        support = selectedSupport
                     )
+                    if (!isLoading &&
+                        calculatedDiagramInputs == currentInputs &&
+                        res.span == currentInputs.span &&
+                        res.code == currentInputs.code &&
+                        res.supportType == currentInputs.support
+                    ) {
+                        MomentShearForceDiagram(
+                            span = currentInputs.span,
+                            supportType = res.supportType.name,
+                            deadLoad = currentInputs.deadLoad,
+                            liveLoad = currentInputs.liveLoad,
+                            appliedMoment = res.appliedMoment,
+                            appliedShear = res.appliedShear,
+                            designCode = currentInputs.code,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }

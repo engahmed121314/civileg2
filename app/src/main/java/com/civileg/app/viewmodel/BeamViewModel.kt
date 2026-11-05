@@ -79,6 +79,7 @@ class BeamViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isLoading.value = true
+            _result.value = null
             pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
                 // Store all inputs for PDF export

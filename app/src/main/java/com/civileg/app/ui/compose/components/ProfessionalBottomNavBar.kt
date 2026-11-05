@@ -4,8 +4,10 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateScaleAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,7 +21,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,7 +31,7 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -53,21 +54,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
 
-// ══════════════════════════════════════════════════════════════════
-// Color Palette – Deep Navy Dark Theme for Bottom Nav
-// ══════════════════════════════════════════════════════════════════
-private val NavBarBackground  = Color(0xFF1A1A2E)
-private val NavBarAccent      = Color(0xFF0F9DFF)
-private val NavBarAccentGlow  = Color(0xFF0F9DFF).copy(alpha = 0.12f)
-private val TabSelectedColor  = Color(0xFF0F9DFF)
-private val TabUnselectedColor = Color(0xFF6B7280)
-private val BadgeRed          = Color(0xFFFF3D00)
-private val TopBorderGradient = Color(0xFF0F9DFF).copy(alpha = 0.35f)
-private val IndicatorColor    = Color(0xFF0F9DFF)
+// ============================================================================
+// PREMIUM GEOMETRIC COLOR PALETTE – Deep Navy Dark Theme for Bottom Nav
+// ============================================================================
 
-// ══════════════════════════════════════════════════════════════════
+private val NavBarBackground  = PremiumColorsLight.primary
+private val NavBarAccent      = PremiumColorsLight.accent
+private val NavBarAccentGlow  = PremiumColorsLight.accent.copy(alpha = 0.12f)
+private val TabSelectedColor  = PremiumColorsLight.accent
+private val TabUnselectedColor = PremiumColorsLight.textSecondary
+private val BadgeRed          = PremiumColorsLight.unsafe
+private val TopBorderGradient = PremiumColorsLight.primary.copy(alpha = 0.35f)
+private val IndicatorColor    = PremiumColorsLight.primary
+
+// ============================================================================
 // Tab Model
-// ══════════════════════════════════════════════════════════════════
+// ============================================================================
+
 @Immutable
 data class BottomNavItem(
     val labelRes: Int,
@@ -75,6 +78,7 @@ data class BottomNavItem(
     val route: String
 )
 
+// Premium bottom nav items with geometric proportions
 private val bottomNavItems = listOf(
     BottomNavItem(R.string.nav_home,      Icons.Default.Home,      "home"),
     BottomNavItem(R.string.nav_design_hub, Icons.Default.AccountBalance, "design"),
@@ -83,14 +87,15 @@ private val bottomNavItems = listOf(
     BottomNavItem(R.string.nav_more,     Icons.Default.MoreHoriz,  "more")
 )
 
-// ══════════════════════════════════════════════════════════════════
-// Public API
-// ══════════════════════════════════════════════════════════════════
+// ============================================================================
+// Professional Bottom Navigation Bar - PREMIUM GEOMETRIC VERSION
+// ============================================================================
+
 /**
- * Professional Bottom Navigation Bar.
- *
- * Deep navy background (#1A1A2E), animated sliding indicator, scale + color
- * transitions on icons, and a red notification badge on the Design tab.
+ * Premium Professional Bottom Navigation Bar.
+ * Deep navy background (#0F172A), animated sliding indicator,
+ * scale + color transitions on icons, and a red notification badge
+ * on the Design tab. Geometric pill-shaped tab items with premium gradients.
  *
  * @param selectedTab  Currently selected tab index (0‑4).
  * @param onTabSelected Called when a tab is tapped.
@@ -108,14 +113,14 @@ fun ProfessionalBottomNavBar(
         modifier = modifier
             .fillMaxWidth()
             .shadow(
-                elevation = 20.dp,
-                ambientColor = Color.Black.copy(alpha = 0.5f),
-                spotColor  = Color.Black.copy(alpha = 0.3f)
+                elevation = 4.dp,
+                ambientColor = Color.Black.copy(alpha = 0.1f),
+                spotColor  = Color.Black.copy(alpha = 0.1f)
             ),
         color = NavBarBackground
     ) {
         Column {
-            // ── Top accent gradient line ──
+            // ── Top accent geometric gradient line ──
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -152,9 +157,7 @@ fun ProfessionalBottomNavBar(
                     }
                 }
 
-                // ── Animated sliding indicator bar ──
-                // Use the real measured width so the indicator stays centred in
-                // RTL, split-screen and tablet windows.
+                // ── Animated sliding geometric indicator bar ──
                 val tabCenterFraction = (selectedTab.toFloat() + 0.5f) / bottomNavItems.size
                 val targetOffset = barWidth * tabCenterFraction - 16.dp
 
@@ -181,9 +184,10 @@ fun ProfessionalBottomNavBar(
     }
 }
 
-// ══════════════════════════════════════════════════════════════════
-// Individual Tab Item
-// ══════════════════════════════════════════════════════════════════
+// ============================================================================
+// Individual Tab Item - PREMIUM GEOMETRIC PILL STYLE
+// ============================================================================
+
 @Composable
 private fun TabItem(
     item: BottomNavItem,
@@ -192,7 +196,7 @@ private fun TabItem(
     badgeCount: Int,
     onClick: () -> Unit
 ) {
-    // Animated properties
+    // Animated properties with geometric easing
     val iconTint by animateColorAsState(
         targetValue = if (isSelected) TabSelectedColor else TabUnselectedColor,
         animationSpec = tween(250, easing = FastOutSlowInEasing),
@@ -214,9 +218,16 @@ private fun TabItem(
         label = "glow_alpha"
     )
 
+    // Geometric pill container with gradient background on select
+    val backgroundByState = if (isSelected) {
+        PremiumColorsLight.primaryGradient
+    } else {
+        PremiumColorsLight.surfaceVariant.copy(alpha = 0.3f)
+    }
+
     Column(
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))  // Premium geometric pill radius
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -228,23 +239,23 @@ private fun TabItem(
         // Icon container with optional glow
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(42.dp)
+            modifier = Modifier.size(44.dp)
         ) {
-            // Glow circle behind icon
+            // Glow circle behind icon (enhanced for selected state)
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(42.dp)
                     .clip(CircleShape)
                     .background(NavBarAccentGlow.copy(alpha = glowAlpha * 0.9f))
             )
 
-            // The actual icon
+            // The actual icon with geometric scaling
             Icon(
                 imageVector = item.icon,
                 contentDescription = stringResource(item.labelRes),
                 tint = iconTint,
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(26.dp)
                     .graphicsLayer {
                         scaleX = scale
                         scaleY = scale
@@ -252,30 +263,31 @@ private fun TabItem(
                     }
             )
 
-            // Notification badge
+            // Notification badge with geometric pill shape
             if (showBadge) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .offset(x = 4.dp, y = (-2).dp)
-                        .size(if (badgeCount > 9) 22.dp else 18.dp)
-                        .background(BadgeRed, CircleShape),
+                        .offset(x = 6.dp, y = (-4).dp)
+                        .size(if (badgeCount > 9) 28.dp else 22.dp)
+                        .clip(RoundedCornerShape(50.dp))  // Geometric pill badge
+                        .background(BadgeRed, RoundedCornerShape(50.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (badgeCount > 9) "9+" else badgeCount.toString(),
                         color = Color.White,
-                        fontSize = 9.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        lineHeight = 11.sp
+                        lineHeight = 13.sp
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        // Label
+        // Premium geometric label
         Text(
             text = stringResource(item.labelRes),
             color = labelColor,
@@ -286,7 +298,8 @@ private fun TabItem(
     }
 }
 
-// ══════════════════════════════════════════════════════════════════
+// ============================================================================
 // Utility – expose items for external use
-// ══════════════════════════════════════════════════════════════════
+// ============================================================================
+
 fun getBottomNavItems(): List<BottomNavItem> = bottomNavItems

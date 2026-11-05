@@ -266,6 +266,150 @@ object QualityControlEngine {
     }
 
     // ==================================================================
+    // STEEL DETAILED — extended checks: deflection, slenderness, beam-column interaction
+    // ==================================================================
+    fun steelQcDetailed(
+        code: DesignCode,
+        sectionKey: String,
+        fyMpa: Double,
+        spanM: Double,
+        muKnM: Double,
+        vuKn: Double,
+        puKn: Double = 0.0,
+        unbracedLengthMm: Double = 0.0,
+        allowableDeflectionMm: Double = 0.0,
+        memberType: String = "BEAM" // BEAM, COLUMN, BEAM_COLUMN
+    ): QcOutcome {
+        val sec = SteelTables.getSectionByName(sectionKey)
+        if (sec == null) {
+            val check = GenericSafetyCheck("Section geometry available", 0.0, 1.0, "-",
+                false, "AISC 360-22 §B4")
+            return QcOutcome(
+                title = "Steel Structure Quality Control (Detailed)",
+                checks = listOf(check),
+                details = listOf("Section" to sectionKey, "Note" to "Section not found in SteelTables"),
+                passed = false,
+                utilizationRatio = 0.0,
+                summary = "Steel section check unavailable for $sectionKey"
+            )
+        }
+
+        val h = sec.depth
+        val bf = sec.width
+        val tw = sec.tw
+        val tf = sec.tf
+        val fy = fyMpa.coerceAtLeast(1.0)
+        val Aw = h * tw
+        val Ag = sec.area
+        val Ix = (bf * h.pow(3) - (bf - tw) * (h - 2 * tf).pow(3)) / 12.0
+        val Wx = Ix / (h / 2.0)
+        val Zx = bf * tf * (h - tf) + tw * (h - 2 * tf).pow(2) / 4.0
+        val rx = sqrt(Ix / Ag)
+        val ry = sqrt(sec.iy / Ag)
+        val phiB = 0.90
+        val phiV = 1.00
+        val phiC = 0.85
+        val mn = phiB * fy * Zx / 1e6      // kN·m
+        val vn = phiV * 0.60 * fy * Aw / 1e3  // kN
+        val cn = phiC * fy * Ag / 1e3     // kN (axial compressive capacity, simplified)
+
+        val lambdaF = bf / (2 * tf)
+        val lambdaW = (h - 2 * tf) / tw
+        val lambdaPf = 0.38 * sqrt(STEEL_E / fy)
+        val lambdaPw = 3.76 * sqrt(STEEL_E / fy)
+
+        val checks = mutableListOf<GenericSafetyCheck>()
+
+        // 1. Flexural capacity
+        checks.add(GenericSafetyCheck("Flexural capacity φb·M_n ≥ M_u", muKnM, mn, "kN·m",
+            muKnM <= mn, "AISC 360-22 §F2"))
+
+        // 2. Shear capacity
+        checks.add(GenericSafetyCheck("Shear capacity φv·V_n ≥ V_u", vuKn, vn, "kN",
+            vuKn <= vn, "AISC 360-22 §G2"))
+
+        // 3. Flange compactness
+        checks.add(GenericSafetyCheck("Flange compact (λf ≤ λpf)", lambdaF, lambdaPf, "-",
+            lambdaF <= lambdaPf, "AISC 360-22 Table B4.1"))
+
+        // 4. Web compactness
+        checks.add(GenericSafetyCheck("Web compact (λw ≤ λpw)", lambdaW, lambdaPw, "-",
+            lambdaW <= lambdaPw, "AISC 360-22 Table B4.1"))
+
+        // 5. Axial capacity (for columns / beam-columns)
+        if (memberType == "COLUMN" || memberType == "BEAM_COLUMN") {
+            checks.add(GenericSafetyCheck("Axial compressive capacity φc·P_n ≥ P_u", puKn, cn, "kN",
+                puKn <= cn, "AISC 360-22 §E2"))
+        }
+
+        // 6. Slenderness ratio (KL/r) — for compression members
+        if (unbracedLengthMm > 0.0 && (memberType == "COLUMN" || memberType == "BEAM_COLUMN")) {
+            val klR = unbracedLengthMm / rx
+            val klrLimit = 200.0
+            checks.add(GenericSafetyCheck("Slenderness KL/r ≤ 200", klR, klrLimit, "-",
+                klR <= klrLimit, "AISC 360-22 §D2"))
+        }
+
+        // 7. Deflection check — for beams
+        if (allowableDeflectionMm > 0.0 && spanM > 0.0 && muKnM > 0.0) {
+            // Simplified: Δ ≈ (5 · w · L^4) / (384 · E · I) using equivalent udl from moment
+            // w = 8·M / L^2  →  Δ = (5 · 8·M/L² · L⁴) / (384 · E · I) = (5 · M · L²) / (48 · E · I)
+            val equivUdl = 8.0 * muKnM / (spanM * spanM)  // kN/m
+            val deltaMm = (5.0 * equivUdl * (spanM * 1000.0).pow(4)) / (384.0 * STEEL_E * Ix)
+            checks.add(GenericSafetyCheck("Deflection Δ ≤ allowable", deltaMm, allowableDeflectionMm, "mm",
+                deltaMm <= allowableDeflectionMm, "Serviceability (L/Δ limit)"))
+        }
+
+        // 8. Beam-column interaction (AISC Eq. H1-1 / H1-2)
+        if (memberType == "BEAM_COLUMN" && puKn > 0.0 && muKnM > 0.0 && cn > 0.0 && mn > 0.0) {
+            val prRatio = puKn / cn
+            val mrRatio = muKnM / mn
+            val interaction = when {
+                prRatio >= 0.2 -> prRatio + (8.0 / 9.0) * mrRatio
+                else -> prRatio / 2.0 + mrRatio
+            }
+            checks.add(GenericSafetyCheck("Beam-column interaction ≤ 1.0", interaction, 1.0, "-",
+                interaction <= 1.0, "AISC 360-22 §H1"))
+        }
+
+        val passed = checks.all { it.passed }
+        val utilization = checks.maxOrNull { if (it.limit > 0) it.calculated / it.limit else 0.0 } ?: 0.0
+
+        val details = mutableListOf<Pair<String, String>>()
+        details.add("Section" to sectionKey)
+        details.add("Section modulus W_x" to "%.0f cm³".format(Wx / 1e3))
+        details.add("Plastic modulus Z_x" to "%.0f cm³".format(Zx / 1e3))
+        details.add("Radius of gyration r_x" to "%.1f cm".format(rx / 10.0))
+        details.add("fy" to "%.0f MPa".format(fy))
+        details.add("Span" to "%.2f m".format(spanM))
+        details.add("Design moment M_u" to "%.1f kN·m".format(muKnM))
+        details.add("Design shear V_u" to "%.1f kN".format(vuKn))
+        details.add("φb·M_n" to "%.1f kN·m".format(mn))
+        details.add("φv·V_n" to "%.1f kN".format(vn))
+        if (memberType == "COLUMN" || memberType == "BEAM_COLUMN") {
+            details.add("Axial load P_u" to "%.1f kN".format(puKn))
+            details.add("φc·P_n" to "%.1f kN".format(cn))
+        }
+        if (unbracedLengthMm > 0.0) {
+            details.add("Unbraced length L_b" to "%.0f mm".format(unbracedLengthMm))
+            details.add("KL/r_x" to "%.0f".format(unbracedLengthMm / rx))
+        }
+        if (allowableDeflectionMm > 0.0) {
+            details.add("Allowable deflection" to "%.0f mm".format(allowableDeflectionMm))
+        }
+        details.add("Member type" to memberType)
+
+        return QcOutcome(
+            title = "Steel Structure Quality Control (Detailed)",
+            checks = checks,
+            details = details,
+            passed = passed,
+            utilizationRatio = utilization,
+            summary = "Steel member $sectionKey ($memberType) — " + (if (passed) "adequate" else "inadequate")
+        )
+    }
+
+    // ==================================================================
     // ROADS — surface/base/subbase, density, compaction, air voids
     // ==================================================================
     fun roadsQc(

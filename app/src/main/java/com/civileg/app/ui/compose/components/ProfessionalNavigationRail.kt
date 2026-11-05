@@ -36,14 +36,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
-import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.theme.PremiumColorsLight
+import com.civileg.app.ui.theme.PremiumColorsDark
 
-private val RailBackground = Color(0xFF1A1A2E)
-private val RailAccent = Color(0xFF0F9DFF)
-private val RailTextMuted = Color(0xFF8A93A6)
+private val RailBackground = PremiumColorsLight.primary
+private val RailAccent = PremiumColorsLight.accent
+private val RailTextMuted = PremiumColorsLight.textMuted
 
 /**
- * Tablet / landscape navigation rail.
+ * Tablet / landscape navigation rail with Premium Geometric styling.
  *
  * Mirrors the visual language of [ProfessionalBottomNavBar] while using the
  * available horizontal space of larger windows instead of stealing vertical
@@ -65,7 +66,7 @@ fun ProfessionalNavigationRail(
             .fillMaxHeight()
             .width(dimensions.navigationRailWidth),
         containerColor = RailBackground,
-        contentColor = Color.White,
+        contentColor = PremiumColorsLight.onSurface,
         header = {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -81,14 +82,14 @@ fun ProfessionalNavigationRail(
                     Icon(
                         painter = painterResource(id = R.drawable.ic_logo),
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = PremiumColorsLight.onSurface,
                         modifier = Modifier.size(26.dp)
                     )
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = "CivilEG",
-                    color = Color.White,
+                    color = PremiumColorsLight.onSurface,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
@@ -108,8 +109,8 @@ fun ProfessionalNavigationRail(
                         BadgedBox(
                             badge = {
                                 Badge(
-                                    containerColor = Color(0xFFFF3D00),
-                                    contentColor = Color.White
+                                    containerColor = PremiumColorsLight.unsafe,
+                                    contentColor = PremiumColorsLight.onPrimary
                                 ) {
                                     Text(
                                         text = if (designCount > 99) "99+" else designCount.toString(),
@@ -149,7 +150,7 @@ fun ProfessionalNavigationRail(
         Spacer(Modifier.weight(1f))
 
         if (onOpenSettings != null) {
-            HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+            HorizontalDivider(color = PremiumColorsLight.onSurface.copy(alpha = 0.08f))
             IconButton(
                 onClick = onOpenSettings,
                 modifier = Modifier.padding(vertical = 8.dp)

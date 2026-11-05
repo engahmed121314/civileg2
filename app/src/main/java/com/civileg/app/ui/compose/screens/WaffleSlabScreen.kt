@@ -471,27 +471,29 @@ fun WaffleSlabScreen(
                             },
                             designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
                             drawingContent = {
-                                ProfessionalWaffleSlabDrawing(
-                                    lx = lx.toDoubleOrNull() ?: 6000.0,
-                                    ly = ly.toDoubleOrNull() ?: 7500.0,
-                                    ribSpacing = ribSpacing.toDoubleOrNull() ?: 600.0,
-                                    ribWidth = ribWidth.toDoubleOrNull() ?: 150.0,
-                                    ribHeight = ribHeight.toDoubleOrNull() ?: 300.0,
-                                    toppingThickness = toppingThickness.toDoubleOrNull() ?: 50.0,
-                                    solidHeadSize = solidHeadSize.toDoubleOrNull() ?: 1000.0,
-                                    columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
-                                    ribBottomDia = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
-                                    ribBottomCount = res.ribDesign?.flexureReinforcement?.bars ?: 2,
-                                    ribTopDia = res.ribDesign?.shearReinforcement?.stirrupDiameter ?: 10.0,
-                                    ribTopCount = res.ribDesign?.shearReinforcement?.numLegs ?: 2,
-                                    headBottomDia = res.solidHeadDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
-                                    headBottomCount = res.solidHeadDesign?.flexureReinforcement?.bars ?: 4,
-                                    cover = clearCover.toDoubleOrNull() ?: 25.0,
-                                    viewMode = viewMode,
-                                    resultSummary = waffleSlabDrawingSummary(res),
-                                    designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                viewModel.lastCalculatedInput?.let { input ->
+                                    ProfessionalWaffleSlabDrawing(
+                                        lx = input.lx,
+                                        ly = input.ly,
+                                        ribSpacing = input.ribSpacing,
+                                        ribWidth = input.ribWidth,
+                                        ribHeight = input.ribHeight,
+                                        toppingThickness = input.toppingThickness,
+                                        solidHeadSize = input.solidHeadSize,
+                                        columnWidth = input.columnWidth,
+                                        ribBottomDia = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
+                                        ribBottomCount = res.ribDesign?.flexureReinforcement?.bars ?: 2,
+                                        ribTopDia = res.ribDesign?.shearReinforcement?.stirrupDiameter ?: 10.0,
+                                        ribTopCount = res.ribDesign?.shearReinforcement?.numLegs ?: 2,
+                                        headBottomDia = res.solidHeadDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
+                                        headBottomCount = res.solidHeadDesign?.flexureReinforcement?.bars ?: 4,
+                                        cover = input.clearCover,
+                                        viewMode = viewMode,
+                                        resultSummary = waffleSlabDrawingSummary(res),
+                                        designCode = input.designCode,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
                             }
                         )
                     }
@@ -504,27 +506,29 @@ fun WaffleSlabScreen(
                             heightPx = screenHeightPx
                         ) {
                             Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
-                                ProfessionalWaffleSlabDrawing(
-                                    lx = lx.toDoubleOrNull() ?: 6000.0,
-                                    ly = ly.toDoubleOrNull() ?: 7500.0,
-                                    ribSpacing = ribSpacing.toDoubleOrNull() ?: 600.0,
-                                    ribWidth = ribWidth.toDoubleOrNull() ?: 150.0,
-                                    ribHeight = ribHeight.toDoubleOrNull() ?: 300.0,
-                                    toppingThickness = toppingThickness.toDoubleOrNull() ?: 50.0,
-                                    solidHeadSize = solidHeadSize.toDoubleOrNull() ?: 1000.0,
-                                    columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
-                                    ribBottomDia = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
-                                    ribBottomCount = res.ribDesign?.flexureReinforcement?.bars ?: 2,
-                                    ribTopDia = 10.0,
-                                    ribTopCount = 2,
-                                    headBottomDia = res.solidHeadDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
-                                    headBottomCount = res.solidHeadDesign?.flexureReinforcement?.bars ?: 4,
-                                    cover = clearCover.toDoubleOrNull() ?: 25.0,
-                                    viewMode = viewMode,
-                                    resultSummary = waffleSlabDrawingSummary(res),
-                                    designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                viewModel.lastCalculatedInput?.let { input ->
+                                    ProfessionalWaffleSlabDrawing(
+                                        lx = input.lx,
+                                        ly = input.ly,
+                                        ribSpacing = input.ribSpacing,
+                                        ribWidth = input.ribWidth,
+                                        ribHeight = input.ribHeight,
+                                        toppingThickness = input.toppingThickness,
+                                        solidHeadSize = input.solidHeadSize,
+                                        columnWidth = input.columnWidth,
+                                        ribBottomDia = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
+                                        ribBottomCount = res.ribDesign?.flexureReinforcement?.bars ?: 2,
+                                        ribTopDia = res.ribDesign?.shearReinforcement?.stirrupDiameter ?: 10.0,
+                                        ribTopCount = res.ribDesign?.shearReinforcement?.numLegs ?: 2,
+                                        headBottomDia = res.solidHeadDesign?.flexureReinforcement?.diameter?.toDouble() ?: 16.0,
+                                        headBottomCount = res.solidHeadDesign?.flexureReinforcement?.bars ?: 4,
+                                        cover = input.clearCover,
+                                        viewMode = viewMode,
+                                        resultSummary = waffleSlabDrawingSummary(res),
+                                        designCode = input.designCode,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
                             }
                         }
                     }

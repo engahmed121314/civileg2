@@ -780,7 +780,9 @@ private fun SteelStructureQCTab(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.steelState.collectAsState()
-    var selectedSection by remember { mutableStateOf("IPE 200") }
+    var selectedSection by remember { mutableStateOf(uiState.sectionKey.ifBlank { "IPE 200" }) }
+    val memberTypes = listOf("BEAM" to "عارض (Beam)", "COLUMN" to "عمود (Column)", "BEAM_COLUMN" to "عارض-عمود (Beam-Column)")
+    var selectedMemberType by remember { mutableStateOf(uiState.memberType) }
     val sections = listOf("IPE 100", "IPE 120", "IPE 140", "IPE 160", "IPE 180", "IPE 200", "IPE 220", "IPE 240", "IPE 270", "IPE 300")
 
     Column(
@@ -821,6 +823,7 @@ private fun SteelStructureQCTab(
                                 text = { Text(section) },
                                 onClick = {
                                     selectedSection = section
+                                    viewModel.updateSteelField("sectionKey", section)
                                     expanded = false
                                 }
                             )
@@ -828,6 +831,21 @@ private fun SteelStructureQCTab(
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // Member type
+                Text("نوع العضو", style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                    memberTypes.forEachIndexed { index, (key, label) } {
+                        FilterChip(
+                            selected = selectedMemberType == key,
+                            onClick = {
+                                selectedMemberType = key
+                                viewModel.updateSteelField("memberType", key)
+                            },
+                            label = { Text(label, fontSize = 10.sp) }
+                        )
+                    }
+                }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
@@ -863,6 +881,40 @@ private fun SteelStructureQCTab(
                         modifier = Modifier.weight(1f)
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = uiState.axialLoad,
+                        onValueChange = { viewModel.updateSteelField("axialLoad", it) },
+                        label = { Text("Pu (kN) — للأعمدة") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = uiState.unbracedLength,
+                        onValueChange = { viewModel.updateSteelField("unbracedLength", it) },
+                        label = { Text("طول غير مدعّم L_b (مم)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = uiState.allowableDeflection,
+                        onValueChange = { viewModel.updateSteelField("allowableDeflection", it) },
+                        label = { Text("الانحراف المسموح Δ (مم)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        "اترك صفراً لتجاوز",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
@@ -876,7 +928,7 @@ private fun SteelStructureQCTab(
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("فحص المعدن")
+            Text("فحص القطاع المعدني")
         }
 
         uiState.steelChecks?.let { checks ->

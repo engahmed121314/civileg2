@@ -37,6 +37,8 @@ class WaffleSlabViewModel @Inject constructor(
 
     // Store last input for PDF export
     private var lastInput: WaffleSlabDesign.WaffleSlabInput? = null
+    val lastCalculatedInput: WaffleSlabDesign.WaffleSlabInput?
+        get() = lastInput
 
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile

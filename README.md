@@ -286,6 +286,7 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 | Channel | Details |
 |---------|---------|
 | 👤 **Developer** | Eng. Ahmed Magdy |
+| 🌐 **GitHub** | [github.com/engahmed121314](https://github.com/engahmed121314) |
 | 📧 **Email** | [engahmed121314@gmail.com](mailto:engahmed121314@gmail.com) |
 | 📱 **Phone** | +20 101 262 8353 |
 | 🐛 **Issues** | [GitHub Issues](https://github.com/engahmed121314/civileg/issues) |
@@ -493,6 +494,7 @@ powershell -File tools\emulator\Test-App.ps1
 | القناة | التفاصيل |
 |--------|---------|
 | 👤 **المطور** | المهندس أحمد مجدي |
+| 🌐 **جيت هب** | [github.com/engahmed121314](https://github.com/engahmed121314) |
 | 📧 **البريد الإلكتروني** | [engahmed121314@gmail.com](mailto:engahmed121314@gmail.com) |
 | 📱 **الهاتف** | 01012628353+ |
 | 🐛 **المشاكل** | [GitHub Issues](https://github.com/engahmed121314/civileg/issues) |

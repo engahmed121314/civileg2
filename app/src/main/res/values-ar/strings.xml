@@ -357,6 +357,7 @@
     <string name="settings_currency_usd">دولار أمريكي</string>
     <string name="settings_currency_aed">درهم إماراتي</string>
     <string name="settings_supported_codes">الأكواد المدعومة</string>
+    <string name="developer_github">صفحة جيت هب</string>
     <string name="settings_disclaimer_notice">تنبيه: هذا التطبيق للأغراض التعليمية والتصميم المبدئي فقط. جميع الحسابات يجب أن يتم مراجعتها من قبل مهندس إنشائي مرخص.</string>
     <string name="settings_developer_team">تطوير فريق CivilEG — هندسة برمجية متخصصة</string>
 

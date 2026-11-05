@@ -126,6 +126,7 @@ fun PileFoundationScreen(
 
     // ── Design code (ADR-002: per-code engine dispatch) ──
     var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var calculatedCode by remember { mutableStateOf(DesignCode.ECP) }
 
     // ── Expandable sections ──
     var showSoilParams by remember { mutableStateOf(true) }
@@ -547,6 +548,7 @@ fun PileFoundationScreen(
                         viewModel.excavationDepthM = excavationDepth.toDoubleOrNull() ?: 0.0
                         viewModel.workingSpaceM = workingSpace.toDoubleOrNull() ?: 0.5
                         viewModel.blindingThicknessM = blindingThickness.toDoubleOrNull() ?: 0.0
+                        calculatedCode = selectedCode
                         viewModel.designPileFoundation(
                             pileType = selectedPileType,
                             pileDiameter = pileDiameter.toDouble()!!,
@@ -888,6 +890,7 @@ fun PileFoundationScreen(
                                 capRebarCount = cap.flexuralReinforcement.bars,
                                 soilType = res.soilType,
                                 viewMode = selectedViewMode,
+                                designCode = calculatedCode,
                                 resultSummary = pileDrawingSummary(res),
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -931,6 +934,7 @@ fun PileFoundationScreen(
                         capRebarCount = cap.flexuralReinforcement.bars,
                         soilType = res.soilType,
                         viewMode = selectedViewMode,
+                        designCode = calculatedCode,
                         resultSummary = pileDrawingSummary(res),
                         modifier = Modifier.fillMaxSize()
                     )

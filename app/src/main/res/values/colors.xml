@@ -1,44 +1,97 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Modern Material 3 Full Palette -->
+    <!-- ===== Premium Geometric Design System ===== -->
+    
+    <!-- Primary Geometric Palette - Deep Navy Base -->
     <color name="primary">#003A70</color>
     <color name="onPrimary">#FFFFFF</color>
-    <color name="primaryContainer">#D1E4FF</color>
-    <color name="onPrimaryContainer">#001D36</color>
-
+    <color name="primaryContainer">#0F172A</color>
+    <color name="onPrimaryContainer">#D6E4F0</color>
+    
+    <!-- Secondary Geometric Accent - Slate -->
     <color name="secondary">#4A5C7E</color>
     <color name="onSecondary">#FFFFFF</color>
-    <color name="secondaryContainer">#D7E3F7</color>
-    <color name="onSecondaryContainer">#101C2B</color>
-
+    <color name="secondaryContainer">#1E293B</color>
+    <color name="onSecondaryContainer">#F1F5F9</color>
+    
+    <!-- Tertiary Geometric Warm - Amber -->
     <color name="tertiary">#C68400</color>
     <color name="onTertiary">#FFFFFF</color>
-    <color name="tertiaryContainer">#FFDEA1</color>
-    <color name="onTertiaryContainer">#261900</color>
-
+    <color name="tertiaryContainer">#2E1B00</color>
+    <color name="onTertiaryContainer">#FFEAA7</color>
+    
+    <!-- Extended Premium Geometric Palette -->
     <color name="error">#BA1A1A</color>
     <color name="onError">#FFFFFF</color>
-    <color name="errorContainer">#FFDAD6</color>
-    <color name="onErrorContainer">#410002</color>
-
+    <color name="errorContainer">#4F1A1A</color>
+    <color name="onErrorContainer">#FFD9D9</color>
+    
     <color name="outline">#73777F</color>
+    <color name="outlineVariant">#98A2AF</color>
     <color name="gray">#757575</color>
-    <color name="background">#FBFCFF</color>
-    <color name="onBackground">#1A1C1E</color>
+    <color name="grayLight">#E2E8F0</color>
+    <color name="grayDark">#475569</color>
+    
+    <!-- Premium Background Geometrics -->
+    <color name="background">#F8FAFC</color>
+    <color name="onBackground">#0F172A</color>
     <color name="surface">#FFFFFF</color>
-    <color name="onSurface">#1A1C1E</color>
-    <color name="surfaceVariant">#DFE2EB</color>
-    <color name="onSurfaceVariant">#43474E</color>
-
-    <!-- App Specific -->
+    <color name="onSurface">#0F172A</color>
+    <color name="surfaceVariant">#F1F5F9</color>
+    <color name="onSurfaceVariant">#475569</color>
+    
+    <!-- Premium App Specific Geometric Colors -->
     <color name="accent">#FF9800</color>
+    <color name="accentGradientStart">#FF9800</color>
+    <color name="accentGradientEnd">#FFB74D</color>
     <color name="success">#2E7D32</color>
+    <color name="successGradientStart">#2E7D32</color>
+    <color name="successGradientEnd">#4CAF50</color>
     <color name="danger">#C62828</color>
-    <color name="text_primary">#002147</color>
-    <color name="text_secondary">#53647E</color>
-    <color name="text_muted">#8E9DB1</color>
+    <color name="dangerGradientStart">#C62828</color>
+    <color name="dangerGradientEnd">#EF4444</color>
+    
+    <!-- Premium Geometric Gradient Definitions (for backgrounds) -->
+    <color name="gradient_navy_to_blue">#003A70 → #0F172A</color>
+    <color name="gradient_blue_to_purple">#0F172A → #4A5C7E</color>
+    <color name="gradient_purple_to_amber">#4A5C7E → #C68400</color>
+    <color name="gradient_amber_to_orange">#C68400 → #FF9800</color>
+    <color name="gradient_success_to_green">#2E7D32 → #4CAF50</color>
+    <color name="gradient_danger_to_red">#C62828 → #EF4444</color>
+    
+    <!-- Premium Surface Variants -->
+    <color name="surfaceElevated">#FFFFFF</color>
+    <color name="surfaceContainerLow">#F8FAFC</color>
+    <color name="surfaceContainerHigh">#F1F5F9</color>
+    
+    <!-- Premium Text Variants -->
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#475569</color>
+    <color name="text_muted">#64748B</color>
+    <color name="text_inverse">#FFFFFF</color>
+    <color name="text_on_accent">#000000</color>
+    
+    <!-- Premium Status Colors -->
+    <color name="safe">#2E7D32</color>
+    <color name="safeBright">#38A13F</color>
+    <color name="warning">#C41E3A</color>
+    <color name="warningBright">#F6871F</color>
+    <color name="unsafe">#C62828</color>
+    <color name="unsafeBright">#EF4444</color>
+    <color name="info">#0F172A</color>
+    
+    <!-- Premium Geometric Pattern Colors (for subtle backgrounds) -->
+    <color name="patternLight">rgba(15, 23, 42, 0.03)</color>
+    <color name="patternMedium">rgba(15, 23, 42, 0.08)</color>
+    <color name="patternDark">rgba(15, 23, 42, 0.15)</color>
+    
+    <!-- Premium White and Navy -->
     <color name="white">#FFFFFF</color>
-    <color name="black">#000000</color>
+    <color name="navyDeep">#0F172A</color>
+    <color name="navyMedium">#1E293B</color>
+    
+    <!-- Premium Splash -->
     <color name="splash_bg_start">#FFFFFF</color>
-    <color name="splash_bg_end">#E3EDF7</color>
+    <color name="splash_bg_end">#F8FAFC</color>
+    <color name="splash_accent">#FF9800</color>
 </resources>
