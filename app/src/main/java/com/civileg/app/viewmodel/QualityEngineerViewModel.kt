@@ -315,11 +315,7 @@ class QualityEngineerViewModel @Inject constructor(
         _steelState.value = _steelState.value.copy(
             designCode = code,
             steelChecks = null,
-            outcome = null,
-            axialLoad = "0",
-            unbracedLength = "0",
-            allowableDeflection = "0",
-            memberType = "BEAM"
+            outcome = null
         )
         _roadsState.value = _roadsState.value.copy(designCode = code, outcome = null)
         _bridgesState.value = _bridgesState.value.copy(designCode = code, outcome = null)
@@ -562,13 +558,13 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun calculateRebarChecks() {
         val s = _rebarState.value
-        val barDia = InputGuard.positive("barDiameter", s.barDiameter.toDoubleOrNull() ?: 16.0)
-        val nBars = InputGuard.positive("numBars", s.numBars.toIntOrNull() ?: 3)
-        val fy = InputGuard.positive("fy", s.fy.toDoubleOrNull() ?: 400.0)
-        val fcu = InputGuard.positive("fcu", s.fcu.toDoubleOrNull() ?: 25.0)
-        val cover = InputGuard.inRange("cover", s.cover.toDoubleOrNull() ?: 40.0, 10.0, 100.0)
-        val b = InputGuard.positive("beamWidth", s.beamWidth.toDoubleOrNull() ?: 250.0)
-        val d = InputGuard.positive("effectiveDepth", s.effectiveDepth.toDoubleOrNull() ?: 560.0)
+        val barDia = InputGuard.positive("barDiameter", s.barDiameter.toDoubleOrNull() ?: Double.NaN)
+        val nBars = InputGuard.positive("numBars", s.numBars.toIntOrNull() ?: 0)
+        val fy = InputGuard.positive("fy", s.fy.toDoubleOrNull() ?: Double.NaN)
+        val fcu = InputGuard.positive("fcu", s.fcu.toDoubleOrNull() ?: Double.NaN)
+        val cover = InputGuard.inRange("cover", s.cover.toDoubleOrNull() ?: Double.NaN, 10.0, 100.0)
+        val b = InputGuard.positive("beamWidth", s.beamWidth.toDoubleOrNull() ?: Double.NaN)
+        val d = InputGuard.positive("effectiveDepth", s.effectiveDepth.toDoubleOrNull() ?: Double.NaN)
         
         val outcome = QualityControlEngine.rebarQc(
             code = s.designCode,
@@ -598,9 +594,9 @@ class QualityEngineerViewModel @Inject constructor(
         val span = InputGuard.positive("span", s.span.toDoubleOrNull() ?: Double.NaN)
         val mu = InputGuard.nonNegative("appliedMoment", s.appliedMoment.toDoubleOrNull() ?: Double.NaN)
         val vu = InputGuard.nonNegative("appliedShear", s.appliedShear.toDoubleOrNull() ?: Double.NaN)
-        val pu = InputGuard.nonNegative("axialLoad", s.axialLoad.toDoubleOrNull() ?: 0.0)
-        val unbraced = InputGuard.nonNegative("unbracedLength", s.unbracedLength.toDoubleOrNull() ?: 0.0)
-        val allowDefl = InputGuard.nonNegative("allowableDeflection", s.allowableDeflection.toDoubleOrNull() ?: 0.0)
+        val pu = InputGuard.nonNegative("axialLoad", s.axialLoad.toDoubleOrNull() ?: Double.NaN)
+        val unbraced = InputGuard.nonNegative("unbracedLength", s.unbracedLength.toDoubleOrNull() ?: Double.NaN)
+        val allowDefl = InputGuard.nonNegative("allowableDeflection", s.allowableDeflection.toDoubleOrNull() ?: Double.NaN)
         val memberType = s.memberType.takeIf { it.isNotBlank() } ?: "BEAM"
 
         val outcome = QualityControlEngine.steelQcDetailed(
@@ -629,12 +625,12 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun calculateRoadsChecks() {
         val s = _roadsState.value
-        val surface = InputGuard.inRange("surfaceLayerThickness", s.surfaceLayerThickness.toDoubleOrNull() ?: 50.0, 20.0, 100.0)
-        val base = InputGuard.inRange("baseLayerThickness", s.baseLayerThickness.toDoubleOrNull() ?: 150.0, 100.0, 500.0)
-        val subbase = InputGuard.inRange("subbaseLayerThickness", s.subbaseLayerThickness.toDoubleOrNull() ?: 200.0, 100.0, 500.0)
-        val compaction = InputGuard.inRange("compactionPercent", s.compactionPercent.toDoubleOrNull() ?: 97.0, 80.0, 100.0)
-        val density = InputGuard.inRange("asphaltDensity", s.asphaltDensity.toDoubleOrNull() ?: 23.0, 20.0, 26.0)
-        val voids = InputGuard.inRange("airVoids", s.airVoids.toDoubleOrNull() ?: 4.0, 0.0, 10.0)
+        val surface = InputGuard.inRange("surfaceLayerThickness", s.surfaceLayerThickness.toDoubleOrNull() ?: Double.NaN, 20.0, 100.0)
+        val base = InputGuard.inRange("baseLayerThickness", s.baseLayerThickness.toDoubleOrNull() ?: Double.NaN, 100.0, 500.0)
+        val subbase = InputGuard.inRange("subbaseLayerThickness", s.subbaseLayerThickness.toDoubleOrNull() ?: Double.NaN, 100.0, 500.0)
+        val compaction = InputGuard.inRange("compactionPercent", s.compactionPercent.toDoubleOrNull() ?: Double.NaN, 80.0, 100.0)
+        val density = InputGuard.inRange("asphaltDensity", s.asphaltDensity.toDoubleOrNull() ?: Double.NaN, 20.0, 26.0)
+        val voids = InputGuard.inRange("airVoids", s.airVoids.toDoubleOrNull() ?: Double.NaN, 0.0, 10.0)
         
         val outcome = QualityControlEngine.roadsQc(
             surfaceThicknessMm = surface,
@@ -662,14 +658,16 @@ class QualityEngineerViewModel @Inject constructor(
             s.requiredConcreteStrength.toDoubleOrNull() ?: Double.NaN
         )
         val span = InputGuard.positive("span", s.span.toDoubleOrNull() ?: Double.NaN)
-        val freq = InputGuard.nonNegative("naturalFrequency", s.naturalFrequency.toDoubleOrNull() ?: 0.0)
+        val freqValue = s.naturalFrequency.toDoubleOrNull()
+            ?: if (s.naturalFrequency.isBlank()) 0.0 else Double.NaN
+        val freq = InputGuard.nonNegative("naturalFrequency", freqValue)
         val measuredDeflection = InputGuard.nonNegative(
             "measuredDeflection",
             s.measuredDeflection.toDoubleOrNull() ?: Double.NaN
         )
-        val allowableDeflection = InputGuard.nonNegative(
+        val allowableDeflection = InputGuard.positive(
             "allowableDeflection",
-            s.allowableDeflection.toDoubleOrNull() ?: 0.0
+            s.allowableDeflection.toDoubleOrNull() ?: Double.NaN
         )
 
         val outcome = QualityControlEngine.bridgeQcDetailed(
@@ -690,12 +688,12 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun calculateTunnelChecks() {
         val s = _tunnelsState.value
-        val convergence = InputGuard.nonNegative("tunnelConvergence", s.tunnelConvergence.toDoubleOrNull() ?: 20.0)
-        val diameter = InputGuard.positive("tunnelDiameter", s.tunnelDiameter.toDoubleOrNull() ?: 6.0)
-        val support = InputGuard.positive("supportThickness", s.supportThickness.toDoubleOrNull() ?: 150.0)
+        val convergence = InputGuard.nonNegative("tunnelConvergence", s.tunnelConvergence.toDoubleOrNull() ?: Double.NaN)
+        val diameter = InputGuard.positive("tunnelDiameter", s.tunnelDiameter.toDoubleOrNull() ?: Double.NaN)
+        val support = InputGuard.positive("supportThickness", s.supportThickness.toDoubleOrNull() ?: Double.NaN)
         val groundwater = s.groundwaterPresent.equals("true", ignoreCase = true)
-        val shotcrete = InputGuard.positive("shotcreteStrength", s.shotcreteStrength.toDoubleOrNull() ?: 25.0)
-        val rockUcs = InputGuard.positive("rockUcs", s.rockUcs.toDoubleOrNull() ?: 50.0)
+        val shotcrete = InputGuard.positive("shotcreteStrength", s.shotcreteStrength.toDoubleOrNull() ?: Double.NaN)
+        val rockUcs = InputGuard.positive("rockUcs", s.rockUcs.toDoubleOrNull() ?: Double.NaN)
 
         val outcome = QualityControlEngine.tunnelQcDetailed(
             rockClass = s.rockClass,
@@ -715,13 +713,13 @@ class QualityEngineerViewModel @Inject constructor(
     // ---------------------------------------------------------------
     fun calculateBuildingChecks(buildingType: String) {
         val s = _buildingsState.value.copy(buildingType = buildingType)
-        val nFloors = InputGuard.inRange("numFloors", s.numFloors.toIntOrNull() ?: 5, 1, 100)
-        val floorH = InputGuard.inRange("floorHeight", s.floorHeight.toDoubleOrNull() ?: 3.0, 2.0, 5.0)
-        val weight = InputGuard.positive("totalWeight", s.totalWeight.toDoubleOrNull() ?: 50000.0)
-        val importance = InputGuard.inRange("importanceFactor", s.importanceFactor.toDoubleOrNull() ?: 1.0, 1.0, 1.5)
-        val sdsVal = InputGuard.positive("sds", s.sds.toDoubleOrNull() ?: 0.5)
-        val rVal = InputGuard.inRange("responseR", s.responseR.toDoubleOrNull() ?: 5.0, 1.0, 10.0)
-        val drift = InputGuard.positive("storyDrift", s.storyDrift.toDoubleOrNull() ?: 0.015)
+        val nFloors = InputGuard.inRange("numFloors", s.numFloors.toIntOrNull() ?: 0, 1, 100)
+        val floorH = InputGuard.inRange("floorHeight", s.floorHeight.toDoubleOrNull() ?: Double.NaN, 2.0, 5.0)
+        val weight = InputGuard.positive("totalWeight", s.totalWeight.toDoubleOrNull() ?: Double.NaN)
+        val importance = InputGuard.inRange("importanceFactor", s.importanceFactor.toDoubleOrNull() ?: Double.NaN, 1.0, 1.5)
+        val sdsVal = InputGuard.positive("sds", s.sds.toDoubleOrNull() ?: Double.NaN)
+        val rVal = InputGuard.inRange("responseR", s.responseR.toDoubleOrNull() ?: Double.NaN, 1.0, 10.0)
+        val drift = InputGuard.positive("storyDrift", s.storyDrift.toDoubleOrNull() ?: Double.NaN)
         
         val outcome = QualityControlEngine.buildingQc(
             code = s.designCode,

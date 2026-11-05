@@ -229,6 +229,42 @@ class QualityControlEngineTest {
         assertTrue(outcome.passed)
     }
 
+    @Test
+    fun bridgeQcDetailed_usesProjectInputsAndInformationalFrequencyForAllCodes() {
+        listOf(DesignCode.ECP, DesignCode.ACI, DesignCode.SBC).forEach { code ->
+            val outcome = QualityControlEngine.bridgeQcDetailed(
+                code = code,
+                spanM = 20.0,
+                measuredConcreteStrengthMpa = 30.0,
+                requiredConcreteStrengthMpa = 25.0,
+                measuredDeflectionMm = 40.0,
+                allowableDeflectionMm = 50.0,
+                naturalFrequencyHz = 0.0
+            )
+
+            assertTrue(outcome.passed)
+            assertEquals(2, outcome.checks.size)
+            assertTrue(
+                outcome.checks.all {
+                    it.reference?.contains(QualityControlEngine.codeName(code)) == true
+                }
+            )
+            assertTrue(outcome.details.any { it.second == "Not provided" })
+        }
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun bridgeQcDetailed_requiresPositiveProjectDeflectionLimit() {
+        QualityControlEngine.bridgeQcDetailed(
+            code = DesignCode.SBC,
+            spanM = 20.0,
+            measuredConcreteStrengthMpa = 30.0,
+            requiredConcreteStrengthMpa = 25.0,
+            measuredDeflectionMm = 0.0,
+            allowableDeflectionMm = 0.0
+        )
+    }
+
     // ==================================================================
     // TUNNELS
     // ==================================================================

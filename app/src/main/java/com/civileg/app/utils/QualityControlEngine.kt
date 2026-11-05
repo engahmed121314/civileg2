@@ -420,54 +420,15 @@ object QualityControlEngine {
         measuredDeflectionMm: Double,
         allowableDeflectionMm: Double,
         naturalFrequencyHz: Double = 0.0
-    ): QcOutcome {
-        val checks = mutableListOf<GenericSafetyCheck>()
-
-        // 1. Concrete strength compliance
-        checks.add(GenericSafetyCheck("Concrete strength f_c ≥ required", measuredConcreteStrengthMpa, requiredConcreteStrengthMpa, "MPa",
-            measuredConcreteStrengthMpa >= requiredConcreteStrengthMpa, "ACI 318 / ECP 203"))
-
-        // 2. Deflection check — typical bridge limit L/800
-        val deflectionLimitL800 = spanM * 1000.0 / 800.0
-        val effectiveAllowable = if (allowableDeflectionMm > 0) allowableDeflectionMm else deflectionLimitL800
-        checks.add(GenericSafetyCheck("Deflection Δ ≤ L/800 or project limit", measuredDeflectionMm, effectiveAllowable, "mm",
-            measuredDeflectionMm <= effectiveAllowable, "AASHTO / Project Specs"))
-
-        // 3. Natural frequency check — for pedestrian comfort, typically > 3 Hz
-        if (naturalFrequencyHz > 0.0) {
-            checks.add(GenericSafetyCheck("Natural frequency f_n ≥ 3 Hz", naturalFrequencyHz, 3.0, "Hz",
-                naturalFrequencyHz >= 3.0, "Pedestrian comfort limit"))
-        }
-
-        // 4. Span-to-depth ratio (informational, typical range)
-        val spanDepthRatio = spanM * 1000.0 / 600.0 // assuming 600mm typical depth
-        checks.add(GenericSafetyCheck("Span-to-depth ratio (informational)", spanDepthRatio, 25.0, "-",
-            spanDepthRatio <= 25.0, "Typical bridge practice"))
-
-        val passed = checks.all { it.passed }
-        val utilization = checks.map { if (it.limit > 0) it.calculated / it.limit else 0.0 }.maxOrNull() ?: 0.0
-
-        val details = mutableListOf<Pair<String, String>>()
-        details.add("Span" to "%.2f m".format(spanM))
-        details.add("Measured concrete strength" to "%.1f MPa".format(measuredConcreteStrengthMpa))
-        details.add("Required concrete strength" to "%.1f MPa".format(requiredConcreteStrengthMpa))
-        details.add("Measured deflection" to "%.1f mm".format(measuredDeflectionMm))
-        details.add("Allowable deflection" to "%.1f mm".format(effectiveAllowable))
-        details.add("Deflection limit (L/800)" to "%.1f mm".format(deflectionLimitL800))
-        if (naturalFrequencyHz > 0.0) {
-            details.add("Natural frequency" to "%.2f Hz".format(naturalFrequencyHz))
-        }
-        details.add("Span/depth ratio" to "%.1f".format(spanDepthRatio))
-
-        return QcOutcome(
-            title = "Bridge Quality Control (Detailed)",
-            checks = checks,
-            details = details,
-            passed = passed,
-            utilizationRatio = utilization,
-            summary = "Bridge span ${spanM}m — " + (if (passed) "compliant" else "review required")
-        )
-    }
+    ): QcOutcome = bridgeQc(
+        code = code,
+        concreteStrengthMpa = measuredConcreteStrengthMpa,
+        requiredConcreteStrengthMpa = requiredConcreteStrengthMpa,
+        spanM = spanM,
+        naturalFrequencyHz = naturalFrequencyHz,
+        measuredDeflectionMm = measuredDeflectionMm,
+        allowableDeflectionMm = allowableDeflectionMm
+    )
 
     // ==================================================================
     // ROADS — surface/base/subbase, density, compaction, air voids
@@ -535,7 +496,7 @@ object QualityControlEngine {
         require(concreteStrengthMpa.isFinite() && concreteStrengthMpa > 0.0)
         require(requiredConcreteStrengthMpa.isFinite() && requiredConcreteStrengthMpa > 0.0)
         require(spanM.isFinite() && spanM > 0.0)
-        require(naturalFrequencyHz.isFinite() && naturalFrequencyHz > 0.0)
+        require(naturalFrequencyHz.isFinite() && naturalFrequencyHz >= 0.0)
         require(measuredDeflectionMm.isFinite() && measuredDeflectionMm >= 0.0)
         require(allowableDeflectionMm.isFinite() && allowableDeflectionMm > 0.0)
 
@@ -567,7 +528,8 @@ object QualityControlEngine {
             "Measured concrete strength" to "%.1f MPa".format(concreteStrengthMpa),
             "Specified concrete strength" to "%.1f MPa".format(requiredConcreteStrengthMpa),
             "Span" to "%.2f m".format(spanM),
-            "Natural frequency (informational)" to "%.2f Hz".format(naturalFrequencyHz),
+            "Natural frequency (informational)" to
+                if (naturalFrequencyHz > 0.0) "%.2f Hz".format(naturalFrequencyHz) else "Not provided",
             "Measured deflection" to "%.2f mm".format(measuredDeflectionMm),
             "Project deflection limit" to "%.2f mm".format(allowableDeflectionMm)
         )

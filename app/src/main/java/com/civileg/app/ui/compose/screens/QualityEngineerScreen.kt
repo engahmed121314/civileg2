@@ -316,10 +316,9 @@ private fun ConcreteQCTab(
                 QualityCheckRow(
                     label = "قوة 28 يوم ≥ fcu",
                     passed = uiState.strength28Days.toDoubleOrNull()?.let {
-                        val fcu = uiState.fcu.toDoubleOrNull() ?: 25.0
-                        it >= fcu
+                        uiState.fcu.toDoubleOrNull()?.let { fcu -> it >= fcu } ?: false
                     } ?: false,
-                    detail = "المطلوب: ${uiState.fcu.ifEmpty { "25" }} MPa"
+                    detail = "المطلوب: ${uiState.fcu.ifBlank { "—" }} MPa"
                 )
 
                 val slumpRange = QcLimits.slumpRange(uiState.designCode)
@@ -723,7 +722,11 @@ private fun RebarQCTab(
         }
 
         Button(
-            onClick = { viewModel.calculateRebarChecks() },
+            onClick = {
+                runQcInputAction(scope, snackbarHostState) {
+                    viewModel.calculateRebarChecks()
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
@@ -1056,7 +1059,11 @@ private fun RoadsQCTab(
         }
 
         Button(
-            onClick = { viewModel.calculateRoadsChecks() },
+            onClick = {
+                runQcInputAction(scope, snackbarHostState) {
+                    viewModel.calculateRoadsChecks()
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
@@ -1313,7 +1320,11 @@ private fun TunnelsQCTab(
         }
 
         Button(
-            onClick = { viewModel.calculateTunnelChecks() },
+            onClick = {
+                runQcInputAction(scope, snackbarHostState) {
+                    viewModel.calculateTunnelChecks()
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
@@ -1462,7 +1473,11 @@ private fun BuildingsQCTab(
         }
 
         Button(
-            onClick = { viewModel.calculateBuildingChecks(buildingType) },
+            onClick = {
+                runQcInputAction(scope, snackbarHostState) {
+                    viewModel.calculateBuildingChecks(buildingType)
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
