@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
+import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.ui.theme.PremiumColorsLight
 import com.civileg.app.ui.theme.PremiumColorsDark
 
