@@ -8,8 +8,8 @@ plugins {
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.compose.compiler)
     id("kotlin-parcelize")
-    alias(libs.plugins.google.services)
-    alias(libs.plugins.google.firebase.crashlytics)
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 android {

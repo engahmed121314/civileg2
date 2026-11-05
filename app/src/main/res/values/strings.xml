@@ -637,7 +637,7 @@
     <string name="wind_pressure_dist">Wind Pressure Distribution</string>
     <string name="wind_elevation_diag">Wind Pressure Elevation</string>
 
-    <!-- Pile Foundation 추가 -->
+    <!-- Pile Foundation -->
     <string name="pile_title">Pile Foundation Design</string>
     <string name="pile_header_ecp">Pile Design (ECP 203)</string>
     <string name="pile_config_section">Pile &amp; Soil Configuration</string>
@@ -716,7 +716,7 @@
     <string name="pile_detail_drawing">Detail Drawing</string>
     <string name="pile_drawing_sub">Plan &amp; Section reinforcement</string>
 
-    <!-- Flat Slab 추가 -->
+    <!-- Flat Slab -->
     <string name="fs_title">Flat Slab Design</string>
     <string name="fs_config_section">Panel Configuration</string>
     <string name="fs_geometry_section">Geometry &amp; Constraints</string>
@@ -761,7 +761,7 @@
     <string name="fs_steel">Steel</string>
     <string name="fs_panel_plan">Panel Plan View</string>
 
-    <!-- Shear Wall 추가 -->
+    <!-- Shear Wall -->
     <string name="sw_title">Shear Wall Design</string>
     <string name="sw_design_code">Design Code</string>
     <string name="sw_wall_type">Wall Type</string>
@@ -796,7 +796,7 @@
     <string name="sw_wall_drawing">Wall Drawing</string>
     <string name="sw_export_pdf">Export PDF</string>
 
-    <!-- Seismic 추가 -->
+    <!-- Seismic -->
     <string name="seismic_default_name">Seismic Project 1</string>
     <string name="seismic_saved_success">Seismic design saved successfully</string>
     <string name="seismic_section_code">Seismic Code Selection</string>
@@ -843,7 +843,7 @@
     <string name="seismic_save_dialog_title">Save Seismic Analysis</string>
     <string name="seismic_design_name_hint">Project/Analysis Name</string>
 
-    <!-- Steel 추가 -->
+    <!-- Steel -->
     <string name="steel_tab_warehouses">Warehouse</string>
     <string name="steel_tab_sections">Sections</string>
     <string name="steel_tab_welds">Welds</string>
@@ -894,7 +894,7 @@
     <string name="steel_fail">FAIL</string>
     <string name="steel_recommendations">Design Recommendations</string>
     <string name="steel_section_dictionary">Steel Section Dictionary</string>
-    <string name="steel_design_code_metal">Standard: Eurocode / AISC</string>
+    <string name="steel_design_code_metal">Standard: ECP 205 / AISC 360 / SBC 306</string>
     <string name="steel_search_hint">Search profile name (e.g. IPE 300)...</string>
     <string name="steel_search_results">Search Results (%d profiles)</string>
     <string name="steel_section_category">Section Category</string>
@@ -947,11 +947,45 @@
     <string name="steel_anchor_bolts">Anchor Bolts</string>
     <string name="steel_edge_distance">Edge distance</string>
     <string name="steel_embedment_length">Embedment length</string>
+    
+    <!-- Base Plate Type -->
+    <string name="steel_baseplate_type_label">نوع القاعدة</string>
+    <string name="steel_baseplate_concentric">مركزية (Concentric)</string>
+    <string name="steel_baseplate_eccentric">غير مركزية (Eccentric)</string>
+    <string name="steel_baseplate_pocket">قاعدة جيب (Pocket)</string>
+    
+    <!-- Base Plate Results -->
+    <string name="steel_max_bearing_pressure">أقصى ضغط تحمل</string>
+    <string name="steel_min_bearing_pressure">أدنى ضغط تحمل</string>
+    <string name="steel_effective_bearing_length">الطول الفعال للتحمل</string>
+    <string name="steel_bolt_edge_distance">مسافة الحافة للبرغي</string>
+    <string name="steel_tension_side">جانب الشد</string>
+    <string name="steel_yes">نعم</string>
+    <string name="steel_no">لا</string>
+    
+    <!-- Pocket Base Plate -->
+    <string name="steel_pocket_depth">عمق الجيب</string>
+    <string name="steel_pocket_width">عرض الجيب</string>
+    <string name="steel_pocket_length">طول الجيب</string>
+    <string name="steel_concrete_cover">غطاء الخرسانة</string>
     <string name="steel_grout">Grout Layer</string>
     <string name="steel_grout_thickness">Grout thickness</string>
     <string name="steel_grout_strength">Grout strength</string>
     <string name="steel_ur_label">Utilization U.R.</string>
     <string name="steel_warnings">Safety Warnings</string>
+    
+    <!-- Bridge QC Detailed Labels -->
+    <string name="bridge_deflection_limit">Deflection Limit (L/800)</string>
+    <string name="bridge_natural_frequency">Natural Frequency</string>
+    <string name="bridge_span_depth_ratio">Span-to-Depth Ratio</string>
+    <string name="bridge_concrete_strength_ratio">Concrete Strength Ratio</string>
+    
+    <!-- Tunnel QC Detailed Labels -->
+    <string name="tunnel_rmr_factor">RMR Quality Factor</string>
+    <string name="tunnel_strength_ratio">Shotcrete/Rock Strength Ratio</string>
+    <string name="tunnel_groundwater">Groundwater Present</string>
+    <string name="tunnel_rock_ucs">Rock UCS</string>
+    <string name="tunnel_shotcrete">Shotcrete Strength</string>
     <string name="steel_bolt_data">Bolt Configuration</string>
     <string name="steel_applied_force_hint">Factored Force (kN)</string>
     <string name="steel_weld_data">Weld Configuration</string>
@@ -1374,9 +1408,63 @@
     <string name="steel_tensile_cap_bolt">Tension / Bolt</string>
     <string name="steel_block_shear">Block Shear</string>
     <string name="steel_block_shear_cap">Block Shear Cap.</string>
+    <string name="steel_block_shear_capacity">Block Shear Capacity</string>
+    <string name="steel_block_shear_utilization">Block Shear Utilization</string>
     <string name="steel_weld_result_safe">Weld Safe</string>
     <string name="steel_weld_result_fail">Weld Failed</string>
-
+    
+    <!-- Connection Design - Additional Labels -->
+    <string name="steel_conn_slip_critical">الوصلة الانزلاقية (Slip-Critical)</string>
+    <string name="steel_plate_thickness_hint">سماكة اللوحة (مم)</string>
+    <string name="steel_fu_plate_hint">مقاومة الشد للوحة (MPa)</string>
+    <string name="steel_friction_class">فئة الاحتكاك</string>
+    <string name="steel_double_shear">قص مزدوج</string>
+    <string name="steel_detailed_checks">Detailed Checks</string>
+    <string name="steel_bearing_capacity">Bearing Capacity</string>
+    <string name="steel_tension_capacity">Tension Capacity</string>
+    <string name="steel_controlling_capacity">Controlling Capacity</string>
+    <string name="steel_code_notes">Code Notes</string>
+    <string name="steel_calculation_formulas">Calculation Formulas</string>
+    <string name="steel_weld_throat_area">Throat Area</string>
+    <string name="steel_weld_electrode">Electrode Type</string>
+    
+    <!-- Stage 1: Structural Visualization -->
+    <string name="steel_structural_visualization">Structural Visualization</string>
+    <string name="steel_structure_tab">Structure &amp; BOM</string>
+    <string name="steel_view_front_elevation">Front Elevation</string>
+    <string name="steel_view_side_elevation">Side Elevation</string>
+    <string name="steel_view_plan">Plan View</string>
+    <string name="steel_view_3d_perspective">3D Perspective</string>
+    
+    <!-- Connection Details -->
+    <string name="steel_connection_details">Connection Details</string>
+    <string name="steel_bolted_connection">Bolted Connection</string>
+    <string name="steel_welded_connection">Welded Connection</string>
+    
+    <!-- Stage 2: Bill of Materials -->
+    <string name="steel_bill_of_materials">Bill of Materials (BOM)</string>
+    <string name="steel_bom_item">Item</string>
+    <string name="steel_bom_quantity">Qty</string>
+    <string name="steel_bom_weight">Weight</string>
+    <string name="steel_bom_section">Section</string>
+    <string name="steel_bom_columns">Columns</string>
+    <string name="steel_bom_rafters">Rafters</string>
+    <string name="steel_bom_purlins">Purlins</string>
+    <string name="steel_bom_girts">Girts</string>
+    <string name="steel_bom_plates">Base Plates</string>
+    <string name="steel_bom_total">Total Steel Weight</string>
+    
+    <!-- Stage 3: Moment Frame -->
+    <string name="steel_moment_frame_analysis">Moment Resisting Frame Analysis</string>
+    <string name="steel_story_count">Number of Stories</string>
+    <string name="steel_frame_type">Frame Type</string>
+    <string name="steel_moment_resisting_frame">Moment Resisting Frame</string>
+    
+    <!-- Stage 4: Shop Drawings -->
+    <string name="steel_shop_drawing">Shop Drawing Preview</string>
+    <string name="steel_export_dxf">Export DXF</string>
+    <string name="steel_export_cnc">Export CNC</string>
+    
     <!-- Steel Tables -->
     <string name="steel_tables_angles">Angles &amp; L-Sections</string>
     <string name="steel_tables_depth_h">Depth h</string>
@@ -1705,13 +1793,9 @@
     <string name="steel_frame_analysis_results">Frame Analysis Results</string>
     <string name="steel_3d_perspective">3D Perspective</string>
     <string name="steel_engineering_recommendations">Engineering Recommendations</string>
-    <string name="steel_search_placeholder">IPE 300, HEB 240…</string>
     <string name="steel_member_type">Member Type</string>
     <string name="steel_member_detail">Steel Member Detail</string>
     <string name="steel_grade_format">Grade %s</string>
-    <string name="steel_axial_capacity">Axial Capacity (ΦPn)</string>
-    <string name="steel_moment_capacity">Moment Capacity (ΦMn)</string>
-    <string name="steel_shear_capacity">Shear Capacity (ΦVn)</string>
     <string name="steel_generate_full_english_pdf_report">Generate Full English PDF Report</string>
     <string name="steel_section_weight">Section Weight</string>
 

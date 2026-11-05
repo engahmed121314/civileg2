@@ -108,8 +108,8 @@ class RetainingWallViewModel @Inject constructor(
     }
 
     // Legacy method for backward compatibility
-    fun calculateRetainingWall(height: Double, soilDensity: Double, frictionAngle: Double, surcharge: Double, fcu: Double, fy: Double) {
-        calculateRetainingWallPro(height, soilDensity, frictionAngle, surcharge, fcu, fy, 16, DesignCode.ECP)
+    fun calculateRetainingWall(height: Double, soilDensity: Double, frictionAngle: Double, surcharge: Double, fcu: Double, fy: Double, code: com.civileg.app.domain.entities.DesignCode = com.civileg.app.ui.defaultDesignCode()) {
+        calculateRetainingWallPro(height, soilDensity, frictionAngle, surcharge, fcu, fy, 16, code)
     }
 
     fun saveRetainingWall(projectId: Long, name: String, result: CalculatorEngine.RetainingWallResult) {

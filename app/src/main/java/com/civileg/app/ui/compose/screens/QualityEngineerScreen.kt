@@ -76,6 +76,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.*
+import com.civileg.app.ui.defaultDesignCode
 
 private fun runQcInputAction(
     scope: CoroutineScope,
@@ -1265,6 +1266,49 @@ private fun TunnelsQCTab(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Additional detailed tunnel fields
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    var groundwaterExpanded by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = groundwaterExpanded,
+                        onExpandedChange = { groundwaterExpanded = it },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = if (uiState.groundwaterPresent == "true") "نعم" else "لا",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("مياه جوفية") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = groundwaterExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = groundwaterExpanded,
+                            onDismissRequest = { groundwaterExpanded = false }
+                        ) {
+                            DropdownMenuItem(text = { Text("لا") }, onClick = { viewModel.updateTunnelsField("groundwaterPresent", "false"); groundwaterExpanded = false })
+                            DropdownMenuItem(text = { Text("نعم") }, onClick = { viewModel.updateTunnelsField("groundwaterPresent", "true"); groundwaterExpanded = false })
+                        }
+                    }
+                    OutlinedTextField(
+                        value = uiState.shotcreteStrength,
+                        onValueChange = { viewModel.updateTunnelsField("shotcreteStrength", it) },
+                        label = { Text("مقاومة الرشاش (MPa)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = uiState.rockUcs,
+                    onValueChange = { viewModel.updateTunnelsField("rockUcs", it) },
+                    label = { Text("مقاومة الشد المحوري للصخر UCS (MPa)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
 
@@ -1999,7 +2043,7 @@ private fun DisciplineQcTab(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
-    var designCode by remember(discipline) { mutableStateOf(DesignCode.ECP) }
+    var designCode by remember(discipline) { mutableStateOf(defaultDesignCode()) }
     val values = remember(discipline) {
         mutableStateMapOf<String, String>().apply {
             discipline.fields.forEach { put(it.key, it.default) }

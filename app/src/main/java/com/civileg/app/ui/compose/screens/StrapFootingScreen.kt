@@ -47,6 +47,7 @@ import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import kotlinx.coroutines.launch
 import kotlin.math.max
+import com.civileg.app.ui.defaultDesignCode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +87,7 @@ fun StrapFootingScreen(
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("360") }
     var strapWidth by remember { mutableStateOf("400") }
-    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     var barDia by remember { mutableStateOf("18") }
     var cover by remember { mutableStateOf("75") }
 

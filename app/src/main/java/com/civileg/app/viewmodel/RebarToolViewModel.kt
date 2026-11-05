@@ -94,12 +94,14 @@ class RebarToolViewModel : ViewModel() {
                 DesignCode.ECP_203 -> RebarCalculator.developmentLengthECP(
                     diameter, fy, fcu, isTopBar, isConfined, excessRatio
                 )
-                DesignCode.ACI_318 -> {
+                DesignCode.ACI_318, DesignCode.SBC_304 -> {
+                    // SBC 304 follows ACI 318 methodology
                     val fyPsi = fy * 145.038
                     val fcPsi = fcu * 145.038
-                    RebarCalculator.developmentLengthACI(
+                    val aci = RebarCalculator.developmentLengthACI(
                         diameter, fyPsi, fcPsi, isTopBar, isConfined, excessRatio
                     )
+                    if (code == DesignCode.SBC_304) aci.copy(code = DesignCode.SBC_304) else aci
                 }
             }
             _devLengthResult.value = result

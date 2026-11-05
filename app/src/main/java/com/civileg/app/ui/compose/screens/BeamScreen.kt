@@ -51,6 +51,7 @@ import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.defaultDesignCode
 
 private data class BeamDiagramInputSnapshot(
     val span: Double,
@@ -105,7 +106,7 @@ fun BeamScreen(
     var barDiameter by remember { mutableStateOf("16") }
     var selectedSupport by remember { mutableStateOf(CalculatorEngine.SupportType.HINGED_HINGED) }
     var expandedSupport by remember { mutableStateOf(false) }
-    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     var calculatedDiagramInputs by remember { mutableStateOf<BeamDiagramInputSnapshot?>(null) }
 
     Scaffold(

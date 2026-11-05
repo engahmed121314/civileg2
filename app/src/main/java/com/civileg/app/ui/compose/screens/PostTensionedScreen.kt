@@ -59,6 +59,7 @@ import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import com.civileg.app.viewmodel.PostTensionedViewModel
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.defaultDesignCode
 
 /**
  * شاشة تصميم العناصر مسبقة الإجهاد (Post-Tensioned) وفق ECP / ACI / SBC.
@@ -87,7 +88,7 @@ fun PostTensionedScreen(
     var supportType by remember { mutableStateOf(PTSupportType.SimplySupported) }
     var tendonType by remember { mutableStateOf(PTTendonType.Strand_7Wire_12_7mm) }
     var exposureClass by remember { mutableStateOf(PTExposureClass.Moderate) }
-    var designCode by remember { mutableStateOf(DesignCode.ECP) }
+    var designCode by remember { mutableStateOf(defaultDesignCode()) }
 
     var span by remember { mutableStateOf("10.0") }
     var width by remember { mutableStateOf("300") }

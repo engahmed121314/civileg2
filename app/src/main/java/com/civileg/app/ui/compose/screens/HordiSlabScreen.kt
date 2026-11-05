@@ -43,6 +43,7 @@ import com.civileg.app.viewmodel.HordiSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.defaultDesignCode
 
 /**
  * شاشة تصميم بلاطة الهوردي — Hordi (Ribbed/Hollow-Block) Slab Design Screen
@@ -65,7 +66,7 @@ fun HordiSlabScreen(
     val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     // ── Input state ────────────────────────────────────────────────
-    var designCode by remember { mutableStateOf("ECP") }
+    var designCode by remember { mutableStateOf(defaultDesignCode().name) }
     var fcu by remember { mutableStateOf("30") }
     var fy by remember { mutableStateOf("400") }
     var ribWidth by remember { mutableStateOf("120") }
@@ -133,7 +134,13 @@ fun HordiSlabScreen(
                     CodeSelectorChips(
                         selectedCode = designCode,
                         codes = listOf("ECP" to "ECP 203", "ACI" to "ACI 318", "SBC" to "SBC 304"),
-                        onCodeSelected = { designCode = it }
+                        onCodeSelected = { newCode ->
+                            designCode = newCode
+                            val combos = LoadCombination.getByCode(
+                                runCatching { DesignCode.valueOf(newCode) }.getOrDefault(DesignCode.ECP)
+                            )
+                            if (loadCombination !in combos) loadCombination = combos.first()
+                        }
                     )
                 }
 
@@ -233,7 +240,9 @@ fun HordiSlabScreen(
                             expanded = loadCombinationExpanded,
                             onDismissRequest = { loadCombinationExpanded = false }
                         ) {
-                            LoadCombination.entries.forEach { combo ->
+                            LoadCombination.getByCode(
+                                runCatching { DesignCode.valueOf(designCode) }.getOrDefault(DesignCode.ECP)
+                            ).forEach { combo ->
                                 DropdownMenuItem(
                                     text = { Text(combo.description, fontSize = 13.sp) },
                                     onClick = {

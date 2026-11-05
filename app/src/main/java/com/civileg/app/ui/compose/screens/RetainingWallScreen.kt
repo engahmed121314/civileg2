@@ -49,6 +49,7 @@ import androidx.compose.ui.res.stringResource
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
+import com.civileg.app.ui.defaultDesignCode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,7 +85,7 @@ fun RetainingWallScreen(
     var surcharge by remember { mutableStateOf("10.0") }
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("400") }
-    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     var inputError by remember { mutableStateOf<String?>(null) }
 
     // Site quantities (trench excavation)

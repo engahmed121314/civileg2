@@ -714,7 +714,15 @@ class FrameAnalysisViewModel @Inject constructor(
     // ========================================================================
 
     fun updateDesignCode(code: DesignCode) {
-        _settings.value = _settings.value?.copy(designCode = code)
+        val current = _settings.value
+        val newDefaults = FrameAnalysisSettings.defaultLoadCombinations(code)
+        _settings.value = when {
+            current == null -> FrameAnalysisSettings(designCode = code, loadCombinations = newDefaults)
+            // Swap in the code-appropriate combinations, preserving any user-customized set
+            FrameAnalysisSettings.isDefaultComboSet(current.loadCombinations) ->
+                current.copy(designCode = code, loadCombinations = newDefaults)
+            else -> current.copy(designCode = code)
+        }
     }
 
     fun updateSteelFy(fy: Double) {

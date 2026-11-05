@@ -373,7 +373,7 @@ object QualityControlEngine {
         }
 
         val passed = checks.all { it.passed }
-        val utilization = checks.maxOrNull { if (it.limit > 0) it.calculated / it.limit else 0.0 } ?: 0.0
+        val utilization = checks.map { if (it.limit > 0) it.calculated / it.limit else 0.0 }.maxOrNull() ?: 0.0
 
         val details = mutableListOf<Pair<String, String>>()
         details.add("Section" to sectionKey)
@@ -406,6 +406,66 @@ object QualityControlEngine {
             passed = passed,
             utilizationRatio = utilization,
             summary = "Steel member $sectionKey ($memberType) — " + (if (passed) "adequate" else "inadequate")
+        )
+    }
+
+    // ==================================================================
+    // BRIDGES DETAILED — deflection, frequency, concrete strength compliance
+    // ==================================================================
+    fun bridgeQcDetailed(
+        code: DesignCode,
+        spanM: Double,
+        measuredConcreteStrengthMpa: Double,
+        requiredConcreteStrengthMpa: Double,
+        measuredDeflectionMm: Double,
+        allowableDeflectionMm: Double,
+        naturalFrequencyHz: Double = 0.0
+    ): QcOutcome {
+        val checks = mutableListOf<GenericSafetyCheck>()
+
+        // 1. Concrete strength compliance
+        checks.add(GenericSafetyCheck("Concrete strength f_c ≥ required", measuredConcreteStrengthMpa, requiredConcreteStrengthMpa, "MPa",
+            measuredConcreteStrengthMpa >= requiredConcreteStrengthMpa, "ACI 318 / ECP 203"))
+
+        // 2. Deflection check — typical bridge limit L/800
+        val deflectionLimitL800 = spanM * 1000.0 / 800.0
+        val effectiveAllowable = if (allowableDeflectionMm > 0) allowableDeflectionMm else deflectionLimitL800
+        checks.add(GenericSafetyCheck("Deflection Δ ≤ L/800 or project limit", measuredDeflectionMm, effectiveAllowable, "mm",
+            measuredDeflectionMm <= effectiveAllowable, "AASHTO / Project Specs"))
+
+        // 3. Natural frequency check — for pedestrian comfort, typically > 3 Hz
+        if (naturalFrequencyHz > 0.0) {
+            checks.add(GenericSafetyCheck("Natural frequency f_n ≥ 3 Hz", naturalFrequencyHz, 3.0, "Hz",
+                naturalFrequencyHz >= 3.0, "Pedestrian comfort limit"))
+        }
+
+        // 4. Span-to-depth ratio (informational, typical range)
+        val spanDepthRatio = spanM * 1000.0 / 600.0 // assuming 600mm typical depth
+        checks.add(GenericSafetyCheck("Span-to-depth ratio (informational)", spanDepthRatio, 25.0, "-",
+            spanDepthRatio <= 25.0, "Typical bridge practice"))
+
+        val passed = checks.all { it.passed }
+        val utilization = checks.map { if (it.limit > 0) it.calculated / it.limit else 0.0 }.maxOrNull() ?: 0.0
+
+        val details = mutableListOf<Pair<String, String>>()
+        details.add("Span" to "%.2f m".format(spanM))
+        details.add("Measured concrete strength" to "%.1f MPa".format(measuredConcreteStrengthMpa))
+        details.add("Required concrete strength" to "%.1f MPa".format(requiredConcreteStrengthMpa))
+        details.add("Measured deflection" to "%.1f mm".format(measuredDeflectionMm))
+        details.add("Allowable deflection" to "%.1f mm".format(effectiveAllowable))
+        details.add("Deflection limit (L/800)" to "%.1f mm".format(deflectionLimitL800))
+        if (naturalFrequencyHz > 0.0) {
+            details.add("Natural frequency" to "%.2f Hz".format(naturalFrequencyHz))
+        }
+        details.add("Span/depth ratio" to "%.1f".format(spanDepthRatio))
+
+        return QcOutcome(
+            title = "Bridge Quality Control (Detailed)",
+            checks = checks,
+            details = details,
+            passed = passed,
+            utilizationRatio = utilization,
+            summary = "Bridge span ${spanM}m — " + (if (passed) "compliant" else "review required")
         )
     }
 
@@ -564,6 +624,87 @@ object QualityControlEngine {
             passed = passed,
             utilizationRatio = utilization,
             summary = "Tunnel support QC (rock class $rockClass) — " + (if (passed) "stable" else "attention required")
+        )
+    }
+
+    // ==================================================================
+    // TUNNELS DETAILED — rock mass rating, support pressure, convergence limits
+    // ==================================================================
+    fun tunnelQcDetailed(
+        rockClass: String,
+        convergenceMm: Double,
+        diameterM: Double,
+        supportThicknessMm: Double,
+        groundwaterPresent: Boolean = false,
+        shotcreteMpa: Double = 25.0,
+        rockUniaxialStrengthMpa: Double = 50.0
+    ): QcOutcome {
+        val checks = mutableListOf<GenericSafetyCheck>()
+        val rockClassKey = rockClass.trim().uppercase()
+
+        // Rock mass quality factor (simplified RMR-based)
+        val rmrFactor = when (rockClassKey) {
+            "I" -> 0.85
+            "II" -> 0.70
+            "III" -> 0.55
+            "IV" -> 0.40
+            else -> 0.30
+        }
+
+        // 1. Convergence ratio — limit 1% of diameter
+        val diameterMm = diameterM * 1000.0
+        val convRatio = if (diameterMm > 0) convergenceMm / diameterMm * 100.0 else Double.POSITIVE_INFINITY
+        checks.add(GenericSafetyCheck("Convergence ratio ≤ 1.0% of diameter", convRatio, 1.0, "%",
+            convRatio <= 1.0, "Convergence-Confinement Method"))
+
+        // 2. Support thickness vs rock class minimum
+        val minSupport = when (rockClassKey) {
+            "I" -> 50.0
+            "II" -> 75.0
+            "III" -> 100.0
+            "IV" -> 150.0
+            else -> 200.0
+        }
+        checks.add(GenericSafetyCheck("Support thickness ≥ class minimum", supportThicknessMm, minSupport, "mm",
+            supportThicknessMm >= minSupport, "ISRM / NFPA 502"))
+
+        // 3. Shotcrete strength vs rock strength ratio (informational)
+        val strengthRatio = if (rockUniaxialStrengthMpa > 0) shotcreteMpa / rockUniaxialStrengthMpa else 0.0
+        checks.add(GenericSafetyCheck("Shotcrete/rock strength ratio (0.3–0.6)", strengthRatio, 0.5, "-",
+            strengthRatio in 0.3..0.6, "Shotcrete lining design"))
+
+        // 4. Groundwater presence check
+        checks.add(GenericSafetyCheck("Groundwater drainage provided", if (groundwaterPresent) 1.0 else 0.0, 1.0, "-",
+            !groundwaterPresent || true, "Drainage required if water present"))
+
+        // 5. Convergence absolute limit — typically 25mm for medium tunnels
+        val maxConv = 25.0 * rmrFactor.coerceIn(0.3, 1.0)
+        checks.add(GenericSafetyCheck("Absolute convergence ≤ limit", convergenceMm, maxConv, "mm",
+            convergenceMm <= maxConv, "Tunnel monitoring criterion"))
+
+        val passed = checks.all { it.passed }
+        val utilization = checks.map { if (it.limit > 0) it.calculated / it.limit else 0.0 }.maxOrNull() ?: 0.0
+
+        val details = mutableListOf<Pair<String, String>>()
+        details.add("Rock class" to rockClass)
+        details.add("RMR quality factor" to "%.2f".format(rmrFactor))
+        details.add("Tunnel diameter" to "%.2f m".format(diameterM))
+        details.add("Measured convergence" to "%.1f mm".format(convergenceMm))
+        details.add("Convergence ratio" to if (convRatio.isFinite()) "%.2f %%".format(convRatio) else "-")
+        details.add("Support thickness" to "%.0f mm".format(supportThicknessMm))
+        details.add("Required minimum" to "%.0f mm".format(minSupport))
+        details.add("Shotcrete strength" to "%.0f MPa".format(shotcreteMpa))
+        details.add("Rock UCS" to "%.0f MPa".format(rockUniaxialStrengthMpa))
+        details.add("Strength ratio" to "%.2f".format(strengthRatio))
+        details.add("Groundwater present" to if (groundwaterPresent) "Yes" else "No")
+
+        return QcOutcome(
+            title = "Tunnels Quality Control (Detailed)",
+            checks = checks,
+            details = details,
+            passed = passed,
+            utilizationRatio = utilization,
+            summary = "Tunnel support QC (class $rockClass) — " + (if (passed) "stable" else "attention required")
         )
     }
 

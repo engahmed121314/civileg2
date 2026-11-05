@@ -4,7 +4,10 @@ package com.civileg.app.utils
 import kotlin.math.*
 
 /**
- * Comprehensive Rebar Calculator supporting ECP 203 and ACI 318.
+ * Comprehensive Rebar Calculator supporting ECP 203, ACI 318 and SBC 304.
+ * Note: SBC 304-2018 adopts the ACI 318 methodology with Saudi modifications,
+ * so SBC_304 uses the ACI 318 development-length / splice formulas labelled
+ * as SBC 304 (documented in the notes of each result).
  * Covers weight, area, development length, lap splice, spacing, bundling,
  * rebar scheduling, and crack width calculations.
  */
@@ -16,7 +19,7 @@ object RebarCalculator {
     )
 
     // ── Design Code enum ──
-    enum class DesignCode { ECP_203, ACI_318 }
+    enum class DesignCode { ECP_203, ACI_318, SBC_304 }
 
     // ── Lap type ──
     enum class LapType { TENSION, COMPRESSION }
@@ -375,13 +378,19 @@ object RebarCalculator {
             DesignCode.ECP_203 -> developmentLengthECP(
                 diameterMm, fy, fcu, isTopBar, isConfined
             )
-            DesignCode.ACI_318 -> {
-                // Convert to psi for ACI
+            DesignCode.ACI_318, DesignCode.SBC_304 -> {
+                // Convert to psi (SBC 304 follows ACI 318 methodology)
                 val fyPsi = fy * 145.038
                 val fcPsi = fcu * 145.038
-                developmentLengthACI(
+                val aci = developmentLengthACI(
                     diameterMm, fyPsi, fcPsi, isTopBar, isConfined
                 )
+                if (code == DesignCode.SBC_304) {
+                    aci.copy(
+                        code = DesignCode.SBC_304,
+                        notes = aci.notes + "SBC 304-2018 adopts ACI 318 methodology with Saudi modifications (psi factors identical)"
+                    )
+                } else aci
             }
         }
 
@@ -389,7 +398,7 @@ object RebarCalculator {
             LapType.TENSION -> {
                 when (code) {
                     DesignCode.ECP_203 -> if (spliceClass == "A") 1.0 else 1.3
-                    DesignCode.ACI_318 -> if (spliceClass == "A") 1.0 else 1.3
+                    DesignCode.ACI_318, DesignCode.SBC_304 -> if (spliceClass == "A") 1.0 else 1.3
                 }
             }
             LapType.COMPRESSION -> 1.0

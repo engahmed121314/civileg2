@@ -55,6 +55,7 @@ import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.*
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.defaultDesignCode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,7 +100,7 @@ fun StairScreen(
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("360") }
     var expandedType by remember { mutableStateOf(false) }
-    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
 
     // Input validation
     var spanError by remember { mutableStateOf("") }

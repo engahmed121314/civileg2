@@ -284,7 +284,7 @@ private fun DevelopmentLengthTab(viewModel: RebarToolViewModel) {
                         shape = RoundedCornerShape(12.dp)
                     )
                     DropdownSelector(
-                        options = listOf("ECP 203", "ACI 318"), selected = code,
+                        options = listOf("ECP 203", "ACI 318", "SBC 304"), selected = code,
                         onSelect = { code = it }
                     )
                 }
@@ -309,7 +309,11 @@ private fun DevelopmentLengthTab(viewModel: RebarToolViewModel) {
                         val f1 = fy.toDoubleOrNull() ?: return@Button
                         val f2 = fcu.toDoubleOrNull() ?: return@Button
                         val er = excessRatio.toDoubleOrNull() ?: return@Button
-                        val c = if (code == "ECP 203") DesignCode.ECP_203 else DesignCode.ACI_318
+                        val c = when (code) {
+                            "ECP 203" -> DesignCode.ECP_203
+                            "SBC 304" -> DesignCode.SBC_304
+                            else -> DesignCode.ACI_318
+                        }
                         viewModel.calculateDevelopmentLength(d, f1, f2, isTopBar, isConfined, er, c)
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -376,7 +380,7 @@ private fun LapSpliceTab(viewModel: RebarToolViewModel) {
                         shape = RoundedCornerShape(12.dp)
                     )
                     DropdownSelector(
-                        options = listOf("ECP 203", "ACI 318"), selected = code,
+                        options = listOf("ECP 203", "ACI 318", "SBC 304"), selected = code,
                         onSelect = { code = it }
                     )
                 }
@@ -424,7 +428,11 @@ private fun LapSpliceTab(viewModel: RebarToolViewModel) {
                         val f1 = fy.toDoubleOrNull() ?: return@Button
                         val f2 = fcu.toDoubleOrNull() ?: return@Button
                         val lt = if (lapType == "Tension") LapType.TENSION else LapType.COMPRESSION
-                        val c = if (code == "ECP 203") DesignCode.ECP_203 else DesignCode.ACI_318
+                        val c = when (code) {
+                            "ECP 203" -> DesignCode.ECP_203
+                            "SBC 304" -> DesignCode.SBC_304
+                            else -> DesignCode.ACI_318
+                        }
                         viewModel.calculateLapSplice(d, f1, f2, lt, c, isTopBar, isConfined, spliceClass)
                     },
                     modifier = Modifier.fillMaxWidth(),

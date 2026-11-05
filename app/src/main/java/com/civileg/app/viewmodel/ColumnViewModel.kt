@@ -133,7 +133,11 @@ class ColumnViewModel @Inject constructor(
     }
 
     fun updateDesignCode(code: DesignCode) {
-        _uiState.update { it.copy(designCode = code) }
+        _uiState.update {
+            val validCombos = LoadCombination.getByCode(code)
+            val combo = if (it.loadCombination in validCombos) it.loadCombination else validCombos.first()
+            it.copy(designCode = code, loadCombination = combo)
+        }
         calculate()
     }
 

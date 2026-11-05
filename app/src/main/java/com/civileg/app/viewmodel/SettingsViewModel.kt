@@ -31,7 +31,8 @@ data class AppSettings(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val repository: ProjectRepository
+    private val repository: ProjectRepository,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context
 ) : ViewModel() {
     
     private val _settings = MutableStateFlow(AppSettings())
@@ -62,8 +63,11 @@ class SettingsViewModel @Inject constructor(
                 val theme = args[6] as String
                 val reportLang = args[7] as String
 
+                val parsed = try { DesignCode.valueOf(code) } catch (e: Exception) { DesignCode.ECP }
+                // Keep synchronous store in sync with DataStore (covers upgrades and external writes)
+                com.civileg.app.ui.DesignCodeStore.set(appContext, parsed)
                 AppSettings(
-                    defaultCode = try { DesignCode.valueOf(code) } catch (e: Exception) { DesignCode.ECP },
+                    defaultCode = parsed,
                     concretePrice = concrete,
                     steelPrice = steel,
                     formworkPrice = formwork,
@@ -101,6 +105,8 @@ class SettingsViewModel @Inject constructor(
     fun setDefaultCode(code: DesignCode) {
         viewModelScope.launch {
             repository.setDefaultDesignCode(code.name)
+            // Keep the synchronous store in sync so design screens pick it up immediately
+            com.civileg.app.ui.DesignCodeStore.set(appContext, code)
         }
     }
     

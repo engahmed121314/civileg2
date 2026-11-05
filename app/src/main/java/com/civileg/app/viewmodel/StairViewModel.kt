@@ -108,8 +108,8 @@ class StairViewModel @Inject constructor(
     }
 
     // Fixed legacy support
-    fun calculateStair(rise: Double, run: Double, width: Double, load: Double, fcu: Double, fy: Double) {
-        calculateStairPro(CalculatorEngine.StairType.SINGLE_FLIGHT, run, rise, 300.0, load * 0.6, load * 0.4, fcu, fy, 12, DesignCode.ECP, stairWidthMm = width)
+    fun calculateStair(rise: Double, run: Double, width: Double, load: Double, fcu: Double, fy: Double, code: com.civileg.app.domain.entities.DesignCode = com.civileg.app.ui.defaultDesignCode()) {
+        calculateStairPro(CalculatorEngine.StairType.SINGLE_FLIGHT, run, rise, 300.0, load * 0.6, load * 0.4, fcu, fy, 12, code, stairWidthMm = width)
     }
 
     fun saveStair(projectId: Long, name: String, result: CalculatorEngine.StairResult) {

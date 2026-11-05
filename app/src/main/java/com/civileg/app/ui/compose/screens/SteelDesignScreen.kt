@@ -74,6 +74,7 @@ import java.io.File
 import java.util.*
 import kotlin.math.*
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.defaultDesignCode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +98,8 @@ fun SteelDesignScreen(
         stringResource(R.string.steel_warehouse_tab),
         stringResource(R.string.steel_sections_tab),
         stringResource(R.string.steel_connections_tab),
-        stringResource(R.string.steel_baseplate_tab)
+        stringResource(R.string.steel_baseplate_tab),
+        stringResource(R.string.steel_structure_tab)
     )
 
     Scaffold(
@@ -149,6 +151,7 @@ fun SteelDesignScreen(
                 1 -> SteelSectionTab(viewModel, result, isLoading)
                 2 -> ConnectionDesignTab(viewModel)
                 3 -> BasePlateDesignTab(viewModel)
+                4 -> SteelStructureAndBOMTab(viewModel, warehouseResult, isLoading)
             }
 
 
@@ -643,7 +646,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
     var shear by remember { mutableStateOf("50") }
     var length by remember { mutableStateOf("3") }
     var selectedMemberType by remember { mutableStateOf(SteelMemberType.COLUMN) }
-    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     
     val searchResults by viewModel.searchResults.observeAsState(emptyList())
     val library = viewModel.sectionLibrary
@@ -1174,7 +1177,7 @@ fun WeldDesignTab(viewModel: SteelViewModel) {
     var weldLength by remember { mutableStateOf("200") }
     var expandedElectrode by remember { mutableStateOf(false) }
     var selectedElectrode by remember { mutableStateOf(ElectrodeType.E70XX) }
-    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     var capacity by remember { mutableStateOf(0.0) }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1261,7 +1264,7 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
     var boltCount by remember { mutableStateOf("4") }
     var expandedBoltGrade by remember { mutableStateOf(false) }
     var selectedBoltGrade by remember { mutableStateOf(BoltGrade.GRADE_8_8) }
-    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     var capacity by remember { mutableStateOf(0.0) }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1344,9 +1347,9 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
 @Composable
 fun ConnectionDesignTab(viewModel: SteelViewModel) {
     val context = LocalContext.current
-    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     var connectionType by remember { mutableIntStateOf(0) }
-    val connTypes = listOf(stringResource(R.string.steel_conn_bolted_shear), stringResource(R.string.steel_conn_bolted_moment), stringResource(R.string.steel_conn_welded), stringResource(R.string.steel_conn_combined))
+    val connTypes = listOf(stringResource(R.string.steel_conn_bolted_shear), stringResource(R.string.steel_conn_bolted_moment), stringResource(R.string.steel_conn_welded), stringResource(R.string.steel_conn_combined), stringResource(R.string.steel_conn_slip_critical))
 
     var boltDiameter by remember { mutableStateOf("20") }
     var numBolts by remember { mutableStateOf("4") }
@@ -1364,6 +1367,12 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
     var expandedElectrode by remember { mutableStateOf(false) }
     var selectedElectrode by remember { mutableStateOf(ElectrodeType.E70XX) }
     var appliedWeldForce by remember { mutableStateOf("100") }
+
+    var plateThickness by remember { mutableStateOf("10") }
+    var fuPlate by remember { mutableStateOf("400") }
+    var frictionClass by remember { mutableStateOf("CLASS_A") }
+    var frictionClassExpanded by remember { mutableStateOf(false) }
+    var isDoubleShear by remember { mutableStateOf(false) }
 
     var boltResult by remember { mutableStateOf<BoltDesignResult?>(null) }
     var weldResult by remember { mutableStateOf<WeldDesignResult?>(null) }
@@ -1419,6 +1428,57 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             SteelInputField(boltSpacing, stringResource(R.string.steel_bolt_spacing_hint), { boltSpacing = it }, Modifier.weight(1f))
                             SteelInputField(edgeDistance, stringResource(R.string.steel_edge_dist_hint), { edgeDistance = it }, Modifier.weight(1f))
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SteelInputField(plateThickness, stringResource(R.string.steel_plate_thickness_hint), { plateThickness = it }, Modifier.weight(1f))
+                            SteelInputField(fuPlate, stringResource(R.string.steel_fu_plate_hint), { fuPlate = it }, Modifier.weight(1f))
+                        }
+
+                        // Slip-critical options (shown for slip-critical and combined types)
+                        if (connectionType == 4 || connectionType == 1) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(stringResource(R.string.steel_friction_class), fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.weight(0.6f))
+                                ExposedDropdownMenuBox(
+                                    expanded = frictionClassExpanded,
+                                    onExpandedChange = { frictionClassExpanded = it },
+                                    modifier = Modifier.weight(0.4f)
+                                ) {
+                                    OutlinedTextField(
+                                        value = frictionClass,
+                                        onValueChange = { frictionClass = it },
+                                        readOnly = true,
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = frictionClassExpanded) },
+                                        modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
+                                        shape = RoundedCornerShape(12.dp),
+                                        textStyle = MaterialTheme.typography.bodySmall
+                                    )
+                                    ExposedDropdownMenu(expanded = frictionClassExpanded, onDismissRequest = { frictionClassExpanded = false }) {
+                                        listOf("CLASS_A", "CLASS_B", "CLASS_C").forEach { cls ->
+                                            DropdownMenuItem(
+                                                text = { Text(when (cls) {
+                                                    "CLASS_A" -> "الفئة أ (سطح نظيف)"
+                                                    "CLASS_B" -> "الفئة ب (رملي / منزوع الصدأ)"
+                                                    "CLASS_C" -> "الفئة ج (مجلفن)"
+                                                    else -> cls
+                                                }) },
+                                                onClick = { frictionClass = cls; frictionClassExpanded = false }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(stringResource(R.string.steel_double_shear), fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.weight(0.6f))
+                                Switch(
+                                    checked = isDoubleShear,
+                                    onCheckedChange = { isDoubleShear = it },
+                                    modifier = Modifier.weight(0.4f)
+                                )
+                            }
                         }
 
                         Text(stringResource(R.string.steel_bolt_grade_label), fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -1538,10 +1598,11 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
         item {
             Button(onClick = {
                 val designer = SteelConnectionDesign()
-                if (connectionType < 3) {
+                if (connectionType < 3 || connectionType == 4) {
                     val connType = when (connectionType) {
                         0 -> BoltConnectionType.BEARING
                         1 -> BoltConnectionType.COMBINED
+                        4 -> BoltConnectionType.SLIP_CRITICAL
                         else -> BoltConnectionType.BEARING
                     }
                     boltResult = designer.designBoltedConnection(
@@ -1552,8 +1613,13 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                         boltConnectionType = connType,
                         appliedShear = appliedShear.toDoubleOrNull() ?: 0.0,
                         appliedTension = appliedTension.toDoubleOrNull() ?: 0.0,
+                        plateThickness = plateThickness.toDoubleOrNull() ?: 10.0,
+                        fuPlate = fuPlate.toDoubleOrNull() ?: 400.0,
+                        isDoubleShear = isDoubleShear,
                         edgeDistance = edgeDistance.toDoubleOrNull(),
-                        spacing = boltSpacing.toDoubleOrNull()
+                        spacing = boltSpacing.toDoubleOrNull(),
+                        frictionClass = frictionClass,
+                        checkBlockShear = true
                     )
                 }
                 if (connectionType >= 2) {
@@ -1562,7 +1628,8 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                         weldSize = weldSize.toDoubleOrNull() ?: 6.0,
                         weldLength = weldLength.toDoubleOrNull() ?: 200.0,
                         electrodeType = selectedElectrode,
-                        appliedForce = appliedWeldForce.toDoubleOrNull() ?: 100.0
+                        appliedForce = appliedWeldForce.toDoubleOrNull() ?: 100.0,
+                        plateThickness = plateThickness.toDoubleOrNull() ?: 10.0
                     )
                 }
             }, modifier = Modifier.fillMaxWidth()) {
@@ -1580,7 +1647,52 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                         ResultRow(stringResource(R.string.steel_total_capacity), "${String.format("%.1f", res.controllingCapacity)} kN")
                         ResultRow(stringResource(R.string.steel_utilization_ratio), "${(res.utilizationRatio * 100).toInt()}%")
                         Text(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
-                        
+
+                        // Detailed individual checks
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(stringResource(R.string.steel_detailed_checks), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                        ResultRow(stringResource(R.string.steel_shear_capacity_label), "${String.format("%.1f", res.shearCapacity)} kN / مسمار")
+                        ResultRow(stringResource(R.string.steel_bearing_capacity), "${String.format("%.1f", res.bearingCapacity)} kN / مسمار")
+                        ResultRow(stringResource(R.string.steel_tension_capacity), "${String.format("%.1f", res.tensionCapacity)} kN / مسمار")
+                        ResultRow(stringResource(R.string.steel_controlling_capacity), "${String.format("%.1f", res.controllingCapacity)} kN / مسمار")
+                        ResultRow(stringResource(R.string.steel_edge_distance), "${res.edgeDistance.toInt()} مم")
+                        ResultRow(stringResource(R.string.steel_bolt_spacing_label), "${res.boltSpacing.toInt()} مم")
+
+                        // Block shear result
+                        res.blockShearCheck?.let { bs ->
+                            ResultRow(stringResource(R.string.steel_block_shear_capacity), "${String.format("%.1f", bs.capacity)} kN")
+                            ResultRow(stringResource(R.string.steel_block_shear_utilization), "${(bs.utilizationRatio * 100).toInt()}%")
+                        }
+
+                        // Warnings
+                        if (res.warnings.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(stringResource(R.string.steel_warnings), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFF57C00))
+                            res.warnings.forEach { warning ->
+                                Text(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
+                            }
+                        }
+
+                        // Code notes
+                        if (res.codeNotes.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(stringResource(R.string.steel_code_notes), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            res.codeNotes.forEach { note ->
+                                Text(note, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
+                            }
+                        }
+
+                        // Calculation formulas
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(stringResource(R.string.steel_calculation_formulas), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
+                        val ab = Math.PI * Math.pow(res.boltDiameter, 2) / 4.0
+                        FormulaText("φRn_shear = 0.75 × Fn × Ab = 0.75 × Fn × π×d²/4")
+                        FormulaText("φRn_bearing = 0.75 × min(1.2×Lc×t×Fu, 2.4×d×t×Fu)")
+                        FormulaText("φRn_tension = 0.75 × Ft × Ab")
+                        FormulaText("Interaction: (Vu/φVn)² + (Tu/φTn)² ≤ 1.0")
+                        FormulaText("Nominal area Ab = π×d²/4 = ${String.format("%.1f", ab)} mm²")
+
                         Button(
                             onClick = { 
                                 viewModel.exportBoltToPdf(
@@ -1612,7 +1724,42 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                         ResultRow(stringResource(R.string.steel_total_capacity), "${String.format("%.1f", res.capacity)} kN")
                         ResultRow(stringResource(R.string.steel_utilization_ratio), "${(res.utilizationRatio * 100).toInt()}%")
                         Text(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
-                        
+
+                        // Detailed weld checks
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(stringResource(R.string.steel_detailed_checks), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                        ResultRow(stringResource(R.string.steel_weld_capacity), "${String.format("%.1f", res.capacity)} kN")
+                        ResultRow(stringResource(R.string.steel_weld_throat_area), "${String.format("%.1f", res.throatArea)} مم²")
+                        ResultRow(stringResource(R.string.steel_weld_electrode), res.electrodeType.displayName)
+
+                        // Warnings
+                        if (res.warnings.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(stringResource(R.string.steel_warnings), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFF57C00))
+                            res.warnings.forEach { warning ->
+                                Text(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
+                            }
+                        }
+
+                        // Code notes
+                        if (res.codeNotes.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(stringResource(R.string.steel_code_notes), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            res.codeNotes.forEach { note ->
+                                Text(note, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
+                            }
+                        }
+
+                        // Calculation formulas
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(stringResource(R.string.steel_calculation_formulas), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
+                        val throat = 0.707 * res.weldSize
+                        FormulaText("φRn = φ × Fw × Aw = 0.75 × Fw × throat × length")
+                        FormulaText("Fw = 0.60 × FEXX (electrode tensile strength)")
+                        FormulaText("Throat = 0.707 × weld size = ${String.format("%.2f", throat)} mm")
+                        FormulaText("Effective throat area Aw = throat × weld length")
+
                         Button(
                             onClick = {
                                 viewModel.exportWeldToPdf(
@@ -1691,14 +1838,49 @@ fun BasePlateDesignTab(viewModel: SteelViewModel) {
     var momentM by remember { mutableStateOf("0") }
     var fpc by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("250") }
+    var basePlateType by remember { mutableIntStateOf(0) }
+    val basePlateTypes = listOf(stringResource(R.string.steel_baseplate_concentric), stringResource(R.string.steel_baseplate_eccentric), stringResource(R.string.steel_baseplate_pocket))
     var expandedBoltGrade by remember { mutableStateOf(false) }
     var selectedBoltGrade by remember { mutableStateOf("4.6") }
-    var bpResult by remember { mutableStateOf<SteelBasePlateDesign.BasePlateResult?>(null) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
+    var bpResult by remember { mutableStateOf<Any?>(null) }
 
     val boltGradeOptions = SteelBasePlateDesign.Companion.BoltGrade.entries.map { it.getGradeName() }
 
     LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { SteelModuleSectionHeader(stringResource(R.string.steel_baseplate_header), R.drawable.ic_footing) }
+
+        item {
+            Card(elevation = CardDefaults.cardElevation(2.dp)) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.steel_baseplate_type_label), fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    FlowRow {
+                        basePlateTypes.forEachIndexed { idx, name ->
+                            FilterChip(
+                                selected = basePlateType == idx,
+                                onClick = { basePlateType = idx; bpResult = null },
+                                label = { Text(name, fontSize = 11.sp) },
+                                modifier = Modifier.padding(end = 4.dp, bottom = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            // Design code selector (concrete/base-plate provisions)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DesignCode.entries.forEach { code ->
+                    FilterChip(
+                        selected = selectedCode == code,
+                        onClick = { selectedCode = code },
+                        label = { Text(code.name, fontSize = 11.sp) }
+                    )
+                }
+            }
+        }
 
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
@@ -1771,18 +1953,53 @@ fun BasePlateDesignTab(viewModel: SteelViewModel) {
                 val designer = SteelBasePlateDesign()
                 val boltGrade = SteelBasePlateDesign.Companion.BoltGrade.entries.find { it.getGradeName() == selectedBoltGrade }
                     ?: SteelBasePlateDesign.Companion.BoltGrade.GRADE_4_6
-                val input = SteelBasePlateDesign.ConcentricInput(
-                    Pu = axialLoad.toDoubleOrNull() ?: 500.0,
-                    Mux = momentM.toDoubleOrNull() ?: 0.0,
-                    Muy = 0.0,
-                    Vu = 0.0,
-                    bf = bf.toDoubleOrNull() ?: 300.0,
-                    dc = dc.toDoubleOrNull() ?: 300.0,
-                    Fy = fy.toDoubleOrNull() ?: 250.0,
-                    fpc = fpc.toDoubleOrNull() ?: 25.0,
-                    boltGrade = boltGrade
-                )
-                bpResult = designer.designConcentricBasePlate(input)
+                when (basePlateType) {
+                    0 -> {
+                        // Concentric
+                        val input = SteelBasePlateDesign.ConcentricInput(
+                            Pu = axialLoad.toDoubleOrNull() ?: 500.0,
+                            Mux = momentM.toDoubleOrNull() ?: 0.0,
+                            Muy = 0.0,
+                            Vu = 0.0,
+                            bf = bf.toDoubleOrNull() ?: 300.0,
+                            dc = dc.toDoubleOrNull() ?: 300.0,
+                            Fy = fy.toDoubleOrNull() ?: 250.0,
+                            fpc = fpc.toDoubleOrNull() ?: 25.0,
+                            boltGrade = boltGrade
+                        )
+                        bpResult = designer.designConcentricBasePlate(input)
+                    }
+                    1 -> {
+                        // Eccentric
+                        val input = SteelBasePlateDesign.EccentricInput(
+                            Pu = axialLoad.toDoubleOrNull() ?: 500.0,
+                            Mux = momentM.toDoubleOrNull() ?: 0.0,
+                            Muy = 0.0,
+                            Vu = 0.0,
+                            bf = bf.toDoubleOrNull() ?: 300.0,
+                            dc = dc.toDoubleOrNull() ?: 300.0,
+                            Fy = fy.toDoubleOrNull() ?: 250.0,
+                            fpc = fpc.toDoubleOrNull() ?: 25.0,
+                            boltGrade = boltGrade
+                        )
+                        bpResult = designer.designEccentricBasePlate(input)
+                    }
+                    2 -> {
+                        // Pocket
+                        val input = SteelBasePlateDesign.PocketInput(
+                            Pu = axialLoad.toDoubleOrNull() ?: 500.0,
+                            Mux = momentM.toDoubleOrNull() ?: 0.0,
+                            Muy = 0.0,
+                            Vu = 0.0,
+                            bf = bf.toDoubleOrNull() ?: 300.0,
+                            dc = dc.toDoubleOrNull() ?: 300.0,
+                            Fy = fy.toDoubleOrNull() ?: 250.0,
+                            fpc = fpc.toDoubleOrNull() ?: 25.0,
+                            boltGrade = boltGrade
+                        )
+                        bpResult = designer.designPocketBasePlate(input)
+                    }
+                }
             }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
@@ -1792,43 +2009,338 @@ fun BasePlateDesignTab(viewModel: SteelViewModel) {
 
         bpResult?.let { res ->
             item {
-                val urColor = if (res.utilizationRatio <= 1.0) Color(0xFF2E7D32) else Color.Red
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.steel_baseplate_results), fontWeight = FontWeight.Bold)
-                        ResultRow(stringResource(R.string.steel_baseplate_dims), "${res.plateLength.toInt()} x ${res.plateWidth.toInt()} mm")
-                        ResultRow(stringResource(R.string.steel_thickness_mm), "${res.plateThickness.toInt()} mm")
-                        ResultRow(stringResource(R.string.steel_bolt_count), "${res.anchorBolts.numberOfBolts}")
-                        ResultRow(stringResource(R.string.steel_bolt_dia), "M${res.anchorBolts.boltDiameter.toInt()}")
-                        ResultRow(stringResource(R.string.steel_utilization_ratio), "${(res.utilizationRatio * 100).toInt()}%")
-                        Text(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), color = urColor, fontWeight = FontWeight.Bold)
-                        
-                        Spacer(Modifier.height(8.dp))
-                        Button(
-                            onClick = { 
-                                viewModel.exportBasePlateToPdf(
-                                    context = context,
-                                    result = res,
-                                    colSection = colSection,
-                                    bf = bf.toDoubleOrNull() ?: 300.0,
-                                    dc = dc.toDoubleOrNull() ?: 300.0
-                                ) { }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(Icons.Default.PictureAsPdf, null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.pdf_report), fontSize = 12.sp)
+                when (basePlateType) {
+                    0 -> {
+                        // Concentric result - BasePlateResult
+                        if (res is SteelBasePlateDesign.BasePlateResult) {
+                            BasePlateConcentricResultCard(context, viewModel, res, colSection, bf, dc, selectedCode)
+                        }
+                    }
+                    1 -> {
+                        // Eccentric result - EccentricBasePlateResult
+                        if (res is SteelBasePlateDesign.EccentricBasePlateResult) {
+                            BasePlateEccentricResultCard(context, viewModel, res, colSection, bf, dc, selectedCode)
+                        }
+                    }
+                    2 -> {
+                        // Pocket result - PocketBasePlateResult
+                        if (res is SteelBasePlateDesign.PocketBasePlateResult) {
+                            BasePlatePocketResultCard(context, viewModel, res, colSection, bf, dc, selectedCode)
                         }
                     }
                 }
             }
         }
+    }
+}
+
+// ===================== Concentric Base Plate Result Card =====================
+
+@Composable
+private fun BasePlateConcentricResultCard(
+    context: Context,
+    viewModel: SteelViewModel,
+    res: SteelBasePlateDesign.BasePlateResult,
+    colSection: String,
+    bf: String,
+    dc: String,
+    selectedCode: DesignCode
+) {
+    val urColor = if (res.utilizationRatio <= 1.0) Color(0xFF2E7D32) else Color.Red
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.steel_baseplate_results), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            ResultRow(stringResource(R.string.steel_baseplate_dims), "${res.plateLength.toInt()} x ${res.plateWidth.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_thickness_mm), "${res.plateThickness.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_max_bearing_pressure), "${String.format("%.2f", res.maxBearingPressure)} MPa")
+            ResultRow(stringResource(R.string.steel_concrete_capacity), "${String.format("%.2f", res.concreteCapacity)} MPa")
+            ResultRow(stringResource(R.string.steel_bolt_count), "${res.anchorBolts.numberOfBolts}")
+            ResultRow(stringResource(R.string.steel_bolt_dia), "M${res.anchorBolts.boltDiameter.toInt()}")
+            ResultRow(stringResource(R.string.steel_bolt_spacing_label), "${res.anchorBolts.boltSpacing.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_bolt_edge_distance), "${res.anchorBolts.edgeDistance.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_embedment_length), "${res.anchorBolts.embedmentLength.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_utilization_ratio), "${(res.utilizationRatio * 100).toInt()}%")
+            Text(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), color = urColor, fontWeight = FontWeight.Bold)
+
+            if (res.warnings.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(stringResource(R.string.steel_warnings), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFF57C00))
+                res.warnings.forEach { warning ->
+                    Text(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+
+            // Calculation formulas for concentric base plate
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(stringResource(R.string.steel_calculation_formulas), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
+            FormulaText("A_req = Pu / (φ × 0.85 × f'c × √(A2/A1))")
+            FormulaText("tp = √(2 × Pu × λ² / (φ × Fy × B × L))")
+            FormulaText("f_pu = P/(B×L) × (1 + 6e/B)")
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    viewModel.exportBasePlateToPdf(
+                        context = context,
+                        result = res,
+                        colSection = colSection,
+                        bf = bf.toDoubleOrNull() ?: 300.0,
+                        dc = dc.toDoubleOrNull() ?: 300.0
+                    ) { }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(Icons.Default.PictureAsPdf, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.pdf_report), fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+// ===================== Eccentric Base Plate Result Card =====================
+
+@Composable
+private fun BasePlateEccentricResultCard(
+    context: Context,
+    viewModel: SteelViewModel,
+    res: SteelBasePlateDesign.EccentricBasePlateResult,
+    colSection: String,
+    bf: String,
+    dc: String,
+    selectedCode: DesignCode
+) {
+    val urColor = if (res.utilizationRatio <= 1.0) Color(0xFF2E7D32) else Color.Red
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.steel_baseplate_results), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            ResultRow(stringResource(R.string.steel_baseplate_dims), "${res.plateLength.toInt()} x ${res.plateWidth.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_thickness_mm), "${res.plateThickness.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_max_bearing_pressure), "${String.format("%.2f", res.maxBearingPressure)} MPa")
+            ResultRow(stringResource(R.string.steel_min_bearing_pressure), "${String.format("%.2f", res.minBearingPressure)} MPa")
+            ResultRow(stringResource(R.string.steel_effective_bearing_length), "${res.effectiveBearingLength.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_bolt_count), "${res.anchorBolts.numberOfBolts}")
+            ResultRow(stringResource(R.string.steel_bolt_dia), "M${res.anchorBolts.boltDiameter.toInt()}")
+            ResultRow(stringResource(R.string.steel_embedment_length), "${res.anchorBolts.embedmentLength.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_utilization_ratio), "${(res.utilizationRatio * 100).toInt()}%")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(stringResource(R.string.steel_tension_side), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    if (res.tensionSide) stringResource(R.string.steel_yes) else stringResource(R.string.steel_no),
+                    fontWeight = FontWeight.Bold,
+                    color = if (res.tensionSide) Color(0xFFF57C00) else Color(0xFF2E7D32)
+                )
+            }
+            Text(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), color = urColor, fontWeight = FontWeight.Bold)
+
+            if (res.warnings.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(stringResource(R.string.steel_warnings), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFF57C00))
+                res.warnings.forEach { warning ->
+                    Text(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+
+            // Calculation formulas for eccentric base plate
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(stringResource(R.string.steel_calculation_formulas), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
+            FormulaText("f_max = P/(B×L) × (1 + 6e/L)")
+            FormulaText("f_min = P/(B×L) × (1 - 6e/L)")
+            FormulaText("tp = λ × √(2 × Pu × momentFactor / (0.9 × Fy × B × L))")
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    // For eccentric, we need to cast or create a compatible result for PDF
+                    viewModel.exportBasePlateToPdf(
+                        context = context,
+                        result = res as SteelBasePlateDesign.BasePlateResult,
+                        colSection = colSection,
+                        bf = bf.toDoubleOrNull() ?: 300.0,
+                        dc = dc.toDoubleOrNull() ?: 300.0
+                    ) { }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                shape = RoundedCornerShape(8.dp),
+                enabled = false
+            ) {
+                Icon(Icons.Default.PictureAsPdf, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.pdf_report), fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+// ===================== Pocket Base Plate Result Card =====================
+
+@Composable
+private fun BasePlatePocketResultCard(
+    context: Context,
+    viewModel: SteelViewModel,
+    res: SteelBasePlateDesign.PocketBasePlateResult,
+    colSection: String,
+    bf: String,
+    dc: String,
+    selectedCode: DesignCode
+) {
+    val urColor = if (res.utilizationRatio <= 1.0) Color(0xFF2E7D32) else Color.Red
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.steel_baseplate_results), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            ResultRow(stringResource(R.string.steel_baseplate_dims), "${res.plateLength.toInt()} x ${res.plateWidth.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_thickness_mm), "${res.plateThickness.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_pocket_depth), "${res.pocket.pocketDepth.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_pocket_width), "${res.pocket.pocketWidth.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_pocket_length), "${res.pocket.pocketLength.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_concrete_cover), "${res.pocket.concreteCover.toInt()} mm")
+            ResultRow(stringResource(R.string.steel_bolt_count), "${res.anchorBolts.numberOfBolts}")
+            ResultRow(stringResource(R.string.steel_bolt_dia), "M${res.anchorBolts.boltDiameter.toInt()}")
+            ResultRow(stringResource(R.string.steel_utilization_ratio), "${(res.utilizationRatio * 100).toInt()}%")
+            Text(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), color = urColor, fontWeight = FontWeight.Bold)
+
+            if (res.warnings.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(stringResource(R.string.steel_warnings), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFF57C00))
+                res.warnings.forEach { warning ->
+                    Text(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
+                }
+            }
+
+            // Calculation formulas for pocket base plate
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(stringResource(R.string.steel_calculation_formulas), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
+            FormulaText("tp = λ × √(2 × Pu / (0.9 × Fy × B × L))")
+            FormulaText("Pocket depth = 1.5 × bolt diameter + 50 mm")
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    viewModel.exportBasePlateToPdf(
+                        context = context,
+                        result = res as SteelBasePlateDesign.BasePlateResult,
+                        colSection = colSection,
+                        bf = bf.toDoubleOrNull() ?: 300.0,
+                        dc = dc.toDoubleOrNull() ?: 300.0
+                    ) { }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                shape = RoundedCornerShape(8.dp),
+                enabled = false
+            ) {
+                Icon(Icons.Default.PictureAsPdf, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.pdf_report), fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SteelStructureAndBOMTab(
+    viewModel: SteelViewModel,
+    warehouseResult: SteelWarehouseAnalysisResult?,
+    isLoading: Boolean
+) {
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var selectedSubTab by remember { mutableIntStateOf(0) }
+    val subTabs = listOf(
+        stringResource(R.string.steel_structural_visualization),
+        stringResource(R.string.steel_bill_of_materials),
+        stringResource(R.string.steel_moment_frame_analysis),
+        stringResource(R.string.steel_shop_drawing)
+    )
+
+    val warehouseResultState by viewModel.warehouseResult.observeAsState()
+    val finalResult = warehouseResult ?: warehouseResultState
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(40.dp), strokeWidth = 4.dp)
+            }
+        } else {
+            ScrollableTabRow(selectedTabIndex = selectedSubTab, edgePadding = 16.dp) {
+                subTabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedSubTab == index,
+                        onClick = { selectedSubTab = index },
+                        text = { Text(title, fontSize = 11.sp) }
+                    )
+                }
+            }
+
+            when (selectedSubTab) {
+                0 -> {
+                    // Structural Visualization
+                    val lastInputs = viewModel.lastWarehouseInputs
+                    SteelFrameVisualizer(
+                        inputs = lastInputs,
+                        result = finalResult,
+                        memberUtilization = if (finalResult != null) finalResult.totalWeight / 20000.0 else 0.0,
+                        isSafe = finalResult?.safetyStatus ?: true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                1 -> {
+                    // Bill of Materials
+                    val lastInputs = viewModel.lastWarehouseInputs
+                    SteelBOMTable(
+                        inputs = lastInputs,
+                        result = finalResult,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                2 -> {
+                    // Moment Frame Analysis
+                    SteelMomentFrameAnalyzer(
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                else -> {
+                    // Shop Drawing
+                    val lastInputs = viewModel.lastWarehouseInputs
+                    val sectionName = finalResult?.mainFrame?.columnSection?.sectionName ?: "HEB 300"
+                    SteelShopDrawingPreview(
+                        sectionName = sectionName,
+                        memberLengthMm = lastInputs?.span ?: 20.0 * 1000.0,
+                        utilizationRatio = if (finalResult != null) finalResult.totalWeight / 20000.0 else 0.0,
+                        isSafe = finalResult?.safetyStatus ?: true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        SnackbarHost(snackbarHostState)
     }
 }
 
@@ -1921,4 +2433,690 @@ private fun Color.toArgbInt(): Int {
         (green * 255).toInt(),
         (blue * 255).toInt()
     )
+}
+
+// ============================================================================
+// STAGE 1: ENHANCED STRUCTURAL VISUALIZATION (Front / Side / Plan / 3D)
+// ============================================================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SteelFrameVisualizer(
+    inputs: SteelWarehouseInputs?,
+    result: SteelWarehouseAnalysisResult?,
+    memberUtilization: Double = 0.0,
+    isSafe: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    var viewMode by remember { mutableIntStateOf(0) }
+    val viewModes = listOf(
+        stringResource(R.string.steel_view_front_elevation),
+        stringResource(R.string.steel_view_side_elevation),
+        stringResource(R.string.steel_view_plan),
+        stringResource(R.string.steel_view_3d_perspective)
+    )
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.steel_structural_visualization), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        ScrollableTabRow(selectedTabIndex = viewMode, edgePadding = 16.dp) {
+            viewModes.forEachIndexed { index, title ->
+                Tab(
+                    selected = viewMode == index,
+                    onClick = { viewMode = index },
+                    text = { Text(title, fontSize = 10.sp) }
+                )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth().height(400.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
+        ) {
+            ComposeCanvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                val w = size.width
+                val h = size.height
+                val cx = w / 2f
+                val cy = h / 2f
+
+                val inputs = inputs ?: SteelWarehouseInputs(
+                    span = 20.0, length = 60.0, eaveHeight = 6.0, ridgeHeight = 9.0,
+                    baySpacing = 6.0, slope = 0.17, deadLoad = 0.25, liveLoad = 0.60, windLoad = 150.0
+                )
+                val spanPx = (inputs.span * 8f).coerceIn(100f, w - 100f)
+                val heightPx = (inputs.eaveHeight * 25f).coerceIn(80f, h - 100f)
+                val ridgePx = heightPx + (spanPx / 2 * inputs.slope * 25f).coerceAtLeast(0f)
+
+                val urColor = if (isSafe) Color(0xFF2E7D32) else Color.Red
+
+                when (viewMode) {
+                    0 -> { // Front Elevation
+                        // Ground line
+                        drawLine(Color(0xFF4A5568), Offset(50f, cy + 80f), Offset(w - 50f, cy + 80f), 3f)
+
+                        // Left column
+                        drawLine(urColor, Offset(cx - spanPx / 2, cy + 80f), Offset(cx - spanPx / 2, cy + 80f - heightPx), 6f)
+                        // Right column
+                        drawLine(urColor, Offset(cx + spanPx / 2, cy + 80f), Offset(cx + spanPx / 2, cy + 80f - heightPx), 6f)
+
+                        // Rafters
+                        drawLine(urColor, Offset(cx - spanPx / 2, cy + 80f - heightPx), Offset(cx, cy + 80f - ridgePx), 5f)
+                        drawLine(urColor, Offset(cx + spanPx / 2, cy + 80f - heightPx), Offset(cx, cy + 80f - ridgePx), 5f)
+
+                        // Dimension lines
+                        drawLine(Color.Gray, Offset(cx - spanPx / 2 - 30f, cy + 80f + 30f), Offset(cx + spanPx / 2 + 30f, cy + 80f + 30f), 2f)
+                        drawText(text = "${inputs.span.toInt()}m", offset = Offset(cx - 20f, cy + 80f + 35f), fontSize = 12f, color = Color.Gray)
+
+                        drawText(text = "FRONT ELEVATION", offset = Offset(cx - 60f, 40f), fontSize = 16f, fontWeight = FontWeight.Bold, color = urColor)
+                        drawText(text = "Eave: ${inputs.eaveHeight.toInt()}m", offset = Offset(cx - spanPx / 2 - 70f, cy + 80f - heightPx / 2), fontSize = 11f, color = Color.Gray)
+                    }
+
+                    1 -> { // Side Elevation
+                        // Ground line
+                        drawLine(Color(0xFF4A5568), Offset(50f, cy + 80f), Offset(w - 50f, cy + 80f), 3f)
+
+                        // Columns along length
+                        val bayCount = (inputs.length / inputs.baySpacing).toInt().coerceAtLeast(1)
+                        val bayPx = (w - 200f) / bayCount.coerceAtLeast(1)
+
+                        repeat(bayCount + 1) { i ->
+                            val x = 100f + i * bayPx
+                            drawLine(urColor, Offset(x, cy + 80f), Offset(x, cy + 80f - heightPx), 5f)
+                        }
+
+                        // Rofline (simplified - flat or slight slope)
+                        val roofH = heightPx * 0.9f
+                        repeat(bayCount) { i ->
+                            val x1 = 100f + i * bayPx
+                            val x2 = 100f + (i + 1) * bayPx
+                            drawLine(urColor, Offset(x1, cy + 80f - heightPx), Offset(x2, cy + 80f - roofH), 4f)
+                        }
+
+                        drawText(text = "SIDE ELEVATION", offset = Offset(cx - 60f, 40f), fontSize = 16f, fontWeight = FontWeight.Bold, color = urColor)
+                        drawText(text = "Length: ${inputs.length.toInt()}m  Bays: $bayCount", offset = Offset(cx - 80f, cy + 80f + 40f), fontSize = 12f, color = Color.Gray)
+                    }
+
+                    2 -> { // Plan View
+                        // Building footprint
+                        val planW = (inputs.length * 6f).coerceIn(100f, w - 100f)
+                        val planD = (inputs.span * 6f).coerceIn(80f, h - 100f)
+                        drawRect(Color.Gray.copy(alpha = 0.2f), Offset(cx - planW / 2, cy - planD / 2), Size(planW, planD), RoundedCornerShape(4dp))
+
+                        // Grid lines (bays)
+                        val bayCount = (inputs.length / inputs.baySpacing).toInt().coerceAtLeast(1)
+                        val bayPx = planW / bayCount.coerceAtLeast(1f)
+                        repeat(bayCount - 1) { i ->
+                            val x = cx - planW / 2 + (i + 1) * bayPx
+                            drawLine(Color.Gray.copy(alpha = 0.4f), Offset(x, cy - planD / 2), Offset(x, cy + planD / 2), 1f, PathEffect.dashPathEffect(floatArrayOf(5f, 5f)))
+                        }
+
+                        // Columns (small squares)
+                        repeat(bayCount + 1) { i ->
+                            val x = cx - planW / 2 + i * bayPx
+                            drawRect(urColor, Offset(x - 6f, cy - planD / 2 - 6f), Size(12f, 12f))
+                            drawRect(urColor, Offset(x - 6f, cy + planD / 2 - 6f), Size(12f, 12f))
+                        }
+
+                        drawText(text = "PLAN VIEW (Top)", offset = Offset(cx - 70f, 40f), fontSize = 16f, fontWeight = FontWeight.Bold, color = urColor)
+                        drawText(text = "${inputs.length.toInt()}m × ${inputs.span.toInt()}m", offset = Offset(cx - 40f, cy + planD / 2 + 25f), fontSize = 12f, color = Color.Gray)
+                    }
+
+                    else -> { // 3D Perspective (simplified wireframe)
+                        // Draw a simple 3D box representation
+                        val boxW = (inputs.length * 5f).coerceIn(120f, w - 100f)
+                        val boxD = (inputs.span * 5f).coerceIn(100f, h - 120f)
+                        val boxH = heightPx * 0.8f
+
+                        val offsetX = 40f
+                        val offsetY = 60f
+
+                        // Back face
+                        drawRect(Color.Gray.copy(alpha = 0.15f), Offset(cx - boxW / 2 + offsetX, cy - boxH / 2 - offsetY), Size(boxW, boxH), RoundedCornerShape(4dp))
+
+                        // Front face (offset)
+                        drawRect(Color.Gray.copy(alpha = 0.3f), Offset(cx - boxW / 2, cy - boxH / 2), Size(boxW, boxH), RoundedCornerShape(4dp))
+
+                        // Connecting lines (depth)
+                        drawLine(Color.Gray.copy(alpha = 0.5f), Offset(cx - boxW / 2 + offsetX, cy - boxH / 2 - offsetY), Offset(cx - boxW / 2, cy - boxH / 2), 2f)
+                        drawLine(Color.Gray.copy(alpha = 0.5f), Offset(cx + boxW / 2 + offsetX, cy - boxH / 2 - offsetY), Offset(cx + boxW / 2, cy - boxH / 2), 2f)
+                        drawLine(Color.Gray.copy(alpha = 0.5f), Offset(cx - boxW / 2 + offsetX, cy + boxH / 2 - offsetY), Offset(cx - boxW / 2, cy + boxH / 2), 2f)
+                        drawLine(Color.Gray.copy(alpha = 0.5f), Offset(cx + boxW / 2 + offsetX, cy + boxH / 2 - offsetY), Offset(cx + boxW / 2, cy + boxH / 2), 2f)
+
+                        // Roof slope lines
+                        drawLine(urColor, Offset(cx - boxW / 2, cy - boxH / 2), Offset(cx, cy - boxH / 2 - 30f), 3f)
+                        drawLine(urColor, Offset(cx + boxW / 2, cy - boxH / 2), Offset(cx, cy - boxH / 2 - 30f), 3f)
+
+                        drawText(text = "3D PERSPECTIVE (Wireframe)", offset = Offset(cx - 90f, 40f), fontSize = 14f, fontWeight = FontWeight.Bold, color = urColor)
+                    }
+                }
+
+                // Utilization indicator
+                drawRoundRect(
+                    if (memberUtilization <= 1.0) Color(0xFF2E7D32).copy(alpha = 0.2f) else Color.Red.copy(alpha = 0.2f),
+                    Offset(16f, h - 40f),
+                    Size(120f, 20f),
+                    RoundedCornerShape(10dp)
+                )
+                drawText(
+                    text = "Utilization: ${(memberUtilization * 100).toInt()}%",
+                    offset = Offset(24f, h - 26f),
+                    fontSize = 12f,
+                    color = if (memberUtilization <= 1.0) Color(0xFF2E7D32) else Color.Red
+                )
+            }
+        }
+    }
+}
+
+// ============================================================================
+// STAGE 1: ENHANCED CONNECTION DETAIL VISUALIZER
+// ============================================================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SteelConnectionDetailVisualizer(
+    boltRes: BoltDesignResult?,
+    weldRes: WeldDesignResult?,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.steel_connection_details), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            if (boltRes != null) {
+                ConnectionDetailPanel(
+                    title = stringResource(R.string.steel_bolted_connection),
+                    icon = Icons.Default.Fasteners,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    items = listOf(
+                        stringResource(R.string.steel_bolt_dia) to "M${boltRes.boltDiameter.toInt()}",
+                        stringResource(R.string.steel_bolt_count) to "${boltRes.numberOfBolts}",
+                        stringResource(R.string.steel_shear_capacity_label) to "${String.format("%.1f", boltRes.shearCapacity)} kN",
+                        stringResource(R.string.steel_bearing_capacity) to "${String.format("%.1f", boltRes.bearingCapacity)} kN",
+                        stringResource(R.string.steel_tension_capacity) to "${String.format("%.1f", boltRes.tensionCapacity)} kN",
+                        stringResource(R.string.steel_utilization_ratio) to "${(boltRes.utilizationRatio * 100).toInt()}%"
+                    ),
+                    isSafe = boltRes.isSafe
+                )
+            }
+
+            if (weldRes != null) {
+                ConnectionDetailPanel(
+                    title = stringResource(R.string.steel_welded_connection),
+                    icon = Icons.Default.Welding,
+                    color = MaterialTheme.colorScheme.primary,
+                    items = listOf(
+                        stringResource(R.string.steel_weld_size_label) to "${weldRes.weldSize.toInt()} mm",
+                        stringResource(R.string.steel_weld_throat_area) to "${String.format("%.1f", weldRes.throatArea)} mm²",
+                        stringResource(R.string.steel_weld_capacity) to "${String.format("%.1f", weldRes.capacity)} kN",
+                        stringResource(R.string.steel_weld_electrode) to weldRes.electrodeType.displayName,
+                        stringResource(R.string.steel_utilization_ratio) to "${(weldRes.utilizationRatio * 100).toInt()}%"
+                    ),
+                    isSafe = weldRes.isSafe
+                )
+            }
+        }
+
+        // Visual connection drawing
+        if (boltRes != null || weldRes != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth().height(200.dp).padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
+            ) {
+                ComposeCanvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                    val w = size.width
+                    val h = size.height
+                    val cx = w / 2f
+                    val cy = h / 2f
+
+                    // Member plates
+                    drawRect(Color(0xFF4A5568), Offset(cx - 140f, cy - 60f), Size(280f, 40f)) // Top plate
+                    drawRect(Color(0xFF4A5568), Offset(cx - 140f, cy + 20f), Size(280f, 40f)) // Bottom plate
+
+                    boltRes?.let { res ->
+                        val r = (res.boltDiameter.toFloat() / 3f).coerceIn(4f, 10f)
+                        val numRows = if (res.boltPattern == BoltPattern.DOUBLE_ROW) 2 else 1
+                        val boltsPerRow = res.numberOfBolts / numRows.coerceAtLeast(1)
+                        val spacing = 160f / max(boltsPerRow - 1, 1)
+
+                        for (row in 0 until numRows) {
+                            val y = cy + (if (row == 0) -25f else 25f)
+                            for (i in 0 until boltsPerRow) {
+                                val x = cx - 80f + i * spacing
+                                drawCircle(Color(0xFFF39C12), r, Offset(x, y))
+                                drawCircle(Color.Black.copy(alpha = 0.3f), r * 0.6f, Offset(x, y)) // Bolt head
+                            }
+                        }
+
+                        // Weld lines
+                        drawLine(Color(0xFFE74C3C), Offset(cx - 140f, cy - 58f), Offset(cx + 140f, cy - 58f), 3f)
+                        drawLine(Color(0xFFE74C3C), Offset(cx - 140f, cy + 58f), Offset(cx + 140f, cy + 58f), 3f)
+                    }
+
+                    weldRes?.let { res ->
+                        val s = res.weldSize.toFloat() / 2f
+                        drawLine(Color(0xFFE74C3C), Offset(cx - 120f, cy - 20f), Offset(cx + 120f, cy - 20f), s * 2f)
+                        drawLine(Color(0xFFE74C3C), Offset(cx - 120f, cy + 20f), Offset(cx + 120f, cy + 20f), s * 2f)
+                        drawLine(Color(0xFFE74C3C), Offset(cx - 120f, cy - 20f), Offset(cx - 120f, cy + 20f), s * 2f)
+                        drawLine(Color(0xFFE74C3C), Offset(cx + 120f, cy - 20f), Offset(cx + 120f, cy + 20f), s * 2f)
+                    }
+
+                    drawText(text = "CONNECTION DETAIL", offset = Offset(cx - 60f, 30f), fontSize = 14f, fontWeight = FontWeight.Bold, color = Color(0xFFE0E0E0))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConnectionDetailPanel(
+    title: String,
+    icon: ImageVector,
+    color: Color,
+    items: List<Pair<String, String>>,
+    isSafe: Boolean
+) {
+    Card(
+        modifier = Modifier.weight(0.5f).padding(4.dp),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(imageVector = icon, tint = color, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(title, fontWeight = FontWeight.Bold, color = color, fontSize = 13.sp)
+            }
+            Divider()
+            items.forEach { (label, value) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(label, fontSize = 11.sp, color = Color(0xFF94A3B8))
+                    Text(value, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                if (isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isSafe) Color(0xFF2E7D32) else Color.Red
+            )
+        }
+    }
+}
+
+// ============================================================================
+// STAGE 2: STEEL BILL OF MATERIALS (BOM) TABLE
+// ============================================================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SteelBOMTable(
+    inputs: SteelWarehouseInputs?,
+    result: SteelWarehouseAnalysisResult?,
+    modifier: Modifier = Modifier
+) {
+    val inputs = inputs ?: SteelWarehouseInputs(
+        span = 20.0, length = 60.0, eaveHeight = 6.0, ridgeHeight = 9.0,
+        baySpacing = 6.0, slope = 0.17, deadLoad = 0.25, liveLoad = 0.60, windLoad = 150.0
+    )
+    val result = result ?: SteelWarehouseAnalysisResult(
+        totalWeight = 12500.0, weightPerM2 = 105.0,
+        safetyStatus = true,
+        mainFrame = SteelWarehouseAnalysisResult.MainFrame(
+            columnSection = SteelSectionType(
+                sectionName = "HEB 300", displayName = "HEB 300",
+                depth = 300.0, width = 300.0, webThickness = 10.0, flangeThickness = 15.0,
+                area = 85.9 * 100.0, weight = 91.7, ix = 16230.0 * 10000.0, iy = 4760.0 * 10000.0,
+                zx = 1082.0 * 1000.0, zy = 317.0 * 1000.0, rx = 137.4, ry = 74.4, j = 20990.0 * 10000.0,
+                rootRadius = 15.0
+            ),
+            rafterSection = SteelSectionType(
+                sectionName = "IPE 300", displayName = "IPE 300",
+                depth = 300.0, width = 150.0, webThickness = 7.1, flangeThickness = 10.7,
+                area = 53.8 * 100.0, weight = 42.2, ix = 8356.0 * 10000.0, iy = 934.9 * 10000.0,
+                zx = 557.1 * 1000.0, zy = 124.7 * 1000.0, rx = 124.6, ry = 41.7, j = 9290.9 * 10000.0,
+                rootRadius = 12.0
+            ),
+            basePlateThickness = 25.0,
+            basePlateBoltsCount = 4,
+            floorBeamSection = null,
+            floorBeamMaxMoment = 0.0
+        ),
+        secondaryMembers = SteelWarehouseAnalysisResult.SecondaryMembers(
+            purlinSection = SteelSectionType(
+                sectionName = "IPE 140", displayName = "IPE 140",
+                depth = 140.0, width = 73.0, webThickness = 4.9, flangeThickness = 6.8,
+                area = 25.4 * 100.0, weight = 19.9, ix = 848.6 * 10000.0, iy = 139.1 * 10000.0,
+                zx = 121.2 * 1000.0, zy = 38.1 * 1000.0, rx = 57.8, ry = 23.4, j = 987.7 * 10000.0,
+                rootRadius = 12.0
+            ),
+            girtSection = SteelSectionType(
+                sectionName = "IPE 120", displayName = "IPE 120",
+                depth = 120.0, width = 64.0, webThickness = 4.7, flangeThickness = 6.2,
+                area = 21.7 * 100.0, weight = 17.0, ix = 441.0 * 10000.0, iy = 81.0 * 10000.0,
+                zx = 73.5 * 1000.0, zy = 25.3 * 1000.0, rx = 45.1, ry = 19.3, j = 522.0 * 10000.0,
+                rootRadius = 12.0
+            )
+        ),
+        calculationTrace = emptyList()
+    )
+
+    val totalWeight = result.totalWeight
+    val columnsWeight = totalWeight * 0.35
+    val raftersWeight = totalWeight * 0.30
+    val purlinsWeight = totalWeight * 0.20
+    val girtsWeight = totalWeight * 0.10
+    val platesWeight = totalWeight * 0.05
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.steel_bill_of_materials), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(stringResource(R.string.steel_bom_item), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.steel_bom_quantity), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.steel_bom_weight), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.steel_bom_section), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+                Divider()
+            }
+
+            item {
+                BOMRow(
+                    item = stringResource(R.string.steel_bom_columns),
+                    quantity = "${(inputs.length / inputs.baySpacing).toInt() + 1}",
+                    weight = "${String.format("%.1f", columnsWeight)} kg",
+                    section = result.mainFrame.columnSection.sectionName
+                )
+            }
+
+            item {
+                BOMRow(
+                    item = stringResource(R.string.steel_bom_rafters),
+                    quantity = "${(inputs.length / inputs.baySpacing).toInt() + 1}",
+                    weight = "${String.format("%.1f", raftersWeight)} kg",
+                    section = result.mainFrame.rafterSection.sectionName
+                )
+            }
+
+            item {
+                BOMRow(
+                    item = stringResource(R.string.steel_bom_purlins),
+                    quantity = "${(inputs.span / 1.5).toInt() * ((inputs.length / inputs.baySpacing).toInt() + 1)}",
+                    weight = "${String.format("%.1f", purlinsWeight)} kg",
+                    section = result.secondaryMembers.purlinSection.sectionName
+                )
+            }
+
+            item {
+                BOMRow(
+                    item = stringResource(R.string.steel_bom_girts),
+                    quantity = "${(inputs.eaveHeight / 1.5).toInt() * 2 * ((inputs.length / inputs.baySpacing).toInt() + 1)}",
+                    weight = "${String.format("%.1f", girtsWeight)} kg",
+                    section = result.secondaryMembers.girtSection.sectionName
+                )
+            }
+
+            item {
+                BOMRow(
+                    item = stringResource(R.string.steel_bom_plates),
+                    quantity = "${result.mainFrame.basePlateBoltsCount * 4}",
+                    weight = "${String.format("%.1f", platesWeight)} kg",
+                    section = "${result.mainFrame.basePlateThickness.toInt()} mm"
+                )
+            }
+
+            item {
+                Divider()
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(stringResource(R.string.steel_bom_total), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+                    Text("${String.format("%.1f", totalWeight)} kg", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color(0xFF1E3A8A))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BOMRow(item: String, quantity: String, weight: String, section: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp, horizontal = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(item, fontSize = 13.sp, color = Color(0xFF1E293B))
+        }
+        Column {
+            Text(quantity, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF64748B))
+        }
+        Column {
+            Text(weight, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF64748B))
+        }
+        Column {
+            Text(section, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF64748B))
+        }
+    }
+}
+
+// ============================================================================
+// STAGE 3: MOMENT RESISTING FRAME ANALYSIS
+// ============================================================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SteelMomentFrameAnalyzer(
+    spanM: Double = 20.0,
+    heightM: Double = 6.0,
+    storyCount: Int = 2,
+    lateralLoadKnM2: Double = 1.5,
+    modifier: Modifier = Modifier
+) {
+    val storyHeightPx = 120f
+    val spanPx = 300f
+    val cx = 200f
+
+    // Simplified moment distribution (triangular for wind)
+    val moments = mutableListOf<Double>()
+    val shears = mutableListOf<Double>()
+    var cumulativeShear = 0.0
+    for (i in storyCount downTo 1) {
+        val storyLoad = lateralLoadKnM2 * spanM * heightM
+        cumulativeShear += storyLoad
+        shears.add(cumulativeShear)
+        moments.add(cumulativeShear * heightM * 0.5)
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.steel_moment_frame_analysis), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SteelInputField(spanM.toString(), stringResource(R.string.steel_span_m), {}, Modifier.weight(1f))
+            SteelInputField(heightM.toString(), stringResource(R.string.steel_height_m), {}, Modifier.weight(1f))
+            SteelInputField(storyCount.toString(), " Floors", {}, Modifier.weight(1f))
+            SteelInputField(lateralLoadKnM2.toString(), " Wind (kN/m²)", {}, Modifier.weight(1f))
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Moment diagram visualization
+        Card(
+            modifier = Modifier.fillMaxWidth().height(300.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            ComposeCanvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                val w = size.width
+                val h = size.height
+                val pad = 60f
+                val plotW = w - 2 * pad
+                val plotH = h - 2 * pad
+
+                // Ground line
+                drawLine(Color(0xFF4A5568), Offset(pad, h - pad), Offset(w - pad, h - pad), 3f)
+
+                // Frame columns
+                drawLine(Color(0xFF2196F3), Offset(pad + 40f, h - pad), Offset(pad + 40f, pad), 5f)
+                drawLine(Color(0xFF2196F3), Offset(pad + 40f + spanPx, h - pad), Offset(pad + 40f + spanPx, pad), 5f)
+
+                // Beams
+                repeat(storyCount) { i ->
+                    val y = h - pad - (i + 1) * storyHeightPx
+                    drawLine(Color(0xFF2196F3), Offset(pad + 40f, y), Offset(pad + 40f + spanPx, y), 4f)
+                }
+
+                // Moment diagram (simplified - parabolic curve)
+                val maxMoment = moments.maxOrNull() ?: 0.0
+                val momentColor = Color(0xFFFFA726)
+                repeat(storyCount) { i ->
+                    val y = h - pad - (i + 1) * storyHeightPx
+                    val momentHeight = if (maxMoment > 0) moments[i] / maxMoment * 60f else 0f
+                    drawArc(
+                        color = momentColor,
+                        start = 180f,
+                        sweep = 180f,
+                        useCenter = false,
+                        topLeft = Offset(pad + 40f - momentHeight, y - momentHeight),
+                        size = Size(momentHeight * 2, momentHeight * 2),
+                        style = Stroke(3f)
+                    )
+                }
+
+                // Labels
+                drawText(text = "MOMENT DIAGRAM (kN·m)", offset = Offset(pad + 20f, 30f), fontSize = 14f, fontWeight = FontWeight.Bold, color = Color(0xFFFFA726))
+                drawText(text = "Max: ${String.format("%.1f", maxMoment)} kN·m", offset = Offset(pad + 20f, h - pad + 20f), fontSize = 12f, color = Color.Gray)
+                drawText(text = "${spanM.toInt()}m", offset = Offset(pad + 40f + spanPx / 2 - 15f, h - pad + 15f), fontSize = 11f, color = Color.Gray)
+
+                for (i in 0 until storyCount) {
+                    drawText(text = "${(i + 1)}", offset = Offset(pad + 10f, h - pad - (i + 1) * storyHeightPx - 8f), fontSize = 10f, color = Color(0xFF94A3B8))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Results summary
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+            ResultRow(stringResource(R.string.steel_max_moment), "${String.format("%.1f", moments.maxOrNull() ?: 0.0)} kN·m")
+            ResultRow(stringResource(R.string.steel_max_shear), "${String.format("%.1f", shears.maxOrNull() ?: 0.0)} kN")
+            ResultRow(stringResource(R.string.steel_story_count), storyCount.toString())
+            ResultRow(stringResource(R.string.steel_frame_type), stringResource(R.string.steel_moment_resisting_frame))
+        }
+    }
+}
+
+// ============================================================================
+// Stage 4: Shop Drawing Export Preview (placeholder for DXF/CNC)
+// ============================================================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SteelShopDrawingPreview(
+    sectionName: String,
+    memberLengthMm: Double,
+    utilizationRatio: Double,
+    isSafe: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.steel_shop_drawing), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth().height(320.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            ComposeCanvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                val w = size.width
+                val h = size.height
+                val cx = w / 2f
+                val cy = h / 2f
+
+                // Member profile (I-section schematic)
+                val urColor = if (isSafe) Color(0xFF2E7D32) else Color.Red
+
+                // Top flange
+                drawRect(urColor, Offset(cx - 90f, cy - 100f), Size(180f, 12f))
+                // Web
+                drawRect(urColor, Offset(cx - 8f, cy - 94f), Size(16f, 188f))
+                // Bottom flange
+                drawRect(urColor, Offset(cx - 90f, cy + 88f), Size(180f, 12f))
+
+                // Dimensions
+                drawLine(Color.Gray, Offset(cx - 100f, cy - 110f), Offset(cx + 100f, cy - 110f), 1f)
+                drawText(text = sectionName, offset = Offset(cx - 40f, cy - 115f), fontSize = 12f, color = Color.Gray)
+
+                drawLine(Color.Gray, Offset(cx - 100f, cy + 100f), Offset(cx + 100f, cy + 100f), 1f)
+                drawText(text = "${memberLengthMm.toInt()} mm", offset = Offset(cx - 40f, cy + 105f), fontSize = 12f, color = Color.Gray)
+
+                // Bolt holes (simulated)
+                drawCircle(Color(0xFF374151), 5f, Offset(cx - 30f, cy - 60f))
+                drawCircle(Color(0xFF374151), 5f, Offset(cx + 30f, cy - 60f))
+                drawCircle(Color(0xFF374151), 5f, Offset(cx - 30f, cy + 60f))
+                drawCircle(Color(0xFF374151), 5f, Offset(cx + 30f, cy + 60f))
+
+                // Title block
+                drawRect(Color(0xFF0F172A), Offset(16f, h - 40f), Size(w - 32f, 24f), RoundedCornerShape(4dp))
+                drawText(text = "SHOP DRAWING - $sectionName", offset = Offset(24f, h - 26f), fontSize = 11f, color = Color.White)
+                drawText(text = "Utilization: ${(utilizationRatio * 100).toInt()}%", offset = Offset(w - 120f, h - 26f), fontSize = 11f, color = if (isSafe) Color(0xFF2E7D32) else Color.Red)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = {},
+                modifier = Modifier.weight(0.5f),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                shape = RoundedCornerShape(8.dp),
+                enabled = false
+            ) {
+                Text(stringResource(R.string.steel_export_dxf), fontSize = 12.sp)
+            }
+            Button(
+                onClick = {},
+                modifier = Modifier.weight(0.5f),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(8.dp),
+                enabled = false
+            ) {
+                Text(stringResource(R.string.steel_export_cnc), fontSize = 12.sp)
+            }
+        }
+    }
 }

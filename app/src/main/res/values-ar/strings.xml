@@ -174,8 +174,8 @@
     <string name="depth_m">العمق (m)</string>
     <string name="depth_value">العمق: %.2f م</string>
     <string name="width_value">العرض: %.2f م</string>
-    <string name="column_reinforcement">حديد رئيسي: قطر %d مم، مسافة %.1f سم (%d سيخ)</string>
-    <string name="ties_reinforcement">كانات: قطر %d مم، مسافة %.1f سم</string>
+    <string name="column_reinforcement" formatted="false">حديد رئيسي: قطر %d مم، مسافة %.1f سم (%d سيخ)</string>
+    <string name="ties_reinforcement" formatted="false">كانات: قطر %d مم، مسافة %.1f سم</string>
     <string name="ties_diameter">قطر الكانات (مم)</string>
     <string name="ties_spacing">مسافة الكانات (سم)</string>
     <string name="concrete_volume">حجم الخرسانة: %.2f م³</string>
@@ -891,7 +891,7 @@
     <string name="steel_fail">فشل</string>
     <string name="steel_recommendations">توصيات التصميم</string>
     <string name="steel_section_dictionary">قاموس القطاعات المعدنية</string>
-    <string name="steel_design_code_metal">المواصفات: Eurocode / AISC</string>
+    <string name="steel_design_code_metal">الكود الحاكم: ECP 205 / AISC 360 / SBC 306</string>
     <string name="steel_search_hint">ابحث عن اسم القطاع (مثلاً IPE 300)...</string>
     <string name="steel_search_results">نتائج البحث (%d قطاع)</string>
     <string name="steel_section_category">فئة القطاع</string>
@@ -944,6 +944,40 @@
     <string name="steel_anchor_bolts">جوايط التثبيت</string>
     <string name="steel_edge_distance">مسافة الحافة</string>
     <string name="steel_embedment_length">طول التماسك</string>
+    
+    <!-- نوع القاعدة -->
+    <string name="steel_baseplate_type_label">نوع القاعدة</string>
+    <string name="steel_baseplate_concentric">مركزية (Concentric)</string>
+    <string name="steel_baseplate_eccentric">غير مركزية (Eccentric)</string>
+    <string name="steel_baseplate_pocket">قاعدة جيب (Pocket)</string>
+    
+    <!-- نتائج القاعدة -->
+    <string name="steel_max_bearing_pressure">أقصى ضغط تحمل</string>
+    <string name="steel_min_bearing_pressure">أدنى ضغط تحمل</string>
+    <string name="steel_effective_bearing_length">الطول الفعال للتحمل</string>
+    <string name="steel_bolt_edge_distance">مسافة حافة البرغي</string>
+    <string name="steel_tension_side">جانب الشد</string>
+    <string name="steel_yes">نعم</string>
+    <string name="steel_no">لا</string>
+    
+    <!-- توابع الجسور المفصلة -->
+    <string name="bridge_deflection_limit">حد الانحراف (L/800)</string>
+    <string name="bridge_natural_frequency">التردد الطبيعي</string>
+    <string name="bridge_span_depth_ratio">نسبة البحر إلى العمق</string>
+    <string name="bridge_concrete_strength_ratio">نسبة مقاومة الخرسانة</string>
+    
+    <!-- توابع الأنفاق المفصلة -->
+    <string name="tunnel_rmr_factor">عامل جودة RMR</string>
+    <string name="tunnel_strength_ratio">نسبة الرشاش إلى الصخر</string>
+    <string name="tunnel_groundwater">مياه جوفية موجودة</string>
+    <string name="tunnel_rock_ucs">مقاومة الشد المحوري للصخر</string>
+    <string name="tunnel_shotcrete">مقاومة الرشاش</string>
+    
+    <!-- قاعدة الجيب -->
+    <string name="steel_pocket_depth">عمق الجيب</string>
+    <string name="steel_pocket_width">عرض الجيب</string>
+    <string name="steel_pocket_length">طول الجيب</string>
+    <string name="steel_concrete_cover">غطاء الخرسانة</string>
     <string name="steel_grout">طبقة الجrout</string>
     <string name="steel_grout_thickness">سمك الجrout</string>
     <string name="steel_grout_strength">مقاومة الجrout</string>
@@ -1002,16 +1036,16 @@
     <string name="frame_max_shear_format">أقصى قص: %.1f kN</string>
     <string name="frame_span_format">البحر = %.2f م</string>
     <string name="frame_height_format">الارتفاع = %.2f م</string>
-    <string name="frame_provided_req_format">الموفر: %.0f مم² | المطلوب: %.0f مم²</string>
-    <string name="frame_beam_provided_req_mu_format">الموفر: %.0f مم² | المطلوب: %.0f مم² | Mu: %.1f kN.m</string>
-    <string name="frame_level_format">L%d (y=%.2fm)</string>
+    <string name="frame_provided_req_format" formatted="false">الموفر: %.0f مم² | المطلوب: %.0f مم²</string>
+    <string name="frame_beam_provided_req_mu_format" formatted="false">الموفر: %.0f مم² | المطلوب: %.0f مم² | Mu: %.1f kN.m</string>
+    <string name="frame_level_format" formatted="false">L%d (y=%.2fm)</string>
     <string name="frame_legend_title">دليل الرسم</string>
     <string name="frame_legend_slab">بلاطة</string>
     <string name="frame_legend_beam">كمرة</string>
     <string name="frame_legend_column">عمود</string>
-    <string name="frame_plan_span_floors_format">L = %.2f م (%d أدوار)</string>
-    <string name="site_coverage_overlaps_format">التغطية: %d%% | التداخلات: %d</string>
-    <string name="execution_pour_log_format">الهبوط: %d مم | الحجم: %.1f م³</string>
+    <string name="frame_plan_span_floors_format" formatted="false">L = %.2f م (%d أدوار)</string>
+    <string name="site_coverage_overlaps_format" formatted="false">التغطية: %d%% | التداخلات: %d</string>
+    <string name="execution_pour_log_format" formatted="false">الهبوط: %d مم | الحجم: %.1f م³</string>
 
     <string name="frame_member_id_format">#%d</string>
     <string name="frame_udl_format">%.1f ك.ن/م</string>
@@ -1021,9 +1055,9 @@
     <string name="frame_scale_bar_format">%d م</string>
     <string name="frame_dim_b_format">b = %d مم</string>
     <string name="frame_dim_h_format">h = %d مم</string>
-    <string name="frame_rebar_column_format">%d Ø%d مم + Ø%d/@%dمم</string>
-    <string name="frame_rebar_beam_bot_top_format">%d Ø%d (سفلي) + %d Ø%d (علوي)</string>
-    <string name="frame_rebar_beam_stirrup_format">+ Ø%d/@%d مم</string>
+    <string name="frame_rebar_column_format" formatted="false">%d Ø%d مم + Ø%d/@%dمم</string>
+    <string name="frame_rebar_beam_bot_top_format" formatted="false">%d Ø%d (سفلي) + %d Ø%d (علوي)</string>
+    <string name="frame_rebar_beam_stirrup_format" formatted="false">+ Ø%d/@%d مم</string>
     <string name="frame_unit_kn_m">ك.ن.م</string>
     <string name="frame_unit_kn">ك.ن</string>
 
@@ -1376,9 +1410,63 @@
     <string name="steel_tensile_cap_bolt">شد / مسمار</string>
     <string name="steel_block_shear">قص البلوك</string>
     <string name="steel_block_shear_cap">قدرة قص البلوك</string>
+    <string name="steel_block_shear_capacity">سعة قص البلوك</string>
+    <string name="steel_block_shear_utilization">نسبة استغلال قص البلوك</string>
     <string name="steel_weld_result_safe">اللحام آمن</string>
     <string name="steel_weld_result_fail">فشل اللحام</string>
-
+    
+    <!-- تصميم الوصلات - تسميات إضافية -->
+    <string name="steel_conn_slip_critical">الوصلة الانزلاقية (Slip-Critical)</string>
+    <string name="steel_plate_thickness_hint">سماكة اللوحة (مم)</string>
+    <string name="steel_fu_plate_hint">مقاومة الشد للوحة (MPa)</string>
+    <string name="steel_friction_class">فئة الاحتكاك</string>
+    <string name="steel_double_shear">قص مزدوج</string>
+    <string name="steel_detailed_checks">الفحوصات التفصيلية</string>
+    <string name="steel_bearing_capacity">سعة التحمل</string>
+    <string name="steel_tension_capacity">سعة الشد</string>
+    <string name="steel_controlling_capacity">السعة الحاكمة</string>
+    <string name="steel_code_notes">ملاحظات الكود</string>
+    <string name="steel_calculation_formulas">الصيغ الحسابية</string>
+    <string name="steel_weld_throat_area">مساحة الحلق</string>
+    <string name="steel_weld_electrode">نوع القطب</string>
+    
+    <!-- Stage 1: Structural Visualization -->
+    <string name="steel_structural_visualization">التصور الهيكلي</string>
+    <string name="steel_structure_tab">الهيكل وBOM</string>
+    <string name="steel_view_front_elevation">الواجهة الأمامية</string>
+    <string name="steel_view_side_elevation">الواجهة الجانبية</string>
+    <string name="steel_view_plan">المخطط العلوي</string>
+    <string name="steel_view_3d_perspective">منظور ثلاثي الأبعاد</string>
+    
+    <!-- Connection Details -->
+    <string name="steel_connection_details">تفاصيل الوصلات</string>
+    <string name="steel_bolted_connection">وصلة مساميرية</string>
+    <string name="steel_welded_connection">وصلة ملحومة</string>
+    
+    <!-- Stage 2: Bill of Materials -->
+    <string name="steel_bill_of_materials">جدول كميات المواد (BOM)</string>
+    <string name="steel_bom_item">البند</string>
+    <string name="steel_bom_quantity">الكمية</string>
+    <string name="steel_bom_weight">الوزن</string>
+    <string name="steel_bom_section">المقطع</string>
+    <string name="steel_bom_columns">الأعمدة</string>
+    <string name="steel_bom_rafters">العوارض المائلة</string>
+    <string name="steel_bom_purlins">العوارض الثانوية</string>
+    <string name="steel_bom_girts">العوارض الجانبية</string>
+    <string name="steel_bom_plates">اللوحات الأساسية</string>
+    <string name="steel_bom_total">الوزن الإجمالي للحديد</string>
+    
+    <!-- Stage 3: Moment Frame -->
+    <string name="steel_moment_frame_analysis">تحليل الإطار اللحظي</string>
+    <string name="steel_story_count">عدد الطوابق</string>
+    <string name="steel_frame_type">نوع الإطار</string>
+    <string name="steel_moment_resisting_frame">إطار لحظي مقاوم للعزوم</string>
+    
+    <!-- Stage 4: Shop Drawings -->
+    <string name="steel_shop_drawing">رسم ورشة العمل</string>
+    <string name="steel_export_dxf">تصدير DXF</string>
+    <string name="steel_export_cnc">تصدير CNC</string>
+    
     <!-- جداول الحديد -->
     <string name="steel_tables_angles">الزوايا وقطاعات L</string>
     <string name="steel_tables_depth_h">العمق h</string>
@@ -1515,7 +1603,7 @@
     <string name="steel_purlins_format">البرولين: %s</string>
     <string name="steel_girts_format">الجيرت: %s</string>
     <string name="steel_connection_name_format">وصلة: %s</string>
-    <string name="steel_capacity_demand_format">السعة: %.1f kN (الطلب: %.1f kN)</string>
+    <string name="steel_capacity_demand_format" formatted="false">السعة: %.1f kN (الطلب: %.1f kN)</string>
     <string name="steel_grade_label">درجة الحديد</string>
     <string name="steel_section_placeholder">IPE 300, HEB 240…</string>
     <string name="steel_member_type_label">نوع العنصر</string>
@@ -1541,10 +1629,6 @@
     <string name="steel_dl_knm2">حمل ميت D.L (kN/m²)</string>
     <string name="steel_ll_knm2">حمل حي L.L (kN/m²)</string>
     <string name="steel_wind_kmh">رياح (km/h)</string>
-    <string name="steel_view_front_elevation">واجهة أمامية</string>
-    <string name="steel_view_plan">مخطط</string>
-    <string name="steel_view_side_elevation">واجهة جانبية</string>
-    <string name="steel_view_3d_perspective">منظور ثلاثي الأبعاد</string>
     <string name="steel_max_deflection">أقصى انحراف</string>
     <string name="steel_status_safe">آمن ✓</string>
     <string name="steel_status_unsafe">غير آمن ✗</string>
@@ -1603,7 +1687,7 @@
     <string name="water_level_pdf_type">نوع</string>
     <string name="water_level_pdf_reading_m">القراءة (م)</string>
     <string name="water_level_pdf_rl_m">المنسوب (م)</string>
-    <string name="water_level_pdf_max_rl_format">أقصى منسوب: %.3f م  |  أدنى منسوب: %.3f م  |  الفرق: %.3f م</string>
+    <string name="water_level_pdf_max_rl_format" formatted="false">أقصى منسوب: %.3f م  |  أدنى منسوب: %.3f م  |  الفرق: %.3f م</string>
     <string name="steel_1_floor_standard">طابق واحد (هنغار قياسي)</string>
     <string name="steel_dead_load_kn_m2">الحمل الميت (kN/m²)</string>
     <string name="steel_live_load_kn_m2">الحمل الحي (kN/m²)</string>
@@ -1619,13 +1703,9 @@
     <string name="steel_frame_analysis_results">نتائج تحليل الإطار</string>
     <string name="steel_3d_perspective"> منظور ثلاثي الأبعاد</string>
     <string name="steel_engineering_recommendations">التوصيات الهندسية</string>
-    <string name="steel_search_placeholder">IPE 300, HEB 240…</string>
     <string name="steel_member_type">نوع العنصر</string>
     <string name="steel_member_detail">تفاصيل العنصر الفولاذي</string>
     <string name="steel_grade_format">الدرجة %s</string>
-    <string name="steel_axial_capacity">قدرة محورية (ΦPn)</string>
-    <string name="steel_moment_capacity">قدرة انحنائية (ΦMn)</string>
-    <string name="steel_shear_capacity">قدرة قصية (ΦVn)</string>
     <string name="steel_generate_full_english_pdf_report">إنشاء تقرير PDF إنجليزي كامل</string>
     <string name="steel_section_weight">وزن القطاع</string>
 

@@ -29,7 +29,7 @@
     <dimen name="card_radius_lg">20dp</dimen>
     <dimen name="card_radius_xl">24dp</dimen>
     <dimen name="card_radius_pill">50dp</dimen>
-    <dimen name="card_radius_circle">50%</dimen>
+    <dimen name="card_radius_circle">100dp</dimen>
     
     <!-- Premium Elevation System -->
     <dimen name="card_elevation">2dp</dimen>
@@ -69,5 +69,5 @@
     <dimen name="corner_cut_size">4dp</dimen>
     
     <!-- Premium Ripple -->
-    <dimen name="ripple_duration">200ms</dimen>
+    <integer name="ripple_duration">200</integer>
 </resources>

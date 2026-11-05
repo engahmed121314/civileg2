@@ -52,12 +52,12 @@
     <color name="dangerGradientEnd">#EF4444</color>
     
     <!-- Premium Geometric Gradient Definitions (for backgrounds) -->
-    <color name="gradient_navy_to_blue">#003A70 → #0F172A</color>
-    <color name="gradient_blue_to_purple">#0F172A → #4A5C7E</color>
-    <color name="gradient_purple_to_amber">#4A5C7E → #C68400</color>
-    <color name="gradient_amber_to_orange">#C68400 → #FF9800</color>
-    <color name="gradient_success_to_green">#2E7D32 → #4CAF50</color>
-    <color name="gradient_danger_to_red">#C62828 → #EF4444</color>
+    <color name="gradient_navy_to_blue">#003A70</color>
+    <color name="gradient_blue_to_purple">#0F172A</color>
+    <color name="gradient_purple_to_amber">#4A5C7E</color>
+    <color name="gradient_amber_to_orange">#C68400</color>
+    <color name="gradient_success_to_green">#2E7D32</color>
+    <color name="gradient_danger_to_red">#C62828</color>
     
     <!-- Premium Surface Variants -->
     <color name="surfaceElevated">#FFFFFF</color>
@@ -81,9 +81,9 @@
     <color name="info">#0F172A</color>
     
     <!-- Premium Geometric Pattern Colors (for subtle backgrounds) -->
-    <color name="patternLight">rgba(15, 23, 42, 0.03)</color>
-    <color name="patternMedium">rgba(15, 23, 42, 0.08)</color>
-    <color name="patternDark">rgba(15, 23, 42, 0.15)</color>
+    <color name="patternLight">#080F172A</color>
+    <color name="patternMedium">#140F172A</color>
+    <color name="patternDark">#260F172A</color>
     
     <!-- Premium White and Navy -->
     <color name="white">#FFFFFF</color>

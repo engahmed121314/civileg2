@@ -1,5 +1,8 @@
 package com.civileg.app.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 // ===== Premium Geometric Color System =====
@@ -56,6 +59,10 @@ object PremiumColorsLight {
     val dangerGradientEnd = Color(0xFFEF4444)
     
     // Premium Geometric Gradient References (as Compose Brush)
+    val primaryGradient: Brush = Brush.horizontalGradient(
+        listOf(Color(0xFF003A70), Color(0xFF0F172A))
+    )
+
     val gradientNavyToBlue: Brush = Brush.horizontalGradient(
         listOf(Color(0xFF003A70), Color(0xFF0F172A))
     )
@@ -164,6 +171,10 @@ object PremiumColorsDark {
     val dangerGradientEnd = Color(0xFFF87171)
     
     // Geometric Gradients (Dark)
+    val primaryGradient: Brush = Brush.horizontalGradient(
+        listOf(Color(0xFF0F172A), Color(0xFF1E293B))
+    )
+
     val gradientNavyToBlueDark: Brush = Brush.horizontalGradient(
         listOf(Color(0xFF0F172A), Color(0xFF1E293B))
     )
@@ -267,10 +278,10 @@ object PremiumColorScheme {
     fun getSafe(): Color = if (isDarkTheme()) PremiumColorsDark.safe else PremiumColorsLight.safe
     
     @Composable
-    func getWarning(): Color = if (isDarkTheme()) PremiumColorsDark.warning else PremiumColorsLight.warning
+    fun getWarning(): Color = if (isDarkTheme()) PremiumColorsDark.warning else PremiumColorsLight.warning
     
     @Composable
-    func getUnsafe(): Color = if (isDarkTheme()) PremiumColorsDark.unsafe else PremiumColorsLight.unsafe
+    fun getUnsafe(): Color = if (isDarkTheme()) PremiumColorsDark.unsafe else PremiumColorsLight.unsafe
     
     @Composable
     fun getInfo(): Color = if (isDarkTheme()) PremiumColorsDark.info else PremiumColorsLight.info
@@ -280,3 +291,7 @@ object PremiumColorScheme {
         return isSystemInDarkTheme()
     }
 }
+
+typealias ThemeColors = PremiumColorsLight
+typealias ThemeColorsLight = PremiumColorsLight
+typealias ThemeColorsDark = PremiumColorsDark

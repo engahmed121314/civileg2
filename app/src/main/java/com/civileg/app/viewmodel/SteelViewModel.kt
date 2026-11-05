@@ -38,6 +38,8 @@ class SteelViewModel @Inject constructor(
     val warehouseProResult: LiveData<SteelWarehouseProResult?> = _warehouseProResult
 
     private var lastWarehouseInputs: SteelWarehouseInputs? = null
+    val getLastWarehouseInputs: SteelWarehouseInputs?
+        get() = lastWarehouseInputs
 
     // Store actual steel member inputs for PDF export
     private var lastMemberInputs: SteelMemberStoredInputs? = null

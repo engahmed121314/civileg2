@@ -404,13 +404,12 @@ class ECPAdvancedColumn : ColumnDesign {
         // كل طبقة: Pair<distance from extreme compression fiber (mm), area (mm²)>
         val layers: List<Pair<Double, Double>> = when (barConfiguration) {
             BarConfiguration.SYMMETRIC -> {
-                // أربع طبقات: ضغط - نصفي - نصفي - شد
+                // متماثل: ركن - وسط - ركن (مجموع الطبقات = totalAs بالكامل)
                 val asFace = totalAs / 2.0
                 listOf(
-                    dPrime          to asFace / 2.0,   // ضغط (قريب من وجه الضغط)
-                    h / 2.0         to asFace / 2.0,   // نصفي (عند المحور)
-                    h / 2.0         to 0.0,             // (تم دمجه في الطبقة السابقة)
-                    d               to asFace / 2.0    // شد (الوجه البعيد)
+                    dPrime          to asFace / 2.0,   // ركن مضغوط (قريب من وجه الضغط)
+                    h / 2.0         to asFace,         // وسط المقطع (مجموع حديد الواجهتين)
+                    d               to asFace / 2.0    // ركن مشدود (الوجه البعيد)
                 ).filter { it.second > 0.0 }
             }
             BarConfiguration.ONE_FACE -> {
@@ -460,7 +459,7 @@ class ECPAdvancedColumn : ColumnDesign {
             val beta1 = if (fcu <= 30.0) 0.85
                         else if (fcu <= 55.0) 0.85 - 0.05 * (fcu - 30.0) / 5.0
                         else 0.80
-            val a = beta1 * c
+            val a = (beta1 * c).coerceAtMost(h)
 
             // Strain in each layer: εsi = εcu × (c - di) / c
             var sumFsiAsi = 0.0        // Σ(fsi × Asi)  in N
@@ -487,8 +486,9 @@ class ECPAdvancedColumn : ColumnDesign {
 
             // Nominal axial force (positive = compression)
             val Pn = concreteForce + sumFsiAsi
-            // Nominal moment about section centroid
-            val Mn = sumMoment
+            // Nominal moment about section centroid — MUST include the concrete compression block
+            // contribution Cc·(h/2 − a/2) in addition to the steel couple Σ(fsi·Asi·(di−h/2))
+            val Mn = sumMoment + concreteForce * (h / 2.0 - a / 2.0)
 
             // α is already applied inside Pn (via 0.67*fcu/γc and fy/γs material factors)
             // No additional α multiplier needed here

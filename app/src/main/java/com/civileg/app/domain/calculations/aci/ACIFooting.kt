@@ -364,7 +364,7 @@ class ACIFooting : FootingDesign {
         // Eccentricity of resultant from centroid
         val e = (xResultant + s1) - centroidFromLeft
         // Soil pressure with eccentricity (trapezoidal distribution)
-        val I = footingWidth * footingLength.pow(3) / 12.0 / 1e6  // m⁴ (section modulus)
+        val I = footingWidth * footingLength.pow(3) / 12.0 / 1e12  // m⁴ (section modulus)
         val M_ecc = totalWorkingLoad * e / 1000.0  // kN.m (moment due to eccentricity)
         val S_section = I / (footingLength / 2000.0)  // m³ (section modulus)
         val maxSoilPressure = if (S_section > 0) soilPressure + M_ecc / S_section else soilPressure

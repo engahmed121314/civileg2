@@ -43,6 +43,7 @@ import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.defaultDesignCode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,7 +63,7 @@ fun FlatSlabScreen(
     // ── Input state ────────────────────────────────────────────────
     var panelType by remember { mutableStateOf(PanelType.INTERIOR) }
     var designMethod by remember { mutableStateOf(DesignMethod.DDM) }
-    var designCode by remember { mutableStateOf("ECP") }
+    var designCode by remember { mutableStateOf(defaultDesignCode().name) }
     var lx by remember { mutableStateOf("6.0") }
     var ly by remember { mutableStateOf("7.5") }
     var slabThickness by remember { mutableStateOf("250") }

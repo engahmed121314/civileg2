@@ -49,6 +49,7 @@ import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.defaultDesignCode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,7 +81,7 @@ fun SlabScreen(
     var ribSpacingY by remember { mutableStateOf("500") }
 
     var selectedType by remember { mutableStateOf(CalculatorEngine.SlabType.SOLID) }
-    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     var expandedType by remember { mutableStateOf(false) }
     var expandedCode by remember { mutableStateOf(false) }
     

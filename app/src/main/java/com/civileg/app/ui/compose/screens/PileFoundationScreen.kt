@@ -45,6 +45,7 @@ import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.viewmodel.PileFoundationViewModel
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.defaultDesignCode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,8 +126,8 @@ fun PileFoundationScreen(
     var columnLength by remember { mutableStateOf("400") }
 
     // ── Design code (ADR-002: per-code engine dispatch) ──
-    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
-    var calculatedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
+    var calculatedCode by remember { mutableStateOf(defaultDesignCode()) }
 
     // ── Expandable sections ──
     var showSoilParams by remember { mutableStateOf(true) }

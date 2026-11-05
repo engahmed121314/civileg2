@@ -42,6 +42,7 @@ import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.defaultDesignCode
 
 /**
  * شاشة تصميم بلاطة الوافل — Waffle Slab Design Screen
@@ -64,7 +65,7 @@ fun WaffleSlabScreen(
     val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     // ── Input state ────────────────────────────────────────────────
-    var designCode by remember { mutableStateOf("ECP") }
+    var designCode by remember { mutableStateOf(defaultDesignCode().name) }
     var lx by remember { mutableStateOf("6000") }
     var ly by remember { mutableStateOf("7500") }
     var ribSpacing by remember { mutableStateOf("600") }

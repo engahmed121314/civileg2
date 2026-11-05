@@ -131,6 +131,9 @@ data class TunnelsQCState(
     val tunnelConvergence: String = "20",
     val tunnelDiameter: String = "6",
     val supportThickness: String = "150",
+    val groundwaterPresent: String = "false",
+    val shotcreteStrength: String = "25",
+    val rockUcs: String = "50",
     val outcome: QualityControlEngine.QcOutcome? = null
 )
 
@@ -433,6 +436,9 @@ class QualityEngineerViewModel @Inject constructor(
             "tunnelConvergence" -> current.copy(tunnelConvergence = value)
             "tunnelDiameter" -> current.copy(tunnelDiameter = value)
             "supportThickness" -> current.copy(supportThickness = value)
+            "groundwaterPresent" -> current.copy(groundwaterPresent = value)
+            "shotcreteStrength" -> current.copy(shotcreteStrength = value)
+            "rockUcs" -> current.copy(rockUcs = value)
             else -> current
         }
         _tunnelsState.value = if (updated == current) current else updated.copy(outcome = null)
@@ -656,24 +662,24 @@ class QualityEngineerViewModel @Inject constructor(
             s.requiredConcreteStrength.toDoubleOrNull() ?: Double.NaN
         )
         val span = InputGuard.positive("span", s.span.toDoubleOrNull() ?: Double.NaN)
-        val freq = InputGuard.positive("naturalFrequency", s.naturalFrequency.toDoubleOrNull() ?: Double.NaN)
+        val freq = InputGuard.nonNegative("naturalFrequency", s.naturalFrequency.toDoubleOrNull() ?: 0.0)
         val measuredDeflection = InputGuard.nonNegative(
             "measuredDeflection",
             s.measuredDeflection.toDoubleOrNull() ?: Double.NaN
         )
-        val allowableDeflection = InputGuard.positive(
+        val allowableDeflection = InputGuard.nonNegative(
             "allowableDeflection",
-            s.allowableDeflection.toDoubleOrNull() ?: Double.NaN
+            s.allowableDeflection.toDoubleOrNull() ?: 0.0
         )
 
-        val outcome = QualityControlEngine.bridgeQc(
+        val outcome = QualityControlEngine.bridgeQcDetailed(
             code = s.designCode,
-            concreteStrengthMpa = concStrength,
-            requiredConcreteStrengthMpa = requiredStrength,
             spanM = span,
-            naturalFrequencyHz = freq,
+            measuredConcreteStrengthMpa = concStrength,
+            requiredConcreteStrengthMpa = requiredStrength,
             measuredDeflectionMm = measuredDeflection,
-            allowableDeflectionMm = allowableDeflection
+            allowableDeflectionMm = allowableDeflection,
+            naturalFrequencyHz = freq
         )
         _bridgesState.value = s.copy(outcome = outcome)
         persist(QualityControlEngine.Category.BRIDGES, "BRIDGE", s.designCode, outcome)
@@ -687,12 +693,18 @@ class QualityEngineerViewModel @Inject constructor(
         val convergence = InputGuard.nonNegative("tunnelConvergence", s.tunnelConvergence.toDoubleOrNull() ?: 20.0)
         val diameter = InputGuard.positive("tunnelDiameter", s.tunnelDiameter.toDoubleOrNull() ?: 6.0)
         val support = InputGuard.positive("supportThickness", s.supportThickness.toDoubleOrNull() ?: 150.0)
-        
-        val outcome = QualityControlEngine.tunnelQc(
+        val groundwater = s.groundwaterPresent.equals("true", ignoreCase = true)
+        val shotcrete = InputGuard.positive("shotcreteStrength", s.shotcreteStrength.toDoubleOrNull() ?: 25.0)
+        val rockUcs = InputGuard.positive("rockUcs", s.rockUcs.toDoubleOrNull() ?: 50.0)
+
+        val outcome = QualityControlEngine.tunnelQcDetailed(
             rockClass = s.rockClass,
             convergenceMm = convergence,
             diameterM = diameter,
-            supportThicknessMm = support
+            supportThicknessMm = support,
+            groundwaterPresent = groundwater,
+            shotcreteMpa = shotcrete,
+            rockUniaxialStrengthMpa = rockUcs
         )
         _tunnelsState.value = s.copy(outcome = outcome)
         persist(QualityControlEngine.Category.TUNNELS, "TUNNEL-${s.rockClass}", s.designCode, outcome)

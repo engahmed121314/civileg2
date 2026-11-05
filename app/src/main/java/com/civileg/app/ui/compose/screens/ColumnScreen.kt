@@ -4,6 +4,8 @@ import com.civileg.app.ui.responsive.dimens
 
 import kotlin.math.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -124,13 +126,12 @@ fun ColumnScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         LoadCombinationSelector(
                             selected = uiState.loadCombination,
+                            code = uiState.designCode,
                             onSelected = { viewModel.updateLoadCombination(it) }
                         )
                         
                         Text(
-                            text = if (uiState.loadCombination == LoadCombination.DEAD_ONLY) 
-                                stringResource(R.string.column_load_combo_dead_only)
-                                else stringResource(R.string.column_load_combo_dead_live),
+                            text = uiState.loadCombination.description,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.padding(top = 8.dp)
@@ -840,14 +841,14 @@ private fun DesignCodeSelector(selectedCode: DesignCode, onCodeSelected: (Design
 }
 
 @Composable
-private fun LoadCombinationSelector(selected: LoadCombination, onSelected: (LoadCombination) -> Unit) {
+private fun LoadCombinationSelector(selected: LoadCombination, code: com.civileg.app.domain.entities.DesignCode, onSelected: (LoadCombination) -> Unit) {
     Text(stringResource(R.string.column_load_combo), style = MaterialTheme.typography.labelMedium)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        LoadCombination.values().take(2).forEach { combo ->
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+        LoadCombination.getByCode(code).forEach { combo ->
             FilterChip(
                 selected = combo == selected,
                 onClick = { onSelected(combo) },
-                label = { Text(combo.description) }
+                label = { Text(combo.description, fontSize = 11.sp) }
             )
         }
     }

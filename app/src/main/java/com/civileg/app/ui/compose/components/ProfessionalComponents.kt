@@ -49,8 +49,6 @@ import com.civileg.app.R
 import com.civileg.app.ui.theme.PremiumTypography
 import com.civileg.app.ui.theme.PremiumColorsLight
 import com.civileg.app.ui.theme.PremiumColorsDark
-import com.civileg.app.ui.theme.PremiumTypography.ArabicTypography
-import com.civileg.app.ui.theme.PremiumTypography.EnglishTypography
 import kotlin.math.min
 
 // ============================================================================

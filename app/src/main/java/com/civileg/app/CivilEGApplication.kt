@@ -35,6 +35,9 @@ class CivilEGApplication : Application() {
         super.onCreate()
         instance = this
 
+        // Seed the synchronous default-design-code cache from persisted settings
+        com.civileg.app.ui.DesignCodeStore.init(this)
+
         // Initialize LocaleHelper with app context so enum displayName properties
         // can query the current language without needing a Context parameter.
         LocaleHelper.initApplicationContext(this)

@@ -48,6 +48,7 @@ import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.defaultDesignCode
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -89,7 +90,7 @@ fun TankScreen(
     var height by remember { mutableStateOf("3.5") }
     var fcu by remember { mutableStateOf("30") }
     var fy by remember { mutableStateOf("400") }
-    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
 
     // Site quantities (pit excavation / blinding)
     var excavationDepth by remember { mutableStateOf("2.0") }

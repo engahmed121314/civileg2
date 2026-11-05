@@ -415,13 +415,47 @@ data class FrameAnalysisSettings(
     val eColumn: Double = 25e6,      // kN/m² (≈ 25 GPa) - معامل مرونة الخرسانة (غير مستخدم في المحرك)
     // C11: eSteel بوحدة kN/m² مباشرة (200 GPa) — المحرك يستخدمها كما هي بدون أي تحويل.
     val eSteel: Double = 200e6,      // kN/m² (200 GPa) - معامل المرونة للحديد
-    val loadCombinations: List<LoadCombinationFrame> = listOf(
-        LoadCombinationFrame("1.4DL + 1.6LL", 1.4, 1.6, 0.0),
-        LoadCombinationFrame("1.2DL + 1.6LL + 0.5WL", 1.2, 1.6, 0.5)
-    ),
+    val loadCombinations: List<LoadCombinationFrame> = defaultLoadCombinations(DesignCode.ECP),
     // C10: تضمين الوزن الذاتي للأعضاء كحمولة موزعة (خرسانة γ=25 kN/m³، حديد من weight kg/m × g)
     val includeSelfWeight: Boolean = false
-) : Parcelable
+) : Parcelable {
+    companion object {
+        /**
+         * Code-appropriate ULS gravity/wind combinations (DL/LL/WL schema).
+         * Earthquake is intentionally NOT smuggled in as a WL factor — seismic design
+         * goes through the spectral path (ECP 201 / ASCE 7 / SBC 301) in SeismicViewModel.
+         */
+        fun defaultLoadCombinations(code: DesignCode): List<LoadCombinationFrame> = when (code) {
+            DesignCode.ECP -> listOf(
+                // ECP 203-2020 البند 2-3-1
+                LoadCombinationFrame("1.4DL + 1.6LL (ECP 203)", 1.4, 1.6, 0.0),
+                LoadCombinationFrame("1.4DL + 1.0LL + 1.4WL (ECP 203)", 1.4, 1.0, 1.4)
+            )
+            DesignCode.ACI -> listOf(
+                // ACI 318-19 البند 5.3
+                LoadCombinationFrame("1.2DL + 1.6LL (ACI 318)", 1.2, 1.6, 0.0),
+                LoadCombinationFrame("1.2DL + 1.6LL + 0.5WL (ACI 318)", 1.2, 1.6, 0.5),
+                LoadCombinationFrame("1.2DL + 1.0LL + 1.0WL (ACI 318)", 1.2, 1.0, 1.0),
+                LoadCombinationFrame("0.9DL + 1.6WL (ACI 318)", 0.9, 0.0, 1.6)
+            )
+            DesignCode.SBC -> listOf(
+                // SBC 304-2018 (follows ACI 318) / ASCE 7-16
+                LoadCombinationFrame("1.2DL + 1.6LL (SBC 304)", 1.2, 1.6, 0.0),
+                LoadCombinationFrame("1.2DL + 1.6LL + 0.5WL (SBC 304/ASCE 7)", 1.2, 1.6, 0.5),
+                LoadCombinationFrame("1.2DL + 1.0LL + 1.0WL (SBC 304/ASCE 7)", 1.2, 1.0, 1.0),
+                LoadCombinationFrame("0.9DL + 1.6WL (SBC 304/ASCE 7)", 0.9, 0.0, 1.6)
+            )
+        }
+
+        /** True when [combos] is one of the built-in default sets (or the legacy mixed default). */
+        fun isDefaultComboSet(combos: List<LoadCombinationFrame>): Boolean =
+            DesignCode.entries.any { defaultLoadCombinations(it) == combos } ||
+                combos == listOf(
+                    LoadCombinationFrame("1.4DL + 1.6LL", 1.4, 1.6, 0.0),
+                    LoadCombinationFrame("1.2DL + 1.6LL + 0.5WL", 1.2, 1.6, 0.5)
+                )
+    }
+}
 
 @Parcelize
 data class LoadCombinationFrame(

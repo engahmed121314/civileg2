@@ -16,7 +16,7 @@ export default async function BuildsPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">إدارة构建ات التطبيق</h1>
+          <h1 className="text-2xl font-bold">إدارة بناءات التطبيق</h1>
           <p className="text-muted-foreground">مراقبة وإدارة عمليات بناء التطبيقات وإصداراتها</p>
         </div>
         <div className="flex gap-2">
@@ -37,7 +37,7 @@ export default async function BuildsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>قائمة构建ات التطبيق</CardTitle>
+          <CardTitle>قائمة بناءات التطبيق</CardTitle>
         </CardHeader>
         <CardContent>
           <DataTable

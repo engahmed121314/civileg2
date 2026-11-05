@@ -91,8 +91,8 @@ class TankViewModel @Inject constructor(
     }
 
     // Legacy method
-    fun calculateTank(type: CalculatorEngine.TankType, capacity: Double, height: Double, fcu: Double, fy: Double) {
-        calculateTankPro(type, capacity, height, fcu, fy, 12, DesignCode.ECP)
+    fun calculateTank(type: CalculatorEngine.TankType, capacity: Double, height: Double, fcu: Double, fy: Double, code: com.civileg.app.domain.entities.DesignCode = com.civileg.app.ui.defaultDesignCode()) {
+        calculateTankPro(type, capacity, height, fcu, fy, 12, code)
     }
 
     fun saveTank(projectId: Long, name: String, result: CalculatorEngine.TankResult) {

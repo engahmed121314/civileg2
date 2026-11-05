@@ -48,6 +48,7 @@ import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
+import com.civileg.app.ui.defaultDesignCode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,7 +101,7 @@ fun FootingScreen(
     var colDistance by remember { mutableStateOf("3.5") }
     var maxLeft by remember { mutableStateOf("") }
     var maxRight by remember { mutableStateOf("") }
-    var selectedCode by remember { mutableStateOf(DesignCode.ECP) }
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
 
     // Site quantities (excavation / blinding)
     var excavationDepth by remember { mutableStateOf("1.5") }
