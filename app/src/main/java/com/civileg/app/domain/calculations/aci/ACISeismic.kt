@@ -56,8 +56,10 @@ class ACISeismic : SeismicDesign {
         var cs = sds / (responseModificationFactor / importanceFactor)
         
         // الحدود (ASCE 7-16 Section 12.8.1.1)
-        // Cs,max = SD1 / (T·(R/Ie)); approximate period Ta = Ct·h^x (ASCE 12.8.2.1)
-        val ta = (0.0488 * buildingHeight.coerceAtLeast(0.0).pow(0.75)).coerceAtLeast(0.1)
+        // Cs,max = SD1 / (T·(R/Ie)); approximate period Ta = Ct·hn^x (ASCE 7-22 Table 12.8-2)
+        // [FIX] Ct = 0.0466, x = 0.9 for concrete moment frames (ASCE 7-22 Table 12.8-2)
+        // Previous value 0.0488 was for steel moment frames (Ct = 0.0488, x = 0.8)
+        val ta = (0.0466 * buildingHeight.coerceAtLeast(0.0).pow(0.9)).coerceAtLeast(0.1)
         val csMax = sd1 / (ta * (responseModificationFactor / importanceFactor))
         val csMin = max(0.044 * sds * importanceFactor, 0.01)
         

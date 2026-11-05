@@ -244,10 +244,13 @@ class ACIBeam : BeamDesign {
             SupportCondition.CONTINUOUS -> 21.0
             SupportCondition.CANTILEVER -> 8.0
         }
-        
-        // Modification for fy (ACI Table 7.3.1.1), assume Grade 60 (fy=420 MPa) as default
-        val defaultFy = DEFAULT_FY
-        val fyFactor = minOf(1.0, 0.4 + DEFAULT_FY / defaultFy)
+
+        // [FIX] ACI 318-19 Table 24.2.2 footnote: multiply by (0.4 + fy/700)
+        // when fy ≠ 420 MPa. reinforcementRatio carries fy when caller passes it
+        // as fy-value directly; fall back to DEFAULT_FY when ≤ 0.
+        // Bug was: fyFactor = 0.4 + DEFAULT_FY/DEFAULT_FY = 1.4, then min(1.0, 1.4) = 1.0 always.
+        val fyForFactor = if (reinforcementRatio > 0) reinforcementRatio else DEFAULT_FY
+        val fyFactor = 0.4 + fyForFactor / 700.0
         
         val actualRatio = (span * 1000) / totalDepth
         val allowableRatio = basicRatio * fyFactor
