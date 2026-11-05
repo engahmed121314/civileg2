@@ -497,7 +497,11 @@ class ECPFooting : FootingDesign {
         val codeNotes = mutableListOf<String>()
 
         // 1. ضغط التربة
-        val P_service = totalLoads / 1.5
+        // [FIX] Use standard ECP load factor 1.5 (DL+LL) to get service-level pressure.
+        // The hardcoded 1.5 was correct for ECP DEAD_LIVE combination but left ambiguous.
+        // Explicit comment clarifies intent; totalLoads is already at ultimate (factored) level.
+        val ecpLoadFactor = 1.5  // ECP 203 §2-3-1: γG×DL + γQ×LL ≈ 1.5 average for DL+LL combo
+        val P_service = totalLoads / ecpLoadFactor
         val q_avg = P_service / totalArea
 
         val B = sqrt(totalArea)

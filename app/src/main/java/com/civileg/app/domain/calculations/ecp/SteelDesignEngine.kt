@@ -431,12 +431,20 @@ class SteelDesignEngine {
             Lb <= Lp -> Mn_full // المنطقة البلاستيكية - قدرة كاملة
             Lb <= Lr -> {
                 // المنطقة اللدنة (Inelastic LTB) - AISC F2-2
+                // [FIX] Clip to Mn_full: Cb can push inelastic branch above plastic capacity
                 val Mn_Lr = 0.7 * grade.fy * section.Sx / 1e6
-                Cb * Mn_full - (Cb * Mn_full - Mn_Lr) * ((Lb - Lp) / (Lr - Lp).coerceAtLeast(1.0))
+                val Mn_inelastic = Cb * Mn_full - (Cb * Mn_full - Mn_Lr) * ((Lb - Lp) / (Lr - Lp).coerceAtLeast(1.0))
+                Mn_inelastic.coerceAtMost(Mn_full)
             }
             else -> {
                 // المنطقة المرنة (Elastic LTB) - AISC F2-3
-                val Fcr_ltb = Cb * PI * PI * E_STEEL / ((Lb / ry).pow(2))
+                // [FIX] Use rt (effective radius of gyration) not ry per AISC F2-3:
+                // Fcr = Cb × π² × E / (Lb/rt)²  × √(1 + 0.078 × J×c/(Sx×h0) × (Lb/rt)²)
+                val Jc = section.J * 1.0  // c=1.0 for doubly-symmetric I-shape
+                val Sxh0 = (section.Sx * h0).coerceAtLeast(1.0)
+                val LbOverRt = Lb / rt.coerceAtLeast(1.0)
+                val Fcr_ltb = Cb * PI * PI * E_STEEL / LbOverRt.pow(2) *
+                    sqrt(1.0 + 0.078 * Jc / Sxh0 * LbOverRt.pow(2))
                 Fcr_ltb * section.Sx / 1e6
             }
         }
