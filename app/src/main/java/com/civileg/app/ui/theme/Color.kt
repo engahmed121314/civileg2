@@ -117,6 +117,13 @@ object PremiumColorsLight {
     val navyDeep = Color(0xFF0F172A)
     val navyMedium = Color(0xFF1E293B)
     val navyLight = Color(0xFFF1F5F9)
+
+    fun safeColor(): Color = safe
+    fun unsafeColor(): Color = unsafe
+    fun chartColors(): List<Color> = listOf(primary, secondary, tertiary, accent, safe, warning)
+    fun concreteColor(): Color = primaryContainer
+    fun steelColor(): Color = primary
+    fun dimensionColor(): Color = outline
 }
 
 // Dark Theme Colors - Premium Geometric Palette
