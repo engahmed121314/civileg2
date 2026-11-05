@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import com.civileg.app.domain.entities.DesignCode
-import kotlin.math.ceil
+import com.civileg.app.utils.QcLimits
 import kotlin.math.max
 
 // ============================================================================
@@ -25,10 +25,9 @@ import kotlin.math.max
 // Two acceptance tests are visualised, both driven by the values entered in
 // the Concrete QC tab:
 //   1. Slump test (ASTM C143) - cone 300 mm high, measured slump annotated.
-//   2. Compressive strength cylinders (ASTM C39) - 7-day, 28-day and design
-//      f'c drawn as 150 x 300 mm specimens with fill gauges.
+//   2. Strength specimens use cubes for ECP and cylinders for ACI/SBC.
 // The footer repeats the remaining acceptance parameters (air content,
-// temperature, volume) plus the ACI 318-19 26.12.2.1 sampling requirement.
+// temperature and strength ratio) using the same displayed QC limits.
 // ============================================================================
 
 private val QcConcreteFill = Color(0xFF4A4A4A)
@@ -54,6 +53,8 @@ fun ConcreteQcDrawing(
     modifier: Modifier = Modifier
 ) {
     val cfg = drawingDimensionsConfig()
+    val slumpRange = QcLimits.slumpRange(designCode)
+    val airRange = QcLimits.airContent(designCode)
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val cw = size.width
@@ -85,9 +86,10 @@ fun ConcreteQcDrawing(
             top = bandTop,
             bottom = bandBottom,
             slumpMm = slumpMm,
+            slumpRange = slumpRange,
             cfg = cfg
         )
-        drawStrengthCylinders(
+        drawStrengthSpecimens(
             left = splitX + margin * 0.5f,
             right = cw - margin,
             top = bandTop,
@@ -95,6 +97,7 @@ fun ConcreteQcDrawing(
             fcuDesignMpa = fcuDesignMpa,
             strength7DaysMpa = strength7DaysMpa,
             strength28DaysMpa = strength28DaysMpa,
+            designCode = designCode,
             cfg = cfg
         )
 
@@ -107,18 +110,19 @@ fun ConcreteQcDrawing(
             strokeWidth = 1f
         )
 
-        val requiredSets = max(1.0, ceil(volumeM3 / 110.0))
-        val airOk = airContent in 3.0..8.0
+        val airOk = airContent in airRange
         val tempOk = concreteTemp in 5.0..40.0
         val ratioOk = strength28DaysMpa > 0.0 &&
             strength7DaysMpa / strength28DaysMpa >= 0.65
+        val strengthOk = fcuDesignMpa > 0.0 && strength28DaysMpa >= fcuDesignMpa
 
         val footerItems = listOf(
-            Triple("Air content", "%.1f %%".format(airContent), if (airOk) QcPass else QcFail),
-            Triple("Temperature", "%.1f C".format(concreteTemp), if (tempOk) QcPass else QcFail),
+            Triple("Air ${airRange.start.toInt()}-${airRange.endInclusive.toInt()}%", "%.1f %%".format(airContent), if (airOk) QcPass else QcFail),
+            Triple("Temp 5-40 C", "%.1f C".format(concreteTemp), if (tempOk) QcPass else QcFail),
             Triple("7/28 ratio", if (strength28DaysMpa > 0) "%.0f %%".format(100.0 * strength7DaysMpa / strength28DaysMpa) else "-",
                 if (ratioOk) QcPass else QcFail),
-            Triple("Test sets (ACI 26.12.2.1)", "%.0f".format(requiredSets), QcTarget)
+            Triple("28-day / target", "%.1f / %.1f MPa".format(strength28DaysMpa, fcuDesignMpa),
+                if (strengthOk) QcPass else QcFail)
         )
         val cellW = (cw - 2 * margin) / footerItems.size
         footerItems.forEachIndexed { i, (label, value, color) ->
@@ -141,6 +145,7 @@ private fun DrawScope.drawSlumpTest(
     top: Float,
     bottom: Float,
     slumpMm: Double,
+    slumpRange: ClosedFloatingPointRange<Double>,
     cfg: DrawingDimensionsConfig
 ) {
     val bandW = right - left
@@ -227,14 +232,14 @@ private fun DrawScope.drawSlumpTest(
     )
 
     // Slump annotation
-    val slumpColor = if (slumpMm in 25.0..100.0) QcPass else QcFail
+    val slumpColor = if (slumpMm in slumpRange) QcPass else QcFail
     drawTextAnnotated(
         "Slump = ${"%.0f".format(slumpMm)} mm",
         left, top + cfg.annotationTextSmall * 2.6f, slumpColor,
         cfg.annotationTextSmall * 1.05f, bold = true
     )
     drawTextAnnotated(
-        "Target 25 - 100 mm (ACI 26.12.1.3)",
+        "Project QC range %.0f - %.0f mm".format(slumpRange.start, slumpRange.endInclusive),
         left, top + cfg.annotationTextSmall * 4.0f, QcLabel, cfg.annotationTextSmall
     )
 }
@@ -243,7 +248,7 @@ private fun DrawScope.drawSlumpTest(
 // STRENGTH CYLINDERS
 // ============================================================================
 
-private fun DrawScope.drawStrengthCylinders(
+private fun DrawScope.drawStrengthSpecimens(
     left: Float,
     right: Float,
     top: Float,
@@ -251,64 +256,88 @@ private fun DrawScope.drawStrengthCylinders(
     fcuDesignMpa: Double,
     strength7DaysMpa: Double,
     strength28DaysMpa: Double,
+    designCode: DesignCode,
     cfg: DrawingDimensionsConfig
 ) {
     val bandW = right - left
     val bandH = bottom - top
     if (bandW <= 0f || bandH <= 0f) return
 
-    drawZoneLabel(left, top, "COMPRESSIVE STRENGTH (ASTM C39)", cfg)
+    val cubeSpecimens = designCode == DesignCode.ECP
+    val specimenLabel = if (cubeSpecimens) "COMPRESSIVE STRENGTH (ECP CUBES)" else "COMPRESSIVE STRENGTH (ASTM C39)"
+    drawZoneLabel(left, top, specimenLabel, cfg)
 
-    val fcu = max(fcuDesignMpa, 1.0)
+    val fcu = fcuDesignMpa.coerceAtLeast(0.0)
     val specs = listOf(
-        Triple("7-day", strength7DaysMpa, strength7DaysMpa >= 0.65 * strength28DaysMpa),
-        Triple("28-day", strength28DaysMpa, strength28DaysMpa >= fcu - 3.5),
+        Triple("7-day", strength7DaysMpa, strength28DaysMpa > 0.0 &&
+            strength7DaysMpa / strength28DaysMpa >= 0.65),
+        Triple("28-day", strength28DaysMpa, fcu > 0.0 && strength28DaysMpa >= fcu),
         Triple("f'c", fcu, true)
     )
 
-    val cylinderH = bandH * 0.50f
-    val cylinderW = cylinderH * 0.5f // 150 mm dia / 300 mm height
+    val specimenH = bandH * 0.50f
+    val specimenW = if (cubeSpecimens) specimenH * 0.62f else specimenH * 0.5f
     val baseY = top + bandH * 0.80f
-    val cylinderTopY = baseY - cylinderH
-    val gap = (bandW - specs.size * cylinderW) / (specs.size + 1)
-    val maxValue = max(fcu, max(strength7DaysMpa, strength28DaysMpa)) * 1.1
+    val specimenTopY = baseY - specimenH
+    val gap = (bandW - specs.size * specimenW) / (specs.size + 1)
+    val maxValue = (max(fcu, max(strength7DaysMpa, strength28DaysMpa)) * 1.1).coerceAtLeast(1.0)
 
     specs.forEachIndexed { i, (label, value, passed) ->
-        val cx = left + gap + cylinderW / 2f + i * (cylinderW + gap)
+        val cx = left + gap + specimenW / 2f + i * (specimenW + gap)
         val color = when (i) {
             2 -> QcTarget
             else -> if (passed) QcPass else QcFail
         }
 
-        // Cylinder body
-        drawRoundRect(
-            color = QcConcreteFill,
-            topLeft = Offset(cx - cylinderW / 2f, cylinderTopY),
-            size = Size(cylinderW, cylinderH),
-            cornerRadius = CornerRadius(cylinderW * 0.12f)
-        )
+        if (cubeSpecimens) {
+            drawRect(
+                color = QcConcreteFill,
+                topLeft = Offset(cx - specimenW / 2f, specimenTopY),
+                size = Size(specimenW, specimenH)
+            )
+        } else {
+            drawRoundRect(
+                color = QcConcreteFill,
+                topLeft = Offset(cx - specimenW / 2f, specimenTopY),
+                size = Size(specimenW, specimenH),
+                cornerRadius = CornerRadius(specimenW * 0.12f)
+            )
+        }
         // Filled gauge proportional to measured strength
-        val fillH = (cylinderH * (value / maxValue).coerceIn(0.0, 1.0)).toFloat()
-        drawRoundRect(
-            color = color.copy(alpha = 0.30f),
-            topLeft = Offset(cx - cylinderW / 2f, baseY - fillH),
-            size = Size(cylinderW, fillH),
-            cornerRadius = CornerRadius(cylinderW * 0.12f)
-        )
-        drawRoundRect(
-            color = color,
-            topLeft = Offset(cx - cylinderW / 2f, cylinderTopY),
-            size = Size(cylinderW, cylinderH),
-            cornerRadius = CornerRadius(cylinderW * 0.12f),
-            style = Stroke(cfg.strokeDefault * 1.5f)
-        )
-        // Top cap
-        drawOval(
-            color = QcConcreteEdge,
-            topLeft = Offset(cx - cylinderW / 2f, cylinderTopY - cylinderW * 0.12f),
-            size = Size(cylinderW, cylinderW * 0.24f),
-            style = Stroke(cfg.strokeDefault)
-        )
+        val fillH = (specimenH * (value / maxValue).coerceIn(0.0, 1.0)).toFloat()
+        if (cubeSpecimens) {
+            drawRect(
+                color = color.copy(alpha = 0.30f),
+                topLeft = Offset(cx - specimenW / 2f, baseY - fillH),
+                size = Size(specimenW, fillH)
+            )
+            drawRect(
+                color = color,
+                topLeft = Offset(cx - specimenW / 2f, specimenTopY),
+                size = Size(specimenW, specimenH),
+                style = Stroke(cfg.strokeDefault * 1.5f)
+            )
+        } else {
+            drawRoundRect(
+                color = color.copy(alpha = 0.30f),
+                topLeft = Offset(cx - specimenW / 2f, baseY - fillH),
+                size = Size(specimenW, fillH),
+                cornerRadius = CornerRadius(specimenW * 0.12f)
+            )
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(cx - specimenW / 2f, specimenTopY),
+                size = Size(specimenW, specimenH),
+                cornerRadius = CornerRadius(specimenW * 0.12f),
+                style = Stroke(cfg.strokeDefault * 1.5f)
+            )
+            drawOval(
+                color = QcConcreteEdge,
+                topLeft = Offset(cx - specimenW / 2f, specimenTopY - specimenW * 0.12f),
+                size = Size(specimenW, specimenW * 0.24f),
+                style = Stroke(cfg.strokeDefault)
+            )
+        }
 
         // Value + label under the cylinder
         drawTextAnnotated(
@@ -324,7 +353,7 @@ private fun DrawScope.drawStrengthCylinders(
     }
 
     // Design target line
-    val targetY = baseY - cylinderH * (fcu / maxValue).toFloat()
+    val targetY = baseY - specimenH * (fcu / maxValue).toFloat()
     val dash = PathEffect.dashPathEffect(floatArrayOf(8f, 6f), 0f)
     drawLine(
         color = QcTarget.copy(alpha = 0.7f),

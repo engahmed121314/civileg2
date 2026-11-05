@@ -140,6 +140,70 @@ class QualityControlEngineTest {
         assertFalse(outcome.passed)
     }
 
+    @Test
+    fun steelQcDetailed_convertsSteelTableUnitsAndUsesSelectedCodeBasis() {
+        val expectedBases = mapOf(
+            DesignCode.ECP to "ECP 205-2007 (steel)",
+            DesignCode.ACI to "AISC 360-16 (US steel; ACI 318 is concrete)",
+            DesignCode.SBC to "SBC 306-2018 (steel)"
+        )
+
+        expectedBases.forEach { (code, basis) ->
+            val outcome = QualityControlEngine.steelQcDetailed(
+                code = code,
+                sectionKey = "IPE 200",
+                fyMpa = 275.0,
+                spanM = 5.0,
+                muKnM = 40.0,
+                vuKn = 100.0
+            )
+
+            assertTrue(outcome.details.contains("Gross area" to "2850 mm²"))
+            assertTrue(outcome.details.contains("Major-axis inertia" to "19430000 mm⁴"))
+            assertTrue(outcome.details.contains("Selected steel design basis" to basis))
+            assertEquals(54.45, outcome.checks.first().limit, 0.01)
+            assertTrue(outcome.checks.all { it.reference?.contains(basis) == true })
+        }
+    }
+
+    @Test
+    fun steelQcDetailed_doesNotClaimAcceptanceWhenLateralBucklingIsUnverified() {
+        val outcome = QualityControlEngine.steelQcDetailed(
+            code = DesignCode.ACI,
+            sectionKey = "IPE 200",
+            fyMpa = 275.0,
+            spanM = 5.0,
+            muKnM = 10.0,
+            vuKn = 50.0,
+            unbracedLengthMm = 3000.0
+        )
+
+        assertFalse(outcome.passed)
+        assertTrue(outcome.checks.any {
+            it.name == "Lateral-torsional buckling analysis available" && !it.passed
+        })
+    }
+
+    @Test
+    fun steelQcDetailed_columnUsesWeakAxisSlendernessAndBucklingCapacity() {
+        val outcome = QualityControlEngine.steelQcDetailed(
+            code = DesignCode.SBC,
+            sectionKey = "IPE 200",
+            fyMpa = 275.0,
+            spanM = 3.0,
+            muKnM = 0.0,
+            vuKn = 0.0,
+            puKn = 200.0,
+            unbracedLengthMm = 3000.0,
+            memberType = "COLUMN"
+        )
+
+        assertTrue(outcome.checks.any {
+            it.name == "Flexural buckling capacity φP_n ≥ P_u" && it.passed
+        })
+        assertTrue(outcome.details.contains("Minor-axis slenderness KL/r_y" to "134"))
+    }
+
     // ==================================================================
     // ROADS
     // ==================================================================

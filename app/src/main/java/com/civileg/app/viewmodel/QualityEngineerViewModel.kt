@@ -594,7 +594,12 @@ class QualityEngineerViewModel @Inject constructor(
         val span = InputGuard.positive("span", s.span.toDoubleOrNull() ?: Double.NaN)
         val mu = InputGuard.nonNegative("appliedMoment", s.appliedMoment.toDoubleOrNull() ?: Double.NaN)
         val vu = InputGuard.nonNegative("appliedShear", s.appliedShear.toDoubleOrNull() ?: Double.NaN)
-        val pu = InputGuard.nonNegative("axialLoad", s.axialLoad.toDoubleOrNull() ?: Double.NaN)
+        val axialLoad = s.axialLoad.toDoubleOrNull() ?: Double.NaN
+        val pu = if (s.memberType == "COLUMN" || s.memberType == "BEAM_COLUMN") {
+            InputGuard.positive("axialLoad", axialLoad)
+        } else {
+            InputGuard.nonNegative("axialLoad", axialLoad)
+        }
         val unbraced = InputGuard.nonNegative("unbracedLength", s.unbracedLength.toDoubleOrNull() ?: Double.NaN)
         val allowDefl = InputGuard.nonNegative("allowableDeflection", s.allowableDeflection.toDoubleOrNull() ?: Double.NaN)
         val memberType = s.memberType.takeIf { it.isNotBlank() } ?: "BEAM"

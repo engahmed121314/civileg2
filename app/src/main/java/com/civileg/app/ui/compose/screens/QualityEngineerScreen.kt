@@ -914,7 +914,7 @@ private fun SteelStructureQCTab(
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        "اترك صفراً لتجاوز",
+                        "L_b = 0 يعني افتراض التقييد الجانبي الكامل؛ أدخل L_b الفعلي عند عدم التقييد",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1213,6 +1213,7 @@ private fun BridgesQCTab(
 // TAB 7: Tunnels Quality Control
 // ═══════════════════════════════════════════════════════════════════════
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TunnelsQCTab(
     viewModel: QualityEngineerViewModel,

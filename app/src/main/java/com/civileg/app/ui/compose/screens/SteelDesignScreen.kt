@@ -13,6 +13,9 @@ import androidx.compose.foundation.Canvas as ComposeCanvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -1686,7 +1690,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                         // Calculation formulas
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(stringResource(R.string.steel_calculation_formulas), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
-                        val ab = Math.PI * Math.pow(res.boltDiameter, 2) / 4.0
+                        val ab = Math.PI * Math.pow(res.boltDiameter.toDouble(), 2.0) / 4.0
                         FormulaText("φRn_shear = 0.75 × Fn × Ab = 0.75 × Fn × π×d²/4")
                         FormulaText("φRn_bearing = 0.75 × min(1.2×Lc×t×Fu, 2.4×d×t×Fu)")
                         FormulaText("φRn_tension = 0.75 × Ft × Ab")
@@ -2301,7 +2305,7 @@ fun SteelStructureAndBOMTab(
             when (selectedSubTab) {
                 0 -> {
                     // Structural Visualization
-                    val lastInputs = viewModel.lastWarehouseInputs
+                    val lastInputs = viewModel.getLastWarehouseInputs
                     SteelFrameVisualizer(
                         inputs = lastInputs,
                         result = finalResult,
@@ -2312,7 +2316,7 @@ fun SteelStructureAndBOMTab(
                 }
                 1 -> {
                     // Bill of Materials
-                    val lastInputs = viewModel.lastWarehouseInputs
+                    val lastInputs = viewModel.getLastWarehouseInputs
                     SteelBOMTable(
                         inputs = lastInputs,
                         result = finalResult,
@@ -2327,7 +2331,7 @@ fun SteelStructureAndBOMTab(
                 }
                 else -> {
                     // Shop Drawing
-                    val lastInputs = viewModel.lastWarehouseInputs
+                    val lastInputs = viewModel.getLastWarehouseInputs
                     val sectionName = finalResult?.mainFrame?.columnSection?.sectionName ?: "HEB 300"
                     SteelShopDrawingPreview(
                         sectionName = sectionName,
@@ -2485,9 +2489,9 @@ fun SteelFrameVisualizer(
                     span = 20.0, length = 60.0, eaveHeight = 6.0, ridgeHeight = 9.0,
                     baySpacing = 6.0, slope = 0.17, deadLoad = 0.25, liveLoad = 0.60, windLoad = 150.0
                 )
-                val spanPx = (inputs.span * 8f).coerceIn(100f, w - 100f)
-                val heightPx = (inputs.eaveHeight * 25f).coerceIn(80f, h - 100f)
-                val ridgePx = heightPx + (spanPx / 2 * inputs.slope * 25f).coerceAtLeast(0f)
+                val spanPx = ((inputs.span * 8.0).toFloat()).coerceIn(100f, w - 100f)
+                val heightPx = ((inputs.eaveHeight * 25.0).toFloat()).coerceIn(80f, h - 100f)
+                val ridgePx = heightPx + (spanPx / 2f * inputs.slope.toFloat() * 25f).coerceAtLeast(0f)
 
                 val urColor = if (isSafe) Color(0xFF2E7D32) else Color.Red
 
@@ -2540,9 +2544,9 @@ fun SteelFrameVisualizer(
 
                     2 -> { // Plan View
                         // Building footprint
-                        val planW = (inputs.length * 6f).coerceIn(100f, w - 100f)
-                        val planD = (inputs.span * 6f).coerceIn(80f, h - 100f)
-                        drawRect(Color.Gray.copy(alpha = 0.2f), Offset(cx - planW / 2, cy - planD / 2), Size(planW, planD), RoundedCornerShape(4dp))
+                        val planW = ((inputs.length * 6.0).toFloat()).coerceIn(100f, w - 100f)
+                        val planD = ((inputs.span * 6.0).toFloat()).coerceIn(80f, h - 100f)
+                        drawRoundRect(Color.Gray.copy(alpha = 0.2f), Offset(cx - planW / 2, cy - planD / 2), Size(planW, planD), cornerRadius = CornerRadius(4f))
 
                         // Grid lines (bays)
                         val bayCount = (inputs.length / inputs.baySpacing).toInt().coerceAtLeast(1)
@@ -2565,18 +2569,17 @@ fun SteelFrameVisualizer(
 
                     else -> { // 3D Perspective (simplified wireframe)
                         // Draw a simple 3D box representation
-                        val boxW = (inputs.length * 5f).coerceIn(120f, w - 100f)
-                        val boxD = (inputs.span * 5f).coerceIn(100f, h - 120f)
+                        val boxW = ((inputs.length * 5.0).toFloat()).coerceIn(120f, w - 100f)
+                        val boxD = ((inputs.span * 5.0).toFloat()).coerceIn(100f, h - 120f)
                         val boxH = heightPx * 0.8f
 
                         val offsetX = 40f
                         val offsetY = 60f
 
                         // Back face
-                        drawRect(Color.Gray.copy(alpha = 0.15f), Offset(cx - boxW / 2 + offsetX, cy - boxH / 2 - offsetY), Size(boxW, boxH), RoundedCornerShape(4dp))
-
+                        drawRoundRect(Color.Gray.copy(alpha = 0.15f), Offset(cx - boxW / 2 + offsetX, cy - boxH / 2 - offsetY), Size(boxW, boxH), cornerRadius = CornerRadius(4f))
                         // Front face (offset)
-                        drawRect(Color.Gray.copy(alpha = 0.3f), Offset(cx - boxW / 2, cy - boxH / 2), Size(boxW, boxH), RoundedCornerShape(4dp))
+                        drawRoundRect(Color.Gray.copy(alpha = 0.3f), Offset(cx - boxW / 2, cy - boxH / 2), Size(boxW, boxH), cornerRadius = CornerRadius(4f))
 
                         // Connecting lines (depth)
                         drawLine(Color.Gray.copy(alpha = 0.5f), Offset(cx - boxW / 2 + offsetX, cy - boxH / 2 - offsetY), Offset(cx - boxW / 2, cy - boxH / 2), 2f)
@@ -2597,7 +2600,7 @@ fun SteelFrameVisualizer(
                     if (memberUtilization <= 1.0) Color(0xFF2E7D32).copy(alpha = 0.2f) else Color.Red.copy(alpha = 0.2f),
                     Offset(16f, h - 40f),
                     Size(120f, 20f),
-                    RoundedCornerShape(10dp)
+                    cornerRadius = CornerRadius(10f)
                 )
                 drawText(
                     text = "Utilization: ${(memberUtilization * 100).toInt()}%",
@@ -2632,7 +2635,7 @@ fun SteelConnectionDetailVisualizer(
             if (boltRes != null) {
                 ConnectionDetailPanel(
                     title = stringResource(R.string.steel_bolted_connection),
-                    icon = Icons.Default.Fasteners,
+                    icon = Icons.Default.Build,
                     color = MaterialTheme.colorScheme.tertiary,
                     items = listOf(
                         stringResource(R.string.steel_bolt_dia) to "M${boltRes.boltDiameter.toInt()}",
@@ -2649,7 +2652,7 @@ fun SteelConnectionDetailVisualizer(
             if (weldRes != null) {
                 ConnectionDetailPanel(
                     title = stringResource(R.string.steel_welded_connection),
-                    icon = Icons.Default.Welding,
+                    icon = Icons.Default.Build,
                     color = MaterialTheme.colorScheme.primary,
                     items = listOf(
                         stringResource(R.string.steel_weld_size_label) to "${weldRes.weldSize.toInt()} mm",
@@ -2771,44 +2774,33 @@ fun SteelBOMTable(
         baySpacing = 6.0, slope = 0.17, deadLoad = 0.25, liveLoad = 0.60, windLoad = 150.0
     )
     val result = result ?: SteelWarehouseAnalysisResult(
-        totalWeight = 12500.0, weightPerM2 = 105.0,
+        totalWeight = 12500.0,
+        weightPerM2 = 105.0,
         safetyStatus = true,
-        mainFrame = SteelWarehouseAnalysisResult.MainFrame(
-            columnSection = SteelSectionType(
-                sectionName = "HEB 300", displayName = "HEB 300",
-                depth = 300.0, width = 300.0, webThickness = 10.0, flangeThickness = 15.0,
-                area = 85.9 * 100.0, weight = 91.7, ix = 16230.0 * 10000.0, iy = 4760.0 * 10000.0,
-                zx = 1082.0 * 1000.0, zy = 317.0 * 1000.0, rx = 137.4, ry = 74.4, j = 20990.0 * 10000.0,
-                rootRadius = 15.0
-            ),
-            rafterSection = SteelSectionType(
-                sectionName = "IPE 300", displayName = "IPE 300",
-                depth = 300.0, width = 150.0, webThickness = 7.1, flangeThickness = 10.7,
-                area = 53.8 * 100.0, weight = 42.2, ix = 8356.0 * 10000.0, iy = 934.9 * 10000.0,
-                zx = 557.1 * 1000.0, zy = 124.7 * 1000.0, rx = 124.6, ry = 41.7, j = 9290.9 * 10000.0,
-                rootRadius = 12.0
-            ),
+        mainFrame = MainFrameResult(
+            columnSection = SteelSectionType.ISection(h = 300.0, bf = 300.0, tf = 15.0, tw = 10.0, grade = SteelGrade.ST37, customName = "HEB 300"),
+            rafterSection = SteelSectionType.ISection(h = 300.0, bf = 150.0, tf = 10.7, tw = 7.1, grade = SteelGrade.ST37, customName = "IPE 300"),
+            maxMoment = 0.0,
+            maxShear = 0.0,
+            maxAxial = 0.0,
+            maxDeflection = 0.0,
+            allowableDeflection = 0.0,
+            isSafe = true,
             basePlateThickness = 25.0,
-            basePlateBoltsCount = 4,
-            floorBeamSection = null,
-            floorBeamMaxMoment = 0.0
+            basePlateBoltsCount = 4
         ),
-        secondaryMembers = SteelWarehouseAnalysisResult.SecondaryMembers(
-            purlinSection = SteelSectionType(
-                sectionName = "IPE 140", displayName = "IPE 140",
-                depth = 140.0, width = 73.0, webThickness = 4.9, flangeThickness = 6.8,
-                area = 25.4 * 100.0, weight = 19.9, ix = 848.6 * 10000.0, iy = 139.1 * 10000.0,
-                zx = 121.2 * 1000.0, zy = 38.1 * 1000.0, rx = 57.8, ry = 23.4, j = 987.7 * 10000.0,
-                rootRadius = 12.0
-            ),
-            girtSection = SteelSectionType(
-                sectionName = "IPE 120", displayName = "IPE 120",
-                depth = 120.0, width = 64.0, webThickness = 4.7, flangeThickness = 6.2,
-                area = 21.7 * 100.0, weight = 17.0, ix = 441.0 * 10000.0, iy = 81.0 * 10000.0,
-                zx = 73.5 * 1000.0, zy = 25.3 * 1000.0, rx = 45.1, ry = 19.3, j = 522.0 * 10000.0,
-                rootRadius = 12.0
-            )
+        secondaryMembers = SecondaryMembersResult(
+            purlinSection = SteelSectionType.ISection(h = 140.0, bf = 73.0, tf = 6.8, tw = 4.9, grade = SteelGrade.ST37, customName = "IPE 140"),
+            girtSection = SteelSectionType.ISection(h = 120.0, bf = 64.0, tf = 6.2, tw = 4.7, grade = SteelGrade.ST37, customName = "IPE 120"),
+            bracingSection = SteelSectionType.ISection(h = 50.0, bf = 50.0, tf = 5.0, tw = 5.0, grade = SteelGrade.ST37, customName = "L 50x5"),
+            purlinCount = 10,
+            isSafe = true
         ),
+        connections = emptyList(),
+        totalCladdingArea = 1000.0,
+        resultsByCode = "ECP",
+        recommendations = emptyList(),
+        materialTakeoff = emptyMap(),
         calculationTrace = emptyList()
     )
 
@@ -3000,11 +2992,11 @@ fun SteelMomentFrameAnalyzer(
                 val momentColor = Color(0xFFFFA726)
                 repeat(storyCount) { i ->
                     val y = h - pad - (i + 1) * storyHeightPx
-                    val momentHeight = if (maxMoment > 0) moments[i] / maxMoment * 60f else 0f
+                    val momentHeight = if (maxMoment > 0.0) (moments[i] / maxMoment * 60.0).toFloat() else 0f
                     drawArc(
                         color = momentColor,
-                        start = 180f,
-                        sweep = 180f,
+                        startAngle = 180f,
+                        sweepAngle = 180f,
                         useCenter = false,
                         topLeft = Offset(pad + 40f - momentHeight, y - momentHeight),
                         size = Size(momentHeight * 2, momentHeight * 2),
@@ -3087,7 +3079,7 @@ fun SteelShopDrawingPreview(
                 drawCircle(Color(0xFF374151), 5f, Offset(cx + 30f, cy + 60f))
 
                 // Title block
-                drawRect(Color(0xFF0F172A), Offset(16f, h - 40f), Size(w - 32f, 24f), RoundedCornerShape(4dp))
+                drawRoundRect(Color(0xFF0F172A), Offset(16f, h - 40f), Size(w - 32f, 24f), cornerRadius = CornerRadius(4f))
                 drawText(text = "SHOP DRAWING - $sectionName", offset = Offset(24f, h - 26f), fontSize = 11f, color = Color.White)
                 drawText(text = "Utilization: ${(utilizationRatio * 100).toInt()}%", offset = Offset(w - 120f, h - 26f), fontSize = 11f, color = if (isSafe) Color(0xFF2E7D32) else Color.Red)
             }
@@ -3119,4 +3111,22 @@ fun SteelShopDrawingPreview(
             }
         }
     }
+}
+
+private fun DrawScope.drawText(
+    text: String,
+    offset: Offset,
+    fontSize: Float = 12f,
+    color: Color = Color.White,
+    fontWeight: FontWeight = FontWeight.Normal
+) {
+    val paint = android.graphics.Paint().apply {
+        textSize = fontSize * density
+        this.color = color.toArgb()
+        isAntiAlias = true
+        if (fontWeight == FontWeight.Bold) {
+            isFakeBoldText = true
+        }
+    }
+    drawContext.canvas.nativeCanvas.drawText(text, offset.x, offset.y, paint)
 }

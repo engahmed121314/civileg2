@@ -10,9 +10,14 @@ import kotlin.math.tan
  * كود تصميم الكمرات العميقة.
  * ECP 203-2020 و ACI 318-19.
  */
-enum class DeepBeamCode(val displayName: String, val version: String) {
-    ECP("Egyptian Code", "ECP 203-2020"),
-    ACI("American Code", "ACI 318-19")
+enum class DeepBeamCode(
+    val displayName: String,
+    val version: String,
+    val usesAciBaseProvisions: Boolean
+) {
+    ECP("Egyptian Code", "ECP 203-2020", false),
+    ACI("American Code", "ACI 318-19", true),
+    SBC("Saudi Code (ACI base)", "SBC 304-2018", true)
 }
 
 /**
@@ -89,7 +94,7 @@ class DeepBeamDesign {
         /** نسبة البحر/العمق الحدية لتصنيف الكمرة العميقة. */
         fun spanToDepthLimit(code: DeepBeamCode, isContinuous: Boolean): Double = when (code) {
             DeepBeamCode.ECP -> if (isContinuous) 2.0 else 2.5
-            DeepBeamCode.ACI -> if (isContinuous) 2.5 else 4.0
+            DeepBeamCode.ACI, DeepBeamCode.SBC -> if (isContinuous) 2.5 else 4.0
         }
 
         /** فحص سريع لتصنيف الكمرة. */
@@ -139,17 +144,17 @@ class DeepBeamDesign {
         val strutArea = input.width * strutWidth // mm²
 
         // ── Material strengths ───────────────────────────────────────────
-        val fcRef = if (input.code == DeepBeamCode.ECP) input.fcu else 0.80 * input.fcu
-        val fce = if (input.code == DeepBeamCode.ECP) {
+        val fcRef = if (input.code.usesAciBaseProvisions) 0.80 * input.fcu else input.fcu
+        val fce = if (!input.code.usesAciBaseProvisions) {
             0.67 * input.fcu / 1.5
         } else {
             0.85 * 0.75 * fcRef
         }
-        val phiStrut = if (input.code == DeepBeamCode.ACI) 0.75 else 1.0
+        val phiStrut = if (input.code.usesAciBaseProvisions) 0.75 else 1.0
         val strutCapacity = phiStrut * fce * strutArea / 1000.0 // kN
 
         // ── Tie reinforcement ───────────────────────────────────────────
-        val phiTie = if (input.code == DeepBeamCode.ACI) 0.75 else 1.0
+        val phiTie = if (input.code.usesAciBaseProvisions) 0.75 else 1.0
         val tieAreaRequired = if (input.fy > 0.0) {
             tieForce * 1000.0 / (phiTie * input.fy)
         } else 0.0
@@ -157,7 +162,7 @@ class DeepBeamDesign {
         val tieAreaProvided = input.providedTieArea
 
         // ── Shear capacity ──────────────────────────────────────────────
-        val vcN = if (input.code == DeepBeamCode.ACI) {
+        val vcN = if (input.code.usesAciBaseProvisions) {
             0.17 * sqrt(fcRef) * input.width * effectiveDepth
         } else {
             0.24 * sqrt(input.fcu / 1.5) * input.width * effectiveDepth
@@ -165,7 +170,7 @@ class DeepBeamDesign {
         val vsN = if (input.stirrupSpacing > 0.0) {
             input.providedStirrupArea * input.fy * effectiveDepth / input.stirrupSpacing
         } else 0.0
-        val phiShear = if (input.code == DeepBeamCode.ACI) 0.75 else 1.0
+        val phiShear = if (input.code.usesAciBaseProvisions) 0.75 else 1.0
         val sectionShear = phiShear * (vcN + vsN) / 1000.0
         val stmShear = 2.0 * phiStrut * fce * strutArea * sinTheta / 1000.0
         val shearCapacity = minOf(sectionShear, stmShear)
@@ -174,7 +179,7 @@ class DeepBeamDesign {
         val bearingStress = if (input.bearingPlateWidth * input.width > 0.0) {
             factoredShear * 1000.0 / (input.bearingPlateWidth * input.width)
         } else 0.0
-        val bearingCapacity = if (input.code == DeepBeamCode.ACI) {
+        val bearingCapacity = if (input.code.usesAciBaseProvisions) {
             0.65 * 0.85 * fcRef
         } else {
             0.67 * input.fcu / 1.5
@@ -208,6 +213,10 @@ class DeepBeamDesign {
         if (bearingStress > bearingCapacity) warnings.add("Node bearing stress exceeds the limit")
 
         val notes = mutableListOf<String>()
+        notes.add("Design basis: ${input.code.version}")
+        if (input.code == DeepBeamCode.SBC) {
+            notes.add("SBC 304 local amendments are not independently modeled; ACI-base provisions are used for this screening.")
+        }
         notes.add("Strut-and-tie model with θ = ${"%.1f".format(Math.toDegrees(theta))}°")
         notes.add("Strut width = ${"%.1f".format(strutWidth)} mm, area = ${"%.0f".format(strutArea)} mm²")
         notes.add("fce = ${"%.2f".format(fce)} MPa, φ_strut = ${"%.2f".format(phiStrut)}")

@@ -622,7 +622,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.deepContent(
         CodeChips(
             options = DeepBeamCode.entries,
             selected = form.deepCode,
-            label = { it.name },
+            label = { "${it.displayName} · ${it.version}" },
             onSelected = { form.deepCode = it }
         )
     }

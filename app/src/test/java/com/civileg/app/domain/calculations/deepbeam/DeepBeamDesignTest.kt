@@ -69,6 +69,18 @@ class DeepBeamDesignTest {
     }
 
     @Test
+    fun `SBC uses the explicit ACI-base screening assumptions and reports local amendment limitation`() {
+        val sbc = design.design(input(code = DeepBeamCode.SBC, providedTie = 1200.0))
+        val aci = design.design(input(code = DeepBeamCode.ACI, providedTie = 1200.0))
+
+        assertEquals(DeepBeamDesign.spanToDepthLimit(DeepBeamCode.ACI, false),
+            DeepBeamDesign.spanToDepthLimit(DeepBeamCode.SBC, false), 1e-9)
+        assertEquals(aci.factoredLoad, sbc.factoredLoad, 1e-9)
+        assertEquals(aci.strutCapacity, sbc.strutCapacity, 1e-9)
+        assertTrue(sbc.notes.any { it.contains("SBC 304 local amendments are not independently modeled") })
+    }
+
+    @Test
     fun `ECP continuous limit is two`() {
         assertEquals(2.0, DeepBeamDesign.spanToDepthLimit(DeepBeamCode.ECP, true), 1e-9)
 
