@@ -1880,6 +1880,7 @@
     <string name="quality_tab_fire_protection">Fire Protection</string>
     <string name="quality_tab_reports">Reports</string>
     <string name="quality_tab_compliance">Compliance</string>
+    <string name="quality_control_screening_disclaimer">Preliminary screening only—not proof of code compliance. Confirm the governing edition, project specifications, exposure conditions, and unmodeled requirements with the responsible engineer.</string>
     <string name="boq_site_title">Site &amp; Quantities</string>
     <string name="boq_excavation_depth">Excavation Depth (m)</string>
     <string name="boq_working_space">Working Space (m)</string>

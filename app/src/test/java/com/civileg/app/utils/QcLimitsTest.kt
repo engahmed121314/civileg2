@@ -7,8 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Unit tests for [QcLimits] — the unified ECP/ACI/SBC code-limit source
- * used by the QC engines.
+ * Unit tests for [QcLimits] — preliminary screening limits used by QC.
  */
 class QcLimitsTest {
 
@@ -26,7 +25,8 @@ class QcLimitsTest {
         assertEquals(20.0, slab.value, 1e-9)
         assertEquals(40.0, beam.value, 1e-9)
         assertTrue(slab.unit == "mm")
-        assertTrue(slab.reference.isNotBlank())
+        assertTrue(slab.reference.contains(DesignCode.ACI.version))
+        assertTrue(slab.reference.contains("not modeled"))
     }
 
     @Test
@@ -94,14 +94,11 @@ class QcLimitsTest {
 
     @Test
     fun developmentLength_allCodesReturnPositiveValue() {
-        listOf(
-            DesignCode.ECP,
-            DesignCode.ACI,
-            DesignCode.SBC
-        ).forEach { code ->
+        DesignCode.entries.forEach { code ->
             val ld = QcLimits.developmentLength(16.0, 420.0, 30.0, code)
             assertTrue("ld must be positive for $code", ld.value > 0.0)
-            assertTrue(ld.reference.isNotBlank())
+            assertTrue(ld.reference.contains(code.version))
+            assertTrue(ld.reference.contains("not modeled"))
         }
     }
 
@@ -111,5 +108,10 @@ class QcLimitsTest {
         val classB = QcLimits.lapSpliceLength(20.0, 420.0, 30.0, DesignCode.ACI, "B").value
         assertEquals(classA, classB / 1.3, 1e-6)
         assertTrue(classB > classA)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun lapSplice_rejectsUnknownClass() {
+        QcLimits.lapSpliceLength(20.0, 420.0, 30.0, DesignCode.ACI, "C")
     }
 }

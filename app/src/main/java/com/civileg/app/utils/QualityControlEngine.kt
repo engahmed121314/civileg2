@@ -11,6 +11,8 @@ object QualityControlEngine {
 
     private const val CUBE_TO_CYLINDER = 0.8
     private const val STEEL_E = 200_000.0
+    const val SCREENING_DISCLAIMER =
+        "Preliminary QC screening only—not proof of code compliance. Confirm the governing edition, project specifications, exposure conditions, and all unmodeled requirements with the responsible engineer."
 
     data class QcOutcome(
         val title: String,
@@ -73,20 +75,21 @@ object QualityControlEngine {
         val lowerAccept = fcu - 3.5
         val ratio = if (strength28DaysMpa > 0) strength7DaysMpa / strength28DaysMpa else 0.0
         val slumpRange = QcLimits.slumpRange(code)
+        val selectedBasis = "${codeName(code)} preliminary screening; approved mix and project specifications govern"
 
         val checks = listOf(
             GenericSafetyCheck("Slump within code range", slumpMm, slumpRange.endInclusive, "mm",
-                slumpMm in slumpRange, "ECP 203 §6.3 / ACI 318-19 §26.12.1"),
+                slumpMm in slumpRange, selectedBasis),
             GenericSafetyCheck("28-day strength ≥ f'cu", strength28DaysMpa, fcu, "MPa",
-                strength28DaysMpa >= fcu, "ACI 318-19 Table 26.12.3.1"),
+                strength28DaysMpa >= fcu, selectedBasis),
             GenericSafetyCheck("Individual strength ≥ f'cu − 3.5 MPa", strength28DaysMpa, lowerAccept, "MPa",
-                strength28DaysMpa >= lowerAccept, "ACI 318-19 Table 26.12.3.1"),
+                strength28DaysMpa >= lowerAccept, selectedBasis),
             GenericSafetyCheck("7/28-day strength ratio ≥ 65%", ratio * 100.0, 65.0, "%",
-                ratio >= 0.65, "ECP 203 §6.3"),
+                ratio >= 0.65, "Project-defined early-strength screening criterion; verify specification"),
             GenericSafetyCheck("Air content 3–8%", airContent, 8.0, "%",
-                airContent in 3.0..8.0, "ASTM C231"),
+                airContent in 3.0..8.0, "Preliminary range only; verify exposure and approved mix requirements"),
             GenericSafetyCheck("Concrete temperature 5–40 °C", concreteTemp, 40.0, "°C",
-                concreteTemp in 5.0..40.0, "ACI 305.1 / ACI 306.1")
+                concreteTemp in 5.0..40.0, "Preliminary range only; verify placement and project requirements")
         )
 
         val passed = checks.all { it.passed }
@@ -148,18 +151,19 @@ object QualityControlEngine {
             else -> ElementType.BEAM
         }
         val coverLimit = QcLimits.minCover(element, code)
+        val selectedBasis = "${codeName(code)} preliminary reinforcement screening; member-specific provisions are not fully modeled"
         val minClearSpacing = maxOf(barDiameterMm, 25.0)
         val clearSpacing = if (n > 1) (b - 2 * coverMm - n * barDiameterMm) / (n - 1) else Double.POSITIVE_INFINITY
 
         val checks = listOf(
             GenericSafetyCheck("Reinforcement ratio ρ ≥ ρ_min", rho * 100.0, rhoMin * 100.0, "%",
-                rho >= rhoMin, "ACI 318-19 §25.4.2.2 / ECP 203 §4.2"),
+                rho >= rhoMin, selectedBasis),
             GenericSafetyCheck("Reinforcement ratio ρ ≤ 0.75·ρ_bal", rho * 100.0, rhoMax * 100.0, "%",
-                rho <= rhoMax, "ACI 318-19 §25.4.2.2"),
+                rho <= rhoMax, selectedBasis),
             GenericSafetyCheck("Cover ≥ required", coverMm, coverLimit.value, "mm",
                 coverMm >= coverLimit.value, coverLimit.reference),
             GenericSafetyCheck("Clear spacing ≥ max(d_b, 25 mm)", if (n > 1) clearSpacing else barDiameterMm,
-                minClearSpacing, "mm", if (n > 1) clearSpacing >= minClearSpacing else true, "ACI 318-19 §25.2.1")
+                minClearSpacing, "mm", if (n > 1) clearSpacing >= minClearSpacing else true, selectedBasis)
         )
 
         val passed = checks.all { it.passed }

@@ -1797,6 +1797,7 @@
     <string name="quality_tab_fire_protection">الحماية من الحريق</string>
     <string name="quality_tab_reports">التقارير</string>
     <string name="quality_tab_compliance">الامتثال</string>
+    <string name="quality_control_screening_disclaimer">فحص استرشادي فقط وليس إثباتًا للامتثال للكود. على المهندس المسؤول مراجعة الإصدار المعتمد ومواصفات المشروع وظروف التعرض والاشتراطات غير الممثلة.</string>
     <string name="boq_site_title">الموقع والكميات</string>
     <string name="boq_excavation_depth">عمق الحفر (م)</string>
     <string name="boq_working_space">مسافة العمل (م)</string>

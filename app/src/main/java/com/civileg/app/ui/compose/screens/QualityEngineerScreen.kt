@@ -3095,6 +3095,12 @@ private fun QcOutcomeCard(outcome: QualityControlEngine.QcOutcome?) {
             Divider()
             Spacer(modifier = Modifier.height(8.dp))
             Text(outcome.summary, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                stringResource(R.string.quality_control_screening_disclaimer),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
         }
     }
 }

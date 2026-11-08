@@ -10,8 +10,8 @@ import org.junit.Test
 /**
  * Unit tests for [QualityControlEngine].
  *
- * Verifies code-referenced pass/fail behaviour for every discipline and the
- * code-name mapping used by the exported PDF report.
+ * Verifies preliminary screening behavior and the selected-code labels used
+ * by the exported PDF report.
  */
 class QualityControlEngineTest {
 
@@ -43,6 +43,9 @@ class QualityControlEngineTest {
         assertEquals(6, outcome.checks.size)
         // utilization = 30 / 25 = 1.2
         assertEquals(1.2, outcome.utilizationRatio, 1e-6)
+        assertTrue(outcome.checks[0].reference?.contains(DesignCode.ECP.version) == true)
+        assertTrue(outcome.checks[1].reference?.contains("approved mix") == true)
+        assertTrue(QualityControlEngine.SCREENING_DISCLAIMER.contains("not proof of code compliance"))
     }
 
     @Test
@@ -80,6 +83,8 @@ class QualityControlEngineTest {
         )
         assertTrue(outcome.passed)
         assertEquals(4, outcome.checks.size)
+        assertTrue(outcome.checks[0].reference?.contains(DesignCode.ECP.version) == true)
+        assertTrue(outcome.checks[0].reference?.contains("not fully modeled") == true)
     }
 
     @Test

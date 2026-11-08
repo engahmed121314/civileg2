@@ -1198,6 +1198,7 @@ class QualityEngineerViewModel @Inject constructor(
 
                 val inputMap = LinkedHashMap<String, String>()
                 val resultMap = LinkedHashMap<String, String>()
+                resultMap["QC scope"] = QualityControlEngine.SCREENING_DISCLAIMER
                 val safetyChecks = mutableListOf<ProfessionalEnglishPdfReporter.SafetyCheck>()
                 val selectedCodes = linkedSetOf<String>()
 
@@ -1327,6 +1328,7 @@ class QualityEngineerViewModel @Inject constructor(
 
                 val inputMap = LinkedHashMap<String, String>()
                 val resultMap = LinkedHashMap<String, String>()
+                resultMap["QC scope"] = QualityControlEngine.SCREENING_DISCLAIMER
                 val safetyChecks = mutableListOf<ProfessionalEnglishPdfReporter.SafetyCheck>()
 
                 outcome?.let { o ->

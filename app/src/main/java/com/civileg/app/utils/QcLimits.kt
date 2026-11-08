@@ -14,27 +14,30 @@ enum class ExposureClass { C0, C1, C2 }
 
 object QcLimits {
 
+    private fun coverReference(code: DesignCode) =
+        "${code.version} preliminary cover screen; exposure, fire, and construction conditions are not modeled"
+
     fun minCover(element: ElementType, code: DesignCode): QcLimit = when (code) {
         DesignCode.ECP -> when (element) {
-            ElementType.SLAB -> QcLimit(20.0, "mm", "ECP 203 §4.2")
-            ElementType.BEAM -> QcLimit(40.0, "mm", "ECP 203 §4.2")
-            ElementType.COLUMN -> QcLimit(40.0, "mm", "ECP 203 §4.2")
-            ElementType.FOUNDATION -> QcLimit(75.0, "mm", "ECP 203 §4.2")
-            ElementType.WALL -> QcLimit(20.0, "mm", "ECP 203 §4.2")
+            ElementType.SLAB -> QcLimit(20.0, "mm", coverReference(code))
+            ElementType.BEAM -> QcLimit(40.0, "mm", coverReference(code))
+            ElementType.COLUMN -> QcLimit(40.0, "mm", coverReference(code))
+            ElementType.FOUNDATION -> QcLimit(75.0, "mm", coverReference(code))
+            ElementType.WALL -> QcLimit(20.0, "mm", coverReference(code))
         }
         DesignCode.ACI -> when (element) {
-            ElementType.SLAB -> QcLimit(20.0, "mm", "ACI 318-19 §20.6.1.4.2")
-            ElementType.BEAM -> QcLimit(40.0, "mm", "ACI 318-19 §20.6.1.4.2")
-            ElementType.COLUMN -> QcLimit(40.0, "mm", "ACI 318-19 §20.6.1.4.2")
-            ElementType.FOUNDATION -> QcLimit(75.0, "mm", "ACI 318-19 §20.6.1.4.2")
-            ElementType.WALL -> QcLimit(20.0, "mm", "ACI 318-19 §20.6.1.4.2")
+            ElementType.SLAB -> QcLimit(20.0, "mm", coverReference(code))
+            ElementType.BEAM -> QcLimit(40.0, "mm", coverReference(code))
+            ElementType.COLUMN -> QcLimit(40.0, "mm", coverReference(code))
+            ElementType.FOUNDATION -> QcLimit(75.0, "mm", coverReference(code))
+            ElementType.WALL -> QcLimit(20.0, "mm", coverReference(code))
         }
         DesignCode.SBC -> when (element) {
-            ElementType.SLAB -> QcLimit(20.0, "mm", "SBC 304-2018")
-            ElementType.BEAM -> QcLimit(40.0, "mm", "SBC 304-2018")
-            ElementType.COLUMN -> QcLimit(40.0, "mm", "SBC 304-2018")
-            ElementType.FOUNDATION -> QcLimit(75.0, "mm", "SBC 304-2018")
-            ElementType.WALL -> QcLimit(20.0, "mm", "SBC 304-2018")
+            ElementType.SLAB -> QcLimit(20.0, "mm", coverReference(code))
+            ElementType.BEAM -> QcLimit(40.0, "mm", coverReference(code))
+            ElementType.COLUMN -> QcLimit(40.0, "mm", coverReference(code))
+            ElementType.FOUNDATION -> QcLimit(75.0, "mm", coverReference(code))
+            ElementType.WALL -> QcLimit(20.0, "mm", coverReference(code))
         }
     }
 
@@ -53,14 +56,33 @@ object QcLimits {
     fun boltSpacingMin(d: Double): QcLimit = QcLimit(2.66 * d, "mm", "AISC 360-22 §J3.3")
 
     fun developmentLength(d: Double, fy: Double, fcu: Double, code: DesignCode): QcLimit = when (code) {
-        DesignCode.ECP -> QcLimit(0.5 * fy / Math.sqrt(fcu) * d, "mm", "ECP 203 §4.2")
-        DesignCode.ACI -> QcLimit(0.5 * fy / Math.sqrt(fcu) * d, "mm", "ACI 318-19 §25.4.2")
-        DesignCode.SBC -> QcLimit(0.5 * fy / Math.sqrt(fcu) * d, "mm", "SBC 304-2018")
+        DesignCode.ECP -> QcLimit(
+            0.5 * fy / Math.sqrt(fcu) * d,
+            "mm",
+            "${code.version} preliminary estimate; detailed anchorage provisions are not modeled"
+        )
+        DesignCode.ACI -> QcLimit(
+            0.5 * fy / Math.sqrt(fcu) * d,
+            "mm",
+            "${code.version} preliminary estimate; detailed anchorage provisions are not modeled"
+        )
+        DesignCode.SBC -> QcLimit(
+            0.5 * fy / Math.sqrt(fcu) * d,
+            "mm",
+            "${code.version} preliminary estimate; detailed anchorage provisions are not modeled"
+        )
     }
 
     fun lapSpliceLength(d: Double, fy: Double, fcu: Double, code: DesignCode, spliceClass: String): QcLimit {
+        require(spliceClass == "A" || spliceClass == "B") {
+            "Unsupported splice class: $spliceClass"
+        }
         val ld = developmentLength(d, fy, fcu, code).value
         val factor = if (spliceClass == "A") 1.0 else 1.3
-        return QcLimit(factor * ld, "mm", "ACI 318-19 §25.5.2")
+        return QcLimit(
+            factor * ld,
+            "mm",
+            "${code.version} preliminary class $spliceClass splice estimate; detailing provisions are not modeled"
+        )
     }
 }

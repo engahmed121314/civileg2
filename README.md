@@ -8,13 +8,14 @@
 
 <br/>
 
-[![Android CI](https://github.com/engahmed121314/civileg/actions/workflows/android.yml/badge.svg)](https://github.com/engahmed121314/civileg/actions/workflows/android.yml)
+[![Android CI](https://github.com/engahmed121314/civileg2/actions/workflows/android.yml/badge.svg)](https://github.com/engahmed121314/civileg2/actions/workflows/android.yml)
 [![API Level](https://img.shields.io/badge/minSDK-26-brightgreen?logo=android)](https://developer.android.com/about/versions)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Compose BOM](https://img.shields.io/badge/Compose_BOM-2024.12.01-5846BE?logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Security](https://img.shields.io/badge/Security-Play_Integrity-blue?logo=google)](SECURITY.md)
+[![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors)](https://github.com/sponsors/engahmed121314)
 
 <br/>
 
@@ -48,11 +49,11 @@
 
 ## Overview
 
-**Civil Engineer Pro** is a comprehensive Android application for structural engineers, civil engineering students, and construction professionals. It provides precise structural design and analysis tools for **reinforced concrete**, **steel structures**, **seismic analysis**, and **quantity surveying** — fully compliant with major international design codes.
+**Civil Engineer Pro** is a bilingual Android toolkit for preliminary structural design and analysis, including **reinforced concrete**, **steel structures**, **seismic analysis**, **quantity surveying**, engineering drawings, and PDF reports. It offers selectable Egyptian, American, and Saudi code bases; code coverage and assumptions vary by calculation module.
 
-The app supports **3 international design codes**: the **Egyptian Code (ECP 203/201/205)**, the **American Concrete Institute (ACI 318 / ASCE 7-16 / AISC 360-16)**, and the **Saudi Building Code (SBC 304/301/306)**.
+The app provides selections for the **Egyptian Code (ECP)**, **American standards (ACI / ASCE / AISC)**, and the **Saudi Building Code (SBC)**. The selected edition shown by a module is not a certification that every provision of that edition has been implemented.
 
-> **Disclaimer:** This application is for *educational and preliminary design purposes only*. All results must be verified by a licensed structural engineer. The developer is not responsible for any errors or damages.
+> **Disclaimer:** This application is for *educational and preliminary design purposes only*. Its calculations are not a substitute for the applicable standards, project specifications, or independent engineering review. A licensed structural engineer must verify inputs, assumptions, and results before use.
 
 ---
 
@@ -74,7 +75,7 @@ The app supports **3 international design codes**: the **Egyptian Code (ECP 203/
 
 | Module | Description |
 |--------|-------------|
-| **Steel Members** | AISC 360-16 LRFD — tension, compression (buckling), bending (LTB), combined loads (H1-1a/H1-1b) — ECP 205 / AISC / SBC 306 |
+| **Steel Members** | Preliminary checks against the selected ECP 205, AISC 360-22, or SBC 306 basis; applicability and assumptions vary by module |
 | **Base Plate Design** | Concentric & eccentric loads, pocket bases, anchor bolt design (grades 4.6–10.9) |
 | **Bolt & Weld** | Bolt capacity (shear/bearing/tension/combined/slip-critical/block shear) + fillet weld (E60XX–E90XX) |
 | **Steel Warehouse** | Complete portal frame — 4-view drawings (front/plan/side/3D isometric), BMD, PDF report |
@@ -108,9 +109,11 @@ The app supports **3 international design codes**: the **Egyptian Code (ECP 203/
 
 | Code | Standards | Country |
 |------|-----------|---------|
-| **ECP** | ECP 203 (Concrete), ECP 201 (Seismic), ECP 205 (Steel) | 🇪🇬 Egypt |
-| **ACI / AISC** | ACI 318-19, ASCE 7-16, AISC 360-16 | 🇺🇸 USA / International |
-| **SBC** | SBC 304 (Concrete), SBC 301 (Seismic), SBC 306 (Steel) | 🇸🇦 Saudi Arabia |
+| **ECP** | ECP 203-2025 (concrete selection), ECP 201 (seismic), ECP 205-2007 (steel basis) | 🇪🇬 Egypt |
+| **ACI / ASCE / AISC** | ACI 318-25 (concrete selection), ASCE 7-16 (seismic), AISC 360-22 (steel basis) | 🇺🇸 USA / International |
+| **SBC** | SBC 304-2024 (concrete selection), SBC 301 (seismic), SBC 306-2018 (steel basis) | 🇸🇦 Saudi Arabia |
+
+These are the editions identified by the app's current code selector and quality-control labels. Individual calculators may use different assumptions or legacy clause references; confirm the governing edition and provisions for each project.
 
 ---
 
@@ -173,9 +176,9 @@ app/src/main/java/com/civileg/app/
 | **Play Integrity API** | Tamper detection & genuine device verification |
 | **AES-256 Encryption** | Sensitive local data encrypted at rest |
 | **R8 / ProGuard** | Advanced obfuscation protecting design formulas |
-| **No Cloud Dependency** | All calculations run 100% offline on-device |
-| **No Data Collection** | Zero user data transmitted or stored externally |
-| **Secure In-App Billing** | Google Play Billing with server-side verification |
+| **On-device calculations** | Core structural calculations run locally; network-dependent services may require connectivity |
+| **Data disclosures** | Firebase Crashlytics is included as a dependency; review runtime collection and Google Play Data safety disclosures before release |
+| **Sponsorship** | Optional project support through GitHub Sponsors; availability depends on the maintainer's account approval |
 
 > Found a security issue? Please report it privately at **engahmed121314@gmail.com** — see [SECURITY.md](SECURITY.md).
 
@@ -194,8 +197,8 @@ app/src/main/java/com/civileg/app/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/engahmed121314/civileg.git
-cd civileg
+git clone https://github.com/engahmed121314/civileg2.git
+cd civileg2
 
 # 2. Build debug APK
 ./gradlew assembleDebug
@@ -263,10 +266,8 @@ The project uses **GitHub Actions** for continuous integration:
 
 | Job | Trigger | Description |
 |-----|---------|-------------|
-| **Lint** | Push / PR | Android Lint analysis |
-| **Unit Tests** | After Lint | JVM unit tests (`testDebugUnitTest`) |
-| **Debug Build** | After Tests | Build & upload debug APK artifact |
-| **Release AAB** | On `v*` tag | Sign & upload release bundle |
+| **Android CI** | Manual dispatch | Lint report, JVM unit tests, and debug APK artifact |
+| **Release AAB** | Manual dispatch on a `v*` tag | Requires signing secrets; uploads a release bundle |
 | **Dependabot** | Weekly | Gradle dependency updates |
 
 ---
@@ -286,11 +287,12 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 | Channel | Details |
 |---------|---------|
 | 👤 **Developer** | Eng. Ahmed Magdy |
-| 🌐 **GitHub** | [github.com/engahmed121314](https://github.com/engahmed121314) |
+| 🌐 **GitHub** | [github.com/engahmed121314/civileg2](https://github.com/engahmed121314/civileg2) |
 | 📧 **Email** | [engahmed121314@gmail.com](mailto:engahmed121314@gmail.com) |
 | 📱 **Phone** | +20 101 262 8353 |
-| 🐛 **Issues** | [GitHub Issues](https://github.com/engahmed121314/civileg/issues) |
+| 🐛 **Issues** | [GitHub Issues](https://github.com/engahmed121314/civileg2/issues) |
 | 🔒 **Security** | [Security Policy](SECURITY.md) |
+| 💚 **Sponsor** | [GitHub Sponsors](https://github.com/sponsors/engahmed121314) — available after the maintainer activates a Sponsors profile |
 
 ---
 ---
@@ -301,11 +303,11 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 
 ## نظرة عامة
 
-**المهندس المدني برو** هو تطبيق أندرويد شامل مصمم للمهندسين الإنشائيين وطلاب الهندسة المدنية ومحترفي البناء. يوفر أدوات تصميم وتحليل دقيقة للـ**خرسانة المسلحة** و**المنشآت الفولاذية** و**التحليل الزلزالي** و**جداول الكميات** — متوافق تماماً مع كودات التصميم الدولية الرئيسية.
+**المهندس المدني برو** مجموعة أدوات أندرويد ثنائية اللغة للتصميم والتحليل الإنشائي المبدئي، تشمل **الخرسانة المسلحة** و**المنشآت الفولاذية** و**التحليل الزلزالي** و**جداول الكميات** والرسومات الهندسية وتقارير PDF. تتيح اختيار أساس مصري أو أمريكي أو سعودي، مع اختلاف نطاق التطبيق والافتراضات بين وحدات الحساب.
 
-يدعم التطبيق **3 كودات تصميم دولية**: **الكود المصري (ECP 203/201/205)**، **الكود الأمريكي (ACI 318 / ASCE 7-16 / AISC 360-16)**، و**الكود السعودي (SBC 304/301/306)**.
+يوفر التطبيق اختيارات **الكود المصري (ECP)** و**المعايير الأمريكية (ACI / ASCE / AISC)** و**الكود السعودي (SBC)**. ظهور إصدار في الوحدة لا يعني أن جميع اشتراطات ذلك الإصدار مطبقة أو معتمدة.
 
-> **إخلاء المسؤولية:** هذا التطبيق لأغراض *تعليمية والتصميم المبدئي فقط*. يجب التحقق من جميع النتائج بواسطة مهندس إنشائي مرخص.
+> **إخلاء المسؤولية:** التطبيق للأغراض *التعليمية والتصميم المبدئي فقط*، ولا يغني عن الكود المعتمد أو مواصفات المشروع أو المراجعة الهندسية المستقلة. يجب على مهندس إنشائي مرخص مراجعة المدخلات والافتراضات والنتائج قبل استخدامها.
 
 ---
 
@@ -327,7 +329,7 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 
 | الوحدة | الوصف |
 |--------|-------|
-| **الأعضاء الفولاذية** | AISC 360-16 LRFD — شد وضغط (انبعاج) وانحناء (LTB) وأحمال مركبة (H1-1a/H1-1b) |
+| **الأعضاء الفولاذية** | فحوص مبدئية وفق أساس ECP 205 أو AISC 360-22 أو SBC 306 المختار؛ وتختلف الافتراضات والنطاق حسب الوحدة |
 | **لوحات القاعدة** | محملة مركزياً ولامركزياً، قواعد جيبية، براغي التثبيت |
 | **البراغي واللحامات** | سعة البراغي والانزلاق الحرج وقص الكتلة + اللحامات التفصيلية |
 | **المستودعات الفولاذية** | تصميم كامل لإطارات البوابة — رسومات 4 مناظر (أمامي/مسقط/جانبي/ثلاثي)، تقرير PDF |
@@ -361,9 +363,11 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 
 | الكود | المعايير | الدولة |
 |-------|---------|--------|
-| **ECP** | ECP 203 (خرسانة)، ECP 201 (زلازل)، ECP 205 (فولاذ) | 🇪🇬 مصر |
-| **ACI / AISC** | ACI 318-19، ASCE 7-16، AISC 360-16 | 🇺🇸 أمريكا / دولي |
-| **SBC** | SBC 304 (خرسانة)، SBC 301 (زلازل)، SBC 306 (فولاذ) | 🇸🇦 السعودية |
+| **ECP** | ECP 203-2025 (اختيار الخرسانة)، ECP 201 (زلازل)، ECP 205-2007 (أساس الفولاذ) | 🇪🇬 مصر |
+| **ACI / ASCE / AISC** | ACI 318-25 (اختيار الخرسانة)، ASCE 7-16 (زلازل)، AISC 360-22 (أساس الفولاذ) | 🇺🇸 أمريكا / دولي |
+| **SBC** | SBC 304-2024 (اختيار الخرسانة)، SBC 301 (زلازل)، SBC 306-2018 (أساس الفولاذ) | 🇸🇦 السعودية |
+
+هذه الإصدارات هي ما تعرضه اختيارات الأكواد وتسميات فحوص الجودة الحالية. قد تستخدم بعض الحاسبات افتراضات أو إحالات لبنود أقدم؛ لذا يجب تأكيد الإصدار والاشتراطات الحاكمة لكل مشروع.
 
 ---
 
@@ -399,9 +403,9 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 | **Play Integrity API** | كشف التلاعب والتحقق من الأجهزة الأصيلة |
 | **تشفير AES-256** | تشفير البيانات الحساسة المحلية |
 | **R8 / ProGuard** | تشفير متقدم لحماية خوارزميات التصميم والمعادلات الهندسية |
-| **بدون اتصال بالإنترنت** | جميع الحسابات تعمل 100% محلياً على الجهاز |
-| **لا جمع بيانات** | لا يتم نقل أو تخزين بيانات المستخدم خارجياً |
-| **فوترة آمنة** | Google Play Billing مع التحقق من جانب الخادم |
+| **الحسابات على الجهاز** | الحسابات الإنشائية الأساسية تعمل محلياً؛ وقد تتطلب الخدمات المرتبطة اتصالاً بالإنترنت |
+| **الإفصاح عن البيانات** | يتضمن المشروع اعتماد Firebase Crashlytics؛ يجب مراجعة جمع البيانات الفعلي وإفصاحات أمان البيانات في Google Play قبل النشر |
+| **الدعم المالي** | دعم اختياري للمشروع عبر GitHub Sponsors، بعد تفعيل حساب المطور وقبوله في البرنامج |
 
 > اكتشفت ثغرة أمنية؟ يرجى الإبلاغ عنها بسرية على **engahmed121314@gmail.com** — راجع [SECURITY.md](SECURITY.md).
 
@@ -420,8 +424,8 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 
 ```bash
 # 1. استنساخ المستودع
-git clone https://github.com/engahmed121314/civileg.git
-cd civileg
+git clone https://github.com/engahmed121314/civileg2.git
+cd civileg2
 
 # 2. بناء APK التطوير
 ./gradlew assembleDebug
@@ -471,10 +475,8 @@ powershell -File tools\emulator\Test-App.ps1
 
 | المهمة | المُشغِّل | الوصف |
 |--------|---------|-------|
-| **Lint** | Push / PR | تحليل Android Lint |
-| **اختبارات الوحدة** | بعد Lint | اختبارات JVM |
-| **بناء Debug** | بعد الاختبارات | بناء ورفع APK |
-| **إصدار AAB** | عند وسم `v*` | توقيع ورفع حزمة الإصدار |
+| **Android CI** | تشغيل يدوي | تقرير Lint واختبارات JVM وملف APK للتطوير |
+| **إصدار AAB** | تشغيل يدوي على وسم `v*` | يتطلب أسرار التوقيع ويرفع حزمة الإصدار |
 | **Dependabot** | أسبوعياً | تحديثات تبعيات Gradle |
 
 ---
@@ -494,11 +496,12 @@ powershell -File tools\emulator\Test-App.ps1
 | القناة | التفاصيل |
 |--------|---------|
 | 👤 **المطور** | المهندس أحمد مجدي |
-| 🌐 **جيت هب** | [github.com/engahmed121314](https://github.com/engahmed121314) |
+| 🌐 **جيت هب** | [github.com/engahmed121314/civileg2](https://github.com/engahmed121314/civileg2) |
 | 📧 **البريد الإلكتروني** | [engahmed121314@gmail.com](mailto:engahmed121314@gmail.com) |
 | 📱 **الهاتف** | 01012628353+ |
-| 🐛 **المشاكل** | [GitHub Issues](https://github.com/engahmed121314/civileg/issues) |
+| 🐛 **المشاكل** | [GitHub Issues](https://github.com/engahmed121314/civileg2/issues) |
 | 🔒 **الأمان** | [سياسة الأمان](SECURITY.md) |
+| 💚 **الدعم** | [GitHub Sponsors](https://github.com/sponsors/engahmed121314) — يظهر الدعم بعد تفعيل وقبول ملف المطور |
 
 </div>
 
@@ -509,8 +512,8 @@ powershell -File tools\emulator\Test-App.ps1
 **Made with ❤️ for Civil Engineers Worldwide**
 **صُنع بشغف لمهندسي المدني حول العالم**
 
-[![GitHub stars](https://img.shields.io/github/stars/engahmed121314/civileg?style=social)](https://github.com/engahmed121314/civileg/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/engahmed121314/civileg?style=social)](https://github.com/engahmed121314/civileg/network/members)
-[![GitHub issues](https://img.shields.io/github/issues/engahmed121314/civileg)](https://github.com/engahmed121314/civileg/issues)
+[![GitHub stars](https://img.shields.io/github/stars/engahmed121314/civileg2?style=social)](https://github.com/engahmed121314/civileg2/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/engahmed121314/civileg2?style=social)](https://github.com/engahmed121314/civileg2/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/engahmed121314/civileg2)](https://github.com/engahmed121314/civileg2/issues)
 
 </div>
