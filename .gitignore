@@ -63,6 +63,7 @@ core/calculations/build/
 # Build output logs (not matched by *.log)
 build.release.out
 build.release.err
+/.kotlin/
 
 # Local SQLite database
 /db/custom.db
@@ -73,7 +74,7 @@ __pycache__/
 
 # ── غير مرتبطة بتطبيق أندرويد (إخفاء من العرض) ─────────────────────────
 # واجهة ويب Next.js / TypeScript
-src/
+/src/
 next.config.ts
 tailwind.config.ts
 postcss.config.mjs
@@ -111,4 +112,3 @@ core/calculations/build/
 artifacts/
 node_modules/
 .next/
-

@@ -174,8 +174,8 @@
     <string name="depth_m">العمق (m)</string>
     <string name="depth_value">العمق: %.2f م</string>
     <string name="width_value">العرض: %.2f م</string>
-    <string name="column_reinforcement" formatted="false">حديد رئيسي: قطر %d مم، مسافة %.1f سم (%d سيخ)</string>
-    <string name="ties_reinforcement" formatted="false">كانات: قطر %d مم، مسافة %.1f سم</string>
+    <string name="column_reinforcement">حديد رئيسي: قطر %1$d مم، مسافة %2$.1f سم (%3$d سيخ)</string>
+    <string name="ties_reinforcement">كانات: قطر %1$d مم، مسافة %2$.1f سم</string>
     <string name="ties_diameter">قطر الكانات (مم)</string>
     <string name="ties_spacing">مسافة الكانات (سم)</string>
     <string name="concrete_volume">حجم الخرسانة: %.2f م³</string>
@@ -1036,16 +1036,16 @@
     <string name="frame_max_shear_format">أقصى قص: %.1f kN</string>
     <string name="frame_span_format">البحر = %.2f م</string>
     <string name="frame_height_format">الارتفاع = %.2f م</string>
-    <string name="frame_provided_req_format" formatted="false">الموفر: %.0f مم² | المطلوب: %.0f مم²</string>
-    <string name="frame_beam_provided_req_mu_format" formatted="false">الموفر: %.0f مم² | المطلوب: %.0f مم² | Mu: %.1f kN.m</string>
-    <string name="frame_level_format" formatted="false">L%d (y=%.2fm)</string>
+    <string name="frame_provided_req_format">الموفر: %1$.0f مم² | المطلوب: %2$.0f مم²</string>
+    <string name="frame_beam_provided_req_mu_format">الموفر: %1$.0f مم² | المطلوب: %2$.0f مم² | Mu: %3$.1f kN.m</string>
+    <string name="frame_level_format">L%1$d (y=%2$.2fm)</string>
     <string name="frame_legend_title">دليل الرسم</string>
     <string name="frame_legend_slab">بلاطة</string>
     <string name="frame_legend_beam">كمرة</string>
     <string name="frame_legend_column">عمود</string>
-    <string name="frame_plan_span_floors_format" formatted="false">L = %.2f م (%d أدوار)</string>
-    <string name="site_coverage_overlaps_format" formatted="false">التغطية: %d%% | التداخلات: %d</string>
-    <string name="execution_pour_log_format" formatted="false">الهبوط: %d مم | الحجم: %.1f م³</string>
+    <string name="frame_plan_span_floors_format">L = %1$.2f م (%2$d أدوار)</string>
+    <string name="site_coverage_overlaps_format">التغطية: %1$d%% | التداخلات: %2$d</string>
+    <string name="execution_pour_log_format">الهبوط: %1$d مم | الحجم: %2$.1f م³</string>
 
     <string name="frame_member_id_format">#%d</string>
     <string name="frame_udl_format">%.1f ك.ن/م</string>
@@ -1055,9 +1055,9 @@
     <string name="frame_scale_bar_format">%d م</string>
     <string name="frame_dim_b_format">b = %d مم</string>
     <string name="frame_dim_h_format">h = %d مم</string>
-    <string name="frame_rebar_column_format" formatted="false">%d Ø%d مم + Ø%d/@%dمم</string>
-    <string name="frame_rebar_beam_bot_top_format" formatted="false">%d Ø%d (سفلي) + %d Ø%d (علوي)</string>
-    <string name="frame_rebar_beam_stirrup_format" formatted="false">+ Ø%d/@%d مم</string>
+    <string name="frame_rebar_column_format">%1$d Ø%2$d مم + Ø%3$d/@%4$dمم</string>
+    <string name="frame_rebar_beam_bot_top_format">%1$d Ø%2$d (سفلي) + %3$d Ø%4$d (علوي)</string>
+    <string name="frame_rebar_beam_stirrup_format">+ Ø%1$d/@%2$d مم</string>
     <string name="frame_unit_kn_m">ك.ن.م</string>
     <string name="frame_unit_kn">ك.ن</string>
 
@@ -1603,7 +1603,7 @@
     <string name="steel_purlins_format">البرولين: %s</string>
     <string name="steel_girts_format">الجيرت: %s</string>
     <string name="steel_connection_name_format">وصلة: %s</string>
-    <string name="steel_capacity_demand_format" formatted="false">السعة: %.1f kN (الطلب: %.1f kN)</string>
+    <string name="steel_capacity_demand_format">السعة: %1$.1f kN (الطلب: %2$.1f kN)</string>
     <string name="steel_grade_label">درجة الحديد</string>
     <string name="steel_section_placeholder">IPE 300, HEB 240…</string>
     <string name="steel_member_type_label">نوع العنصر</string>
@@ -1687,7 +1687,7 @@
     <string name="water_level_pdf_type">نوع</string>
     <string name="water_level_pdf_reading_m">القراءة (م)</string>
     <string name="water_level_pdf_rl_m">المنسوب (م)</string>
-    <string name="water_level_pdf_max_rl_format" formatted="false">أقصى منسوب: %.3f م  |  أدنى منسوب: %.3f م  |  الفرق: %.3f م</string>
+    <string name="water_level_pdf_max_rl_format">أقصى منسوب: %1$.3f م  |  أدنى منسوب: %2$.3f م  |  الفرق: %3$.3f م</string>
     <string name="steel_1_floor_standard">طابق واحد (هنغار قياسي)</string>
     <string name="steel_dead_load_kn_m2">الحمل الميت (kN/m²)</string>
     <string name="steel_live_load_kn_m2">الحمل الحي (kN/m²)</string>
@@ -1808,4 +1808,10 @@
     <string name="home_advanced_design">التصميم المتقدم</string>
     <string name="home_advanced_design_sub">كمرات مركبة، حريق، كمرات عميقة، خوازيق، هبوط</string>
     <string name="screen_post_tensioned_title">تصميم ما بعد الشد</string>
+    <string name="design_status_not_verified">غير متحقق - مؤشرات أولية فقط. يلزم استكمال أساس التصميم ومدخلات المشروع ومراجعتها.</string>
+    <string name="load_distribution_unavailable">توزيع الأحمال غير متاح. لم يُنفذ تحليل إنشائي موثوق ولم يتم تغيير النموذج.</string>
+    <string name="quantity_geometry_invalid">الكميات غير متاحة: يجب أن تحتوي كل بلاطة على ثلاث عقد صحيحة غير واقعة على خط واحد على الأقل.</string>
+    <string name="quantity_estimate_notice">الكميات والتكاليف تقديرية أولية؛ يجب التحقق من الهندسة والقياسات والأسعار.</string>
+    <string name="live_prices_unavailable">الأسعار المباشرة غير متاحة؛ لم يتم تغيير الأسعار المخزنة.</string>
+    <string name="slab_tool_unavailable">إنشاء البلاطات غير متاح حاليا؛ لم يتم تغيير النموذج.</string>
 </resources>

@@ -7,6 +7,11 @@
 name: Android CI/CD
 
 on:
+  push:
+    branches: [ "master" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "master" ]
   workflow_dispatch:
 
 concurrency:
@@ -16,7 +21,9 @@ concurrency:
 env:
   JAVA_VERSION: '17'
   JAVA_DISTRIBUTION: 'temurin'
-  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
+
+permissions:
+  contents: read
 
 jobs:
   # ─── Job 1: Lint Check ────────────────────────────────────────────────
@@ -34,27 +41,20 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Run Android Lint
+      - name: Run Android Lint (non-blocking)
         run: ./gradlew lintDebug --no-daemon
         continue-on-error: true
 
       - name: Check lint severity
         run: |
           if [ -f app/build/reports/lint-results-debug.xml ]; then
-            ERRORS=$(grep -c 'severity="error"' app/build/reports/lint-results-debug.xml 2>/dev/null || echo "0")
+            ERRORS=$(grep -c 'severity="error"' app/build/reports/lint-results-debug.xml 2>/dev/null || true)
             echo "Lint errors found: $ERRORS"
             if [ "$ERRORS" -gt 0 ]; then
-              echo "::warning::$ERRORS lint error(s) found — non-blocking for now"
+              echo "::warning::$ERRORS lint error(s) found; see the uploaded lint report"
             fi
           fi
 
@@ -65,6 +65,7 @@ jobs:
           name: lint-report
           path: app/build/reports/lint-results-debug.html
           retention-days: 14
+          if-no-files-found: ignore
 
   # ─── Job 2: Unit Tests ────────────────────────────────────────────────
   test:
@@ -82,18 +83,11 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest --no-daemon
+        run: ./gradlew test --no-daemon
 
       - name: Upload test results
         if: always()
@@ -102,6 +96,7 @@ jobs:
           name: test-report
           path: app/build/reports/tests/
           retention-days: 14
+          if-no-files-found: ignore
 
   # ─── Job 3: Debug APK Build ──────────────────────────────────────────
   build-debug:
@@ -109,7 +104,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [lint, test]
-    if: always()
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -120,15 +114,8 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Build debug APK
         run: ./gradlew assembleDebug --no-daemon
@@ -139,6 +126,7 @@ jobs:
           name: civileg2-debug
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 7
+          if-no-files-found: error
 
   # ─── Job 4: Release AAB (only on tags) ──────────────────────────────
   build-release:
@@ -147,6 +135,8 @@ jobs:
     timeout-minutes: 30
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build-debug
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -157,18 +147,71 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
 
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Decode keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
+      - name: Validate signing secrets and configure release IDs
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
+          ADMOB_BANNER_ID: ${{ vars.ADMOB_BANNER_ID }}
+          ADMOB_INTERSTITIAL_ID: ${{ vars.ADMOB_INTERSTITIAL_ID }}
+          ADMOB_NATIVE_ID: ${{ vars.ADMOB_NATIVE_ID }}
+          ADMOB_REWARDED_ID: ${{ vars.ADMOB_REWARDED_ID }}
+        run: |
+          for name in KEYSTORE_BASE64 KEY_ALIAS KEY_PASSWORD KEYSTORE_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Required GitHub Actions secret $name is not configured."
+              exit 1
+            fi
+          done
+
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > app/release.keystore
+          if ! keytool -list -keystore app/release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error::The configured release keystore, alias, or store password is invalid."
+            exit 1
+          fi
+
+          admob_ids=("$ADMOB_APP_ID" "$ADMOB_BANNER_ID" "$ADMOB_INTERSTITIAL_ID" "$ADMOB_NATIVE_ID" "$ADMOB_REWARDED_ID")
+          configured=0
+          for value in "${admob_ids[@]}"; do
+            if [ -n "$value" ]; then
+              configured=$((configured + 1))
+            fi
+          done
+
+          if [ "$configured" -eq 0 ]; then
+            echo "::warning::AdMob GitHub variables are not configured; this release will use Google test ad IDs."
+            exit 0
+          fi
+          if [ "$configured" -ne "${#admob_ids[@]}" ]; then
+            echo "::error::Configure all five AdMob repository variables or leave all of them empty."
+            exit 1
+          fi
+
+          if [[ ! "$ADMOB_APP_ID" =~ ^ca-app-pub-[0-9]{16}~[0-9]{10}$ ]]; then
+            echo "::error::ADMOB_APP_ID has an invalid format."
+            exit 1
+          fi
+          publisher="${ADMOB_APP_ID%%~*}"
+          for name in ADMOB_BANNER_ID ADMOB_INTERSTITIAL_ID ADMOB_NATIVE_ID ADMOB_REWARDED_ID; do
+            value="${!name}"
+            if [[ ! "$value" =~ ^ca-app-pub-[0-9]{16}/[0-9]{10}$ ]] || [ "${value%%/*}" != "$publisher" ]; then
+              echo "::error::$name has an invalid format or does not match ADMOB_APP_ID."
+              exit 1
+            fi
+          done
+
+          {
+            printf 'admob.app.id=%s\n' "$ADMOB_APP_ID"
+            printf 'admob.banner.id=%s\n' "$ADMOB_BANNER_ID"
+            printf 'admob.interstitial.id=%s\n' "$ADMOB_INTERSTITIAL_ID"
+            printf 'admob.native.id=%s\n' "$ADMOB_NATIVE_ID"
+            printf 'admob.rewarded.id=%s\n' "$ADMOB_REWARDED_ID"
+          } >> local.properties
 
       - name: Build release AAB
         env:
@@ -184,6 +227,7 @@ jobs:
           name: civileg2-release
           path: app/build/outputs/bundle/release/*.aab
           retention-days: 30
+          if-no-files-found: error
 
   # ─── Job 5: Build Summary ────────────────────────────────────────────
   summary:

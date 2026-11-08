@@ -10,8 +10,8 @@
 
 [![Android CI](https://github.com/engahmed121314/civileg2/actions/workflows/android.yml/badge.svg)](https://github.com/engahmed121314/civileg2/actions/workflows/android.yml)
 [![API Level](https://img.shields.io/badge/minSDK-26-brightgreen?logo=android)](https://developer.android.com/about/versions)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
-[![Compose BOM](https://img.shields.io/badge/Compose_BOM-2024.12.01-5846BE?logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.2.20-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Compose BOM](https://img.shields.io/badge/Compose_BOM-2025.06.01-5846BE?logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Security](https://img.shields.io/badge/Security-Play_Integrity-blue?logo=google)](SECURITY.md)
@@ -121,12 +121,12 @@ These are the editions identified by the app's current code selector and quality
 
 | Component | Technology |
 |-----------|------------|
-| **Language** | Kotlin 2.1.0 |
+| **Language** | Kotlin 2.2.20 |
 | **UI Framework** | Jetpack Compose + Material 3 |
 | **Dependency Injection** | Hilt (Dagger) |
 | **Database** | Room (SQLite) — 11 entities, 11 DAOs |
 | **Navigation** | Jetpack Navigation Compose |
-| **Build System** | Gradle 8.13 + Version Catalog |
+| **Build System** | Gradle 9.6.0 + Version Catalog |
 | **Min SDK** | API 26 (Android 8.0 Oreo) |
 | **Target SDK** | API 36 (Android 16) |
 | **JDK** | 17 (Temurin) |
@@ -191,7 +191,7 @@ app/src/main/java/com/civileg/app/
 - **JDK 17** (Temurin recommended)
 - **Android Studio Meerkat** or newer
 - **Android SDK** with API 36
-- **Gradle 8.13** (handled automatically by the wrapper)
+- **Gradle 9.6.0** (handled automatically by the wrapper)
 
 ### Build Instructions
 
@@ -266,9 +266,15 @@ The project uses **GitHub Actions** for continuous integration:
 
 | Job | Trigger | Description |
 |-----|---------|-------------|
-| **Android CI** | Manual dispatch | Lint report, JVM unit tests, and debug APK artifact |
-| **Release AAB** | Manual dispatch on a `v*` tag | Requires signing secrets; uploads a release bundle |
+| **Android CI** | Push to `master`, pull requests to `master`, or manual dispatch | JVM unit tests, non-blocking lint report, and debug APK artifact; no emulator |
+| **Release AAB** | Push a `v*` tag (or dispatch on that tag) | Signed release bundle artifact; requires `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, and `KEYSTORE_PASSWORD` repository secrets |
+| **Release APK** | Manual dispatch | Signed APK artifact; requires the same signing secrets |
 | **Dependabot** | Weekly | Gradle dependency updates |
+
+Release builds optionally use these GitHub repository variables: `ADMOB_APP_ID`,
+`ADMOB_BANNER_ID`, `ADMOB_INTERSTITIAL_ID`, `ADMOB_NATIVE_ID`, and
+`ADMOB_REWARDED_ID`. Configure all five together; if none are configured, the
+build warns and retains Google's test ad IDs.
 
 ---
 
@@ -375,12 +381,12 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 
 | المكوّن | التقنية |
 |---------|---------|
-| **اللغة** | Kotlin 2.1.0 |
+| **اللغة** | Kotlin 2.2.20 |
 | **إطار واجهة المستخدم** | Jetpack Compose + Material 3 |
 | **حقن التبعيات** | Hilt (Dagger) |
 | **قاعدة البيانات** | Room (SQLite) — 11 كيان، 11 واجهة DAO |
 | **التنقل** | Jetpack Navigation Compose |
-| **نظام البناء** | Gradle 8.13 + Version Catalog |
+| **نظام البناء** | Gradle 9.6.0 + Version Catalog |
 | **الحد الأدنى للمصدر** | API 26 (Android 8.0 Oreo) |
 | **المصدر المستهدف** | API 36 (Android 16) |
 | **JDK** | 17 (Temurin) |
@@ -418,7 +424,7 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 - **JDK 17** (يُنصح بـ Temurin)
 - **Android Studio Meerkat** أو أحدث
 - **Android SDK** مع API 36
-- **Gradle 8.13** (يتم التعامل معه تلقائياً عبر Gradle Wrapper)
+- **Gradle 9.6.0** (يتم التعامل معه تلقائياً عبر Gradle Wrapper)
 
 ### أوامر البناء
 
@@ -475,9 +481,15 @@ powershell -File tools\emulator\Test-App.ps1
 
 | المهمة | المُشغِّل | الوصف |
 |--------|---------|-------|
-| **Android CI** | تشغيل يدوي | تقرير Lint واختبارات JVM وملف APK للتطوير |
-| **إصدار AAB** | تشغيل يدوي على وسم `v*` | يتطلب أسرار التوقيع ويرفع حزمة الإصدار |
+| **Android CI** | دفع إلى `master` أو طلب دمج إليها أو تشغيل يدوي | اختبارات JVM وتقرير Lint غير حاجب وملف APK تطوير؛ بلا محاكي |
+| **إصدار AAB** | دفع وسم `v*` أو تشغيل يدوي عليه | ملف حزمة موقّع؛ يتطلب أسرار التوقيع `KEYSTORE_BASE64` و`KEY_ALIAS` و`KEY_PASSWORD` و`KEYSTORE_PASSWORD` |
+| **إصدار APK** | تشغيل يدوي | ملف APK موقّع؛ يتطلب أسرار التوقيع نفسها |
 | **Dependabot** | أسبوعياً | تحديثات تبعيات Gradle |
+
+تستخدم إصدارات الإنتاج، اختيارياً، متغيرات GitHub التالية للإعلانات:
+`ADMOB_APP_ID` و`ADMOB_BANNER_ID` و`ADMOB_INTERSTITIAL_ID` و`ADMOB_NATIVE_ID`
+و`ADMOB_REWARDED_ID`. يجب ضبطها جميعاً معاً؛ وإذا لم يُضبط أي منها فسيظهر
+تحذير ويستمر البناء بمعرّفات إعلانات Google الاختبارية.
 
 ---
 

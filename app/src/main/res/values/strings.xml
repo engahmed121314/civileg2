@@ -177,8 +177,8 @@
     <string name="depth_m">Depth (m)</string>
     <string name="depth_value">Depth: %.2f m</string>
     <string name="width_value">Width: %.2f m</string>
-    <string name="column_reinforcement">Main Bars: %d mm @ %.1f cm (%d bars)</string>
-    <string name="ties_reinforcement">Ties: %d mm @ %.1f cm</string>
+    <string name="column_reinforcement">Main Bars: %1$d mm @ %2$.1f cm (%3$d bars)</string>
+    <string name="ties_reinforcement">Ties: %1$d mm @ %2$.1f cm</string>
     <string name="ties_diameter">Tie Diameter (mm)</string>
     <string name="ties_spacing">Tie Spacing (cm)</string>
     <string name="concrete_volume">Concrete Volume: %.2f m³</string>
@@ -1039,16 +1039,16 @@
     <string name="frame_max_shear_format">Max Shear: %.1f kN</string>
     <string name="frame_span_format">Span = %.2f m</string>
     <string name="frame_height_format">Height = %.2f m</string>
-    <string name="frame_provided_req_format">As provided: %.0f mm² | As req: %.0f mm²</string>
-    <string name="frame_beam_provided_req_mu_format">As provided: %.0f mm² | As req: %.0f mm² | Mu: %.1f kN.m</string>
-    <string name="frame_level_format">L%d (y=%.2fm)</string>
+    <string name="frame_provided_req_format">As provided: %1$.0f mm² | As req: %2$.0f mm²</string>
+    <string name="frame_beam_provided_req_mu_format">As provided: %1$.0f mm² | As req: %2$.0f mm² | Mu: %3$.1f kN.m</string>
+    <string name="frame_level_format">L%1$d (y=%2$.2fm)</string>
     <string name="frame_legend_title">LEGEND</string>
     <string name="frame_legend_slab">Slab</string>
     <string name="frame_legend_beam">Beam</string>
     <string name="frame_legend_column">Column</string>
-    <string name="frame_plan_span_floors_format">L = %.2f m (%d floors)</string>
-    <string name="site_coverage_overlaps_format">Coverage: %d%% | Overlaps: %d</string>
-    <string name="execution_pour_log_format">Slump: %d mm | Vol: %.1f m³</string>
+    <string name="frame_plan_span_floors_format">L = %1$.2f m (%2$d floors)</string>
+    <string name="site_coverage_overlaps_format">Coverage: %1$d%% | Overlaps: %2$d</string>
+    <string name="execution_pour_log_format">Slump: %1$d mm | Vol: %2$.1f m³</string>
 
     <string name="frame_member_id_format">#%d</string>
     <string name="frame_udl_format">%.1f kN/m</string>
@@ -1058,9 +1058,9 @@
     <string name="frame_scale_bar_format">%d m</string>
     <string name="frame_dim_b_format">b = %d mm</string>
     <string name="frame_dim_h_format">h = %d mm</string>
-    <string name="frame_rebar_column_format">%d Ø%d mm + Ø%d/@%dmm</string>
-    <string name="frame_rebar_beam_bot_top_format">%d Ø%d (bot) + %d Ø%d (top)</string>
-    <string name="frame_rebar_beam_stirrup_format">+ Ø%d/@%d mm</string>
+    <string name="frame_rebar_column_format">%1$d Ø%2$d mm + Ø%3$d/@%4$dmm</string>
+    <string name="frame_rebar_beam_bot_top_format">%1$d Ø%2$d (bot) + %3$d Ø%4$d (top)</string>
+    <string name="frame_rebar_beam_stirrup_format">+ Ø%1$d/@%2$d mm</string>
     <string name="frame_unit_kn_m">kN.m</string>
     <string name="frame_unit_kn">kN</string>
 
@@ -1298,8 +1298,8 @@
     <string name="frame_load_value">Load Value</string>
     <string name="frame_load_position">Position from start (m)</string>
     <string name="frame_node_label">Node %d</string>
-    <string name="frame_on_member">On: %s (#%d)</string>
-    <string name="frame_member_format">Node %d ← Node %d</string>
+    <string name="frame_on_member">On: %1$s (#%2$d)</string>
+    <string name="frame_member_format">Node %1$d ← Node %2$d</string>
 
     <!-- Inventory -->
     <string name="inventory_search_hint">Search inventory...</string>
@@ -1689,7 +1689,7 @@
     <string name="steel_purlins_format">Purlins: %s</string>
     <string name="steel_girts_format">Girts: %s</string>
     <string name="steel_connection_name_format">Connection: %s</string>
-    <string name="steel_capacity_demand_format">Capacity: %.1f kN (Demand: %.1f kN)</string>
+    <string name="steel_capacity_demand_format">Capacity: %1$.1f kN (Demand: %2$.1f kN)</string>
     <string name="steel_grade_label">Steel Grade</string>
     <string name="steel_section_placeholder">IPE 300, HEB 240…</string>
     <string name="steel_member_type_label">Member Type</string>
@@ -1782,7 +1782,7 @@
     <string name="water_level_pdf_type">Type</string>
     <string name="water_level_pdf_reading_m">Reading (m)</string>
     <string name="water_level_pdf_rl_m">RL (m)</string>
-    <string name="water_level_pdf_max_rl_format">Max RL: %.3f m  |  Min RL: %.3f m  |  Difference: %.3f m</string>
+    <string name="water_level_pdf_max_rl_format">Max RL: %1$.3f m  |  Min RL: %2$.3f m  |  Difference: %3$.3f m</string>
     <string name="steel_structure">Steel Structure</string>
     <string name="steel_bmd">BMD</string>
     <string name="steel_sfd">SFD</string>
@@ -1891,4 +1891,10 @@
     <string name="home_advanced_design">Advanced Design</string>
     <string name="home_advanced_design_sub">Composite, Fire, Deep Beam, Piles &amp; Settlement</string>
     <string name="screen_post_tensioned_title">Post-Tensioned Design</string>
+    <string name="design_status_not_verified">Not verified - preliminary metrics only. A verified design basis and complete project inputs are required.</string>
+    <string name="load_distribution_unavailable">Load distribution unavailable. No verified structural analysis was performed; the model was not changed.</string>
+    <string name="quantity_geometry_invalid">Quantities unavailable: each slab must have at least three valid, non-collinear nodes.</string>
+    <string name="quantity_estimate_notice">Quantities and costs are preliminary estimates; verify geometry, measurements, and rates.</string>
+    <string name="live_prices_unavailable">Live prices are unavailable; stored prices were not changed.</string>
+    <string name="slab_tool_unavailable">Slab creation is not available yet; the model was not changed.</string>
 </resources>

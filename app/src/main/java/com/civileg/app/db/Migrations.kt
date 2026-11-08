@@ -372,6 +372,28 @@ object Migrations {
     }
 
     /**
+     * Migration from version 12 to 13.
+     * Adds saved building layouts without replacing existing project data.
+     */
+    val MIGRATION_12_13: Migration = object : Migration(12, 13) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS building_layouts (" +
+                    "id TEXT NOT NULL, " +
+                    "name TEXT NOT NULL, " +
+                    "structureType TEXT NOT NULL, " +
+                    "plotWidth REAL NOT NULL, " +
+                    "plotLength REAL NOT NULL, " +
+                    "gridSpacing REAL NOT NULL, " +
+                    "jsonModelData TEXT NOT NULL, " +
+                    "updatedAt INTEGER NOT NULL, " +
+                    "PRIMARY KEY(id)" +
+                    ")"
+            )
+        }
+    }
+
+    /**
      * Helper to create a no-op migration between consecutive versions.
      * Use only when no schema changes occurred between versions.
      */

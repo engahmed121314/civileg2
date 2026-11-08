@@ -31,5 +31,8 @@ sdk.dir=/path/to/Android/Sdk
 # signing.fingerprint.sha256=AB:CD:EF:01:...:34
 
 # ── Release signing (optional — keystore.properties preferred) ──
-# See play-store/keystore-setup-guide.md. CI uses repo secrets instead:
+# See play-store/keystore-setup-guide.md. CI uses repository secrets:
 # KEYSTORE_BASE64, KEY_ALIAS, KEY_PASSWORD, KEYSTORE_PASSWORD.
+# CI uses optional repository variables for production AdMob IDs:
+# ADMOB_APP_ID, ADMOB_BANNER_ID, ADMOB_INTERSTITIAL_ID,
+# ADMOB_NATIVE_ID, ADMOB_REWARDED_ID. Set all five or none.
