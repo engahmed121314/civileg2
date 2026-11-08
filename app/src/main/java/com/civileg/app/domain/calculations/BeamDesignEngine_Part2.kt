@@ -419,7 +419,7 @@ object BeamDesignEnginePart2 {
         val fbd = when(code) {
             DesignCode.ECP -> 0.6 * sqrt(fcu) // ECP 203 §5-2-2: fbd =0.6√fcu for deformed bars (high bond)
             else -> {
-                // FIX: ACI 318-19 §25.4.2.2 (metric): Ld = (fy × ψt × ψe) / (1.7 × λ × √f'c) × db
+                // FIX: ACI 318-25 §25.4.2.2 (metric): Ld = (fy × ψt × ψe) / (1.7 × λ × √f'c) × db
                 // Simplified for ψt=ψe=λ=1: fbd_equiv = 1.7×√f'c / 4, using 4×fbd form
                 1.7 * sqrt(fcu * 0.8) / 4.0  // bond stress equivalent for ACI Ld formula
             }

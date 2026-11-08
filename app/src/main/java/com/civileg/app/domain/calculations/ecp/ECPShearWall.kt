@@ -7,7 +7,7 @@ import com.civileg.app.domain.calculations.base.ShearWallDesign
 import kotlin.math.*
 
 /**
- * ECP 203-2020 / ECP 201-2020 Shear Wall Design Implementation
+ * ECP 203-2025 / ECP 201-2020 Shear Wall Design Implementation
  *
  * References:
  *  - ECP 203 §6-7: Structural walls (general provisions)
@@ -78,7 +78,7 @@ class ECPShearWall : ShearWallDesign {
         val safetyChecks = mutableListOf<ShearWallSafetyCheck>()
 
         codeNotes.add(CodeReference.ECP.SW_SHEAR)
-        codeNotes.add("ECP 203-2020 §6-7 / ECP 201: Shear Wall Design")
+        codeNotes.add("ECP 203-2025 §6-7 / ECP 201: Shear Wall Design")
         codeNotes.add("Wall Type: ${input.wallType.displayName}")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S")
 

@@ -6,7 +6,7 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تصميم البلاطات الهوردي (Joist Construction) حسب ACI 318-19 Section 9.8
+ * تصميم البلاطات الهوردي (Joist Construction) حسب ACI 318-25 Section 9.8
  */
 class ACIJoistSlab : HordiSlabDesign {
 

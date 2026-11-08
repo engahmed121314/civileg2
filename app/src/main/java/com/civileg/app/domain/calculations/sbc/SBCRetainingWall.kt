@@ -7,7 +7,7 @@ import com.civileg.app.domain.entities.DesignCode
 import kotlin.math.*
 
 /**
- * تصميم جدار الاستناد حسب الكود السعودي SBC 304-2018 — مستقل بالكامل عن ACI
+ * تصميم جدار الاستناد حسب الكود السعودي SBC 304-2024 — مستقل بالكامل عن ACI
  *
  * فروقات SBC 304 عن ACI 318 في جدران الاستناد:
  * - معاملات أمان مختلفة: FS_OT ≥ 1.5 (SBC) مقابل FS_OT ≥ 2.0 (ACI)
@@ -19,31 +19,31 @@ import kotlin.math.*
  * - ضغط الماء الجوفي معامل تحميل 1.6
  *
  * المراجع:
- * - SBC 304-2018 البند 13 (القواعد والجدران الاستنادية)
- * - SBC 304-2018 البند 9.3 (معاملات الاختزال)
- * - SBC 304-2018 البند 4 (متطلبات عامة — غطاء خرساني)
- * - SBC 304-2018 البند 18 (متطلبات زلزالية)
+ * - SBC 304-2024 البند 13 (القواعد والجدران الاستنادية)
+ * - SBC 304-2024 البند 9.3 (معاملات الاختزال)
+ * - SBC 304-2024 البند 4 (متطلبات عامة — غطاء خرساني)
+ * - SBC 304-2024 البند 18 (متطلبات زلزالية)
  */
 class SBCRetainingWall : RetainingWallDesign {
 
     companion object {
-        // ── SBC 304-2018 معاملات الاختزال ──
+        // ── SBC 304-2024 معاملات الاختزال ──
         private const val PHI_FLEXURE = 0.9    // §9.3.3
         private const val PHI_SHEAR = 0.75     // §9.3.4
 
-        // ── SBC 304-2018 معاملات التحميل ──
+        // ── SBC 304-2024 معاملات التحميل ──
         private const val LF_DEAD = 1.2        // §9.2
         private const val LF_LIVE = 1.6        // §9.2
         private const val LF_LATERAL = 1.6     // §9.2 — ضغط الأرض
 
-        // ── SBC 304-2018 الغطاء الخرساني (§4 — أكثر تحفظاً من ACI) ──
+        // ── SBC 304-2024 الغطاء الخرساني (§4 — أكثر تحفظاً من ACI) ──
         private const val COVER_EARTH = 75.0       // mm — تلامس التربة
         private const val COVER_INTERIOR = 40.0    // mm — داخلية
         private const val COVER_EXTERIOR = 50.0    // mm — خارجية
         private const val COVER_SEVERE = 65.0      // mm — شديد التآكل
         private const val COVER_COASTAL = 75.0     // mm — مناطق ساحلية
 
-        // ── SBC 304-2018 معاملات الأمان ──
+        // ── SBC 304-2024 معاملات الأمان ──
         private const val MIN_STEEL_RATIO = 0.002
         private const val OT_FS_LIMIT = 1.5        // SBC: 1.5 (أقل من ACI 2.0)
         private const val SLIDE_FS_LIMIT = 1.5     // SBC: 1.5
@@ -217,7 +217,7 @@ class SBCRetainingWall : RetainingWallDesign {
         // 8. ملاحظات الكود السعودي
         // ══════════════════════════════════════════════════════════════
         val notes = mutableListOf(
-            "SBC 304-2018 §13: جدران الاستناد",
+            "SBC 304-2024 §13: جدران الاستناد",
             "SBC 304 §9.3: \u03C6f=${PHI_FLEXURE}, \u03C6v=${PHI_SHEAR}",
             "SBC 304 §9.2: \u03B3D=${LF_DEAD}, \u03B3L=${LF_LIVE}, \u03B3Lat=${LF_LATERAL}",
             "f'c = 0.8\u00D7fcu = ${"%.0f".format(fc)} MPa",

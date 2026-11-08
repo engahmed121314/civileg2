@@ -13,7 +13,7 @@ import com.civileg.app.domain.calculations.base.posttensioned.AnchorageZoneResul
 import com.civileg.app.domain.calculations.base.posttensioned.PTDeflectionResult
 
 /**
- * تصميم العناصر مسبقة الإجهاد وفق الكود السعودي SBC 304-2018.
+ * تصميم العناصر مسبقة الإجهاد وفق الكود السعودي SBC 304-2024.
  */
 class SBCPostTensioned : PostTensionedDesign {
 

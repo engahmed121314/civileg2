@@ -8,16 +8,16 @@ import kotlin.math.tan
 
 /**
  * كود تصميم الكمرات العميقة.
- * ECP 203-2020 و ACI 318-19.
+ * ECP 203-2025 و ACI 318-25.
  */
 enum class DeepBeamCode(
     val displayName: String,
     val version: String,
     val usesAciBaseProvisions: Boolean
 ) {
-    ECP("Egyptian Code", "ECP 203-2020", false),
-    ACI("American Code", "ACI 318-19", true),
-    SBC("Saudi Code (ACI base)", "SBC 304-2018", true)
+    ECP("Egyptian Code", "ECP 203-2025", false),
+    ACI("American Code", "ACI 318-25", true),
+    SBC("Saudi Code (ACI base)", "SBC 304-2024", true)
 }
 
 /**

@@ -91,7 +91,7 @@ object CalculationFactory {
         return when (code) {
             DesignCode.ECP -> ECPHordiSlabWrapper()
             DesignCode.ACI -> ACIJoistSlab()
-            DesignCode.SBC -> SBCHordiSlabDesign()  // SBC 304-2018 مستقل — وليس fallback لـ ACI
+            DesignCode.SBC -> SBCHordiSlabDesign()  // SBC 304-2024 مستقل — وليس fallback لـ ACI
         }
     }
 
@@ -136,7 +136,7 @@ object CalculationFactory {
 
     /**
      * Returns the specialized ECPCombinedFooting class for detailed combined footing design.
-     * ECP 203-2020 §7-1: Returns a standalone engine with full combined footing analysis
+     * ECP 203-2025 §7-1: Returns a standalone engine with full combined footing analysis
      * including longitudinal/transverse bending, punching shear, and reinforcement design.
      * For ACI/SBC, use getCombinedFootingDesign() which routes through FootingDesign interface.
      */

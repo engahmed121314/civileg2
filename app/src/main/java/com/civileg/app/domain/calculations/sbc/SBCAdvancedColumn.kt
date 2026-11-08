@@ -7,8 +7,8 @@ import com.civileg.app.domain.usecases.AnalyzeRebarInventory
 import kotlin.math.*
 
 /**
- * تصميم متقدم للأعمدة حسب الكود السعودي SBC 304-2018
- * SBC 304-2018 يتبع ACI 318-19 مع تعديلات سعودية محددة
+ * تصميم متقدم للأعمدة حسب الكود السعودي SBC 304-2024
+ * SBC 304-2024 يتبع ACI 318-19 مع تعديلات سعودية محددة
  *
  * يشمل:
  * - تحقيق النحافة (Slenderness) بمعاملات K معدلة للبناء السعودي
@@ -45,7 +45,7 @@ class SBCAdvancedColumn : ColumnDesign {
     // =========================================================================
 
     /**
-     * تصميم متقدم للأعمدة بجميع أنواعها حسب الكود السعودي SBC 304-2018
+     * تصميم متقدم للأعمدة بجميع أنواعها حسب الكود السعودي SBC 304-2024
      *
      * @param columnType نوع العمود (مستطيل، دائري، إلخ)
      * @param fcu مقاومة الخرسانة للمكعب (MPa)
@@ -79,7 +79,7 @@ class SBCAdvancedColumn : ColumnDesign {
         isSpiral: Boolean = false,
         isSeismicZone: Boolean = false
     ): AdvancedColumnResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("columnType", columnType)
         InputGuard.notNull("endConditions", endConditions)
         InputGuard.notNull("loadCombination", loadCombination)
@@ -95,7 +95,7 @@ class SBCAdvancedColumn : ColumnDesign {
 
         // تحويل مقاومة المكعب إلى مقاومة الأسطوانة
         val fcPrime = 0.8 * fcu
-        codeNotes.add("SBC 304-2018: fc' = 0.8 × fcu = 0.8 × $fcu = ${String.format("%.1f", fcPrime)} MPa")
+        codeNotes.add("SBC 304-2024: fc' = 0.8 × fcu = 0.8 × $fcu = ${String.format("%.1f", fcPrime)} MPa")
 
         // المساحة الكلية للمقطع
         val Ag = columnType.getGrossArea()
@@ -121,7 +121,7 @@ class SBCAdvancedColumn : ColumnDesign {
 
         if (isSlender) {
             warnings.add("⚠️ عمود نحيف! يجب مراعاة التأثيرات من الدرجة الثانية (P-Delta)")
-            codeNotes.add(String.format("SBC 304-2018: Section 6.2.5/6.2.6 — نسبة النحافة λ = %.1f > %.0f", slendernessRatio, slendernessLimit))
+            codeNotes.add(String.format("SBC 304-2024: Section 6.2.5/6.2.6 — نسبة النحافة λ = %.1f > %.0f", slendernessRatio, slendernessLimit))
         }
 
         // حساب تأثير النحافة (م magnified moment)
@@ -197,7 +197,7 @@ class SBCAdvancedColumn : ColumnDesign {
         }
 
         // ===== 8. ملاحظات الكود النهائية =====
-        codeNotes.add("SBC 304-2018: Section 10 — تصميم عناصر الضغط")
+        codeNotes.add("SBC 304-2024: Section 10 — تصميم عناصر الضغط")
         codeNotes.add("φ = $phi (${if (isSpiral) "حلزوني" else "مربوط"})")
         codeNotes.add("الغطاء الخرساني = ${String.format("%.0f", cover)} mm")
         if (isSeismicZone) {
@@ -329,7 +329,7 @@ class SBCAdvancedColumn : ColumnDesign {
         fy: Double,
         fcu: Double = 40.0
     ): SeismicConfinementResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("mainBarDiameter", mainBarDiameter)
         InputGuard.positive("numberOfBars", numberOfBars.toDouble())
         InputGuard.positive("fy", fy)
@@ -432,7 +432,7 @@ class SBCAdvancedColumn : ColumnDesign {
     // =========================================================================
 
     /**
-     * حساب تأثير النحافة على الأعمدة حسب SBC 304-2018 (ACI 318-19 Section 6.2.5/6.2.6)
+     * حساب تأثير النحافة على الأعمدة حسب SBC 304-2024 (ACI 318-19 Section 6.2.5/6.2.6)
      *
      * للعمود غير المائع (non-sway):
      * - إذا λ ≤ 22 (tied) أو 28 (spiral): لا حاجة لحساب P-Delta
@@ -698,7 +698,7 @@ class SBCAdvancedColumn : ColumnDesign {
         As: Double = 0.0,
         isSpiral: Boolean = false
     ): BiaxialCheckResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("Pu", Pu)
         InputGuard.positive("PnCapacity", PnCapacity)
         InputGuard.positive("fcu", fcu)
@@ -819,7 +819,7 @@ class SBCAdvancedColumn : ColumnDesign {
         isSeismicZone: Boolean = false,
         fcu: Double = 40.0
     ): Double {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("barDiameter", barDiameter)
         InputGuard.positive("fy", fy)
         InputGuard.positive("cover", cover)
@@ -1268,7 +1268,7 @@ class SBCAdvancedColumn : ColumnDesign {
         reinforcementArea: Double,
         loadCombination: LoadCombination
     ): Double {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("width", width)
@@ -1289,7 +1289,7 @@ class SBCAdvancedColumn : ColumnDesign {
         momentY: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("width", width)
@@ -1314,7 +1314,7 @@ class SBCAdvancedColumn : ColumnDesign {
 // =========================================================================
 
 /**
- * أنواع البيئة حسب SBC 304-2018 Section 7.7
+ * أنواع البيئة حسب SBC 304-2024 Section 7.7
  */
 enum class SBSEnvironment(val displayName: String, val coverMm: Double) {
     NORMAL("بيئة عادية (الرياض، القصيم)", 40.0),

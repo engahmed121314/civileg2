@@ -4,7 +4,7 @@ import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**
- * Combined Footing Design per ECP 203-2020
+ * Combined Footing Design per ECP 203-2025
  *
  * Design of a rectangular combined footing supporting two columns.
  *
@@ -19,9 +19,9 @@ import kotlin.math.*
  * 8. Calculate required reinforcement
  *
  * Reference:
- * - ECP 203-2020 Clause 7-1 (Foundations)
- * - ECP 203-2020 Clause 4-3-2 (Punching Shear)
- * - ECP 203-2020 Clause 4-2-1-2 (Minimum Reinforcement)
+ * - ECP 203-2025 Clause 7-1 (Foundations)
+ * - ECP 203-2025 Clause 4-3-2 (Punching Shear)
+ * - ECP 203-2025 Clause 4-2-1-2 (Minimum Reinforcement)
  */
 data class CombinedFootingResult(
     val footingLength: Double,       // m

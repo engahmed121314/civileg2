@@ -4,7 +4,7 @@ import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**
- * Doubly Reinforced Beam Design per ECP 203-2020
+ * Doubly Reinforced Beam Design per ECP 203-2025
  *
  * When a singly reinforced section is insufficient (Mu > Mu_max for tension-controlled),
  * compression steel is added to increase the moment capacity.
@@ -24,7 +24,7 @@ import kotlin.math.*
  * - d = effective depth
  * - d' = depth to compression steel
  *
- * Reference: ECP 203-2020 Clause 4-2-2-2
+ * Reference: ECP 203-2025 Clause 4-2-2-2
  */
 data class DoublyReinforcedBeamResult(
     val mu: Double,                        // Applied ultimate moment (kN.m)
@@ -64,7 +64,7 @@ class ECPDoublyReinforcedBeam {
     }
 
     /**
-     * Calculate K_balanced per ECP 203-2020
+     * Calculate K_balanced per ECP 203-2025
      * K_bal = 0.36 * (fcu / (fy/gamma_s)) * (gamma_c / (1 + fy/(gamma_s * 440)))
      *
      * This formula derives from the strain compatibility condition at the balanced

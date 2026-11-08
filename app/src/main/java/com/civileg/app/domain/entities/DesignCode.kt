@@ -5,9 +5,9 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 enum class DesignCode(val displayName: String, val version: String) : Parcelable {
-    ECP("Egyptian Code", "ECP 203-2020"),
-    ACI("American Code", "ACI 318-19"),
-    SBC("Saudi Code", "SBC 304-2018");
+    ECP("Egyptian Code", "ECP 203-2025"),
+    ACI("American Code", "ACI 318-25"),
+    SBC("Saudi Code", "SBC 304-2024");
 
     fun getDeadLoadFactor(): Double = when(this) {
         ECP -> 1.4

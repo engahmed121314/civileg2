@@ -6,23 +6,23 @@ import com.civileg.app.domain.entities.CodeReference
 import com.civileg.core.engineering.StrapFootingDesignEngine
 
 /**
- * تصميم القاعدة الشريطية حسب الكود السعودي SBC 304-2018
+ * تصميم القاعدة الشريطية حسب الكود السعودي SBC 304-2024
  * SBC 304 Strap Footing Design — يوسع ويتطور وليس مجرد حراسة
  *
  * التوسعات:
  * - تحقق InputGuard لكل المدخلات قبل الحساب (ADR-010)
- * - مرجع SBC 304-2018 البند 13 (القواعد)
+ * - مرجع SBC 304-2024 البند 13 (القواعد)
  * - معاملات تحميل سعودية: 1.2D + 1.6L (SBC 304 §9.2)
  * - غطاء خرساني أكبر في البيئات المالحة (75 مم)
  */
 class SBCStrapFooting : StrapFootingDesign {
 
     companion object {
-        // SBC 304-2018 §9.2: معاملات التحميل
+        // SBC 304-2024 §9.2: معاملات التحميل
         private const val LF_DEAD = 1.2
         private const val LF_LIVE = 1.6
 
-        // SBC 304-2018 §4: الغطاء الخرساني
+        // SBC 304-2024 §4: الغطاء الخرساني
         private const val SBC_COVER_CORROSIVE = 75.0  // mm — البيئة المالحة (السعودية)
         private const val SBC_COVER_NORMAL = 50.0     // mm — عادي
         private const val SBC_MIN_THICKNESS = 300.0   // mm — أقل سماكة للقاعدة
@@ -50,8 +50,8 @@ class SBCStrapFooting : StrapFootingDesign {
 
         // ── إضافة ملاحظات الكود السعودي ──
         val notes = result.codeNotes.toMutableList()
-        notes.add("SBC 304-2018 §9.2: γD=${LF_DEAD}, γL=${LF_LIVE}")
-        notes.add("SBC 304-2018 §13: Strap Footing Design")
+        notes.add("SBC 304-2024 §9.2: γD=${LF_DEAD}, γL=${LF_LIVE}")
+        notes.add("SBC 304-2024 §13: Strap Footing Design")
         notes.add(CodeReference.SBC.FOOTING_BEARING)
         notes.add(CodeReference.SBC.FOOTING_REINFORCEMENT)
         notes.add("Cover: ${SBC_COVER_CORROSIVE}mm (بيئة مالحة) / ${SBC_COVER_NORMAL}mm (عادي)")

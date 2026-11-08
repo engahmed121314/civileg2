@@ -16,13 +16,13 @@ import com.civileg.app.domain.entities.ShearReinforcementResult
 import kotlin.math.*
 
 /**
- * ECP 203-2020 Waffle Slab Design Implementation
+ * ECP 203-2025 Waffle Slab Design Implementation
  *
  * References:
- *  - ECP 203-2020 §6-4: Waffle slabs (ribbed slabs with solid heads)
- *  - ECP 203-2020 §4-2: Flexural design
- *  - ECP 203-2020 §4-3: Shear design
- *  - ECP 203-2020 §6-3: Deflection control
+ *  - ECP 203-2025 §6-4: Waffle slabs (ribbed slabs with solid heads)
+ *  - ECP 203-2025 §4-2: Flexural design
+ *  - ECP 203-2025 §4-3: Shear design
+ *  - ECP 203-2025 §6-3: Deflection control
  *
  * Waffle slabs are two-way ribbed slabs with ribs in two directions and solid heads at columns.
  * Design includes:
@@ -67,7 +67,7 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         val safetyChecks = mutableListOf<SafetyCheckItem>()
 
         codeNotes.add(CodeReference.ECP.SLAB_TWO_WAY)
-        codeNotes.add("ECP 203-2020 §6-4: Waffle Slab Design")
+        codeNotes.add("ECP 203-2025 §6-4: Waffle Slab Design")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S, φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")
 
         // ── 1. Input validation ─────────────────────────────────────
@@ -177,7 +177,7 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════════
-    // RIB DESIGN — ECP 203-2020
+    // RIB DESIGN — ECP 203-2025
     // ════════════════════════════════════════════════════════════════════════════════════
 
     override fun designRib(

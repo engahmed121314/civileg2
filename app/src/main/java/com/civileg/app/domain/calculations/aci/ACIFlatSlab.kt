@@ -13,16 +13,16 @@ import com.civileg.app.domain.calculations.base.FlatSlabDesign.DeflectionResult
 import kotlin.math.*
 
 /**
- * ACI 318-19 Flat Slab Design Implementation
+ * ACI 318-25 Flat Slab Design Implementation
  *
  * References:
- *  - ACI 318-19 Ch.8: Two-way slabs
- *  - ACI 318-19 §8.10: Direct Design Method (DDM)
- *  - ACI 318-19 §8.11: Equivalent Frame Method (EFM)
- *  - ACI 318-19 §22.6: Punching shear
- *  - ACI 318-19 §24.2: Deflection
- *  - ACI 318-19 §8.3.1.1: Minimum thickness
- *  - ACI 318-19 §8.2.4: Drop panel requirements
+ *  - ACI 318-25 Ch.8: Two-way slabs
+ *  - ACI 318-25 §8.10: Direct Design Method (DDM)
+ *  - ACI 318-25 §8.11: Equivalent Frame Method (EFM)
+ *  - ACI 318-25 §22.6: Punching shear
+ *  - ACI 318-25 §24.2: Deflection
+ *  - ACI 318-25 §8.3.1.1: Minimum thickness
+ *  - ACI 318-25 §8.2.4: Drop panel requirements
  *
  * Uses φ factors: φ_flexure = 0.9, φ_shear = 0.75
  * Material: f'c (cylinder), fy (yield)
@@ -60,7 +60,7 @@ class ACIFlatSlab : FlatSlabDesign {
         val safetyChecks = mutableListOf<SafetyCheckItem>()
 
         codeNotes.add(CodeReference.ACI.SLAB_TWO_WAY)
-        codeNotes.add("ACI 318-19 Ch.8: Two-Way Slab Systems")
+        codeNotes.add("ACI 318-25 Ch.8: Two-Way Slab Systems")
         codeNotes.add("Method: ${input.designMethod.displayName}")
         codeNotes.add("φ_flexure = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")
 
@@ -388,7 +388,7 @@ class ACIFlatSlab : FlatSlabDesign {
     override fun getMomentCoefficients(
         panelType: PanelType, hasBeams: Boolean
     ): FlatSlabDesign.MomentCoefficients {
-        // ACI 318-19 Table 8.10.4.2 for flat slabs (α = 0, no beams)
+        // ACI 318-25 Table 8.10.4.2 for flat slabs (α = 0, no beams)
         return when (panelType) {
             PanelType.INTERIOR -> FlatSlabDesign.MomentCoefficients(
                 colNegExterior = 0.75, colPositive = 0.60, colNegInterior = 0.75,
@@ -652,7 +652,7 @@ class ACIFlatSlab : FlatSlabDesign {
         return if (fy > 420) 0.0014 else 0.0018
     }
 
-    override fun getCodeName(): String = "ACI 318-19"
+    override fun getCodeName(): String = "ACI 318-25"
 
     override fun getFactoredLoad(deadLoad: Double, liveLoad: Double): Double {
         // ACI Table 5.3.1: U = 1.2DL + 1.6LL

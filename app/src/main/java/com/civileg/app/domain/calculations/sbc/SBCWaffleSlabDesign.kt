@@ -16,13 +16,13 @@ import com.civileg.app.domain.entities.ShearReinforcementResult
 import kotlin.math.*
 
 /**
- * SBC 304-2018 Waffle Slab Design Implementation
+ * SBC 304-2024 Waffle Slab Design Implementation
  *
  * References:
- *  - SBC 304-2018 §6-4: Waffle slabs (ribbed slabs with solid heads)
- *  - SBC 304-2018 §4-2: Flexural design
- *  - SBC 304-2018 §4-3: Shear design
- *  - SBC 304-2018 §6-3: Deflection control
+ *  - SBC 304-2024 §6-4: Waffle slabs (ribbed slabs with solid heads)
+ *  - SBC 304-2024 §4-2: Flexural design
+ *  - SBC 304-2024 §4-3: Shear design
+ *  - SBC 304-2024 §6-3: Deflection control
  *
  * Key SBC 304 differences from ACI:
  *  - Uses fcu directly (cube strength), not f'c = 0.8×fcu
@@ -48,7 +48,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
     }
 
     override fun design(input: WaffleSlabInput): WaffleSlabResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.fcu", input.fcu)
         InputGuard.positive("input.fy", input.fy)
@@ -64,7 +64,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         val safetyChecks = mutableListOf<SafetyCheckItem>()
 
         codeNotes.add(CodeReference.SBC.SLAB_TWO_WAY)
-        codeNotes.add("SBC 304-2018 §6-4: Waffle Slab Design")
+        codeNotes.add("SBC 304-2024 §6-4: Waffle Slab Design")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S, φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")
         codeNotes.add("Load: Wu = 1.4×DL + 1.6×LL (SBC 304 §3-2)")
 
@@ -168,7 +168,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════════
-    // RIB DESIGN — SBC 304-2018
+    // RIB DESIGN — SBC 304-2024
     // ════════════════════════════════════════════════════════════════════════════════════
 
     override fun designRib(
@@ -181,7 +181,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         totalLoad: Double,
         loadCombination: LoadCombination
     ): WaffleSlabDesign.RibDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("ribWidth", ribWidth)
@@ -289,7 +289,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         axialLoad: Double,
         moment: Double
     ): WaffleSlabDesign.SolidHeadDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("solidHeadSize", solidHeadSize)
@@ -369,7 +369,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         axialLoad: Double,
         shear: Double
     ): WaffleSlabDesign.PunchingShearCheck {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("solidHeadSize", solidHeadSize)
@@ -416,7 +416,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         providedAs: Double,
         loadCombination: LoadCombination
     ): FlatSlabDesign.DeflectionResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("span", span)
         InputGuard.positive("totalDepth", totalDepth)
         InputGuard.positive("ribWidth", ribWidth)

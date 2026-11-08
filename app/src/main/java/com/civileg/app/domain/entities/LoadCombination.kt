@@ -1,13 +1,13 @@
 package com.civileg.app.domain.entities
 
 /**
- * مجموعات التحميل حسب الكود المصري ECP 203-2020 البند 2-3-1
- * والكود الأمريكي ACI 318-19 البند 5.3
+ * مجموعات التحميل حسب الكود المصري ECP 203-2025-2020 البند 2-3-1
+ * والكود الأمريكي ACI 318-25 البند 5.3
  *
  * معاملات التحويل (factor) تُستخدم لتحويل الحمل التصميمي (Factored) إلى حمل الخدمة (Service):
  *   P_service = P_factored / factor
  *
- * ECP 203: 1.4D+1.6L → factor ≈ 1.5, 1.4D → factor = 1.4
+ * ECP 203-2025: 1.4D+1.6L → factor ≈ 1.5, 1.4D → factor = 1.4
  * ACI 318: 1.2D+1.6L → factor ≈ 1.4, 1.2D → factor = 1.2
  */
 enum class LoadCombination(val factor: Double, val description: String) {
@@ -23,7 +23,7 @@ enum class LoadCombination(val factor: Double, val description: String) {
      */
     fun getFactorForCode(code: DesignCode): Double = when(code) {
         DesignCode.ECP -> when(this) {
-            // ECP 203 البند 2-3-1: 1.4D, 1.4D+1.6L, 1.4D+1.6L+0.4W, 1.4D+1.0L+1.4W, 0.9D+1.4W, 1.4D+1.0L+1.0E
+            // ECP 203-2025 البند 2-3-1: 1.4D, 1.4D+1.6L, 1.4D+1.6L+0.4W, 1.4D+1.0L+1.4W, 0.9D+1.4W, 1.4D+1.0L+1.0E
             DEAD_ONLY -> 1.4          // 1.4D
             DEAD_LIVE -> 1.5          // متوسط: (1.4D+1.6L) / (D+L) ≈ 1.5 عندما D≈L
             DEAD_LIVE_WIND -> 1.4     // 1.4D + 1.6L + 0.4W (الرياح ثانوية)
@@ -31,7 +31,7 @@ enum class LoadCombination(val factor: Double, val description: String) {
             DEAD_EARTHQUAKE -> 0.9    // 0.9D + 1.4E (أو 0.9D - 1.4E)
         }
         DesignCode.ACI -> when(this) {
-            // ACI 318-19 البند 5.3: 1.2D, 1.2D+1.6L, 1.2D+1.6L+0.5W, 1.2D+1.0L+1.0W, 0.9D+1.6W, 1.2D+1.0E
+            // ACI 318-25 البند 5.3: 1.2D, 1.2D+1.6L, 1.2D+1.6L+0.5W, 1.2D+1.0L+1.0W, 0.9D+1.6W, 1.2D+1.0E
             DEAD_ONLY -> 1.2
             DEAD_LIVE -> 1.4          // متوسط: (1.2D+1.6L) / (D+L) ≈ 1.4
             DEAD_LIVE_WIND -> 1.2     // 1.2D + 1.6L + 0.5W
@@ -39,7 +39,7 @@ enum class LoadCombination(val factor: Double, val description: String) {
             DEAD_EARTHQUAKE -> 0.9    // 0.9D + 1.0E
         }
         DesignCode.SBC -> when(this) {
-            // SBC 304-2018 يتبع ACI 318
+            // SBC 304-2024 يتبع ACI 318
             DEAD_ONLY -> 1.2
             DEAD_LIVE -> 1.4
             DEAD_LIVE_WIND -> 1.2

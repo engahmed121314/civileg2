@@ -7,7 +7,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Unit tests for ECPFlatSlab — ECP 203-2020 flat slab design engine.
+ * Unit tests for ECPFlatSlab — ECP 203-2025 flat slab design engine.
  * Covers DDM, moment distribution, punching shear, deflection,
  * InputGuard validation, and edge cases.
  */
@@ -234,7 +234,7 @@ class ECPFlatSlabTest {
 
     @Test
     fun `getCodeName_returnsECP`() {
-        assertEquals("ECP 203-2020", flatSlab.getCodeName())
+        assertEquals("ECP 203-2025", flatSlab.getCodeName())
     }
 
     @Test

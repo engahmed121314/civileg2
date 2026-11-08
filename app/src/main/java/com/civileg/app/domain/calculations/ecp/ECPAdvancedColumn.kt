@@ -178,7 +178,7 @@ class ECPAdvancedColumn : ColumnDesign {
             checkBiaxialLoading(columnType, axialLoad, momentX, momentY, axialCapacity)
         } else null
         
-        codeNotes.add("ECP 203-2020: Section 4.2 Design of Compression Members")
+        codeNotes.add("ECP 203-2025: Section 4.2 Design of Compression Members")
         codeNotes.add("Slab Connection: ${connectedSlab.displayName}")
         if (hasCap) codeNotes.add("Column Cap provided - improved punching resistance")
         
@@ -251,7 +251,7 @@ class ECPAdvancedColumn : ColumnDesign {
         )
     }
 
-    // حساب القدرة المحورية الإسمية حسب ECP 203-2020
+    // حساب القدرة المحورية الإسمية حسب ECP 203-2025
     // Pu = φ × α × [0.67×fcu/γc × (Ag-Ast) + fy/γs × Ast]
     private fun calculateAxialCapacity(fcu: Double, fy: Double, columnType: ColumnType, Ag: Double, Ast: Double = 0.0): Double {
         val GAMMA_C = 1.5
@@ -354,7 +354,7 @@ class ECPAdvancedColumn : ColumnDesign {
     override fun getMinCover(): Double = 40.0
 
     // ──────────────────────────────────────────────────────────────────────────────
-    // ثوابت الكود المصري ECP 203-2020 (ECP Constants)
+    // ثوابت الكود المصري ECP 203-2025 (ECP Constants)
     // ──────────────────────────────────────────────────────────────────────────────
 
     companion object {

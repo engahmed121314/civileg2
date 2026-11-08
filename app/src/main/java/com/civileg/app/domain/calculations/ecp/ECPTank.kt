@@ -253,7 +253,7 @@ class ECPTank : TankDesign {
         ))
 
         codeNotes.add(CodeReference.ECP.TANK_HYDROSTATIC)
-        codeNotes.add("ECP 203-2020: Section 8-1 (Water-Retaining Structures)")
+        codeNotes.add("ECP 203-2025: Section 8-1 (Water-Retaining Structures)")
         codeNotes.add("Wall: Cantilever method, M = γw×h³/6")
         codeNotes.add("Vertical: ${barsPerMeter}Ø${barDiameter.toInt()} @ ${spacing.toInt()}mm")
         codeNotes.add("Horizontal: ${hBarsPerMeter}Ø${hBarDia.toInt()} @ ${hSpacing.toInt()}mm")
@@ -334,7 +334,7 @@ class ECPTank : TankDesign {
         val isCrackSafe = steelStress <= fct * 1000.0
 
         codeNotes.add(CodeReference.ECP.TANK_HYDROSTATIC)
-        codeNotes.add("ECP 203-2020: Section 8-1 (Circular Tank - Hoop Tension)")
+        codeNotes.add("ECP 203-2025: Section 8-1 (Circular Tank - Hoop Tension)")
         codeNotes.add("Max Hoop Tension T = γw×H×R = ${String.format("%.1f", maxHoopTension)} kN/m")
         codeNotes.add("Hoop: ${hoopBarsPerMeter}Ø${hoopBarDia.toInt()} @ ${hoopSpacing.toInt()}mm")
         codeNotes.add("Vertical: ${vertBarsPerMeter}Ø${vertBarDia.toInt()} @ ${vertSpacing.toInt()}mm")

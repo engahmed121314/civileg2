@@ -13,7 +13,7 @@ import com.civileg.app.domain.calculations.base.FlatSlabDesign.DeflectionResult
 import kotlin.math.*
 
 /**
- * ECP 203-2020 Flat Slab Design Implementation
+ * ECP 203-2025 Flat Slab Design Implementation
  *
  * References:
  *  - ECP 203 §6-5: Flat slabs (no beams)
@@ -63,7 +63,7 @@ class ECPFlatSlab : FlatSlabDesign {
         val safetyChecks = mutableListOf<SafetyCheckItem>()
 
         codeNotes.add(CodeReference.ECP.SLAB_TWO_WAY)
-        codeNotes.add("ECP 203-2020 §6-5: Flat Slab Design")
+        codeNotes.add("ECP 203-2025 §6-5: Flat Slab Design")
         codeNotes.add("Method: ${input.designMethod.displayName}")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S")
 
@@ -842,7 +842,7 @@ class ECPFlatSlab : FlatSlabDesign {
         return max(0.6 / fy, 0.0015)
     }
 
-    override fun getCodeName(): String = "ECP 203-2020"
+    override fun getCodeName(): String = "ECP 203-2025"
 
     override fun getFactoredLoad(deadLoad: Double, liveLoad: Double): Double {
         // ECP 203 §2-3: Wu = 1.4 × DL + 1.6 × LL

@@ -85,7 +85,7 @@ class SBCColumn : ColumnDesign {
         if (eccentricity > 0.05 * h) {
             val momentFactor = max(1.0, 1.0 + 2.0 * eccentricity / h)
             requiredSteelArea *= momentFactor
-            codeNotes.add("SBC 304: Significant moment (e=${String.format("%.1f", eccentricity)}mm > 0.05h), As increased by factor ${String.format("%.2f", momentFactor)}")
+            codeNotes.add("SBC 304-2024: Significant moment (e=${String.format("%.1f", eccentricity)}mm > 0.05h), As increased by factor ${String.format("%.2f", momentFactor)}")
         }
         
         val minSteel = getMinReinforcementRatio() * Ag
@@ -191,7 +191,7 @@ class SBCColumn : ColumnDesign {
             (Vu - phiVc) * 1000.0 / (phi * fy * d)  // mm²/mm
         } else 0.0
 
-        // Max spacing per SBC 304-2018 (adopts ACI 318-19 §25.7.2.2): min(b/4, 6×db, 150mm)
+        // Max spacing per SBC 304-2024 (adopts ACI 318-19 §25.7.2.2): min(b/4, 6×db, 150mm)
         val maxSpacing = minOf(min(width, depth) / 4.0, 6.0 * longitudinalBarDia, 150.0)
         val seismicMaxSpacing = minOf(d / 4.0, 100.0)  // seismic zone restriction
 
@@ -229,7 +229,7 @@ class SBCColumn : ColumnDesign {
         val utilizationRatio = if (totalCapacity > 0) Vu / totalCapacity else 2.0
 
         codeNotes.add(CodeReference.SBC.COLUMN_TIES)
-        codeNotes.add("SBC 304: Column Shear Design")
+        codeNotes.add("SBC 304-2024: Column Shear Design")
         codeNotes.add("f'c = 0.8×fcu = ${String.format("%.0f", fc)} MPa")
         codeNotes.add("Vc = 0.17√f'c·b·d = ${String.format("%.1f", Vc)} kN")
         codeNotes.add("φVc = ${String.format("%.1f", phiVc)} kN  (φ=$phi)")

@@ -7,9 +7,9 @@ import com.civileg.app.domain.usecases.AnalyzeRebarInventory
 import kotlin.math.*
 
 /**
- * تصميم متقدم للكمرات بجميع أنواعها حسب الكود السعودي SBC 304-2018
+ * تصميم متقدم للكمرات بجميع أنواعها حسب الكود السعودي SBC 304-2024
  *
- * SBC 304-2018 مبني على ACI 318-19 مع تعديلات سعودية خاصة تتضمن:
+ * SBC 304-2024 مبني على ACI 318-19 مع تعديلات سعودية خاصة تتضمن:
  * - متطلبات المناطق الزلزالية (SBC 304 البند 21)
  * - متطلبات البيئة المالحة والتآكل (غطاء 50 مم للمناطق الساحلية)
  * - أقل عرض للكمرات في المناطق الزلزالية (250 مم)
@@ -19,19 +19,19 @@ import kotlin.math.*
  * - معامل انحراف طويل المدى للمناخ الحار (λ ≈ 2.5)
  *
  * المراجع:
- * - SBC 304-2018 البند 9 (الانحناء)
- * - SBC 304-2018 البند 11 (القص)
- * - SBC 304-2018 البند 12 (أطوال التثبيت)
- * - SBC 304-2018 البند 21 (متطلبات الزلازل)
- * - SBC 304-2018 البند 18.10 (الكمرات العميقة)
- * - SBC 304-2018 البند 8.12 (الكمرات تي الشكل)
+ * - SBC 304-2024 البند 9 (الانحناء)
+ * - SBC 304-2024 البند 11 (القص)
+ * - SBC 304-2024 البند 12 (أطوال التثبيت)
+ * - SBC 304-2024 البند 21 (متطلبات الزلازل)
+ * - SBC 304-2024 البند 18.10 (الكمرات العميقة)
+ * - SBC 304-2024 البند 8.12 (الكمرات تي الشكل)
  */
 class SBCAdvancedBeam {
 
     private val baseBeam = SBCBeam()
 
     companion object {
-        // ثوابت الكود السعودي SBC 304-2018
+        // ثوابت الكود السعودي SBC 304-2024
         private const val PHI_FLEXURE = 0.9        // معامل الاختزال للانحناء - SBC 304 §9.3
         private const val PHI_SHEAR = 0.75         // معامل الاختزال للقص - SBC 304 §21.2
         private const val LAMBDA = 1.0             // عامل الوزن للخرسانة العادية - SBC 304 §19.2.4
@@ -59,7 +59,7 @@ class SBCAdvancedBeam {
     // ========================================================================
 
     /**
-     * تصميم متقدم للكمرة حسب SBC 304-2018
+     * تصميم متقدم للكمرة حسب SBC 304-2024
      *
      * @param beamType نوع الكمرة (بسيطة، ثابتة، كابولي، مستمرة، متعددة الدعامات، متغيرة المقطع، فيرينديل)
      * @param sectionType نوع المقطع (مستطيل، تي، إل، دائري، مركب)
@@ -86,7 +86,7 @@ class SBCAdvancedBeam {
         loadCombination: LoadCombination,
         isCorrosiveEnvironment: Boolean = false
     ): AdvancedBeamResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("beamType", beamType)
         InputGuard.notNull("sectionType", sectionType)
         InputGuard.notNull("loadCombination", loadCombination)
@@ -112,7 +112,7 @@ class SBCAdvancedBeam {
         val cover = if (isCorrosiveEnvironment) SBC_COVER_CORROSIVE else SBC_COVER_NORMAL
         codeNotes.add("Concrete cover: ${cover.toInt()}mm ${if (isCorrosiveEnvironment) "(SBC 304 §7.7 - corrosive/coastal)" else "(SBC 304 §7.7 - normal)"}")
 
-        // === حساب معاملات التحميل حسب SBC 304-2018 (يتبع ACI 5.3) ===
+        // === حساب معاملات التحميل حسب SBC 304-2024 (يتبع ACI 5.3) ===
         val totalFactor = loadCombination.getFactorForCode(DesignCode.SBC)
         val gammaD = 1.2
         val gammaL = 1.6
@@ -213,8 +213,8 @@ class SBCAdvancedBeam {
         // === تجميع مراجع الكود ===
         codeNotes.add(CodeReference.SBC.BEAM_FLEXURE)
         codeNotes.add(CodeReference.SBC.BEAM_SHEAR)
-        codeNotes.add("SBC 304-2018 §9.5: Deflection Control")
-        codeNotes.add("SBC 304-2018 §24.5: Crack Width Control (Hot/Arid Climate)")
+        codeNotes.add("SBC 304-2024 §9.5: Deflection Control")
+        codeNotes.add("SBC 304-2024 §24.5: Crack Width Control (Hot/Arid Climate)")
         codeNotes.add(CodeReference.SBC.BEAM_DEVELOPMENT_LENGTH)
         codeNotes.add("Beam Type: ${beamType.displayName}")
 
@@ -254,7 +254,7 @@ class SBCAdvancedBeam {
     // ========================================================================
 
     /**
-     * تصميم كمرة تي الشكل حسب SBC 304-2018 البند 8.12
+     * تصميم كمرة تي الشكل حسب SBC 304-2024 البند 8.12
      *
      * قواعد عرض الجناح الفعال حسب SBC 304 §8.12 (مطابق لـ ACI §6.3):
      *   bf ≤ bw + 16×hf (لكل جانب)
@@ -288,7 +288,7 @@ class SBCAdvancedBeam {
         inventory: RebarInventory?,
         loadCombination: LoadCombination
     ): AdvancedBeamResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("loadCombination", loadCombination)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
@@ -449,7 +449,7 @@ class SBCAdvancedBeam {
 
         codeNotes.add(CodeReference.SBC.BEAM_FLEXURE)
         codeNotes.add(CodeReference.SBC.BEAM_SHEAR)
-        codeNotes.add("T-Beam Design: SBC 304-2018 §8.12")
+        codeNotes.add("T-Beam Design: SBC 304-2024 §8.12")
 
         return AdvancedBeamResult(
             beamType = BeamType.SimplySupported(span),
@@ -556,7 +556,7 @@ class SBCAdvancedBeam {
     // ========================================================================
 
     /**
-     * تصميم الكمرات العميقة حسب SBC 304-2018 البند 18.10
+     * تصميم الكمرات العميقة حسب SBC 304-2024 البند 18.10
      *
      * تعريف الكمرة العميقة: L/d < 4 (SBC 304 §18.10.1)
      *
@@ -586,7 +586,7 @@ class SBCAdvancedBeam {
         liveLoad: Double,
         loadCombination: LoadCombination
     ): AdvancedBeamResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("loadCombination", loadCombination)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
@@ -751,7 +751,7 @@ class SBCAdvancedBeam {
             crackWidthCheck = null,
             developmentLengthCheck = null,
             warnings = warnings,
-            codeNotes = codeNotes + "SBC 304-2018 §18.10 (Deep Beam Design)"
+            codeNotes = codeNotes + "SBC 304-2024 §18.10 (Deep Beam Design)"
         )
     }
 
@@ -760,7 +760,7 @@ class SBCAdvancedBeam {
     // ========================================================================
 
     /**
-     * تصميم الكمرة المستمرة حسب SBC 304-2018 البند 6.5
+     * تصميم الكمرة المستمرة حسب SBC 304-2024 البند 6.5
      *
      * يستخدم معاملات العزم التقريبية (ACI/SBC Moment Coefficients):
      * - عزم سالب عند الدعامة الخارجية: wL²/16
@@ -795,7 +795,7 @@ class SBCAdvancedBeam {
         inventory: RebarInventory?,
         loadCombination: LoadCombination
     ): List<AdvancedBeamResult> {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("loadCombination", loadCombination)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
@@ -1071,7 +1071,7 @@ class SBCAdvancedBeam {
         val codeNotes = mutableListOf<String>()
         val fcPrime = 0.8 * fcu
 
-        codeNotes.add("SBC 304-2018 §21: Seismic Design Provisions")
+        codeNotes.add("SBC 304-2024 §21: Seismic Design Provisions")
 
         // SBC 304 §21.4: أقل عرض للكمرات في المناطق الزلزالية
         if (width < SBC_MIN_WIDTH_SEISMIC) {
@@ -1207,7 +1207,7 @@ class SBCAdvancedBeam {
         fy: Double
     ): Triple<Double, Boolean, List<String>> {
         val notes = mutableListOf<String>()
-        notes.add("SBC 304-2018 §21.6: Strong Column - Weak Beam Check")
+        notes.add("SBC 304-2024 §21.6: Strong Column - Weak Beam Check")
 
         // حساب عزوم الخضوع للكمرات
         // Mnb = As × fy × (d - a/2) / φ
@@ -1242,7 +1242,7 @@ class SBCAdvancedBeam {
     // ========================================================================
 
     /**
-     * فحص الانحراف المتقدم حسب SBC 304-2018 مع تعديلات المناخ الحار
+     * فحص الانحراف المتقدم حسب SBC 304-2024 مع تعديلات المناخ الحار
      *
      * الاختلاف الرئيسي عن ACI:
      * - معامل الانحراف طويل المدى ξ = 2.5 (للمناخ الحار الجاف)
@@ -1373,7 +1373,7 @@ class SBCAdvancedBeam {
     // ========================================================================
 
     /**
-     * فحص عرض الشروخ حسب SBC 304-2018 مع تعديلات المناخ الحار/الجاف
+     * فحص عرض الشروخ حسب SBC 304-2024 مع تعديلات المناخ الحار/الجاف
      *
      * يستخدم طريقة Gergely-Lutz (مشابهة لـ ACI 24.5) مع تعديلات:
      * - عامل المناخ الحار: يزيد عرض الشرخ بنسبة 15% تقريباً
@@ -1402,7 +1402,7 @@ class SBCAdvancedBeam {
                 calculatedWidth = 0.0,
                 allowableWidth = 0.30,
                 isSafe = true,
-                codeReference = "SBC 304-2018: Section 24.5 (Crack Width Control - Hot/Arid Climate)"
+                codeReference = "SBC 304-2024: Section 24.5 (Crack Width Control - Hot/Arid Climate)"
             )
         }
 
@@ -1454,7 +1454,7 @@ class SBCAdvancedBeam {
             calculatedWidth = crackWidth,
             allowableWidth = allowableWidth,
             isSafe = isSafe,
-            codeReference = "SBC 304-2018: Section 24.5 (z=${"%.0f".format(z)} kip/in, " +
+            codeReference = "SBC 304-2024: Section 24.5 (z=${"%.0f".format(z)} kip/in, " +
                     "hot-climate factor=${"%.2f".format(hotClimateFactor)}, " +
                     "limit=${if (isExterior) 0.25 else 0.30}mm)"
         )
@@ -1465,7 +1465,7 @@ class SBCAdvancedBeam {
     // ========================================================================
 
     /**
-     * فحص طول التثبيت حسب SBC 304-2018 البند 12
+     * فحص طول التثبيت حسب SBC 304-2024 البند 12
      *
      * يتبع ACI 25.4.2 مع تعديلات SBC:
      * - للأسياك المجلفنة (Galvanized): زيادة 10% في طول التثبيت
@@ -1517,7 +1517,7 @@ class SBCAdvancedBeam {
             requiredLength = ldRequired,
             availableLength = availableLength,
             isSafe = isSafe,
-            codeReference = "SBC 304-2018: Section 12 (Ld_bot=${"%.0f".format(ldBottom)}mm, " +
+            codeReference = "SBC 304-2024: Section 12 (Ld_bot=${"%.0f".format(ldBottom)}mm, " +
                     "Ld_top=${"%.0f".format(ldTop)}mm, Galv: ×1.1, " +
                     "Ld_req=${"%.0f".format(ldRequired)}mm)"
         )
@@ -1528,7 +1528,7 @@ class SBCAdvancedBeam {
     // ========================================================================
 
     /**
-     * فحص العرض الفعال للجناح حسب SBC 304-2018 البند 8.12
+     * فحص العرض الفعال للجناح حسب SBC 304-2024 البند 8.12
      *
      * bf لا يتجاوز:
      *   1. bw + 16 × hf (لكل جانب)
@@ -1549,7 +1549,7 @@ class SBCAdvancedBeam {
         span: Double
     ): Pair<Double, List<String>> {
         val notes = mutableListOf<String>()
-        notes.add("SBC 304-2018 §8.12: Effective Flange Width Check")
+        notes.add("SBC 304-2024 §8.12: Effective Flange Width Check")
 
         val Ln = span * 1000.0  // mm
 
@@ -1583,7 +1583,7 @@ class SBCAdvancedBeam {
     // ========================================================================
 
     /**
-     * فحص معايير الكمرة العميقة حسب SBC 304-2018 البند 18.10.1
+     * فحص معايير الكمرة العميقة حسب SBC 304-2024 البند 18.10.1
      *
      * الكمرة العميقة: Ln/d < 4
      * الكمرة العادية: Ln/d ≥ 4
@@ -1602,7 +1602,7 @@ class SBCAdvancedBeam {
         val Ln = span * 1000.0  // mm
         val ldRatio = Ln / effectiveDepth
 
-        notes.add("SBC 304-2018 §18.10.1: Deep Beam Criteria")
+        notes.add("SBC 304-2024 §18.10.1: Deep Beam Criteria")
         notes.add("Clear span Ln = ${"%.0f".format(Ln)}mm")
         notes.add("Effective depth d = ${"%.0f".format(effectiveDepth)}mm")
         notes.add("Total depth h = ${"%.0f".format(totalDepth)}mm")
@@ -1632,7 +1632,7 @@ class SBCAdvancedBeam {
     // ========================================================================
 
     /**
-     * حساب معامل β1 حسب SBC 304-2018 (= ACI 21.2.2.1)
+     * حساب معامل β1 حسب SBC 304-2024 (= ACI 21.2.2.1)
      *
      * β1 = 0.85 لـ fc' ≤ 28 MPa
      * β1 ينخفض 0.05 لكل 7 MPa فوق 28 MPa

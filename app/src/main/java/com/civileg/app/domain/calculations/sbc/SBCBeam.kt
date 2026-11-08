@@ -6,9 +6,9 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تنفيذ الكود السعودي SBC 304-2018 للكمرات — مستقل بالكامل عن ACI
+ * تنفيذ الكود السعودي SBC 304-2024 للكمرات — مستقل بالكامل عن ACI
  *
- * SBC 304-2018 مبني على ACI 318-19 لكن مع فروقات جوهرية:
+ * SBC 304-2024 مبني على ACI 318-19 لكن مع فروقات جوهرية:
  * - تحويل المقاومة: f'c = 0.8 × fcu (مكعب → أسطوانة)
  * - مقاومة القص الخرسانية: SBC 304 §11 يختلف عن ACI §22 في معاملات محددة
  * - نسبة التسليح الأدنى في المناطق الزلزالية: ρ_min,seis = 0.25√(f'c)/fy
@@ -17,47 +17,47 @@ import kotlin.math.*
  * - تباعد الكانات الزلزالية: min(d/4, 100mm)
  *
  * المراجع:
- * - SBC 304-2018 البند 9 (الانحناء)
- * - SBC 304-2018 البند 11 (القص)
- * - SBC 304-2018 البند 9.5 (الانحراف)
- * - SBC 304-2018 البند 12 (أطوال التثبيت)
- * - SBC 304-2018 البند 18 (المناطق الزلزالية)
- * - SBC 304-2018 البند 4 (متطلبات عامة)
+ * - SBC 304-2024 البند 9 (الانحناء)
+ * - SBC 304-2024 البند 11 (القص)
+ * - SBC 304-2024 البند 9.5 (الانحراف)
+ * - SBC 304-2024 البند 12 (أطوال التثبيت)
+ * - SBC 304-2024 البند 18 (المناطق الزلزالية)
+ * - SBC 304-2024 البند 4 (متطلبات عامة)
  */
 class SBCBeam : BeamDesign {
 
     companion object {
-        // ── SBC 304-2018 معاملات الاختزال (Section 9.3) ──
+        // ── SBC 304-2024 معاملات الاختزال (Section 9.3) ──
         private const val PHI_FLEXURE = 0.9       // §9.3.3 — مقاطع محكومة بالشد
         private const val PHI_SHEAR = 0.75        // §9.3.4 — القص
         private const val PHI_COMPRESSION = 0.65  // §9.3.3 — مقاطع محكومة بالضغط
 
-        // ── SBC 304-2018 معاملات الخرسانة ──
+        // ── SBC 304-2024 معاملات الخرسانة ──
         private const val LAMBDA = 1.0            // عامل الوزن للخرسانة العادية
         private const val BETA_1_DEFAULT = 0.85   // لـ f'c ≤ 28 MPa
 
-        // ── SBC 304-2018 متطلبات زلزالية (Section 18) ──
+        // ── SBC 304-2024 متطلبات زلزالية (Section 18) ──
         private const val SBC_MIN_WIDTH_SEISMIC = 250.0   // mm — أقل عرض للكمرات الزلزالية §18.4
         private const val SBC_SEISMIC_MAX_STIRRUP_SPACING_FACTOR = 4.0  // d/4
         private const val SBC_SEISMIC_MAX_STIRRUP_SPACING_MM = 100.0   // mm
 
-        // ── SBC 304-2018 الغطاء الخرساني (Section 4) ──
+        // ── SBC 304-2024 الغطاء الخرساني (Section 4) ──
         private const val SBC_COVER_INTERIOR = 40.0      // mm — داخلية
         private const val SBC_COVER_EXTERIOR = 50.0      // mm — خارجية (بيئة مالحة شائعة في المملكة)
         private const val SBC_COVER_SEVERE = 65.0        // mm — بيئة شديدة التآكل
         private const val SBC_COVER_COASTAL = 75.0       // mm — مناطق ساحلية
 
-        // ── SBC 304-2018 أطوال التثبيت (Section 12) ──
+        // ── SBC 304-2024 أطوال التثبيت (Section 12) ──
         private const val SBC_MIN_DEVELOPMENT_LENGTH = 300.0  // mm
 
-        // ── SBC 304-2018 قيم افتراضية سعودية ──
+        // ── SBC 304-2024 قيم افتراضية سعودية ──
         private const val DEFAULT_FCU = 30.0       // MPa — أكثر درجات الخرسانة شيوعاً في السعودية
         private const val DEFAULT_FY = 420.0      // MPa — Grade 60 (السعودي)
         private const val MAX_SHEAR_SPACING = 600.0  // mm — SBC 304 §11.7.6
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // 1. حساب التسليح للانحناء — SBC 304-2018 §9
+    // 1. حساب التسليح للانحناء — SBC 304-2024 §9
     // ══════════════════════════════════════════════════════════════════════
     override fun calculateFlexureReinforcement(
         fcu: Double,
@@ -68,7 +68,7 @@ class SBCBeam : BeamDesign {
         designMoment: Double,
         loadCombination: LoadCombination
     ): ReinforcementResult {
-        // ── InputGuard: تحقق صارم (ADR-010) — SBC 304-2018 §9 ──
+        // ── InputGuard: تحقق صارم (ADR-010) — SBC 304-2024 §9 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("width", width)
@@ -81,7 +81,7 @@ class SBCBeam : BeamDesign {
         val codeNotes = mutableListOf<String>()
 
         // ── تحويل المقاومة: f'c = 0.8 × fcu ──
-        // SBC 304-2018 §4.1: نفس ACI 318 في تحويل المكعب لأسطوانة
+        // SBC 304-2024 §4.1: نفس ACI 318 في تحويل المكعب لأسطوانة
         val fc = 0.8 * fcu
         val Mu = designMoment * 1e6  // N.mm
 
@@ -214,7 +214,7 @@ class SBCBeam : BeamDesign {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // 2. حساب تسليح القص — SBC 304-2018 §11
+    // 2. حساب تسليح القص — SBC 304-2024 §11
     // ══════════════════════════════════════════════════════════════════════
     override fun calculateShearReinforcement(
         fcu: Double,
@@ -345,7 +345,7 @@ class SBCBeam : BeamDesign {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // 3. التحقق من الانحراف — SBC 304-2018 §9.5
+    // 3. التحقق من الانحراف — SBC 304-2024 §9.5
     // ══════════════════════════════════════════════════════════════════════
     override fun checkDeflection(
         span: Double,
@@ -395,7 +395,7 @@ class SBCBeam : BeamDesign {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // 4. أطوال التثبيت — SBC 304-2018 §12
+    // 4. أطوال التثبيت — SBC 304-2024 §12
     // ══════════════════════════════════════════════════════════════════════
     override fun calculateDevelopmentLength(
         barDiameter: Double,
@@ -442,10 +442,10 @@ class SBCBeam : BeamDesign {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // 5. تصميم كمرة مضاعفة التسليح — SBC 304-2018 §9.3.3.2
+    // 5. تصميم كمرة مضاعفة التسليح — SBC 304-2024 §9.3.3.2
     // ══════════════════════════════════════════════════════════════════════
     /**
-     * تصميم كمرة مضاعفة التسليح (Doubly-Reinforced Beam) حسب SBC 304-2018
+     * تصميم كمرة مضاعفة التسليح (Doubly-Reinforced Beam) حسب SBC 304-2024
      *
      * طريقة Rn-ρ مع فروقات SBC عن ACI:
      * - f'c = 0.8 × fcu (تحويل مكعب → أسطوانة)
@@ -582,7 +582,7 @@ class SBCBeam : BeamDesign {
     }
 
     // ══════════════════════════════════════════════════════════════════════
-    // حدود الكود السعودي SBC 304-2018
+    // حدود الكود السعودي SBC 304-2024
     // ══════════════════════════════════════════════════════════════════════
 
     override fun getMinReinforcementRatio(): Double {

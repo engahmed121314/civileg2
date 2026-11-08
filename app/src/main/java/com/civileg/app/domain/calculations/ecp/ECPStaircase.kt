@@ -6,11 +6,11 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تصميم السلالم حسب الكود المصري ECP 203-2020
+ * تصميم السلالم حسب الكود المصري ECP 203-2025
  *
  * المراجع:
- * - ECP 203-2020 البند 4-2 (تصميم الانحناء والقص)
- * - ECP 203-2020 البند 6-3 (الانحراف)
+ * - ECP 203-2025 البند 4-2 (تصميم الانحناء والقص)
+ * - ECP 203-2025 البند 6-3 (الانحراف)
  * - ECP 201-2012 (أحمال السلالم: حي 4 kN/m²، ميت 6 kN/m²)
  *
  * السلم يُ Modellled كـ بلاطة باتجاه واحد (كمرة بعرض 1م)
@@ -113,7 +113,7 @@ class ECPStaircase : StaircaseDesign {
         codeNotes.add(CodeReference.ECP.STAIRCASE_DEFLECTION)
 
         // ========== 2. سماكة البلاطة ==========
-        // ECP 203-2020 §6-2: Minimum waist slab thickness for stair
+        // ECP 203-2025 §6-2: Minimum waist slab thickness for stair
         val waistThickness = max(input.waistThickness, MIN_WAIST)
         val cover = COVER_INTERIOR
         val stirrupEstimate = 8.0
@@ -128,7 +128,7 @@ class ECPStaircase : StaircaseDesign {
             description = "Minimum waist thickness per ECP 203 §6-2"
         ))
 
-        // ECP 203-2020 §6-2: Waist slab span/depth check
+        // ECP 203-2025 §6-2: Waist slab span/depth check
         // For stair slabs: L/d ≤ 26 for continuous, 20 for simply supported
         val waistSpanDepthRatio = (input.span * 1000) / dEffective
         val waistAllowableRatio = if (input.stairType == StairType.DOG_LEG) 26.0 else 20.0
@@ -254,10 +254,10 @@ class ECPStaircase : StaircaseDesign {
         }
 
         // ========== 7. فحص الانحراف ==========
-        // ECP 203-2020 §6-3: Span/depth ratio approach for stair slab deflection
+        // ECP 203-2025 §6-3: Span/depth ratio approach for stair slab deflection
         val basicRatio = 20.0
         val rhoPercent = (rho * 100).coerceAtLeast(0.15)
-        // ECP 203-2020 §6-3-1: MF = 0.55 + 477/(fy×ρ%), capped at 2.5
+        // ECP 203-2025 §6-3-1: MF = 0.55 + 477/(fy×ρ%), capped at 2.5
         val modificationFactor = (0.55 + 477.0 / (input.fy * rhoPercent)).coerceIn(1.0, 2.5)
         val allowableRatio = basicRatio * modificationFactor
         val actualRatio = (span * 1000) / dEffective
@@ -301,9 +301,9 @@ class ECPStaircase : StaircaseDesign {
 
         // ========== 9. ملاحظات الكود ==========
         codeNotes.add(CodeReference.ECP.SLAB_ONE_WAY)
-        codeNotes.add("ECP 203-2020: Section 4-2 (Flexure design of waist slab)")
-        codeNotes.add("ECP 203-2020: Section 6-2 (Slab reinforcement rules)")
-        codeNotes.add("ECP 203-2020: Section 6-3 (Deflection limits L/250)")
+        codeNotes.add("ECP 203-2025: Section 4-2 (Flexure design of waist slab)")
+        codeNotes.add("ECP 203-2025: Section 6-2 (Slab reinforcement rules)")
+        codeNotes.add("ECP 203-2025: Section 6-3 (Deflection limits L/250)")
         codeNotes.add("ECP 201-2012: Staircase live load = 4.0 kN/m²")
         if (waistSpanDepthRatio > waistAllowableRatio) {
             codeNotes.add("WARNING: Waist slab L/d = ${"%.1f".format(waistSpanDepthRatio)} exceeds ${"%.0f".format(waistAllowableRatio)} — increase thickness")
@@ -353,7 +353,7 @@ class ECPStaircase : StaircaseDesign {
     }
 
     /**
-     * Gooseneck (حبة البط) detail calculation per ECP 203-2020 §4-2
+     * Gooseneck (حبة البط) detail calculation per ECP 203-2025 §4-2
      * The gooseneck is the re-entrant corner at the junction of the waist slab
      * and the landing slab where significant tension and stress concentration occurs.
      *
@@ -382,12 +382,12 @@ class ECPStaircase : StaircaseDesign {
         InputGuard.positive("fy", fy)
         InputGuard.positive("fcu", fcu)
 
-        // ECP 203-2020 §4-2: Minimum radius at re-entrant corner
+        // ECP 203-2025 §4-2: Minimum radius at re-entrant corner
         // The gooseneck radius should be at least 50mm to avoid cracking
         val minGooseneckRadius = 50.0  // mm
         val recommendedRadius = max(minGooseneckRadius, riserMm * 0.3)
 
-        // ECP 203-2020 §4-2: Additional reinforcement at gooseneck
+        // ECP 203-2025 §4-2: Additional reinforcement at gooseneck
         // Diagonal tension at the re-entrant corner requires extra bars
         // Minimum: 2Ø10 or equivalent at the corner, extending min Ld on each side
         val fbd = 0.6 * sqrt(fcu)  // Bond strength per ECP 203 §5-2-2

@@ -51,7 +51,7 @@ class SBCFlatSlab : FlatSlabDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun design(input: FlatSlabInput): FlatSlabResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.fcu", input.fcu)
         InputGuard.positive("input.fy", input.fy)
@@ -417,7 +417,7 @@ class SBCFlatSlab : FlatSlabDesign {
         columnWidth: Double, columnDepth: Double,
         cover: Double
     ): FlatSlabDesign.PunchingShearResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("slabThickness", slabThickness)
@@ -502,7 +502,7 @@ class SBCFlatSlab : FlatSlabDesign {
         moment: Double, fcu: Double, fy: Double,
         effectiveDepth: Double, stripWidth: Double, cover: Double
     ): FlatSlabDesign.ReinforcementDesign {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("effectiveDepth", effectiveDepth)
@@ -601,7 +601,7 @@ class SBCFlatSlab : FlatSlabDesign {
         serviceMoment: Double, effectiveDepth: Double,
         providedAs: Double
     ): FlatSlabDesign.DeflectionResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("span", span)

@@ -7,7 +7,7 @@ import com.civileg.app.domain.entities.ReinforcementResult
 import kotlin.math.*
 
 /**
- * تصميم خزانات المياه حسب SBC 304-2018
+ * تصميم خزانات المياه حسب SBC 304-2024
  * SBC 304 يتبع منهجية ACI 318/350 للمنشآت المائية مع اختلاف في:
  * - f'c = 0.67 × fcu / γc (مكافئ)
  * - نفس معاملات φ: 0.90 للانحناء، 0.75 للقص
@@ -37,7 +37,7 @@ class SBCTank : TankDesign {
         length: Double, width: Double, height: Double,
         waterDepth: Double, fcu: Double, fy: Double, type: TankType
     ): TankResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("length", length)
         InputGuard.positive("width", width)
         InputGuard.positive("height", height)
@@ -131,14 +131,14 @@ class SBCTank : TankDesign {
             maxShearWall = GAMMA_W * hW * hW / 2.0,
             factorOfSafetyUplift = upliftFS,
             structuralSystem = when (type) {
-                TankType.RECTANGULAR_GROUND -> "SBC 304-2018: Ground Rectangular - Cantilever Wall"
-                TankType.CIRCULAR_GROUND -> "SBC 304-2018: Ground Circular - Hoop Tension"
-                TankType.RECTANGULAR_ELEVATED -> "SBC 304-2018: Elevated Rectangular"
-                TankType.CIRCULAR_ELEVATED -> "SBC 304-2018: Elevated Circular"
-                TankType.RECTANGULAR_UNDERGROUND -> "SBC 304-2018: Underground Rectangular"
-                TankType.CIRCULAR_UNDERGROUND -> "SBC 304-2018: Underground Circular"
-                TankType.RECTANGULAR -> "SBC 304-2018: Rectangular Tank"
-                TankType.CIRCULAR -> "SBC 304-2018: Circular Tank"
+                TankType.RECTANGULAR_GROUND -> "SBC 304-2024: Ground Rectangular - Cantilever Wall"
+                TankType.CIRCULAR_GROUND -> "SBC 304-2024: Ground Circular - Hoop Tension"
+                TankType.RECTANGULAR_ELEVATED -> "SBC 304-2024: Elevated Rectangular"
+                TankType.CIRCULAR_ELEVATED -> "SBC 304-2024: Elevated Circular"
+                TankType.RECTANGULAR_UNDERGROUND -> "SBC 304-2024: Underground Rectangular"
+                TankType.CIRCULAR_UNDERGROUND -> "SBC 304-2024: Underground Circular"
+                TankType.RECTANGULAR -> "SBC 304-2024: Rectangular Tank"
+                TankType.CIRCULAR -> "SBC 304-2024: Circular Tank"
             },
             recommendations = listOf(
                 "Use water-stop at all construction joints",
@@ -217,7 +217,7 @@ class SBCTank : TankDesign {
         ))
 
         codeNotes.add(CodeReference.SBC.TANK_HYDROSTATIC)
-        codeNotes.add(String.format("SBC 304-2018: f'c=%.1f MPa (0.67×fcu/γc)", fcPrime))
+        codeNotes.add(String.format("SBC 304-2024: f'c=%.1f MPa (0.67×fcu/γc)", fcPrime))
         codeNotes.add(String.format("Vertical: %dØ%d @ %dmm", barsPerMeter, barDiameter.toInt(), spacing.toInt()))
         codeNotes.add(String.format("Horizontal: %dØ%d @ %dmm", hBarsPerMeter, hBarDia.toInt(), hSpacing.toInt()))
 
@@ -286,7 +286,7 @@ class SBCTank : TankDesign {
             isCrackSafe, "SBC 304: Hoop stress vs tensile strength"
         ))
 
-        codeNotes.add("SBC 304-2018: Circular Tank - Hoop Tension")
+        codeNotes.add("SBC 304-2024: Circular Tank - Hoop Tension")
         codeNotes.add(String.format("Hoop: %dØ%d @ %dmm", hoopBarsPerMeter, hoopBarDia.toInt(), hoopSpacing.toInt()))
         codeNotes.add(String.format("Vertical: %dØ%d @ %dmm", vertBarsPerMeter, vertBarDia.toInt(), vertSpacing.toInt()))
 

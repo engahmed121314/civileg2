@@ -6,16 +6,16 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تصميم البلاطات الهوردي (Joist / Ribbed Slab) حسب الكود السعودي SBC 304-2018
+ * تصميم البلاطات الهوردي (Joist / Ribbed Slab) حسب الكود السعودي SBC 304-2024
  *
- * تنفيذ كامل لـ SBC 304-2018 مع مراعاة الفروق الجوهرية عن ECP و ACI:
- *  - SBC 304-2018 §8.4: Ribbed / Joist slab provisions
- *  - SBC 304-2018 §4.2: Flexural design (partial-factor format γc=1.5, γs=1.15)
- *  - SBC 304-2018 §4.3: Shear design (معامل 0.25 بدل 0.24)
- *  - SBC 304-2018 §8.4.5: Effective flange width للـ T-section
- *  - SBC 304-2018 §8.4.6: Joist shear enhancement factor
- *  - SBC 304-2018 §8.4.7: Minimum topping thickness
- *  - SBC 304-2018 §4.2.2: Maximum reinforcement ratio
+ * تنفيذ كامل لـ SBC 304-2024 مع مراعاة الفروق الجوهرية عن ECP و ACI:
+ *  - SBC 304-2024 §8.4: Ribbed / Joist slab provisions
+ *  - SBC 304-2024 §4.2: Flexural design (partial-factor format γc=1.5, γs=1.15)
+ *  - SBC 304-2024 §4.3: Shear design (معامل 0.25 بدل 0.24)
+ *  - SBC 304-2024 §8.4.5: Effective flange width للـ T-section
+ *  - SBC 304-2024 §8.4.6: Joist shear enhancement factor
+ *  - SBC 304-2024 §8.4.7: Minimum topping thickness
+ *  - SBC 304-2024 §4.2.2: Maximum reinforcement ratio
  *
  * الفروق الرئيسية عن ECP 203:
  *  - معامل القص: 0.25 بدل 0.24 (SBC 304 §4.3.2)
@@ -27,7 +27,7 @@ import kotlin.math.*
 class SBCJoistSlab : HordiSlabDesign {
 
     companion object {
-        // SBC 304 partial safety factors (mandated by SBC 304-2018 §4.2)
+        // SBC 304 partial safety factors (mandated by SBC 304-2024 §4.2)
         private const val GAMMA_C = 1.5    // SBC 304-4.2.2: γc for concrete
         private const val GAMMA_S = 1.15   // SBC 304-4.2.2: γs for steel
 
@@ -225,7 +225,7 @@ class SBCJoistSlab : HordiSlabDesign {
 
         // ── Code notes ──
         codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
-        codeNotes.add("SBC 304-2018 §8.4: Hordi/Joist Slab Design")
+        codeNotes.add("SBC 304-2024 §8.4: Hordi/Joist Slab Design")
         codeNotes.add(String.format("γc=%.2f, γs=%.2f (SBC 304-4.2.2)", GAMMA_C, GAMMA_S))
         codeNotes.add(String.format("fcu=%.0f MPa → fcd=%.1f MPa, fsd=%.1f MPa", fcu, fc, fsd))
         codeNotes.add(String.format("beff=%.0f mm (SBC 304-8.4.5), bw=%.0f mm", beff, bw))

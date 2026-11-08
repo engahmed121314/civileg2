@@ -6,12 +6,12 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تصميم البلاطات حسب الكود السعودي SBC 304-2018
+ * تصميم البلاطات حسب الكود السعودي SBC 304-2024
  * يعتمد على ACI 318 مع تعديلات سعودية محددة
  *
  * المراجع:
- * - SBC 304-2018 البند 8 (البلاطات)
- * - SBC 304-2018 البند 8.4 (الحد الأدنى للتسليح)
+ * - SBC 304-2024 البند 8 (البلاطات)
+ * - SBC 304-2024 البند 8.4 (الحد الأدنى للتسليح)
  */
 class SBCSlab : SlabDesign {
 
@@ -31,7 +31,7 @@ class SBCSlab : SlabDesign {
         designShear: Double,
         loadCombination: LoadCombination
     ): SlabDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 البند 8 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 البند 8 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("slabThickness", slabThickness)
@@ -90,7 +90,7 @@ class SBCSlab : SlabDesign {
         val utilizationRatio = rhoFinal / rhoMin.coerceAtLeast(0.001)
 
         codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
-        codeNotes.add("SBC 304-2018: One-Way Slab")
+        codeNotes.add("SBC 304-2024: One-Way Slab")
         codeNotes.add(String.format("fc'=%.0f MPa, d=%.0f mm", fc_prime, effectiveDepth))
 
         return SlabDesignResult(

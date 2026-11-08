@@ -1296,7 +1296,11 @@ class FrameAnalysisEngineTest {
         assertEquals("Envelope minMoment = 0 (SS sagging only)", 0.0, env.minMoment, 1e-9)
         assertEquals("Envelope maxShear = 1.4 × 45 = 63", 63.0, env.maxShear, 0.3)
         assertEquals("Envelope minShear = 1.4 × (−45) = −63", -63.0, env.minShear, 0.3)
-        assertEquals("Governing combination = 1.4DL + 1.6LL", "1.4DL + 1.6LL", env.governingCombination)
+        assertEquals(
+            "Governing combination includes the selected code",
+            "1.4DL + 1.6LL (ECP 203)",
+            env.governingCombination
+        )
     }
 
     @Test

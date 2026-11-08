@@ -6,13 +6,13 @@ import com.civileg.app.domain.entities.CodeReference
 import com.civileg.core.engineering.StrapFootingDesignEngine
 
 /**
- * تصميم القاعدة الشريطية حسب ACI 318-19
+ * تصميم القاعدة الشريطية حسب ACI 318-25
  * معاملات تحميل ACI §9.2: γD = 1.2, γL = 1.6
  */
 class ACIStrapFooting : StrapFootingDesign {
 
     companion object {
-        // ACI 318-19 §9.2: معاملات التحميل
+        // ACI 318-25 §9.2: معاملات التحميل
         private const val LF_DEAD = 1.2
         private const val LF_LIVE = 1.6
     }
@@ -39,8 +39,8 @@ class ACIStrapFooting : StrapFootingDesign {
 
         // ── إضافة ملاحظات الكود ──
         val notes = result.codeNotes.toMutableList()
-        notes.add("ACI 318-19 §9.2: γD=${LF_DEAD}, γL=${LF_LIVE}")
-        notes.add("ACI 318-19 §13: Strap Footing Design")
+        notes.add("ACI 318-25 §9.2: γD=${LF_DEAD}, γL=${LF_LIVE}")
+        notes.add("ACI 318-25 §13: Strap Footing Design")
         notes.add(CodeReference.ACI.FOOTING_BEARING)
         notes.add(CodeReference.ACI.FOOTING_REINFORCEMENT)
 

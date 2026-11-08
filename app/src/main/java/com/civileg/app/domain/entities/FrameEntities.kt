@@ -427,7 +427,7 @@ data class FrameAnalysisSettings(
          */
         fun defaultLoadCombinations(code: DesignCode): List<LoadCombinationFrame> = when (code) {
             DesignCode.ECP -> listOf(
-                // ECP 203-2020 البند 2-3-1
+                // ECP 203-2025 البند 2-3-1
                 LoadCombinationFrame("1.4DL + 1.6LL (ECP 203)", 1.4, 1.6, 0.0),
                 LoadCombinationFrame("1.4DL + 1.0LL + 1.4WL (ECP 203)", 1.4, 1.0, 1.4)
             )

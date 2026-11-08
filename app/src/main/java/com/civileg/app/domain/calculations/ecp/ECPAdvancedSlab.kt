@@ -310,7 +310,7 @@ class ECPAdvancedSlab {
             isSafe = isSafe,
             criticalPerimeter = criticalPerimeter,
             shearHeadsRequired = shearStress > capacity,
-            codeReference = "ECP 203-2020: Section 4-3-2 (Punching Shear)",
+            codeReference = "ECP 203-2025: Section 4-3-2 (Punching Shear)",
             warnings = if (!isSafe) listOf(String.format("قص الاختراق %.2f MPa > %.2f MPa - زِد السمك أو أضف رأس عمود", shearStress, capacity)) else emptyList()
         )
     }
@@ -437,7 +437,7 @@ class ECPAdvancedSlab {
         val Ld = max(12.0 * barDiameter, (fs * barDiameter) / (3.5 * sqrt(fcu)))  // mm (ECP 203 البند 5-2)
         val availableLength = span_m * 1000.0 * 0.8  // 80% من البحر
 
-        codeNotes.add("ECP 203-2020: Precast Slab (Section 8)")
+        codeNotes.add("ECP 203-2025: Precast Slab (Section 8)")
         codeNotes.add(String.format("Total: %.0f + %.0f = %.0f mm", slab.thickness, slab.toppingThickness, totalThickness))
         codeNotes.add(String.format("Mu = %.1f kN.m, K = %.3f", maxMoment, K))
         codeNotes.add(String.format("Ld = %.0f mm, Available = %.0f mm", Ld, availableLength))

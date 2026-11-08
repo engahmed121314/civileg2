@@ -263,9 +263,9 @@ object ProfessionalEnglishPdfReporter {
     private fun addCalculationMethodology(document: Document, designCode: String,
                                           reportType: ReportType,
                                           steps: List<CalculationStep>) {
-        document.add(sectionTitle("2. Design Calculations"))
+        document.add(sectionTitle("2. Calculation Methodology & Verification"))
         document.add(separator())
-        document.add(Paragraph().add(text("Method: $designCode — Strength Design Method (USD)", createPdfFont(), 10f, SECONDARY)))
+        document.add(Paragraph().add(text("Applicable design basis: $designCode", createPdfFont(), 10f, SECONDARY)))
         document.add(emptyLine())
 
         if (steps.isNotEmpty()) {
@@ -969,7 +969,7 @@ object ProfessionalEnglishPdfReporter {
         }
 
         // Extract design code from inputs if available
-        val defaultCode = if (reportType == ReportType.STEEL) "AISC 360-16 / ECP 205-2007" else "ACI 318-19 / ECP 203-2020"
+        val defaultCode = if (reportType == ReportType.STEEL) "AISC 360-16 / ECP 205-2007" else "ACI 318-19 / ECP 203-2025"
         val codeStr = inputs["Design Code"]
             ?: inputs["الكود التصميمي"]
             ?: defaultCode

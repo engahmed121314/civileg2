@@ -13,7 +13,7 @@ import com.civileg.app.domain.calculations.base.posttensioned.AnchorageZoneResul
 import com.civileg.app.domain.calculations.base.posttensioned.PTDeflectionResult
 
 /**
- * تصميم العناصر مسبقة الإجهاد وفق الكود المصري ECP 203-2020.
+ * تصميم العناصر مسبقة الإجهاد وفق الكود المصري ECP 203-2025.
  */
 class ECPPostTensioned : PostTensionedDesign {
 

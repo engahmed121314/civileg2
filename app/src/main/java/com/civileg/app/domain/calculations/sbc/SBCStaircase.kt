@@ -6,7 +6,7 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تصميم السلالم حسب الكود السعودي SBC 304-2018
+ * تصميم السلالم حسب الكود السعودي SBC 304-2024
  *
  * SBC 304 يعتمد على ACI 318 مع تعديلات سعودية محددة:
  * - معاملات تحميل: 1.2D + 1.6L (SBC 304)
@@ -16,10 +16,10 @@ import kotlin.math.*
  * - فحص زلزالي إضافي إن وجد
  *
  * المراجع:
- * - SBC 304-2018 البند 9 (الانحناء)
- * - SBC 304-2018 البند 11 (القص)
- * - SBC 304-2018 البند 7.7 (الغطاء الخرساني)
- * - SBC 304-2018 البند 21 (متطلبات زلزالية)
+ * - SBC 304-2024 البند 9 (الانحناء)
+ * - SBC 304-2024 البند 11 (القص)
+ * - SBC 304-2024 البند 7.7 (الغطاء الخرساني)
+ * - SBC 304-2024 البند 21 (متطلبات زلزالية)
  */
 class SBCStaircase : StaircaseDesign {
 
@@ -41,7 +41,7 @@ class SBCStaircase : StaircaseDesign {
     }
 
     override fun designStaircase(input: StaircaseInput): StaircaseResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.fcu", input.fcu)
         InputGuard.positive("input.fy", input.fy)
@@ -142,7 +142,7 @@ class SBCStaircase : StaircaseDesign {
         val factoredOnSlope = horizontalLoad * cosTheta
 
         codeNotes.add("Factored horizontal load = ${String.format("%.2f", horizontalLoad)} kN/m²")
-        codeNotes.add("Load factors: 1.2D + 1.6L per SBC 304-2018")
+        codeNotes.add("Load factors: 1.2D + 1.6L per SBC 304-2024")
 
         // ========== 4. التحليل الإنشائي ==========
         val span = input.span
@@ -190,14 +190,14 @@ class SBCStaircase : StaircaseDesign {
         if (astRequired < minSteelArea) {
             astRequired = minSteelArea
             codeNotes.add("SBC minimum steel applied: ${String.format("%.0f", minSteelArea)} mm²/m (0.002 × b × d)")
-            codeNotes.add("SBC 304-2018: Higher ρmin for hot/arid climate durability")
+            codeNotes.add("SBC 304-2024: Higher ρmin for hot/arid climate durability")
         }
 
         safetyChecks.add(StairSafetyCheck(
             name = "Flexure (ρ ≤ ρ_max_tc)",
             value = rho, limit = rhoMaxTc, unit = "",
             isSafe = rho <= rhoMaxTc,
-            description = "SBC 304-2018 Section 9.3.3.1"
+            description = "SBC 304-2024 Section 9.3.3.1"
         ))
 
         // اختيار حديد رئيسي
@@ -228,7 +228,7 @@ class SBCStaircase : StaircaseDesign {
             name = "Shear Capacity",
             value = adjustedShear, limit = maxShearCapacity, unit = "kN/m",
             isSafe = shearSafe,
-            description = "SBC 304-2018 Section 11"
+            description = "SBC 304-2024 Section 11"
         ))
 
         val requiredStirrups: String
@@ -284,7 +284,7 @@ class SBCStaircase : StaircaseDesign {
             name = "Deflection (Span/Depth)",
             value = actualRatio, limit = allowableRatio, unit = "",
             isSafe = deflectionOk,
-            description = "SBC 304-2018 Section 9.5: L/d ≤ ${String.format("%.1f", allowableRatio)}"
+            description = "SBC 304-2024 Section 9.5: L/d ≤ ${String.format("%.1f", allowableRatio)}"
         ))
 
         // ========== 8. فحوصات هندسية ==========
@@ -309,10 +309,10 @@ class SBCStaircase : StaircaseDesign {
 
         // ========== 9. SBC-specific: ملاحظات البيئة المالحة ==========
         codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
-        codeNotes.add("SBC 304-2018: Section 9 (Flexure)")
-        codeNotes.add("SBC 304-2018: Section 11 (Shear)")
-        codeNotes.add("SBC 304-2018: Section 7.7 (Cover requirements)")
-        codeNotes.add("SBC 304-2018: Higher ρmin = 0.002 for hot/arid climate durability")
+        codeNotes.add("SBC 304-2024: Section 9 (Flexure)")
+        codeNotes.add("SBC 304-2024: Section 11 (Shear)")
+        codeNotes.add("SBC 304-2024: Section 7.7 (Cover requirements)")
+        codeNotes.add("SBC 304-2024: Higher ρmin = 0.002 for hot/arid climate durability")
         codeNotes.add("Note: For coastal areas, increase cover to ${COVER_COASTAL.toInt()}mm")
         codeNotes.add("Note: Epoxy-coated bars recommended in corrosive environments per SBC 304")
         codeNotes.add("Note: Seismic provisions (SBC 304 Section 21) may require additional checks")

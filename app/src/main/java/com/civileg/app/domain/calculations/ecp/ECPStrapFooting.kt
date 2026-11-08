@@ -6,13 +6,13 @@ import com.civileg.app.domain.entities.CodeReference
 import com.civileg.core.engineering.StrapFootingDesignEngine
 
 /**
- * تصميم القاعدة الشريطية حسب ECP 203-2020
+ * تصميم القاعدة الشريطية حسب ECP 203-2025
  * معاملات تحميل ECP §2.3: γD = 1.4, γL = 1.6
  */
 class ECPStrapFooting : StrapFootingDesign {
 
     companion object {
-        // ECP 203-2020 §2.3: معاملات التحميل
+        // ECP 203-2025 §2.3: معاملات التحميل
         private const val LF_DEAD = 1.4
         private const val LF_LIVE = 1.6
     }
@@ -39,8 +39,8 @@ class ECPStrapFooting : StrapFootingDesign {
 
         // ── إضافة ملاحظات الكود ──
         val notes = result.codeNotes.toMutableList()
-        notes.add("ECP 203-2020 §2.3: γD=${LF_DEAD}, γL=${LF_LIVE}")
-        notes.add("ECP 203-2020 §7: Strap Footing Design")
+        notes.add("ECP 203-2025 §2.3: γD=${LF_DEAD}, γL=${LF_LIVE}")
+        notes.add("ECP 203-2025 §7: Strap Footing Design")
         notes.add(CodeReference.ECP.FOOTING_BEARING)
         notes.add(CodeReference.ECP.FOOTING_REINFORCEMENT)
 

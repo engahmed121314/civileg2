@@ -105,7 +105,7 @@ class ExportManager(private val context: Context) {
         reportType: ProfessionalEnglishPdfReporter.ReportType,
         title: String,
         subtitle: String = "",
-        designCode: String = "ECP 203-2020",
+        designCode: String = "ECP 203-2025",
         inputs: Map<String, String> = emptyMap(),
         results: Map<String, String> = emptyMap(),
         safetyChecks: List<ProfessionalEnglishPdfReporter.SafetyCheck> = emptyList(),

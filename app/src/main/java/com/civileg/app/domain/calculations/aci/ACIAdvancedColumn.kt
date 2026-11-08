@@ -7,7 +7,7 @@ import com.civileg.app.domain.usecases.AnalyzeRebarInventory
 import kotlin.math.*
 
 /**
- * تصميم أعمدة متقدم حسب الكود الأمريكي ACI 318-19
+ * تصميم أعمدة متقدم حسب الكود الأمريكي ACI 318-25
  * يغطي جميع حالات التصميم: النحافة، الانحناء الثنائي، الأعمدة الحلزونية،
  * قص الاختراق، منحنى التفاعل، وتكبير العزوم
  */
@@ -44,7 +44,7 @@ class ACIAdvancedColumn : ColumnDesign {
     // ═══════════════════════════════════════════════════════════════════
 
     /**
-     * تصميم عمود متقدم حسب ACI 318-19
+     * تصميم عمود متقدم حسب ACI 318-25
      * Advanced column design covering slenderness, biaxial bending, interaction diagrams,
      * spiral/tied reinforcement, and punching shear checks.
      *
@@ -209,7 +209,7 @@ class ACIAdvancedColumn : ColumnDesign {
         }
 
         // ── Code notes ──
-        codeNotes.add("ACI 318-19: Chapter 10 - Design of Compression Members")
+        codeNotes.add("ACI 318-25: Chapter 10 - Design of Compression Members")
         codeNotes.add(String.format("ACI 21.2.1: φ = %.2f (%s column)", 
             if (isSpiral) PHI_SPIRAL else PHI_TIED,
             if (isSpiral) "spiral" else "tied"

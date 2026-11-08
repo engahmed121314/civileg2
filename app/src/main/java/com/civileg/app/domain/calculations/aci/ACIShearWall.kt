@@ -7,16 +7,16 @@ import com.civileg.app.domain.calculations.base.ShearWallDesign
 import kotlin.math.*
 
 /**
- * ACI 318-19 Shear Wall Design Implementation
+ * ACI 318-25 Shear Wall Design Implementation
  *
  * References:
- *  - ACI 318-19 Ch.11: Walls (general)
- *  - ACI 318-19 §18.10: Special structural walls
- *  - ACI 318-19 §18.10.4: Shear strength
- *  - ACI 318-19 §18.10.6: Boundary elements
- *  - ACI 318-19 §18.10.7: Coupling beams
- *  - ACI 318-19 §22.5: Shear strength provisions
- *  - ACI 318-19 §25.4: Development length
+ *  - ACI 318-25 Ch.11: Walls (general)
+ *  - ACI 318-25 §18.10: Special structural walls
+ *  - ACI 318-25 §18.10.4: Shear strength
+ *  - ACI 318-25 §18.10.6: Boundary elements
+ *  - ACI 318-25 §18.10.7: Coupling beams
+ *  - ACI 318-25 §22.5: Shear strength provisions
+ *  - ACI 318-25 §25.4: Development length
  *
  * Strength reduction factors:
  *  φ_flexure = 0.9 (tension-controlled)
@@ -33,7 +33,7 @@ import kotlin.math.*
 class ACIShearWall : ShearWallDesign {
 
     companion object {
-        // Strength reduction factors — ACI 318-19 Table 21.2.1
+        // Strength reduction factors — ACI 318-25 Table 21.2.1
         private const val PHI_FLEXURE = 0.9
         private const val PHI_COMPRESSION = 0.65
         private const val PHI_SHEAR = 0.75
@@ -77,7 +77,7 @@ class ACIShearWall : ShearWallDesign {
         val safetyChecks = mutableListOf<ShearWallSafetyCheck>()
 
         codeNotes.add(CodeReference.ACI.SW_SHEAR)
-        codeNotes.add("ACI 318-19: Shear Wall Design")
+        codeNotes.add("ACI 318-25: Shear Wall Design")
         codeNotes.add("Wall Type: ${input.wallType.displayName}")
         codeNotes.add("φ_flex = $PHI_FLEXURE, φ_comp = $PHI_COMPRESSION, φ_shear = $PHI_SHEAR")
 
@@ -246,7 +246,7 @@ class ACIShearWall : ShearWallDesign {
     /**
      * Calculate nominal moment (Mn) and axial (Pn) capacities.
      *
-     * ACI 318-19 §18.10.2: Walls designed as columns under combined
+     * ACI 318-25 §18.10.2: Walls designed as columns under combined
      * axial load and bending.
      *
      * Uses iterative solution for neutral axis with:

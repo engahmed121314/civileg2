@@ -7,7 +7,7 @@ import com.civileg.app.domain.entities.ReinforcementResult
 import kotlin.math.*
 
 /**
- * تصميم خزانات المياه حسب ACI 318-19 / ACI 350-06 (Environmental Concrete Structures)
+ * تصميم خزانات المياه حسب ACI 318-25 / ACI 350-06 (Environmental Concrete Structures)
  * يغطي الخزانات المستطيلة والدائرية (أرضية، مرتفعة، تحت الأرض)
  *
  * الاختلافات عن ECP:
@@ -170,7 +170,7 @@ class ACITank : TankDesign {
         val maxMoment = GAMMA_W * hW * hW * hW / 6.0 * FLUID_LOAD_FACTOR
         val maxShear = GAMMA_W * hW * hW / 2.0 * FLUID_LOAD_FACTOR
 
-        // Rn-ρ method (ACI 318-19)
+        // Rn-ρ method (ACI 318-25)
         val Mu_Nmm = maxMoment * 1e6
         val Rn = Mu_Nmm / (PHI_FLEXURE * b * d * d)
 
@@ -234,7 +234,7 @@ class ACITank : TankDesign {
         ))
 
         codeNotes.add(CodeReference.ACI.TANK_HYDROSTATIC)
-        codeNotes.add("ACI 350-06 / ACI 318-19: Water-Retaining Structure")
+        codeNotes.add("ACI 350-06 / ACI 318-25: Water-Retaining Structure")
         codeNotes.add(String.format("f'c=%.0f MPa (0.8×fcu), φ_flex=%.2f", fcPrime, PHI_FLEXURE))
         codeNotes.add(String.format("Fluid load factor: %.1f", FLUID_LOAD_FACTOR))
         codeNotes.add(String.format("Vertical: %dØ%d @ %dmm", barsPerMeter, barDiameter.toInt(), spacing.toInt()))

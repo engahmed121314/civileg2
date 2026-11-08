@@ -46,7 +46,7 @@ class ECPBeam : BeamDesign {
         val K_bal = calculateKBal(fcu, fy)
         
         // التحقق من أن المقطع غير مفرط التسليح
-        // ECP 203-2020 §4-2-2-2: When K > K_bal, doubly-reinforced design is required
+        // ECP 203-2025 §4-2-2-2: When K > K_bal, doubly-reinforced design is required
         if (K > K_bal) {
             warnings.add("Section is over-reinforced (K=${"%.4f".format(K)} > K_bal=${"%.4f".format(K_bal)}! Doubly-reinforced design required per ECP 203 §4-2-2-2")
             codeNotes.add(CodeReference.ECP.BEAM_REINFORCEMENT_MAX)
@@ -231,7 +231,7 @@ class ECPBeam : BeamDesign {
         InputGuard.positive("totalDepth", totalDepth)
 
         // طريقة النسبة (Span/Depth) المبسطة حسب الكود المصري
-        // ECP 203-2020 §6-3-1: Basic span/depth ratios
+        // ECP 203-2025 §6-3-1: Basic span/depth ratios
         val basicRatio = when (supportCondition) {
             SupportCondition.SIMPLY_SUPPORTED -> 20.0
             SupportCondition.CONTINUOUS -> 26.0
@@ -239,21 +239,21 @@ class ECPBeam : BeamDesign {
         }
         
         // تعديل النسبة حسب نسبة التسليح
-        // ECP 203-2020 §6-3-1: MF = 0.55 + 477 / (fy × ρ%)
+        // ECP 203-2025 §6-3-1: MF = 0.55 + 477 / (fy × ρ%)
         // This modification factor accounts for service stress in reinforcement.
         // When ρ is very small, MF becomes large (more flexible), and must be capped.
         val rhoPercent = (reinforcementRatio * 100).coerceAtLeast(0.15)
-        // ECP 203-2020 §6-3-1: fy = 360 MPa default for high-grade steel (360/520)
+        // ECP 203-2025 §6-3-1: fy = 360 MPa default for high-grade steel (360/520)
         // ملاحظة: الواجهة لا تمرر fy — إذا أُضيف باراميتر fy للواجهة مستقبلاً يمكن استخدامه مباشرة
         val fyEff = 360.0  // ECP 203 default for high-grade steel (360/520)
         val modificationFactor = (0.55 + 477.0 / (fyEff * rhoPercent)).coerceIn(1.0, 2.5)
-        // ECP 203-2020 §6-3-1: Cap MF at 2.5 to prevent unrealistic allowable depths
+        // ECP 203-2025 §6-3-1: Cap MF at 2.5 to prevent unrealistic allowable depths
         val allowableRatio = basicRatio * modificationFactor
         
         val actualRatio = (span * 1000) / totalDepth  // تحويل span إلى مم
         val ratio = actualRatio / allowableRatio
         
-        // ECP 203-2020 §6-3: Deflection estimation using span/depth approach
+        // ECP 203-2025 §6-3: Deflection estimation using span/depth approach
         // For more accurate deflection, use cracked section properties:
         // δ ≈ (5 × w × L^4) / (384 × E_c × I_cr) for simply supported
         // Here we use the simplified ratio-based estimate
@@ -328,7 +328,7 @@ class ECPBeam : BeamDesign {
     override fun getMinCover(): Double = 40.0
     
     override fun getDeflectionLimit(span: Double): Double {
-        // الانحراف المسموح: L/250 للأحمال الكلية (ECP 203-2020 §6-3)
+        // الانحراف المسموح: L/250 للأحمال الكلية (ECP 203-2025 §6-3)
         // For spans > 10m under brittle partitions, limit is L/500 per §6-3
         return (span * 1000) / 250.0
     }
@@ -508,7 +508,7 @@ class ECPBeam : BeamDesign {
         notes.add("As' (compression) = ${String.format("%.0f", AsPrime)} mm²")
         notes.add("Neutral axis depth c = ${String.format("%.1f", neutralAxisDepth)} mm")
         notes.add(CodeReference.ECP.BEAM_FLEXURE)
-        notes.add("ECP 203-2020: Section 4-2-2-2 (Doubly reinforced)")
+        notes.add("ECP 203-2025: Section 4-2-2-2 (Doubly reinforced)")
         
         return DoublyReinforcedResult(
             needsCompressionSteel = true,

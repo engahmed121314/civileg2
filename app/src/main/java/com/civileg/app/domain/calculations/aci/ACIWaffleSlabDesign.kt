@@ -16,14 +16,14 @@ import com.civileg.app.domain.entities.ShearReinforcementResult
 import kotlin.math.*
 
 /**
- * ACI 318-19 Waffle Slab Design Implementation
+ * ACI 318-25 Waffle Slab Design Implementation
  *
  * References:
- *  - ACI 318-19 Ch.8: Two-way slabs (waffle slabs treated as two-way joist systems)
- *  - ACI 318-19 §9: Flexural design
- *  - ACI 318-19 §22: Shear design
- *  - ACI 318-19 §22.6: Punching shear
- *  - ACI 318-19 §24.2: Deflection control
+ *  - ACI 318-25 Ch.8: Two-way slabs (waffle slabs treated as two-way joist systems)
+ *  - ACI 318-25 §9: Flexural design
+ *  - ACI 318-25 §22: Shear design
+ *  - ACI 318-25 §22.6: Punching shear
+ *  - ACI 318-25 §24.2: Deflection control
  *
  * Key ACI differences from ECP:
  *  - Uses f'c (cylinder strength) = 0.8 * fcu
@@ -62,13 +62,13 @@ class ACIWaffleSlabDesign : WaffleSlabDesign {
         val safetyChecks = mutableListOf<SafetyCheckItem>()
 
         codeNotes.add(CodeReference.ACI.SLAB_TWO_WAY)
-        codeNotes.add("ACI 318-19 Ch.8: Waffle Slab Design (Two-Way Joist System)")
+        codeNotes.add("ACI 318-25 Ch.8: Waffle Slab Design (Two-Way Joist System)")
         codeNotes.add("φ_flexure = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")
         codeNotes.add("f'c = 0.8 × fcu = ${String.format("%.1f", input.fcu * 0.8)} MPa")
 
         val fc = input.fcu * 0.8  // cylinder strength
 
-        // ── 1. Load combinations per ACI 318-19 §5.3.1 ───────────────
+        // ── 1. Load combinations per ACI 318-25 §5.3.1 ───────────────
         val wu = 1.2 * input.deadLoad + 1.6 * input.liveLoad
         codeNotes.add("Wu = 1.2×DL + 1.6×LL = ${String.format("%.2f", wu)} kN/m²")
 
@@ -155,7 +155,7 @@ class ACIWaffleSlabDesign : WaffleSlabDesign {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════════════
-    // RIB DESIGN — ACI 318-19
+    // RIB DESIGN — ACI 318-25
     // ════════════════════════════════════════════════════════════════════════════════════
 
     override fun designRib(

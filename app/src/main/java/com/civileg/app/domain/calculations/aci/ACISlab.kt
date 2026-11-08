@@ -6,14 +6,14 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تصميم البلاطات حسب الكود الأمريكي ACI 318-19
+ * تصميم البلاطات حسب الكود الأمريكي ACI 318-25
  * يغطي: بلاطة اتجاه واحد، اتجاهين، فحص السمك، الانحراف
  *
  * المراجع:
- * - ACI 318-19 البند 7 (أبعاد البلاطات)
- * - ACI 318-19 البند 8 (بلاطات اتجاهين)
- * - ACI 318-19 البند 24 (الانحراف)
- * - ACI 318-19 البند 7.6 (الحد الأدنى للتسليح)
+ * - ACI 318-25 البند 7 (أبعاد البلاطات)
+ * - ACI 318-25 البند 8 (بلاطات اتجاهين)
+ * - ACI 318-25 البند 24 (الانحراف)
+ * - ACI 318-25 البند 7.6 (الحد الأدنى للتسليح)
  */
 class ACISlab : SlabDesign {
 
@@ -94,7 +94,7 @@ class ACISlab : SlabDesign {
         val utilizationRatio = rhoFinal / rhoMin.coerceAtLeast(0.001)
 
         codeNotes.add(CodeReference.ACI.SLAB_ONE_WAY)
-        codeNotes.add("ACI 318-19: One-Way Slab Design")
+        codeNotes.add("ACI 318-25: One-Way Slab Design")
         codeNotes.add(String.format("fc'=%.0f MPa, d=%.0f mm, Rn=%.2f", fc_prime, effectiveDepth, Rn))
         codeNotes.add(String.format("rho=%.4f, rho_min=%.4f", rhoFinal, rhoMin))
         codeNotes.add(String.format("Vc=%.1f kN/m", Vc))
@@ -177,7 +177,7 @@ class ACISlab : SlabDesign {
         val longRes = designOneWaySlab(fcu, fy, slabThickness, longSpan, Mu_long, q * lx / 3.0, loadCombination)
             .let { it.copy(codeNotes = it.codeNotes + CodeReference.ACI.SLAB_TWO_WAY) }
 
-        codeNotes.add("ACI 318-19: Two-Way Slab (Direct Design Method)")
+        codeNotes.add("ACI 318-25: Two-Way Slab (Direct Design Method)")
         codeNotes.add(String.format("ly/lx=%.2f, q=%.1f kN/m²", ratio, q))
         codeNotes.add(String.format("Short: M+=%.1f, M-=%.1f kN.m/m", Mu_short_pos, Mu_short_neg))
         codeNotes.add(String.format("Long: M+=%.1f, M-=%.1f kN.m/m", Mu_long_pos, Mu_long_neg))

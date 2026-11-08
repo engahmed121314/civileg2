@@ -200,7 +200,7 @@ class ECPAdvancedBeam {
         val beffByFlange = 12.0 * flangeThickness + webWidth
         val beff = min(min(flangeWidth, beffBySpan), beffByFlange)
 
-        codeNotes.add("ECP 203-2020: Section 6-2-2 (Effective Flange Width)")
+        codeNotes.add("ECP 203-2025: Section 6-2-2 (Effective Flange Width)")
         codeNotes.add("b_eff = min(b, L/${if (isEdgeBeam) "8" else "4"}, 12hf+bw) = min(${"%.0f".format(flangeWidth)}, ${"%.0f".format(beffBySpan)}, ${"%.0f".format(beffByFlange)}) = ${"%.0f".format(beff)} mm")
 
         if (beff < flangeWidth) {
@@ -411,7 +411,7 @@ class ECPAdvancedBeam {
         val beffByFlange = 6.0 * flangeThickness + webWidth
         val beff = min(min(flangeWidth, beffBySpan), beffByFlange)
 
-        codeNotes.add("ECP 203-2020: Section 6-2-2 (L-Beam Effective Flange Width)")
+        codeNotes.add("ECP 203-2025: Section 6-2-2 (L-Beam Effective Flange Width)")
         codeNotes.add("b_eff = min(b, L/12, 6hf+bw) = min(${"%.0f".format(flangeWidth)}, ${"%.0f".format(beffBySpan)}, ${"%.0f".format(beffByFlange)}) = ${"%.0f".format(beff)} mm")
 
         if (beff < flangeWidth) {
@@ -579,7 +579,7 @@ class ECPAdvancedBeam {
         val d = depth - COVER
         val spanToDepthRatio = span * 1000.0 / depth
 
-        codeNotes.add("ECP 203-2020: Section 4-2-8 (Deep Beam Design)")
+        codeNotes.add("ECP 203-2025: Section 4-2-8 (Deep Beam Design)")
         codeNotes.add("L/d = ${"%.2f".format(spanToDepthRatio)} ${if (spanToDepthRatio < 4.0) "→ Deep Beam (L/d < 4)" else "→ NOT a Deep Beam (L/d ≥ 4)"}")
 
         if (spanToDepthRatio >= 4.0) {
@@ -691,7 +691,7 @@ class ECPAdvancedBeam {
             )
         )
 
-        codeNotes.add("Deep beam design per ECP 203-2020 §4-2-1-4 (l/d ≤ 4 for continuous, ≤ 5 for simple)")
+        codeNotes.add("Deep beam design per ECP 203-2025 §4-2-1-4 (l/d ≤ 4 for continuous, ≤ 5 for simple)")
         codeNotes.add("As_flexure = ${numBars}Ø${selectedDia.toInt()} (${"%.0f".format(astProvided)} mm²)")
 
         val beamType = BeamType.SimplySupported(span)
@@ -863,7 +863,7 @@ class ECPAdvancedBeam {
                 val codeNotes = mutableListOf<String>()
                 val sectionWarnings = mutableListOf<String>()
 
-                codeNotes.add("ECP 203-2020: Section 4-2 (Continuous Beam)")
+                codeNotes.add("ECP 203-2025: Section 4-2 (Continuous Beam)")
                 codeNotes.add("Span ${i + 1}: $description")
                 codeNotes.add("Moment coefficient = $coeff (wL² = ${"%.1f".format(wL2)} kN.m)")
                 codeNotes.add("M_design = ${"%.2f".format(absMoment)} kN.m")
@@ -1233,7 +1233,7 @@ class ECPAdvancedBeam {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
-        codeNotes.add("ECP 203-2020: Section 4-3-4 (Torsion Design)")
+        codeNotes.add("ECP 203-2025: Section 4-3-4 (Torsion Design)")
 
         val b = min(width, depth)
         val h = max(width, depth)
@@ -1265,7 +1265,7 @@ class ECPAdvancedBeam {
                 ao = 0.0,
                 ph = 0.0,
                 isSafe = true,
-                codeReference = "ECP 203-2020: Section 4-3-4 (Tu < Tu_threshold - No torsion design required)",
+                codeReference = "ECP 203-2025: Section 4-3-4 (Tu < Tu_threshold - No torsion design required)",
                 warnings = warnings
             )
         }
@@ -1359,7 +1359,7 @@ class ECPAdvancedBeam {
             ao = ao,
             ph = ph,
             isSafe = isSafe,
-            codeReference = "ECP 203-2020: Section 4-3-4 (Torsion Design)",
+            codeReference = "ECP 203-2025: Section 4-3-4 (Torsion Design)",
             warnings = warnings
         )
     }
@@ -1396,7 +1396,7 @@ class ECPAdvancedBeam {
             calculatedWidth = crackWidth,
             allowableWidth = allowable,
             isSafe = crackWidth <= allowable,
-            codeReference = "ECP 203-2020: Section 4-4 (Crack Width Control)"
+            codeReference = "ECP 203-2025: Section 4-4 (Crack Width Control)"
         )
     }
     
@@ -1413,7 +1413,7 @@ class ECPAdvancedBeam {
             requiredLength = ld_final,
             availableLength = effectiveAvailable,
             isSafe = ld_final <= effectiveAvailable,
-            codeReference = "ECP 203-2020: Section 5-2 (Development Length)"
+            codeReference = "ECP 203-2025: Section 5-2 (Development Length)"
         )
     }
 

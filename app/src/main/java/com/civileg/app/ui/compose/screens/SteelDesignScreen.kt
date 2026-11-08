@@ -33,6 +33,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Path
@@ -2550,10 +2551,10 @@ fun SteelFrameVisualizer(
 
                         // Grid lines (bays)
                         val bayCount = (inputs.length / inputs.baySpacing).toInt().coerceAtLeast(1)
-                        val bayPx = planW / bayCount.coerceAtLeast(1f)
+                        val bayPx = planW / bayCount.coerceAtLeast(1).toFloat()
                         repeat(bayCount - 1) { i ->
                             val x = cx - planW / 2 + (i + 1) * bayPx
-                            drawLine(Color.Gray.copy(alpha = 0.4f), Offset(x, cy - planD / 2), Offset(x, cy + planD / 2), 1f, PathEffect.dashPathEffect(floatArrayOf(5f, 5f)))
+                            drawLine(Color.Gray.copy(alpha = 0.4f), Offset(x, cy - planD / 2), Offset(x, cy + planD / 2), strokeWidth = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 5f)))
                         }
 
                         // Columns (small squares)
@@ -2637,6 +2638,7 @@ fun SteelConnectionDetailVisualizer(
                     title = stringResource(R.string.steel_bolted_connection),
                     icon = Icons.Default.Build,
                     color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.weight(1f),
                     items = listOf(
                         stringResource(R.string.steel_bolt_dia) to "M${boltRes.boltDiameter.toInt()}",
                         stringResource(R.string.steel_bolt_count) to "${boltRes.numberOfBolts}",
@@ -2654,6 +2656,7 @@ fun SteelConnectionDetailVisualizer(
                     title = stringResource(R.string.steel_welded_connection),
                     icon = Icons.Default.Build,
                     color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
                     items = listOf(
                         stringResource(R.string.steel_weld_size_label) to "${weldRes.weldSize.toInt()} mm",
                         stringResource(R.string.steel_weld_throat_area) to "${String.format("%.1f", weldRes.throatArea)} mm²",
@@ -2722,17 +2725,18 @@ private fun ConnectionDetailPanel(
     title: String,
     icon: ImageVector,
     color: Color,
+    modifier: Modifier = Modifier,
     items: List<Pair<String, String>>,
     isSafe: Boolean
 ) {
     Card(
-        modifier = Modifier.weight(0.5f).padding(4.dp),
+        modifier = modifier.fillMaxWidth().padding(4.dp),
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f)),
         shape = RoundedCornerShape(8.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = icon, tint = color, modifier = Modifier.size(20.dp))
+                Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(title, fontWeight = FontWeight.Bold, color = color, fontSize = 13.sp)
             }

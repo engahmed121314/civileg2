@@ -8,14 +8,14 @@ import com.civileg.app.domain.entities.CodeReference
 import kotlin.math.*
 
 /**
- * ACI 318-19 Pile Foundation Design Implementation.
+ * ACI 318-25 Pile Foundation Design Implementation.
  *
  * References:
- *  - ACI 318-19 Chapter 13: Foundations (deep foundations §13.4)
- *  - ACI 318-19 §21.2.1: Strength reduction factors (φ flexure 0.9, shear 0.75, tied compression 0.65)
- *  - ACI 318-19 §22.5: One-way shear (Vc = 0.17·λ·√f'c·b·d)
- *  - ACI 318-19 §22.6.5: Two-way (punching) shear
- *  - ACI 318-19 §5.3.1: Load combinations (1.4D, 1.2D+1.6L governing)
+ *  - ACI 318-25 Chapter 13: Foundations (deep foundations §13.4)
+ *  - ACI 318-25 §21.2.1: Strength reduction factors (φ flexure 0.9, shear 0.75, tied compression 0.65)
+ *  - ACI 318-25 §22.5: One-way shear (Vc = 0.17·λ·√f'c·b·d)
+ *  - ACI 318-25 §22.6.5: Two-way (punching) shear
+ *  - ACI 318-25 §5.3.1: Load combinations (1.4D, 1.2D+1.6L governing)
  *  - FHWA-NHI-16-009: Driven pile geotechnical methods (alpha/beta)
  *  - Meyerhof (1951, 1956): bearing capacity & settlement
  *  - Broms (1964): lateral load analysis
@@ -33,7 +33,7 @@ import kotlin.math.*
 class ACIPileFoundation : PileFoundationDesign {
 
     companion object {
-        // ACI 318-19 strength reduction factors §21.2.1
+        // ACI 318-25 strength reduction factors §21.2.1
         private const val PHI_FLEXURE = 0.9
         private const val PHI_SHEAR = 0.75
         private const val PHI_TIED = 0.65
@@ -42,7 +42,7 @@ class ACIPileFoundation : PileFoundationDesign {
         // Cube → cylinder conversion (Egyptian/Saudi cube tests → ACI cylinder)
         private const val CUBE_TO_CYLINDER = 0.8
 
-        // ACI 318-19 §5.3.1 load combinations
+        // ACI 318-25 §5.3.1 load combinations
         private const val LF_DL_ALONE = 1.4
         private const val LF_DL = 1.2
         private const val LF_LL = 1.6
@@ -79,11 +79,11 @@ class ACIPileFoundation : PileFoundationDesign {
         val codeNotes = mutableListOf<String>()
 
         val fc = input.fcu * CUBE_TO_CYLINDER
-        codeNotes.add("ACI 318-19 Chapter 13: Deep Foundation Design")
+        codeNotes.add("ACI 318-25 Chapter 13: Deep Foundation Design")
         codeNotes.add(CodeReference.ACI.PILE_CAPACITY)
         codeNotes.add("f'c = 0.8 × fcu = %.1f MPa (cylinder) | ${CodeReference.ACI.FOOTING_REINFORCEMENT}".format(fc))
-        codeNotes.add("φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR, φ_tied = $PHI_TIED (ACI 318-19 §21.2.1)")
-        codeNotes.add("Load combos: 1.2D+1.6L governing, 1.4D checked (ACI 318-19 §5.3.1)")
+        codeNotes.add("φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR, φ_tied = $PHI_TIED (ACI 318-25 §21.2.1)")
+        codeNotes.add("Load combos: 1.2D+1.6L governing, 1.4D checked (ACI 318-25 §5.3.1)")
         codeNotes.add("Pile Type: ${input.pileType.displayName}, Soil: ${input.soilType.displayName}")
 
         // ── 1. Geotechnical capacity ──────────────────────────────
@@ -236,7 +236,7 @@ class ACIPileFoundation : PileFoundationDesign {
 
         when (input.soilType) {
             SoilType.CLAY -> {
-                // Alpha method — FHWA-NHI-16-009 §8.3, ACI 318-19 Ch.13 (geotechnical)
+                // Alpha method — FHWA-NHI-16-009 §8.3, ACI 318-25 Ch.13 (geotechnical)
                 val alpha = calculateAlphaFactor(input.cu, input.pileType)
                 Qs = alpha * input.cu * PI * D * L
                 Qb = 9.0 * input.cu * PI * D * D / 4.0  // Nc = 9 (Skempton)
@@ -315,7 +315,7 @@ class ACIPileFoundation : PileFoundationDesign {
     }
 
     // ══════════════════════════════════════════════════════════════
-    // 3. PILE CAP DESIGN (ACI 318-19 §13.2 / §22.5 / §22.6)
+    // 3. PILE CAP DESIGN (ACI 318-25 §13.2 / §22.5 / §22.6)
     // ══════════════════════════════════════════════════════════════
 
     override fun designPileCap(input: PileCapInput): PileCapResult {
@@ -460,7 +460,7 @@ class ACIPileFoundation : PileFoundationDesign {
         } else 0.0
 
         val totalSettlement = immediateSettlement + consolidationSettlement
-        val allowableSettlement = 25.0  // ACI 318-19 performance limit
+        val allowableSettlement = 25.0  // ACI 318-25 performance limit
 
         return PileSettlementResult(
             immediateSettlement = immediateSettlement,

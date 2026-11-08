@@ -4,7 +4,7 @@ import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**
- * Doubly Reinforced Beam Design per SBC 304-2018
+ * Doubly Reinforced Beam Design per SBC 304-2024
  *
  * When a singly reinforced section is insufficient (Mu > Mu_max for tension-controlled),
  * compression steel is added to increase the moment capacity.
@@ -23,11 +23,11 @@ import kotlin.math.*
  * - α = 0.85 (ECP factor for concrete stress block)
  *
  * References:
- *  - SBC 304-2018 §4-2-2-1: Flexural design
- *  - SBC 304-2018 §4-2-2-2: Doubly reinforced sections
- *  - SBC 304-2018 §4-2-3: Ductility requirements
- *  - SBC 304-2018 §3-2: Material safety factors (γc=1.5, γs=1.15)
- *  - SBC 304-2018 §3-2: Load factors (1.4DL + 1.6LL)
+ *  - SBC 304-2024 §4-2-2-1: Flexural design
+ *  - SBC 304-2024 §4-2-2-2: Doubly reinforced sections
+ *  - SBC 304-2024 §4-2-3: Ductility requirements
+ *  - SBC 304-2024 §3-2: Material safety factors (γc=1.5, γs=1.15)
+ *  - SBC 304-2024 §3-2: Load factors (1.4DL + 1.6LL)
  */
 data class DoublyReinforcedBeamResult(
     val mu: Double,                        // Applied ultimate moment (kN.m)
@@ -116,7 +116,7 @@ class SBCDoublyReinforcedBeam {
         tensionBarDia: Int = 20,
         compBarDia: Int = 16
     ): DoublyReinforcedBeamResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("mu", mu)
         InputGuard.positive("b", b)
         InputGuard.positive("h", h)

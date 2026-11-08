@@ -7,7 +7,7 @@ import com.civileg.app.domain.usecases.AnalyzeRebarInventory
 import kotlin.math.*
 
 /**
- * تصميم البلاطات المتقدم حسب الكود الأمريكي ACI 318-19
+ * تصميم البلاطات المتقدم حسب الكود الأمريكي ACI 318-25
  * يغطي:
  * - بلاطة مسطحة بدون كمرات (Flat Plate) - ACI 8.10 Direct Design Method
  * - بلاطة مسطحة مع بلاطة منخفضة (Flat Slab with Drop Panels) - ACI 8.10 + 8.10.3
@@ -16,14 +16,14 @@ import kotlin.math.*
  * - بلاطة كابولية (Cantilever Slab) - ACI 8.3.1.1
  *
  * المراجع:
- * - ACI 318-19 البند 7 (أبعاد البلاطات)
- * - ACI 318-19 البند 8 (البلاطات ذات الاتجاهين - طريقة التصميم المباشر)
- * - ACI 318-19 البند 22.5-22.6 (القص وقص الاختراق)
- * - ACI 318-19 البند 24 (الانحراف)
- * - ACI 318-19 البند 7.6.1.1 (الحد الأدنى للتسليح)
- * - ACI 318-19 البند 22.2.2.4.1 (معامل β₁ الديناميكي)
+ * - ACI 318-25 البند 7 (أبعاد البلاطات)
+ * - ACI 318-25 البند 8 (البلاطات ذات الاتجاهين - طريقة التصميم المباشر)
+ * - ACI 318-25 البند 22.5-22.6 (القص وقص الاختراق)
+ * - ACI 318-25 البند 24 (الانحراف)
+ * - ACI 318-25 البند 7.6.1.1 (الحد الأدنى للتسليح)
+ * - ACI 318-25 البند 22.2.2.4.1 (معامل β₁ الديناميكي)
  *
- * ملاحظة: استخدام طريقة Rn-ρ حسب ACI 318-19 (وليس طريقة K الخاصة بـ ECP)
+ * ملاحظة: استخدام طريقة Rn-ρ حسب ACI 318-25 (وليس طريقة K الخاصة بـ ECP)
  */
 class ACIAdvancedSlab {
 
@@ -42,7 +42,7 @@ class ACIAdvancedSlab {
     }
 
     // ============================================================
-    // نقطة الدخول الرئيسية - تصميم شامل حسب ACI 318-19
+    // نقطة الدخول الرئيسية - تصميم شامل حسب ACI 318-25
     // ============================================================
 
     /**
@@ -77,7 +77,7 @@ class ACIAdvancedSlab {
 
         // تحويل مقاومة المكعب لمقاومة الأسطوانة: f'c = 0.8 × fcu
         val fcPrime = 0.8 * fcu
-        codeNotes.add(String.format("ACI 318-19: fcu=%.0f MPa → fc'=0.8×fcu=%.0f MPa", fcu, fcPrime))
+        codeNotes.add(String.format("ACI 318-25: fcu=%.0f MPa → fc'=0.8×fcu=%.0f MPa", fcu, fcPrime))
         codeNotes.add(String.format("φ_flexure=%.1f, φ_shear=%.1f (ACI 21.2.1)", PHI_FLEXURE, PHI_SHEAR))
 
         // الحمل التصميمي: ACI 5.3.1 → U = 1.2D + 1.6L
@@ -159,7 +159,7 @@ class ACIAdvancedSlab {
 
     /**
      * تصميم البلاطة المسطحة بدون بلاطة منخفضة
-     * ACI 318-19 البند 8.10 (طريقة التصميم المباشر)
+     * ACI 318-25 البند 8.10 (طريقة التصميم المباشر)
      * - توزيع العزم بين شريط العمود وشريط الوسط
      * - معاملات العزم من الجدول 8.10.2.2
      * - فحص قص الاختراق ACI 22.6
@@ -263,7 +263,7 @@ class ACIAdvancedSlab {
 
     /**
      * تصميم البلاطة المسطحة مع بلاطة منخفضة (Drop Panel)
-     * ACI 318-19 البند 8.10.3 (متطلبات البلاطة المنخفضة)
+     * ACI 318-25 البند 8.10.3 (متطلبات البلاطة المنخفضة)
      * - امتداد البلاطة المنخفضة ≥ L/6 من مركز العمود
      * - سماكة البلاطة المنخفضة ≥ h/4 تحت البلاطة الأصلية
      * - محيط قص الاختراق يتضمن حافة البلاطة المنخفضة
@@ -371,7 +371,7 @@ class ACIAdvancedSlab {
 
     /**
      * تصميم البلاطة المجوفة / الكمريتات ذات الاتجاه الواحد
-     * ACI 318-19 البند 7.6 (أبعاد البلاطات المنفذة جزئياً)
+     * ACI 318-25 البند 7.6 (أبعاد البلاطات المنفذة جزئياً)
      * - تصميم الكمريتات كعناصر انحناء بطريقة Rn-ρ
      * - تصميم طبقة التغطية (Topping) كبلاطة اتجاه واحد
      * - الحد الأدنى لعرض الكمريتة: 100 مم (ACI 7.6.5)
@@ -535,7 +535,7 @@ class ACIAdvancedSlab {
 
     /**
      * تصميم بلاطة الوافل ذات الاتجاهين
-     * ACI 318-19 البنود 8.10 + 7.6
+     * ACI 318-25 البنود 8.10 + 7.6
      * - كمريتات الاتجاه القصير (تحمل العزم الأكبر)
      * - كمريتات الاتجاه الطويل
      * - رأس صلب عند الأعمدة لتحمل قص الاختراق
@@ -652,7 +652,7 @@ class ACIAdvancedSlab {
 
     /**
      * تصميم البلاطة الكابولية
-     * ACI 318-19 البند 8.3.1.1 (الحد الأدنى للسمك)
+     * ACI 318-25 البند 8.3.1.1 (الحد الأدنى للسمك)
      * - عزم الكابولي: Mu = wu × L² / 2 (عند الدعامة - عزم سالب)
      * - القص: Vu = wu × L (عند الدعامة)
      * - الانحراف: δ = w × L⁴ / (8 × Ec × Ig) للكابولي
@@ -862,7 +862,7 @@ class ACIAdvancedSlab {
             isSafe = isSafe,
             criticalPerimeter = bo,
             shearHeadsRequired = !isSafe,
-            codeReference = "ACI 318-19: Section 22.6 (Punching Shear)",
+            codeReference = "ACI 318-25: Section 22.6 (Punching Shear)",
             warnings = warnings
         )
     }
@@ -901,7 +901,7 @@ class ACIAdvancedSlab {
         )
 
         return result.copy(
-            codeReference = "ACI 318-19: Section 22.6 (Punching with Drop Panel)",
+            codeReference = "ACI 318-25: Section 22.6 (Punching with Drop Panel)",
             warnings = result.warnings + extraNotes
         )
     }
@@ -1396,14 +1396,14 @@ class ACIAdvancedSlab {
     }
 
     private fun getCodeReference(slab: SlabType): String = when (slab) {
-        is SlabType.FlatPlate -> "ACI 318-19: Chapter 8 (Flat Plate - Direct Design Method)"
-        is SlabType.FlatSlab -> "ACI 318-19: Chapter 8 + Section 8.10.3 (Flat Slab with Drop Panels)"
-        is SlabType.Hordi -> "ACI 318-19: Section 7.6 (One-Way Ribbed Slab)"
-        is SlabType.Waffle -> "ACI 318-19: Chapter 8 + Section 7.6 (Two-Way Waffle Slab)"
+        is SlabType.FlatPlate -> "ACI 318-25: Chapter 8 (Flat Plate - Direct Design Method)"
+        is SlabType.FlatSlab -> "ACI 318-25: Chapter 8 + Section 8.10.3 (Flat Slab with Drop Panels)"
+        is SlabType.Hordi -> "ACI 318-25: Section 7.6 (One-Way Ribbed Slab)"
+        is SlabType.Waffle -> "ACI 318-25: Chapter 8 + Section 7.6 (Two-Way Waffle Slab)"
         is SlabType.Solid -> CodeReference.ACI.SLAB_TWO_WAY
         is SlabType.OneWay -> CodeReference.ACI.SLAB_ONE_WAY
         is SlabType.TwoWay -> CodeReference.ACI.SLAB_TWO_WAY
-        is SlabType.PostTensioned -> "ACI 318-19: Chapter 24 (Post-Tensioned Slab)"
-        is SlabType.Precast -> "ACI 318-19: Chapter 16 (Precast Concrete)"
+        is SlabType.PostTensioned -> "ACI 318-25: Chapter 24 (Post-Tensioned Slab)"
+        is SlabType.Precast -> "ACI 318-25: Chapter 16 (Precast Concrete)"
     }
 }

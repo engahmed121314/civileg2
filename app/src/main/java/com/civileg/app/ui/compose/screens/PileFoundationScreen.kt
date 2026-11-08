@@ -653,7 +653,7 @@ fun PileFoundationScreen(
                                         )
                                     }
                                     Text(
-                                        "ECP 203-2020 • ${res.pileType}",
+                                        "ECP 203-2025 • ${res.pileType}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

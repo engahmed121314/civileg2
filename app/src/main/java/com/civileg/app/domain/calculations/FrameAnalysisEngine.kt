@@ -1301,7 +1301,7 @@ object FrameAnalysisEngine {
                 val b = cs.width / 1000.0  // mm -> m
                 val h = cs.depth / 1000.0
                 val Ig = b * h * h * h / 12.0
-                // Cracked inertia: 0.35Ig for beams, 0.70Ig for columns (ACI 318-19 §6.6.3.1.1)
+                // Cracked inertia: 0.35Ig for beams, 0.70Ig for columns (ACI 318-25 §6.6.3.1.1)
                 val crackedFactor = when (member.memberType) {
                     FrameMemberType.Beam -> 0.35
                     FrameMemberType.Column -> 0.70

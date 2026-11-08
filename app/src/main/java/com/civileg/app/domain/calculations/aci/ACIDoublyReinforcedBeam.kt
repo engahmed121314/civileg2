@@ -4,7 +4,7 @@ import com.civileg.app.domain.calculations.InputGuard
 import kotlin.math.*
 
 /**
- * Doubly Reinforced Beam Design per ACI 318-19
+ * Doubly Reinforced Beam Design per ACI 318-25
  *
  * When a singly reinforced section is insufficient (Mu > φMn_max for tension-controlled),
  * compression steel is added to increase the moment capacity.
@@ -16,10 +16,10 @@ import kotlin.math.*
  * - As = As1 (concrete balanced) + As' (compression steel couple)
  *
  * References:
- * - ACI 318-19 §9.3: Flexural design of beams
- * - ACI 318-19 §9.5: Minimum flexural reinforcement
- * - ACI 318-19 §9.6: Maximum reinforcement
- * - ACI 318-19 §22.4.2: Compression reinforcement
+ * - ACI 318-25 §9.3: Flexural design of beams
+ * - ACI 318-25 §9.5: Minimum flexural reinforcement
+ * - ACI 318-25 §9.6: Maximum reinforcement
+ * - ACI 318-25 §22.4.2: Compression reinforcement
  */
 data class DoublyReinforcedBeamResult(
     val mu: Double,                        // Applied ultimate moment (kN.m)
@@ -52,9 +52,9 @@ data class DoublyReinforcedBeamResult(
 class ACIDoublyReinforcedBeam {
 
     companion object {
-        const val PHI_FLEXURE = 0.9       // ACI 318-19 §21.2.2.1
-        const val PHI_SHEAR = 0.75        // ACI 318-19 §22.5.5.1
-        const val BETA_1_LIMIT = 0.85     // ACI 318-19 §22.2.2.4.1
+        const val PHI_FLEXURE = 0.9       // ACI 318-25 §21.2.2.1
+        const val PHI_SHEAR = 0.75        // ACI 318-25 §22.5.5.1
+        const val BETA_1_LIMIT = 0.85     // ACI 318-25 §22.2.2.4.1
         const val E_S = 200000.0          // Modulus of elasticity of steel (MPa)
         const val EPSILON_CU = 0.003      // Maximum concrete strain at failure
     }
@@ -106,7 +106,7 @@ class ACIDoublyReinforcedBeam {
         // ==================== Convert Moment ====================
         val Mu = mu * 1e6  // kN.m -> N.mm
 
-        // Max moment for singly reinforced section per ACI 318-19
+        // Max moment for singly reinforced section per ACI 318-25
         val rMax = calculateRMax(fcPrime, fy)
         val muMaxSingle = rMax * b * d * d / 1e6  // kN.m
 
@@ -163,7 +163,7 @@ class ACIDoublyReinforcedBeam {
         }
 
         // ========== DOUBLY REINFORCED DESIGN ==========
-        warnings.add("Mu > φMn_max: Compression steel required per ACI 318-19")
+        warnings.add("Mu > φMn_max: Compression steel required per ACI 318-25")
 
         val leverArmExcess = d - dPrime
         val beta1 = if (fcPrime <= 28.0) 0.85 else (0.85 - 0.05 * (fcPrime - 28.0) / 7.0).coerceAtLeast(0.65)
@@ -187,7 +187,7 @@ class ACIDoublyReinforcedBeam {
 
         // Maximum steel check
         if (asTotal > asMaxValue) {
-            warnings.add("Total steel ratio exceeds 2.5% per ACI 318-19 §9.6.1.2")
+            warnings.add("Total steel ratio exceeds 2.5% per ACI 318-25 §9.6.1.2")
         }
 
         // ===== Select Bar Combinations =====

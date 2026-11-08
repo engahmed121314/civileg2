@@ -7,21 +7,21 @@ import com.civileg.app.domain.usecases.AnalyzeRebarInventory
 import kotlin.math.*
 
 /**
- * تصميم متقدم للكمرات بجميع أنواعها حسب الكود الأمريكي ACI 318-19
+ * تصميم متقدم للكمرات بجميع أنواعها حسب الكود الأمريكي ACI 318-25
  *
  * يغطي هذا الفصل:
- * - تصميم الانحناء (Flexure) حسب ACI 318-19 الفصل التاسع
- * - تصميم القص (Shear) حسب ACI 318-19 الفصل الثاني والعشرين
- * - التحقق من الانحراف (Deflection) حسب ACI 318-19 القسم 24.2
- * - التحقق من عرض الشروخ (Crack Width) حسب ACI 318-19 القسم 24.5
- * - حساب طول التثبيت (Development Length) حسب ACI 318-19 القسم 25.4.2
+ * - تصميم الانحناء (Flexure) حسب ACI 318-25 الفصل التاسع
+ * - تصميم القص (Shear) حسب ACI 318-25 الفصل الثاني والعشرين
+ * - التحقق من الانحراف (Deflection) حسب ACI 318-25 القسم 24.2
+ * - التحقق من عرض الشروخ (Crack Width) حسب ACI 318-25 القسم 24.5
+ * - حساب طول التثبيت (Development Length) حسب ACI 318-25 القسم 25.4.2
  * - مخططات عزم الانحناء والقص لجميع أنواع الكمرات
  * - تحليل المخزون (Inventory Analysis) مع البدائل الاقتصادية والآمنة
  */
 class ACIAdvancedBeam {
 
     companion object {
-        // ثوابت الكود الأمريكي ACI 318-19
+        // ثوابت الكود الأمريكي ACI 318-25
         private const val PHI_FLEXURE = 0.9       // معامل الاختزال للانحناء - ACI 21.2.1
         private const val PHI_SHEAR = 0.75        // معامل الاختزال للقص - ACI 21.2.1
         private const val LAMBDA = 1.0            // عامل الوزن للخرسانة العادية - ACI 19.2.4
@@ -39,7 +39,7 @@ class ACIAdvancedBeam {
     private val baseBeam = ACIBeam()
 
     /**
-     * تصميم متقدم للكمرة حسب ACI 318-19
+     * تصميم متقدم للكمرة حسب ACI 318-25
      *
      * @param beamType نوع الكمرة (بسيطة، ثابتة، كابولي، مستمرة، متعددة الدعامات، متغيرة المقطع، فيرينديل)
      * @param sectionType نوع المقطع (مستطيل، تي، إل، دائري، مركب)
@@ -80,7 +80,7 @@ class ACIAdvancedBeam {
         val codeNotes = mutableListOf<String>()
 
         // === التحويل من مقاومة المكعب إلى مقاومة الأسطوانة ===
-        // ACI 318-19 لا يعتمد مقاومة المكعب مباشرة، لكن في الدول العربية
+        // ACI 318-25 لا يعتمد مقاومة المكعب مباشرة، لكن في الدول العربية
         // تُستخدم مقاومة المكعب fcu، لذا نحولها:
         // fc' = 0.8 × fcu (العلاقة التقريبية المعتمدة)
         val fcPrime = 0.8 * fcu
@@ -88,14 +88,14 @@ class ACIAdvancedBeam {
         codeNotes.add("fc' = 0.8 × fcu = 0.8 × $fcu = $fcPrime MPa (Cube to Cylinder conversion)")
         codeNotes.add("Load Combination: ${loadCombination.description}")
 
-        // === حساب معاملات التحميل حسب ACI 318-19 القسم 5.3 ===
+        // === حساب معاملات التحميل حسب ACI 318-25 القسم 5.3 ===
         val totalFactor = loadCombination.getFactorForCode(DesignCode.ACI)
-        // ACI 318-19: 1.2D + 1.6L (معامل موحد تقريبي)
+        // ACI 318-25: 1.2D + 1.6L (معامل موحد تقريبي)
         val gammaD = 1.2
         val gammaL = 1.6
         val totalLoad = (deadLoad + liveLoad) * totalFactor  // kN/m
 
-        codeNotes.add("ACI 318-19 §5.3: Wu = ${gammaD}D + ${gammaL}L = ${gammaD}×$deadLoad + ${gammaL}×$liveLoad = ${String.format("%.2f", totalLoad)} kN/m")
+        codeNotes.add("ACI 318-25 §5.3: Wu = ${gammaD}D + ${gammaL}L = ${gammaD}×$deadLoad + ${gammaL}×$liveLoad = ${String.format("%.2f", totalLoad)} kN/m")
 
         // === حساب القوى القصوى بناءً على نوع الكمرة ===
         val maxMoment = beamType.getMaxMoment(totalLoad)  // kN.m
@@ -111,12 +111,12 @@ class ACIAdvancedBeam {
         val estimatedMainBarDia = 16.0  // mm
         val effectiveDepth = depth - DEFAULT_COVER - estimatedStirrupDia - estimatedMainBarDia / 2.0  // mm
 
-        // === تصميم الانحناء (Flexure Design) - ACI 318-19 الفصل التاسع ===
+        // === تصميم الانحناء (Flexure Design) - ACI 318-25 الفصل التاسع ===
         val flexureResult = baseBeam.calculateFlexureReinforcement(
             fcu, fy, width, effectiveDepth, depth, maxMoment, loadCombination
         )
 
-        // === تصميم القص (Shear Design) - ACI 318-19 الفصل الثاني والعشرين ===
+        // === تصميم القص (Shear Design) - ACI 318-25 الفصل الثاني والعشرين ===
         val shearResult = baseBeam.calculateShearReinforcement(
             fcu, fy, width, effectiveDepth, maxShear, 0.0, loadCombination
         )
@@ -132,7 +132,7 @@ class ACIAdvancedBeam {
             is BeamType.Vierendeel -> beamType.span
         }
 
-        // === التحقق من الانحراف (Deflection Check) - ACI 318-19 القسم 24.2 ===
+        // === التحقق من الانحراف (Deflection Check) - ACI 318-25 القسم 24.2 ===
         // تحميل الخدمة (Service Load) للتحقق من الانحراف
         val serviceLoad = deadLoad + liveLoad  // kN/m (بدون معاملات التحميل)
         val serviceMoment = when (beamType) {
@@ -162,7 +162,7 @@ class ACIAdvancedBeam {
             analyzeBeamInventory(flexureResult, span, inv)
         }
 
-        // === التحقق من عرض الشروخ (Crack Width) - ACI 318-19 القسم 24.5 ===
+        // === التحقق من عرض الشروخ (Crack Width) - ACI 318-25 القسم 24.5 ===
         val crackWidth = checkCrackWidthACI(
             result = flexureResult,
             fcPrime = fcPrime,
@@ -172,14 +172,14 @@ class ACIAdvancedBeam {
             isExterior = false
         )
 
-        // === التحقق من طول التثبيت (Development Length) - ACI 318-19 القسم 25.4.2 ===
+        // === التحقق من طول التثبيت (Development Length) - ACI 318-25 القسم 25.4.2 ===
         val devLength = checkDevelopmentLengthACI(flexureResult, fcPrime, fy, span)
 
         // === تجميع مراجع الكود ===
         codeNotes.add(CodeReference.ACI.BEAM_FLEXURE)
         codeNotes.add(CodeReference.ACI.BEAM_SHEAR)
         codeNotes.add(CodeReference.ACI.SLAB_DEFLECTION)  // مرجع الانحراف
-        codeNotes.add("ACI 318-19 §24.5: Crack Width Control")
+        codeNotes.add("ACI 318-25 §24.5: Crack Width Control")
         codeNotes.add(CodeReference.ACI.BEAM_DEVELOPMENT_LENGTH)
         codeNotes.add("Beam Type: ${beamType.displayName}")
 
@@ -215,11 +215,11 @@ class ACIAdvancedBeam {
     }
 
     // ========================================================================
-    //  فحص الانحراف المتقدم حسب ACI 318-19 القسم 24.2
+    //  فحص الانحراف المتقدم حسب ACI 318-25 القسم 24.2
     // ========================================================================
 
     /**
-     * فحص الانحراف المتقدم حسب ACI 318-19 القسم 24.2
+     * فحص الانحراف المتقدم حسب ACI 318-25 القسم 24.2
      *
      * يستخدم عزم القصور الذاتي الفعال Ie (ACI المعادلة 24.2.3.5a):
      *   Ie = (Mcr/Ma)³ × Ig + [1 - (Mcr/Ma)³] × Icr  ≤  Ig
@@ -387,13 +387,13 @@ class ACIAdvancedBeam {
     }
 
     // ========================================================================
-    //  فحص عرض الشروخ حسب ACI 318-19 القسم 24.5
+    //  فحص عرض الشروخ حسب ACI 318-25 القسم 24.5
     // ========================================================================
 
     /**
-     * فحص عرض الشروخ حسب ACI 318-19 القسم 24.5 (طريقة مبسطة)
+     * فحص عرض الشروخ حسب ACI 318-25 القسم 24.5 (طريقة مبسطة)
      *
-     * ACI 318-19 يستخدم طريقة التحكم في الشروخ عن طريق التوزيع
+     * ACI 318-25 يستخدم طريقة التحكم في الشروخ عن طريق التوزيع
      * وحد أقصى لتباعد التسليح بدلاً من حساب عرض الشرخ المباشر.
      *
      * المعادلة المبسطة لعرض الشرخ (مشابهة لمعادلة Gergely-Lutz):
@@ -434,7 +434,7 @@ class ACIAdvancedBeam {
                 calculatedWidth = 0.0,
                 allowableWidth = 0.41,
                 isSafe = true,
-                codeReference = "ACI 318-19: Section 24.5 (Crack Width Control)"
+                codeReference = "ACI 318-25: Section 24.5 (Crack Width Control)"
             )
         }
 
@@ -483,16 +483,16 @@ class ACIAdvancedBeam {
             calculatedWidth = crackWidth,
             allowableWidth = allowableWidth,
             isSafe = isSafe,
-            codeReference = "ACI 318-19: Section 24.5 (z = ${String.format("%.0f", z)} kip/in, limit = ${if (isExterior) 145 else 175} kip/in)"
+            codeReference = "ACI 318-25: Section 24.5 (z = ${String.format("%.0f", z)} kip/in, limit = ${if (isExterior) 145 else 175} kip/in)"
         )
     }
 
     // ========================================================================
-    //  فحص طول التثبيت حسب ACI 318-19 القسم 25.4.2
+    //  فحص طول التثبيت حسب ACI 318-25 القسم 25.4.2
     // ========================================================================
 
     /**
-     * فحص طول التثبيت حسب ACI 318-19 القسم 25.4.2
+     * فحص طول التثبيت حسب ACI 318-25 القسم 25.4.2
      *
      * طول التثبيت للقضبان المضغوطة والملساء:
      *   Ld = (fy × ψt × ψe × ψs) / (1.7 × λ × √(fc')) × db
@@ -547,7 +547,7 @@ class ACIAdvancedBeam {
             requiredLength = ldRequired,
             availableLength = availableLength,
             isSafe = isSafe,
-            codeReference = "ACI 318-19: Section 25.4.2 (Ld_bot=${String.format("%.0f", ldBottom)}mm, Ld_top=${String.format("%.0f", ldTop)}mm)"
+            codeReference = "ACI 318-25: Section 25.4.2 (Ld_bot=${String.format("%.0f", ldBottom)}mm, Ld_top=${String.format("%.0f", ldTop)}mm)"
         )
     }
 

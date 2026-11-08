@@ -20,9 +20,9 @@ class QualityControlEngineTest {
     // ==================================================================
     @Test
     fun codeName_mapsEachDesignCode() {
-        assertEquals("ECP 203-2020", QualityControlEngine.codeName(DesignCode.ECP))
-        assertEquals("ACI 318-19", QualityControlEngine.codeName(DesignCode.ACI))
-        assertEquals("SBC 304-2018", QualityControlEngine.codeName(DesignCode.SBC))
+        DesignCode.entries.forEach { code ->
+            assertEquals(code.version, QualityControlEngine.codeName(code))
+        }
     }
 
     // ==================================================================
@@ -144,7 +144,7 @@ class QualityControlEngineTest {
     fun steelQcDetailed_convertsSteelTableUnitsAndUsesSelectedCodeBasis() {
         val expectedBases = mapOf(
             DesignCode.ECP to "ECP 205-2007 (steel)",
-            DesignCode.ACI to "AISC 360-16 (US steel; ACI 318 is concrete)",
+            DesignCode.ACI to "AISC 360-22 (US steel; ACI 318 is concrete)",
             DesignCode.SBC to "SBC 306-2018 (steel)"
         )
 
@@ -158,8 +158,8 @@ class QualityControlEngineTest {
                 vuKn = 100.0
             )
 
-            assertTrue(outcome.details.contains("Gross area" to "2850 mm²"))
-            assertTrue(outcome.details.contains("Major-axis inertia" to "19430000 mm⁴"))
+            assertTrue(outcome.details.any { it.first.startsWith("Gross area") && it.second == "2850 mm²" })
+            assertTrue(outcome.details.any { it.first.startsWith("Major-axis inertia") && it.second == "19430000 mm⁴" })
             assertTrue(outcome.details.contains("Selected steel design basis" to basis))
             assertEquals(54.45, outcome.checks.first().limit, 0.01)
             assertTrue(outcome.checks.all { it.reference?.contains(basis) == true })

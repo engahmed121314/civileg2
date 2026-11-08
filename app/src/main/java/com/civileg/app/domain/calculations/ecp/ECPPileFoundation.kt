@@ -8,7 +8,7 @@ import com.civileg.app.domain.calculations.base.*
 import kotlin.math.*
 
 /**
- * Pile foundation design engine per Egyptian Code ECP 203-2020.
+ * Pile foundation design engine per Egyptian Code ECP 203-2025.
  * Covers:
  *  - Single pile capacity (shaft friction + end bearing) for driven, bored, CFA, micropile
  *  - Pile cap design: punching shear, beam shear, flexure
@@ -19,8 +19,8 @@ import kotlin.math.*
  *  - Pile structural reinforcement design
  *
  * References:
- *  - ECP 203-2020 Clause 7-2 (Pile Foundations)
- *  - ECP 203-2020 Clause 4-3-2 (Punching Shear)
+ *  - ECP 203-2025 Clause 7-2 (Pile Foundations)
+ *  - ECP 203-2025 Clause 4-3-2 (Punching Shear)
  *  - Meyerhof (1951, 1956) bearing capacity & settlement
  *  - Broms (1964) lateral load analysis
  *  - Converse-Labarre (1937) group efficiency
@@ -149,7 +149,7 @@ class ECPPileFoundation : PileFoundationDesign {
                 && (lateralResult as com.civileg.app.domain.calculations.base.LateralLoadResult).allowableLateralCapacity >= input.lateralLoad
 
         codeNotes.add(CodeReference.ECP.PILE_CAPACITY)
-        codeNotes.add("ECP 203-2020: Pile Foundation Design")
+        codeNotes.add("ECP 203-2025: Pile Foundation Design")
         codeNotes.add("Pile: ${input.pileType.displayName}, Ø${input.pileDiameter.toInt()}mm x ${input.pileLength}m")
         codeNotes.add("Soil: ${input.soilType.displayName}, FS=${input.safetyFactor}")
         codeNotes.add("Ultimate capacity: ${"%.1f".format(capacityResult.ultimateCapacity)} kN")

@@ -64,7 +64,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun designPile(input: PileInput): PileDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.fcu", input.fcu)
         InputGuard.positive("input.fy", input.fy)
@@ -213,7 +213,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculatePileCapacity(input: PileInput): PileCapacityResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.pileDiameter", input.pileDiameter)
         InputGuard.positive("input.pileLength", input.pileLength)
@@ -327,7 +327,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun designPileCap(input: PileCapInput): PileCapResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.pileDiameter", input.pileDiameter)
         InputGuard.positive("input.pileSpacing", input.pileSpacing)
@@ -447,7 +447,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculateSettlement(input: PileInput): PileSettlementResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.pileDiameter", input.pileDiameter)
         InputGuard.positive("input.pileLength", input.pileLength)
@@ -493,7 +493,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun checkGroupEfficiency(input: PileGroupInput): PileGroupResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.pileDiameter", input.pileDiameter)
         InputGuard.positive("input.numberOfPiles", input.numberOfPiles.toDouble())
@@ -532,7 +532,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculateLateralCapacity(input: PileInput): LateralLoadResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.pileDiameter", input.pileDiameter)
         InputGuard.positive("input.pileLength", input.pileLength)
@@ -583,7 +583,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculateNegativeSkinFriction(input: PileInput): Double {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.pileDiameter", input.pileDiameter)
         InputGuard.positive("input.pileLength", input.pileLength)
@@ -616,7 +616,7 @@ class SBCPileFoundation : PileFoundationDesign {
         axialLoad: Double,
         moment: Double
     ): PileReinforcementResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.fcu", input.fcu)
         InputGuard.positive("input.fy", input.fy)

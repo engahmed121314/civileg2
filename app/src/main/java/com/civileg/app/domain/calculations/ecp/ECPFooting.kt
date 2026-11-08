@@ -10,13 +10,13 @@ import com.civileg.app.domain.entities.ShearCheckResult
 import kotlin.math.*
 
 /**
- * محرك تصميم القواعد حسب الكود المصري ECP 203-2020
+ * محرك تصميم القواعد حسب الكود المصري ECP 203-2025
  * يغطي: القواعد المنفصلة، المشتركة، اللبشة، وقبعات الركائز
  *
  * المراجع:
- * - ECP 203-2020 البند 7-1 (الأساسات)
- * - ECP 203-2020 البند 4-3-2 (قص الاختراق)
- * - ECP 203-2020 البند 4-2-1-2 (الحد الأدنى للتسليح)
+ * - ECP 203-2025 البند 7-1 (الأساسات)
+ * - ECP 203-2025 البند 4-3-2 (قص الاختراق)
+ * - ECP 203-2025 البند 4-2-1-2 (الحد الأدنى للتسليح)
  */
 class ECPFooting : FootingDesign {
 
@@ -69,7 +69,7 @@ class ECPFooting : FootingDesign {
         val My_service = momentY / factor
 
         // 3. حساب أبعاد القاعدة المنفصلة
-        // A_req = P / (SBC - gamma_c * t) per ECP 203-2020 §7-1
+        // A_req = P / (SBC - gamma_c * t) per ECP 203-2025 §7-1
         val t_m = footingDepth / 1000.0
         val netSBC = soilBearingCapacity - GAMMA_CONCRETE * t_m
         // Guard: netSBC must be positive — if overburden exceeds bearing, use gross SBC
@@ -100,7 +100,7 @@ class ECPFooting : FootingDesign {
         val A_actual = B * L / 1e6
 
         // 7. ضغط التربة مع الانحراف
-        // ECP 203-2020 §7-1: Bearing pressure with eccentricity (service level)
+        // ECP 203-2025 §7-1: Bearing pressure with eccentricity (service level)
         val q_avg = if (A_actual > 0) P_service / A_actual else 0.0
         val ex = if (P_service > 0) Mx_service / P_service else 0.0
         val ey = if (P_service > 0) My_service / P_service else 0.0
@@ -117,7 +117,7 @@ class ECPFooting : FootingDesign {
         // Factored soil pressure for flexure and one-way shear design (ultimate level)
         val q_factored = q_avg * factor
 
-        // ECP 203-2020 §7-1: Bearing check — q_max ≤ SBC, q_min ≥ 0 (no uplift)
+        // ECP 203-2025 §7-1: Bearing check — q_max ≤ SBC, q_min ≥ 0 (no uplift)
         if (q_max > soilBearingCapacity) {
             warnings.add(String.format("ضغط التربة الأقصى %.1f kPa يتجاوز قدرة التربة %.1f kPa", q_max, soilBearingCapacity))
         }
@@ -139,11 +139,11 @@ class ECPFooting : FootingDesign {
         val Mu_x = q_factored * (L / 1000.0) * cantX * cantX / 2.0  // kN.m
         val Mu_y = q_factored * (B / 1000.0) * cantY * cantY / 2.0  // kN.m
 
-        // 10. فحص القص الأحادي عند بعد d/2 من وجه العمود (ECP 203-2020 البند 4-3-1-2) — factored pressure
+        // 10. فحص القص الأحادي عند بعد d/2 من وجه العمود (ECP 203-2025 البند 4-3-1-2) — factored pressure
         val Vu_x = q_factored * (L / 1000.0) * max(cantX - dSafe / 2000.0, 0.0)  // kN
         val Vu_y = q_factored * (B / 1000.0) * max(cantY - dSafe / 2000.0, 0.0)  // kN
 
-        // One-way shear capacity ECP 203-2020 §4-3-1-2: qcu = 0.24 * sqrt(fcu/γc)
+        // One-way shear capacity ECP 203-2025 §4-3-1-2: qcu = 0.24 * sqrt(fcu/γc)
         val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
         val Vc_x = qcu * (L / 1000.0) * dSafe / 1000.0 * 1000.0  // kN
         val Vc_y = qcu * (B / 1000.0) * dSafe / 1000.0 * 1000.0  // kN
@@ -180,7 +180,7 @@ class ECPFooting : FootingDesign {
         // 14. التسليح الرئيسي = الأكبر
         val mainReinf = if (reinfX.astRequired >= reinfY.astRequired) reinfX else reinfY
 
-        codeNotes.add("ECP 203-2020: Isolated Footing Design")
+        codeNotes.add("ECP 203-2025: Isolated Footing Design")
         codeNotes.add(CodeReference.ECP.FOOTING_BEARING)
         codeNotes.add(CodeReference.ECP.FOOTING_SHEAR_PUNCHING)
         codeNotes.add(CodeReference.ECP.FOOTING_REINFORCEMENT)
@@ -230,7 +230,7 @@ class ECPFooting : FootingDesign {
         InputGuard.positive("effectiveDepth", effectiveDepth)
         InputGuard.positive("punchingShearForce", punchingShearForce)
 
-        // محيط الاختراق عند بعد d/2 من وجه العمود (ECP 203-2020 البند 4-3-2)
+        // محيط الاختراق عند بعد d/2 من وجه العمود (ECP 203-2025 البند 4-3-2)
         // bo = 2(c1 + c2) + 4d for interior column
         // For edge column: bo = (c1 + 2d) + 2(c2 + d)  — three-sided perimeter
         // For corner column: bo = 2(c1 + d) + 2(c2 + d) — but only 2 sides
@@ -244,7 +244,7 @@ class ECPFooting : FootingDesign {
         // ضغط القص المُطبَّق
         val denom = (bo * effectiveDepth).coerceAtLeast(0.001)
         val qp_applied = (V_punch * 1000.0) / denom
-        // Punching shear capacity ECP 203-2020 §4-3-2: qp = 0.316 * sqrt(fcu/γc)
+        // Punching shear capacity ECP 203-2025 §4-3-2: qp = 0.316 * sqrt(fcu/γc)
         val qp_capacity = 0.316 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
 
         val isSafe = qp_applied <= qp_capacity
@@ -254,7 +254,7 @@ class ECPFooting : FootingDesign {
             warnings.add(String.format("قص الاختراق %.2f MPa > %.2f MPa - زِد سمك القاعدة", qp_applied, qp_capacity))
         }
 
-        // ECP 203-2020 §4-3-2: Check maximum punching shear stress (strut failure limit)
+        // ECP 203-2025 §4-3-2: Check maximum punching shear stress (strut failure limit)
         // qp_max = 0.7 * sqrt(fcu/γc) — if exceeded, section is inadequate regardless of reinforcement
         val qp_max = 0.7 * sqrt(fcu / GAMMA_C)
         if (qp_applied > qp_max) {
@@ -705,7 +705,7 @@ class ECPFooting : FootingDesign {
 
     /**
      * Calculate punching shear critical perimeter for different column positions
-     * per ECP 203-2020 §4-3-2
+     * per ECP 203-2025 §4-3-2
      *
      * @param columnWidth column dimension c1 (mm)
      * @param columnDepth column dimension c2 (mm)
@@ -725,7 +725,7 @@ class ECPFooting : FootingDesign {
         InputGuard.positive("columnDepth", columnDepth)
         InputGuard.positive("effectiveDepth", effectiveDepth)
 
-        // ECP 203-2020 §4-3-2: Critical section at d/2 from column face
+        // ECP 203-2025 §4-3-2: Critical section at d/2 from column face
         val c1 = columnWidth
         val c2 = columnDepth
         val d = effectiveDepth

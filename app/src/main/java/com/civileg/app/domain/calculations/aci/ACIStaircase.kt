@@ -6,13 +6,13 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
  /**
- * تصميم السلالم حسب الكود الأمريكي ACI 318-19
+ * تصميم السلالم حسب الكود الأمريكي ACI 318-25
  *
  * المراجع:
- * - ACI 318-19 Chapter 9 (Flexure - One-way slabs)
- * - ACI 318-19 Chapter 22 (Shear)
- * - ACI 318-19 Table 24.2.2 (Deflection)
- * - ACI 318-19 Table 24.4.3.2 (Shrinkage and temperature reinforcement)
+ * - ACI 318-25 Chapter 9 (Flexure - One-way slabs)
+ * - ACI 318-25 Chapter 22 (Shear)
+ * - ACI 318-25 Table 24.2.2 (Deflection)
+ * - ACI 318-25 Table 24.4.3.2 (Shrinkage and temperature reinforcement)
  * - IBC Section 1011 (Geometric requirements)
  * - ASCE 7 (Stair loads: Live 4.8 kN/m² = 100 psf)
  *
@@ -144,7 +144,7 @@ class ACIStaircase : StaircaseDesign {
         val factoredOnSlope = horizontalLoad * cosTheta
 
         codeNotes.add("Factored horizontal load = ${String.format("%.2f", horizontalLoad)} kN/m²")
-        codeNotes.add("Load factors: 1.2D + 1.6L per ACI 318-19")
+        codeNotes.add("Load factors: 1.2D + 1.6L per ACI 318-25")
 
         // ========== 4. التحليل الإنشائي ==========
         val span = input.span
@@ -193,7 +193,7 @@ class ACIStaircase : StaircaseDesign {
         // Required steel area
         var astRequired = rho * b * d
 
-        // Minimum steel per ACI 318-19 Table 24.4.3.2 (Shrinkage & Temp)
+        // Minimum steel per ACI 318-25 Table 24.4.3.2 (Shrinkage & Temp)
         // - fy < 420 MPa: 0.0020
         // - fy ≥ 420 MPa: max(0.0018 * 420 / fy, 0.0014)
         val minSteelRatio = if (input.fy < 420.0) {
@@ -212,7 +212,7 @@ class ACIStaircase : StaircaseDesign {
             name = "Flexure (ρ ≤ ρ_max_tc)",
             value = rho, limit = rhoMaxTc, unit = "",
             isSafe = rho <= rhoMaxTc,
-            description = "ACI 318-19 Section 9.3.3.1 (tension-controlled)"
+            description = "ACI 318-25 Section 9.3.3.1 (tension-controlled)"
         ))
 
         // اختيار حديد رئيسي (مقاسات أمريكية: 12, 16, 19, 22, 25 mm)
@@ -245,7 +245,7 @@ class ACIStaircase : StaircaseDesign {
             name = "Shear Capacity",
             value = adjustedShear, limit = maxShearCapacity, unit = "kN/m",
             isSafe = shearSafe,
-            description = "ACI 318-19 Section 22.5.1.2"
+            description = "ACI 318-25 Section 22.5.1.2"
         ))
 
         val requiredStirrups: String
@@ -272,7 +272,7 @@ class ACIStaircase : StaircaseDesign {
                 stirrupDiameter = 0.0
                 stirrupSpacing = 0.0
                 codeNotes.add("φVc = ${String.format("%.2f", phiVc)} kN/m ≥ Vu = ${String.format("%.2f", adjustedShear)} kN/m")
-                codeNotes.add("No shear reinforcement required per ACI 318-19")
+                codeNotes.add("No shear reinforcement required per ACI 318-25")
             }
         } else {
             // Calculate required stirrups
@@ -310,7 +310,7 @@ class ACIStaircase : StaircaseDesign {
             name = "Deflection (Span/Depth)",
             value = actualRatio, limit = allowableRatio, unit = "",
             isSafe = deflectionOk,
-            description = "ACI 318-19 Table 24.2.2: L/d ≤ ${String.format("%.1f", allowableRatio)}"
+            description = "ACI 318-25 Table 24.2.2: L/d ≤ ${String.format("%.1f", allowableRatio)}"
         ))
 
         // ========== 8. فحوصات هندسية (IBC) ==========
@@ -335,9 +335,9 @@ class ACIStaircase : StaircaseDesign {
 
         // ========== 9. ملاحظات الكود ==========
         codeNotes.add(CodeReference.ACI.SLAB_ONE_WAY)
-        codeNotes.add("ACI 318-19: Chapter 9 (Flexure - one-way slab)")
-        codeNotes.add("ACI 318-19: Chapter 22 (Shear)")
-        codeNotes.add("ACI 318-19: Table 24.2.2 (Deflection L/240)")
+        codeNotes.add("ACI 318-25: Chapter 9 (Flexure - one-way slab)")
+        codeNotes.add("ACI 318-25: Chapter 22 (Shear)")
+        codeNotes.add("ACI 318-25: Table 24.2.2 (Deflection L/240)")
         codeNotes.add("IBC Section 1011 (Stair geometry requirements)")
         codeNotes.add("f'c = 0.8 × fcu (cube to cylinder conversion)")
         codeNotes.add("φ = $PHI_FLEXURE flexure, φ = $PHI_SHEAR shear")

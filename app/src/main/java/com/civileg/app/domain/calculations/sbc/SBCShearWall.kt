@@ -66,7 +66,7 @@ class SBCShearWall : ShearWallDesign {
     // ══════════════════════════════════════════════════════════════════
 
     override fun designWall(input: ShearWallInput): ShearWallResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.fcu", input.fcu)
         InputGuard.positive("input.fy", input.fy)
@@ -249,7 +249,7 @@ class SBCShearWall : ShearWallDesign {
      * @return Pair<Mn_kN_m, Pn_kN> (nominal, before φ)
      */
     override fun calculateFlexuralStrength(input: ShearWallInput): Pair<Double, Double> {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.fcu", input.fcu)
         InputGuard.positive("input.fy", input.fy)
@@ -338,7 +338,7 @@ class SBCShearWall : ShearWallDesign {
      * @return Pair<VcNominal_kN, VsNominal_kN>
      */
     override fun calculateShearStrength(input: ShearWallInput): Pair<Double, Double> {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.fcu", input.fcu)
         InputGuard.positive("input.fyv", input.fyv)
@@ -404,7 +404,7 @@ class SBCShearWall : ShearWallDesign {
      *  - Coupled walls: BE when c/d > 0.3
      */
     override fun designBoundaryElements(input: ShearWallInput): Pair<BoundaryElementType, RebarResult?> {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.fcu", input.fcu)
         InputGuard.positive("input.fy", input.fy)
@@ -513,7 +513,7 @@ class SBCShearWall : ShearWallDesign {
     // ══════════════════════════════════════════════════════════════════
 
     override fun designCouplingBeam(input: ShearWallInput): CouplingBeamResult? {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.notNull("input.wallType", input.wallType)
 
@@ -589,7 +589,7 @@ class SBCShearWall : ShearWallDesign {
      * SBC 304: walls with H/t > 25 require second-order analysis.
      */
     override fun checkSlenderness(input: ShearWallInput): Pair<Boolean, Double> {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.wallThickness", input.wallThickness)
         InputGuard.positive("input.wallHeight", input.wallHeight)

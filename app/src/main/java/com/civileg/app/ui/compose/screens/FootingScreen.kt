@@ -352,7 +352,7 @@ fun FootingScreen(
                                 Text(
                                     "Method: unified combined-footing design — centroid-balanced soil pressure, " +
                                         "longitudinal and transverse bending, one-way and punching shear. " +
-                                        "ECP 203-2020 uses the dedicated combined-footing engine; " +
+                                        "ECP 203-2025 uses the dedicated combined-footing engine; " +
                                         "ACI 318 / SBC 304 route through the shared footing design interface.",
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant

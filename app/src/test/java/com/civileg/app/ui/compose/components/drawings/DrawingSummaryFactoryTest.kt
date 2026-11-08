@@ -31,7 +31,7 @@ class DrawingSummaryFactoryTest {
 
         assertFalse(summary.isSafe)
         assertEquals("125.0%", summary.utilizationPercent)
-        assertEquals("ACI 318-19", summary.designCodeLabel)
+        assertEquals("ACI 318-25", summary.designCodeLabel)
         assertEquals(2, summary.safetyChecks.size)
         assertEquals(1, summary.failedCheckCount)
         assertEquals(2.4, summary.concreteVolume, 0.0)
@@ -87,10 +87,10 @@ class DrawingSummaryFactoryTest {
         val slabSummary = slabDrawingSummary(slab)
 
         assertTrue(footingSummary.isSafe)
-        assertEquals("ECP 203-2020", footingSummary.designCodeLabel)
+        assertEquals("ECP 203-2025", footingSummary.designCodeLabel)
         assertEquals(0, footingSummary.failedCheckCount)
         assertTrue(slabSummary.isSafe)
-        assertEquals("SBC 304-2018", slabSummary.designCodeLabel)
+        assertEquals("SBC 304-2024", slabSummary.designCodeLabel)
         assertEquals(1, slabSummary.safetyChecks.size)
     }
 
@@ -113,7 +113,7 @@ class DrawingSummaryFactoryTest {
         val summary = stairDrawingSummary(result)
 
         assertTrue(summary.isSafe)
-        assertEquals("ECP 203-2020", summary.designCodeLabel)
+        assertEquals("ECP 203-2025", summary.designCodeLabel)
         assertEquals("55.0%", summary.utilizationPercent)
         assertEquals(0, summary.failedCheckCount)
     }

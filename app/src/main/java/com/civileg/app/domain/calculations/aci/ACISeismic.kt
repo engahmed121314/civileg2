@@ -7,7 +7,7 @@ import com.civileg.app.domain.entities.DesignCode
 import kotlin.math.*
 
 /**
- * تنفيذ التصميم الزلزالي حسب الكود الأمريكي ASCE 7-16 / ACI 318-19
+ * تنفيذ التصميم الزلزالي حسب الكود الأمريكي ASCE 7-16 / ACI 318-25
  */
 class ACISeismic : SeismicDesign {
     

@@ -148,7 +148,7 @@ data class PunchingCheckResult(
 ) : Parcelable
 
 /**
- * Slenderness check result per ECP 203-2020 §4-2-3
+ * Slenderness check result per ECP 203-2025 §4-2-3
  */
 @Parcelize
 data class SlendernessCheckResult(

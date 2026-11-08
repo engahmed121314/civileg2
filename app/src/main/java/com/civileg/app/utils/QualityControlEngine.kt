@@ -47,15 +47,11 @@ object QualityControlEngine {
         const val FIRE_PROTECTION = "FIRE_PROTECTION"
     }
 
-    fun codeName(code: DesignCode): String = when (code) {
-        DesignCode.ACI -> "ACI 318-19"
-        DesignCode.SBC -> "SBC 304-2018"
-        else -> "ECP 203-2020"
-    }
+    fun codeName(code: DesignCode): String = code.version
 
     private fun steelCodeBasis(code: DesignCode): String = when (code) {
         DesignCode.ECP -> "ECP 205-2007 (steel)"
-        DesignCode.ACI -> "AISC 360-16 (US steel; ACI 318 is concrete)"
+        DesignCode.ACI -> "AISC 360-22 (US steel; ACI 318 is concrete)"
         DesignCode.SBC -> "SBC 306-2018 (steel)"
     }
 

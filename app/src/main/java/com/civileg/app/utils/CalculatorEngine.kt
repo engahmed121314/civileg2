@@ -2063,9 +2063,9 @@ class CalculatorEngine @Inject constructor(
     }
 
     private fun codeNoteRef(code: DesignCode): String = when (code) {
-        DesignCode.ECP -> "ECP 203-2020"
-        DesignCode.ACI -> "ACI 318-19"
-        DesignCode.SBC -> "SBC 304-2018"
+        DesignCode.ECP -> "ECP 203-2025"
+        DesignCode.ACI -> "ACI 318-25"
+        DesignCode.SBC -> "SBC 304-2024"
     }
 
     private fun barAreaMm2(diameter: Double): Double = Math.PI / 4.0 * diameter * diameter

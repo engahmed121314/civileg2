@@ -6,7 +6,7 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تصميم البلاطة الهوردي حسب الكود السعودي SBC 304-2018
+ * تصميم البلاطة الهوردي حسب الكود السعودي SBC 304-2024
  * SBC 304 Hordi (Ribbed/Joist) Slab Design — تطبيق مستقل وليس fallback لـ ACI
  *
  * الاختلافات الرئيسية عن ACI 318:
@@ -18,11 +18,11 @@ import kotlin.math.*
  * - غطاء خرساني أكبر: 40 مم داخلي، 65 مم خارجي/ساحلي
  *
  * المراجع:
- * - SBC 304-2018 البند 6.4 (البلاطات المصمتة والهوردي)
- * - SBC 304-2018 البند 4.2 (الانحناء)
- * - SBC 304-2018 البند 4.3 (القص)
- * - SBC 304-2018 البند 21 (متطلبات الزلازل)
- * - SBC 304-2018 البند 7.7 (الغطاء الخرساني)
+ * - SBC 304-2024 البند 6.4 (البلاطات المصمتة والهوردي)
+ * - SBC 304-2024 البند 4.2 (الانحناء)
+ * - SBC 304-2024 البند 4.3 (القص)
+ * - SBC 304-2024 البند 21 (متطلبات الزلازل)
+ * - SBC 304-2024 البند 7.7 (الغطاء الخرساني)
  */
 class SBCHordiSlabDesign : HordiSlabDesign {
 
@@ -35,7 +35,7 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         private const val PHI_FLEXURE = 0.9
         private const val PHI_SHEAR = 0.75
 
-        // SBC 304-2018 limits
+        // SBC 304-2024 limits
         private const val MIN_RIB_WIDTH = 100.0        // mm — SBC 304 §6.4
         private const val MIN_TOPPING = 50.0            // mm — SBC (أعلى من ACI بسبب المناخ الحار)
         private const val MAX_RIB_SPACING = 700.0       // mm
@@ -59,7 +59,7 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         designShear: Double,
         loadCombination: LoadCombination
     ): SlabDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2018 ──
+        // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("ribWidth", ribWidth)
@@ -192,7 +192,7 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         // 7. Code Notes & Results
         // ══════════════════════════════════════════════════════════════════
         codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
-        codeNotes.add("SBC 304-2018 §6.4: Hordi Slab Design (independent SBC implementation)")
+        codeNotes.add("SBC 304-2024 §6.4: Hordi Slab Design (independent SBC implementation)")
         codeNotes.add("f'c = 0.8 × fcu = ${String.format("%.1f", fc)} MPa (SBC 304/ACI conversion)")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S, φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")
         codeNotes.add("Rib: ${ribWidth.toInt()}×${ribHeight.toInt()}mm, d=${String.format("%.0f", d)}mm")

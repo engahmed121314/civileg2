@@ -1199,14 +1199,19 @@ class QualityEngineerViewModel @Inject constructor(
                 val inputMap = LinkedHashMap<String, String>()
                 val resultMap = LinkedHashMap<String, String>()
                 val safetyChecks = mutableListOf<ProfessionalEnglishPdfReporter.SafetyCheck>()
+                val selectedCodes = linkedSetOf<String>()
 
-                fun absorb(outcome: QualityControlEngine.QcOutcome?) {
+                fun absorb(outcome: QualityControlEngine.QcOutcome?, code: DesignCode) {
                     outcome ?: return
-                    outcome.details.forEach { (k, v) -> inputMap["${outcome.title.split(" ").first()} · $k"] = v }
+                    val discipline = outcome.title.split(" ").first()
+                    val codeName = QualityControlEngine.codeName(code)
+                    selectedCodes.add(codeName)
+                    inputMap["$discipline · Design code"] = codeName
+                    outcome.details.forEach { (k, v) -> inputMap["$discipline · $k"] = v }
                     outcome.checks.forEach { c ->
                         safetyChecks.add(
                             ProfessionalEnglishPdfReporter.SafetyCheck(
-                                name = "${outcome.title.split(" ").first()}: ${c.name}",
+                                name = "$discipline: ${c.name}",
                                 calculated = c.calculated,
                                 limit = c.limit,
                                 unit = c.unit,
@@ -1217,16 +1222,19 @@ class QualityEngineerViewModel @Inject constructor(
                     }
                 }
 
-                absorb(_concreteState.value.outcome)
-                absorb(_rebarState.value.outcome)
-                absorb(_steelState.value.outcome)
-                absorb(_roadsState.value.outcome)
-                absorb(_bridgesState.value.outcome)
-                absorb(_tunnelsState.value.outcome)
-                absorb(_buildingsState.value.outcome)
+                absorb(_concreteState.value.outcome, _concreteState.value.designCode)
+                absorb(_rebarState.value.outcome, _rebarState.value.designCode)
+                absorb(_steelState.value.outcome, _steelState.value.designCode)
+                absorb(_roadsState.value.outcome, _roadsState.value.designCode)
+                absorb(_bridgesState.value.outcome, _bridgesState.value.designCode)
+                absorb(_tunnelsState.value.outcome, _tunnelsState.value.designCode)
+                absorb(_buildingsState.value.outcome, _buildingsState.value.designCode)
 
                 // Soil outcome is stored separately as a bearing result
                 _soilState.value.soilResult?.let { r ->
+                    val codeName = QualityControlEngine.codeName(_soilState.value.designCode)
+                    selectedCodes.add(codeName)
+                    inputMap["Soil · Design code"] = codeName
                     resultMap["Soil · Allowable bearing"] = "%.1f kPa".format(r.allowableBearingCapacity)
                     resultMap["Soil · Settlement"] = "%.1f mm".format(r.settlement)
                     safetyChecks.add(
@@ -1241,6 +1249,7 @@ class QualityEngineerViewModel @Inject constructor(
                 }
 
                 val stats = _reportsState.value
+                stats.records.mapTo(selectedCodes) { it.designCode }
                 resultMap["Session · Total records"] = stats.totalInspections.toString()
                 resultMap["Session · Passed"] = stats.passedInspections.toString()
                 resultMap["Session · Failed"] = stats.failedInspections.toString()
@@ -1264,7 +1273,7 @@ class QualityEngineerViewModel @Inject constructor(
                     reportType = ProfessionalEnglishPdfReporter.ReportType.GENERIC,
                     title = "Site Quality Control Report",
                     subtitle = "Concrete · Soil · Rebar · Steel · Roads · Bridges · Tunnels · Buildings · ITP · NCR",
-                    designCode = "ECP 203-2020 / ACI 318-19 / SBC 304-2018",
+                    designCode = selectedCodes.joinToString(" / ").ifBlank { "Not specified" },
                     inputs = inputMap,
                     results = resultMap,
                     safetyChecks = safetyChecks,
