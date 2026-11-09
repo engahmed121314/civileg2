@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -155,6 +156,31 @@ fun SoilStructureScreen(
             }
 
             uiState?.let { res ->
+                val context = androidx.compose.ui.platform.LocalContext.current
+
+                Button(
+                    onClick = {
+                        viewModel.exportToPdf(
+                            context = context,
+                            foundationLengthMm = foundationLengthMm.toDoubleOrNull() ?: 3000.0,
+                            foundationWidthMm = foundationWidthMm.toDoubleOrNull() ?: 2000.0,
+                            foundationThicknessMm = foundationThicknessMm.toDoubleOrNull() ?: 500.0,
+                            columnLoadKN = columnLoadKN.toDoubleOrNull() ?: 1200.0,
+                            momentKNm = momentKNm.toDoubleOrNull() ?: 50.0,
+                            soilBearingCapacityKpa = soilBearingCapacityKpa.toDoubleOrNull() ?: 150.0,
+                            soilUnitWeightKNm3 = soilUnitWeightKNm3.toDoubleOrNull() ?: 18.0,
+                            frictionAngleDeg = frictionAngleDeg.toDoubleOrNull() ?: 30.0,
+                            embedmentDepthMm = embedmentDepthMm.toDoubleOrNull() ?: 1500.0
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                ) {
+                    Icon(androidx.compose.material.icons.Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("تصدير تقرير PDF برو (3 قطاعات)", fontWeight = FontWeight.Bold)
+                }
+
                 DesignSectionHeader(title = "الرسم الهندسي لتفاعل المنشأ مع التربة")
 
                 Text(

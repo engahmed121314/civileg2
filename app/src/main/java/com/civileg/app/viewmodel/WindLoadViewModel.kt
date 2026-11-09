@@ -308,6 +308,63 @@ class WindLoadViewModel @Inject constructor(
         updateK2Table()
         _result.postValue(null)
     }
+
+    /** Export Wind Load Analysis report to PDF with 3-view engineering drawings. */
+    fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        val res = _result.value ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val input = buildInput()
+                val drawingBitmap = com.civileg.app.utils.PdfDrawingGenerator.generateWindLoadDrawing(
+                    basicSpeed = input.basicWindSpeed,
+                    height = input.buildingHeight,
+                    width = input.buildingWidth,
+                    depth = input.buildingDepth,
+                    qzMax = res.designWindPressure,
+                    baseShear = res.totalBaseShear,
+                    buildingShape = input.buildingShape.name,
+                    isSafe = true
+                )
+
+                val inputsMap = mapOf(
+                    "Basic Wind Speed (V)" to "${input.basicWindSpeed} m/s",
+                    "Building Height (H)" to "${input.buildingHeight} m",
+                    "Building Width (B)" to "${input.buildingWidth} m",
+                    "Building Depth (L)" to "${input.buildingDepth} m",
+                    "Terrain Category" to input.terrainCategory.name,
+                    "Importance Factor (I)" to "${input.importanceFactor}"
+                )
+
+                val resultsMap = mapOf(
+                    "Top Wind Pressure (p_z)" to "${"%.2f".format(res.designWindPressure)} kN/m²",
+                    "Total Base Shear (F_base)" to "${"%.1f".format(res.totalBaseShear)} kN",
+                    "Overturning Moment" to "${"%.1f".format(res.overturningMoment)} kN.m",
+                    "Gust Factor (G)" to "${"%.3f".format(res.gustFactor)}"
+                )
+
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, "Wind_Load_Report_${System.currentTimeMillis()}.pdf")
+
+                val bundle = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "تقرير حساب أحمال الرياح",
+                    titleEn = "Wind Load Analysis Report",
+                    subtitle = "Building Wind Pressure & Base Shear",
+                    designType = "Wind Analysis",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    isSafe = true,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath,
+                    openPdfOnComplete = true
+                )
+                onComplete(bundle.pdfFile)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onComplete(null)
+            }
+        }
+    }
 }
 
 /** Quick-load presets for typical building scenarios. */

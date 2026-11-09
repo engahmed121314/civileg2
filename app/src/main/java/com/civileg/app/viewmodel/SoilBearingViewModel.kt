@@ -236,4 +236,65 @@ class SoilBearingViewModel @Inject constructor(
     fun onSoilTypeSelected(soilType: SoilType) {
         this.soilType.postValue(soilType)
     }
+
+    /** Export Soil Bearing Capacity report to PDF with 3-view drawings. */
+    fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        val res = _result.value ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val input = buildInput()
+                val drawingBitmap = com.civileg.app.utils.PdfDrawingGenerator.generateSoilBearingDrawing(
+                    width = input.foundationWidth,
+                    length = input.foundationLength,
+                    depth = input.foundationDepth,
+                    cohesion = input.cohesion,
+                    phi = input.frictionAngle,
+                    qUlt = res.grossBearingCapacity,
+                    qAllow = res.allowableBearingCapacity,
+                    gwt = input.waterTableDepth,
+                    isSafe = true
+                )
+
+                val inputsMap = mapOf(
+                    "Method" to input.method.name,
+                    "Soil Type" to input.soilType.name,
+                    "Foundation Width (B)" to "${input.foundationWidth} m",
+                    "Foundation Length (L)" to "${input.foundationLength} m",
+                    "Foundation Depth (D_f)" to "${input.foundationDepth} m",
+                    "Cohesion (c)" to "${input.cohesion} kPa",
+                    "Friction Angle (φ)" to "${input.frictionAngle}°",
+                    "Unit Weight (γ)" to "${input.unitWeight} kN/m³",
+                    "Safety Factor" to "${input.safetyFactor}"
+                )
+
+                val resultsMap = mapOf(
+                    "Gross Ultimate Capacity (q_ult)" to "${"%.1f".format(res.grossBearingCapacity)} kPa",
+                    "Net Ultimate Capacity (q_net)" to "${"%.1f".format(res.netBearingCapacity)} kPa",
+                    "Allowable Capacity (q_allow)" to "${"%.1f".format(res.allowableBearingCapacity)} kPa",
+                    "Effective Width (B')" to "${"%.2f".format(res.effectiveWidth)} m"
+                )
+
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, "Soil_Bearing_Report_${System.currentTimeMillis()}.pdf")
+
+                val bundle = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "تقرير قدرة تحمّل التربة",
+                    titleEn = "Soil Bearing Capacity Report",
+                    subtitle = "Geotechnical Foundation Analysis",
+                    designType = "Soil Bearing",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    isSafe = true,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath,
+                    openPdfOnComplete = true
+                )
+                onComplete(bundle.pdfFile)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onComplete(null)
+            }
+        }
+    }
 }

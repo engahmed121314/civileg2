@@ -34,8 +34,8 @@ By participating in this project, you agree to treat everyone with respect, adhe
 #### Steps
 ```bash
 # 1. Fork and clone
-git clone https://github.com/engahmed121314/civileg.git
-cd civileg
+git clone https://github.com/engahmed121314/civileg2.git
+cd civileg2
 
 # 2. Open project in Android Studio
 # Allow Gradle Sync to download dependencies
@@ -104,8 +104,8 @@ Do **NOT** post security vulnerabilities in public issues or PRs. Please refer t
 - **Android SDK API 36**
 
 ```bash
-git clone https://github.com/engahmed121314/civileg.git
-cd civileg
+git clone https://github.com/engahmed121314/civileg2.git
+cd civileg2
 ./gradlew assembleDebug
 ./gradlew testDebugUnitTest
 ```

@@ -74,4 +74,77 @@ class SoilStructureViewModel @Inject constructor() : ViewModel() {
         _error.value = null
         _isLoading.value = false
     }
+
+    /** Export Soil Structure Interaction report to PDF with 3-view engineering drawings. */
+    fun exportToPdf(
+        context: android.content.Context,
+        foundationLengthMm: Double,
+        foundationWidthMm: Double,
+        foundationThicknessMm: Double,
+        columnLoadKN: Double,
+        momentKNm: Double,
+        soilBearingCapacityKpa: Double,
+        soilUnitWeightKNm3: Double,
+        frictionAngleDeg: Double,
+        embedmentDepthMm: Double,
+        onComplete: (java.io.File?) -> Unit = {}
+    ) {
+        val res = _result.value ?: return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val drawingBitmap = com.civileg.app.utils.PdfDrawingGenerator.generateSoilBearingDrawing(
+                    width = foundationWidthMm / 1000.0,
+                    length = foundationLengthMm / 1000.0,
+                    depth = embedmentDepthMm / 1000.0,
+                    cohesion = 0.0,
+                    phi = frictionAngleDeg,
+                    qUlt = res.bearing.maxPressureKpa,
+                    qAllow = soilBearingCapacityKpa,
+                    gwt = 5.0,
+                    isSafe = res.isSafe
+                )
+
+                val inputsMap = mapOf(
+                    "Foundation Length" to "$foundationLengthMm mm",
+                    "Foundation Width" to "$foundationWidthMm mm",
+                    "Thickness" to "$foundationThicknessMm mm",
+                    "Column Load" to "$columnLoadKN kN",
+                    "Bending Moment" to "$momentKNm kN.m",
+                    "Allowable Soil Capacity" to "$soilBearingCapacityKpa kPa",
+                    "Embedment Depth" to "$embedmentDepthMm mm"
+                )
+
+                val resultsMap = mapOf(
+                    "Max Soil Pressure" to "${"%.1f".format(res.bearing.maxPressureKpa)} kPa",
+                    "Min Soil Pressure" to "${"%.1f".format(res.bearing.minPressureKpa)} kPa",
+                    "Average Pressure" to "${"%.1f".format(res.bearing.averagePressureKpa)} kPa",
+                    "Settlement" to "${"%.1f".format(res.settlement.totalSettlementMm)} mm",
+                    "F.S Overturning" to "${"%.2f".format(res.stability.factorOfSafetyOverturning)}",
+                    "F.S Sliding" to "${"%.2f".format(res.stability.factorOfSafetySliding)}",
+                    "F.S Bearing" to "${"%.2f".format(res.stability.factorOfSafetyBearing)}"
+                )
+
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, "Soil_Structure_Report_${System.currentTimeMillis()}.pdf")
+
+                val bundle = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "تقرير تفاعل المنشأ مع التربة",
+                    titleEn = "Soil-Structure Interaction Analysis Report",
+                    subtitle = "Soil Pressure, Stability & Settlement Analysis",
+                    designType = "Soil Structure",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    isSafe = res.isSafe,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath,
+                    openPdfOnComplete = true
+                )
+                onComplete(bundle.pdfFile)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onComplete(null)
+            }
+        }
+    }
 }

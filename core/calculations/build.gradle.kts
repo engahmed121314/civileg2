@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.civileg.core.calculations"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
@@ -33,4 +33,5 @@ android {
 dependencies {
     implementation(libs.firebase.crashlytics)
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
+    testImplementation(libs.junit)
 }

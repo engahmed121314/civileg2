@@ -4,6 +4,7 @@ package com.civileg.app.viewmodel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.utils.RebarCalculator
 import com.civileg.app.utils.RebarCalculator.WeightResult
@@ -17,6 +18,7 @@ import com.civileg.app.utils.RebarCalculator.BarProperties
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
  * ViewModel for the Rebar Tool module.
@@ -315,5 +317,71 @@ class RebarToolViewModel : ViewModel() {
         _lapResult.value = null
         _scheduleResult.value = null
         _crackResult.value = null
+    }
+
+    /** Export Rebar Calculations report to PDF with 3-view engineering drawings. */
+    fun exportToPdf(context: android.content.Context, barDiameter: Double = 16.0, onComplete: (java.io.File?) -> Unit = {}) {
+        val dev = _devLengthResult.value
+        val lap = _lapResult.value
+        val weight = _weightResult.value
+
+        val barDia = barDiameter
+        val devL = dev?.modifiedLd ?: 0.0
+        val lapL = lap?.lapLength ?: 0.0
+        val wPerM = weight?.weightPerMeter ?: (barDia * barDia / 162.0)
+        val codeName = dev?.code?.name ?: lap?.code?.name ?: "ECP 203"
+
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val drawingBitmap = com.civileg.app.utils.PdfDrawingGenerator.generateRebarToolDrawing(
+                    barDia = barDia,
+                    devLength = devL,
+                    lapLength = lapL,
+                    weightPerM = wPerM,
+                    codeName = codeName,
+                    isSafe = true
+                )
+
+                val inputsMap = mutableMapOf(
+                    "Bar Diameter (Ø)" to "$barDia mm",
+                    "Design Code" to codeName,
+                    "Unit Weight" to "${"%.3f".format(wPerM)} kg/m"
+                )
+
+                val resultsMap = mutableMapOf<String, String>()
+                dev?.let {
+                    resultsMap["Basic L_d"] = "${"%.0f".format(it.basicLd)} mm"
+                    resultsMap["Modified L_d"] = "${"%.0f".format(it.modifiedLd)} mm"
+                }
+                lap?.let {
+                    resultsMap["Lap Splice Length (L_s)"] = "${"%.0f".format(it.lapLength)} mm"
+                    resultsMap["Lap Type"] = it.lapType.name
+                }
+                weight?.let {
+                    resultsMap["Total Bar Weight"] = "${"%.2f".format(it.totalWeight)} kg"
+                }
+
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, "Rebar_Tool_Report_${System.currentTimeMillis()}.pdf")
+
+                val bundle = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "تقرير حسابات حديد التسليح",
+                    titleEn = "Rebar Development & Lap Splice Report",
+                    subtitle = "Rebar Detailing & Weight Takeoff",
+                    designType = "Rebar Detailing",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    isSafe = true,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath,
+                    openPdfOnComplete = true
+                )
+                onComplete(bundle.pdfFile)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onComplete(null)
+            }
+        }
     }
 }

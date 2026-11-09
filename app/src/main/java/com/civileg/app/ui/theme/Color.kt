@@ -5,118 +5,102 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-// ===== Premium Geometric Color System =====
+// ===== Elite Cyber Industrial Titanium Color System =====
 
-// Light Theme Colors - Premium Geometric Palette
+// Light Theme Colors - Modern Tech & Engineering Palette
 object PremiumColorsLight {
-    // Primary Geometric Palette - Deep Navy Base
-    val primary = Color(0xFF003A70)
-    val primaryContainer = Color(0xFF0F172A)
+    val primary = Color(0xFF0B192C)
+    val primaryContainer = Color(0xFF1E3E62)
     val onPrimary = Color(0xFFFFFFFF)
-    val onPrimaryContainer = Color(0xFFD6E4F0)
+    val onPrimaryContainer = Color(0xFFE0F2FE)
     
-    // Secondary Geometric Accent - Slate
-    val secondary = Color(0xFF4A5C7E)
-    val secondaryContainer = Color(0xFF1E293B)
+    val secondary = Color(0xFF0077B6)
+    val secondaryContainer = Color(0xFFCAF0F8)
     val onSecondary = Color(0xFFFFFFFF)
-    val onSecondaryContainer = Color(0xFFf1f5f9)
+    val onSecondaryContainer = Color(0xFF03045E)
     
-    // Tertiary Geometric Warm - Amber
-    val tertiary = Color(0xFFC68400)
-    val tertiaryContainer = Color(0xFF2E1B00)
-    val onTertiary = Color(0xFFFFFFFF)
-    val onTertiaryContainer = Color(0xFFFFEAA7)
+    val tertiary = Color(0xFFD4A373)
+    val tertiaryContainer = Color(0xFFFAEDCD)
+    val onTertiary = Color(0xFF281C08)
+    val onTertiaryContainer = Color(0xFFFEFAE0)
     
-    // Extended Premium Geometric Palette
-    val error = Color(0xFFBA1A1A)
+    val error = Color(0xFFDC2626)
     val onError = Color(0xFFFFFFFF)
-    val errorContainer = Color(0xFF4F1A1A)
-    val onErrorContainer = Color(0xFFFFD9D9)
+    val errorContainer = Color(0xFFFEE2E2)
+    val onErrorContainer = Color(0xFF991B1B)
     
-    val outline = Color(0xFF73777F)
-    val outlineVariant = Color(0xFF98A2AF)
-    val gray = Color(0xFF757575)
-    val grayLight = Color(0xFFE2E8F0)
-    val grayDark = Color(0xFF475569)
+    val outline = Color(0xFF64748B)
+    val outlineVariant = Color(0xFF94A3B8)
+    val gray = Color(0xFF6B7280)
+    val grayLight = Color(0xFFF1F5F9)
+    val grayDark = Color(0xFF334155)
     
-    // Premium Background Geometrics
-    val background = Color(0xFFF8FAFC)
-    val onBackground = Color(0xFF0F172A)
+    val background = Color(0xFFF4F6F9)
+    val onBackground = Color(0xFF0B192C)
     val surface = Color(0xFFFFFFFF)
-    val onSurface = Color(0xFF0F172A)
-    val surfaceVariant = Color(0xFFF1F5F9)
-    val onSurfaceVariant = Color(0xFF475569)
+    val onSurface = Color(0xFF0B192C)
+    val surfaceVariant = Color(0xFFE2E8F0)
+    val onSurfaceVariant = Color(0xFF334155)
     
-    // Premium App Specific Geometric Colors
-    val accent = Color(0xFFFF9800)
-    val accentGradientStart = Color(0xFFFF9800)
-    val accentGradientEnd = Color(0xFFFFB74D)
-    val success = Color(0xFF2E7D32)
-    val successGradientStart = Color(0xFF2E7D32)
-    val successGradientEnd = Color(0xFF4CAF50)
-    val danger = Color(0xFFC62828)
-    val dangerGradientStart = Color(0xFFC62828)
+    val accent = Color(0xFF00A8E8)
+    val accentGradientStart = Color(0xFF00A8E8)
+    val accentGradientEnd = Color(0xFF0096C7)
+    val success = Color(0xFF059669)
+    val successGradientStart = Color(0xFF059669)
+    val successGradientEnd = Color(0xFF10B981)
+    val danger = Color(0xFFDC2626)
+    val dangerGradientStart = Color(0xFFDC2626)
     val dangerGradientEnd = Color(0xFFEF4444)
     
-    // Premium Geometric Gradient References (as Compose Brush)
     val primaryGradient: Brush = Brush.horizontalGradient(
-        listOf(Color(0xFF003A70), Color(0xFF0F172A))
+        listOf(Color(0xFF0B192C), Color(0xFF1E3E62))
     )
 
     val gradientNavyToBlue: Brush = Brush.horizontalGradient(
-        listOf(Color(0xFF003A70), Color(0xFF0F172A))
+        listOf(Color(0xFF0B192C), Color(0xFF0077B6))
     )
     
     val gradientBlueToPurple: Brush = Brush.horizontalGradient(
-        listOf(Color(0xFF0F172A), Color(0xFF4A5C7E))
+        listOf(Color(0xFF0077B6), Color(0xFF00A8E8))
     )
     
     val gradientPurpleToAmber: Brush = Brush.horizontalGradient(
-        listOf(Color(0xFF4A5C7E), Color(0xFFC68400))
+        listOf(Color(0xFF00A8E8), Color(0xFFD4A373))
     )
     
     val gradientAmberToOrange: Brush = Brush.horizontalGradient(
-        listOf(Color(0xFFC68400), Color(0xFFFF9800))
+        listOf(Color(0xFFD4A373), Color(0xFFF59E0B))
     )
     
     val gradientSuccessToGreen: Brush = Brush.horizontalGradient(
-        listOf(Color(0xFF2E7D32), Color(0xFF4CAF50))
+        listOf(Color(0xFF059669), Color(0xFF10B981))
     )
     
     val gradientDangerToRed: Brush = Brush.horizontalGradient(
-        listOf(Color(0xFFC62828), Color(0xFFEF4444))
+        listOf(Color(0xFFDC2626), Color(0xFFEF4444))
     )
     
-    // Surface Variants
     val surfaceElevated = Color(0xFFFFFFFF)
     val surfaceContainerLow = Color(0xFFF8FAFC)
-    val surfaceContainerHigh = Color(0xFFF1F5F9)
+    val surfaceContainerHigh = Color(0xFFE2E8F0)
     
-    // Text Variants
-    val textPrimary = Color(0xFF0F172A)
-    val textSecondary = Color(0xFF475569)
+    val textPrimary = Color(0xFF0B192C)
+    val textSecondary = Color(0xFF334155)
     val textMuted = Color(0xFF64748B)
     val textInverse = Color(0xFFFFFFFF)
-    val textOnAccent = Color(0xFF000000)
-    
-    // Premium Status Colors
-    val safe = Color(0xFF2E7D32)
-    val safeBright = Color(0xFF38A13F)
-    val warning = Color(0xFFC41E3A)
-    val warningBright = Color(0xFFF6871F)
-    val unsafe = Color(0xFFC62828)
+    val textOnAccent = Color(0xFFFFFFFF)
+
+    val safe = Color(0xFF059669)
+    val safeBright = Color(0xFF10B981)
+    val warning = Color(0xFFD97706)
+    val warningBright = Color(0xFFF59E0B)
+    val unsafe = Color(0xFFDC2626)
     val unsafeBright = Color(0xFFEF4444)
-    val info = Color(0xFF0F172A)
-    
-    // Premium Geometric Pattern Colors
-    val patternLight = Color(0xFF0F172A).copy(alpha = 0.03f)
-    val patternMedium = Color(0xFF0F172A).copy(alpha = 0.08f)
-    val patternDark = Color(0xFF0F172A).copy(alpha = 0.15f)
-    
-    // Premium Navy Shades
-    val navyDeep = Color(0xFF0F172A)
-    val navyMedium = Color(0xFF1E293B)
-    val navyLight = Color(0xFFF1F5F9)
+    val info = Color(0xFF0077B6)
+
+    val navyDeep = Color(0xFF0B192C)
+    val navyMedium = Color(0xFF1E3E62)
+    val navyLight = Color(0xFFE2E8F0)
 
     fun safeColor(): Color = safe
     fun unsafeColor(): Color = unsafe
@@ -126,179 +110,125 @@ object PremiumColorsLight {
     fun dimensionColor(): Color = outline
 }
 
-// Dark Theme Colors - Premium Geometric Palette
+// Dark Theme Colors - Cyber Obsidian Palette
 object PremiumColorsDark {
-    // Primary Geometric Palette - Dark Navy Base
-    val primary = Color(0xFF0F172A)
-    val primaryContainer = Color(0xFF1E293B)
+    val primary = Color(0xFF161A30)
+    val primaryContainer = Color(0xFF31304D)
     val onPrimary = Color(0xFFF8FAFC)
-    val onPrimaryContainer = Color(0xFFF1F5F9)
+    val onPrimaryContainer = Color(0xFFE2E8F0)
     
-    // Secondary Geometric Accent - Slate (lighter in dark)
-    val secondary = Color(0xFF6B7280)
+    val secondary = Color(0xFF00B4D8)
     val secondaryContainer = Color(0xFF1E293B)
-    val onSecondary = Color(0xFF1F2937)
-    val onSecondaryContainer = Color(0xFFf1f5f9)
+    val onSecondary = Color(0xFF0B0F19)
+    val onSecondaryContainer = Color(0xFFCAF0F8)
     
-    // Tertiary Geometric Warm - Amber (adjusted for dark)
-    val tertiary = Color(0xFFD9AA35)
-    val tertiaryContainer = Color(0xFF2E1B00)
-    val onTertiary = Color(0xFF1F2937)
-    val onTertiaryContainer = Color(0xFFFFEAA7)
+    val tertiary = Color(0xFFFACC15)
+    val tertiaryContainer = Color(0xFF422006)
+    val onTertiary = Color(0xFF422006)
+    val onTertiaryContainer = Color(0xFFFEF08A)
     
-    // Extended Premium Geometric Palette (Dark)
     val error = Color(0xFFEF4444)
-    val onError = Color(0xFF1F2937)
-    val errorContainer = Color(0xFF933300)
-    val onErrorContainer = Color(0xFFFFF0F0)
+    val onError = Color(0xFF0B0F19)
+    val errorContainer = Color(0xFF7F1D1D)
+    val onErrorContainer = Color(0xFFFEE2E2)
     
-    val outline = Color(0xFF9CA3AF)
-    val outlineVariant = Color(0xFF6B7280)
-    val gray = Color(0xFFD1D5DB)
-    val grayLight = Color(0xFF374151)
-    val grayDark = Color(0xFF1E293B)
+    val outline = Color(0xFF94A3B8)
+    val outlineVariant = Color(0xFF64748B)
+    val gray = Color(0xFF9CA3AF)
+    val grayLight = Color(0xFF1E293B)
+    val grayDark = Color(0xFF0B0F19)
     
-    // Dark Premium Background Geometrics
-    val background = Color(0xFF0F172A)
+    val background = Color(0xFF0B0F19)
     val onBackground = Color(0xFFF8FAFC)
-    val surface = Color(0xFF1E293B)
+    val surface = Color(0xFF131B2E)
     val onSurface = Color(0xFFF8FAFC)
     val surfaceVariant = Color(0xFF1E293B)
-    val onSurfaceVariant = Color(0xFF6B7280)
+    val onSurfaceVariant = Color(0xFF94A3B8)
     
-    // Dark App Specific Geometric Colors
-    val accent = Color(0xFFFB923C)
-    val accentGradientStart = Color(0xFFFB923C)
-    val accentGradientEnd = Color(0xFFFD7E14)
-    val success = Color(0xFF38A13F)
-    val successGradientStart = Color(0xFF38A13F)
-    val successGradientEnd = Color(0xFF22C55E)
+    val accent = Color(0xFF00E5FF)
+    val accentGradientStart = Color(0xFF00E5FF)
+    val accentGradientEnd = Color(0xFF00B4D8)
+    val success = Color(0xFF10B981)
+    val successGradientStart = Color(0xFF10B981)
+    val successGradientEnd = Color(0xFF059669)
     val danger = Color(0xFFEF4444)
     val dangerGradientStart = Color(0xFFEF4444)
-    val dangerGradientEnd = Color(0xFFF87171)
+    val dangerGradientEnd = Color(0xFFDC2626)
     
-    // Geometric Gradients (Dark)
     val primaryGradient: Brush = Brush.horizontalGradient(
-        listOf(Color(0xFF0F172A), Color(0xFF1E293B))
+        listOf(Color(0xFF161A30), Color(0xFF31304D))
     )
 
     val gradientNavyToBlueDark: Brush = Brush.horizontalGradient(
-        listOf(Color(0xFF0F172A), Color(0xFF1E293B))
+        listOf(Color(0xFF161A30), Color(0xFF00B4D8))
     )
     
     val gradientBlueToPurpleDark: Brush = Brush.horizontalGradient(
-        listOf(Color(0xFF1E293B), Color(0xFF6B7280))
+        listOf(Color(0xFF00B4D8), Color(0xFF00E5FF))
     )
     
-    // Surface Variants (Dark)
-    val surfaceElevated = Color(0xFF1E293B)
-    val surfaceContainerLow = Color(0xFF1E293B)
-    val surfaceContainerHigh = Color(0xFF374151)
+    val surfaceElevated = Color(0xFF161A30)
+    val surfaceContainerLow = Color(0xFF131B2E)
+    val surfaceContainerHigh = Color(0xFF1E293B)
     
-    // Text Variants (Dark)
     val textPrimary = Color(0xFFF8FAFC)
-    val textSecondary = Color(0xFF6B7280)
-    val textMuted = Color(0xFF9CA3AF)
-    val textInverse = Color(0xFF1F2937)
-    val textOnAccent = Color(0xFF1F2937)
+    val textSecondary = Color(0xFF94A3B8)
+    val textMuted = Color(0xFF64748B)
+    val textInverse = Color(0xFF0B0F19)
+    val textOnAccent = Color(0xFF0B0F19)
     
-    // Dark Status Colors
-    val safe = Color(0xFF38A13F)
-    val safeBright = Color(0xFF48BBD0)
-    val warning = Color(0xFFF6871F)
-    val warningBright = Color(0xFFFDBB2D)
+    val safe = Color(0xFF10B981)
+    val safeBright = Color(0xFF34D399)
+    val warning = Color(0xFFF59E0B)
+    val warningBright = Color(0xFFFBBF24)
     val unsafe = Color(0xFFEF4444)
     val unsafeBright = Color(0xFFF87171)
-    val info = Color(0xFF0F172A)
-    
-    // Dark Pattern Colors
-    val patternLight = Color(0xFF0F172A).copy(alpha = 0.03f)
-    val patternMedium = Color(0xFF0F172A).copy(alpha = 0.08f)
-    val patternDark = Color(0xFF0F172A).copy(alpha = 0.15f)
-    
-    // Dark Navy Shades
-    val navyDeep = Color(0xFF0F172A)
-    val navyMedium = Color(0xFF1E293B)
-    val navyLight = Color(0xFF374151)
+    val info = Color(0xFF00B4D8)
+
+    val navyDeep = Color(0xFF0B0F19)
+    val navyMedium = Color(0xFF161A30)
+    val navyLight = Color(0xFF1E293B)
+
+    fun safeColor(): Color = safe
+    fun unsafeColor(): Color = unsafe
+    fun chartColors(): List<Color> = listOf(primary, secondary, tertiary, accent, safe, warning)
+    fun concreteColor(): Color = primaryContainer
+    fun steelColor(): Color = primary
+    fun dimensionColor(): Color = outline
 }
 
-// Object for easy access to current theme colors
+// ThemeColors compatibility object
+object ThemeColors {
+    @Composable fun safeColor(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.safe else PremiumColorsLight.safe
+    @Composable fun unsafeColor(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.unsafe else PremiumColorsLight.unsafe
+    @Composable fun chartColors(): List<Color> = if (isSystemInDarkTheme()) PremiumColorsDark.chartColors() else PremiumColorsLight.chartColors()
+    @Composable fun concreteColor(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.concreteColor() else PremiumColorsLight.concreteColor()
+    @Composable fun steelColor(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.steelColor() else PremiumColorsLight.steelColor()
+    @Composable fun dimensionColor(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.dimensionColor() else PremiumColorsLight.dimensionColor()
+}
+
 object PremiumColorScheme {
     @Composable
-    fun getPrimary(): Color = if (isDarkTheme()) PremiumColorsDark.primary else PremiumColorsLight.primary
+    fun getPrimary(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.primary else PremiumColorsLight.primary
     
     @Composable
-    fun getOnPrimary(): Color = if (isDarkTheme()) PremiumColorsDark.onPrimary else PremiumColorsLight.onPrimary
+    fun getOnPrimary(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.onPrimary else PremiumColorsLight.onPrimary
     
     @Composable
-    fun getSecondary(): Color = if (isDarkTheme()) PremiumColorsDark.secondary else PremiumColorsLight.secondary
+    fun getSecondary(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.secondary else PremiumColorsLight.secondary
     
     @Composable
-    fun getOnSecondary(): Color = if (isDarkTheme()) PremiumColorsDark.onSecondary else PremiumColorsLight.onSecondary
+    fun getOnSecondary(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.onSecondary else PremiumColorsLight.onSecondary
     
     @Composable
-    fun getTertiary(): Color = if (isDarkTheme()) PremiumColorsDark.tertiary else PremiumColorsLight.tertiary
+    fun getTertiary(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.tertiary else PremiumColorsLight.tertiary
     
     @Composable
-    fun getOnTertiary(): Color = if (isDarkTheme()) PremiumColorsDark.onTertiary else PremiumColorsLight.onTertiary
+    fun getOnTertiary(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.onTertiary else PremiumColorsLight.onTertiary
     
     @Composable
-    fun getError(): Color = if (isDarkTheme()) PremiumColorsDark.error else PremiumColorsLight.error
+    fun getError(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.error else PremiumColorsLight.error
     
     @Composable
-    fun getOnError(): Color = if (isDarkTheme()) PremiumColorsDark.onError else PremiumColorsLight.onError
-    
-    @Composable
-    fun getOutline(): Color = if (isDarkTheme()) PremiumColorsDark.outline else PremiumColorsLight.outline
-    
-    @Composable
-    fun getGray(): Color = if (isDarkTheme()) PremiumColorsDark.gray else PremiumColorsLight.gray
-    
-    @Composable
-    fun getGrayLight(): Color = if (isDarkTheme()) PremiumColorsDark.grayLight else PremiumColorsLight.grayLight
-    
-    @Composable
-    fun getGrayDark(): Color = if (isDarkTheme()) PremiumColorsDark.grayDark else PremiumColorsLight.grayDark
-    
-    @Composable
-    fun getBackground(): Color = if (isDarkTheme()) PremiumColorsDark.background else PremiumColorsLight.background
-    
-    @Composable
-    fun getOnBackground(): Color = if (isDarkTheme()) PremiumColorsDark.onBackground else PremiumColorsLight.onBackground
-    
-    @Composable
-    fun getSurface(): Color = if (isDarkTheme()) PremiumColorsDark.surface else PremiumColorsLight.surface
-    
-    @Composable
-    fun getOnSurface(): Color = if (isDarkTheme()) PremiumColorsDark.onSurface else PremiumColorsLight.onSurface
-    
-    @Composable
-    fun getSurfaceVariant(): Color = if (isDarkTheme()) PremiumColorsDark.surfaceVariant else PremiumColorsLight.surfaceVariant
-    
-    @Composable
-    fun getOnSurfaceVariant(): Color = if (isDarkTheme()) PremiumColorsDark.onSurfaceVariant else PremiumColorsLight.onSurfaceVariant
-    
-    @Composable
-    fun getAccent(): Color = if (isDarkTheme()) PremiumColorsDark.accent else PremiumColorsLight.accent
-    
-    @Composable
-    fun getSafe(): Color = if (isDarkTheme()) PremiumColorsDark.safe else PremiumColorsLight.safe
-    
-    @Composable
-    fun getWarning(): Color = if (isDarkTheme()) PremiumColorsDark.warning else PremiumColorsLight.warning
-    
-    @Composable
-    fun getUnsafe(): Color = if (isDarkTheme()) PremiumColorsDark.unsafe else PremiumColorsLight.unsafe
-    
-    @Composable
-    fun getInfo(): Color = if (isDarkTheme()) PremiumColorsDark.info else PremiumColorsLight.info
-    
-    @Composable
-    private fun isDarkTheme(): Boolean {
-        return isSystemInDarkTheme()
-    }
+    fun getOnError(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.onError else PremiumColorsLight.onError
 }
-
-typealias ThemeColors = PremiumColorsLight
-typealias ThemeColorsLight = PremiumColorsLight
-typealias ThemeColorsDark = PremiumColorsDark

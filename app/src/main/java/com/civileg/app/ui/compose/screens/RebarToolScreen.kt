@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -206,6 +207,18 @@ private fun WeightCalculatorTab(viewModel: RebarToolViewModel) {
 
         // Results
         result?.let { r ->
+            val context = androidx.compose.ui.platform.LocalContext.current
+
+            Button(
+                onClick = { viewModel.exportToPdf(context, barDiameter = r.diameter) },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("تصدير تقرير PDF برو (3 قطاعات)", fontWeight = FontWeight.Bold)
+            }
+
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
@@ -325,6 +338,18 @@ private fun DevelopmentLengthTab(viewModel: RebarToolViewModel) {
         }
 
         result?.let { r ->
+            val context = androidx.compose.ui.platform.LocalContext.current
+
+            Button(
+                onClick = { viewModel.exportToPdf(context, barDiameter = diameter.toDoubleOrNull() ?: 16.0) },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("تصدير تقرير PDF برو (3 قطاعات)", fontWeight = FontWeight.Bold)
+            }
+
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
@@ -444,6 +469,18 @@ private fun LapSpliceTab(viewModel: RebarToolViewModel) {
         }
 
         result?.let { r ->
+            val context = androidx.compose.ui.platform.LocalContext.current
+
+            Button(
+                onClick = { viewModel.exportToPdf(context, barDiameter = diameter.toDoubleOrNull() ?: 16.0) },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+            ) {
+                Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("تصدير تقرير PDF برو (3 قطاعات)", fontWeight = FontWeight.Bold)
+            }
+
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))

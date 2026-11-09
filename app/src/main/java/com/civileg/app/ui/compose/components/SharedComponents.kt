@@ -174,7 +174,8 @@ fun DesignSectionHeader(
         Text(
             title,
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.ExtraBold
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

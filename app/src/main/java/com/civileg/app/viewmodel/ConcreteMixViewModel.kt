@@ -60,6 +60,8 @@ class ConcreteMixViewModel @Inject constructor(
         fineAggSG: Double,
         coarseAggSG: Double
     ) {
+        _errorMessage.value = null
+        _mixResult.value = null
         try {
             InputGuard.positive("targetStrength", targetStrength)
             InputGuard.positive("standardDeviation", standardDeviation)
@@ -124,12 +126,70 @@ class ConcreteMixViewModel @Inject constructor(
     fun clearResults() {
         _mixResult.value = null
         _gradeResults.value = emptyList()
+        _errorMessage.value = null
     }
 
     fun saveDesign(projectId: Long, name: String) {
         val res = _mixResult.value ?: return
         viewModelScope.launch {
             repository.saveConcreteMixDesign(projectId, name, res)
+        }
+    }
+
+    /** Export Concrete Mix Design report to PDF with 3-view drawings. */
+    fun exportToPdf(context: android.content.Context, slump: Double = 100.0, onComplete: (java.io.File?) -> Unit = {}) {
+        val res = _mixResult.value ?: return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val drawingBitmap = com.civileg.app.utils.PdfDrawingGenerator.generateConcreteMixDrawing(
+                    targetFc = res.targetStrength,
+                    cement = res.cementContent,
+                    water = res.waterContent,
+                    fineAgg = res.fineAggContent,
+                    coarseAgg = res.coarseAggContent,
+                    wcRatio = res.waterCementRatio,
+                    slump = slump,
+                    isSafe = true
+                )
+
+                val inputsMap = mapOf(
+                    "Target Strength (f_c')" to "${res.targetStrength} MPa",
+                    "Required Strength (f_cr')" to "${"%.1f".format(res.requiredStrength)} MPa",
+                    "Cement Type" to res.cementType,
+                    "Exposure" to res.exposure,
+                    "W/C Ratio" to "${"%.2f".format(res.waterCementRatio)}"
+                )
+
+                val resultsMap = mapOf(
+                    "Cement Content" to "${"%.1f".format(res.cementContent)} kg/m³",
+                    "Water Content" to "${"%.1f".format(res.waterContent)} kg/m³",
+                    "Fine Aggregate" to "${"%.1f".format(res.fineAggContent)} kg/m³",
+                    "Coarse Aggregate" to "${"%.1f".format(res.coarseAggContent)} kg/m³",
+                    "Mix Ratio (C:S:G)" to res.mixRatio,
+                    "Unit Weight" to "${"%.0f".format(res.unitWeight)} kg/m³"
+                )
+
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, "Concrete_Mix_Report_${System.currentTimeMillis()}.pdf")
+
+                val bundle = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "تقرير تصميم الخلطة الخرسانية",
+                    titleEn = "Concrete Mix Design Report",
+                    subtitle = "Proportioning & Volumetric Yield Analysis",
+                    designType = "Concrete Mix",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    isSafe = true,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath,
+                    openPdfOnComplete = true
+                )
+                onComplete(bundle.pdfFile)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onComplete(null)
+            }
         }
     }
 }

@@ -84,6 +84,31 @@ object ConcreteMixDesigner {
     // ══════════════════════════════════════════════════════════════
 
     fun designMix(input: MixInput): MixResult {
+        require(input.targetStrength.isFinite() && input.targetStrength > 0.0) {
+            "Target strength must be finite and positive"
+        }
+        require(input.standardDeviation.isFinite() && input.standardDeviation > 0.0) {
+            "Standard deviation must be finite and positive"
+        }
+        require(input.maxAggregateSize.isFinite() && input.maxAggregateSize in 10.0..75.0) {
+            "Maximum aggregate size must be between 10 and 75 mm"
+        }
+        require(input.slump.isFinite() && input.slump in 25.0..200.0) {
+            "Slump must be between 25 and 200 mm"
+        }
+        require(input.finenessModulus.isFinite() && input.finenessModulus in 2.4..3.2) {
+            "Fineness modulus must be between 2.4 and 3.2"
+        }
+        require(input.fineAggSG.isFinite() && input.fineAggSG > 0.0) {
+            "Fine aggregate specific gravity must be finite and positive"
+        }
+        require(input.coarseAggSG.isFinite() && input.coarseAggSG > 0.0) {
+            "Coarse aggregate specific gravity must be finite and positive"
+        }
+        require(input.admixtureDosage.isFinite() && input.admixtureDosage >= 0.0) {
+            "Admixture dosage must be finite and non-negative"
+        }
+
         val notes = mutableListOf<String>()
 
         // Step 1: Determine required average strength f'cr
@@ -97,6 +122,9 @@ object ConcreteMixDesigner {
             val fcrVal = input.targetStrength + 1.34 * input.standardDeviation
             notes.add("f'cr = f'c + 1.34×S = ${input.targetStrength} + 1.34×${input.standardDeviation} = ${"%.1f".format(fcrVal)} MPa")
             fcrVal
+        }
+        require(fcr.isFinite() && fcr in 15.0..50.0) {
+            "Required average strength must be between 15 and 50 MPa for the available table data"
         }
 
         // Step 2: Select water-cement ratio from ACI Table 9.5.1
@@ -141,9 +169,12 @@ object ConcreteMixDesigner {
         val airVol = airContent / 100.0
         val caVolFraction = coarseVolFraction
         val faVol = 1.0 - cementVol - waterVol - airVol - caVolFraction
+        require(faVol >= -1e-9) {
+            "Selected strength and exposure leave no volume for fine aggregate; adjust the mix inputs"
+        }
 
         val caWeight = caVolFraction * input.coarseAggSG * 1000.0
-        val faWeight = maxOf(faVol * input.fineAggSG * 1000.0, 0.0)
+        val faWeight = maxOf(faVol, 0.0) * input.fineAggSG * 1000.0
 
         notes.add("Coarse agg = ${"%.0f".format(caWeight)} kg/m³")
         notes.add("Fine agg = ${"%.0f".format(faWeight)} kg/m³")

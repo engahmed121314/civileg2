@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -146,6 +147,30 @@ fun WallOpeningScreen(
             }
 
             uiState?.let { res ->
+                val context = androidx.compose.ui.platform.LocalContext.current
+
+                Button(
+                    onClick = {
+                        viewModel.exportToPdf(
+                            context = context,
+                            wallHeightMm = wallHeightMm.toDoubleOrNull() ?: 3000.0,
+                            wallThicknessMm = wallThicknessMm.toDoubleOrNull() ?: 250.0,
+                            openingWidthMm = openingWidthMm.toDoubleOrNull() ?: 1000.0,
+                            openingHeightMm = openingHeightMm.toDoubleOrNull() ?: 2000.0,
+                            openingFromBaseMm = openingFromBaseMm.toDoubleOrNull() ?: 800.0,
+                            wallLengthMm = wallLengthMm.toDoubleOrNull() ?: 5000.0,
+                            fcu = fcu.toDoubleOrNull() ?: 25.0,
+                            fy = fy.toDoubleOrNull() ?: 360.0
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                ) {
+                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("تصدير تقرير PDF برو (3 قطاعات)", fontWeight = FontWeight.Bold)
+                }
+
                 DesignSectionHeader(title = "الرسم الهندسي لفتحة الحائط")
 
                 Text(

@@ -1548,6 +1548,8 @@
     <string name="mix_slump">Slump Requirement</string>
     <string name="mix_fine_agg">Fine Aggregate</string>
     <string name="mix_coarse_agg">Coarse Aggregate</string>
+    <string name="mix_input_validation">Enter finite positive values. Fine aggregate fineness modulus must be 2.4–3.2; admixture dosage must be positive when admixture is enabled.</string>
+    <string name="mix_preliminary_notice">Preliminary ACI 211.1-based estimate only. Confirm applicable project code, verified material properties, and trial-batch test results before use.</string>
     <string name="soil_title">Soil Bearing Capacity</string>
     <string name="wind_title">Wind Load Analysis</string>
     <string name="wind_geometry_section">Building Geometry</string>

@@ -36,7 +36,7 @@ object PdfDrawingGenerator {
     private val TOP_REBAR = Color.parseColor("#7EC8E3")
     private val STIRRUP = Color.parseColor("#9B59B6")
     private val SECONDARY_RED = Color.parseColor("#E74C3C")
-    private val DIM_TEXT = Color.WHITE
+    private val DIM_TEXT = Color.parseColor("#38BDF8")
     private val DIM_LINE = Color.parseColor("#AAAAAA")
     private val HATCH = Color.parseColor("#99AAAAAA")
     private val SUPPORT = Color.parseColor("#CCCCCC")
@@ -3440,6 +3440,319 @@ object PdfDrawingGenerator {
         canvas.drawText("Weight: ${"%.1f".format(weight)} kg/m", 50f, H - 70f, textP)
         canvas.drawText("Grade: $gradeName", 50f, H - 40f, textP)
 
+        return bitmap
+    }
+
+    // ========== GENERATE WALL OPENING DRAWING ==========
+    // 3 Views: 1) Wall Elevation with Opening  2) Corner Diagonal Rebar Detail  3) Lintel Cross Section
+    fun generateWallOpeningDrawing(
+        wallHeight: Double,
+        wallThickness: Double,
+        openingWidth: Double,
+        openingHeight: Double,
+        openingFromBase: Double,
+        wallLength: Double,
+        fcu: Double,
+        fy: Double,
+        isSafe: Boolean
+    ): Bitmap {
+        val W = 800; val H = 800
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 2f)
+        val fillConc = fillPaint(CONCRETE)
+        val rebarP = createPaint(REBAR_BLUE, 2.5f)
+        val titleP = textPaint(Color.CYAN, 18f, true)
+        val dimP = textPaint(Color.WHITE, 12f, false)
+
+        // View 1: Wall Elevation (Top Half)
+        val elevL = 60f; val elevT = 60f; val elevW = 420f; val elevH = 340f
+        canvas.drawRect(elevL, elevT, elevL + elevW, elevT + elevH, fillConc)
+        canvas.drawRect(elevL, elevT, elevL + elevW, elevT + elevH, outlineP)
+
+        // Opening Hole
+        val opW = (openingWidth / wallLength * elevW).toFloat().coerceIn(60f, elevW * 0.6f)
+        val opH = (openingHeight / wallHeight * elevH).toFloat().coerceIn(50f, elevH * 0.6f)
+        val opL = elevL + (elevW - opW) / 2f
+        val opT = elevT + elevH - (openingFromBase / wallHeight * elevH).toFloat() - opH
+        canvas.drawRect(opL, opT, opL + opW, opT + opH, fillPaint(BG_COLOR))
+        canvas.drawRect(opL, opT, opL + opW, opT + opH, createPaint(Color.YELLOW, 2f))
+
+        // Diagonal Rebar at corners
+        val diagL = 25f
+        canvas.drawLine(opL, opT, opL - diagL, opT - diagL, rebarP)
+        canvas.drawLine(opL + opW, opT, opL + opW + diagL, opT - diagL, rebarP)
+        canvas.drawLine(opL, opT + opH, opL - diagL, opT + opH + diagL, rebarP)
+        canvas.drawLine(opL + opW, opT + opH, opL + opW + diagL, opT + opH + diagL, rebarP)
+
+        canvas.drawText("View 1: Wall Elevation & Opening", elevL, elevT - 15f, titleP)
+
+        // View 2: Corner Detail Section A-A (Bottom Left)
+        val sec1L = 60f; val sec1T = 460f; val sec1W = 320f; val sec1H = 280f
+        canvas.drawRect(sec1L, sec1T, sec1L + sec1W, sec1T + sec1H, fillConc)
+        canvas.drawRect(sec1L, sec1T, sec1L + sec1W, sec1T + sec1H, outlineP)
+        val cX = sec1L + 80f; val cY = sec1T + 80f
+        canvas.drawRect(sec1L, sec1T, cX, cY, fillPaint(BG_COLOR))
+        canvas.drawRect(sec1L, sec1T, cX, cY, createPaint(Color.YELLOW, 2f))
+        canvas.drawLine(cX, cY, cX + 80f, cY + 80f, createPaint(SECONDARY_RED, 3.5f))
+        canvas.drawText("View 2: Corner Diagonal Bar (Section A-A)", sec1L, sec1T - 15f, titleP)
+
+        // View 3: Lintel Beam Section B-B (Bottom Right)
+        val sec2L = 440f; val sec2T = 460f; val sec2W = 300f; val sec2H = 280f
+        canvas.drawRect(sec2L, sec2T, sec2L + sec2W, sec2T + sec2H, fillConc)
+        canvas.drawRect(sec2L, sec2T, sec2L + sec2W, sec2T + sec2H, outlineP)
+        // Stirrup
+        canvas.drawRect(sec2L + 30f, sec2T + 30f, sec2L + sec2W - 30f, sec2T + sec2H - 30f, createPaint(STIRRUP, 2f))
+        // Rebar dots
+        canvas.drawRebar(sec2L + 40f, sec2T + 40f, 6f, REBAR_BLUE)
+        canvas.drawRebar(sec2L + sec2W - 40f, sec2T + 40f, 6f, REBAR_BLUE)
+        canvas.drawRebar(sec2L + 40f, sec2T + sec2H - 40f, 6f, REBAR_BLUE)
+        canvas.drawRebar(sec2L + sec2W - 40f, sec2T + sec2H - 40f, 6f, REBAR_BLUE)
+        canvas.drawText("View 3: Lintel Section B-B", sec2L, sec2T - 15f, titleP)
+
+        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Wall Opening Detail")
+        return bitmap
+    }
+
+    // ========== GENERATE WIND LOAD DRAWING ==========
+    // 3 Views: 1) Building Elevation & Wind Vector  2) Pressure Distribution Diagram  3) Roof Pressure Detail
+    fun generateWindLoadDrawing(
+        basicSpeed: Double,
+        height: Double,
+        width: Double,
+        depth: Double,
+        qzMax: Double,
+        baseShear: Double,
+        buildingShape: String,
+        isSafe: Boolean
+    ): Bitmap {
+        val W = 800; val H = 800
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 2f)
+        val windP = createPaint(Color.CYAN, 2.5f)
+        val titleP = textPaint(Color.CYAN, 18f, true)
+        val labelP = textPaint(Color.WHITE, 13f, false)
+
+        // View 1: Building Elevation (Top Left)
+        val bL = 80f; val bT = 80f; val bW = 280f; val bH = 340f
+        canvas.drawRect(bL, bT, bL + bW, bT + bH, fillPaint(CONCRETE))
+        canvas.drawRect(bL, bT, bL + bW, bT + bH, outlineP)
+
+        // Wind arrows on windward face
+        for (i in 0..5) {
+            val ay = bT + 40f + i * 50f
+            canvas.drawLine(bL - 50f, ay, bL - 5f, ay, windP)
+            canvas.drawLine(bL - 15f, ay - 8f, bL - 5f, ay, windP)
+            canvas.drawLine(bL - 15f, ay + 8f, bL - 5f, ay, windP)
+        }
+        canvas.drawText("View 1: Building Elevation", bL - 40f, bT - 20f, titleP)
+        canvas.drawText("V = $basicSpeed m/s", bL - 50f, bT + bH + 25f, labelP)
+
+        // View 2: Wind Pressure Diagram (Top Right)
+        val pL = 440f; val pT = 80f; val pW = 280f; val pH = 340f
+        val path = Path().apply {
+            moveTo(pL, pT + pH)
+            lineTo(pL + 160f, pT + 40f)
+            lineTo(pL + 200f, pT)
+            lineTo(pL, pT)
+            close()
+        }
+        canvas.drawPath(path, fillPaint(Color.argb(100, 0, 200, 255)))
+        canvas.drawPath(path, createPaint(Color.CYAN, 2f))
+        canvas.drawText("View 2: Wind Pressure q(z)", pL, pT - 20f, titleP)
+        canvas.drawText("q_max = ${"%.2f".format(qzMax)} kN/m²", pL + 40f, pT + 30f, labelP)
+        canvas.drawText("Base Shear = ${"%.1f".format(baseShear)} kN", pL + 40f, pT + pH - 20f, labelP)
+
+        // View 3: Roof Wind Pressure Zone (Bottom Left)
+        val rL = 80f; val rT = 480f; val rW = 640f; val rH = 240f
+        canvas.drawRect(rL, rT, rL + rW, rT + rH, fillPaint(BG_COLOR))
+        canvas.drawRect(rL, rT, rL + rW, rT + rH, outlineP)
+        // Roof slope / flat line
+        canvas.drawLine(rL + 40f, rT + 180f, rL + rW / 2f, rT + 60f, createPaint(Color.WHITE, 3f))
+        canvas.drawLine(rL + rW / 2f, rT + 60f, rL + rW - 40f, rT + 180f, createPaint(Color.WHITE, 3f))
+        // Suction arrows on roof
+        canvas.drawLine(rL + 200f, rT + 100f, rL + 200f, rT + 40f, windP)
+        canvas.drawLine(rL + 440f, rT + 100f, rL + 440f, rT + 40f, windP)
+        canvas.drawText("View 3: Roof Pressure Distribution & Suction Zones", rL, rT - 15f, titleP)
+
+        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Wind Analysis Detail")
+        return bitmap
+    }
+
+    // ========== GENERATE SOIL BEARING DRAWING ==========
+    // 3 Views: 1) Foundation Plan View  2) Subsurface Soil Stratum & GWT  3) Contact Pressure Distribution
+    fun generateSoilBearingDrawing(
+        width: Double,
+        length: Double,
+        depth: Double,
+        cohesion: Double,
+        phi: Double,
+        qUlt: Double,
+        qAllow: Double,
+        gwt: Double,
+        isSafe: Boolean
+    ): Bitmap {
+        val W = 800; val H = 800
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 2f)
+        val titleP = textPaint(Color.CYAN, 18f, true)
+        val labelP = textPaint(Color.WHITE, 13f, false)
+
+        // View 1: Foundation Plan View (Top Left)
+        val pL = 60f; val pT = 60f; val pW = 320f; val pH = 320f
+        canvas.drawRect(pL, pT, pL + pW, pT + pH, fillPaint(CONCRETE))
+        canvas.drawRect(pL, pT, pL + pW, pT + pH, outlineP)
+        canvas.drawRect(pL + 100f, pT + 100f, pL + 220f, pT + 220f, fillPaint(CONCRETE_SIDE))
+        canvas.drawHDim(pL, pL + pW, pT + pH + 20f, "B = ${"%.2f".format(width)} m")
+        canvas.drawVDim(pL - 20f, pT, pT + pH, "L = ${"%.2f".format(length)} m")
+        canvas.drawText("View 1: Foundation Plan", pL, pT - 20f, titleP)
+
+        // View 2: Soil Profile & Water Table (Top Right)
+        val sL = 440f; val sT = 60f; val sW = 320f; val sH = 320f
+        canvas.drawRect(sL, sT, sL + sW, sT + sH, fillPaint(SOIL_BROWN))
+        canvas.drawHatch(sL, sT, sW, sH, spacing = 18f)
+        // Foundation block embedded
+        canvas.drawRect(sL + 80f, sT + 80f, sL + 240f, sT + 160f, fillPaint(CONCRETE))
+        canvas.drawRect(sL + 80f, sT + 80f, sL + 240f, sT + 160f, outlineP)
+        // Water Table Line
+        val gwtY = sT + 200f
+        canvas.drawLine(sL, gwtY, sL + sW, gwtY, createPaint(WATER_BLUE, 3f))
+        canvas.drawText("▼ GWT", sL + 20f, gwtY - 10f, textPaint(Color.CYAN, 14f, true))
+        canvas.drawText("View 2: Soil Profile & GWT", sL, sT - 20f, titleP)
+
+        // View 3: Contact Pressure Diagram (Bottom)
+        val qL = 60f; val qT = 460f; val qW = 700f; val qH = 260f
+        canvas.drawRect(qL, qT, qL + qW, qT + qH, fillPaint(BG_COLOR))
+        canvas.drawRect(qL, qT, qL + qW, qT + qH, outlineP)
+        // Trapezoid Pressure
+        val qPath = Path().apply {
+            moveTo(qL + 100f, qT + 60f)
+            lineTo(qL + 600f, qT + 60f)
+            lineTo(qL + 600f, qT + 180f)
+            lineTo(qL + 100f, qT + 180f)
+            close()
+        }
+        canvas.drawPath(qPath, fillPaint(Color.argb(120, 74, 144, 217)))
+        canvas.drawPath(qPath, createPaint(REBAR_BLUE, 2.5f))
+        canvas.drawText("View 3: Contact Pressure & Capacity", qL, qT - 15f, titleP)
+        canvas.drawText("q_ult = ${"%.1f".format(qUlt)} kN/m²", qL + 120f, qT + 100f, labelP)
+        canvas.drawText("q_allow = ${"%.1f".format(qAllow)} kN/m²", qL + 120f, qT + 140f, labelP)
+
+        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Soil Bearing Detail")
+        return bitmap
+    }
+
+    // ========== GENERATE CONCRETE MIX DRAWING ==========
+    // 3 Views: 1) Mix Proportions Bar Chart  2) Volumetric Breakdown  3) Target Strength Profile
+    fun generateConcreteMixDrawing(
+        targetFc: Double,
+        cement: Double,
+        water: Double,
+        fineAgg: Double,
+        coarseAgg: Double,
+        wcRatio: Double,
+        slump: Double,
+        isSafe: Boolean
+    ): Bitmap {
+        val W = 800; val H = 800
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 2f)
+        val titleP = textPaint(Color.CYAN, 18f, true)
+        val labelP = textPaint(Color.WHITE, 12f, false)
+
+        // View 1: Mix Proportions Bar Chart (Top Left)
+        val bL = 60f; val bT = 60f; val bW = 340f; val bH = 340f
+        canvas.drawRect(bL, bT, bL + bW, bT + bH, fillPaint(BG_COLOR))
+        canvas.drawRect(bL, bT, bL + bW, bT + bH, outlineP)
+
+        val maxKg = maxOf(cement, water, fineAgg, coarseAgg, 100.0).toFloat()
+        val bars = listOf(
+            "Cement" to (cement.toFloat() / maxKg * (bH - 80f)),
+            "Water" to (water.toFloat() / maxKg * (bH - 80f)),
+            "Sand" to (fineAgg.toFloat() / maxKg * (bH - 80f)),
+            "Gravel" to (coarseAgg.toFloat() / maxKg * (bH - 80f))
+        )
+        val colors = listOf(Color.GRAY, Color.CYAN, Color.YELLOW, Color.LTGRAY)
+        bars.forEachIndexed { i, (name, h) ->
+            val x = bL + 30f + i * 75f
+            val y = bT + bH - 30f - h
+            canvas.drawRect(x, y, x + 50f, bT + bH - 30f, fillPaint(colors[i]))
+            canvas.drawText(name, x, bT + bH - 10f, labelP)
+        }
+        canvas.drawText("View 1: Mix Weights (kg/m³)", bL, bT - 20f, titleP)
+
+        // View 2: Volumetric Breakdown Circle (Top Right)
+        val cL = 440f; val cT = 60f; val cW = 320f; val cH = 340f
+        canvas.drawRect(cL, cT, cL + cW, cT + cH, fillPaint(BG_COLOR))
+        canvas.drawRect(cL, cT, cL + cW, cT + cH, outlineP)
+        val cx = cL + cW / 2f; val cy = cT + cH / 2f
+        canvas.drawCircle(cx, cy, 100f, fillPaint(CONCRETE))
+        canvas.drawCircle(cx, cy, 100f, outlineP)
+        canvas.drawText("W/C Ratio = ${"%.2f".format(wcRatio)}", cL + 40f, cT + 40f, labelP)
+        canvas.drawText("Slump = ${"%.0f".format(slump)} mm", cL + 40f, cT + 70f, labelP)
+        canvas.drawText("View 2: Volumetric Proportions", cL, cT - 20f, titleP)
+
+        // View 3: Target Strength Curve (Bottom)
+        val sL = 60f; val sT = 460f; val sW = 700f; val sH = 260f
+        canvas.drawRect(sL, sT, sL + sW, sT + sH, fillPaint(BG_COLOR))
+        canvas.drawRect(sL, sT, sL + sW, sT + sH, outlineP)
+        canvas.drawText("Target Strength f_cr = ${"%.1f".format(targetFc)} MPa", sL + 40f, sT + 50f, labelP)
+        canvas.drawText("View 3: Strength Gain & Quality Control Curve", sL, sT - 15f, titleP)
+
+        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Concrete Mix Detail")
+        return bitmap
+    }
+
+    // ========== GENERATE REBAR TOOL DRAWING ==========
+    // 3 Views: 1) Bar Geometry & Hook Detail  2) Development Length Anchorage  3) Lap Splice Detail
+    fun generateRebarToolDrawing(
+        barDia: Double,
+        devLength: Double,
+        lapLength: Double,
+        weightPerM: Double,
+        codeName: String,
+        isSafe: Boolean
+    ): Bitmap {
+        val W = 800; val H = 800
+        val (bitmap, canvas) = createCanvas(W, H)
+        val outlineP = createPaint(Color.WHITE, 2f)
+        val rebarP = createPaint(REBAR_BLUE, 3.5f)
+        val titleP = textPaint(Color.CYAN, 18f, true)
+        val labelP = textPaint(Color.WHITE, 13f, false)
+
+        // View 1: Bar Geometry & Standard 90° Hook (Top Left)
+        val bL = 60f; val bT = 60f; val bW = 340f; val bH = 320f
+        canvas.drawRect(bL, bT, bL + bW, bT + bH, fillPaint(BG_COLOR))
+        canvas.drawRect(bL, bT, bL + bW, bT + bH, outlineP)
+        // Rebar with hook
+        val path = Path().apply {
+            moveTo(bL + 40f, bT + 160f)
+            lineTo(bL + 240f, bT + 160f)
+            lineTo(bL + 240f, bT + 80f)
+        }
+        canvas.drawPath(path, rebarP)
+        canvas.drawText("Ø${"%.0f".format(barDia)} mm Hook", bL + 60f, bT + 140f, labelP)
+        canvas.drawText("View 1: Bar Hook Geometry", bL, bT - 20f, titleP)
+
+        // View 2: Development Length L_d (Top Right)
+        val dL = 440f; val dT = 60f; val dW = 320f; val dH = 320f
+        canvas.drawRect(dL, dT, dL + dW, dT + dH, fillPaint(BG_COLOR))
+        canvas.drawRect(dL, dT, dL + dW, dT + dH, outlineP)
+        canvas.drawLine(dL + 30f, dT + 160f, dL + dW - 30f, dT + 160f, rebarP)
+        canvas.drawHDim(dL + 30f, dL + dW - 30f, dT + 190f, "L_d = ${"%.0f".format(devLength)} mm")
+        canvas.drawText("View 2: Development Length (L_d)", dL, dT - 20f, titleP)
+
+        // View 3: Lap Splice L_s (Bottom)
+        val sL = 60f; val sT = 440f; val sW = 700f; val sH = 280f
+        canvas.drawRect(sL, sT, sL + sW, sT + sH, fillPaint(BG_COLOR))
+        canvas.drawRect(sL, sT, sL + sW, sT + sH, outlineP)
+        // Two overlapping bars
+        canvas.drawLine(sL + 60f, sT + 120f, sL + 450f, sT + 120f, rebarP)
+        canvas.drawLine(sL + 250f, sT + 150f, sL + 640f, sT + 150f, createPaint(TOP_REBAR, 3.5f))
+        canvas.drawHDim(sL + 250f, sL + 450f, sT + 190f, "L_s = ${"%.0f".format(lapLength)} mm")
+        canvas.drawText("Weight = ${"%.3f".format(weightPerM)} kg/m ($codeName)", sL + 60f, sT + 240f, labelP)
+        canvas.drawText("View 3: Lap Splice Detail (L_s)", sL, sT - 15f, titleP)
+
+        drawTitleBlock(canvas, W - 280f, H - 60f, 280f, 60f, "Rebar Tool Detail")
         return bitmap
     }
 }

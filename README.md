@@ -19,6 +19,11 @@
 
 <br/>
 
+[![Download Latest APK](https://img.shields.io/badge/Download_APK-Direct_Download_(v1.7.0)-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/engahmed121314/civileg2/releases)
+[![Monetization Guide](https://img.shields.io/badge/Monetization-Revenue_Guide-blue?style=for-the-badge&logo=googleads)](docs/MONETIZATION_GUIDE.md)
+
+<br/>
+
 **[English](#-english) | [العربية](#-العربية)**
 
 </div>
@@ -29,17 +34,13 @@
 
 <div align="center">
 
-| Home Screen | Beam Design | Column Design |
-|:-----------:|:-----------:|:-------------:|
-| ![Home](download/screenshots/01_home_screen.png) | ![Beam](download/screenshots/02_beam_design.png) | ![Column](download/screenshots/03_column_design.png) |
+| Home Screen — الرئيسية | Design Hub — مركز التصميم | Frame Analysis — تحليل الإطارات |
+|:----------------------:|:-------------------------:|:-------------------------------:|
+| ![Home](download/screenshots/01_home_screen.png) | ![Design Hub](download/screenshots/02_design_hub.png) | ![Frame](download/screenshots/05_frame_analysis.png) |
 
-| Steel Design | Frame Analysis | Seismic Analysis |
-|:------------:|:--------------:|:----------------:|
-| ![Steel](download/screenshots/04_steel_design.png) | ![Frame](download/screenshots/05_frame_analysis.png) | ![Seismic](download/screenshots/06_seismic_analysis.png) |
-
-| Water Tank | Settings | Full Showcase |
-|:----------:|:--------:|:-------------:|
-| ![Tank](download/screenshots/07_water_tank_design.png) | ![Settings](download/screenshots/08_settings.png) | ![All](download/screenshots/showcase_all.png) |
+| PDF Export — تصدير التقارير | Settings & Codes — إعدادات الأكواد | Full Showcase — نظرة عامة |
+|:---------------------------:|:----------------------------------:|:-------------------------:|
+| ![PDF Export](download/screenshots/09_pdf_export_dialog.png) | ![Settings](download/screenshots/08_settings.png) | ![All](download/screenshots/showcase_all.png) |
 
 </div>
 
@@ -54,6 +55,15 @@
 The app provides selections for the **Egyptian Code (ECP)**, **American standards (ACI / ASCE / AISC)**, and the **Saudi Building Code (SBC)**. The selected edition shown by a module is not a certification that every provision of that edition has been implemented.
 
 > **Disclaimer:** This application is for *educational and preliminary design purposes only*. Its calculations are not a substitute for the applicable standards, project specifications, or independent engineering review. A licensed structural engineer must verify inputs, assumptions, and results before use.
+
+---
+
+## 📥 Download Pre-built APK
+
+Looking to run the app directly on your Android phone without building from source?
+- 📦 **[Download Latest APK from GitHub Releases](https://github.com/engahmed121314/civileg2/releases)**
+- Compatible with **Android 8.0 (Oreo / API 26) through Android 16 (API 36)**.
+- Simply download `app-release.apk` (or `app-debug.apk`), enable *"Install Unknown Apps"* in settings, and open the app.
 
 ---
 
@@ -181,6 +191,17 @@ app/src/main/java/com/civileg/app/
 | **Sponsorship** | Optional project support through GitHub Sponsors; availability depends on the maintainer's account approval |
 
 > Found a security issue? Please report it privately at **engahmed121314@gmail.com** — see [SECURITY.md](SECURITY.md).
+
+---
+
+## 💰 Monetization & Revenue Opportunities
+
+Civil Engineer Pro is designed with production-ready monetization avenues:
+- **Google AdMob Integration**: Non-intrusive Banner, Interstitial, Native, and Rewarded Ads with GDPR/UMP consent management.
+- **In-App Subscriptions (Google Play Billing v7)**: Monthly and Yearly Pro plans (`civileg_premium_monthly`, `civileg_premium_yearly`) for ad-free experience and premium PDF reports.
+- **GitHub Sponsors & Open Collective**: Community and developer support via `.github/FUNDING.yml`.
+- **Enterprise & White-Label Licensing**: Custom versions tailored for engineering firms and contractors.
+- 📖 Read the full **[Monetization & Revenue Guide](docs/MONETIZATION_GUIDE.md)** for detailed setup instructions.
 
 ---
 
@@ -317,6 +338,15 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 
 ---
 
+## 📥 تنزيل ملف APK الجاهز مباشرة
+
+هل ترغب في تجربة وتشغيل التطبيق مباشرة على هاتفك دون الحاجة للبناء من الكود المصدري؟
+- 📦 **[تنزيل أحدث ملف APK من صفحة إصدارات GitHub Releases](https://github.com/engahmed121314/civileg2/releases)**
+- متوافق مع نظام أندرويد من **Android 8.0 (Oreo / API 26)** حتى **Android 16 (API 36)**.
+- حمّل الملف وثبته على هاتفك مع السماح بـ "تثبيت التطبيقات غير المعروفة" (Install Unknown Apps) لتبدأ التصميم فوراً!
+
+---
+
 ## ✨ الميزات الرئيسية
 
 ### 🧱 تصميم الخرسانة المسلحة
@@ -414,6 +444,17 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 | **الدعم المالي** | دعم اختياري للمشروع عبر GitHub Sponsors، بعد تفعيل حساب المطور وقبوله في البرنامج |
 
 > اكتشفت ثغرة أمنية؟ يرجى الإبلاغ عنها بسرية على **engahmed121314@gmail.com** — راجع [SECURITY.md](SECURITY.md).
+
+---
+
+## 💰 تحقيق الأرباح وتسييل المشروع
+
+تم تزويد وتجهيز التطبيق بأنظمة ربحية جاهزة للعمل في بيئة الإنتاج:
+- **إعلانات Google AdMob**: وحدات إعلانية (بانر، بينية، مدمجة، ومكافأة) متوافقة مع لوائح الخصوصية الأوروبية (UMP/GDPR).
+- **الاشتراكات الشهرية والسنوية (Google Play Billing v7)**: باقات Pro للميزات الحصرية وتصدير الـ PDF غير المحدود (`civileg_premium_monthly`, `civileg_premium_yearly`).
+- **رعاية المطور والتبرعات (GitHub Sponsors)**: دعم المجتمع والمكاتب الهندسية عبر `.github/FUNDING.yml`.
+- **الترخيص التجاري ونسخ الشركات (White-Label)**: تخصيص التطبيق للمكاتب الاستشارية وشركات المقاولات.
+- 📖 راجع **[دليل تحقيق الأرباح الشامل](docs/MONETIZATION_GUIDE.md)** للتفاصيل وخطوات الربط خطوة بخطوة.
 
 ---
 

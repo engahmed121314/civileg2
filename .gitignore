@@ -22,7 +22,9 @@ out/
 *.lock
 $capture
 upload/
-download/
+download/*
+!download/screenshots/
+!download/screenshots/**
 scripts/
 tool-results/
 worklog.md

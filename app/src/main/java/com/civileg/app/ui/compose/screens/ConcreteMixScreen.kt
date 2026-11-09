@@ -9,9 +9,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -37,6 +39,7 @@ import com.civileg.app.utils.ConcreteMixDesigner.STANDARD_GRADES
 import com.civileg.app.utils.ConcreteMixDesigner.MixResult
 import com.civileg.app.viewmodel.ConcreteMixViewModel
 import kotlin.math.*
+import java.util.Locale
 
 // ============================================================
 // Color palette
@@ -61,11 +64,12 @@ fun ConcreteMixScreen(
     onNavigateBack: () -> Unit
 ) {
     val mixResult by viewModel.mixResult.collectAsState()
+    val calculationError by viewModel.errorMessage.observeAsState()
 
     // ── Local UI state ──
     var targetStrength by remember { mutableStateOf("30") }
     var standardDeviation by remember { mutableStateOf("5.0") }
-    var selectedGrade by remember { mutableIntStateOf(30) }
+    val selectedGrade = targetStrength.toDoubleOrNull()
     var selectedExposure by remember { mutableStateOf(Exposure.MODERATE) }
     var maxAggSize by remember { mutableStateOf(20.0) }
     var finenessModulus by remember { mutableStateOf("2.70") }
@@ -76,6 +80,19 @@ fun ConcreteMixScreen(
     var hasAdmixture by remember { mutableStateOf(false) }
     var selectedAdmixture by remember { mutableStateOf("Water Reducer") }
     var admixtureDosage by remember { mutableStateOf("1.0") }
+    val targetStrengthValue = targetStrength.toDoubleOrNull()
+    val standardDeviationValue = standardDeviation.toDoubleOrNull()
+    val finenessModulusValue = finenessModulus.toDoubleOrNull()
+    val fineAggSGValue = fineAggSG.toDoubleOrNull()
+    val coarseAggSGValue = coarseAggSG.toDoubleOrNull()
+    val admixtureDosageValue = admixtureDosage.toDoubleOrNull()
+    val inputIsValid =
+        targetStrengthValue?.let { it.isFinite() && it > 0.0 } == true &&
+        standardDeviationValue?.let { it.isFinite() && it > 0.0 } == true &&
+        finenessModulusValue?.let { it.isFinite() && it in 2.4..3.2 } == true &&
+        fineAggSGValue?.let { it.isFinite() && it > 0.0 } == true &&
+        coarseAggSGValue?.let { it.isFinite() && it > 0.0 } == true &&
+        (!hasAdmixture || admixtureDosageValue?.let { it.isFinite() && it > 0.0 } == true)
 
     // Derived slump mid-point value for calculation
     val slumpValue = when (selectedSlump) {
@@ -140,16 +157,16 @@ fun ConcreteMixScreen(
                 ) {
                     STANDARD_GRADES.forEach { grade ->
                         FilterChip(
-                            selected = grade == selectedGrade,
+                            selected = grade.toDouble() == selectedGrade,
                             onClick = {
-                                selectedGrade = grade
                                 targetStrength = grade.toString()
                                 standardDeviation = "%.1f".format(
+                                    Locale.US,
                                     ConcreteMixDesigner.estimateStandardDeviation(grade.toDouble())
                                 )
                             },
                             label = { Text("C$grade") },
-                            leadingIcon = if (grade == selectedGrade) {
+                            leadingIcon = if (grade.toDouble() == selectedGrade) {
                                 { Text("●", color = MaterialTheme.colorScheme.primary) }
                             } else null
                         )
@@ -341,25 +358,32 @@ fun ConcreteMixScreen(
             ) {
                 Button(
                     onClick = {
+                        val target = targetStrengthValue ?: return@Button
+                        val deviation = standardDeviationValue ?: return@Button
+                        val fm = finenessModulusValue ?: return@Button
+                        val fineSG = fineAggSGValue ?: return@Button
+                        val coarseSG = coarseAggSGValue ?: return@Button
+                        val dosage = if (hasAdmixture) admixtureDosageValue ?: return@Button else 0.0
                         viewModel.designMix(
-                            targetStrength = targetStrength.toDoubleOrNull() ?: 30.0,
-                            standardDeviation = standardDeviation.toDoubleOrNull() ?: 5.0,
+                            targetStrength = target,
+                            standardDeviation = deviation,
                             maxAggSize = maxAggSize,
                             slump = slumpValue,
                             exposure = selectedExposure,
                             cementType = selectedCementType,
-                            fm = finenessModulus.toDoubleOrNull() ?: 2.70,
+                            fm = fm,
                             hasAdmixture = hasAdmixture,
                             admixtureType = if (hasAdmixture) selectedAdmixture else "None",
-                            admixtureDosage = if (hasAdmixture) (admixtureDosage.toDoubleOrNull() ?: 1.0) else 0.0,
+                            admixtureDosage = dosage,
                             isPumpable = false,
                             weatherCondition = "Normal",
                             useNoTestData = false,
-                            fineAggSG = fineAggSG.toDoubleOrNull() ?: 2.65,
-                            coarseAggSG = coarseAggSG.toDoubleOrNull() ?: 2.70
+                            fineAggSG = fineSG,
+                            coarseAggSG = coarseSG
                         )
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    enabled = inputIsValid
                 ) {
                     Icon(Icons.Default.Calculate, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -369,7 +393,6 @@ fun ConcreteMixScreen(
                     onClick = {
                         targetStrength = "30"
                         standardDeviation = "5.0"
-                        selectedGrade = 30
                         selectedExposure = Exposure.MODERATE
                         maxAggSize = 20.0
                         finenessModulus = "2.70"
@@ -387,10 +410,42 @@ fun ConcreteMixScreen(
                 }
             }
 
+            if (!inputIsValid) {
+                Text(
+                    stringResource(R.string.mix_input_validation),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            calculationError?.let { error ->
+                Text(
+                    error,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
             // ── 8. Results Section ──
             mixResult?.let { result ->
+                val context = androidx.compose.ui.platform.LocalContext.current
+
+                Button(
+                    onClick = { viewModel.exportToPdf(context, slump = slumpValue) },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                ) {
+                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("تصدير تقرير PDF برو (3 قطاعات)", fontWeight = FontWeight.Bold)
+                }
+
                 Spacer(modifier = Modifier.height(4.dp))
                 MixResultCard(result = result)
+                Text(
+                    stringResource(R.string.mix_preliminary_notice),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
 
                 // Mix Proportion Bar Chart
                 Spacer(modifier = Modifier.height(4.dp))
@@ -531,7 +586,7 @@ private fun MixResultCard(result: MixResult) {
                     shape = MaterialTheme.shapes.small
                 ) {
                     Text(
-                        "C${result.targetStrength.toInt()}",
+                        "%.1f MPa".format(Locale.US, result.targetStrength),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
                         style = MaterialTheme.typography.labelLarge,
@@ -544,17 +599,17 @@ private fun MixResultCard(result: MixResult) {
             // Key results
             ResultRow(
                 stringResource(R.string.mix_req_strength),
-                "%.1f MPa".format(result.requiredStrength)
+                "%.1f MPa".format(Locale.US, result.requiredStrength)
             )
             ResultRow(
                 stringResource(R.string.mix_wc_ratio),
-                "%.3f".format(result.waterCementRatio),
+                "%.3f".format(Locale.US, result.waterCementRatio),
                 highlight = true
             )
             if (result.admixtureContent > 0) {
                 ResultRow(
                     stringResource(R.string.mix_effective_wc),
-                    "%.3f".format(result.wCmRatio)
+                    "%.3f".format(Locale.US, result.wCmRatio)
                 )
             }
 
@@ -567,25 +622,25 @@ private fun MixResultCard(result: MixResult) {
             )
             ResultRow(
                 stringResource(R.string.mix_cement_content),
-                "%.0f kg/m³".format(result.cementContent),
+                "%.0f kg/m³".format(Locale.US, result.cementContent),
                 highlight = true
             )
             ResultRow(
                 stringResource(R.string.mix_water_content),
-                "%.0f liters/m³".format(result.waterContent)
+                "%.0f liters/m³".format(Locale.US, result.waterContent)
             )
             ResultRow(
                 stringResource(R.string.mix_fine_agg),
-                "%.0f kg/m³".format(result.fineAggContent)
+                "%.0f kg/m³".format(Locale.US, result.fineAggContent)
             )
             ResultRow(
                 stringResource(R.string.mix_coarse_agg),
-                "%.0f kg/m³".format(result.coarseAggContent)
+                "%.0f kg/m³".format(Locale.US, result.coarseAggContent)
             )
             if (result.admixtureContent > 0) {
                 ResultRow(
                     stringResource(R.string.mix_admix_content),
-                    "%.1f kg/m³".format(result.admixtureContent)
+                    "%.1f kg/m³".format(Locale.US, result.admixtureContent)
                 )
             }
 
@@ -593,15 +648,15 @@ private fun MixResultCard(result: MixResult) {
 
             ResultRow(
                 stringResource(R.string.mix_air_content),
-                "%.1f %%".format(result.airContent)
+                "%.1f %%".format(Locale.US, result.airContent)
             )
             ResultRow(
                 stringResource(R.string.mix_unit_weight),
-                "%.0f kg/m³".format(result.unitWeight)
+                "%.0f kg/m³".format(Locale.US, result.unitWeight)
             )
             ResultRow(
                 stringResource(R.string.mix_yield_label),
-                "%.2f m³".format(result.yield)
+                "%.2f m³".format(Locale.US, result.yield)
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -662,7 +717,7 @@ private fun buildMixRatioString(result: MixResult): String {
     val fa = result.fineAggContent / c
     val ca = result.coarseAggContent / c
     val w = result.waterContent / c
-    return "1 : ${"%.2f".format(fa)} : ${"%.2f".format(ca)} : ${"%.2f".format(w)}"
+    return "1 : ${"%.2f".format(Locale.US, fa)} : ${"%.2f".format(Locale.US, ca)} : ${"%.2f".format(Locale.US, w)}"
 }
 
 // ============================================================
@@ -684,7 +739,7 @@ private fun MixProportionBarChart(result: MixResult) {
         stringResource(R.string.mix_water_content)  to ((water / total)  to WaterBlue),
         stringResource(R.string.mix_fine_agg) to ((fine / total) to FineSandBeige),
         stringResource(R.string.mix_coarse_agg) to ((coarse / total) to CoarseBrown)
-    )
+    ).filter { (_, pair) -> pair.first > 0.0 }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -704,33 +759,24 @@ private fun MixProportionBarChart(result: MixResult) {
             segments.forEachIndexed { index, (label, pair) ->
                 val (fractionDouble, color) = pair
                 val fraction = fractionDouble.toFloat()
-                val barWidth = (w * fraction).coerceAtLeast(1f)
+                val barWidth = (w * fraction).coerceIn(0f, w - xOffset)
                 val isLast = index == segments.lastIndex
+                val segmentWidth = if (isLast) (w - xOffset).coerceAtLeast(0f) else barWidth
 
-                drawRoundRect(
-                    color = color,
-                    topLeft = Offset(xOffset, 0f),
-                    size = Size(
-                        if (isLast) w - xOffset else barWidth,
-                        h
-                    ),
-                    cornerRadius = if (xOffset <= 0f && isLast) cornerRadius
-                    else if (xOffset <= 0f) CornerRadius(
-                        cornerRadius.x,
-                        cornerRadius.y
+                if (segmentWidth > 0f) {
+                    drawRoundRect(
+                        color = color,
+                        topLeft = Offset(xOffset, 0f),
+                        size = Size(segmentWidth, h),
+                        cornerRadius = if (xOffset <= 0f || isLast) cornerRadius else CornerRadius.Zero
                     )
-                    else if (isLast) CornerRadius(
-                        cornerRadius.x,
-                        cornerRadius.y
-                    )
-                    else CornerRadius.Zero
-                )
+                }
 
                 // Draw percentage label if segment is wide enough
-                if (barWidth > 40.dp.toPx()) {
+                if (segmentWidth > 40.dp.toPx()) {
                     drawContext.canvas.nativeCanvas.drawText(
-                        "${"%.0f".format(fraction * 100)}%",
-                        (xOffset + barWidth / 2f).toFloat(),
+                        "${"%.0f".format(Locale.US, fraction * 100)}%",
+                        xOffset + segmentWidth / 2f,
                         h / 2f + 10f,
                         android.graphics.Paint().apply {
                             this.setColor(android.graphics.Color.WHITE)
@@ -741,7 +787,7 @@ private fun MixProportionBarChart(result: MixResult) {
                     )
                 }
 
-                xOffset += barWidth
+                xOffset += segmentWidth
             }
 
             // Border
@@ -807,7 +853,7 @@ private fun MixProportionBarChart(result: MixResult) {
                     Spacer(modifier = Modifier.width(8.dp))
                     // Value
                     Text(
-                        "${"%.0f".format(fraction * total)} kg",
+                        "${"%.0f".format(Locale.US, fraction * total)} kg",
                         modifier = Modifier.width(80.dp),
                         textAlign = TextAlign.End,
                         style = MaterialTheme.typography.bodySmall,
@@ -819,7 +865,7 @@ private fun MixProportionBarChart(result: MixResult) {
 
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            "Total: ${"%.0f".format(total)} kg/m³  (excl. air & admixture)",
+            "Total: ${"%.0f".format(Locale.US, total)} kg/m³  (excl. air & admixture)",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

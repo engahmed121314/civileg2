@@ -1550,6 +1550,8 @@
     <string name="mix_slump">الهبوط المطلوب</string>
     <string name="mix_fine_agg">الركام الصغير (الرمل)</string>
     <string name="mix_coarse_agg">الركام الكبير (الزلط)</string>
+    <string name="mix_input_validation">أدخل قيماً رقمية موجبة ومنتهية. يجب أن يكون معامل نعومة الرمل بين 2.4 و3.2، وجرعة الإضافة موجبة عند تفعيلها.</string>
+    <string name="mix_preliminary_notice">تقدير أولي استرشادي وفق منهج ACI 211.1 فقط. يجب التحقق من كود المشروع وخصائص المواد الفعلية ونتائج الخلطات التجريبية قبل الاستخدام.</string>
     <string name="soil_title">قدرة تحمل التربة</string>
     <string name="wind_title">تحليل أحمال الرياح</string>
     <string name="wind_geometry_section">أبعاد المنشأ</string>
@@ -1814,4 +1816,92 @@
     <string name="quantity_estimate_notice">الكميات والتكاليف تقديرية أولية؛ يجب التحقق من الهندسة والقياسات والأسعار.</string>
     <string name="live_prices_unavailable">الأسعار المباشرة غير متاحة؛ لم يتم تغيير الأسعار المخزنة.</string>
     <string name="slab_tool_unavailable">إنشاء البلاطات غير متاح حاليا؛ لم يتم تغيير النموذج.</string>
+
+    <!-- Screen Titles v2 -->
+    <string name="screen_beam_title_v2">تصميم الكمرات الخرسانية</string>
+    <string name="screen_column_title_v2">تصميم الأعمدة الخرسانية</string>
+
+    <!-- Steel Design Module -->
+    <string name="steel_design_connection">تصميم الوصلة</string>
+    <string name="steel_bolted_results">نتائج الوصلة بالمسامير</string>
+    <string name="steel_total_capacity">المقاومة الكلية (φRn)</string>
+    <string name="steel_welded_results">نتائج الوصلة باللحام</string>
+    <string name="steel_baseplate_results">نتائج لوح القاعدة (Baseplate)</string>
+    <string name="steel_baseplate_dims">أبعاد لوح القاعدة</string>
+    <string name="steel_thickness_mm">سُمك اللوح (tp)</string>
+    <string name="steel_bolt_count">عدد مسامير التثبيت (Anchor Bolts)</string>
+    <string name="steel_bolt_dia">قطر المسمار</string>
+    <string name="steel_warehouse_tab">الهناجر الصناعية</string>
+    <string name="steel_sections_tab">تصميم القطاعات</string>
+    <string name="steel_connections_tab">الوصلات المعدنية</string>
+    <string name="steel_baseplate_tab">لوح القاعدة</string>
+    <string name="steel_warehouse_inputs">مدخلات الهنجر</string>
+    <string name="steel_span_m">البحر (م)</string>
+    <string name="steel_spacing_m">المسافة بين الإطارات (م)</string>
+    <string name="steel_height_m">ارتفاع الإفريز (م)</string>
+    <string name="steel_length_m">الطول الكلي (م)</string>
+    <string name="steel_weight_m2">الوزن لكل م² (كجم/م²)</string>
+    <string name="steel_loads_header">أحمال التصميم (kN/m²)</string>
+    <string name="steel_design_warehouse">تحليل الهنجر</string>
+    <string name="steel_design_summary">ملخص المشروع</string>
+    <string name="steel_status">حالة الأمان</string>
+    <string name="steel_structural_analysis">مخططات التحليل الإنشائي</string>
+    <string name="steel_calculate_capacity">حساب السعة القصوى</string>
+    <string name="steel_calculate_button">تحليل العنصر</string>
+    <string name="steel_bolt_capacity">مقاومة المسامير (φRn)</string>
+    <string name="steel_weld_design">تحليل اللحام</string>
+    <string name="steel_bolt_design">تحليل المسامير</string>
+
+    <!-- Frame Analysis Module -->
+    <string name="frame_id_label">المعرف</string>
+    <string name="frame_b_mm">العرض b (مم)</string>
+    <string name="frame_h_mm">الارتفاع h (مم)</string>
+    <string name="frame_fcu_mpa">f\'c (ميجاباسكال)</string>
+    <string name="frame_fy_mpa">fy (ميجاباسكال)</string>
+    <string name="frame_analyzing">جاري تحليل الإطار…</string>
+    <string name="frame_diagram_bmd">مخطط عزوم الانحناء (BMD)</string>
+    <string name="frame_diagram_sfd">مخطط قوى القص (SFD)</string>
+    <string name="frame_diagram_afd">مخطط القوى المحورية (AFD)</string>
+    <string name="frame_design_code_label">كود التصميم:</string>
+    <string name="frame_simple_portal">إطار بوابة بسيط (Portal Frame)</string>
+    <string name="frame_two_story">إطار من طابقين</string>
+    <string name="frame_report_subject">تقرير تحليل الإطار الإنشائي</string>
+    <string name="frame_view_frame_en">Frame</string>
+    <string name="frame_view_frame_ar">الإطار</string>
+    <string name="frame_view_long_section_en">Long. Section</string>
+    <string name="frame_view_long_section_ar">قطاع طولي</string>
+    <string name="frame_view_cross_section_en">Cross Section</string>
+    <string name="frame_view_cross_section_ar">قطاع عرضي</string>
+    <string name="frame_view_plan_en">Plan</string>
+    <string name="frame_view_plan_ar">مسقط أفقي</string>
+    <string name="frame_member_connectivity">عقدة %1$d ← عقدة %2$d  |  %3$s  |  %4$s</string>
+    <string name="frame_concrete_dims">b=%1$s h=%2$s f\'c=%3$s</string>
+    <string name="frame_default_steel_section">IPE 300</string>
+    <string name="frame_nodal_load_values">Fx=%1$s, Fy=%2$s kN, M=%3$s kN.m</string>
+    <string name="frame_member_label">عنصر %d</string>
+    <string name="frame_member_load_value">%1$s: %2$s kN/m</string>
+    <string name="frame_nodal_load_add">إضافة حمل عقدي</string>
+    <string name="frame_node_number">رقم العقدة</string>
+    <string name="frame_fx_horizontal">Fx - أفقي (kN)</string>
+    <string name="frame_fy_vertical_up">Fy - رأسي (kN) - موجب لأعلى</string>
+    <string name="frame_mz_moment">Mz - عزم (kN.m)</string>
+    <string name="frame_add_action">إضافة</string>
+    <string name="frame_cancel_action">إلغاء</string>
+    <string name="frame_member_load_add">إضافة حمل على العنصر</string>
+    <string name="frame_member_number">رقم العنصر</string>
+    <string name="frame_load_type_label">نوع الحمل:</string>
+    <string name="frame_result_member_id">%1$s (#%2$d)</string>
+    <string name="frame_concrete_section_info">القطاع: %1$s×%2$s مم | f\'c=%3$s MPa</string>
+    <string name="frame_max_forces">أقصى M=%1$.1f kN.m | أقصى V=%2$.1f kN | N=%3$.1f kN</string>
+    <string name="frame_reinforcement_required">حديد التسليح المطلوب As: %.0f مم²</string>
+    <string name="frame_reinforcement_bottom">سفلي: %1$dØ%2$d (As=%3$.0f مم²)</string>
+    <string name="frame_reinforcement_top">علوي: %1$dØ%2$d (As=%3$.0f مم²)</string>
+    <string name="frame_stirrups">الكانات: Ø%1$d @ %2$d مم</string>
+    <string name="frame_bending">الانحناء:</string>
+    <string name="frame_shear_label">القص:</string>
+    <string name="frame_selected_section">القطاع المختار: %s</string>
+    <string name="frame_steel_section_info">الوزن: %1$s كجم/م | Ix=%2$s سم⁴ | Sx=%3$s سم³</string>
+    <string name="frame_axial">المحوري:</string>
+    <string name="frame_combined">الإجهاد المزدوج:</string>
+    <string name="frame_warning_format">⚠ %s</string>
 </resources>

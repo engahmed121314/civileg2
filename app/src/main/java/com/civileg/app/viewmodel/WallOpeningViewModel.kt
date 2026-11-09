@@ -76,4 +76,75 @@ class WallOpeningViewModel @Inject constructor(
         _error.value = null
         _isLoading.value = false
     }
+
+    /** Export Wall Opening Design report to PDF with 3-view engineering drawings. */
+    fun exportToPdf(
+        context: android.content.Context,
+        wallHeightMm: Double,
+        wallThicknessMm: Double,
+        openingWidthMm: Double,
+        openingHeightMm: Double,
+        openingFromBaseMm: Double,
+        wallLengthMm: Double,
+        fcu: Double,
+        fy: Double,
+        onComplete: (java.io.File?) -> Unit = {}
+    ) {
+        val res = _result.value ?: return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val drawingBitmap = com.civileg.app.utils.PdfDrawingGenerator.generateWallOpeningDrawing(
+                    wallHeight = wallHeightMm,
+                    wallThickness = wallThicknessMm,
+                    openingWidth = openingWidthMm,
+                    openingHeight = openingHeightMm,
+                    openingFromBase = openingFromBaseMm,
+                    wallLength = wallLengthMm,
+                    fcu = fcu,
+                    fy = fy,
+                    isSafe = res.isSafe
+                )
+
+                val inputsMap = mapOf(
+                    "Wall Height" to "$wallHeightMm mm",
+                    "Wall Thickness" to "$wallThicknessMm mm",
+                    "Wall Length" to "$wallLengthMm mm",
+                    "Opening Width" to "$openingWidthMm mm",
+                    "Opening Height" to "$openingHeightMm mm",
+                    "Opening From Base" to "$openingFromBaseMm mm",
+                    "fcu" to "$fcu MPa",
+                    "fy" to "$fy MPa"
+                )
+
+                val resultsMap = mapOf(
+                    "Lintel Rebar" to "${res.headerBeamReinforcement.numberOfBars}T${res.headerBeamReinforcement.barDiameterMm.toInt()}",
+                    "Sill Rebar" to "${res.sillReinforcement.numberOfBars}T${res.sillReinforcement.barDiameterMm.toInt()}",
+                    "Side Vertical Rebar" to "${res.verticalReinforcementEachSide.numberOfBars}T${res.verticalReinforcementEachSide.barDiameterMm.toInt()}",
+                    "Max Concrete Stress" to "${"%.2f".format(res.maxStressMpa)} MPa",
+                    "Safety Status" to if (res.isSafe) "SAFE (PASS)" else "UNSAFE (FAIL)"
+                )
+
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, "Wall_Opening_Report_${System.currentTimeMillis()}.pdf")
+
+                val bundle = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "تقرير تصميم فتحات الحوائط",
+                    titleEn = "Wall Opening Design Report",
+                    subtitle = "Structural Lintels & Opening Detailing",
+                    designType = "Wall Opening",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    isSafe = res.isSafe,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath,
+                    openPdfOnComplete = true
+                )
+                onComplete(bundle.pdfFile)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onComplete(null)
+            }
+        }
+    }
 }

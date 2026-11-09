@@ -290,6 +290,18 @@ fun WindLoadScreen(
 
             // ---- Results ----
             result?.let { res ->
+                val context = androidx.compose.ui.platform.LocalContext.current
+
+                Button(
+                    onClick = { viewModel.exportToPdf(context) },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                ) {
+                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("تصدير تقرير PDF برو (3 قطاعات)", fontWeight = FontWeight.Bold)
+                }
+
                 // Summary cards
                 SummaryCards(result = res)
 

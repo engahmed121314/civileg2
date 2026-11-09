@@ -55,8 +55,8 @@ private val ConcreteSideGray = Color(0xFF505050)
 /** Stress diagram color — PINK */
 private val StressPink = Color(0xFFE91E8C)
 
-/** Dimension lines and text — WHITE */
-private val DimensionWhite = Color(0xFFFFFFFF)
+/** Dimension lines and text — TECH CYAN */
+private val DimensionWhite = Color(0xFF38BDF8)
 
 /** Dimension extension lines — GRAY */
 private val ExtensionGray = Color(0xFFAAAAAA)

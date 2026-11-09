@@ -35,6 +35,7 @@ android {
             arg("dagger.hilt.internal.useAggregatingRootProcessor", "true")
             arg("dagger.fastInit", "enabled")
             arg("dagger.hilt.android.internal.disableAndroidSuperclassValidation", "true")
+            arg("ksp.incremental", "false")
         }
 
         // Developer info for Play Store

@@ -51,8 +51,8 @@ private val ConcreteTopGray = Color(0xFF8A8A8A)
 /** Concrete side face (darker for 3D effect) */
 private val ConcreteSideGray = Color(0xFF505050)
 
-/** Dimension lines and text — WHITE */
-private val DimensionWhite = Color(0xFFFFFFFF)
+/** Dimension lines and text — TECH CYAN */
+private val DimensionWhite = Color(0xFF38BDF8)
 
 /** Dimension extension lines — GRAY */
 private val ExtensionGray = Color(0xFFAAAAAA)

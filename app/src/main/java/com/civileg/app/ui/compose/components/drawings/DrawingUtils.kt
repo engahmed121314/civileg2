@@ -211,7 +211,7 @@ object DrawingColorDefaults {
     val ConcreteTopGray = Color(0xFF8A8A8A)
     val ConcreteSideGray = Color(0xFF505050)
     val StressPink = Color(0xFFE91E8C)
-    val DimensionWhite = Color(0xFFFFFFFF)
+    val DimensionWhite = Color(0xFF38BDF8)
     val ExtensionGray = Color(0xFFAAAAAA)
     val TableHeaderBg = Color(0x33FFFFFF)
     val TableRowAlt = Color(0x1AFFFFFF)
