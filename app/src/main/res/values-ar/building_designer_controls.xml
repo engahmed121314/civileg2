@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_prices">تحديث الأسعار</string>
+    <string name="quantity_cost_table">جدول الكميات والتكلفة</string>
+    <string name="run_design_analysis">تشغيل التصميم والتحليل</string>
+    <string name="total_concrete">إجمالي الخرسانة</string>
+    <string name="total_rebar">إجمالي حديد التسليح</string>
+    <string name="total_structural_steel">إجمالي الحديد الإنشائي</string>
+    <string name="total_formwork">إجمالي الشدات</string>
+    <string name="total_excavation">إجمالي الحفر</string>
+    <string name="total_estimated_cost">إجمالي التكلفة التقديرية</string>
+    <string name="boq_items">بنود جدول الكميات</string>
+    <string name="close">إغلاق</string>
+</resources>
