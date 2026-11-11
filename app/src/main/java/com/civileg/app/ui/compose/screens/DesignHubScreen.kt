@@ -1,13 +1,11 @@
 package com.civileg.app.ui.compose.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
@@ -38,33 +35,28 @@ private data class DesignHubItem(
 )
 
 private val designHubItems = listOf(
-    DesignHubItem(AppScreen.BeamDesign,     R.string.home_beam,     R.string.home_beam_sub,     listOf("ECP", "ACI", "SBC"), Color(0xFF1976D2), Icons.Default.AccountBalance),
-    DesignHubItem(AppScreen.ColumnDesign,    R.string.home_column,   R.string.home_column_sub,   listOf("ECP", "ACI", "SBC"), Color(0xFF7B1FA2), Icons.Default.ViewColumn),
-    DesignHubItem(AppScreen.SlabDesign,      R.string.home_slab,     R.string.home_slab_sub,     listOf("ECP", "ACI", "SBC"), Color(0xFF00838F), Icons.Default.ViewWeek),
-    DesignHubItem(AppScreen.FootingDesign,   R.string.home_footing,  R.string.home_footing_sub,  listOf("ECP", "ACI", "SBC"), Color(0xFF4E342E), Icons.Default.Layers),
-    DesignHubItem(AppScreen.TankDesign,      R.string.home_tank,     R.string.hub_design_tank_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF0277BD), Icons.Default.WaterDrop),
-    DesignHubItem(AppScreen.RetainingWall,   R.string.home_retaining_wall, R.string.home_retaining_wall_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF558B2F), Icons.Default.SensorDoor),
-    DesignHubItem(AppScreen.StairDesign,     R.string.home_stair,    R.string.home_stair_sub,    listOf("ECP", "ACI", "SBC"), Color(0xFFAD1457), Icons.Default.Stairs),
-    DesignHubItem(AppScreen.SeismicAnalysis, R.string.home_seismic,  R.string.home_seismic_sub,  listOf("ASCE", "SBC"),       Color(0xFFBF360C), Icons.Default.Warning),
-    DesignHubItem(AppScreen.FrameAnalysis,  R.string.home_frame,    R.string.hub_design_frame_sub, listOf("ECP", "ACI", "AISC"), Color(0xFF1A237E), Icons.Default.AccountTree),
-    DesignHubItem(AppScreen.ColumnDesign,   R.string.home_column_biaxial, R.string.home_column_biaxial_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF7B1FA2), Icons.Default.ViewCompact),
-    DesignHubItem(AppScreen.PileFoundation, R.string.home_pile,     R.string.home_pile_sub,     listOf("ECP", "ACI", "SBC"), Color(0xFF33691E), Icons.Default.Foundation),
-    DesignHubItem(AppScreen.StrapFooting,   R.string.home_strap_footing, R.string.home_strap_footing_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF5D4037), Icons.Default.VerticalAlignCenter),
-    DesignHubItem(AppScreen.FlatSlab,      R.string.home_flat_slab, R.string.home_flat_slab_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF004D40), Icons.Default.Dashboard),
-    DesignHubItem(AppScreen.WaffleSlab,    R.string.home_waffle_slab, R.string.home_waffle_slab_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF1B5E20), Icons.Default.GridView),
-    DesignHubItem(AppScreen.HordiSlab,     R.string.home_hordi_slab, R.string.home_hordi_slab_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF455A64), Icons.Default.ViewAgenda),
-    DesignHubItem(AppScreen.ShearWall,     R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF880E4F), Icons.Default.SensorDoor),
+    DesignHubItem(AppScreen.BeamDesign, R.string.home_beam, R.string.home_beam_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF1976D2), Icons.Default.AccountBalance),
+    DesignHubItem(AppScreen.ColumnDesign, R.string.home_column, R.string.home_column_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF7B1FA2), Icons.Default.ViewColumn),
+    DesignHubItem(AppScreen.SlabDesign, R.string.home_slab, R.string.home_slab_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF00838F), Icons.Default.ViewWeek),
+    DesignHubItem(AppScreen.FootingDesign, R.string.home_footing, R.string.home_footing_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF4E342E), Icons.Default.Layers),
+    DesignHubItem(AppScreen.TankDesign, R.string.home_tank, R.string.hub_design_tank_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF0277BD), Icons.Default.WaterDrop),
+    DesignHubItem(AppScreen.RetainingWall, R.string.home_retaining_wall, R.string.home_retaining_wall_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF558B2F), Icons.Default.SensorDoor),
+    DesignHubItem(AppScreen.StairDesign, R.string.home_stair, R.string.home_stair_sub, listOf("ECP", "ACI", "SBC"), Color(0xFFAD1457), Icons.Default.Stairs),
+    DesignHubItem(AppScreen.SeismicAnalysis, R.string.home_seismic, R.string.home_seismic_sub, listOf("ASCE", "SBC"), Color(0xFFBF360C), Icons.Default.Warning),
+    DesignHubItem(AppScreen.FrameAnalysis, R.string.home_frame, R.string.hub_design_frame_sub, listOf("ECP", "ACI", "AISC"), Color(0xFF1A237E), Icons.Default.AccountTree),
+    DesignHubItem(AppScreen.PileFoundation, R.string.home_pile, R.string.home_pile_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF33691E), Icons.Default.Foundation),
+    DesignHubItem(AppScreen.StrapFooting, R.string.home_strap_footing, R.string.home_strap_footing_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF5D4037), Icons.Default.VerticalAlignCenter),
+    DesignHubItem(AppScreen.FlatSlab, R.string.home_flat_slab, R.string.home_flat_slab_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF004D40), Icons.Default.Dashboard),
+    DesignHubItem(AppScreen.WaffleSlab, R.string.home_waffle_slab, R.string.home_waffle_slab_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF1B5E20), Icons.Default.GridView),
+    DesignHubItem(AppScreen.HordiSlab, R.string.home_hordi_slab, R.string.home_hordi_slab_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF455A64), Icons.Default.ViewAgenda),
+    DesignHubItem(AppScreen.ShearWall, R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF880E4F), Icons.Default.SensorDoor),
     DesignHubItem(AppScreen.PostTensioned, R.string.home_post_tensioned, R.string.home_post_tensioned_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF00695C), Icons.Default.LinearScale),
-    DesignHubItem(AppScreen.AdvancedDesign, R.string.home_advanced_design, R.string.home_advanced_design_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF37474F), Icons.Default.Architecture),
-
+    DesignHubItem(AppScreen.AdvancedDesign, R.string.home_advanced_design, R.string.home_advanced_design_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF37474F), Icons.Default.Architecture)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DesignHubScreen(
-    onNavigateTo: (String) -> Unit,
-    onNavigateBack: () -> Unit
-) {
+fun DesignHubScreen(onNavigateTo: (String) -> Unit, onNavigateBack: () -> Unit) {
     val snackbarHostState = remember { SnackbarHostState() }
     val dimensions = MaterialTheme.dimens
     Scaffold(
@@ -82,21 +74,12 @@ fun DesignHubScreen(
     ) { padding ->
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = dimensions.gridMinItemWidth),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(MaterialTheme.colorScheme.background)
-                .padding(dimensions.screenHorizontalPadding),
+            modifier = Modifier.fillMaxSize().padding(padding).background(MaterialTheme.colorScheme.background).padding(dimensions.screenHorizontalPadding),
             horizontalArrangement = Arrangement.spacedBy(dimensions.cardSpacing),
             verticalArrangement = Arrangement.spacedBy(dimensions.cardSpacing)
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(
-                    stringResource(R.string.hub_design_choose),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
+                Text(stringResource(R.string.hub_design_choose), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
             }
             items(designHubItems) { item ->
                 DesignHubCard(item = item, onClick = { onNavigateTo(item.screen.route) })
@@ -109,60 +92,25 @@ fun DesignHubScreen(
 @Composable
 private fun DesignHubCard(item: DesignHubItem, onClick: () -> Unit) {
     val isDark = MaterialTheme.colorScheme.surface.luminance < 0.5f
-
     Card(
         onClick = onClick,
         modifier = Modifier.heightIn(min = MaterialTheme.dimens.hubCardMinHeight),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isDark) Color(0xFF1E1E30) else Color.White
-        ),
+        colors = CardDefaults.cardColors(containerColor = if (isDark) Color(0xFF1E1E30) else Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(item.accentColor.copy(alpha = 0.06f))
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(item.accentColor.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
+        Box(modifier = Modifier.fillMaxSize().background(item.accentColor.copy(alpha = 0.06f))) {
+            Column(modifier = Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                Box(modifier = Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(item.accentColor.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
                     Icon(item.icon, null, tint = item.accentColor, modifier = Modifier.size(22.dp))
                 }
                 Column {
-                    Text(
-                        text = stringResource(item.titleRes),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        maxLines = 1,
-                        color = if (isDark) Color.White else Color(0xFF1A1A2E)
-                    )
-                    Text(
-                        text = stringResource(item.subtitleRes),
-                        fontSize = 10.sp,
-                        color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
-                        maxLines = 2,
-                        lineHeight = 14.sp
-                    )
+                    Text(text = stringResource(item.titleRes), fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, color = if (isDark) Color.White else Color(0xFF1A1A2E))
+                    Text(text = stringResource(item.subtitleRes), fontSize = 10.sp, color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575), maxLines = 2, lineHeight = 14.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(top = 4.dp)) {
                         item.codes.forEach { code ->
-                            Surface(
-                                color = item.accentColor.copy(alpha = 0.1f),
-                                shape = RoundedCornerShape(4.dp)
-                            ) {
-                                Text(code, fontSize = 8.sp, fontWeight = FontWeight.SemiBold,
-                                    color = item.accentColor,
-                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp))
+                            Surface(color = item.accentColor.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
+                                Text(code, fontSize = 8.sp, fontWeight = FontWeight.SemiBold, color = item.accentColor, modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp))
                             }
                         }
                     }
@@ -172,6 +120,5 @@ private fun DesignHubCard(item: DesignHubItem, onClick: () -> Unit) {
     }
 }
 
-// Helper extension for luminance check
 private val Color.luminance: Float
     get() = (red * 299 + green * 587 + blue * 114) / 1000f
