@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="building_designer_title">Building Designer &amp; Quantity Takeoff</string>
+    <string name="building_designer_subtitle">2D structural model and quantity tools</string>
+</resources>
