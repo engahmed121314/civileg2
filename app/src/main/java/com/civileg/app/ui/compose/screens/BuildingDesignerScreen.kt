@@ -77,10 +77,10 @@ fun BuildingDesignerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("المصمم الإنشائي وحساب الكميات (2D Building Designer)") },
+                title = { Text(context.getString(com.civileg.app.R.string.building_designer_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "رجوع")
+                        Icon(Icons.Default.ArrowBack, contentDescription = context.getString(com.civileg.app.R.string.back))
                     }
                 },
                 actions = {
