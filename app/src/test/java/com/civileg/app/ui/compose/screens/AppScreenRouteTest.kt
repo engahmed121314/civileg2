@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
