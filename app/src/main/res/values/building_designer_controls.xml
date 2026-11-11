@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_prices">Update prices</string>
+    <string name="quantity_cost_table">Quantity and cost table</string>
+    <string name="run_design_analysis">Run design analysis</string>
+    <string name="total_concrete">Total concrete</string>
+    <string name="total_rebar">Total reinforcement steel</string>
+    <string name="total_structural_steel">Total structural steel</string>
+    <string name="total_formwork">Total formwork</string>
+    <string name="total_excavation">Total excavation</string>
+    <string name="total_estimated_cost">Total estimated cost</string>
+    <string name="boq_items">BOQ items</string>
+    <string name="close">Close</string>
+</resources>
