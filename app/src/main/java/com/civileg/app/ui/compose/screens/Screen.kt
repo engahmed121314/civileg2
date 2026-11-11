@@ -26,11 +26,11 @@ sealed class AppScreen(val route: String, val titleResId: Int, val iconRes: Int)
     object Calculator : AppScreen("calculator", R.string.home_calculator, R.drawable.ic_calculator)
     object SteelTables : AppScreen("steel_tables", R.string.home_steel_tables, R.drawable.ic_steel)
     object WaterLevel : AppScreen("water_level", R.string.home_water_level, R.drawable.ic_water)
-    object SiteLayout : AppScreen("site_layout", R.string.home_section_tools_title, R.drawable.ic_footing)
+    object SiteLayout : AppScreen("site_layout", R.string.site_layout_title, R.drawable.ic_footing)
     object ProjectSummary : AppScreen("project_summary/{projectId}", R.string.results_summary, R.drawable.ic_calculator)
     object ExecutionLog : AppScreen("execution_log/{projectId}", R.string.nav_inventory, R.drawable.ic_costing)
     object MasterBbs : AppScreen("master_bbs/{projectId}", R.string.nav_inventory, R.drawable.ic_steel)
-    
+
     // New Design Modules
     object PileFoundation : AppScreen("pile_foundation", R.string.home_pile, R.drawable.ic_pile)
     object StrapFooting : AppScreen("strap_footing", R.string.home_strap_footing, R.drawable.ic_footing)
@@ -40,7 +40,7 @@ sealed class AppScreen(val route: String, val titleResId: Int, val iconRes: Int)
     object ShearWall : AppScreen("shear_wall", R.string.home_shear_wall, R.drawable.ic_wall)
     object PostTensioned : AppScreen("post_tensioned", R.string.home_post_tensioned, R.drawable.ic_beam)
     object AdvancedDesign : AppScreen("advanced_design", R.string.home_advanced_design, R.drawable.ic_design)
-    
+
     // New Tools
     object RebarTool : AppScreen("rebar_tool", R.string.home_rebar_tool, R.drawable.ic_steel)
     object ConcreteMix : AppScreen("concrete_mix", R.string.home_concrete_mix, R.drawable.ic_calculator)
