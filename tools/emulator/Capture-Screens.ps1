@@ -162,3 +162,4 @@ if (-not $KeepUiDumps) {
 & $script:Adb -s $serial logcat -d -t 800 2>$null | Out-File -LiteralPath (Join-Path $OutDir "logcat.txt") -Encoding utf8
 
 Write-Ok "Screenshots saved to $OutDir"
+exit 0

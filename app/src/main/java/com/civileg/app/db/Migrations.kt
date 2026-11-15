@@ -394,6 +394,29 @@ object Migrations {
     }
 
     /**
+     * Migration from version 13 to 14.
+     * Adds the exports table for saved export logs.
+     */
+    val MIGRATION_13_14: Migration = object : Migration(13, 14) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE TABLE IF NOT EXISTS exports (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "projectId INTEGER NOT NULL, " +
+                    "elementType TEXT NOT NULL, " +
+                    "designCode TEXT NOT NULL, " +
+                    "exportType TEXT NOT NULL, " +
+                    "filePath TEXT NOT NULL, " +
+                    "fileSizeBytes INTEGER NOT NULL DEFAULT 0, " +
+                    "createdAt INTEGER NOT NULL, " +
+                    "FOREIGN KEY(projectId) REFERENCES projects(id) ON DELETE CASCADE" +
+                    ")"
+            )
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_exports_projectId ON exports(projectId)")
+        }
+    }
+
+    /**
      * Helper to create a no-op migration between consecutive versions.
      * Use only when no schema changes occurred between versions.
      */

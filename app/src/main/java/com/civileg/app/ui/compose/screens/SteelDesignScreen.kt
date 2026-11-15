@@ -11,7 +11,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas as ComposeCanvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -26,6 +25,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -63,6 +63,7 @@ import com.civileg.app.domain.calculations.ecp.WeldDesignResult
 import com.civileg.app.domain.entities.*
 import com.civileg.app.ui.compose.components.PremiumDesignSystem
 import com.civileg.app.ui.compose.components.PremiumSectionHeader
+import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen as AppInteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSteelDrawing
 import com.civileg.app.ui.compose.components.drawings.ProfessionalWarehouseDrawing
@@ -203,19 +204,31 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
     val config = LocalConfiguration.current
     val screenWidthPx = (config.screenWidthDp * density.density).toInt().coerceAtLeast(800)
     val screenHeightPx = (config.screenHeightDp * density.density).toInt().coerceAtLeast(600)
-    var span by remember { mutableStateOf("20.0") }
-    var spacing by remember { mutableStateOf("6.0") }
-    var eaveHeight by remember { mutableStateOf("6.0") }
-    var totalLength by remember { mutableStateOf("60.0") }
-    var roofSlope by remember { mutableStateOf("10") }
-    var deadLoad by remember { mutableStateOf("0.25") }
-    var liveLoad by remember { mutableStateOf("0.60") }
-    var windSpeed by remember { mutableStateOf("150") }
-    var numberOfStories by remember { mutableIntStateOf(1) }
+    var span by rememberSaveable { mutableStateOf("20.0") }
+    var spacing by rememberSaveable { mutableStateOf("6.0") }
+    var eaveHeight by rememberSaveable { mutableStateOf("6.0") }
+    var totalLength by rememberSaveable { mutableStateOf("60.0") }
+    var roofSlope by rememberSaveable { mutableStateOf("10") }
+    var deadLoad by rememberSaveable { mutableStateOf("0.25") }
+    var liveLoad by rememberSaveable { mutableStateOf("0.60") }
+    var windSpeed by rememberSaveable { mutableStateOf("150") }
+    var numberOfStories by rememberSaveable { mutableIntStateOf(1) }
+    var selectedCode by rememberSaveable { mutableStateOf(defaultDesignCode()) }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { SteelModuleSectionHeader(stringResource(R.string.steel_warehouse_inputs), R.drawable.ic_frame) }
-        
+
+        item {
+            Card(elevation = CardDefaults.cardElevation(2.dp)) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DesignCodeSelectorRow(
+                        selectedCode = selectedCode,
+                        onCodeSelected = { selectedCode = it }
+                    )
+                }
+            }
+        }
+
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -253,41 +266,58 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SteelInputField(deadLoad, stringResource(R.string.steel_dl_knm2), { deadLoad = it }, Modifier.weight(1f))
                         SteelInputField(liveLoad, stringResource(R.string.steel_ll_knm2), { liveLoad = it }, Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SteelInputField(windSpeed, stringResource(R.string.steel_wind_kmh), { windSpeed = it }, Modifier.weight(1f))
+                        SteelInputField(roofSlope, stringResource(R.string.steel_roof_slope_deg), { roofSlope = it }, Modifier.weight(1f))
                     }
                 }
             }
         }
 
         item {
-            Button(
-                onClick = {
-                    val s = span.toDoubleOrNull() ?: 20.0
-                    val l = totalLength.toDoubleOrNull() ?: 60.0
-                    val h = eaveHeight.toDoubleOrNull() ?: 6.0
-                    val sl = roofSlope.toDoubleOrNull() ?: 10.0
-                    val ridgeH = h + (s / 2.0 * tan(Math.toRadians(sl)))
-                    
-                    val inputs = SteelWarehouseInputs(
-                        span = s,
-                        length = l,
-                        eaveHeight = h,
-                        ridgeHeight = ridgeH,
-                        baySpacing = spacing.toDoubleOrNull() ?: 6.0,
-                        slope = tan(Math.toRadians(sl)),
-                        deadLoad = deadLoad.toDoubleOrNull() ?: 0.25,
-                        liveLoad = liveLoad.toDoubleOrNull() ?: 0.60,
-                        windLoad = windSpeed.toDoubleOrNull() ?: 150.0,
-                        numberOfStories = numberOfStories
+            val warehouseInputsValid = listOf(span, spacing, eaveHeight, totalLength, roofSlope, deadLoad, liveLoad, windSpeed)
+                .all { it.trim().toDoubleOrNull() != null } &&
+                listOf(span, spacing, eaveHeight, totalLength).all { (it.trim().toDoubleOrNull() ?: 0.0) > 0.0 }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!warehouseInputsValid) {
+                    Text(
+                        text = stringResource(R.string.input_invalid_numbers),
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp
                     )
-                    viewModel.calculateWarehouse(inputs)
-                },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                enabled = !isLoading
-            ) {
-                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Text(stringResource(R.string.steel_design_warehouse))
+                }
+                Button(
+                    onClick = {
+                        val s = span.toDoubleOrNull() ?: return@Button
+                        val l = totalLength.toDoubleOrNull() ?: return@Button
+                        val h = eaveHeight.toDoubleOrNull() ?: return@Button
+                        val sl = roofSlope.toDoubleOrNull() ?: return@Button
+                        val ridgeH = h + (s / 2.0 * tan(Math.toRadians(sl)))
+
+                        val inputs = SteelWarehouseInputs(
+                            span = s,
+                            length = l,
+                            eaveHeight = h,
+                            ridgeHeight = ridgeH,
+                            baySpacing = spacing.toDoubleOrNull() ?: return@Button,
+                            slope = tan(Math.toRadians(sl)),
+                            code = selectedCode,
+                            deadLoad = deadLoad.toDoubleOrNull() ?: return@Button,
+                            liveLoad = liveLoad.toDoubleOrNull() ?: return@Button,
+                            windLoad = windSpeed.toDoubleOrNull() ?: return@Button,
+                            numberOfStories = numberOfStories
+                        )
+                        viewModel.calculateWarehouse(inputs)
+                    },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = !isLoading && warehouseInputsValid
+                ) {
+                    if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    else Text(stringResource(R.string.steel_design_warehouse))
+                }
             }
         }
 
@@ -362,13 +392,17 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                 }
             }
 
-            item { StructuralAnalysisVisualizer(lastWarehouseInputs(span, spacing, eaveHeight, totalLength, roofSlope, deadLoad, liveLoad, windSpeed), res) }
-            item { SteelWarehouseVisualizer(lastWarehouseInputs(span, spacing, eaveHeight, totalLength, roofSlope, deadLoad, liveLoad, windSpeed), res, pdfCaptureLayer, screenWidthPx, screenHeightPx) }
+            item { StructuralAnalysisVisualizer(lastWarehouseInputs(span, spacing, eaveHeight, totalLength, roofSlope, deadLoad, liveLoad, windSpeed, numberOfStories, selectedCode), res) }
+            item { SteelWarehouseVisualizer(lastWarehouseInputs(span, spacing, eaveHeight, totalLength, roofSlope, deadLoad, liveLoad, windSpeed, numberOfStories, selectedCode), res, pdfCaptureLayer, screenWidthPx, screenHeightPx) }
         }
     }
 }
 
-private fun lastWarehouseInputs(span: String, spacing: String, height: String, length: String, slope: String, dl: String, ll: String, ws: String): SteelWarehouseInputs {
+private fun lastWarehouseInputs(
+    span: String, spacing: String, height: String, length: String, slope: String,
+    dl: String, ll: String, ws: String, stories: Int = 1,
+    code: DesignCode = DesignCode.ECP
+): SteelWarehouseInputs {
     val s = span.toDoubleOrNull() ?: 20.0
     val l = length.toDoubleOrNull() ?: 60.0
     val h = height.toDoubleOrNull() ?: 6.0
@@ -383,9 +417,11 @@ private fun lastWarehouseInputs(span: String, spacing: String, height: String, l
         ridgeHeight = ridgeH,
         baySpacing = sp,
         slope = tan(Math.toRadians(sl)),
+        code = code,
         deadLoad = dl.toDoubleOrNull() ?: 0.25,
         liveLoad = ll.toDoubleOrNull() ?: 0.60,
-        windLoad = ws.toDoubleOrNull() ?: 150.0
+        windLoad = ws.toDoubleOrNull() ?: 150.0,
+        numberOfStories = stories
     )
 }
 
@@ -403,6 +439,19 @@ fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
                 ResultRow(stringResource(R.string.steel_floor_beam_moment), "${String.format("%.1f", res.mainFrame.floorBeamMaxMoment)} kN.m")
             }
             ResultRow(stringResource(R.string.steel_status), if (res.safetyStatus) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe))
+            ResultRow(stringResource(R.string.steel_max_moment), "${String.format("%.1f", res.mainFrame.maxMoment)} kN.m")
+            ResultRow(stringResource(R.string.steel_max_shear), "${String.format("%.1f", res.mainFrame.maxShear)} kN")
+            ResultRow(stringResource(R.string.steel_max_axial), "${String.format("%.1f", res.mainFrame.maxAxial)} kN")
+            ResultRow(
+                stringResource(R.string.steel_deflection),
+                "${String.format("%.1f", res.mainFrame.maxDeflection)} / ${String.format("%.0f", res.mainFrame.allowableDeflection)} mm"
+            )
+            if (res.mainFrame.utilizationMoment > 0.0 || res.mainFrame.utilizationShear > 0.0 || res.mainFrame.utilizationAxial > 0.0) {
+                Spacer(Modifier.height(4.dp))
+                UtilizationBar(stringResource(R.string.steel_max_moment), res.mainFrame.utilizationMoment)
+                UtilizationBar(stringResource(R.string.steel_max_shear), res.mainFrame.utilizationShear)
+                UtilizationBar(stringResource(R.string.steel_max_axial), res.mainFrame.utilizationAxial)
+            }
         }
     }
 }
@@ -640,30 +689,27 @@ fun RecommendationsCard(items: List<String>) {
 @Composable
 fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoading: Boolean) {
     val context = LocalContext.current
-    var selectedCategory by remember { mutableStateOf("IPE (European I-Beams)") }
+    var selectedCategory by rememberSaveable { mutableStateOf("IPE (European I-Beams)") }
     var selectedSection by remember { mutableStateOf<SteelSectionType?>(null) }
-    var searchQuery by remember { mutableStateOf("") }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     var expandedCategory by remember { mutableStateOf(false) }
     var expandedSection by remember { mutableStateOf(false) }
-    
-    var axialLoad by remember { mutableStateOf("500") }
-    var moment by remember { mutableStateOf("100") }
-    var shear by remember { mutableStateOf("50") }
-    var length by remember { mutableStateOf("3") }
-    var selectedMemberType by remember { mutableStateOf(SteelMemberType.COLUMN) }
-    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
-    
+
+    var axialLoad by rememberSaveable { mutableStateOf("500") }
+    var moment by rememberSaveable { mutableStateOf("100") }
+    var shear by rememberSaveable { mutableStateOf("50") }
+    var length by rememberSaveable { mutableStateOf("3") }
+    var selectedMemberType by rememberSaveable { mutableStateOf(SteelMemberType.COLUMN) }
+    var selectedCode by rememberSaveable { mutableStateOf(defaultDesignCode()) }
+
     val searchResults by viewModel.searchResults.observeAsState(emptyList())
     val library = viewModel.sectionLibrary
     val categories = library.keys.toList()
 
-    val steelCodes = listOf("ECP 205", "AISC 360-16", "SBC 306")
-    var selectedSteelCode by remember { mutableStateOf(steelCodes[0]) }
-    var expandedSteelCode by remember { mutableStateOf(false) }
-    
     val steelGrades = SteelGrade.entries
-    var selectedGrade by remember { mutableStateOf(SteelGrade.ST37) }
+    var selectedGrade by rememberSaveable { mutableStateOf(SteelGrade.ST37) }
     var expandedGrade by remember { mutableStateOf(false) }
+    val isExporting by viewModel.isExporting.observeAsState(false)
 
     // PDF drawing capture: the export embeds the view that is on screen right now.
     val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
@@ -686,34 +732,11 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.steel_design_code_metal), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            ExposedDropdownMenuBox(
-                                expanded = expandedSteelCode,
-                                onExpandedChange = { expandedSteelCode = !expandedSteelCode }
-                            ) {
-                                OutlinedTextField(
-                                    value = selectedSteelCode,
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSteelCode) },
-                                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
-                                    shape = RoundedCornerShape(12.dp),
-                                    textStyle = MaterialTheme.typography.bodySmall
-                                )
-                                ExposedDropdownMenu(
-                                    expanded = expandedSteelCode,
-                                    onDismissRequest = { expandedSteelCode = false }
-                                ) {
-                                    steelCodes.forEach { code ->
-                                        DropdownMenuItem(
-                                            text = { Text(code) },
-                                            onClick = { selectedSteelCode = code; expandedSteelCode = false }
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        DesignCodeSelectorRow(
+                            selectedCode = selectedCode,
+                            onCodeSelected = { selectedCode = it },
+                            modifier = Modifier.weight(1f)
+                        )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(stringResource(R.string.steel_grade_label), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             ExposedDropdownMenuBox(
@@ -961,52 +984,68 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
         }
 
         item {
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = { 
-                        selectedSection?.let { sec ->
-                            viewModel.calculateSteelMember(
-                                section = sec,
-                                memberType = selectedMemberType,
-                                inputs = SteelInputs(
-                                    axialLoad = axialLoad.toDoubleOrNull() ?: 0.0,
-                                    moment = moment.toDoubleOrNull() ?: 0.0,
-                                    shear = shear.toDoubleOrNull() ?: 0.0,
-                                    unbracedLength = (length.toDoubleOrNull() ?: 3.0) * 1000.0,
-                                    length = (length.toDoubleOrNull() ?: 3.0) * 1000.0,
-                                    grade = selectedGrade
-                                ),
-                                code = selectedCode
-                            )
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    enabled = !isLoading && selectedSection != null
-                ) {
-                    if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    else Text(stringResource(R.string.steel_analyze_section))
+            val sectionInputsValid = listOf(axialLoad, moment, shear, length).all { it.trim().toDoubleOrNull() != null } &&
+                (length.trim().toDoubleOrNull() ?: 0.0) > 0.0
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!sectionInputsValid) {
+                    Text(
+                        text = stringResource(R.string.input_invalid_numbers),
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp
+                    )
                 }
-
-                if (result != null) {
+                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = {
-                            captureScope.launch {
-                                val captureBitmap = try {
-                                    pdfCaptureLayer.captureToAndroidBitmap()
-                                } catch (_: Exception) { null }
-                                viewModel.pendingDrawingBitmap = captureBitmap
-                                viewModel.exportToPdf(context) { }
+                            val sec = selectedSection
+                            val pu = axialLoad.trim().toDoubleOrNull()
+                            val mu = moment.trim().toDoubleOrNull()
+                            val vu = shear.trim().toDoubleOrNull()
+                            val lb = length.trim().toDoubleOrNull()
+                            if (sec != null && pu != null && mu != null && vu != null && lb != null) {
+                                viewModel.calculateSteelMember(
+                                    section = sec,
+                                    memberType = selectedMemberType,
+                                    inputs = SteelInputs(
+                                        axialLoad = pu,
+                                        moment = mu,
+                                        shear = vu,
+                                        unbracedLength = lb * 1000.0,
+                                        length = lb * 1000.0,
+                                        grade = selectedGrade
+                                    ),
+                                    code = selectedCode
+                                )
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                        enabled = !viewModel.isExporting.value!!
+                        enabled = !isLoading && selectedSection != null && sectionInputsValid
                     ) {
-                        if (viewModel.isExporting.value!!) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        else {
-                            Icon(Icons.Default.PictureAsPdf, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.pdf_report))
+                        if (isLoading) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        else Text(stringResource(R.string.steel_analyze_section))
+                    }
+
+                    if (result != null) {
+                        Button(
+                            onClick = {
+                                captureScope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                            enabled = !isExporting
+                        ) {
+                            if (isExporting) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            else {
+                                Icon(Icons.Default.PictureAsPdf, null, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.pdf_report))
+                            }
                         }
                     }
                 }
@@ -2421,6 +2460,36 @@ private fun ResultRow(label: String, value: String) {
 }
 
 @Composable
+private fun UtilizationBar(label: String, utilization: Double) {
+    val pct = utilization.coerceIn(0.0, 5.0).toFloat()
+    val barColor = when {
+        utilization < 0.85f -> Color(0xFF43A047)
+        utilization <= 1.0f -> Color(0xFFFFA000)
+        else -> Color(0xFFE53935)
+    }
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("$label — ${stringResource(R.string.steel_utilization_ratio)}", fontSize = 12.sp)
+            Text("${String.format("%.0f", utilization * 100)}%", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(2.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(3.dp))
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth(pct / 5f)
+                    .height(6.dp)
+                    .background(barColor, RoundedCornerShape(3.dp))
+            )
+        }
+    }
+}
+
+@Composable
 fun PropertyLine(label: String, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
         Box(modifier = Modifier.size(6.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)))
@@ -2819,81 +2888,68 @@ fun SteelBOMTable(
         Text(stringResource(R.string.steel_bill_of_materials), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.height(8.dp))
 
-        LazyColumn(
+        // A LazyColumn here would sit inside the verticalScroll Column of
+        // SteelStructureAndBOMTab and crash ("infinity maximum height
+        // constraints"). The BOM is a short fixed list, so a plain Column is enough.
+        Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.steel_bom_item), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text(stringResource(R.string.steel_bom_quantity), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text(stringResource(R.string.steel_bom_weight), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text(stringResource(R.string.steel_bom_section), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                }
-                Divider()
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(stringResource(R.string.steel_bom_item), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.steel_bom_quantity), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.steel_bom_weight), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.steel_bom_section), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
+            Divider()
 
-            item {
-                BOMRow(
-                    item = stringResource(R.string.steel_bom_columns),
-                    quantity = "${(inputs.length / inputs.baySpacing).toInt() + 1}",
-                    weight = "${String.format("%.1f", columnsWeight)} kg",
-                    section = result.mainFrame.columnSection.sectionName
-                )
-            }
+            BOMRow(
+                item = stringResource(R.string.steel_bom_columns),
+                quantity = "${(inputs.length / inputs.baySpacing).toInt() + 1}",
+                weight = "${String.format("%.1f", columnsWeight)} kg",
+                section = result.mainFrame.columnSection.sectionName
+            )
 
-            item {
-                BOMRow(
-                    item = stringResource(R.string.steel_bom_rafters),
-                    quantity = "${(inputs.length / inputs.baySpacing).toInt() + 1}",
-                    weight = "${String.format("%.1f", raftersWeight)} kg",
-                    section = result.mainFrame.rafterSection.sectionName
-                )
-            }
+            BOMRow(
+                item = stringResource(R.string.steel_bom_rafters),
+                quantity = "${(inputs.length / inputs.baySpacing).toInt() + 1}",
+                weight = "${String.format("%.1f", raftersWeight)} kg",
+                section = result.mainFrame.rafterSection.sectionName
+            )
 
-            item {
-                BOMRow(
-                    item = stringResource(R.string.steel_bom_purlins),
-                    quantity = "${(inputs.span / 1.5).toInt() * ((inputs.length / inputs.baySpacing).toInt() + 1)}",
-                    weight = "${String.format("%.1f", purlinsWeight)} kg",
-                    section = result.secondaryMembers.purlinSection.sectionName
-                )
-            }
+            BOMRow(
+                item = stringResource(R.string.steel_bom_purlins),
+                quantity = "${(inputs.span / 1.5).toInt() * ((inputs.length / inputs.baySpacing).toInt() + 1)}",
+                weight = "${String.format("%.1f", purlinsWeight)} kg",
+                section = result.secondaryMembers.purlinSection.sectionName
+            )
 
-            item {
-                BOMRow(
-                    item = stringResource(R.string.steel_bom_girts),
-                    quantity = "${(inputs.eaveHeight / 1.5).toInt() * 2 * ((inputs.length / inputs.baySpacing).toInt() + 1)}",
-                    weight = "${String.format("%.1f", girtsWeight)} kg",
-                    section = result.secondaryMembers.girtSection.sectionName
-                )
-            }
+            BOMRow(
+                item = stringResource(R.string.steel_bom_girts),
+                quantity = "${(inputs.eaveHeight / 1.5).toInt() * 2 * ((inputs.length / inputs.baySpacing).toInt() + 1)}",
+                weight = "${String.format("%.1f", girtsWeight)} kg",
+                section = result.secondaryMembers.girtSection.sectionName
+            )
 
-            item {
-                BOMRow(
-                    item = stringResource(R.string.steel_bom_plates),
-                    quantity = "${result.mainFrame.basePlateBoltsCount * 4}",
-                    weight = "${String.format("%.1f", platesWeight)} kg",
-                    section = "${result.mainFrame.basePlateThickness.toInt()} mm"
-                )
-            }
+            BOMRow(
+                item = stringResource(R.string.steel_bom_plates),
+                quantity = "${result.mainFrame.basePlateBoltsCount * 4}",
+                weight = "${String.format("%.1f", platesWeight)} kg",
+                section = "${result.mainFrame.basePlateThickness.toInt()} mm"
+            )
 
-            item {
-                Divider()
-            }
+            Divider()
 
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(stringResource(R.string.steel_bom_total), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
-                    Text("${String.format("%.1f", totalWeight)} kg", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color(0xFF1E3A8A))
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(stringResource(R.string.steel_bom_total), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+                Text("${String.format("%.1f", totalWeight)} kg", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color(0xFF1E3A8A))
             }
         }
     }

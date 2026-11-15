@@ -1,5 +1,7 @@
 # Agent Guide — CivilEG2
 
+Before any task, read docs/AGENT_MASTER_PLAN.md and obey §1 and §9.
+
 ## Build & test from the command line
 
 ```powershell

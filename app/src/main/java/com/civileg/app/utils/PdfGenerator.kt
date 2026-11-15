@@ -66,8 +66,8 @@ object PdfGenerator {
     /**
      * Returns the appropriate text based on current language setting.
      */
-    private fun t(context: Context, ar: String, en: String): String {
-        return if (isEnglish(context)) en else ar
+    private fun t(context: Context, en: String): String {
+        return en
     }
 
     /**
@@ -134,7 +134,7 @@ object PdfGenerator {
         table.addCell(Cell().add(createStyledParagraph(type, font, 9f)))
         table.addCell(Cell().add(createStyledParagraph(section, font, 9f, isBold = true)))
         val statusP = createStyledParagraph(status, font, 9f, isBold = true)
-        if (status.contains("Safe", true) || status.contains("آمن", true)) {
+        if (status.contains("Safe", true)) {
             statusP.setFontColor(SUCCESS_COLOR)
         } else {
             statusP.setFontColor(ERROR_COLOR)
@@ -208,7 +208,7 @@ object PdfGenerator {
         // --- Title & Status ---
         document.add(createStyledParagraph(title, arabicFont, 18f, isBold = true))
 
-        val statusText = if (isSafe) t(context, "STATUS: SAFE (مطابق للأكواد)", "STATUS: SAFE - Code Compliant") else t(context, "STATUS: UNSAFE (غير آمن - مراجعة التصميم)", "STATUS: UNSAFE - Design Review Required")
+        val statusText = if (isSafe) "STATUS: SAFE - Code Compliant" else "STATUS: UNSAFE - Design Review Required"
         val statusPara = createStyledParagraph(statusText, arabicFont, 12f, isBold = true)
             .setFontColor(if (isSafe) SUCCESS_COLOR else ERROR_COLOR)
             .setPadding(10f)
@@ -222,7 +222,7 @@ object PdfGenerator {
 
         // Column 1: Inputs & Results
         val infoCell = Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER)
-        infoCell.add(createStyledParagraph(t(context, "بيانات التصميم", "DESIGN DATA"), arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
+        infoCell.add(createStyledParagraph("DESIGN DATA", arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
         
         val dataTable = Table(UnitValue.createPercentArray(floatArrayOf(60f, 40f))).useAllAvailableWidth()
         inputs.forEach { (k, v) ->
@@ -238,7 +238,7 @@ object PdfGenerator {
 
         // Column 2: Drawing
         val drawingCell = Cell().setBorder(com.itextpdf.layout.borders.Border.NO_BORDER).setPaddingLeft(10f)
-        drawingCell.add(createStyledParagraph(t(context, "رسم تسليح القطاع", "SECTION DRAWING"), arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
+        drawingCell.add(createStyledParagraph("SECTION DRAWING", arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
         if (drawingBitmap != null) {
             val stream = ByteArrayOutputStream()
             drawingBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
@@ -248,11 +248,7 @@ object PdfGenerator {
         } else {
             drawingCell.add(
                 Paragraph(
-                    t(
-                        context,
-                        "لم يتم إرفاق صورة الرسم. استخدم زر تصدير PDF من شاشة العنصر للحصول على الرسم التفصيلي.",
-                        "No drawing image was attached. Use the element screen's Export PDF action to include the generated detail drawing."
-                    )
+                    "No drawing image was attached. Use the element screen's Export PDF action to include the generated detail drawing."
                 ).setItalic().setFontColor(ColorConstants.GRAY).setFontSize(9f)
             )
         }
@@ -263,7 +259,7 @@ object PdfGenerator {
 
         // --- Safety Checks Table ---
         if (safetyChecks.isNotEmpty()) {
-            document.add(createStyledParagraph(t(context, "تحققات الأمان", "SAFETY VERIFICATIONS"), arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
+            document.add(createStyledParagraph("SAFETY VERIFICATIONS", arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
             val checkTable = Table(UnitValue.createPercentArray(floatArrayOf(40f, 20f, 20f, 20f))).useAllAvailableWidth()
             
             checkTable.addHeaderCell(Cell().add(createStyledParagraph("Check Type", arabicFont, 9f, true)))
@@ -327,7 +323,7 @@ object PdfGenerator {
         val topSection = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
         
         val notesCell = Cell().setPadding(5f).setBorder(com.itextpdf.layout.borders.SolidBorder(0.5f))
-        notesCell.add(createStyledParagraph(t(context, "ملاحظات عامة", "GENERAL NOTES"), arabicFont, 10f, true).setFontColor(PRIMARY_COLOR))
+        notesCell.add(createStyledParagraph("GENERAL NOTES", arabicFont, 10f, true).setFontColor(PRIMARY_COLOR))
         val notes = arrayOf(
             "1. All dimensions are in METERS unless otherwise noted.",
             "2. All steel members shall be fabricated in accordance with ${inputs.code.name} code.",
@@ -349,7 +345,7 @@ object PdfGenerator {
             summaryTable.addCell(Cell().add(createStyledParagraph(value, arabicFont, 8f, true)).setBorder(com.itextpdf.layout.borders.Border.NO_BORDER))
         }
         
-        addSummaryRow(t(context, "الوزن الكلي", "Total Steel Weight"), "%.2f Tons".format(result.totalWeight))
+        addSummaryRow("Total Steel Weight", "%.2f Tons".format(result.totalWeight))
         addSummaryRow("Weight per Square Meter", "%.1f kg/m²".format(result.weightPerM2))
         addSummaryRow("Cost per Square Meter", "%.0f EGP/m²".format(result.costPerM2))
         addSummaryRow("Total Estimated Cost", "%,.0f EGP".format(result.estimatedTotalCost))
@@ -362,7 +358,7 @@ object PdfGenerator {
         document.add(Paragraph("\n"))
 
         // --- 3. Steel Member Schedule (The core table in the image) ---
-        document.add(createStyledParagraph(t(context, "جدول القطاعات الإنشائية", "STEEL MEMBER SCHEDULE"), arabicFont, 11f, true).setFontColor(PRIMARY_COLOR))
+        document.add(createStyledParagraph("STEEL MEMBER SCHEDULE", arabicFont, 11f, true).setFontColor(PRIMARY_COLOR))
         val scheduleTable = Table(UnitValue.createPercentArray(floatArrayOf(10f, 25f, 45f, 20f))).useAllAvailableWidth()
         
         fun addSchedHeader(text: String) {
@@ -429,7 +425,7 @@ object PdfGenerator {
 
         // --- 6. Analysis Results & Safety ---
         document.add(Paragraph("\n"))
-        val statusText = if (result.safetyStatus) t(context, "المنشأ آمن - التحليل الإنشائي ناجح", "STATUS: STRUCTURAL ANALYSIS PASSED") else t(context, "مراجعة إنشائية مطلوبة", "STATUS: REVIEW REQUIRED")
+        val statusText = if (result.safetyStatus) "STATUS: STRUCTURAL ANALYSIS PASSED" else "STATUS: REVIEW REQUIRED"
         val statusPara = createStyledParagraph(statusText, arabicFont, 10f, true)
             .setFontColor(if (result.safetyStatus) SUCCESS_COLOR else ERROR_COLOR)
             .setTextAlignment(TextAlignment.CENTER)
@@ -507,7 +503,7 @@ object PdfGenerator {
         document.add(Paragraph("\n"))
 
         // --- Key Properties Table ---
-        document.add(createStyledParagraph(t(context, "الخصائص الهندسية", "Geometric Properties"), arabicFont, 12f, true).setFontColor(PRIMARY_COLOR))
+        document.add(createStyledParagraph("Geometric Properties", arabicFont, 12f, true).setFontColor(PRIMARY_COLOR))
         
         val propTable = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
         propTable.addCell(createDataCell("Area (A)", "%.2f cm²".format(result.sectionType.area/100.0), arabicFont))
@@ -525,7 +521,7 @@ object PdfGenerator {
         document.add(Paragraph("\n"))
 
         // --- Design Capacities ---
-        document.add(createStyledParagraph(t(context, "سعة التحمل القصوى", "Design Capacities"), arabicFont, 12f, true).setFontColor(PRIMARY_COLOR))
+        document.add(createStyledParagraph("Design Capacities", arabicFont, 12f, true).setFontColor(PRIMARY_COLOR))
         
         val capacityTable = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
         capacityTable.addCell(createDataCell("Axial Capacity (Pn)", "%.1f kN".format(result.axialCapacity), arabicFont))
@@ -537,7 +533,7 @@ object PdfGenerator {
         // --- Drawing Section ---
         if (drawingBitmap != null) {
             document.add(Paragraph("\n"))
-            document.add(createStyledParagraph(t(context, "رسم تخطيطي", "Section Visualization"), arabicFont, 12f, true).setFontColor(PRIMARY_COLOR))
+            document.add(createStyledParagraph("Section Visualization", arabicFont, 12f, true).setFontColor(PRIMARY_COLOR))
             val stream = ByteArrayOutputStream()
             drawingBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
             val img = Image(ImageDataFactory.create(stream.toByteArray()))
@@ -547,7 +543,7 @@ object PdfGenerator {
 
         // --- Buckling & Stability ---
         result.bucklingCheck?.let { check ->
-            document.add(createStyledParagraph(t(context, "تحليل الانبعاج", "Buckling & Stability Analysis"), arabicFont, 12f, true).setFontColor(PRIMARY_COLOR))
+            document.add(createStyledParagraph("Buckling & Stability Analysis", arabicFont, 12f, true).setFontColor(PRIMARY_COLOR))
             
             val buckTable = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
             buckTable.addCell(createDataCell("Slenderness Ratio (λ)", "%.2f".format(check.slendernessRatio), arabicFont))
@@ -559,7 +555,7 @@ object PdfGenerator {
 
         // --- Warnings & Notes ---
         if (result.warnings.isNotEmpty()) {
-            document.add(createStyledParagraph(t(context, "تحذيرات فنية", "Warnings"), arabicFont, 12f, true).setFontColor(ERROR_COLOR))
+            document.add(createStyledParagraph("Warnings", arabicFont, 12f, true).setFontColor(ERROR_COLOR))
             val warningList = com.itextpdf.layout.element.List()
             result.warnings.forEach { warning -> 
                 val li = ListItem(warning)
@@ -597,30 +593,30 @@ object PdfGenerator {
 
         createReportHeader(
             document, context, arabicFont,
-            t(context, "كشف كميات وتكاليف تقديري", "Comprehensive BOQ Report"),
-            t(context, "تقرير كميات وتكاليف", "Bill of Quantities & Cost Estimate")
+            "Comprehensive BOQ Report",
+            "Bill of Quantities & Cost Estimate"
         )
 
         val infoTable = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
-        addArabicCell(infoTable, t(context, "اسم المشروع", "Project Name"), arabicFont, fontSize = 10f)
+        addArabicCell(infoTable, "Project Name", arabicFont, fontSize = 10f)
         addArabicCell(infoTable, projectName, arabicFont, isBold = true, fontSize = 10f)
-        addArabicCell(infoTable, t(context, "التاريخ", "Report Date"), arabicFont, fontSize = 10f)
+        addArabicCell(infoTable, "Report Date", arabicFont, fontSize = 10f)
         addArabicCell(infoTable, SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date()), arabicFont, isBold = true, fontSize = 10f)
         document.add(infoTable)
         document.add(Paragraph("\n"))
 
-        document.add(createStyledParagraph(t(context, "ملخص المشروع", "PROJECT SUMMARY"), arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
+        document.add(createStyledParagraph("PROJECT SUMMARY", arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
         val summaryTable = Table(UnitValue.createPercentArray(floatArrayOf(34f, 33f, 33f))).useAllAvailableWidth()
-        summaryTable.addCell(createSummaryCell(t(context, "إجمالي الميزانية التقديرية", "Total Estimated Budget"), String.format(Locale.US, "%,.2f EGP", totalBudget), arabicFont))
-        summaryTable.addCell(createSummaryCell(t(context, "حجم الخرسانة الكلي", "Total Concrete Volume"), String.format(Locale.US, "%.2f m\u00B3", concreteVol), arabicFont))
-        summaryTable.addCell(createSummaryCell(t(context, "وزن الحديد الكلي", "Total Steel Weight"), String.format(Locale.US, "%.2f Tons", steelWeight / 1000.0), arabicFont))
+        summaryTable.addCell(createSummaryCell("Total Estimated Budget", String.format(Locale.US, "%,.2f EGP", totalBudget), arabicFont))
+        summaryTable.addCell(createSummaryCell("Total Concrete Volume", String.format(Locale.US, "%.2f m\u00B3", concreteVol), arabicFont))
+        summaryTable.addCell(createSummaryCell("Total Steel Weight", String.format(Locale.US, "%.2f Tons", steelWeight / 1000.0), arabicFont))
         document.add(summaryTable)
         document.add(Paragraph("\n"))
 
-        document.add(createStyledParagraph(t(context, "تفاصيل التكاليف", "DETAILED COST BREAKDOWN"), arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
+        document.add(createStyledParagraph("DETAILED COST BREAKDOWN", arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
         val itemTable = Table(UnitValue.createPercentArray(floatArrayOf(70f, 30f))).useAllAvailableWidth()
-        itemTable.addHeaderCell(createHeaderCell(t(context, "البند / اسم التصميم", "Item / Design Name"), arabicFont))
-        itemTable.addHeaderCell(createHeaderCell(t(context, "التكلفة (ج.م)", "Cost (EGP)"), arabicFont))
+        itemTable.addHeaderCell(createHeaderCell("Item / Design Name", arabicFont))
+        itemTable.addHeaderCell(createHeaderCell("Cost (EGP)", arabicFont))
         items.forEach { (name, price) ->
             addArabicCell(itemTable, name, arabicFont, fontSize = 9f)
             itemTable.addCell(Cell().add(Paragraph(String.format(Locale.US, "%,.0f", price)).setFontSize(9f).setTextAlignment(TextAlignment.RIGHT)))
@@ -648,17 +644,17 @@ object PdfGenerator {
 
         createReportHeader(
             document, context, arabicFont,
-            t(context, "تقرير تقدير التكاليف ودراسة الجدوى", "ESTIMATION & FEASIBILITY REPORT"),
-            t(context, "دراسة جدوى تقديرية", "Cost Estimate & Feasibility Study")
+            "ESTIMATION & FEASIBILITY REPORT",
+            "Cost Estimate & Feasibility Study"
         )
 
-        document.add(createStyledParagraph(t(context, "تقدير إجمالي التكلفة", "Total Project Cost Estimate"), arabicFont, 12f)
+        document.add(createStyledParagraph("Total Project Cost Estimate", arabicFont, 12f)
             .setFontColor(ColorConstants.GRAY))
         document.add(createStyledParagraph(String.format(Locale.US, "%,.0f %s", result.totalCost, result.currencySymbol), arabicFont, 26f, isBold = true)
             .setFontColor(PRIMARY_COLOR))
         document.add(Paragraph("\n"))
 
-        document.add(createStyledParagraph(t(context, "كشف البنود", "DETAILED QUANTITIES & COSTS"), arabicFont, 12f, isBold = true)
+        document.add(createStyledParagraph("DETAILED QUANTITIES & COSTS", arabicFont, 12f, isBold = true)
             .setFontColor(PRIMARY_COLOR))
         val itemTable = Table(UnitValue.createPercentArray(floatArrayOf(40f, 20f, 20f, 20f))).useAllAvailableWidth()
         itemTable.addHeaderCell(createHeaderCell("Description", arabicFont))
@@ -675,22 +671,22 @@ object PdfGenerator {
 
         result.investmentData?.let { invest ->
             document.add(Paragraph("\n"))
-            document.add(createStyledParagraph(t(context, "دراسة الجدوى والاستثمار", "FEASIBILITY & INVESTMENT ANALYSIS"), arabicFont, 12f, isBold = true)
+            document.add(createStyledParagraph("FEASIBILITY & INVESTMENT ANALYSIS", arabicFont, 12f, isBold = true)
                 .setFontColor(PRIMARY_COLOR))
             val investTable = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
             if (invest.landCost > 0) {
-                addArabicCell(investTable, t(context, "سعر الأرض", "Land Cost"), arabicFont, fontSize = 10f)
+                addArabicCell(investTable, "Land Cost", arabicFont, fontSize = 10f)
                 addArabicCell(investTable, String.format(Locale.US, "%,.0f %s", invest.landCost, result.currencySymbol), arabicFont, isBold = true, fontSize = 10f)
             }
-            addArabicCell(investTable, t(context, "تكلفة البناء", "Construction Cost"), arabicFont, fontSize = 10f)
+            addArabicCell(investTable, "Construction Cost", arabicFont, fontSize = 10f)
             addArabicCell(investTable, String.format(Locale.US, "%,.0f %s", invest.constructionCost, result.currencySymbol), arabicFont, isBold = true, fontSize = 10f)
-            addArabicCell(investTable, t(context, "صافي الربح", "Expected Net Profit"), arabicFont, fontSize = 10f)
+            addArabicCell(investTable, "Expected Net Profit", arabicFont, fontSize = 10f)
             addArabicCell(investTable, String.format(Locale.US, "%,.0f %s", invest.netProfit, result.currencySymbol), arabicFont, isBold = true, fontSize = 10f)
             addArabicCell(investTable, "ROI", arabicFont, fontSize = 10f)
             addArabicCell(investTable, String.format(Locale.US, "%.1f %%", invest.roi), arabicFont, isBold = true, fontSize = 10f)
-            addArabicCell(investTable, t(context, "هامش الربح", "Profit Margin"), arabicFont, fontSize = 10f)
+            addArabicCell(investTable, "Profit Margin", arabicFont, fontSize = 10f)
             addArabicCell(investTable, String.format(Locale.US, "%.1f %%", invest.profitMargin), arabicFont, isBold = true, fontSize = 10f)
-            addArabicCell(investTable, t(context, "مدة التنفيذ", "Construction Duration"), arabicFont, fontSize = 10f)
+            addArabicCell(investTable, "Construction Duration", arabicFont, fontSize = 10f)
             addArabicCell(investTable, "${invest.constructionDurationMonths} Months", arabicFont, isBold = true, fontSize = 10f)
             document.add(investTable)
         }
@@ -731,15 +727,11 @@ object PdfGenerator {
 
         createReportHeader(
             document, context, arabicFont,
-            t(context, "تقرير جرد المواد والمعدات", "INVENTORY REPORT"),
-            "${t(context, "تم الإنشاء", "Generated")}: ${dateFormat.format(Date())}  \u2022  ${t(context, "إجمالي البنود", "Total Items")}: ${items.size}"
+            "INVENTORY REPORT",
+            "${"Generated"}: ${dateFormat.format(Date())}  \u2022  ${"Total Items"}: ${items.size}"
         )
 
-        val headers = if (isEnglish(context)) {
-            arrayOf("#", "Item Name", "Type", "Quantity", "Unit", "Alert", "Notes")
-        } else {
-            arrayOf("#", "اسم البند", "النوع", "الكمية", "الوحدة", "تنبيه", "ملاحظات")
-        }
+        val headers = arrayOf("#", "Item Name", "Type", "Quantity", "Unit", "Alert", "Notes")
         val table = Table(UnitValue.createPercentArray(floatArrayOf(6f, 24f, 14f, 12f, 10f, 10f, 24f))).useAllAvailableWidth()
         headers.forEach { table.addHeaderCell(createHeaderCell(it, arabicFont)) }
 
@@ -751,11 +743,11 @@ object PdfGenerator {
             val truncatedName = if (item.name.length > 28) item.name.take(25) + "..." else item.name
             rowCells.add(Cell().add(createStyledParagraph(truncatedName, arabicFont, 8f, isBold = isLowStock)))
 
-            val typeName = if (isEnglish(context)) item.type.name else when (item.type) {
-                com.civileg.app.db.InventoryType.EQUIPMENT -> "معدات ثقيلة"
-                com.civileg.app.db.InventoryType.TOOLS -> "أدوات"
-                com.civileg.app.db.InventoryType.RAW_MATERIAL -> "خامات"
-                com.civileg.app.db.InventoryType.ACCESSORIES -> "إكسسوارات"
+            val typeName = when (item.type) {
+                com.civileg.app.db.InventoryType.EQUIPMENT -> "Heavy Equipment"
+                com.civileg.app.db.InventoryType.TOOLS -> "Tools"
+                com.civileg.app.db.InventoryType.RAW_MATERIAL -> "Raw Materials"
+                com.civileg.app.db.InventoryType.ACCESSORIES -> "Accessories"
             }
             rowCells.add(Cell().add(createStyledParagraph(typeName, arabicFont, 8f)))
 
@@ -767,7 +759,7 @@ object PdfGenerator {
 
             val notes = if (item.notes.length > 25) item.notes.take(22) + "..." else if (item.notes.isEmpty()) "-" else item.notes
             val notesCell = Cell().add(createStyledParagraph(notes, arabicFont, 8f))
-            if (isLowStock) notesCell.add(createStyledParagraph(t(context, "⚠ منخفض", "LOW STOCK"), arabicFont, 7f, isBold = true).setFontColor(ERROR_COLOR))
+            if (isLowStock) notesCell.add(createStyledParagraph("LOW STOCK", arabicFont, 7f, isBold = true).setFontColor(ERROR_COLOR))
             rowCells.add(notesCell)
 
             if (isLowStock) rowCells.forEach { it.setFontColor(ERROR_COLOR) }
@@ -776,7 +768,7 @@ object PdfGenerator {
         document.add(table)
 
         document.add(Paragraph("\n"))
-        document.add(createStyledParagraph(t(context, "ملخص حسب النوع", "SUMMARY BY TYPE"), arabicFont, 12f, isBold = true)
+        document.add(createStyledParagraph("SUMMARY BY TYPE", arabicFont, 12f, isBold = true)
             .setFontColor(PRIMARY_COLOR))
         val summaryTable = Table(UnitValue.createPercentArray(floatArrayOf(100f))).useAllAvailableWidth()
         items.groupBy { it.type }.forEach { (type, itemsOfType) ->
@@ -787,7 +779,7 @@ object PdfGenerator {
         val lowStockItems = items.filter { it.alertQuantity > 0 && it.quantity <= it.alertQuantity }
         if (lowStockItems.isNotEmpty()) {
             document.add(Paragraph("\n"))
-            document.add(createStyledParagraph(t(context, "تنبيهات المخزون المنخفض", "LOW STOCK ALERTS") + " (${lowStockItems.size})", arabicFont, 12f, isBold = true)
+            document.add(createStyledParagraph("LOW STOCK ALERTS" + " (${lowStockItems.size})", arabicFont, 12f, isBold = true)
                 .setFontColor(ERROR_COLOR))
             val alertTable = Table(UnitValue.createPercentArray(floatArrayOf(100f))).useAllAvailableWidth()
             lowStockItems.forEach { item ->

@@ -14,12 +14,6 @@
         android:maxSdkVersion="32"
         tools:ignore="ScopedStorage" />
 
-    <!-- Modern scoped storage for SDK 33+ -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-
-    <!-- Security: prevent screen capture of sensitive design data -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-
     <!-- Support all screen sizes: phones, tablets, foldables -->
     <supports-screens
         android:smallScreens="true"

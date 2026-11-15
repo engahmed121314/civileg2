@@ -91,9 +91,6 @@ object FrameAnalysisPdfExporter {
         document.add(Paragraph("Frame Structural Analysis Report")
             .setFontSize(20f).setTextAlignment(TextAlignment.CENTER)
             .setMarginBottom(5f))
-        document.add(styledEnglishParagraph("تقرير تحليل وتصميم الإطار", arabicFont, 16f)
-            .setTextAlignment(TextAlignment.CENTER)
-            .setMarginBottom(5f))
         document.add(Paragraph("Design Code: ${settings.designCode.version}")
             .setFontSize(11f).setTextAlignment(TextAlignment.CENTER)
             .setMarginBottom(15f))
@@ -111,7 +108,7 @@ object FrameAnalysisPdfExporter {
         }
 
         // === Nodes Table ===
-        document.add(styledEnglishParagraph("Nodes / العقد", arabicBold, 14f, bold = true).setMarginTop(15f))
+        document.add(styledEnglishParagraph("Nodes", arabicBold, 14f, bold = true).setMarginTop(15f))
         val nodeTable = Table(UnitValue.createPercentArray(floatArrayOf(15f, 25f, 25f, 35f))).useAllAvailableWidth()
         nodeTable.addHeaderCell(Cell().add(Paragraph("ID").setFontSize(9f).setBold()))
         nodeTable.addHeaderCell(Cell().add(Paragraph("X (m)").setFontSize(9f).setBold()))
@@ -126,7 +123,7 @@ object FrameAnalysisPdfExporter {
         document.add(nodeTable)
 
         // === Members Table ===
-        document.add(styledEnglishParagraph("Members / الأعضاء", arabicBold, 14f, bold = true).setMarginTop(15f))
+        document.add(styledEnglishParagraph("Members", arabicBold, 14f, bold = true).setMarginTop(15f))
         val memTable = Table(UnitValue.createPercentArray(floatArrayOf(7f, 18f, 11f, 11f, 14f, 27f, 12f))).useAllAvailableWidth()
         memTable.addHeaderCell(Cell().add(Paragraph("#").setFontSize(8f).setBold()))
         memTable.addHeaderCell(Cell().add(Paragraph("Name").setFontSize(8f).setBold()))
@@ -159,7 +156,7 @@ object FrameAnalysisPdfExporter {
 
         // === Slab Panels Table ===
         if (slabs.isNotEmpty()) {
-            document.add(styledEnglishParagraph("Slab Panels / البلاطات", arabicBold, 14f, bold = true).setMarginTop(15f))
+            document.add(styledEnglishParagraph("Slab Panels", arabicBold, 14f, bold = true).setMarginTop(15f))
             val slabTable = Table(UnitValue.createPercentArray(floatArrayOf(8f, 26f, 15f, 15f, 12f, 24f))).useAllAvailableWidth()
             slabTable.addHeaderCell(Cell().add(Paragraph("#").setFontSize(8f).setBold()))
             slabTable.addHeaderCell(Cell().add(Paragraph("Joints").setFontSize(8f).setBold()))
@@ -212,7 +209,7 @@ object FrameAnalysisPdfExporter {
             }
 
             // Member End Forces Table
-            document.add(styledEnglishParagraph("Member End Forces / القوى الداخلية", arabicBold, 14f, bold = true).setMarginTop(15f))
+            document.add(styledEnglishParagraph("Member End Forces", arabicBold, 14f, bold = true).setMarginTop(15f))
             val forcesTable = Table(UnitValue.createPercentArray(floatArrayOf(15f, 17f, 17f, 17f, 17f, 17f))).useAllAvailableWidth()
             forcesTable.addHeaderCell(Cell().add(Paragraph("Member").setFontSize(8f).setBold()))
             forcesTable.addHeaderCell(Cell().add(Paragraph("NI (kN)").setFontSize(8f).setBold()))
@@ -234,7 +231,7 @@ object FrameAnalysisPdfExporter {
             // Concrete Design Results
             if (result.concreteDesignResults.isNotEmpty()) {
                 document.add(AreaBreak())
-                document.add(styledEnglishParagraph("Concrete Design Results / نتائج التصميم الخرساني", arabicBold, 14f, bold = true))
+                document.add(styledEnglishParagraph("Concrete Design Results", arabicBold, 14f, bold = true))
                 for (cr in result.concreteDesignResults) {
                     document.add(styledEnglishParagraph("${cr.memberName} (#${cr.memberId}) - ${cr.memberType.displayNameEn}", arabicBold, 11f, bold = true).setMarginTop(8f))
                     document.add(styledEnglishParagraph("Section: ${cr.section.width} x ${cr.section.depth} mm | f'c = ${cr.section.fcu} MPa | fy = ${cr.section.fy} MPa", arabicFont, 9f))
@@ -249,7 +246,7 @@ object FrameAnalysisPdfExporter {
             // Steel Design Results
             if (result.steelDesignResults.isNotEmpty()) {
                 document.add(AreaBreak())
-                document.add(styledEnglishParagraph("Steel Design Results / نتائج التصميم المعدني", arabicBold, 14f, bold = true))
+                document.add(styledEnglishParagraph("Steel Design Results", arabicBold, 14f, bold = true))
                 for (sr in result.steelDesignResults) {
                     document.add(styledEnglishParagraph("${sr.memberName} (#${sr.memberId}) - ${sr.memberType.displayNameEn}", arabicBold, 11f, bold = true).setMarginTop(8f))
                     document.add(styledEnglishParagraph("Selected: ${sr.selectedSection} | W = ${sr.sectionWeight} kg/m | Ix = ${sr.sectionIx} cm^4", arabicFont, 9f))
@@ -263,7 +260,7 @@ object FrameAnalysisPdfExporter {
         return file
         } catch (e: Exception) {
             Log.e("FrameAnalysisPdf", "PDF generation failed", e)
-            throw RuntimeException("خطأ في إنشاء تقرير PDF: ${e.message}", e)
+            throw RuntimeException("Error generating PDF report: ${e.message}", e)
         }
     }
 

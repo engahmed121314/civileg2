@@ -60,8 +60,8 @@ object PdfDrawingGenerator {
     }
 
     /** Pick Arabic or English label based on current locale */
-    fun t(ar: String, en: String): String =
-        if (LocaleHelper.isArabic()) ar else en
+    fun t(en: String): String = en
+    fun t(ar: String, en: String): String = en
 
     fun generateWarehouseDrawing(
         inputs: SteelWarehouseInputs,
@@ -107,7 +107,7 @@ object PdfDrawingGenerator {
         canvas.drawPath(path, pMain)
         canvas.drawLine(cx - w/2, yBase, cx + w/2, yBase, pDim)
         
-        canvas.drawBilingualText("FRONT ELEVATION | مسقط رأسي", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
+        canvas.drawBilingualText("FRONT ELEVATION", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
         canvas.drawBilingualText("${span}m", cx, yBase + 30f, DIM_TEXT, 20f, true)
     }
 
@@ -131,7 +131,7 @@ object PdfDrawingGenerator {
             canvas.drawLine(x, yStart, x, yStart + ds, pDim)
         }
         
-        canvas.drawBilingualText("PLAN VIEW | مسقط أفقي", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
+        canvas.drawBilingualText("PLAN VIEW", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
         canvas.drawBilingualText("L = ${length}m, B = ${span}m", cx, yStart + ds + 35f, DIM_TEXT, 20f, true)
     }
 
@@ -165,7 +165,7 @@ object PdfDrawingGenerator {
         canvas.drawLine(e1.x, e1.y, a1.x, a1.y, pMain)
         canvas.drawLine(e2.x, e2.y, a1.x, a1.y, pMain)
         
-        canvas.drawBilingualText("3D WIREFRAME | منظور هيكلي", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
+        canvas.drawBilingualText("3D WIREFRAME", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
     }
 
     fun generateBasePlateDrawing(
@@ -229,7 +229,7 @@ object PdfDrawingGenerator {
         canvas.drawHDim(cx - drawW/2, cx + drawW/2, cy + drawL/2 + 40f, "${plateWidth.toInt()} mm")
         canvas.drawVDim(cy - drawL/2, cy + drawL/2, cx + drawW/2 + 40f, "${plateLength.toInt()} mm")
         
-        canvas.drawBilingualText("BASE PLATE PLAN | مسقط أفقي لقاعدة العمود", cx, 60f, DIM_TEXT, 24f, true)
+        canvas.drawBilingualText("BASE PLATE PLAN", cx, 60f, DIM_TEXT, 24f, true)
         val statusColor = if (isSafe) Color.parseColor("#2E7D32") else Color.RED
         canvas.drawBilingualText(if (isSafe) "SAFE ✓" else "UNSAFE ✗", cx, cy + drawL/2 + 100f, statusColor, 32f, true)
         
@@ -528,7 +528,7 @@ object PdfDrawingGenerator {
 
         // Title
         val titleP = textPaint(Color.WHITE, 24f, true)
-        canvas.drawTextCentered(t("تفاصيل وتسليح الكمرات", "BEAM REINFORCEMENT DETAIL"), W / 2f, 30f, titleP)
+        canvas.drawTextCentered("BEAM REINFORCEMENT DETAIL", W / 2f, 30f, titleP)
 
         // Cross-section inset (bottom-left)
         val csX = 80f; val csY = H * 0.60f; val csScale = 0.4f
@@ -646,7 +646,7 @@ object PdfDrawingGenerator {
         canvas.drawVDim(elevTop, elevTop + elevH, elevLeft - 25f, "H=${columnHeight.toInt()} mm")
         canvas.drawHDim(elevLeft, elevLeft + elevW, elevTop + elevH + 30f, "b=${columnWidth.toInt()}")
 
-        canvas.drawTextCentered(t("قطاع طولي للعمود", "COLUMN ELEVATION"), elevLeft + elevW / 2f, elevTop - 30f, titleP)
+        canvas.drawTextCentered("COLUMN ELEVATION", elevLeft + elevW / 2f, elevTop - 30f, titleP)
 
         // Cross-section (right side)
         val csCx = W * 0.65f; val csCy = H * 0.35f
@@ -682,7 +682,7 @@ object PdfDrawingGenerator {
 
             // Section dimensions
             canvas.drawHDim(csCx - csRadius, csCx + csRadius, csCy + csRadius + 15f, "Ø${columnWidth.toInt()} mm", 20f)
-            canvas.drawTextCentered(t("قطاع عرضي A-A", "SECTION A-A"), csCx, csCy - csRadius - 20f, titleP)
+            canvas.drawTextCentered("SECTION A-A", csCx, csCy - csRadius - 20f, titleP)
         } else {
             // ── Rectangular cross-section (original logic) ──
             val csW2 = columnWidth.toFloat() * 0.8f
@@ -733,7 +733,7 @@ object PdfDrawingGenerator {
             // Section dimensions
             canvas.drawHDim(csLeft, csLeft + csW2, csTop2 + csH2 + 15f, "${columnWidth.toInt()} mm (b)", 20f)
             canvas.drawVDim(csTop2, csTop2 + csH2, csLeft + csW2 + 15f, "${columnDepth.toInt()} mm (d)", 20f)
-            canvas.drawTextCentered(t("قطاع عرضي A-A", "SECTION A-A"), csCx, csTop2 - 20f, titleP)
+            canvas.drawTextCentered("SECTION A-A", csCx, csTop2 - 20f, titleP)
         }
 
         // Rebar table
@@ -831,7 +831,7 @@ object PdfDrawingGenerator {
         canvas.drawTextCentered("Lx: ${(spanX*1000).toInt()}", planL + planW/2f, planT + planH + 60f, textPaint(DIM_TEXT, 14f))
 
         // Plan title (bilingual)
-        canvas.drawTextCentered(t("مسقط تسليح البلاطة", "SLAB REINFORCEMENT PLAN"), planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
+        canvas.drawTextCentered("SLAB REINFORCEMENT PLAN", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
         
         // [AUDIT: PRECISION] Show thickness in plan
         val fadedWhite = Color.argb(128, 255, 255, 255)
@@ -841,12 +841,12 @@ object PdfDrawingGenerator {
         val legX = planL + 10f; val legY = planT + planH - 55f
         canvas.drawLine(legX, legY, legX + 25f, legY, mainP)
         canvas.drawBilingualText(
-            t("رئيسي $mainDia mm @ $mainSpacing mm", "Main ${mainDia.toInt()}mm @ ${mainSpacing.toInt()}mm"),
+            "Main ${mainDia.toInt()}mm @ ${mainSpacing.toInt()}mm",
             legX + 30f, legY + 8f, DIM_TEXT, 14f
         )
         canvas.drawLine(legX, legY + 18f, legX + 25f, legY + 18f, distP)
         canvas.drawBilingualText(
-            t("توزيع $distDia mm @ $distSpacing mm", "Dist ${distDia.toInt()}mm @ ${distSpacing.toInt()}mm"),
+            "Dist ${distDia.toInt()}mm @ ${distSpacing.toInt()}mm",
             legX + 30f, legY + 26f, DIM_TEXT, 14f
         )
 
@@ -917,24 +917,24 @@ object PdfDrawingGenerator {
         }
 
         // Section title (bilingual)
-        canvas.drawTextCentered(t("قطاع B-B", "SECTION B-B"), secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
+        canvas.drawTextCentered("SECTION B-B", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
         // ===== REINFORCEMENT SCHEDULE TABLE (bottom) =====
         drawRebarTable(canvas,
             x = 80f, y = H * 0.6f,
             data = listOf(
-                listOf(t("الرمز", "Mark"), t("القطر", "Dia (mm)"), t("الاتجاه", "Direction"), t("التباعد", "Spacing (mm)"), t("الطبقة", "Layer"), t("الطول", "Length (mm)")),
-                listOf("M1", "${mainDia.toInt()}", t("البحر القصير (Lx)", "Short span (Lx)"), "@ ${mainSpacing.toInt()} c/c", t("سفلي", "Bottom"), "${(spanX * 1000).toInt()}"),
-                listOf("D1", "${distDia.toInt()}", t("البحر الطويل (Ly)", "Long span (Ly)"), "@ ${distSpacing.toInt()} c/c", t("سفلي", "Bottom"), "${(spanY * 1000).toInt()}"),
-                listOf("T1", "${mainDia.toInt()}", t("حديد سالب (الكمريات)", "Top support (neg. moment)"), "@ ${mainSpacing.toInt()} c/c", t("علوي", "Top"), "—")
+                listOf("Mark", "Dia (mm)", "Direction", "Spacing (mm)", "Layer", "Length (mm)"),
+                listOf("M1", "${mainDia.toInt()}", "Short span (Lx)", "@ ${mainSpacing.toInt()} c/c", "Bottom", "${(spanX * 1000).toInt()}"),
+                listOf("D1", "${distDia.toInt()}", "Long span (Ly)", "@ ${distSpacing.toInt()} c/c", "Bottom", "${(spanY * 1000).toInt()}"),
+                listOf("T1", "${mainDia.toInt()}", "Top support (neg. moment)", "@ ${mainSpacing.toInt()} c/c", "Top", "—")
             )
         )
 
         // ===== TITLE BLOCK =====
-        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, t("تفاصيل تسليح البلاطة", "Slab Reinforcement Detail"))
+        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Slab Reinforcement Detail")
 
         // Scale note (bilingual)
-        canvas.drawBilingualText(t("المقياس: غير مطابق للمقياس - للمرجعية فقط", "Scale: Not to scale - For reference only"), 80f, H - 20f, DIM_TEXT, 12f)
+        canvas.drawBilingualText("Scale: Not to scale - For reference only", 80f, H - 20f, DIM_TEXT, 12f)
 
         return bitmap
     }
@@ -1055,18 +1055,18 @@ object PdfDrawingGenerator {
         // Dimensions
         canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
         canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
-        canvas.drawTextCentered(t("مسقط بلاطة مسطحة مع أبلات التسليح", "FLAT SLAB PLAN — DROP PANELS"), planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
+        canvas.drawTextCentered("FLAT SLAB PLAN — DROP PANELS", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
         val legX = planL + 10f; val legY = planT + planH - 75f
         canvas.drawRect(legX, legY, legX + 20f, legY + 14f, fillPaint(dpColor))
-        canvas.drawBilingualText(t("أبلة تسليح", "Drop Panel"), legX + 26f, legY + 12f, DIM_TEXT, 14f)
+        canvas.drawBilingualText("Drop Panel", legX + 26f, legY + 12f, DIM_TEXT, 14f)
         canvas.drawRect(legX, legY + 20f, legX + 20f, legY + 34f, fillPaint(colColor))
-        canvas.drawBilingualText(t("عمود", "Column"), legX + 26f, legY + 32f, DIM_TEXT, 14f)
+        canvas.drawBilingualText("Column", legX + 26f, legY + 32f, DIM_TEXT, 14f)
         canvas.drawLine(legX, legY + 44f, legX + 25f, legY + 44f, mainP)
-        canvas.drawBilingualText(t("رئيسي ${mainDia.toInt()}@${mainSpacing.toInt()}", "Main ${mainDia.toInt()}@${mainSpacing.toInt()}"), legX + 30f, legY + 50f, DIM_TEXT, 13f)
+        canvas.drawBilingualText("Main ${mainDia.toInt()}@${mainSpacing.toInt()}", legX + 30f, legY + 50f, DIM_TEXT, 13f)
         canvas.drawLine(legX, legY + 60f, legX + 25f, legY + 60f, distP)
-        canvas.drawBilingualText(t("توزيع ${distDia.toInt()}@${distSpacing.toInt()}", "Dist ${distDia.toInt()}@${distSpacing.toInt()}"), legX + 30f, legY + 66f, DIM_TEXT, 13f)
+        canvas.drawBilingualText("Dist ${distDia.toInt()}@${distSpacing.toInt()}", legX + 30f, legY + 66f, DIM_TEXT, 13f)
 
         // ===== CROSS SECTION (right) =====
         val secL = W * 0.55f; val secT = 100f
@@ -1102,19 +1102,19 @@ object PdfDrawingGenerator {
         // Dimensions
         canvas.drawHDim(secL, secL + secViewW, secT + secH + dpH + 50f, "${(spanX * 1000).toInt()} mm")
         canvas.drawVDim(secT, secT + secH + dpH, secL + secViewW + 20f, "t=${thickness.toInt()}mm + DP=${dropPanelSize.toInt()}mm", offset = 25f)
-        canvas.drawTextCentered(t("قطاع A-A مع أبلة التسليح", "SECTION A-A (WITH DROP PANEL)"), secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
+        canvas.drawTextCentered("SECTION A-A (WITH DROP PANEL)", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
         // ===== TABLE =====
         drawRebarTable(canvas,
             x = 80f, y = H * 0.6f,
             data = listOf(
-                listOf(t("الرمز", "Mark"), t("القطر", "Dia"), t("الاتجاه", "Direction"), t("التباعد", "Spacing"), t("الطبقة", "Layer"), t("الطول", "Length")),
-                listOf("M1", "${mainDia.toInt()}", t("بحر قصير Lx", "Short span Lx"), "@ ${mainSpacing.toInt()} c/c", t("سفلي", "Bottom"), "${(spanX * 1000).toInt()}"),
-                listOf("D1", "${distDia.toInt()}", t("بحر طويل Ly", "Long span Ly"), "@ ${distSpacing.toInt()} c/c", t("سفلي", "Bottom"), "${(spanY * 1000).toInt()}")
+                listOf("Mark", "Dia", "Direction", "Spacing", "Layer", "Length"),
+                listOf("M1", "${mainDia.toInt()}", "Short span Lx", "@ ${mainSpacing.toInt()} c/c", "Bottom", "${(spanX * 1000).toInt()}"),
+                listOf("D1", "${distDia.toInt()}", "Long span Ly", "@ ${distSpacing.toInt()} c/c", "Bottom", "${(spanY * 1000).toInt()}")
             )
         )
-        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, t("تفاصيل بلاطة مسطحة", "Flat Slab Detail"))
-        canvas.drawBilingualText(t("المقياس: غير مطابق للمقياس", "Scale: Not to scale"), 80f, H - 20f, DIM_TEXT, 12f)
+        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Flat Slab Detail")
+        canvas.drawBilingualText("Scale: Not to scale", 80f, H - 20f, DIM_TEXT, 12f)
         return bitmap
     }
 
@@ -1201,16 +1201,16 @@ object PdfDrawingGenerator {
         // Dimensions
         canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
         canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
-        canvas.drawTextCentered(t("مسقط بلاطة هردي — كمرات وأبلات", "HORDI SLAB PLAN — RIBS & VOID BLOCKS"), planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
+        canvas.drawTextCentered("HORDI SLAB PLAN — RIBS & VOID BLOCKS", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
         val legX = planL + 10f; val legY = planT + 10f
         canvas.drawRect(legX, legY, legX + 18f, legY + 12f, fillPaint(CONCRETE))
-        canvas.drawBilingualText(t("كمرة (ريبة)", "Rib"), legX + 24f, legY + 10f, DIM_TEXT, 13f)
+        canvas.drawBilingualText("Rib", legX + 24f, legY + 10f, DIM_TEXT, 13f)
         canvas.drawRect(legX, legY + 18f, legX + 18f, legY + 30f, fillPaint(Color.parseColor("#1F1F2E")))
-        canvas.drawBilingualText(t("بلوك مفرغ", "Hollow Block"), legX + 24f, legY + 28f, DIM_TEXT, 13f)
+        canvas.drawBilingualText("Hollow Block", legX + 24f, legY + 28f, DIM_TEXT, 13f)
         canvas.drawCircle(legX + 9f, legY + 40f, 3f, fillPaint(REBAR_BLUE))
-        canvas.drawBilingualText(t("سيخ رئيسي ${mainDia.toInt()}mm", "Main bar ${mainDia.toInt()}mm"), legX + 24f, legY + 44f, DIM_TEXT, 13f)
+        canvas.drawBilingualText("Main bar ${mainDia.toInt()}mm", legX + 24f, legY + 44f, DIM_TEXT, 13f)
 
         // ===== CROSS SECTION (showing ribs + voids + blocks) =====
         val secL = W * 0.55f; val secT = 100f
@@ -1252,20 +1252,20 @@ object PdfDrawingGenerator {
         // Dimensions
         canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${(spanX * 1000).toInt()} mm")
         canvas.drawVDim(secT, secT + secH, secL + secViewW + 20f, "t=${thickness.toInt()}mm", offset = 25f)
-        canvas.drawTextCentered(t("قطاع A-A — كمرات وبلوكات", "SECTION A-A — RIBS & BLOCKS"), secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
+        canvas.drawTextCentered("SECTION A-A — RIBS & BLOCKS", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
         // ===== TABLE =====
         drawRebarTable(canvas,
             x = 80f, y = H * 0.6f,
             data = listOf(
-                listOf(t("الرمز", "Mark"), t("القطر", "Dia"), t("الموقع", "Location"), t("التباعد", "Spacing"), t("الطول", "Length")),
-                listOf("R1", "${mainDia.toInt()}", t("باطن الريبة", "Rib bottom"), "@ ${ribSpacing.toInt()} mm", "${(spanX * 1000).toInt()}"),
-                listOf("T1", "${distDia.toInt()}", t("سقف البلاطة", "Slab top"), "@ ${distSpacing.toInt()} mm", "${(spanY * 1000).toInt()}"),
-                listOf("S1", "8", t("روابط الريبة", "Rib stirrups"), "@ 200 mm", "${(spanX * 1000).toInt()}")
+                listOf("Mark", "Dia", "Location", "Spacing", "Length"),
+                listOf("R1", "${mainDia.toInt()}", "Rib bottom", "@ ${ribSpacing.toInt()} mm", "${(spanX * 1000).toInt()}"),
+                listOf("T1", "${distDia.toInt()}", "Slab top", "@ ${distSpacing.toInt()} mm", "${(spanY * 1000).toInt()}"),
+                listOf("S1", "8", "Rib stirrups", "@ 200 mm", "${(spanX * 1000).toInt()}")
             )
         )
-        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, t("تفاصيل بلاطة هردي", "Hordi Slab Detail"))
-        canvas.drawBilingualText(t("المقياس: غير مطابق للمقياس", "Scale: Not to scale"), 80f, H - 20f, DIM_TEXT, 12f)
+        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Hordi Slab Detail")
+        canvas.drawBilingualText("Scale: Not to scale", 80f, H - 20f, DIM_TEXT, 12f)
         return bitmap
     }
 
@@ -1325,14 +1325,14 @@ object PdfDrawingGenerator {
         // Dimensions
         canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
         canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
-        canvas.drawTextCentered(t("مسقط بلاطة وافل — كمرات متقاطعة", "WAFFLE SLAB PLAN — TWO-WAY RIBS"), planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
+        canvas.drawTextCentered("WAFFLE SLAB PLAN — TWO-WAY RIBS", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
         val legX = planL + 10f; val legY = planT + 10f
         canvas.drawRect(legX, legY, legX + 18f, legY + 12f, fillPaint(CONCRETE))
-        canvas.drawBilingualText(t("كمرة", "Rib"), legX + 24f, legY + 10f, DIM_TEXT, 13f)
+        canvas.drawBilingualText("Rib", legX + 24f, legY + 10f, DIM_TEXT, 13f)
         canvas.drawRect(legX, legY + 18f, legX + 18f, legY + 30f, fillPaint(Color.parseColor("#1F1F2E")))
-        canvas.drawBilingualText(t("فراغ", "Void"), legX + 24f, legY + 28f, DIM_TEXT, 13f)
+        canvas.drawBilingualText("Void", legX + 24f, legY + 28f, DIM_TEXT, 13f)
 
         // ===== CROSS SECTION =====
         val secL = W * 0.55f; val secT = 100f
@@ -1364,20 +1364,20 @@ object PdfDrawingGenerator {
         // Dimensions
         canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${(spanX * 1000).toInt()} mm")
         canvas.drawVDim(secT, secT + secH, secL + secViewW + 20f, "t=${thickness.toInt()}mm", offset = 25f)
-        canvas.drawTextCentered(t("قطاع A-A — وافل", "SECTION A-A — WAFFLE"), secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
+        canvas.drawTextCentered("SECTION A-A — WAFFLE", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
         // ===== TABLE =====
         drawRebarTable(canvas,
             x = 80f, y = H * 0.6f,
             data = listOf(
-                listOf(t("الرمز", "Mark"), t("القطر", "Dia"), t("الاتجاه", "Direction"), t("التباعد", "Spacing"), t("الطبقة", "Layer")),
-                listOf("RX", "${mainDia.toInt()}", t("بحر X", "X-direction"), "@ ${ribSpacing.toInt()} mm", t("باطن", "Bottom")),
-                listOf("RY", "${mainDia.toInt()}", t("بحر Y", "Y-direction"), "@ ${ribSpacing.toInt()} mm", t("باطن", "Bottom")),
-                listOf("T", "${distDia.toInt()}", t("سقف", "Top flange"), "@ ${distSpacing.toInt()} mm", t("علوي", "Top"))
+                listOf("Mark", "Dia", "Direction", "Spacing", "Layer"),
+                listOf("RX", "${mainDia.toInt()}", "X-direction", "@ ${ribSpacing.toInt()} mm", "Bottom"),
+                listOf("RY", "${mainDia.toInt()}", "Y-direction", "@ ${ribSpacing.toInt()} mm", "Bottom"),
+                listOf("T", "${distDia.toInt()}", "Top flange", "@ ${distSpacing.toInt()} mm", "Top")
             )
         )
-        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, t("تفاصيل بلاطة وافل", "Waffle Slab Detail"))
-        canvas.drawBilingualText(t("المقياس: غير مطابق للمقياس", "Scale: Not to scale"), 80f, H - 20f, DIM_TEXT, 12f)
+        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Waffle Slab Detail")
+        canvas.drawBilingualText("Scale: Not to scale", 80f, H - 20f, DIM_TEXT, 12f)
         return bitmap
     }
 
@@ -1443,14 +1443,14 @@ object PdfDrawingGenerator {
         // Dimensions
         canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
         canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
-        canvas.drawTextCentered(t("مسقط بلاطة بست تنشن — ترتيب ال tendons", "POST-TENSION SLAB PLAN — TENDON LAYOUT"), planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
+        canvas.drawTextCentered("POST-TENSION SLAB PLAN — TENDON LAYOUT", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
         val legX = planL + 10f; val legY = planT + planH - 55f
         canvas.drawLine(legX, legY, legX + 25f, legY, tendonP)
-        canvas.drawBilingualText(t("Tendons (parabolic profile)", "Tendons (parabolic profile)"), legX + 30f, legY + 5f, DIM_TEXT, 13f)
+        canvas.drawBilingualText("Tendons (parabolic profile)", legX + 30f, legY + 5f, DIM_TEXT, 13f)
         canvas.drawRect(legX, legY + 16f, legX + 18f, legY + 28f, anchorP)
-        canvas.drawBilingualText(t("أنكور", "Anchorage"), legX + 24f, legY + 26f, DIM_TEXT, 13f)
+        canvas.drawBilingualText("Anchorage", legX + 24f, legY + 26f, DIM_TEXT, 13f)
 
         // ===== CROSS SECTION (showing parabolic tendon profile) =====
         val secL = W * 0.55f; val secT = 100f
@@ -1483,19 +1483,19 @@ object PdfDrawingGenerator {
         // Dimensions
         canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${(spanX * 1000).toInt()} mm")
         canvas.drawVDim(secT, secT + secH, secL + secViewW + 20f, "t=${thickness.toInt()}mm", offset = 25f)
-        canvas.drawTextCentered(t("قطاع A-A — مظهر ال tendons", "SECTION A-A — TENDON PROFILE"), secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
+        canvas.drawTextCentered("SECTION A-A — TENDON PROFILE", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
         // ===== TABLE =====
         drawRebarTable(canvas,
             x = 80f, y = H * 0.6f,
             data = listOf(
-                listOf(t("الرمز", "Mark"), t("النوع", "Type"), t("الاتجاه", "Direction"), t("التباعد", "Spacing"), t("القطر", "Dia")),
-                listOf("PT1", t("ست تنشن", "Tendon"), t("بحر X", "X-direction"), "@ ${mainSpacing.toInt()} mm", "Ø${mainDia.toInt()}mm (15.2mm strand)"),
-                listOf("R1", t("تسليح عادي", "Mild steel"), t("بحر Y", "Y-direction"), "@ ${distSpacing.toInt()} mm", "Ø${distDia.toInt()}mm")
+                listOf("Mark", "Type", "Direction", "Spacing", "Dia"),
+                listOf("PT1", "Tendon", "X-direction", "@ ${mainSpacing.toInt()} mm", "Ø${mainDia.toInt()}mm (15.2mm strand)"),
+                listOf("R1", "Mild steel", "Y-direction", "@ ${distSpacing.toInt()} mm", "Ø${distDia.toInt()}mm")
             )
         )
-        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, t("تفاصيل بلاطة بست تنشن", "Post-Tension Slab Detail"))
-        canvas.drawBilingualText(t("المقياس: غير مطابق للمقياس", "Scale: Not to scale"), 80f, H - 20f, DIM_TEXT, 12f)
+        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Post-Tension Slab Detail")
+        canvas.drawBilingualText("Scale: Not to scale", 80f, H - 20f, DIM_TEXT, 12f)
         return bitmap
     }
 
@@ -2195,7 +2195,7 @@ object PdfDrawingGenerator {
         canvas.drawHDim(csLeft, leftWallRight, wallTop - 15f, "tw=${wallThickness.toInt()}", 20f)
         canvas.drawVDim(baseTop, baseBottom, csLeft + drawW + 15f, "tb=${baseThickness.toInt()}", 20f)
 
-        canvas.drawTextCentered(t("قطاع عرضي للخزان", "TANK CROSS-SECTION"), csLeft + drawW / 2f, csTop - 25f, titleP)
+        canvas.drawTextCentered("TANK CROSS-SECTION", csLeft + drawW / 2f, csTop - 25f, titleP)
 
         // === RIGHT SIDE: Plan View ===
         val planLeft = W * 0.52f; val planTop = 80f
@@ -2412,7 +2412,7 @@ object PdfDrawingGenerator {
         canvas.drawHDim(baseRight - heelPx, baseRight, baseBottom + 50f, "Heel: ${heelLength.toInt()}")
         canvas.drawVDim(wallTopY, wallTopY + whPx, wallTopRight + 25f, "ts=${wallTopThickness.toInt()}")
 
-        canvas.drawTextCentered(t("مقطع جدار استنادي", "RETAINING WALL SECTION"), (baseLeft + baseRight) / 2f, marginT - 25f, titleP)
+        canvas.drawTextCentered("RETAINING WALL SECTION", (baseLeft + baseRight) / 2f, marginT - 25f, titleP)
         
         // [AUDIT: PRECISION] Add soil friction angle label
         val soilP = textPaint(Color.WHITE, 13f, true)
@@ -3158,7 +3158,7 @@ object PdfDrawingGenerator {
 
         // Title
         canvas.drawTextCentered(
-            t("مسقط المبنى وتوزيع القوى الأفقية", "BUILDING ELEVATION & FORCE DISTRIBUTION"),
+            "BUILDING ELEVATION & FORCE DISTRIBUTION",
             elevL + elevW / 2f, elevT - 30f,
             textPaint(DIM_TEXT, 18f, true)
         )
@@ -3185,13 +3185,13 @@ object PdfDrawingGenerator {
 
         // Axis labels
         canvas.drawTextCentered(
-            t("القوة الأفقية (kN)", "Lateral Force (kN)"),
+            "Lateral Force (kN)",
             chartL + 30f, chartT + chartH / 2f,
             textPaint(DIM_TEXT, 13f, true)
         )
         // Rotate Y label by drawing it vertically
         canvas.drawTextCentered(
-            t("الطابق", "Floor"),
+            "Floor",
             chartL + chartW / 2f, chartT + chartH - 10f,
             textPaint(DIM_TEXT, 13f, true)
         )
@@ -3239,7 +3239,7 @@ object PdfDrawingGenerator {
         } else {
             // Empty state
             canvas.drawBilingualText(
-                t("لا توجد بيانات قوى", "No force data"),
+                "No force data",
                 chartL + chartW / 2f, chartT + chartH / 2f,
                 DIM_TEXT, 16f
             )
@@ -3247,7 +3247,7 @@ object PdfDrawingGenerator {
 
         // Chart title
         canvas.drawTextCentered(
-            t("توزيع القوى على الطوابق", "FLOOR FORCE DISTRIBUTION"),
+            "FLOOR FORCE DISTRIBUTION",
             chartL + chartW / 2f, chartT - 12f,
             textPaint(REBAR_BLUE, 16f, true)
         )
@@ -3270,12 +3270,12 @@ object PdfDrawingGenerator {
         canvas.drawLine(spOriginX, spOriginY, spMaxX, spOriginY, axisP)
 
         canvas.drawTextCentered(
-            t("تسارع طيفي Sa (g)", "Spectral Accel Sa (g)"),
+            "Spectral Accel Sa (g)",
             specL + 30f, specT + specH / 2f,
             textPaint(DIM_TEXT, 13f, true)
         )
         canvas.drawTextCentered(
-            t("زمن T (sec)", "Period T (sec)"),
+            "Period T (sec)",
             specL + specW / 2f, specT + specH - 10f,
             textPaint(DIM_TEXT, 13f, true)
         )
@@ -3340,7 +3340,7 @@ object PdfDrawingGenerator {
 
         // Spectrum chart title
         canvas.drawTextCentered(
-            t("طيف الاستجابة", "RESPONSE SPECTRUM"),
+            "RESPONSE SPECTRUM",
             specL + specW / 2f, specT - 12f,
             textPaint(SECONDARY_RED, 16f, true)
         )
@@ -3351,9 +3351,9 @@ object PdfDrawingGenerator {
         canvas.drawText(statusText, W - 130f, 50f, textPaint(statusColor, 28f, true))
 
         // ===== TITLE BLOCK =====
-        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, t("تحليل زلزالي", "Seismic Analysis"))
+        drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Seismic Analysis")
         canvas.drawBilingualText(
-            t("المقياس: غير مطابق للمقياس - للمرجعية فقط", "Scale: Not to scale - For reference only"),
+            "Scale: Not to scale - For reference only",
             80f, H - 20f, DIM_TEXT, 12f
         )
         return bitmap

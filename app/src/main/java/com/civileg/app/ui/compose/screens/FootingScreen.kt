@@ -83,6 +83,13 @@ fun FootingScreen(
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
     val footingDefaultName = stringResource(R.string.footing_default_name)
     var designName by remember { mutableStateOf(footingDefaultName) }
+
+    // Pre-select the first available project instead of saving against a hardcoded id.
+    LaunchedEffect(showSaveDialog, projects) {
+        if (showSaveDialog && projects.isNotEmpty() && projects.none { it.id == selectedProjectId }) {
+            selectedProjectId = projects.first().id
+        }
+    }
     
     var selectedType by remember { mutableStateOf(CalculatorEngine.FootingType.ISOLATED) }
     var expandedType by remember { mutableStateOf(false) }
@@ -238,6 +245,14 @@ fun FootingScreen(
                         && soilCapacity.toDoubleOrNull()?.let { it > 0 } == true
                         && colWidth.toDoubleOrNull()?.let { it > 0 } == true
                         && colLength.toDoubleOrNull()?.let { it > 0 } == true
+                if (!inputValid) {
+                    Text(
+                        stringResource(R.string.input_invalid_numbers),
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                }
                 Button(
                     onClick = {
                         if (!inputValid) return@Button
@@ -345,7 +360,7 @@ fun FootingScreen(
                             ResultRow(stringResource(R.string.footing_thickness_label2), "${res.thickness.toInt()} mm")
                             ResultRow(stringResource(R.string.column_concrete_vol), "${"%.2f".format(res.concreteVolume)} m³")
                             ResultRow(stringResource(R.string.column_steel_weight), "${"%.2f".format(res.steelWeight)} kg")
-                            ResultRow("Allowable Pressure", "${"%.1f".format(res.allowablePressure)} kN/m²")
+                            ResultRow(stringResource(R.string.footing_allowable_pressure), "${"%.1f".format(res.allowablePressure)} kN/m²")
                             ResultRow(stringResource(R.string.column_estimated_cost), "${"%.2f".format(res.cost)}")
                             if (selectedType == CalculatorEngine.FootingType.COMBINED) {
                                 Spacer(Modifier.height(8.dp))
@@ -363,24 +378,32 @@ fun FootingScreen(
                 }
 
                 if (res.calculationSteps.isNotEmpty()) {
-                    item { CalculationStepsCard(res.calculationSteps, title = "Footing Calculation Steps") }
+                    item { CalculationStepsCard(res.calculationSteps, title = stringResource(R.string.footing_calc_steps)) }
                 }
 
-                val bbsEntries = runCatching {
-                    BbsGenerator.generateFootingBbs("F1", res)
-                }.getOrDefault(emptyList())
-                if (bbsEntries.isNotEmpty()) {
-                    item { BbsTableCard(bbsEntries, title = "Footing Bar Bending Schedule") }
+                // BBS/BOQ are heavy pure functions: remember them so recomposition
+                // (typing, scrolling, snackbars) does not regenerate the tables.
+                item {
+                    val bbsEntries = remember(res) {
+                        runCatching { BbsGenerator.generateFootingBbs("F1", res) }.getOrDefault(emptyList())
+                    }
+                    if (bbsEntries.isNotEmpty()) {
+                        BbsTableCard(bbsEntries, title = stringResource(R.string.footing_bbs_title))
+                    }
                 }
 
-                val boqRows = runCatching {
-                    BoqEstimator.footingRows(
-                        res, "F1",
-                        viewModel.excavationDepthM, viewModel.workingSpaceM, viewModel.blindingThicknessM
-                    )
-                }.getOrDefault(emptyList())
-                if (boqRows.isNotEmpty()) {
-                    item { BoqTableCard(boqRows, title = "Footing Bill of Quantities") }
+                item {
+                    val boqRows = remember(res, viewModel.excavationDepthM, viewModel.workingSpaceM, viewModel.blindingThicknessM) {
+                        runCatching {
+                            BoqEstimator.footingRows(
+                                res, "F1",
+                                viewModel.excavationDepthM, viewModel.workingSpaceM, viewModel.blindingThicknessM
+                            )
+                        }.getOrDefault(emptyList())
+                    }
+                    if (boqRows.isNotEmpty()) {
+                        BoqTableCard(boqRows, title = stringResource(R.string.footing_boq_title))
+                    }
                 }
 
                 if (res.safetyChecks.isNotEmpty()) {
@@ -478,22 +501,13 @@ fun FootingScreen(
                         else -> (700 * wRatio).toInt().coerceIn(500, 900)
                     }
                     // Map footing type to English name expected by the drawing
-                    val footingTypeEnglish = when (selectedType) {
-                        CalculatorEngine.FootingType.ISOLATED -> "Isolated"
-                        CalculatorEngine.FootingType.COMBINED -> "Combined"
-                        CalculatorEngine.FootingType.STRAP -> "Isolated"
-                        CalculatorEngine.FootingType.RAFT -> "Raft"
-                        CalculatorEngine.FootingType.STRIP -> "Isolated"
-                        CalculatorEngine.FootingType.PILE_CAP -> "Isolated"
-                    }
+                    val footingTypeEnglish = footingDrawingTypeName(selectedType)
                     // For combined footings, compute column positions relative to footing left edge
                     val (col1XPos, col2XPos) = if (selectedType == CalculatorEngine.FootingType.COMBINED) {
-                        val dist = (colDistance.toDoubleOrNull() ?: 3.5) * 1000.0
-                        val p1 = axialLoad.toDoubleOrNull() ?: 1200.0
-                        val p2 = axialLoad2.toDoubleOrNull() ?: 1000.0
-                        val xR = (p2 * dist) / (p1 + p2)
-                        val s1 = 600.0
-                        Pair(s1, s1 + dist)
+                        combinedColumnPositions(
+                            columnWidthMm = colWidth.toDoubleOrNull() ?: 300.0,
+                            distanceM = colDistance.toDoubleOrNull() ?: 3.5
+                        )
                     } else {
                         Pair(0.0, 0.0)
                     }
@@ -561,21 +575,12 @@ fun FootingScreen(
         }
         // PDF drawing capture area (invisible, renders at viewMode=0)
         result?.let { res ->
-            val footingTypeEnglish = when (selectedType) {
-                CalculatorEngine.FootingType.ISOLATED -> "Isolated"
-                CalculatorEngine.FootingType.COMBINED -> "Combined"
-                CalculatorEngine.FootingType.STRAP -> "Isolated"
-                CalculatorEngine.FootingType.RAFT -> "Raft"
-                CalculatorEngine.FootingType.STRIP -> "Isolated"
-                CalculatorEngine.FootingType.PILE_CAP -> "Isolated"
-            }
+            val footingTypeEnglish = footingDrawingTypeName(selectedType)
             val (col1XPos, col2XPos) = if (selectedType == CalculatorEngine.FootingType.COMBINED) {
-                val dist = (colDistance.toDoubleOrNull() ?: 3.5) * 1000.0
-                val p1 = axialLoad.toDoubleOrNull() ?: 1200.0
-                val p2 = axialLoad2.toDoubleOrNull() ?: 1000.0
-                val xR = (p2 * dist) / (p1 + p2)
-                val s1 = 600.0
-                Pair(s1, s1 + dist)
+                combinedColumnPositions(
+                    columnWidthMm = colWidth.toDoubleOrNull() ?: 300.0,
+                    distanceM = colDistance.toDoubleOrNull() ?: 3.5
+                )
             } else {
                 Pair(0.0, 0.0)
             }
@@ -635,7 +640,7 @@ fun FootingScreen(
                 }
             }
         }
-        // Loading overlay
+        // Loading overlay (single instance — the duplicate below was removed)
         if (isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -643,7 +648,7 @@ fun FootingScreen(
             ) {
                 Card(
                     modifier = Modifier.padding(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -652,35 +657,10 @@ fun FootingScreen(
                         CircularProgressIndicator(
                             modifier = Modifier.size(48.dp),
                             strokeWidth = 4.dp,
-                            color = Color(0xFF1565C0)
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
-                    }
-                }
-            }
-        }
-        // Loading overlay
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Card(
-                    modifier = Modifier.padding(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(48.dp),
-                            strokeWidth = 4.dp,
-                            color = Color(0xFF1565C0)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                        Text(stringResource(R.string.loading), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -723,11 +703,13 @@ fun FootingScreen(
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
-                    result?.let { viewModel.saveFooting(pId, designName, it) }
-                    showSaveDialog = false
-                }) {
+                Button(
+                    enabled = selectedProjectId != -1L,
+                    onClick = {
+                        result?.let { viewModel.saveFooting(selectedProjectId, designName, it) }
+                        showSaveDialog = false
+                    }
+                ) {
                     Text(stringResource(R.string.save))
                 }
             },
@@ -765,6 +747,36 @@ private fun ResultRow(label: String, value: String) {
         Text(label)
         Text(value, fontWeight = FontWeight.Bold)
     }
+}
+
+/**
+ * Footing type name understood by [ProfessionalFootingDrawing].
+ *
+ * The drawing now implements every footing type, so each [CalculatorEngine.FootingType]
+ * maps to its own plan; this used to send STRAP/STRIP/PILE_CAP to the "Isolated"
+ * drawing, which produced wrong plans and reinforcement labels on screen and in PDF.
+ *
+ * `internal` so the regression test can assert one-to-one mapping.
+ */
+internal fun footingDrawingTypeName(type: CalculatorEngine.FootingType): String = when (type) {
+    CalculatorEngine.FootingType.ISOLATED -> "Isolated"
+    CalculatorEngine.FootingType.COMBINED -> "Combined"
+    CalculatorEngine.FootingType.STRAP -> "Strap"
+    CalculatorEngine.FootingType.RAFT -> "Raft"
+    CalculatorEngine.FootingType.STRIP -> "Strip"
+    CalculatorEngine.FootingType.PILE_CAP -> "Pile Cap"
+}
+
+/**
+ * Column centres (mm, measured from the footing left edge) used by the combined
+ * footing drawing: boundary column at the edge, second column one [distanceM] away.
+ */
+internal fun combinedColumnPositions(
+    columnWidthMm: Double,
+    distanceM: Double
+): Pair<Double, Double> {
+    val firstColCenter = columnWidthMm / 2.0 + 50.0
+    return Pair(firstColCenter, firstColCenter + distanceM * 1000.0)
 }
 
 

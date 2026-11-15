@@ -55,3 +55,7 @@ if ($Launch) {
     Start-Sleep -Seconds 8
     Write-Ok "App launched"
 }
+
+# `adb shell am start` propagates the remote exit status; do not let a successful
+# install/launch look like a failure to the calling script.
+exit 0

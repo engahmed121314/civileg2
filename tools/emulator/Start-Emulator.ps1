@@ -134,3 +134,6 @@ Start-Sleep -Seconds 2
 Write-Ok "Emulator ready: $serial"
 Write-Host "    Screenshot: powershell -File tools\emulator\Capture-Screens.ps1"
 Write-Host "    Stop:       powershell -File tools\emulator\Stop-Emulator.ps1"
+# adb children (e.g. `am start -W`, `settings put`) can leave a non-zero
+# $LASTEXITCODE even when the emulator is fine; make the script's own result explicit.
+exit 0

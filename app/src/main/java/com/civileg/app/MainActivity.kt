@@ -342,6 +342,9 @@ fun AppNavigation(
                 composable(AppScreen.RebarTool.route) {
                     RebarToolScreen(onNavigateBack = { navController.popBackStack() })
                 }
+                composable(AppScreen.QuickTools.route) {
+                    QuickToolsScreen(onNavigateBack = { navController.popBackStack() })
+                }
                 composable(AppScreen.ConcreteMix.route) {
                     ConcreteMixScreen(onNavigateBack = { navController.popBackStack() })
                 }

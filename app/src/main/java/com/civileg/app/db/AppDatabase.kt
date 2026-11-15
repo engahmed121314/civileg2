@@ -27,9 +27,10 @@ import androidx.room.TypeConverters
         QualityRecord::class,
         InspectionTestPlan::class,
         NonConformity::class,
-        BuildingLayoutEntity::class
+        BuildingLayoutEntity::class,
+        ExportEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -52,7 +53,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun shearWallDao(): ShearWallDao
     abstract fun qualityDao(): QualityDao
     abstract fun buildingLayoutDao(): BuildingLayoutDao
-    
+    abstract fun exportDao(): ExportDao
+
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
@@ -71,9 +73,11 @@ abstract class AppDatabase : RoomDatabase() {
                     Migrations.MIGRATION_9_10,
                     Migrations.MIGRATION_10_11,
                     Migrations.MIGRATION_11_12,
-                    Migrations.MIGRATION_12_13
+                    Migrations.MIGRATION_12_13,
+                    Migrations.MIGRATION_13_14
                 )
-                .fallbackToDestructiveMigration(true)
+                .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5)
+                .fallbackToDestructiveMigrationOnDowngrade(true)
                 .build()
                 INSTANCE = instance
                 instance

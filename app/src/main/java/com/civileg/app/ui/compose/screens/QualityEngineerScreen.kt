@@ -1,13 +1,12 @@
 package com.civileg.app.ui.compose.screens
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -18,6 +17,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,8 +48,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.db.QualityRecord
 import com.civileg.app.domain.entities.DesignCode
-import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
-import com.civileg.app.ui.compose.components.SafetyCheckRow
+import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.DesignCodeStore
+import com.civileg.app.ui.compose.components.*
+import com.civileg.app.ui.compose.components.charts.*
+import com.civileg.app.ui.compose.components.drawings.*
+import com.civileg.app.ui.compose.components.drawings.DisciplineQcGenericDrawing
 import com.civileg.app.utils.SoilBearingCalculator
 import com.civileg.app.utils.SoilBearingInput
 import com.civileg.app.utils.SoilBearingResult
@@ -59,16 +63,6 @@ import com.civileg.app.utils.QualityControlEngineNew
 import com.civileg.app.utils.QcLimits
 import com.civileg.app.utils.CalculatorEngine
 import com.civileg.app.utils.SoilType
-import com.civileg.app.ui.compose.components.charts.DailyTrendChart
-import com.civileg.app.ui.compose.components.drawings.ConcreteQcDrawing
-import com.civileg.app.ui.compose.components.drawings.DisciplineQcGenericDrawing
-import com.civileg.app.ui.compose.components.drawings.DrainageQcDrawing
-import com.civileg.app.ui.compose.components.drawings.MasonryQcDrawing
-import com.civileg.app.ui.compose.components.drawings.QcDrawingLayer
-import com.civileg.app.ui.compose.components.drawings.QcDrawingMetric
-import com.civileg.app.ui.compose.components.drawings.ProfessionalPileDrawing
-import com.civileg.app.ui.compose.components.drawings.ProfessionalRetainingWallDrawing
-import com.civileg.app.ui.compose.components.drawings.ProfessionalTankDrawing
 import com.civileg.app.viewmodel.QualityEngineerViewModel
 import com.civileg.app.viewmodel.ReportsQCState
 import com.google.gson.Gson
@@ -76,7 +70,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.*
-import com.civileg.app.ui.defaultDesignCode
 
 private fun runQcInputAction(
     scope: CoroutineScope,
@@ -87,7 +80,7 @@ private fun runQcInputAction(
         action()
     } catch (error: IllegalArgumentException) {
         scope.launch {
-            snackbarHostState.showSnackbar(error.message ?: "Please check the entered values")
+            snackbarHostState.showSnackbar(error.message ?: "Please check input values / يرجى مراجعة المدخلات")
         }
     }
 }
@@ -100,34 +93,11 @@ fun QualityEngineerScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf(
-        stringResource(R.string.quality_tab_concrete),
-        stringResource(R.string.quality_tab_soil),
-        stringResource(R.string.quality_tab_rebar),
-        stringResource(R.string.quality_tab_steel),
-        stringResource(R.string.quality_tab_roads),
-        stringResource(R.string.quality_tab_bridges),
-        stringResource(R.string.quality_tab_tunnels),
-        stringResource(R.string.quality_tab_buildings),
-        stringResource(R.string.quality_tab_earthworks),
-        stringResource(R.string.quality_tab_piling),
-        stringResource(R.string.quality_tab_retaining),
-        stringResource(R.string.quality_tab_waterproofing),
-        stringResource(R.string.quality_tab_masonry),
-        stringResource(R.string.quality_tab_flooring),
-        stringResource(R.string.quality_tab_precast),
-        stringResource(R.string.quality_tab_post_tension),
-        stringResource(R.string.quality_tab_grouting),
-        stringResource(R.string.quality_tab_soil_improvement),
-        stringResource(R.string.quality_tab_water_tanks),
-        stringResource(R.string.quality_tab_drainage),
-        stringResource(R.string.quality_tab_painting),
-        stringResource(R.string.quality_tab_site_works),
-        stringResource(R.string.quality_tab_fire_protection),
-        stringResource(R.string.quality_tab_reports),
-        stringResource(R.string.quality_tab_compliance)
-    )
+    var selectedGroup by rememberSaveable { mutableStateOf(QcGroup.CONCRETE) }
+    var selectedTab by rememberSaveable { mutableStateOf(QcTab.CONCRETE) }
+    val groupTabs = QcTab.entries.filter { it.group == selectedGroup }
+    // Derived from the selected module so it stays correct after process restoration.
+    val selectedTabIndex = groupTabs.indexOf(selectedTab).coerceAtLeast(0)
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -145,21 +115,52 @@ fun QualityEngineerScreen(
                 )
             )
 
+            // Level 1 — discipline group (5 instead of 25 tabs)
             ScrollableTabRow(
-                selectedTabIndex = selectedTab,
+                selectedTabIndex = QcGroup.entries.indexOf(selectedGroup),
                 modifier = Modifier.fillMaxWidth(),
                 edgePadding = 0.dp
             ) {
-                tabs.forEachIndexed { index, title ->
+                QcGroup.entries.forEach { group ->
                     Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
+                        selected = selectedGroup == group,
+                        onClick = {
+                            if (selectedGroup != group) {
+                                selectedGroup = group
+                                selectedTab = QcTab.entries.first { it.group == group }
+                            }
+                        },
                         text = {
                             Text(
-                                title,
+                                stringResource(group.titleRes),
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                fontWeight = if (selectedGroup == group) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    )
+                }
+            }
+
+            // Level 2 — modules inside the selected group
+            ScrollableTabRow(
+                selectedTabIndex = selectedTabIndex.coerceIn(0, (groupTabs.size - 1).coerceAtLeast(0)),
+                modifier = Modifier.fillMaxWidth(),
+                edgePadding = 0.dp,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            ) {
+                groupTabs.forEach { tab ->
+                    Tab(
+                        selected = selectedTab == tab,
+                        onClick = {
+                            selectedTab = tab
+                        },
+                        text = {
+                            Text(
+                                stringResource(tab.titleRes),
                                 fontSize = 11.sp,
                                 maxLines = 1,
-                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = if (selectedTab == tab) FontWeight.Bold else FontWeight.Normal
                             )
                         }
                     )
@@ -167,35 +168,80 @@ fun QualityEngineerScreen(
             }
 
             when (selectedTab) {
-                0 -> ConcreteQCTab(viewModel, snackbarHostState, scope)
-                1 -> SoilFoundationQCTab(viewModel, snackbarHostState, scope)
-                2 -> RebarQCTab(viewModel, snackbarHostState, scope)
-                3 -> SteelStructureQCTab(viewModel, snackbarHostState, scope)
-                4 -> RoadsQCTab(viewModel, snackbarHostState, scope)
-                5 -> BridgesQCTab(viewModel, snackbarHostState, scope)
-                6 -> TunnelsQCTab(viewModel, snackbarHostState, scope)
-                7 -> BuildingsQCTab(viewModel, snackbarHostState, scope)
-                8 -> DisciplineQcTab(viewModel, QcDiscipline.EARTHWORKS, snackbarHostState, scope)
-                9 -> DisciplineQcTab(viewModel, QcDiscipline.PILING, snackbarHostState, scope)
-                10 -> DisciplineQcTab(viewModel, QcDiscipline.RETAINING_WALLS, snackbarHostState, scope)
-                11 -> DisciplineQcTab(viewModel, QcDiscipline.WATERPROOFING, snackbarHostState, scope)
-                12 -> DisciplineQcTab(viewModel, QcDiscipline.MASONRY, snackbarHostState, scope)
-                13 -> DisciplineQcTab(viewModel, QcDiscipline.FLOORING, snackbarHostState, scope)
-                14 -> DisciplineQcTab(viewModel, QcDiscipline.PRECAST, snackbarHostState, scope)
-                15 -> DisciplineQcTab(viewModel, QcDiscipline.POST_TENSION, snackbarHostState, scope)
-                16 -> DisciplineQcTab(viewModel, QcDiscipline.GROUTING, snackbarHostState, scope)
-                17 -> DisciplineQcTab(viewModel, QcDiscipline.SOIL_IMPROVEMENT, snackbarHostState, scope)
-                18 -> DisciplineQcTab(viewModel, QcDiscipline.WATER_TANKS, snackbarHostState, scope)
-                19 -> DisciplineQcTab(viewModel, QcDiscipline.DRAINAGE, snackbarHostState, scope)
-                20 -> DisciplineQcTab(viewModel, QcDiscipline.PAINTING, snackbarHostState, scope)
-                21 -> DisciplineQcTab(viewModel, QcDiscipline.SITE_WORKS, snackbarHostState, scope)
-                22 -> DisciplineQcTab(viewModel, QcDiscipline.FIRE_PROTECTION, snackbarHostState, scope)
-                23 -> QualityReportsTab(viewModel, snackbarHostState, scope)
-                24 -> QualityComplianceScreen()
+                QcTab.CONCRETE -> ConcreteQCTab(viewModel, snackbarHostState, scope)
+                QcTab.SOIL -> SoilFoundationQCTab(viewModel, snackbarHostState, scope)
+                QcTab.REBAR -> RebarQCTab(viewModel, snackbarHostState, scope)
+                QcTab.STEEL -> SteelStructureQCTab(viewModel, snackbarHostState, scope)
+                QcTab.PRECAST -> DisciplineQcTab(viewModel, QcDiscipline.PRECAST, snackbarHostState, scope)
+                QcTab.POST_TENSION -> DisciplineQcTab(viewModel, QcDiscipline.POST_TENSION, snackbarHostState, scope)
+                QcTab.GROUTING -> DisciplineQcTab(viewModel, QcDiscipline.GROUTING, snackbarHostState, scope)
+                QcTab.EARTHWORKS -> DisciplineQcTab(viewModel, QcDiscipline.EARTHWORKS, snackbarHostState, scope)
+                QcTab.PILING -> DisciplineQcTab(viewModel, QcDiscipline.PILING, snackbarHostState, scope)
+                QcTab.RETAINING -> DisciplineQcTab(viewModel, QcDiscipline.RETAINING_WALLS, snackbarHostState, scope)
+                QcTab.SOIL_IMPROVEMENT -> DisciplineQcTab(viewModel, QcDiscipline.SOIL_IMPROVEMENT, snackbarHostState, scope)
+                QcTab.WATER_TANKS -> DisciplineQcTab(viewModel, QcDiscipline.WATER_TANKS, snackbarHostState, scope)
+                QcTab.DRAINAGE -> DisciplineQcTab(viewModel, QcDiscipline.DRAINAGE, snackbarHostState, scope)
+                QcTab.ROADS -> RoadsQCTab(viewModel, snackbarHostState, scope)
+                QcTab.BRIDGES -> BridgesQCTab(viewModel, snackbarHostState, scope)
+                QcTab.TUNNELS -> TunnelsQCTab(viewModel, snackbarHostState, scope)
+                QcTab.BUILDINGS -> BuildingsQCTab(viewModel, snackbarHostState, scope)
+                QcTab.MASONRY -> DisciplineQcTab(viewModel, QcDiscipline.MASONRY, snackbarHostState, scope)
+                QcTab.FLOORING -> DisciplineQcTab(viewModel, QcDiscipline.FLOORING, snackbarHostState, scope)
+                QcTab.WATERPROOFING -> DisciplineQcTab(viewModel, QcDiscipline.WATERPROOFING, snackbarHostState, scope)
+                QcTab.PAINTING -> DisciplineQcTab(viewModel, QcDiscipline.PAINTING, snackbarHostState, scope)
+                QcTab.SITE_WORKS -> DisciplineQcTab(viewModel, QcDiscipline.SITE_WORKS, snackbarHostState, scope)
+                QcTab.FIRE_PROTECTION -> DisciplineQcTab(viewModel, QcDiscipline.FIRE_PROTECTION, snackbarHostState, scope)
+                QcTab.REPORTS -> QualityReportsTab(viewModel, snackbarHostState, scope)
+                QcTab.COMPLIANCE -> QualityComplianceScreen()
             }
         }
         SnackbarHost(snackbarHostState)
     }
+}
+
+// ── Quality navigation model ────────────────────────────────────────────
+// The screen used to expose 25 flat tabs in a single scroll row, which made the
+// discipline you needed hard to find. Groups + rememberSaveable keep the last
+// module open across configuration changes and keep the row short.
+
+private enum class QcGroup(val titleRes: Int) {
+    CONCRETE(R.string.qc_group_concrete),
+    GROUND(R.string.qc_group_ground),
+    INFRA(R.string.qc_group_infra),
+    BUILDING(R.string.qc_group_building),
+    REPORTS(R.string.qc_group_reports)
+}
+
+private enum class QcTab(val group: QcGroup, val titleRes: Int) {
+    CONCRETE(QcGroup.CONCRETE, R.string.quality_tab_concrete),
+    REBAR(QcGroup.CONCRETE, R.string.quality_tab_rebar),
+    STEEL(QcGroup.CONCRETE, R.string.quality_tab_steel),
+    PRECAST(QcGroup.CONCRETE, R.string.quality_tab_precast),
+    POST_TENSION(QcGroup.CONCRETE, R.string.quality_tab_post_tension),
+    GROUTING(QcGroup.CONCRETE, R.string.quality_tab_grouting),
+
+    SOIL(QcGroup.GROUND, R.string.quality_tab_soil),
+    EARTHWORKS(QcGroup.GROUND, R.string.quality_tab_earthworks),
+    PILING(QcGroup.GROUND, R.string.quality_tab_piling),
+    RETAINING(QcGroup.GROUND, R.string.quality_tab_retaining),
+    SOIL_IMPROVEMENT(QcGroup.GROUND, R.string.quality_tab_soil_improvement),
+    WATER_TANKS(QcGroup.GROUND, R.string.quality_tab_water_tanks),
+    DRAINAGE(QcGroup.GROUND, R.string.quality_tab_drainage),
+
+    ROADS(QcGroup.INFRA, R.string.quality_tab_roads),
+    BRIDGES(QcGroup.INFRA, R.string.quality_tab_bridges),
+    TUNNELS(QcGroup.INFRA, R.string.quality_tab_tunnels),
+
+    BUILDINGS(QcGroup.BUILDING, R.string.quality_tab_buildings),
+    MASONRY(QcGroup.BUILDING, R.string.quality_tab_masonry),
+    FLOORING(QcGroup.BUILDING, R.string.quality_tab_flooring),
+    WATERPROOFING(QcGroup.BUILDING, R.string.quality_tab_waterproofing),
+    PAINTING(QcGroup.BUILDING, R.string.quality_tab_painting),
+    SITE_WORKS(QcGroup.BUILDING, R.string.quality_tab_site_works),
+    FIRE_PROTECTION(QcGroup.BUILDING, R.string.quality_tab_fire_protection),
+
+    REPORTS(QcGroup.REPORTS, R.string.quality_tab_reports),
+    COMPLIANCE(QcGroup.REPORTS, R.string.quality_tab_compliance)
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -225,13 +271,13 @@ private fun ConcreteQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("بيانات الصب", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_concrete_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
                     value = uiState.elementId,
                     onValueChange = { viewModel.updateConcreteField("elementId", it) },
-                    label = { Text("العنصر (مثال: B1, C2)") },
+                    label = { Text(stringResource(R.string.qc_concrete_element_id)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -240,14 +286,14 @@ private fun ConcreteQCTab(
                     OutlinedTextField(
                         value = uiState.volume,
                         onValueChange = { viewModel.updateConcreteField("volume", it) },
-                        label = { Text("الحجم (م³)") },
+                        label = { Text(stringResource(R.string.qc_concrete_volume)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.slump,
                         onValueChange = { viewModel.updateConcreteField("slump", it) },
-                        label = { Text("الهبوط (مم)") },
+                        label = { Text(stringResource(R.string.qc_concrete_slump)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
@@ -258,14 +304,14 @@ private fun ConcreteQCTab(
                     OutlinedTextField(
                         value = uiState.fcu,
                         onValueChange = { viewModel.updateConcreteField("fcu", it) },
-                        label = { Text("fcu (MPa)") },
+                        label = { Text(stringResource(R.string.qc_concrete_fcu)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.sampleId,
                         onValueChange = { viewModel.updateConcreteField("sampleId", it) },
-                        label = { Text("رقم العينة") },
+                        label = { Text(stringResource(R.string.qc_concrete_sample_id)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -275,14 +321,14 @@ private fun ConcreteQCTab(
                     OutlinedTextField(
                         value = uiState.strength7Days,
                         onValueChange = { viewModel.updateConcreteField("strength7Days", it) },
-                        label = { Text("قوة 7 أيام") },
+                        label = { Text(stringResource(R.string.qc_concrete_strength_7days)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.strength28Days,
                         onValueChange = { viewModel.updateConcreteField("strength28Days", it) },
-                        label = { Text("قوة 28 يوم") },
+                        label = { Text(stringResource(R.string.qc_concrete_strength_28days)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -293,14 +339,14 @@ private fun ConcreteQCTab(
                     OutlinedTextField(
                         value = uiState.airContent,
                         onValueChange = { viewModel.updateConcreteField("airContent", it) },
-                        label = { Text("Air content (%)") },
+                        label = { Text(stringResource(R.string.qc_concrete_air_content)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.concreteTemp,
                         onValueChange = { viewModel.updateConcreteField("concreteTemp", it) },
-                        label = { Text("Concrete temp (C)") },
+                        label = { Text(stringResource(R.string.qc_concrete_temp)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -310,46 +356,47 @@ private fun ConcreteQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("فحوصات الجودة", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_concrete_checks_header), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 QualityCheckRow(
-                    label = "قوة 28 يوم ≥ fcu",
+                    label = stringResource(R.string.qc_concrete_check_28days),
                     passed = uiState.strength28Days.toDoubleOrNull()?.let {
                         uiState.fcu.toDoubleOrNull()?.let { fcu -> it >= fcu } ?: false
                     } ?: false,
-                    detail = "المطلوب: ${uiState.fcu.ifBlank { "—" }} MPa"
+                    detail = stringResource(R.string.qc_concrete_check_28days_detail, uiState.fcu.ifBlank { "—" })
                 )
 
                 val slumpRange = QcLimits.slumpRange(uiState.designCode)
 
                 QualityCheckRow(
-                    label = "الهبوط ضمن الحدود",
+                    label = stringResource(R.string.qc_concrete_check_slump),
                     passed = uiState.slump.toDoubleOrNull()?.let { it in slumpRange } ?: false,
-                    detail = "الحد: %.0f-%.0f مم (%s)".format(
+                    detail = stringResource(
+                        R.string.qc_concrete_check_slump_detail,
                         slumpRange.start, slumpRange.endInclusive, uiState.designCode.version
                     )
                 )
 
                 QualityCheckRow(
-                    label = "محتوى الهواء ضمن الحدود",
+                    label = stringResource(R.string.qc_concrete_check_air),
                     passed = uiState.airContent.toDoubleOrNull()?.let { it in 3.0..8.0 } ?: false,
-                    detail = "الحد: 3-8% (ASTM C231)"
+                    detail = stringResource(R.string.qc_concrete_check_air_detail)
                 )
 
                 QualityCheckRow(
-                    label = "درجة حرارة الخرسانة",
+                    label = stringResource(R.string.qc_concrete_check_temp),
                     passed = uiState.concreteTemp.toDoubleOrNull()?.let { it in 5.0..40.0 } ?: false,
-                    detail = "الحد: 5-40 °C (ACI 305.1 / 306.1)"
+                    detail = stringResource(R.string.qc_concrete_check_temp_detail)
                 )
 
                 QualityCheckRow(
-                    label = "نسبة قوة 7/28 يوم",
+                    label = stringResource(R.string.qc_concrete_check_ratio),
                     passed = uiState.strength7Days.toDoubleOrNull()?.let { s7 ->
                         val s28 = uiState.strength28Days.toDoubleOrNull() ?: 0.0
                         if (s28 > 0) s7 / s28 >= 0.65 else false
                     } ?: false,
-                    detail = "المطلوب: ≥ 65%"
+                    detail = stringResource(R.string.qc_concrete_check_ratio_detail)
                 )
             }
         }
@@ -364,15 +411,15 @@ private fun ConcreteQCTab(
         ) {
             Icon(Icons.Default.Save, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("حفظ وتسجيل")
+            Text(stringResource(R.string.qc_concrete_save))
         }
 
         Button(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = "Concrete Quality Control",
-                    subtitle = "Pour QC Report",
+                    title = context.getString(R.string.qc_concrete_report_title),
+                    subtitle = context.getString(R.string.qc_concrete_report_subtitle),
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -381,7 +428,7 @@ private fun ConcreteQCTab(
         ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("تصدير تقرير الخرسانة PDF")
+            Text(stringResource(R.string.qc_concrete_export))
         }
 
         QcOutcomeCard(uiState.outcome)
@@ -389,7 +436,7 @@ private fun ConcreteQCTab(
         // Drawing preview
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("Concrete QC drawing - slump test / test cylinders", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_concrete_drawing_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 ConcreteQcDrawing(
                     elementId = uiState.elementId,
@@ -439,10 +486,10 @@ private fun SoilFoundationQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("معاملات التربة", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_soil_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text("طريقة الحساب", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.qc_soil_calc_method), style = MaterialTheme.typography.labelLarge)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -454,10 +501,10 @@ private fun SoilFoundationQCTab(
                             label = {
                                 Text(
                                     when (method) {
-                                        BearingMethod.TERZAGHI -> "Terzaghi"
-                                        BearingMethod.MEYERHOF -> "Meyerhof"
-                                        BearingMethod.HANSEN -> "Hansen"
-                                        BearingMethod.VESIC -> "Vesic"
+                                        BearingMethod.TERZAGHI -> stringResource(R.string.qc_soil_method_terzaghi)
+                                        BearingMethod.MEYERHOF -> stringResource(R.string.qc_soil_method_meyerhof)
+                                        BearingMethod.HANSEN -> stringResource(R.string.qc_soil_method_hansen)
+                                        BearingMethod.VESIC -> stringResource(R.string.qc_soil_method_vesic)
                                     },
                                     fontSize = 11.sp
                                 )
@@ -467,7 +514,7 @@ private fun SoilFoundationQCTab(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text("نوع التربة", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.qc_soil_soil_type), style = MaterialTheme.typography.labelLarge)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -479,10 +526,10 @@ private fun SoilFoundationQCTab(
                             label = {
                                 Text(
                                     when (type) {
-                                        SoilType.CLAY -> "طين"
-                                        SoilType.SAND -> "رمل"
-                                        SoilType.ROCK -> "صخر"
-                                        SoilType.MIXED -> "مختلط"
+                                        SoilType.CLAY -> stringResource(R.string.qc_soil_type_clay)
+                                        SoilType.SAND -> stringResource(R.string.qc_soil_type_sand)
+                                        SoilType.ROCK -> stringResource(R.string.qc_soil_type_rock)
+                                        SoilType.MIXED -> stringResource(R.string.qc_soil_type_mixed)
                                     },
                                     fontSize = 11.sp
                                 )
@@ -496,14 +543,14 @@ private fun SoilFoundationQCTab(
                     OutlinedTextField(
                         value = uiState.cohesion,
                         onValueChange = { viewModel.updateSoilField("cohesion", it) },
-                        label = { Text("التماسك c (kPa)") },
+                        label = { Text(stringResource(R.string.qc_soil_cohesion)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.frictionAngle,
                         onValueChange = { viewModel.updateSoilField("frictionAngle", it) },
-                        label = { Text("φ (درجة)") },
+                        label = { Text(stringResource(R.string.qc_soil_friction_angle)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -514,14 +561,14 @@ private fun SoilFoundationQCTab(
                     OutlinedTextField(
                         value = uiState.unitWeight,
                         onValueChange = { viewModel.updateSoilField("unitWeight", it) },
-                        label = { Text("γ (kN/m³)") },
+                        label = { Text(stringResource(R.string.qc_soil_unit_weight)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.waterTableDepth,
                         onValueChange = { viewModel.updateSoilField("waterTableDepth", it) },
-                        label = { Text("منسوب المياه (م)") },
+                        label = { Text(stringResource(R.string.qc_soil_water_table)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -531,21 +578,21 @@ private fun SoilFoundationQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("أبعاد الأساس", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_soil_foundation_dims), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = uiState.foundationWidth,
                         onValueChange = { viewModel.updateSoilField("foundationWidth", it) },
-                        label = { Text("B (م)") },
+                        label = { Text(stringResource(R.string.qc_soil_width_b)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.foundationLength,
                         onValueChange = { viewModel.updateSoilField("foundationLength", it) },
-                        label = { Text("L (م)") },
+                        label = { Text(stringResource(R.string.qc_soil_length_l)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -556,14 +603,14 @@ private fun SoilFoundationQCTab(
                     OutlinedTextField(
                         value = uiState.foundationDepth,
                         onValueChange = { viewModel.updateSoilField("foundationDepth", it) },
-                        label = { Text("Df (م)") },
+                        label = { Text(stringResource(R.string.qc_soil_depth_df)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.safetyFactor,
                         onValueChange = { viewModel.updateSoilField("safetyFactor", it) },
-                        label = { Text("معامل الأمان") },
+                        label = { Text(stringResource(R.string.qc_soil_safety_factor)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -581,26 +628,26 @@ private fun SoilFoundationQCTab(
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("حساب قدرة التحمل")
+            Text(stringResource(R.string.qc_soil_calculate))
         }
 
         uiState.soilResult?.let { result ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("النتائج", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.qc_soil_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    ResultRow("قدرة التحمل الكلية qu", "${String.format("%.1f", result.grossBearingCapacity)} kPa")
-                    ResultRow("قدرة التحمل الصافية qnet", "${String.format("%.1f", result.netBearingCapacity)} kPa")
-                    ResultRow("قدرة التحمل المسموحة", "${String.format("%.1f", result.allowableBearingCapacity)} kPa")
-                    ResultRow("الهبوط المقدر", "${String.format("%.1f", result.settlement)} mm")
-                    ResultRow("معامل تصحيح المياه", String.format("%.2f", result.waterTableCorrection))
+                    ResultRow(stringResource(R.string.qc_soil_gross), "${String.format("%.1f", result.grossBearingCapacity)} kPa")
+                    ResultRow(stringResource(R.string.qc_soil_net), "${String.format("%.1f", result.netBearingCapacity)} kPa")
+                    ResultRow(stringResource(R.string.qc_soil_allowable), "${String.format("%.1f", result.allowableBearingCapacity)} kPa")
+                    ResultRow(stringResource(R.string.qc_soil_settlement), "${String.format("%.1f", result.settlement)} mm")
+                    ResultRow(stringResource(R.string.qc_soil_water_correction), String.format("%.2f", result.waterTableCorrection))
                     Spacer(modifier = Modifier.height(8.dp))
 
                     QualityCheckRow(
-                        label = "الحالة الآمنة",
+                        label = stringResource(R.string.qc_soil_safe_case),
                         passed = result.isSafe,
-                        detail = if (result.isSafe) "SAFE" else "UNSAFE"
+                        detail = if (result.isSafe) stringResource(R.string.design_status_safe) else stringResource(R.string.design_status_unsafe)
                     )
                 }
             }
@@ -612,8 +659,8 @@ private fun SoilFoundationQCTab(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = "Soil & Foundation Quality Control",
-                    subtitle = "Bearing Capacity Report",
+                    title = context.getString(R.string.qc_soil_report_title),
+                    subtitle = context.getString(R.string.qc_soil_report_subtitle),
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -622,7 +669,7 @@ private fun SoilFoundationQCTab(
         ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("تصدير تقرير التربة PDF")
+            Text(stringResource(R.string.qc_soil_export))
         }
     }
 }
@@ -654,21 +701,21 @@ private fun RebarQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("بيانات التسليح", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_rebar_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = uiState.barDiameter,
                         onValueChange = { viewModel.updateRebarField("barDiameter", it) },
-                        label = { Text("قطر السيخ (مم)") },
+                        label = { Text(stringResource(R.string.qc_rebar_bar_diameter)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.numBars,
                         onValueChange = { viewModel.updateRebarField("numBars", it) },
-                        label = { Text("عدد الأسياخ") },
+                        label = { Text(stringResource(R.string.qc_rebar_num_bars)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
@@ -679,14 +726,14 @@ private fun RebarQCTab(
                     OutlinedTextField(
                         value = uiState.fy,
                         onValueChange = { viewModel.updateRebarField("fy", it) },
-                        label = { Text("fy (MPa)") },
+                        label = { Text(stringResource(R.string.qc_rebar_fy)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.cover,
                         onValueChange = { viewModel.updateRebarField("cover", it) },
-                        label = { Text("الغطاء (مم)") },
+                        label = { Text(stringResource(R.string.qc_rebar_cover)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
@@ -697,14 +744,14 @@ private fun RebarQCTab(
                     OutlinedTextField(
                         value = uiState.beamWidth,
                         onValueChange = { viewModel.updateRebarField("beamWidth", it) },
-                        label = { Text("عرض الكمرة (مم)") },
+                        label = { Text(stringResource(R.string.qc_rebar_beam_width)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.effectiveDepth,
                         onValueChange = { viewModel.updateRebarField("effectiveDepth", it) },
-                        label = { Text("d (مم)") },
+                        label = { Text(stringResource(R.string.qc_rebar_effective_depth)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
@@ -714,7 +761,7 @@ private fun RebarQCTab(
                 OutlinedTextField(
                     value = uiState.fcu,
                     onValueChange = { viewModel.updateRebarField("fcu", it) },
-                    label = { Text("fcu (MPa)") },
+                    label = { Text(stringResource(R.string.qc_rebar_fcu)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -731,13 +778,13 @@ private fun RebarQCTab(
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("فحص التسليح")
+            Text(stringResource(R.string.qc_rebar_calculate))
         }
 
         uiState.rebarChecks?.let { checks ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("نتائج الفحص", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.qc_check_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     checks.forEach { check ->
                         SafetyCheckRow(
@@ -754,8 +801,8 @@ private fun RebarQCTab(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = "Reinforcement Quality Control",
-                    subtitle = "Rebar Detail Report",
+                    title = context.getString(R.string.qc_rebar_report_title),
+                    subtitle = context.getString(R.string.qc_rebar_report_subtitle),
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -764,7 +811,7 @@ private fun RebarQCTab(
         ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("تصدير تقرير التسليح PDF")
+            Text(stringResource(R.string.qc_rebar_export))
         }
 
         QcOutcomeCard(uiState.outcome)
@@ -785,7 +832,11 @@ private fun SteelStructureQCTab(
     val context = LocalContext.current
     val uiState by viewModel.steelState.collectAsState()
     var selectedSection by remember { mutableStateOf(uiState.sectionKey.ifBlank { "IPE 200" }) }
-    val memberTypes = listOf("BEAM" to "عارض (Beam)", "COLUMN" to "عمود (Column)", "BEAM_COLUMN" to "عارض-عمود (Beam-Column)")
+    val memberTypes = listOf(
+        "BEAM" to stringResource(R.string.qc_steel_member_beam),
+        "COLUMN" to stringResource(R.string.qc_steel_member_column),
+        "BEAM_COLUMN" to stringResource(R.string.qc_steel_member_beam_column)
+    )
     var selectedMemberType by remember { mutableStateOf(uiState.memberType) }
     val sections = listOf("IPE 100", "IPE 120", "IPE 140", "IPE 160", "IPE 180", "IPE 200", "IPE 220", "IPE 240", "IPE 270", "IPE 300")
 
@@ -803,7 +854,7 @@ private fun SteelStructureQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("فحص القطاع المعدني", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_steel_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 var expanded by remember { mutableStateOf(false) }
@@ -817,7 +868,7 @@ private fun SteelStructureQCTab(
                         value = selectedSection,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("القطاع") },
+                        label = { Text(stringResource(R.string.qc_steel_section)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
                     )
@@ -837,7 +888,7 @@ private fun SteelStructureQCTab(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Member type
-                Text("نوع العضو", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.qc_steel_member_type), style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
                     memberTypes.forEachIndexed { index, (key, label) ->
                         FilterChip(
@@ -855,14 +906,14 @@ private fun SteelStructureQCTab(
                     OutlinedTextField(
                         value = uiState.appliedMoment,
                         onValueChange = { viewModel.updateSteelField("appliedMoment", it) },
-                        label = { Text("Mu (kN.m)") },
+                        label = { Text(stringResource(R.string.qc_steel_moment)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.appliedShear,
                         onValueChange = { viewModel.updateSteelField("appliedShear", it) },
-                        label = { Text("Vu (kN)") },
+                        label = { Text(stringResource(R.string.qc_steel_shear)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -873,14 +924,14 @@ private fun SteelStructureQCTab(
                     OutlinedTextField(
                         value = uiState.steelFy,
                         onValueChange = { viewModel.updateSteelField("steelFy", it) },
-                        label = { Text("Fy (MPa)") },
+                        label = { Text(stringResource(R.string.qc_steel_fy)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.span,
                         onValueChange = { viewModel.updateSteelField("span", it) },
-                        label = { Text("البحر (م)") },
+                        label = { Text(stringResource(R.string.qc_steel_span)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -891,14 +942,14 @@ private fun SteelStructureQCTab(
                     OutlinedTextField(
                         value = uiState.axialLoad,
                         onValueChange = { viewModel.updateSteelField("axialLoad", it) },
-                        label = { Text("Pu (kN) — للأعمدة") },
+                        label = { Text(stringResource(R.string.qc_steel_axial_load)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.unbracedLength,
                         onValueChange = { viewModel.updateSteelField("unbracedLength", it) },
-                        label = { Text("طول غير مدعّم L_b (مم)") },
+                        label = { Text(stringResource(R.string.qc_steel_unbraced_length)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -909,12 +960,12 @@ private fun SteelStructureQCTab(
                     OutlinedTextField(
                         value = uiState.allowableDeflection,
                         onValueChange = { viewModel.updateSteelField("allowableDeflection", it) },
-                        label = { Text("الانحراف المسموح Δ (مم)") },
+                        label = { Text(stringResource(R.string.qc_steel_allowable_deflection)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        "L_b = 0 يعني افتراض التقييد الجانبي الكامل؛ أدخل L_b الفعلي عند عدم التقييد",
+                        stringResource(R.string.qc_steel_lb_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -932,13 +983,13 @@ private fun SteelStructureQCTab(
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("فحص القطاع المعدني")
+            Text(stringResource(R.string.qc_steel_check))
         }
 
         uiState.steelChecks?.let { checks ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("نتائج الفحص", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.qc_check_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     checks.forEach { check ->
                         SafetyCheckRow(
@@ -957,8 +1008,8 @@ private fun SteelStructureQCTab(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = "Steel Structure Quality Control",
-                    subtitle = "Steel Member Report",
+                    title = context.getString(R.string.qc_steel_report_title),
+                    subtitle = context.getString(R.string.qc_steel_report_subtitle),
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -967,7 +1018,7 @@ private fun SteelStructureQCTab(
         ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("تصدير تقرير المعدن PDF")
+            Text(stringResource(R.string.qc_steel_export))
         }
     }
 }
@@ -994,21 +1045,21 @@ private fun RoadsQCTab(
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("فحص طبقات الطريق", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_roads_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = uiState.surfaceLayerThickness,
                         onValueChange = { viewModel.updateRoadsField("surfaceLayerThickness", it) },
-                        label = { Text("السطحية (مم)") },
+                        label = { Text(stringResource(R.string.qc_roads_surface)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.baseLayerThickness,
                         onValueChange = { viewModel.updateRoadsField("baseLayerThickness", it) },
-                        label = { Text("الأساس (مم)") },
+                        label = { Text(stringResource(R.string.qc_roads_base)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
@@ -1018,7 +1069,7 @@ private fun RoadsQCTab(
                 OutlinedTextField(
                     value = uiState.subbaseLayerThickness,
                     onValueChange = { viewModel.updateRoadsField("subbaseLayerThickness", it) },
-                    label = { Text("الأساس المساعد (مم)") },
+                    label = { Text(stringResource(R.string.qc_roads_subbase)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1027,13 +1078,13 @@ private fun RoadsQCTab(
                 Divider()
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text("فحوصات الدمك", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_roads_compaction_checks), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
                     value = uiState.compactionPercent,
                     onValueChange = { viewModel.updateRoadsField("compactionPercent", it) },
-                    label = { Text("نسبة الدمك (%)") },
+                    label = { Text(stringResource(R.string.qc_roads_compaction)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1042,7 +1093,7 @@ private fun RoadsQCTab(
                 OutlinedTextField(
                     value = uiState.asphaltDensity,
                     onValueChange = { viewModel.updateRoadsField("asphaltDensity", it) },
-                    label = { Text("كثافة الأسفلت (kN/m³)") },
+                    label = { Text(stringResource(R.string.qc_roads_asphalt_density)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1051,7 +1102,7 @@ private fun RoadsQCTab(
                 OutlinedTextField(
                     value = uiState.airVoids,
                     onValueChange = { viewModel.updateRoadsField("airVoids", it) },
-                    label = { Text("نسبة الفراغات (%)") },
+                    label = { Text(stringResource(R.string.qc_roads_air_voids)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1068,15 +1119,15 @@ private fun RoadsQCTab(
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("فحص طبقات الطريق")
+            Text(stringResource(R.string.qc_roads_check))
         }
 
         Button(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = "Roads Quality Control",
-                    subtitle = "Pavement QC Report",
+                    title = context.getString(R.string.qc_roads_report_title),
+                    subtitle = context.getString(R.string.qc_roads_report_subtitle),
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -1085,7 +1136,7 @@ private fun RoadsQCTab(
         ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("تصدير تقرير الطرق PDF")
+            Text(stringResource(R.string.qc_roads_export))
         }
 
         QcOutcomeCard(uiState.outcome)
@@ -1114,21 +1165,21 @@ private fun BridgesQCTab(
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("فحص الجسر", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_bridges_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = uiState.concreteStrength,
                         onValueChange = { viewModel.updateBridgesField("concreteStrength", it) },
-                        label = { Text("مقاومة الخرسانة المقاسة (MPa)") },
+                        label = { Text(stringResource(R.string.qc_bridges_concrete_strength)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.span,
                         onValueChange = { viewModel.updateBridgesField("span", it) },
-                        label = { Text("البحر (م)") },
+                        label = { Text(stringResource(R.string.qc_bridges_span)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1138,7 +1189,7 @@ private fun BridgesQCTab(
                 OutlinedTextField(
                     value = uiState.requiredConcreteStrength,
                     onValueChange = { viewModel.updateBridgesField("requiredConcreteStrength", it) },
-                    label = { Text("مقاومة الخرسانة المطلوبة حسب المواصفات (MPa)") },
+                    label = { Text(stringResource(R.string.qc_bridges_required_strength)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1146,12 +1197,12 @@ private fun BridgesQCTab(
                 OutlinedTextField(
                     value = uiState.naturalFrequency,
                     onValueChange = { viewModel.updateBridgesField("naturalFrequency", it) },
-                    label = { Text("التردد الطبيعي (Hz)") },
+                    label = { Text(stringResource(R.string.qc_bridges_natural_frequency)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    "التردد الطبيعي مؤشر معلوماتي فقط؛ لا يُستخدم بديلًا عن قياس الهبوط أو حد القبول بالمشروع.",
+                    stringResource(R.string.qc_bridges_freq_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1160,14 +1211,14 @@ private fun BridgesQCTab(
                     OutlinedTextField(
                         value = uiState.measuredDeflection,
                         onValueChange = { viewModel.updateBridgesField("measuredDeflection", it) },
-                        label = { Text("الهبوط المقاس (mm)") },
+                        label = { Text(stringResource(R.string.qc_bridges_measured_deflection)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.allowableDeflection,
                         onValueChange = { viewModel.updateBridgesField("allowableDeflection", it) },
-                        label = { Text("حد الهبوط بالمشروع (mm)") },
+                        label = { Text(stringResource(R.string.qc_bridges_allowable_deflection)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1185,15 +1236,15 @@ private fun BridgesQCTab(
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("فحص الجسر")
+            Text(stringResource(R.string.qc_bridges_check))
         }
 
         Button(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = "Bridges Quality Control",
-                    subtitle = "Bridge QC Report",
+                    title = context.getString(R.string.qc_bridges_report_title),
+                    subtitle = context.getString(R.string.qc_bridges_report_subtitle),
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -1202,7 +1253,7 @@ private fun BridgesQCTab(
         ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("تصدير تقرير الجسور PDF")
+            Text(stringResource(R.string.qc_bridges_export))
         }
 
         QcOutcomeCard(uiState.outcome)
@@ -1232,12 +1283,12 @@ private fun TunnelsQCTab(
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("فحص النفق", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_tunnels_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 val classes = listOf("I", "II", "III", "IV", "V")
 
-                Text("تصنيف الصخر", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.qc_tunnels_rock_class), style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     classes.forEach { cls ->
                         FilterChip(
@@ -1253,14 +1304,14 @@ private fun TunnelsQCTab(
                     OutlinedTextField(
                         value = uiState.tunnelConvergence,
                         onValueChange = { viewModel.updateTunnelsField("tunnelConvergence", it) },
-                        label = { Text("التقارب (مم)") },
+                        label = { Text(stringResource(R.string.qc_tunnels_convergence)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.tunnelDiameter,
                         onValueChange = { viewModel.updateTunnelsField("tunnelDiameter", it) },
-                        label = { Text("القطر (م)") },
+                        label = { Text(stringResource(R.string.qc_tunnels_diameter)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1270,7 +1321,7 @@ private fun TunnelsQCTab(
                 OutlinedTextField(
                     value = uiState.supportThickness,
                     onValueChange = { viewModel.updateTunnelsField("supportThickness", it) },
-                    label = { Text("سمك الدعم (مم)") },
+                    label = { Text(stringResource(R.string.qc_tunnels_support_thickness)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1285,10 +1336,10 @@ private fun TunnelsQCTab(
                         modifier = Modifier.weight(1f)
                     ) {
                         OutlinedTextField(
-                            value = if (uiState.groundwaterPresent == "true") "نعم" else "لا",
+                            value = if (uiState.groundwaterPresent == "true") stringResource(R.string.qc_tunnels_groundwater_yes) else stringResource(R.string.qc_tunnels_groundwater_no),
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("مياه جوفية") },
+                            label = { Text(stringResource(R.string.qc_tunnels_groundwater)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = groundwaterExpanded) },
                             modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                         )
@@ -1296,14 +1347,14 @@ private fun TunnelsQCTab(
                             expanded = groundwaterExpanded,
                             onDismissRequest = { groundwaterExpanded = false }
                         ) {
-                            DropdownMenuItem(text = { Text("لا") }, onClick = { viewModel.updateTunnelsField("groundwaterPresent", "false"); groundwaterExpanded = false })
-                            DropdownMenuItem(text = { Text("نعم") }, onClick = { viewModel.updateTunnelsField("groundwaterPresent", "true"); groundwaterExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.qc_tunnels_groundwater_no)) }, onClick = { viewModel.updateTunnelsField("groundwaterPresent", "false"); groundwaterExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.qc_tunnels_groundwater_yes)) }, onClick = { viewModel.updateTunnelsField("groundwaterPresent", "true"); groundwaterExpanded = false })
                         }
                     }
                     OutlinedTextField(
                         value = uiState.shotcreteStrength,
                         onValueChange = { viewModel.updateTunnelsField("shotcreteStrength", it) },
-                        label = { Text("مقاومة الرشاش (MPa)") },
+                        label = { Text(stringResource(R.string.qc_tunnels_shotcrete_strength)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1313,7 +1364,7 @@ private fun TunnelsQCTab(
                 OutlinedTextField(
                     value = uiState.rockUcs,
                     onValueChange = { viewModel.updateTunnelsField("rockUcs", it) },
-                    label = { Text("مقاومة الشد المحوري للصخر UCS (MPa)") },
+                    label = { Text(stringResource(R.string.qc_tunnels_rock_ucs)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1330,15 +1381,15 @@ private fun TunnelsQCTab(
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("فحص النفق")
+            Text(stringResource(R.string.qc_tunnels_check))
         }
 
         Button(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = "Tunnels Quality Control",
-                    subtitle = "Tunnel Support Report",
+                    title = context.getString(R.string.qc_tunnels_report_title),
+                    subtitle = context.getString(R.string.qc_tunnels_report_subtitle),
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -1347,7 +1398,7 @@ private fun TunnelsQCTab(
         ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("تصدير تقرير الأنفاق PDF")
+            Text(stringResource(R.string.qc_tunnels_export))
         }
 
         QcOutcomeCard(uiState.outcome)
@@ -1366,8 +1417,14 @@ private fun BuildingsQCTab(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.buildingsState.collectAsState()
-    var buildingType by remember { mutableStateOf("مباني سكنية") }
-    val types = listOf("مباني سكنية", "عمائر", "مستشفيات", "مباني تجارية")
+    val defaultBuildingType = stringResource(R.string.qc_buildings_type_residential)
+    var buildingType by remember(defaultBuildingType) { mutableStateOf(defaultBuildingType) }
+    val types = listOf(
+        stringResource(R.string.qc_buildings_type_residential),
+        stringResource(R.string.qc_buildings_type_apartment),
+        stringResource(R.string.qc_buildings_type_hospital),
+        stringResource(R.string.qc_buildings_type_commercial)
+    )
 
     Column(
         modifier = Modifier
@@ -1383,7 +1440,7 @@ private fun BuildingsQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("نوع المبنى", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_buildings_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 types.forEach { type ->
@@ -1406,21 +1463,21 @@ private fun BuildingsQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("معاملات المبنى", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_buildings_foundation_params), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = uiState.numFloors,
                         onValueChange = { viewModel.updateBuildingsField("numFloors", it) },
-                        label = { Text("عدد الطوابق") },
+                        label = { Text(stringResource(R.string.qc_buildings_num_floors)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.floorHeight,
                         onValueChange = { viewModel.updateBuildingsField("floorHeight", it) },
-                        label = { Text("ارتفاع الطابق (م)") },
+                        label = { Text(stringResource(R.string.qc_buildings_floor_height)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1431,14 +1488,14 @@ private fun BuildingsQCTab(
                     OutlinedTextField(
                         value = uiState.totalWeight,
                         onValueChange = { viewModel.updateBuildingsField("totalWeight", it) },
-                        label = { Text("الوزن الكلي (kN)") },
+                        label = { Text(stringResource(R.string.qc_buildings_total_weight)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.importanceFactor,
                         onValueChange = { viewModel.updateBuildingsField("importanceFactor", it) },
-                        label = { Text("معامل الأهمية") },
+                        label = { Text(stringResource(R.string.qc_buildings_importance_factor)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1449,14 +1506,14 @@ private fun BuildingsQCTab(
                     OutlinedTextField(
                         value = uiState.sds,
                         onValueChange = { viewModel.updateBuildingsField("sds", it) },
-                        label = { Text("S_DS (g)") },
+                        label = { Text(stringResource(R.string.qc_buildings_sds)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.responseR,
                         onValueChange = { viewModel.updateBuildingsField("responseR", it) },
-                        label = { Text("معامل الاستجابة R") },
+                        label = { Text(stringResource(R.string.qc_buildings_response_r)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1466,7 +1523,7 @@ private fun BuildingsQCTab(
                 OutlinedTextField(
                     value = uiState.storyDrift,
                     onValueChange = { viewModel.updateBuildingsField("storyDrift", it) },
-                    label = { Text("الانزلاق النسبي للطابق") },
+                    label = { Text(stringResource(R.string.qc_buildings_story_drift)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1483,13 +1540,13 @@ private fun BuildingsQCTab(
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("فحص المبنى")
+            Text(stringResource(R.string.qc_buildings_check))
         }
 
         uiState.buildingChecks?.let { checks ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("نتائج الفحص", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.qc_check_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     checks.forEach { check ->
                         SafetyCheckRow(
@@ -1506,8 +1563,8 @@ private fun BuildingsQCTab(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = "Buildings Quality Control",
-                    subtitle = "High-Rise / Hospitals QC Report",
+                    title = context.getString(R.string.qc_buildings_report_title),
+                    subtitle = context.getString(R.string.qc_buildings_report_subtitle),
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -1516,7 +1573,7 @@ private fun BuildingsQCTab(
         ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("تصدير تقرير المباني PDF")
+            Text(stringResource(R.string.qc_buildings_export))
         }
 
         QcOutcomeCard(uiState.outcome)
@@ -1531,7 +1588,7 @@ private enum class QcFieldType { NUMBER, TEXT, BOOL }
 
 private data class QcField(
     val key: String,
-    val label: String,
+    @StringRes val labelRes: Int,
     val type: QcFieldType,
     val default: String = ""
 )
@@ -1550,281 +1607,281 @@ private fun Map<String, String>.str(k: String, def: String = "") =
 
 private enum class QcDiscipline(
     val category: String,
-    val title: String,
-    val subtitle: String,
+    @StringRes val titleRes: Int,
+    @StringRes val subtitleRes: Int,
     val elementId: String,
     val fields: List<QcField>
 ) {
     EARTHWORKS(
         QualityControlEngine.Category.EARTHWORKS,
-        "Earthworks Quality Control", "Excavation & Backfill", "EARTHWORKS",
+        R.string.qc_d_earthworks_title, R.string.qc_d_earthworks_subtitle, "EARTHWORKS",
         listOf(
-            QcField("excavationDepth", "عمق الحفر (m)", QcFieldType.NUMBER, "3.0"),
-            QcField("excavationLength", "طول الحفر (m)", QcFieldType.NUMBER, "20.0"),
-            QcField("excavationWidth", "عرض الحفر (m)", QcFieldType.NUMBER, "10.0"),
-            QcField("slopeAngle", "زاوية الميل (°)", QcFieldType.NUMBER, "45"),
-            QcField("soilType", "نوع التربة (CLAY/SAND/ROCK)", QcFieldType.TEXT, "SAND"),
-            QcField("groundwaterLevel", "منسوب المياه (m)", QcFieldType.NUMBER, "5.0"),
-            QcField("backfillType", "نوع الردم", QcFieldType.TEXT, "Compacted Sand"),
-            QcField("compactionMethod", "طريقة الدمك", QcFieldType.TEXT, "Vibratory"),
-            QcField("layerThickness", "سماكة الطبقة (mm)", QcFieldType.NUMBER, "250"),
-            QcField("fieldDensity", "الكثافة الحقلية (kN/m³)", QcFieldType.NUMBER, "19.0"),
-            QcField("maxDryDensity", "أقصى كثافة جافة (kN/m³)", QcFieldType.NUMBER, "20.0"),
-            QcField("optimumMoisture", "الرطوبة المثلى (%)", QcFieldType.NUMBER, "12.0"),
-            QcField("fieldMoisture", "الرطوبة الحقلية (%)", QcFieldType.NUMBER, "12.5")
+            QcField("excavationDepth", R.string.qc_f_excavation_depth, QcFieldType.NUMBER, "3.0"),
+            QcField("excavationLength", R.string.qc_f_excavation_length, QcFieldType.NUMBER, "20.0"),
+            QcField("excavationWidth", R.string.qc_f_excavation_width, QcFieldType.NUMBER, "10.0"),
+            QcField("slopeAngle", R.string.qc_f_slope_angle, QcFieldType.NUMBER, "45"),
+            QcField("soilType", R.string.qc_f_soil_type_classified, QcFieldType.TEXT, "SAND"),
+            QcField("groundwaterLevel", R.string.qc_f_groundwater_level, QcFieldType.NUMBER, "5.0"),
+            QcField("backfillType", R.string.qc_f_backfill_type, QcFieldType.TEXT, "Compacted Sand"),
+            QcField("compactionMethod", R.string.qc_f_compaction_method, QcFieldType.TEXT, "Vibratory"),
+            QcField("layerThickness", R.string.qc_f_layer_thickness, QcFieldType.NUMBER, "250"),
+            QcField("fieldDensity", R.string.qc_f_field_density, QcFieldType.NUMBER, "19.0"),
+            QcField("maxDryDensity", R.string.qc_f_max_dry_density, QcFieldType.NUMBER, "20.0"),
+            QcField("optimumMoisture", R.string.qc_f_optimum_moisture, QcFieldType.NUMBER, "12.0"),
+            QcField("fieldMoisture", R.string.qc_f_field_moisture, QcFieldType.NUMBER, "12.5")
         )
     ),
     PILING(
         QualityControlEngine.Category.PILING,
-        "Piling Quality Control", "Deep Foundations", "PILES",
+        R.string.qc_d_piling_title, R.string.qc_d_piling_subtitle, "PILES",
         listOf(
-            QcField("pileType", "نوع الخازوق (DRIVEN/BORED/CFA)", QcFieldType.TEXT, "BORED"),
-            QcField("pileDiameter", "قطر الخازوق (mm)", QcFieldType.NUMBER, "600"),
-            QcField("pileLength", "طول الخازوق (m)", QcFieldType.NUMBER, "15"),
-            QcField("numberOfPiles", "عدد الخوازيق", QcFieldType.NUMBER, "9"),
-            QcField("pileSpacing", "التباعد (m)", QcFieldType.NUMBER, "1.8"),
-            QcField("axialLoad", "الحمل المحوري (kN)", QcFieldType.NUMBER, "1200"),
-            QcField("lateralLoad", "الحمل الجانبي (kN)", QcFieldType.NUMBER, "80"),
-            QcField("momentLoad", "العزم (kN·m)", QcFieldType.NUMBER, "150"),
-            QcField("cu", "تماسك Cu (kPa)", QcFieldType.NUMBER, "75"),
-            QcField("phi", "زاوية الاحتكاك (°)", QcFieldType.NUMBER, "30"),
-            QcField("gammaSoil", "الوزن النوعي (kN/m³)", QcFieldType.NUMBER, "18"),
-            QcField("waterTableDepth", "عمق المياه (m)", QcFieldType.NUMBER, "3"),
-            QcField("safetyFactor", "معامل الأمان", QcFieldType.NUMBER, "2.5"),
-            QcField("pileGroupPattern", "نمط المجموعة", QcFieldType.TEXT, "3x3"),
-            QcField("scourDepth", "عمق النحر (m)", QcFieldType.NUMBER, "1.0"),
-            QcField("capConcreteCover", "غطاء القاعدة (mm)", QcFieldType.NUMBER, "75"),
-            QcField("columnWidth", "عرض العمود (mm)", QcFieldType.NUMBER, "600"),
-            QcField("columnLength", "طول العمود (mm)", QcFieldType.NUMBER, "600")
+            QcField("pileType", R.string.qc_f_pile_type, QcFieldType.TEXT, "BORED"),
+            QcField("pileDiameter", R.string.qc_f_pile_diameter, QcFieldType.NUMBER, "600"),
+            QcField("pileLength", R.string.qc_f_pile_length, QcFieldType.NUMBER, "15"),
+            QcField("numberOfPiles", R.string.qc_f_number_of_piles, QcFieldType.NUMBER, "9"),
+            QcField("pileSpacing", R.string.qc_f_pile_spacing, QcFieldType.NUMBER, "1.8"),
+            QcField("axialLoad", R.string.qc_f_axial_load, QcFieldType.NUMBER, "1200"),
+            QcField("lateralLoad", R.string.qc_f_lateral_load, QcFieldType.NUMBER, "80"),
+            QcField("momentLoad", R.string.qc_f_moment_load, QcFieldType.NUMBER, "150"),
+            QcField("cu", R.string.qc_f_cohesion_cu, QcFieldType.NUMBER, "75"),
+            QcField("phi", R.string.qc_f_friction_angle, QcFieldType.NUMBER, "30"),
+            QcField("gammaSoil", R.string.qc_f_unit_weight, QcFieldType.NUMBER, "18"),
+            QcField("waterTableDepth", R.string.qc_f_water_table_depth, QcFieldType.NUMBER, "3"),
+            QcField("safetyFactor", R.string.qc_f_safety_factor, QcFieldType.NUMBER, "2.5"),
+            QcField("pileGroupPattern", R.string.qc_f_pile_group_pattern, QcFieldType.TEXT, "3x3"),
+            QcField("scourDepth", R.string.qc_f_scour_depth, QcFieldType.NUMBER, "1.0"),
+            QcField("capConcreteCover", R.string.qc_f_cap_concrete_cover, QcFieldType.NUMBER, "75"),
+            QcField("columnWidth", R.string.qc_f_column_width, QcFieldType.NUMBER, "600"),
+            QcField("columnLength", R.string.qc_f_column_length, QcFieldType.NUMBER, "600")
         )
     ),
     RETAINING_WALLS(
         QualityControlEngine.Category.RETAINING_WALLS,
-        "Retaining Walls Quality Control", "Earth Retention", "RETAINING",
+        R.string.qc_d_retaining_walls_title, R.string.qc_d_retaining_walls_subtitle, "RETAINING",
         listOf(
-            QcField("wallHeight", "ارتفاع الجدار (m)", QcFieldType.NUMBER, "5"),
-            QcField("wallThickness", "سماكة الجدار (mm)", QcFieldType.NUMBER, "300"),
-            QcField("soilType", "نوع التربة", QcFieldType.TEXT, "SAND"),
-            QcField("backfillUnitWeight", "وزن الردم (kN/m³)", QcFieldType.NUMBER, "18"),
-            QcField("backfillFrictionAngle", "زاوية احتكاك الردم (°)", QcFieldType.NUMBER, "30"),
-            QcField("backfillCohesion", "تماسك الردم (kPa)", QcFieldType.NUMBER, "0"),
-            QcField("surchargeLoad", "حمل السير (kN/m²)", QcFieldType.NUMBER, "10"),
-            QcField("groundwaterLevel", "منسوب المياه (m)", QcFieldType.NUMBER, "3"),
-            QcField("foundationDepth", "عمق التأسيس (m)", QcFieldType.NUMBER, "1.5"),
-            QcField("foundationWidth", "عرض القاعدة (m)", QcFieldType.NUMBER, "4"),
-            QcField("foundationSoilBearing", "تحمل التربة (kPa)", QcFieldType.NUMBER, "200"),
-            QcField("concreteStrength", "مقاومة الخرسانة (MPa)", QcFieldType.NUMBER, "30"),
-            QcField("steelGrade", "رتبة الحديد (MPa)", QcFieldType.NUMBER, "400"),
-            QcField("seismicCoefficient", "معامل الزلازل", QcFieldType.NUMBER, "0.1")
+            QcField("wallHeight", R.string.qc_f_wall_height, QcFieldType.NUMBER, "5"),
+            QcField("wallThickness", R.string.qc_f_wall_thickness, QcFieldType.NUMBER, "300"),
+            QcField("soilType", R.string.qc_f_soil_type, QcFieldType.TEXT, "SAND"),
+            QcField("backfillUnitWeight", R.string.qc_f_backfill_unit_weight, QcFieldType.NUMBER, "18"),
+            QcField("backfillFrictionAngle", R.string.qc_f_backfill_friction_angle, QcFieldType.NUMBER, "30"),
+            QcField("backfillCohesion", R.string.qc_f_backfill_cohesion, QcFieldType.NUMBER, "0"),
+            QcField("surchargeLoad", R.string.qc_f_surcharge_load, QcFieldType.NUMBER, "10"),
+            QcField("groundwaterLevel", R.string.qc_f_groundwater_level, QcFieldType.NUMBER, "3"),
+            QcField("foundationDepth", R.string.qc_f_foundation_depth, QcFieldType.NUMBER, "1.5"),
+            QcField("foundationWidth", R.string.qc_f_foundation_width, QcFieldType.NUMBER, "4"),
+            QcField("foundationSoilBearing", R.string.qc_f_foundation_soil_bearing, QcFieldType.NUMBER, "200"),
+            QcField("concreteStrength", R.string.qc_f_concrete_strength, QcFieldType.NUMBER, "30"),
+            QcField("steelGrade", R.string.qc_f_steel_grade, QcFieldType.NUMBER, "400"),
+            QcField("seismicCoefficient", R.string.qc_f_seismic_coefficient, QcFieldType.NUMBER, "0.1")
         )
     ),
     WATERPROOFING(
         QualityControlEngine.Category.WATERPROOFING,
-        "Waterproofing Quality Control", "Membranes & Coatings", "WATERPROOFING",
+        R.string.qc_d_waterproofing_title, R.string.qc_d_waterproofing_subtitle, "WATERPROOFING",
         listOf(
-            QcField("waterproofingType", "نوع العزل", QcFieldType.TEXT, "Bituminous Membrane"),
-            QcField("membraneThickness", "سماكة الغشاء (mm)", QcFieldType.NUMBER, "2.0"),
-            QcField("coatingThickness", "سماكة الطبقة (mm)", QcFieldType.NUMBER, "1.5"),
-            QcField("adhesionStrength", "قوة الالتصاق (MPa)", QcFieldType.NUMBER, "0.6"),
-            QcField("overlapWidth", "عرض التراكب (mm)", QcFieldType.NUMBER, "100"),
-            QcField("leakTestResult", "اجتياز اختبار التسريب", QcFieldType.BOOL, "true"),
-            QcField("cornerDetails", "تفاصيل الأركان", QcFieldType.BOOL, "true"),
-            QcField("drainageLayer", "طبقة الصرف", QcFieldType.BOOL, "true"),
-            QcField("protectionLayer", "طبقة الحماية", QcFieldType.BOOL, "true"),
-            QcField("substrateCondition", "حالة السطح", QcFieldType.TEXT, "Dry"),
-            QcField("applicationTemperature", "درجة الحرارة (°C)", QcFieldType.NUMBER, "25"),
-            QcField("curingTime", "زمن التصلد (h)", QcFieldType.NUMBER, "24")
+            QcField("waterproofingType", R.string.qc_f_waterproofing_type, QcFieldType.TEXT, "Bituminous Membrane"),
+            QcField("membraneThickness", R.string.qc_f_membrane_thickness, QcFieldType.NUMBER, "2.0"),
+            QcField("coatingThickness", R.string.qc_f_layer_thickness, QcFieldType.NUMBER, "1.5"),
+            QcField("adhesionStrength", R.string.qc_f_adhesion_strength, QcFieldType.NUMBER, "0.6"),
+            QcField("overlapWidth", R.string.qc_f_overlap_width, QcFieldType.NUMBER, "100"),
+            QcField("leakTestResult", R.string.qc_f_leak_test_result, QcFieldType.BOOL, "true"),
+            QcField("cornerDetails", R.string.qc_f_corner_details, QcFieldType.BOOL, "true"),
+            QcField("drainageLayer", R.string.qc_f_drainage_layer, QcFieldType.BOOL, "true"),
+            QcField("protectionLayer", R.string.qc_f_protection_layer, QcFieldType.BOOL, "true"),
+            QcField("substrateCondition", R.string.qc_f_substrate_condition, QcFieldType.TEXT, "Dry"),
+            QcField("applicationTemperature", R.string.qc_f_application_temperature, QcFieldType.NUMBER, "25"),
+            QcField("curingTime", R.string.qc_f_curing_time_hours, QcFieldType.NUMBER, "24")
         )
     ),
     MASONRY(
         QualityControlEngine.Category.MASONRY,
-        "Masonry & Plastering Quality Control", "Walls & Rendering", "MASONRY",
+        R.string.qc_d_masonry_title, R.string.qc_d_masonry_subtitle, "MASONRY",
         listOf(
-            QcField("masonryType", "نوع المباني", QcFieldType.TEXT, "Block"),
-            QcField("blockDimensions", "مقاس الوحدة", QcFieldType.TEXT, "200x200x400"),
-            QcField("mortarType", "نوع المونة", QcFieldType.TEXT, "M10"),
-            QcField("mortarStrength", "مقاومة المونة (MPa)", QcFieldType.NUMBER, "10"),
-            QcField("wallThickness", "سماكة الحائط (mm)", QcFieldType.NUMBER, "200"),
-            QcField("plasterThickness", "سماكة اللياسة (mm)", QcFieldType.NUMBER, "15"),
-            QcField("plasterType", "نوع اللياسة", QcFieldType.TEXT, "Cement"),
-            QcField("surfaceFlatness", "الاستواء (mm/m)", QcFieldType.NUMBER, "2.0"),
-            QcField("verticality", "الرأسية (mm/m)", QcFieldType.NUMBER, "3.0"),
-            QcField("adhesionStrength", "قوة الالتصاق (MPa)", QcFieldType.NUMBER, "0.4"),
-            QcField("curingMethod", "طريقة المعالجة", QcFieldType.TEXT, "Wet"),
-            QcField("jointThickness", "سماكة اللحام (mm)", QcFieldType.NUMBER, "10")
+            QcField("masonryType", R.string.qc_f_masonry_type, QcFieldType.TEXT, "Block"),
+            QcField("blockDimensions", R.string.qc_f_block_dimensions, QcFieldType.TEXT, "200x200x400"),
+            QcField("mortarType", R.string.qc_f_mortar_type, QcFieldType.TEXT, "M10"),
+            QcField("mortarStrength", R.string.qc_f_mortar_strength, QcFieldType.NUMBER, "10"),
+            QcField("wallThickness", R.string.qc_f_partition_thickness, QcFieldType.NUMBER, "200"),
+            QcField("plasterThickness", R.string.qc_f_plaster_thickness, QcFieldType.NUMBER, "15"),
+            QcField("plasterType", R.string.qc_f_plaster_type, QcFieldType.TEXT, "Cement"),
+            QcField("surfaceFlatness", R.string.qc_f_flatness_per_m, QcFieldType.NUMBER, "2.0"),
+            QcField("verticality", R.string.qc_f_verticality, QcFieldType.NUMBER, "3.0"),
+            QcField("adhesionStrength", R.string.qc_f_adhesion_strength, QcFieldType.NUMBER, "0.4"),
+            QcField("curingMethod", R.string.qc_f_curing_method, QcFieldType.TEXT, "Wet"),
+            QcField("jointThickness", R.string.qc_f_joint_thickness, QcFieldType.NUMBER, "10")
         )
     ),
     FLOORING(
         QualityControlEngine.Category.FLOORING,
-        "Flooring Quality Control", "Slabs & Finishes", "FLOORING",
+        R.string.qc_d_flooring_title, R.string.qc_d_flooring_subtitle, "FLOORING",
         listOf(
-            QcField("flooringType", "نوع الأرضية", QcFieldType.TEXT, "Granite"),
-            QcField("slabThickness", "سماكة البلاطة (mm)", QcFieldType.NUMBER, "150"),
-            QcField("surfaceFlatness", "الاستواء (mm/2m)", QcFieldType.NUMBER, "2.0"),
-            QcField("compressiveStrength", "مقاومة الضغط (MPa)", QcFieldType.NUMBER, "30"),
-            QcField("tensileStrength", "مقاومة الشد (MPa)", QcFieldType.NUMBER, "3"),
-            QcField("jointSpacing", "تباعد الفواصل (m)", QcFieldType.NUMBER, "5"),
-            QcField("jointWidth", "عرض الفاصل (mm)", QcFieldType.NUMBER, "6"),
-            QcField("finishType", "نوع التشطيب", QcFieldType.TEXT, "Polished"),
-            QcField("curingMethod", "طريقة المعالجة", QcFieldType.TEXT, "Wet"),
-            QcField("levelness", "الاستواء الكلي (mm)", QcFieldType.NUMBER, "5")
+            QcField("flooringType", R.string.qc_f_flooring_type, QcFieldType.TEXT, "Granite"),
+            QcField("slabThickness", R.string.qc_f_slab_thickness, QcFieldType.NUMBER, "150"),
+            QcField("surfaceFlatness", R.string.qc_f_flatness_per_2m, QcFieldType.NUMBER, "2.0"),
+            QcField("compressiveStrength", R.string.qc_f_compressive_strength, QcFieldType.NUMBER, "30"),
+            QcField("tensileStrength", R.string.qc_f_tensile_strength, QcFieldType.NUMBER, "3"),
+            QcField("jointSpacing", R.string.qc_f_joint_spacing, QcFieldType.NUMBER, "5"),
+            QcField("jointWidth", R.string.qc_f_joint_width, QcFieldType.NUMBER, "6"),
+            QcField("finishType", R.string.qc_f_finish_type, QcFieldType.TEXT, "Polished"),
+            QcField("curingMethod", R.string.qc_f_curing_method, QcFieldType.TEXT, "Wet"),
+            QcField("levelness", R.string.qc_f_levelness, QcFieldType.NUMBER, "5")
         )
     ),
     PRECAST(
         QualityControlEngine.Category.PRECAST,
-        "Pre-cast Concrete Quality Control", "Off-site Elements", "PRECAST",
+        R.string.qc_d_precast_title, R.string.qc_d_precast_subtitle, "PRECAST",
         listOf(
-            QcField("elementType", "نوع العنصر", QcFieldType.TEXT, "Beam"),
-            QcField("elementDimensions", "المقاسات", QcFieldType.TEXT, "300x600x6000"),
-            QcField("concreteStrength", "مقاومة الخرسانة (MPa)", QcFieldType.NUMBER, "40"),
-            QcField("steelGrade", "رتبة الحديد (MPa)", QcFieldType.NUMBER, "400"),
-            QcField("coverThickness", "الغطاء (mm)", QcFieldType.NUMBER, "40"),
-            QcField("surfaceFinish", "تشطيب السطح", QcFieldType.TEXT, "Fair"),
-            QcField("liftingAnchors", "مثبتات الرفع", QcFieldType.BOOL, "true"),
-            QcField("connectionDetails", "تفاصيل الوصل", QcFieldType.TEXT, "Bolted"),
-            QcField("transportDamage", "تلف النقل", QcFieldType.BOOL, "false"),
-            QcField("erectionTolerance", "تفاوت التركيب (mm)", QcFieldType.NUMBER, "5"),
-            QcField("groutStrength", "مقاومة الجراوت (MPa)", QcFieldType.NUMBER, "50")
+            QcField("elementType", R.string.qc_f_element_type, QcFieldType.TEXT, "Beam"),
+            QcField("elementDimensions", R.string.qc_f_element_dimensions, QcFieldType.TEXT, "300x600x6000"),
+            QcField("concreteStrength", R.string.qc_f_concrete_strength, QcFieldType.NUMBER, "40"),
+            QcField("steelGrade", R.string.qc_f_steel_grade, QcFieldType.NUMBER, "400"),
+            QcField("coverThickness", R.string.qc_f_cover_thickness, QcFieldType.NUMBER, "40"),
+            QcField("surfaceFinish", R.string.qc_f_surface_finish, QcFieldType.TEXT, "Fair"),
+            QcField("liftingAnchors", R.string.qc_f_lifting_anchors, QcFieldType.BOOL, "true"),
+            QcField("connectionDetails", R.string.qc_f_connection_details, QcFieldType.TEXT, "Bolted"),
+            QcField("transportDamage", R.string.qc_f_transport_damage, QcFieldType.BOOL, "false"),
+            QcField("erectionTolerance", R.string.qc_f_erection_tolerance, QcFieldType.NUMBER, "5"),
+            QcField("groutStrength", R.string.qc_f_grout_strength, QcFieldType.NUMBER, "50")
         )
     ),
     POST_TENSION(
         QualityControlEngine.Category.POST_TENSION,
-        "Post-Tensioning Quality Control", "Tendons & Grouting", "POST_TENSION",
+        R.string.qc_d_post_tension_title, R.string.qc_d_post_tension_subtitle, "POST_TENSION",
         listOf(
-            QcField("tendonType", "نوع الكابل", QcFieldType.TEXT, "7-wire strand"),
-            QcField("tendonDiameter", "قطر الكابل (mm)", QcFieldType.NUMBER, "15.2"),
-            QcField("jackingForce", "قوة الشد (kN)", QcFieldType.NUMBER, "200"),
-            QcField("elongation", "الاستطالة (mm)", QcFieldType.NUMBER, "180"),
-            QcField("expectedElongation", "الاستطالة المتوقعة (mm)", QcFieldType.NUMBER, "180"),
-            QcField("groutStrength", "مقاومة الجراوت (MPa)", QcFieldType.NUMBER, "35"),
-            QcField("groutFlow", "سيولة الجراوت (sec)", QcFieldType.NUMBER, "20"),
-            QcField("anchorageType", "نوع المثبت", QcFieldType.TEXT, "Wedge"),
-            QcField("ductMaterial", "مادة الممر", QcFieldType.TEXT, "HDPE"),
-            QcField("corrosionProtection", "حماية التآكل", QcFieldType.TEXT, "Galvanized"),
-            QcField("stressLoss", "فقد الإجهاد (%)", QcFieldType.NUMBER, "15"),
-            QcField("frictionCoefficient", "معامل الاحتكاك", QcFieldType.NUMBER, "0.20"),
-            QcField("wobbleCoefficient", "معامل التموج", QcFieldType.NUMBER, "0.002")
+            QcField("tendonType", R.string.qc_f_tendon_type, QcFieldType.TEXT, "7-wire strand"),
+            QcField("tendonDiameter", R.string.qc_f_tendon_diameter, QcFieldType.NUMBER, "15.2"),
+            QcField("jackingForce", R.string.qc_f_jacking_force, QcFieldType.NUMBER, "200"),
+            QcField("elongation", R.string.qc_f_elongation, QcFieldType.NUMBER, "180"),
+            QcField("expectedElongation", R.string.qc_f_expected_elongation, QcFieldType.NUMBER, "180"),
+            QcField("groutStrength", R.string.qc_f_grout_strength, QcFieldType.NUMBER, "35"),
+            QcField("groutFlow", R.string.qc_f_grout_flow, QcFieldType.NUMBER, "20"),
+            QcField("anchorageType", R.string.qc_f_anchorage_type, QcFieldType.TEXT, "Wedge"),
+            QcField("ductMaterial", R.string.qc_f_duct_material, QcFieldType.TEXT, "HDPE"),
+            QcField("corrosionProtection", R.string.qc_f_corrosion_protection, QcFieldType.TEXT, "Galvanized"),
+            QcField("stressLoss", R.string.qc_f_stress_loss, QcFieldType.NUMBER, "15"),
+            QcField("frictionCoefficient", R.string.qc_f_friction_coefficient, QcFieldType.NUMBER, "0.20"),
+            QcField("wobbleCoefficient", R.string.qc_f_wobble_coefficient, QcFieldType.NUMBER, "0.002")
         )
     ),
     GROUTING(
         QualityControlEngine.Category.GROUTING,
-        "Grouting Quality Control", "Injection Works", "GROUTING",
+        R.string.qc_d_grouting_title, R.string.qc_d_grouting_subtitle, "GROUTING",
         listOf(
-            QcField("groutType", "نوع الجراوت", QcFieldType.TEXT, "Cementitious"),
-            QcField("flowTime", "زمن السيولة (sec)", QcFieldType.NUMBER, "20"),
-            QcField("shrinkage", "الانكماش (%)", QcFieldType.NUMBER, "0.05"),
-            QcField("compressiveStrength", "مقاومة الضغط (MPa)", QcFieldType.NUMBER, "40"),
-            QcField("viscosity", "اللزوجة (cP)", QcFieldType.NUMBER, "500"),
-            QcField("gelTime", "زمن التجلط (min)", QcFieldType.NUMBER, "10"),
-            QcField("bondStrength", "قوة الترابط (MPa)", QcFieldType.NUMBER, "2.0"),
-            QcField("injectionPressure", "ضغط الحقن (MPa)", QcFieldType.NUMBER, "0.35"),
-            QcField("injectionVolume", "حجم الحقن (L)", QcFieldType.NUMBER, "100"),
-            QcField("curingTime", "زمن التصلد (days)", QcFieldType.NUMBER, "7"),
-            QcField("substrateCondition", "حالة السطح", QcFieldType.TEXT, "Clean")
+            QcField("groutType", R.string.qc_f_grout_type, QcFieldType.TEXT, "Cementitious"),
+            QcField("flowTime", R.string.qc_f_flow_time, QcFieldType.NUMBER, "20"),
+            QcField("shrinkage", R.string.qc_f_shrinkage, QcFieldType.NUMBER, "0.05"),
+            QcField("compressiveStrength", R.string.qc_f_compressive_strength, QcFieldType.NUMBER, "40"),
+            QcField("viscosity", R.string.qc_f_viscosity, QcFieldType.NUMBER, "500"),
+            QcField("gelTime", R.string.qc_f_gel_time, QcFieldType.NUMBER, "10"),
+            QcField("bondStrength", R.string.qc_f_bond_strength, QcFieldType.NUMBER, "2.0"),
+            QcField("injectionPressure", R.string.qc_f_injection_pressure, QcFieldType.NUMBER, "0.35"),
+            QcField("injectionVolume", R.string.qc_f_injection_volume, QcFieldType.NUMBER, "100"),
+            QcField("curingTime", R.string.qc_f_curing_time_days, QcFieldType.NUMBER, "7"),
+            QcField("substrateCondition", R.string.qc_f_substrate_condition, QcFieldType.TEXT, "Clean")
         )
     ),
     SOIL_IMPROVEMENT(
         QualityControlEngine.Category.SOIL_IMPROVEMENT,
-        "Soil Improvement Quality Control", "Ground Treatment", "SOIL_IMPROVEMENT",
+        R.string.qc_d_soil_improvement_title, R.string.qc_d_soil_improvement_subtitle, "SOIL_IMPROVEMENT",
         listOf(
-            QcField("improvementType", "نوع التحسين", QcFieldType.TEXT, "Stone Columns"),
-            QcField("improvementDepth", "عمق التحسين (m)", QcFieldType.NUMBER, "8"),
-            QcField("improvementDiameter", "القطر (m)", QcFieldType.NUMBER, "0.8"),
-            QcField("spacing", "التباعد (m)", QcFieldType.NUMBER, "2.0"),
-            QcField("preImprovementBearing", "قبل التحسين (kPa)", QcFieldType.NUMBER, "80"),
-            QcField("postImprovementBearing", "بعد التحسين (kPa)", QcFieldType.NUMBER, "160"),
-            QcField("preImprovementSPT", "SPT قبل", QcFieldType.NUMBER, "8"),
-            QcField("postImprovementSPT", "SPT بعد", QcFieldType.NUMBER, "18"),
-            QcField("settlementBefore", "الهبوط قبل (mm)", QcFieldType.NUMBER, "50"),
-            QcField("settlementAfter", "الهبوط بعد (mm)", QcFieldType.NUMBER, "20"),
-            QcField("improvementMaterial", "مادة التحسين", QcFieldType.TEXT, "Crushed Stone"),
-            QcField("qualityControlTest", "اختبار الجودة", QcFieldType.TEXT, "Plate Load")
+            QcField("improvementType", R.string.qc_f_improvement_type, QcFieldType.TEXT, "Stone Columns"),
+            QcField("improvementDepth", R.string.qc_f_improvement_depth, QcFieldType.NUMBER, "8"),
+            QcField("improvementDiameter", R.string.qc_f_improvement_diameter, QcFieldType.NUMBER, "0.8"),
+            QcField("spacing", R.string.qc_f_pile_spacing, QcFieldType.NUMBER, "2.0"),
+            QcField("preImprovementBearing", R.string.qc_f_pre_improvement_bearing, QcFieldType.NUMBER, "80"),
+            QcField("postImprovementBearing", R.string.qc_f_post_improvement_bearing, QcFieldType.NUMBER, "160"),
+            QcField("preImprovementSPT", R.string.qc_f_pre_improvement_spt, QcFieldType.NUMBER, "8"),
+            QcField("postImprovementSPT", R.string.qc_f_post_improvement_spt, QcFieldType.NUMBER, "18"),
+            QcField("settlementBefore", R.string.qc_f_settlement_before, QcFieldType.NUMBER, "50"),
+            QcField("settlementAfter", R.string.qc_f_settlement_after, QcFieldType.NUMBER, "20"),
+            QcField("improvementMaterial", R.string.qc_f_improvement_material, QcFieldType.TEXT, "Crushed Stone"),
+            QcField("qualityControlTest", R.string.qc_f_quality_control_test, QcFieldType.TEXT, "Plate Load")
         )
     ),
     WATER_TANKS(
         QualityControlEngine.Category.WATER_TANKS,
-        "Water Tanks Quality Control", "Liquid Retaining Structures", "WATER_TANKS",
+        R.string.qc_d_water_tanks_title, R.string.qc_d_water_tanks_subtitle, "WATER_TANKS",
         listOf(
-            QcField("tankType", "نوع الخزان", QcFieldType.TEXT, "Rectangular"),
-            QcField("tankCapacity", "السعة (m³)", QcFieldType.NUMBER, "500"),
-            QcField("tankDimensions", "المقاسات", QcFieldType.TEXT, "20x10x3"),
-            QcField("concreteStrength", "مقاومة الخرسانة (MPa)", QcFieldType.NUMBER, "30"),
-            QcField("steelGrade", "رتبة الحديد (MPa)", QcFieldType.NUMBER, "400"),
-            QcField("wallThickness", "سماكة الجدار (mm)", QcFieldType.NUMBER, "250"),
-            QcField("floorThickness", "سماكة الأرضية (mm)", QcFieldType.NUMBER, "200"),
-            QcField("roofThickness", "سماكة السقف (mm)", QcFieldType.NUMBER, "150"),
-            QcField("waterproofingType", "نوع العزل", QcFieldType.TEXT, "Crystalline"),
-            QcField("leakTestResult", "اجتياز اختبار التسريب", QcFieldType.BOOL, "true"),
-            QcField("hydrostaticTest", "الاختبار الهيدروستاتيكي", QcFieldType.BOOL, "true"),
-            QcField("valveType", "نوع الصمام", QcFieldType.TEXT, "Gate"),
-            QcField("drainageSystem", "نظام الصرف", QcFieldType.BOOL, "true")
+            QcField("tankType", R.string.qc_f_tank_type, QcFieldType.TEXT, "Rectangular"),
+            QcField("tankCapacity", R.string.qc_f_tank_capacity, QcFieldType.NUMBER, "500"),
+            QcField("tankDimensions", R.string.qc_f_element_dimensions, QcFieldType.TEXT, "20x10x3"),
+            QcField("concreteStrength", R.string.qc_f_concrete_strength, QcFieldType.NUMBER, "30"),
+            QcField("steelGrade", R.string.qc_f_steel_grade, QcFieldType.NUMBER, "400"),
+            QcField("wallThickness", R.string.qc_f_wall_thickness, QcFieldType.NUMBER, "250"),
+            QcField("floorThickness", R.string.qc_f_floor_thickness, QcFieldType.NUMBER, "200"),
+            QcField("roofThickness", R.string.qc_f_roof_thickness, QcFieldType.NUMBER, "150"),
+            QcField("waterproofingType", R.string.qc_f_waterproofing_type, QcFieldType.TEXT, "Crystalline"),
+            QcField("leakTestResult", R.string.qc_f_leak_test_result, QcFieldType.BOOL, "true"),
+            QcField("hydrostaticTest", R.string.qc_f_hydrostatic_test, QcFieldType.BOOL, "true"),
+            QcField("valveType", R.string.qc_f_valve_type, QcFieldType.TEXT, "Gate"),
+            QcField("drainageSystem", R.string.qc_f_drainage_system, QcFieldType.BOOL, "true")
         )
     ),
     DRAINAGE(
         QualityControlEngine.Category.DRAINAGE,
-        "Drainage Quality Control", "Pipes & Manholes", "DRAINAGE",
+        R.string.qc_d_drainage_title, R.string.qc_d_drainage_subtitle, "DRAINAGE",
         listOf(
-            QcField("pipeMaterial", "مادة المواسير", QcFieldType.TEXT, "RCP"),
-            QcField("pipeDiameter", "القطر (mm)", QcFieldType.NUMBER, "600"),
-            QcField("pipeLength", "الطول (m)", QcFieldType.NUMBER, "100"),
-            QcField("slope", "الميل (%)", QcFieldType.NUMBER, "1.5"),
-            QcField("jointType", "نوع الوصلة", QcFieldType.TEXT, "Rubber Gasket"),
-            QcField("leakTestResult", "اجتياز اختبار التسريب", QcFieldType.BOOL, "true"),
-            QcField("manholeSpacing", "تباعد المطابق (m)", QcFieldType.NUMBER, "40"),
-            QcField("manholeDepth", "عمق المطبق (m)", QcFieldType.NUMBER, "3"),
-            QcField("flowRate", "معدل التصرف (L/s)", QcFieldType.NUMBER, "150"),
-            QcField("invertLevel", "منسوب القاع (mm)", QcFieldType.NUMBER, "0"),
-            QcField("backfillCompaction", "دمك الردم (%)", QcFieldType.NUMBER, "96")
+            QcField("pipeMaterial", R.string.qc_f_pipe_material, QcFieldType.TEXT, "RCP"),
+            QcField("pipeDiameter", R.string.qc_f_pipe_diameter, QcFieldType.NUMBER, "600"),
+            QcField("pipeLength", R.string.qc_f_pipe_length, QcFieldType.NUMBER, "100"),
+            QcField("slope", R.string.qc_f_slope_percent, QcFieldType.NUMBER, "1.5"),
+            QcField("jointType", R.string.qc_f_joint_type, QcFieldType.TEXT, "Rubber Gasket"),
+            QcField("leakTestResult", R.string.qc_f_leak_test_result, QcFieldType.BOOL, "true"),
+            QcField("manholeSpacing", R.string.qc_f_manhole_spacing, QcFieldType.NUMBER, "40"),
+            QcField("manholeDepth", R.string.qc_f_manhole_depth, QcFieldType.NUMBER, "3"),
+            QcField("flowRate", R.string.qc_f_flow_rate, QcFieldType.NUMBER, "150"),
+            QcField("invertLevel", R.string.qc_f_invert_level, QcFieldType.NUMBER, "0"),
+            QcField("backfillCompaction", R.string.qc_f_backfill_compaction, QcFieldType.NUMBER, "96")
         )
     ),
     PAINTING(
         QualityControlEngine.Category.PAINTING,
-        "Painting Quality Control", "Coatings & Finishes", "PAINTING",
+        R.string.qc_d_painting_title, R.string.qc_d_painting_subtitle, "PAINTING",
         listOf(
-            QcField("paintType", "نوع الدهان", QcFieldType.TEXT, "Epoxy"),
-            QcField("dft", "السماكة الجافة (μm)", QcFieldType.NUMBER, "150"),
-            QcField("adhesionStrength", "قوة الالتصاق (MPa)", QcFieldType.NUMBER, "2.0"),
-            QcField("colorUniformity", "انتظام اللون", QcFieldType.BOOL, "true"),
-            QcField("surfacePreparation", "تحضير السطح", QcFieldType.TEXT, "SSPC-SP6"),
-            QcField("numberOfCoats", "عدد الطبقات", QcFieldType.NUMBER, "2"),
-            QcField("coatingThickness", "سماكة الطلاء (mm)", QcFieldType.NUMBER, "0.15"),
-            QcField("fireRating", "تصنيف الحريق", QcFieldType.TEXT, "None"),
-            QcField("curingTime", "زمن التصلد (h)", QcFieldType.NUMBER, "24"),
-            QcField("ambientTemperature", "درجة الحرارة (°C)", QcFieldType.NUMBER, "25"),
-            QcField("humidity", "الرطوبة (%)", QcFieldType.NUMBER, "60")
+            QcField("paintType", R.string.qc_f_paint_type, QcFieldType.TEXT, "Epoxy"),
+            QcField("dft", R.string.qc_f_dry_film_thickness, QcFieldType.NUMBER, "150"),
+            QcField("adhesionStrength", R.string.qc_f_adhesion_strength, QcFieldType.NUMBER, "2.0"),
+            QcField("colorUniformity", R.string.qc_f_color_uniformity, QcFieldType.BOOL, "true"),
+            QcField("surfacePreparation", R.string.qc_f_surface_preparation, QcFieldType.TEXT, "SSPC-SP6"),
+            QcField("numberOfCoats", R.string.qc_f_number_of_coats, QcFieldType.NUMBER, "2"),
+            QcField("coatingThickness", R.string.qc_f_coating_thickness, QcFieldType.NUMBER, "0.15"),
+            QcField("fireRating", R.string.qc_f_fire_rating, QcFieldType.TEXT, "None"),
+            QcField("curingTime", R.string.qc_f_curing_time_hours, QcFieldType.NUMBER, "24"),
+            QcField("ambientTemperature", R.string.qc_f_application_temperature, QcFieldType.NUMBER, "25"),
+            QcField("humidity", R.string.qc_f_humidity, QcFieldType.NUMBER, "60")
         )
     ),
     SITE_WORKS(
         QualityControlEngine.Category.SITE_WORKS,
-        "Site Works Quality Control", "General Site Development", "SITE_WORKS",
+        R.string.qc_d_site_works_title, R.string.qc_d_site_works_subtitle, "SITE_WORKS",
         listOf(
-            QcField("gradingLevel", "منسوب التسوية (m)", QcFieldType.NUMBER, "100"),
-            QcField("slope", "الميل (%)", QcFieldType.NUMBER, "0.5"),
-            QcField("fenceType", "نوع السور", QcFieldType.TEXT, "Chain Link"),
-            QcField("gateType", "نوع البوابة", QcFieldType.TEXT, "Swing"),
-            QcField("lightingType", "نوع الإضاءة", QcFieldType.TEXT, "LED"),
-            QcField("landscapingType", "التنسيق", QcFieldType.TEXT, "Grass"),
-            QcField("pavementType", "نوع الرصف", QcFieldType.TEXT, "Interlock"),
-            QcField("drainageSystem", "نظام الصرف", QcFieldType.BOOL, "true"),
-            QcField("safetySigns", "علامات السلامة", QcFieldType.BOOL, "true"),
-            QcField("fireExtinguishers", "طفايات الحريق", QcFieldType.BOOL, "true"),
-            QcField("firstAidKit", "حقيبة الإسعاف", QcFieldType.BOOL, "true")
+            QcField("gradingLevel", R.string.qc_f_grading_level, QcFieldType.NUMBER, "100"),
+            QcField("slope", R.string.qc_f_slope_percent, QcFieldType.NUMBER, "0.5"),
+            QcField("fenceType", R.string.qc_f_fence_type, QcFieldType.TEXT, "Chain Link"),
+            QcField("gateType", R.string.qc_f_gate_type, QcFieldType.TEXT, "Swing"),
+            QcField("lightingType", R.string.qc_f_lighting_type, QcFieldType.TEXT, "LED"),
+            QcField("landscapingType", R.string.qc_f_landscaping_type, QcFieldType.TEXT, "Grass"),
+            QcField("pavementType", R.string.qc_f_pavement_type, QcFieldType.TEXT, "Interlock"),
+            QcField("drainageSystem", R.string.qc_f_drainage_system, QcFieldType.BOOL, "true"),
+            QcField("safetySigns", R.string.qc_f_safety_signs, QcFieldType.BOOL, "true"),
+            QcField("fireExtinguishers", R.string.qc_f_fire_extinguishers, QcFieldType.BOOL, "true"),
+            QcField("firstAidKit", R.string.qc_f_first_aid_kit, QcFieldType.BOOL, "true")
         )
     ),
     FIRE_PROTECTION(
         QualityControlEngine.Category.FIRE_PROTECTION,
-        "Fire Protection Quality Control", "Passive Fire Protection", "FIRE_PROTECTION",
+        R.string.qc_d_fire_protection_title, R.string.qc_d_fire_protection_subtitle, "FIRE_PROTECTION",
         listOf(
-            QcField("protectionType", "نوع الحماية", QcFieldType.TEXT, "Intumescent"),
-            QcField("coatingThickness", "سماكة الطلاء (mm)", QcFieldType.NUMBER, "0.8"),
-            QcField("adhesionStrength", "قوة الالتصاق (MPa)", QcFieldType.NUMBER, "1.2"),
-            QcField("fireRating", "تصنيف الحريق", QcFieldType.TEXT, "2 hr"),
-            QcField("coverageArea", "المساحة المغطاة (m²)", QcFieldType.NUMBER, "500"),
-            QcField("applicationMethod", "طريقة التطبيق", QcFieldType.TEXT, "Spray"),
-            QcField("curingTime", "زمن التصلد (h)", QcFieldType.NUMBER, "24"),
-            QcField("ambientTemperature", "درجة الحرارة (°C)", QcFieldType.NUMBER, "25"),
-            QcField("humidity", "الرطوبة (%)", QcFieldType.NUMBER, "60"),
-            QcField("surfacePreparation", "تحضير السطح", QcFieldType.TEXT, "SSPC-SP6")
+            QcField("protectionType", R.string.qc_f_protection_type, QcFieldType.TEXT, "Intumescent"),
+            QcField("coatingThickness", R.string.qc_f_coating_thickness, QcFieldType.NUMBER, "0.8"),
+            QcField("adhesionStrength", R.string.qc_f_adhesion_strength, QcFieldType.NUMBER, "1.2"),
+            QcField("fireRating", R.string.qc_f_fire_rating, QcFieldType.TEXT, "2 hr"),
+            QcField("coverageArea", R.string.qc_f_coverage_area, QcFieldType.NUMBER, "500"),
+            QcField("applicationMethod", R.string.qc_f_application_method, QcFieldType.TEXT, "Spray"),
+            QcField("curingTime", R.string.qc_f_curing_time_hours, QcFieldType.NUMBER, "24"),
+            QcField("ambientTemperature", R.string.qc_f_application_temperature, QcFieldType.NUMBER, "25"),
+            QcField("humidity", R.string.qc_f_humidity, QcFieldType.NUMBER, "60"),
+            QcField("surfacePreparation", R.string.qc_f_surface_preparation, QcFieldType.TEXT, "SSPC-SP6")
         )
     )
 }
@@ -2067,6 +2124,12 @@ private fun DisciplineQcTab(
     }
     var outcome by remember(discipline) { mutableStateOf<QualityControlEngine.QcOutcome?>(null) }
 
+    val disciplineTitle = stringResource(discipline.titleRes)
+    val disciplineSubtitle = stringResource(discipline.subtitleRes)
+    val inspectionPassedMessage = stringResource(R.string.qc_msg_inspection_passed_saved)
+    val inspectionReviewMessage = stringResource(R.string.qc_msg_inspection_needs_review)
+    val invalidNumberMessage = stringResource(R.string.qc_msg_enter_valid_number)
+
     // Any numeric field that cannot be parsed would silently become 0.0 and
     // change the result (a zero load or zero strength is not a valid entry).
     // Block the calculation instead and flag the offending fields.
@@ -2091,7 +2154,7 @@ private fun DisciplineQcTab(
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    discipline.subtitle,
+                    disciplineSubtitle,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -2102,7 +2165,7 @@ private fun DisciplineQcTab(
                         QcFieldType.NUMBER -> OutlinedTextField(
                             value = values[field.key] ?: "",
                             onValueChange = { values[field.key] = it },
-                            label = { Text(field.label) },
+                            label = { Text(stringResource(field.labelRes)) },
                             isError = field.key in invalidNumberKeys,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth()
@@ -2110,7 +2173,7 @@ private fun DisciplineQcTab(
                         QcFieldType.TEXT -> OutlinedTextField(
                             value = values[field.key] ?: "",
                             onValueChange = { values[field.key] = it },
-                            label = { Text(field.label) },
+                            label = { Text(stringResource(field.labelRes)) },
                             modifier = Modifier.fillMaxWidth()
                         )
                         QcFieldType.BOOL -> Row(
@@ -2118,7 +2181,7 @@ private fun DisciplineQcTab(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(field.label, style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(field.labelRes), style = MaterialTheme.typography.bodyMedium)
                             Switch(
                                 checked = (values[field.key] ?: "false").equals("true", true),
                                 onCheckedChange = { values[field.key] = it.toString() }
@@ -2138,26 +2201,26 @@ private fun DisciplineQcTab(
                     viewModel.persistDisciplineOutcome(discipline.category, discipline.elementId, designCode, result)
                     scope.launch {
                         snackbarHostState.showSnackbar(
-                            if (result.passed) "الفحص ناجح — تم حفظ السجل" else "الفحص يحتاج مراجعة — تم حفظ السجل"
+                            if (result.passed) inspectionPassedMessage else inspectionReviewMessage
                         )
                     }
                 } else {
-                    scope.launch { snackbarHostState.showSnackbar("أدخل قيمة رقمية صحيحة في جميع الحقول") }
+                    scope.launch { snackbarHostState.showSnackbar(invalidNumberMessage) }
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Calculate, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("تنفيذ الفحص")
+            Text(stringResource(R.string.qc_reports_execute_inspection))
         }
 
         Button(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = discipline.title,
-                    subtitle = discipline.subtitle,
+                    title = disciplineTitle,
+                    subtitle = disciplineSubtitle,
                     outcome = outcome,
                     designCode = designCode
                 )
@@ -2166,7 +2229,7 @@ private fun DisciplineQcTab(
         ) {
             Icon(Icons.Default.PictureAsPdf, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("تصدير تقرير PDF")
+            Text(stringResource(R.string.qc_reports_export_pdf_btn))
         }
 
         DisciplineDrawingCard(discipline, values, designCode, outcome?.passed == true)
@@ -2203,7 +2266,7 @@ private fun QualityReportsTab(
             viewModel.importQualityBackupUri(context, uri) { ok ->
                 scope.launch {
                     snackbarHostState.showSnackbar(
-                        if (ok) "تم استيراد النسخة الاحتياطية بنجاح" else "فشل استيراد النسخة الاحتياطية"
+                        if (ok) context.getString(R.string.qc_reports_import_success) else context.getString(R.string.qc_reports_import_failed)
                     )
                 }
             }
@@ -2229,20 +2292,23 @@ private fun QualityReportsTab(
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("ملخص الجودة", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_reports_quality_summary), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                ResultRow("إجمالي الفحوصات", "${uiState.totalInspections}")
-                ResultRow("ناجح", "${uiState.passedInspections}")
-                ResultRow("فاشل", "${uiState.failedInspections}")
-                ResultRow("نسبة النجاح", "${String.format("%.1f", uiState.successRate)}%")
+                ResultRow(stringResource(R.string.qc_reports_total_inspections), "${uiState.totalInspections}")
+                ResultRow(stringResource(R.string.qc_reports_passed), "${uiState.passedInspections}")
+                ResultRow(stringResource(R.string.qc_reports_failed), "${uiState.failedInspections}")
+                ResultRow(
+                    stringResource(R.string.qc_reports_success_rate),
+                    "${String.format("%.1f", uiState.successRate)}%"
+                )
             }
         }
 
         if (uiState.categorySummary.isNotEmpty()) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("الملخص حسب التخصص", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.qc_reports_category_summary), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     uiState.categorySummary.forEach { row ->
                         Row(
@@ -2254,7 +2320,11 @@ private fun QualityReportsTab(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(row.category, style = MaterialTheme.typography.bodyMedium)
                                 Text(
-                                    "${row.passedCount}/${row.total} ناجح",
+                                    stringResource(
+                                        R.string.qc_reports_passed_ratio,
+                                        row.passedCount,
+                                        row.total
+                                    ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray
                                 )
@@ -2291,7 +2361,7 @@ private fun QualityReportsTab(
                 viewModel.exportNcrCsv(context) { file ->
                     scope.launch {
                         snackbarHostState.showSnackbar(
-                            if (file != null) "تم تصدير تقرير NCR" else "فشل التصدير"
+                            if (file != null) context.getString(R.string.qc_reports_ncr_export_success) else context.getString(R.string.qc_reports_ncr_export_failed)
                         )
                     }
                 }
@@ -2301,13 +2371,13 @@ private fun QualityReportsTab(
         // Search & Filter Bar
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("تصفية السجلات", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.qc_reports_filter_records), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
                     value = searchText,
                     onValueChange = { searchText = it },
-                    label = { Text("بحث (فئة، عنصر، ملخص)") },
+                    label = { Text(stringResource(R.string.qc_reports_search_hint)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -2324,10 +2394,10 @@ private fun QualityReportsTab(
                         modifier = Modifier.weight(1f)
                     ) {
                         OutlinedTextField(
-                            value = selectedCategory?.takeIf { it.isNotBlank() } ?: "كل الفئات",
+                            value = selectedCategory?.takeIf { it.isNotBlank() } ?: stringResource(R.string.qc_reports_all_categories),
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("الفئة") },
+                            label = { Text(stringResource(R.string.qc_reports_category)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
                             modifier = Modifier
                                 .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
@@ -2335,7 +2405,7 @@ private fun QualityReportsTab(
                         )
                         ExposedDropdownMenu(expanded = categoryExpanded, onDismissRequest = { categoryExpanded = false }) {
                             DropdownMenuItem(
-                                text = { Text("كل الفئات") },
+                                text = { Text(stringResource(R.string.qc_reports_all_categories)) },
                                 onClick = { selectedCategory = null; categoryExpanded = false }
                             )
                             categories.forEach { cat ->
@@ -2354,13 +2424,13 @@ private fun QualityReportsTab(
                     ) {
                         OutlinedTextField(
                             value = when (selectedPassFilter) {
-                                true -> "ناجح فقط"
-                                false -> "فاشل فقط"
-                                null -> "كل الحالات"
+                                true -> stringResource(R.string.qc_reports_passed_only)
+                                false -> stringResource(R.string.qc_reports_failed_only)
+                                null -> stringResource(R.string.qc_reports_all_statuses)
                             },
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("الحالة") },
+                            label = { Text(stringResource(R.string.qc_reports_status)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
                             modifier = Modifier
                                 .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
@@ -2368,15 +2438,15 @@ private fun QualityReportsTab(
                         )
                         ExposedDropdownMenu(expanded = statusExpanded, onDismissRequest = { statusExpanded = false }) {
                             DropdownMenuItem(
-                                text = { Text("كل الحالات") },
+                                text = { Text(stringResource(R.string.qc_reports_all_statuses)) },
                                 onClick = { selectedPassFilter = null; statusExpanded = false }
                             )
                             DropdownMenuItem(
-                                text = { Text("ناجح فقط") },
+                                text = { Text(stringResource(R.string.qc_reports_passed_only)) },
                                 onClick = { selectedPassFilter = true; statusExpanded = false }
                             )
                             DropdownMenuItem(
-                                text = { Text("فاشل فقط") },
+                                text = { Text(stringResource(R.string.qc_reports_failed_only)) },
                                 onClick = { selectedPassFilter = false; statusExpanded = false }
                             )
                         }
@@ -2397,7 +2467,7 @@ private fun QualityReportsTab(
             ) {
                 Icon(Icons.Default.PictureAsPdf, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (isExporting) "جارٍ التصدير..." else "تصدير PDF")
+                Text(if (isExporting) stringResource(R.string.qc_reports_exporting) else stringResource(R.string.qc_reports_export_pdf_btn))
             }
             Button(
                 onClick = { viewModel.exportQualityCsv(context) },
@@ -2406,7 +2476,7 @@ private fun QualityReportsTab(
             ) {
                 Icon(Icons.Default.TableChart, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("تصدير CSV")
+                Text(stringResource(R.string.qc_reports_export_csv))
             }
         }
 
@@ -2421,7 +2491,7 @@ private fun QualityReportsTab(
             ) {
                 Icon(Icons.Default.Backup, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("نسخة احتياطية JSON")
+                Text(stringResource(R.string.qc_reports_json_backup))
             }
             Button(
                 onClick = { jsonImportLauncher.launch(arrayOf("application/json", "text/json", "*/*")) },
@@ -2430,7 +2500,7 @@ private fun QualityReportsTab(
             ) {
                 Icon(Icons.Default.Restore, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("استعادة JSON")
+                Text(stringResource(R.string.qc_reports_json_restore))
             }
         }
 
@@ -2440,13 +2510,13 @@ private fun QualityReportsTab(
         ) {
             Icon(Icons.Default.Settings, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("إعدادات المشروع")
+            Text(stringResource(R.string.qc_reports_project_settings))
         }
 
         if (filteredRecords.isNotEmpty()) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("السجلات المحفوظة (${filteredRecords.size})", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.qc_reports_saved_records_format, filteredRecords.size), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     filteredRecords.forEach { record ->
                         Row(
@@ -2478,10 +2548,10 @@ private fun QualityReportsTab(
                                 if (record.inspectorName.isNotBlank() || photoCount > 0) {
                                     Text(
                                         buildString {
-                                            if (record.inspectorName.isNotBlank()) append("المفتش: ${record.inspectorName}")
+                                            if (record.inspectorName.isNotBlank()) append(stringResource(R.string.qc_reports_inspector, record.inspectorName))
                                             if (photoCount > 0) {
                                                 if (isNotEmpty()) append("  ·  ")
-                                                append("$photoCount صورة")
+                                                append(stringResource(R.string.qc_reports_photo_count, photoCount))
                                             }
                                         },
                                         style = MaterialTheme.typography.labelSmall,
@@ -2489,22 +2559,22 @@ private fun QualityReportsTab(
                                     )
                                 }
                             }
-                            Icon(Icons.Default.ChevronRight, contentDescription = "تفاصيل", tint = Color.Gray)
+                            Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.qc_reports_detail), tint = Color.Gray)
                             IconButton(onClick = { showDeleteConfirm = record.id }) {
-                                Icon(Icons.Default.Delete, contentDescription = "حذف", tint = Color(0xFFF44336))
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.qc_reports_delete), tint = Color(0xFFF44336))
                             }
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = { viewModel.clearAllRecords() }) {
-                        Text("مسح كل السجلات")
+                        Text(stringResource(R.string.qc_reports_clear_all))
                     }
                 }
             }
         } else {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("لا توجد سجلات مطابقة", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                    Text(stringResource(R.string.qc_reports_no_matching), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                 }
             }
         }
@@ -2516,16 +2586,16 @@ private fun QualityReportsTab(
         showDeleteConfirm?.let { id ->
             AlertDialog(
                 onDismissRequest = { showDeleteConfirm = null },
-                title = { Text("حذف السجل") },
-                text = { Text("هل تريد حذف هذا السجل؟ لا يمكن التراجع.") },
+                title = { Text(stringResource(R.string.qc_reports_delete_record)) },
+                text = { Text(stringResource(R.string.qc_reports_delete_confirm)) },
                 confirmButton = {
                     TextButton(onClick = { viewModel.deleteQualityRecord(id); showDeleteConfirm = null }) {
-                        Text("حذف")
+                        Text(stringResource(R.string.qc_reports_delete))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteConfirm = null }) {
-                        Text("إلغاء")
+                        Text(stringResource(R.string.qc_reports_cancel))
                     }
                 }
             )
@@ -2557,25 +2627,25 @@ private fun ItpSection(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("خطة الفحص والاختبار (ITP)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.qc_reports_itp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 Text("${uiState.itpItems.size}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onLoadDefault, modifier = Modifier.weight(1f)) { Text("تحميل ITP", fontSize = 12.sp) }
-                OutlinedButton(onClick = onClear, modifier = Modifier.weight(1f)) { Text("مسح", fontSize = 12.sp) }
+                Button(onClick = onLoadDefault, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.qc_reports_load_itp), fontSize = 12.sp) }
+                OutlinedButton(onClick = onClear, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.qc_reports_clear), fontSize = 12.sp) }
             }
             if (uiState.itpItems.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.Share, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("تصدير ITP (CSV)", fontSize = 12.sp)
+                    Text(stringResource(R.string.qc_reports_export_itp_csv), fontSize = 12.sp)
                 }
             }
             if (uiState.itpItems.isEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("لا توجد بنود ITP. حمّل القالب القياسي للبدء.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Text(stringResource(R.string.qc_reports_no_itp), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             } else {
                 Spacer(modifier = Modifier.height(8.dp))
                 uiState.itpItems.take(40).forEach { item ->
@@ -2588,7 +2658,7 @@ private fun ItpSection(
                     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                         Text("${item.discipline} — ${item.inspectionItem}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                         Text(item.acceptanceCriteria, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                        Text("المرجع: ${item.referenceCode}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Text(stringResource(R.string.qc_reports_reference, item.referenceCode), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -2598,8 +2668,8 @@ private fun ItpSection(
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.weight(1f)
                             )
-                            TextButton(onClick = { onUpdateStatus(item.id, "passed") }) { Text("ناجح", fontSize = 11.sp) }
-                            TextButton(onClick = { onUpdateStatus(item.id, "failed") }) { Text("فاشل", fontSize = 11.sp) }
+                            TextButton(onClick = { onUpdateStatus(item.id, "passed") }) { Text(stringResource(R.string.qc_reports_status_passed), fontSize = 11.sp) }
+                            TextButton(onClick = { onUpdateStatus(item.id, "failed") }) { Text(stringResource(R.string.qc_reports_status_failed), fontSize = 11.sp) }
                         }
                     }
                     Divider()
@@ -2627,23 +2697,23 @@ private fun NcrSection(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("تقارير عدم المطابقة (NCR)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text("${uiState.openNcrCount} مفتوح", fontWeight = FontWeight.Bold, color = Color(0xFFF44336))
+                Text(stringResource(R.string.qc_reports_ncr), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.qc_reports_ncr_open_count, uiState.openNcrCount), fontWeight = FontWeight.Bold, color = Color(0xFFF44336))
             }
             if (uiState.ncrItems.isNotEmpty()) {
                 TextButton(onClick = onExport, contentPadding = PaddingValues(0.dp)) {
-                    Text("تصدير CSV", fontSize = 12.sp)
+                    Text(stringResource(R.string.qc_reports_export_csv), fontSize = 12.sp)
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(value = discipline, onValueChange = { discipline = it }, label = { Text("التخصص") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = discipline, onValueChange = { discipline = it }, label = { Text(stringResource(R.string.qc_reports_ncr_field_discipline)) }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(6.dp))
-            OutlinedTextField(value = elementId, onValueChange = { elementId = it }, label = { Text("العنصر") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = elementId, onValueChange = { elementId = it }, label = { Text(stringResource(R.string.qc_reports_ncr_field_element)) }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(6.dp))
-            OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("وصف عدم المطابقة") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text(stringResource(R.string.qc_reports_ncr_field_description)) }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(6.dp))
-            OutlinedTextField(value = reference, onValueChange = { reference = it }, label = { Text("المرجع / الكود") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = reference, onValueChange = { reference = it }, label = { Text(stringResource(R.string.qc_reports_ncr_field_reference)) }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(6.dp))
 
             ExposedDropdownMenuBox(
@@ -2654,7 +2724,7 @@ private fun NcrSection(
                     value = severity,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("الخطورة") },
+                    label = { Text(stringResource(R.string.qc_reports_ncr_field_severity)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = severityExpanded) },
                     modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
                 )
@@ -2677,7 +2747,7 @@ private fun NcrSection(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("فتح تقرير عدم مطابقة")
+                Text(stringResource(R.string.qc_reports_open_ncr_report))
             }
 
             if (uiState.ncrItems.isNotEmpty()) {
@@ -2685,7 +2755,7 @@ private fun NcrSection(
                 OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.Share, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("تصدير تقرير NCR (CSV)")
+                    Text(stringResource(R.string.qc_reports_export_ncr_csv))
                 }
             }
 
@@ -2708,7 +2778,7 @@ private fun NcrSection(
                                 modifier = Modifier.weight(1f)
                             )
                             if (ncr.status != "closed") {
-                                TextButton(onClick = { onClose(ncr.id) }) { Text("إغلاق", fontSize = 11.sp) }
+                                TextButton(onClick = { onClose(ncr.id) }) { Text(stringResource(R.string.qc_reports_close), fontSize = 11.sp) }
                             }
                         }
                     }
@@ -2780,7 +2850,7 @@ private fun InspectionDetailDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("تفاصيل الفحص") },
+        title = { Text(stringResource(R.string.qc_reports_inspection_details)) },
         text = {
             Column(
                 modifier = Modifier
@@ -2802,21 +2872,21 @@ private fun InspectionDetailDialog(
                 OutlinedTextField(
                     value = inspectorName,
                     onValueChange = { inspectorName = it },
-                    label = { Text("اسم المفتش") },
+                    label = { Text(stringResource(R.string.qc_reports_inspector_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = location,
                     onValueChange = { location = it },
-                    label = { Text("الموقع / المحور") },
+                    label = { Text(stringResource(R.string.qc_reports_location)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = weather,
                     onValueChange = { weather = it },
-                    label = { Text("حالة الجو") },
+                    label = { Text(stringResource(R.string.qc_reports_weather)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -2830,16 +2900,16 @@ private fun InspectionDetailDialog(
                         value = inspectionTypeLabel(inspectionType),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("نوع الفحص") },
+                        label = { Text(stringResource(R.string.qc_reports_inspection_type)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
                         modifier = Modifier
                             .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                             .fillMaxWidth()
                     )
                     ExposedDropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
-                        INSPECTION_TYPES.forEach { (key, label) ->
+                        INSPECTION_TYPES.forEach { (key, labelRes) ->
                             DropdownMenuItem(
-                                text = { Text(label) },
+                                text = { Text(stringResource(labelRes)) },
                                 onClick = { inspectionType = key; typeExpanded = false }
                             )
                         }
@@ -2852,10 +2922,10 @@ private fun InspectionDetailDialog(
                     onExpandedChange = { standardExpanded = !standardExpanded }
                 ) {
                     OutlinedTextField(
-                        value = complianceStandard.ifBlank { "غير محدد" },
+                        value = complianceStandard.ifBlank { stringResource(R.string.qc_reports_not_specified) },
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("كود الامتثال") },
+                        label = { Text(stringResource(R.string.qc_reports_compliance_code)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = standardExpanded) },
                         modifier = Modifier
                             .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
@@ -2863,7 +2933,7 @@ private fun InspectionDetailDialog(
                     )
                     ExposedDropdownMenu(expanded = standardExpanded, onDismissRequest = { standardExpanded = false }) {
                         DropdownMenuItem(
-                            text = { Text("غير محدد") },
+                            text = { Text(stringResource(R.string.qc_reports_not_specified)) },
                             onClick = { complianceStandard = ""; standardExpanded = false }
                         )
                         COMPLIANCE_CODES.forEach { code ->
@@ -2878,13 +2948,13 @@ private fun InspectionDetailDialog(
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("ملاحظات") },
+                    label = { Text(stringResource(R.string.qc_reports_notes)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 HorizontalDivider()
-                Text("الصور (${photos.size})", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.qc_reports_photos_format, photos.size), style = MaterialTheme.typography.titleSmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         onClick = {
@@ -2902,7 +2972,7 @@ private fun InspectionDetailDialog(
                     ) {
                         Icon(Icons.Default.AddAPhoto, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("كاميرا")
+                        Text(stringResource(R.string.qc_reports_camera))
                     }
                     OutlinedButton(
                         onClick = {
@@ -2914,7 +2984,7 @@ private fun InspectionDetailDialog(
                     ) {
                         Icon(Icons.Default.PhotoLibrary, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("المعرض")
+                        Text(stringResource(R.string.qc_reports_gallery))
                     }
                 }
 
@@ -2964,7 +3034,7 @@ private fun InspectionDetailDialog(
                                 ) {
                                     Icon(
                                         Icons.Default.Close,
-                                        contentDescription = "حذف الصورة",
+                                        contentDescription = stringResource(R.string.qc_reports_photo_delete),
                                         tint = Color.White,
                                         modifier = Modifier.size(14.dp)
                                     )
@@ -2977,27 +3047,30 @@ private fun InspectionDetailDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSave(currentRecord) }) {
-                Text("حفظ")
+                Text(stringResource(R.string.qc_reports_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("إلغاء")
+                Text(stringResource(R.string.qc_reports_cancel))
             }
         }
     )
 }
 
 private val INSPECTION_TYPES = listOf(
-    "routine" to "اعتيادي",
-    "special" to "خاص",
-    "final" to "نهائي"
+    "routine" to R.string.qc_reports_type_routine,
+    "special" to R.string.qc_reports_type_special,
+    "final" to R.string.qc_reports_type_final
 )
 
 private val COMPLIANCE_CODES = listOf("ECP", "ACI", "SBC", "AISC", "AASHTO", "ASCE", "TUNNEL")
 
-private fun inspectionTypeLabel(key: String): String =
-    INSPECTION_TYPES.firstOrNull { it.first == key }?.second ?: key
+@Composable
+private fun inspectionTypeLabel(key: String): String {
+    val res = INSPECTION_TYPES.firstOrNull { it.first == key }?.second
+    return if (res == null) key else stringResource(res)
+}
 
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -3144,27 +3217,27 @@ private fun ProjectSettingsDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("إعدادات المشروع") },
+        title = { Text(stringResource(R.string.qc_reports_project_settings)) },
         text = {
             Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                 OutlinedTextField(
                     value = projectName,
                     onValueChange = { projectName = it },
-                    label = { Text("اسم المشروع") },
+                    label = { Text(stringResource(R.string.qc_reports_project_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = engineerName,
                     onValueChange = { engineerName = it },
-                    label = { Text("اسم المهندس") },
+                    label = { Text(stringResource(R.string.qc_reports_engineer_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = companyName,
                     onValueChange = { companyName = it },
-                    label = { Text("اسم الشركة") },
+                    label = { Text(stringResource(R.string.qc_reports_company_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -3178,12 +3251,12 @@ private fun ProjectSettingsDialog(onDismiss: () -> Unit) {
                     .apply()
                 onDismiss()
             }) {
-                Text("حفظ")
+                Text(stringResource(R.string.qc_reports_save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("إلغاء")
+                Text(stringResource(R.string.qc_reports_cancel))
             }
         }
     )
@@ -3203,7 +3276,7 @@ private fun DisciplineDrawingCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text("Discipline Drawing Preview", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.qc_reports_discipline_drawing_preview), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             when (discipline) {
                 QcDiscipline.RETAINING_WALLS -> {

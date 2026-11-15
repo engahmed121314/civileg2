@@ -75,7 +75,7 @@ fun DesignCodeSelectorRow(
 ) {
     Column(modifier = modifier) {
         Text(
-            "Design Code",
+            stringResource(R.string.sw_design_code),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -266,6 +266,9 @@ fun DesignStatusBanner(
 
 /**
  * Consistent styled input field for all design screens.
+ *
+ * [isError] + [supportingText] let a screen surface validation feedback next to
+ * the field instead of silently replacing invalid input with a default value.
  */
 @Composable
 fun DesignInputField(
@@ -273,7 +276,9 @@ fun DesignInputField(
     label: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    isError: Boolean = false,
+    supportingText: String? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -283,6 +288,8 @@ fun DesignInputField(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         enabled = enabled,
+        isError = isError,
+        supportingText = supportingText?.let { { Text(it, fontSize = 11.sp) } },
         textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,

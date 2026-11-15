@@ -56,6 +56,31 @@ enum class DesignType {
     BEAM, COLUMN, FOOTING, SLAB, STAIRCASE, RETAINING_WALL, WATER_TANK, PILE, SEISMIC, STEEL_MEMBER, STEEL_WAREHOUSE, FRAME_ANALYSIS, PILE_FOUNDATION, FLAT_SLAB, SHEAR_WALL, CONCRETE_MIX, SOIL_BEARING, WIND_LOAD, WAFFLE_SLAB, HORDI_SLAB, COMBINED_FOOTING
 }
 
+/**
+ * سجل تصدير المخرجات (PDF/DXF) في قاعدة البيانات.
+ */
+@Entity(
+    tableName = "exports",
+    indices = [androidx.room.Index(value = ["projectId"])],
+    foreignKeys = [ForeignKey(
+        entity = Project::class,
+        parentColumns = ["id"],
+        childColumns = ["projectId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
+data class ExportEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val projectId: Long,
+    val elementType: String,
+    val designCode: String,
+    val exportType: String, // "PDF" أو "DXF"
+    val filePath: String,
+    val fileSizeBytes: Long = 0,
+    val createdAt: Date = Date()
+)
+
 @Entity(
     tableName = "footings",
     indices = [androidx.room.Index(value = ["projectId"])],

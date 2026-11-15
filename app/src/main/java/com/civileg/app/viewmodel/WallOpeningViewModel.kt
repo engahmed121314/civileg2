@@ -44,8 +44,8 @@ class WallOpeningViewModel @Inject constructor(
         code: DesignCode
     ) {
         lastCode = code
-        viewModelScope.launch {
-            _isLoading.value = true
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            _isLoading.postValue(true)
             try {
                 val design = CalculationFactory.getWallOpeningDesign(code)
                 val inputs = WallOpeningDesign.Inputs(
@@ -60,13 +60,13 @@ class WallOpeningViewModel @Inject constructor(
                     loadAboveOpeningKNm = loadAboveOpeningKNm
                 )
                 val res = design.design(inputs)
-                _result.value = res
-                _error.value = null
+                _result.postValue(res)
+                _error.postValue(null)
             } catch (e: Exception) {
-                _error.value = "فشل الحساب / Calculation failed: ${e.message}"
-                _result.value = null
+                _error.postValue("فشل الحساب / Calculation failed: ${e.message}")
+                _result.postValue(null)
             } finally {
-                _isLoading.value = false
+                _isLoading.postValue(false)
             }
         }
     }
@@ -88,6 +88,8 @@ class WallOpeningViewModel @Inject constructor(
         wallLengthMm: Double,
         fcu: Double,
         fy: Double,
+        loadAboveOpeningKNm: Double,
+        code: DesignCode,
         onComplete: (java.io.File?) -> Unit = {}
     ) {
         val res = _result.value ?: return
@@ -112,8 +114,10 @@ class WallOpeningViewModel @Inject constructor(
                     "Opening Width" to "$openingWidthMm mm",
                     "Opening Height" to "$openingHeightMm mm",
                     "Opening From Base" to "$openingFromBaseMm mm",
+                    "Load Above Opening" to "$loadAboveOpeningKNm kN/m",
                     "fcu" to "$fcu MPa",
-                    "fy" to "$fy MPa"
+                    "fy" to "$fy MPa",
+                    "Design Code" to code.displayName
                 )
 
                 val resultsMap = mapOf(

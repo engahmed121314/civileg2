@@ -54,6 +54,9 @@ private val designHubItems = listOf(
     DesignHubItem(AppScreen.WaffleSlab,    R.string.home_waffle_slab, R.string.home_waffle_slab_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF1B5E20), Icons.Default.GridView),
     DesignHubItem(AppScreen.HordiSlab,     R.string.home_hordi_slab, R.string.home_hordi_slab_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF455A64), Icons.Default.ViewAgenda),
     DesignHubItem(AppScreen.ShearWall,     R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF880E4F), Icons.Default.SensorDoor),
+    DesignHubItem(AppScreen.WallOpening,   R.string.home_wall_opening, R.string.home_wall_opening_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF880E4F), Icons.Default.DoorFront),
+    DesignHubItem(AppScreen.SteelDesign,   R.string.home_steel, R.string.home_steel_sub, listOf("ECP 205", "AISC", "SBC 306"), Color(0xFF455A64), Icons.Default.Build),
+    DesignHubItem(AppScreen.QualityEngineer, R.string.home_quality_engineer, R.string.home_quality_engineer_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF2E7D32), Icons.Default.Verified),
     DesignHubItem(AppScreen.PostTensioned, R.string.home_post_tensioned, R.string.home_post_tensioned_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF00695C), Icons.Default.LinearScale),
     DesignHubItem(AppScreen.AdvancedDesign, R.string.home_advanced_design, R.string.home_advanced_design_sub, listOf("ECP", "ACI", "SBC"), Color(0xFF37474F), Icons.Default.Architecture),
 

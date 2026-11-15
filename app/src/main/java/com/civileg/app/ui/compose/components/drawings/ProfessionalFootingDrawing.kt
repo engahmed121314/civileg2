@@ -317,6 +317,91 @@ fun ProfessionalFootingDrawing(
                     }
                 }
             }
+            "Strip" -> {
+                // Strip (continuous) footing: a row of columns along X.
+                val columnsCount = 3
+                for (ci in 0 until columnsCount) {
+                    val cx = fLeft + drawLX * (ci + 1) / (columnsCount + 1) - colDrawW / 2f
+                    val cT = fCenterY - colDrawD / 2f
+                    drawRect(color = columnFill, topLeft = Offset(cx, cT), size = Size(colDrawW, colDrawD))
+                    drawRect(
+                        color = columnStroke,
+                        topLeft = Offset(cx, cT), size = Size(colDrawW, colDrawD),
+                        style = Stroke(width = 1.5f)
+                    )
+                    drawHatchPattern(cx, cT, colDrawW, colDrawD, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
+                }
+                drawTextAnnotated(
+                    "STRIP FOOTING — ${columnsCount} COLUMNS",
+                    fCenterX, fBottom - 8f, textColor, cfg.annotationTextSmall, center = true
+                )
+            }
+            "Pile Cap" -> {
+                // Pile cap: single column over a cap supported on piles.
+                val pileR = (min(drawLX, drawLY) * 0.06f).coerceAtLeast(4f)
+                val insetX = drawLX * 0.18f
+                val insetY = drawLY * 0.22f
+                val pilePositions = listOf(
+                    Offset(fLeft + insetX, fTop + insetY),
+                    Offset(fRight - insetX, fTop + insetY),
+                    Offset(fLeft + insetX, fBottom - insetY),
+                    Offset(fRight - insetX, fBottom - insetY)
+                )
+                pilePositions.forEach { p ->
+                    drawCircle(color = Color(0xFF2B2B2B), radius = pileR, center = p)
+                    drawCircle(color = footingBorder, radius = pileR, center = p, style = Stroke(width = 1.5f))
+                }
+                drawTextAnnotated(
+                    "PILES",
+                    fCenterX, fBottom - 10f, textColor, cfg.annotationTextSmall, center = true
+                )
+                val cL = fCenterX - colDrawW / 2f
+                val cT = fCenterY - colDrawD / 2f
+                drawRect(color = columnFill, topLeft = Offset(cL, cT), size = Size(colDrawW, colDrawD))
+                drawRect(
+                    color = columnStroke,
+                    topLeft = Offset(cL, cT), size = Size(colDrawW, colDrawD),
+                    style = Stroke(width = 1.5f)
+                )
+                drawHatchPattern(cL, cT, colDrawW, colDrawD, spacing = 5f, angleDeg = -45f, color = Color(0x66666666))
+            }
+            "Strap" -> {
+                // Strap footing: two pads tied by a strap beam (boundary column case).
+                val padW = (drawLX * 0.32f).coerceAtLeast(colDrawW * 1.6f).coerceAtMost(drawLX * 0.45f)
+                listOf(fLeft, fRight - padW).forEach { px ->
+                    drawRect(color = columnFill.copy(alpha = 0.35f), topLeft = Offset(px, fTop), size = Size(padW, drawLY))
+                    drawRect(
+                        color = footingBorder,
+                        topLeft = Offset(px, fTop), size = Size(padW, drawLY),
+                        style = Stroke(width = 1.5f)
+                    )
+                }
+                // Strap beam band
+                val beamH = (colDrawD * 0.8f).coerceAtMost(drawLY * 0.25f)
+                drawRect(
+                    color = columnFill.copy(alpha = 0.20f),
+                    topLeft = Offset(fLeft + padW, fCenterY - beamH / 2f),
+                    size = Size(drawLX - 2f * padW, beamH)
+                )
+                drawRect(
+                    color = columnStroke,
+                    topLeft = Offset(fLeft + padW, fCenterY - beamH / 2f),
+                    size = Size(drawLX - 2f * padW, beamH),
+                    style = Stroke(width = 1.2f)
+                )
+                drawTextAnnotated("STRAP BEAM", fCenterX, fCenterY + beamH, textColor, cfg.annotationTextSmall, center = true)
+                // Columns sitting on each pad
+                listOf(fLeft + padW / 2f, fRight - padW / 2f).forEach { cx ->
+                    val cL = cx - colDrawW / 2f
+                    val cT = fCenterY - colDrawD / 2f
+                    drawRect(color = columnFill, topLeft = Offset(cL, cT), size = Size(colDrawW, colDrawD))
+                    drawRect(
+                        color = columnStroke,
+                        topLeft = Offset(cL, cT), size = Size(colDrawW, colDrawD),
+                        style = Stroke(width = 1.5f)
+                    )
+                }
+            }
         }
 
         // Footing border
