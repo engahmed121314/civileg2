@@ -9,7 +9,9 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -30,40 +32,78 @@ import com.civileg.app.ui.responsive.AppResponsiveProvider
 // ============================================================================
 
 // Premium Light Color Scheme - Geometric Harmony
-private val PremiumLightColorScheme = lightColorScheme(
+//
+// Every role that Material3 renders text or icons with is mapped explicitly, with a
+// matching on-color, so nothing silently falls back to the Material baseline palette.
+// Contrast is asserted by ThemeContrastTest (WCAG AA: 4.5:1 text, 3:1 non-text).
+internal val PremiumLightColorScheme = lightColorScheme(
     primary = PremiumColorsLight.primary,
-    primaryContainer = PremiumColorsLight.primaryContainer,
-    secondary = PremiumColorsLight.secondary,
-    secondaryContainer = PremiumColorsLight.secondaryContainer,
-    background = PremiumColorsLight.background,
-    surface = PremiumColorsLight.surface,
-    error = PremiumColorsLight.error,
     onPrimary = PremiumColorsLight.onPrimary,
+    primaryContainer = PremiumColorsLight.primaryContainer,
+    onPrimaryContainer = PremiumColorsLight.onPrimaryContainer,
+    secondary = PremiumColorsLight.secondary,
     onSecondary = PremiumColorsLight.onSecondary,
-    onBackground = PremiumColorsLight.textOnAccent,
-    onSurface = PremiumColorsLight.onSurface,
+    secondaryContainer = PremiumColorsLight.secondaryContainer,
+    onSecondaryContainer = PremiumColorsLight.onSecondaryContainer,
+    tertiary = PremiumColorsLight.tertiary,
+    onTertiary = PremiumColorsLight.onTertiary,
+    tertiaryContainer = PremiumColorsLight.tertiaryContainer,
+    onTertiaryContainer = PremiumColorsLight.onTertiaryContainer,
+    error = PremiumColorsLight.error,
     onError = PremiumColorsLight.onError,
+    errorContainer = PremiumColorsLight.errorContainer,
+    onErrorContainer = PremiumColorsLight.onErrorContainer,
+    background = PremiumColorsLight.background,
+    // Was mapped to textOnAccent (white) -> 1.08:1 white-on-light, i.e. invisible body text.
+    onBackground = PremiumColorsLight.onBackground,
+    surface = PremiumColorsLight.surface,
+    onSurface = PremiumColorsLight.onSurface,
     surfaceVariant = PremiumColorsLight.surfaceVariant,
-    onSurfaceVariant = PremiumColorsLight.onSurfaceVariant
+    onSurfaceVariant = PremiumColorsLight.onSurfaceVariant,
+    outline = PremiumColorsLight.outline,
+    outlineVariant = PremiumColorsLight.outlineVariant
 )
 
 // Premium Dark Color Scheme - Geometric Harmony
-private val PremiumDarkColorScheme = darkColorScheme(
-    primary = PremiumColorsDark.primary,
+//
+// primary/onPrimary are the *semantic* pair (light cyan on navy), not the navy brand
+// surface: in dark mode the brand navy can never be used as text or icon colour.
+internal val PremiumDarkColorScheme = darkColorScheme(
+    primary = PremiumColorsDark.semanticPrimary,
+    onPrimary = PremiumColorsDark.onSemanticPrimary,
     primaryContainer = PremiumColorsDark.primaryContainer,
+    onPrimaryContainer = PremiumColorsDark.onPrimaryContainer,
     secondary = PremiumColorsDark.secondary,
-    secondaryContainer = PremiumColorsDark.secondaryContainer,
-    background = PremiumColorsDark.background,
-    surface = PremiumColorsDark.surface,
-    error = PremiumColorsDark.error,
-    onPrimary = PremiumColorsDark.onPrimary,
     onSecondary = PremiumColorsDark.onSecondary,
-    onBackground = PremiumColorsDark.textOnAccent,
-    onSurface = PremiumColorsDark.onSurface,
+    secondaryContainer = PremiumColorsDark.secondaryContainer,
+    onSecondaryContainer = PremiumColorsDark.onSecondaryContainer,
+    tertiary = PremiumColorsDark.tertiary,
+    onTertiary = PremiumColorsDark.onTertiary,
+    tertiaryContainer = PremiumColorsDark.tertiaryContainer,
+    onTertiaryContainer = PremiumColorsDark.onTertiaryContainer,
+    error = PremiumColorsDark.error,
     onError = PremiumColorsDark.onError,
+    errorContainer = PremiumColorsDark.errorContainer,
+    onErrorContainer = PremiumColorsDark.onErrorContainer,
+    background = PremiumColorsDark.background,
+    onBackground = PremiumColorsDark.onBackground,
+    surface = PremiumColorsDark.surface,
+    onSurface = PremiumColorsDark.onSurface,
     surfaceVariant = PremiumColorsDark.surfaceVariant,
-    onSurfaceVariant = PremiumColorsDark.onSurfaceVariant
+    onSurfaceVariant = PremiumColorsDark.onSurfaceVariant,
+    outline = PremiumColorsDark.outline,
+    outlineVariant = PremiumColorsDark.outlineVariant
 )
+
+/**
+ * Whether the app is currently rendering the dark palette.
+ *
+ * This is the *in-app* choice (Settings → Theme, [ThemeMode]), not the OS setting.
+ * Reading `isSystemInDarkTheme()` anywhere below [CivilEngineerPremiumTheme] silently
+ * ignores the user's choice and desynchronises colours from MaterialTheme; use this
+ * instead. Only MainActivity's `ThemeMode.SYSTEM` branch may read the OS setting.
+ */
+val LocalIsDarkTheme = staticCompositionLocalOf { false }
 
 // ============================================================================
 // PREMIUM GEOMETRIC THEME COMPOSABLE
@@ -96,13 +136,15 @@ fun CivilEngineerPremiumTheme(
     }
     
     // Premium responsive geometry provider
-    AppResponsiveProvider {
-        MaterialTheme(
-            colorScheme = colorScheme,
-            // Use premium geometric typography
-            typography = PremiumTypography.Typography,
-            content = content
-        )
+    CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
+        AppResponsiveProvider {
+            MaterialTheme(
+                colorScheme = colorScheme,
+                // Use premium geometric typography
+                typography = PremiumTypography.Typography,
+                content = content
+            )
+        }
     }
 }
 

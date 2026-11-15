@@ -1,6 +1,5 @@
 package com.civileg.app.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -22,7 +21,8 @@ object PremiumColorsLight {
     val tertiary = Color(0xFFD4A373)
     val tertiaryContainer = Color(0xFFFAEDCD)
     val onTertiary = Color(0xFF281C08)
-    val onTertiaryContainer = Color(0xFFFEFAE0)
+    // Was 0xFFFEFAE0 (near-white) on the pale 0xFAEDCD container -> 1.11:1, i.e. invisible.
+    val onTertiaryContainer = Color(0xFF281C08)
     
     val error = Color(0xFFDC2626)
     val onError = Color(0xFFFFFFFF)
@@ -30,7 +30,7 @@ object PremiumColorsLight {
     val onErrorContainer = Color(0xFF991B1B)
     
     val outline = Color(0xFF64748B)
-    val outlineVariant = Color(0xFF94A3B8)
+    val outlineVariant = Color(0xFF7B8798)
     val gray = Color(0xFF6B7280)
     val grayLight = Color(0xFFF1F5F9)
     val grayDark = Color(0xFF334155)
@@ -86,13 +86,14 @@ object PremiumColorsLight {
     
     val textPrimary = Color(0xFF0B192C)
     val textSecondary = Color(0xFF334155)
-    val textMuted = Color(0xFF64748B)
+    val textMuted = Color(0xFF586577)
     val textInverse = Color(0xFFFFFFFF)
-    val textOnAccent = Color(0xFFFFFFFF)
+    // Navy on the bright cyan accent (6.53:1); white on it was 2.70:1.
+    val textOnAccent = Color(0xFF0B192C)
 
-    val safe = Color(0xFF059669)
+    val safe = Color(0xFF047857)
     val safeBright = Color(0xFF10B981)
-    val warning = Color(0xFFD97706)
+    val warning = Color(0xFFB45309)
     val warningBright = Color(0xFFF59E0B)
     val unsafe = Color(0xFFDC2626)
     val unsafeBright = Color(0xFFEF4444)
@@ -173,9 +174,14 @@ object PremiumColorsDark {
     
     val textPrimary = Color(0xFFF8FAFC)
     val textSecondary = Color(0xFF94A3B8)
-    val textMuted = Color(0xFF64748B)
+    val textMuted = Color(0xFF9AA7BD)
     val textInverse = Color(0xFF0B0F19)
     val textOnAccent = Color(0xFF0B0F19)
+
+    // Semantic Material primary pair for dark mode: the navy brand surface above can
+    // never be used as text/icon colour on a dark surface (1.00:1).
+    val semanticPrimary = Color(0xFF7DD3FC)
+    val onSemanticPrimary = Color(0xFF0B0F19)
     
     val safe = Color(0xFF10B981)
     val safeBright = Color(0xFF34D399)
@@ -192,43 +198,44 @@ object PremiumColorsDark {
     fun safeColor(): Color = safe
     fun unsafeColor(): Color = unsafe
     fun chartColors(): List<Color> = listOf(primary, secondary, tertiary, accent, safe, warning)
-    fun concreteColor(): Color = primaryContainer
-    fun steelColor(): Color = primary
+    // Sections and diagrams sit on the dark surface: navy-on-navy was invisible.
+    fun concreteColor(): Color = Color(0xFF9E9E9E)
+    fun steelColor(): Color = Color(0xFF64B5F6)
     fun dimensionColor(): Color = outline
 }
 
 // ThemeColors compatibility object
 object ThemeColors {
-    @Composable fun safeColor(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.safe else PremiumColorsLight.safe
-    @Composable fun unsafeColor(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.unsafe else PremiumColorsLight.unsafe
-    @Composable fun chartColors(): List<Color> = if (isSystemInDarkTheme()) PremiumColorsDark.chartColors() else PremiumColorsLight.chartColors()
-    @Composable fun concreteColor(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.concreteColor() else PremiumColorsLight.concreteColor()
-    @Composable fun steelColor(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.steelColor() else PremiumColorsLight.steelColor()
-    @Composable fun dimensionColor(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.dimensionColor() else PremiumColorsLight.dimensionColor()
+    @Composable fun safeColor(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.safe else PremiumColorsLight.safe
+    @Composable fun unsafeColor(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.unsafe else PremiumColorsLight.unsafe
+    @Composable fun chartColors(): List<Color> = if (LocalIsDarkTheme.current) PremiumColorsDark.chartColors() else PremiumColorsLight.chartColors()
+    @Composable fun concreteColor(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.concreteColor() else PremiumColorsLight.concreteColor()
+    @Composable fun steelColor(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.steelColor() else PremiumColorsLight.steelColor()
+    @Composable fun dimensionColor(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.dimensionColor() else PremiumColorsLight.dimensionColor()
 }
 
 object PremiumColorScheme {
     @Composable
-    fun getPrimary(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.primary else PremiumColorsLight.primary
+    fun getPrimary(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.primary else PremiumColorsLight.primary
     
     @Composable
-    fun getOnPrimary(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.onPrimary else PremiumColorsLight.onPrimary
+    fun getOnPrimary(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.onPrimary else PremiumColorsLight.onPrimary
     
     @Composable
-    fun getSecondary(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.secondary else PremiumColorsLight.secondary
+    fun getSecondary(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.secondary else PremiumColorsLight.secondary
     
     @Composable
-    fun getOnSecondary(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.onSecondary else PremiumColorsLight.onSecondary
+    fun getOnSecondary(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.onSecondary else PremiumColorsLight.onSecondary
     
     @Composable
-    fun getTertiary(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.tertiary else PremiumColorsLight.tertiary
+    fun getTertiary(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.tertiary else PremiumColorsLight.tertiary
     
     @Composable
-    fun getOnTertiary(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.onTertiary else PremiumColorsLight.onTertiary
+    fun getOnTertiary(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.onTertiary else PremiumColorsLight.onTertiary
     
     @Composable
-    fun getError(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.error else PremiumColorsLight.error
+    fun getError(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.error else PremiumColorsLight.error
     
     @Composable
-    fun getOnError(): Color = if (isSystemInDarkTheme()) PremiumColorsDark.onError else PremiumColorsLight.onError
+    fun getOnError(): Color = if (LocalIsDarkTheme.current) PremiumColorsDark.onError else PremiumColorsLight.onError
 }

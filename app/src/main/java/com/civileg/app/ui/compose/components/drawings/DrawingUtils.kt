@@ -1,8 +1,8 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.ui.theme.LocalIsDarkTheme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -326,7 +326,11 @@ data class DrawingColors(
             ribFill = Color(0xFFBDBDBD),
             dropFill = Color(0xFFB0BEC5),
             columnFill = Color(0xFF616161),
-            planBackground = Color(0xFF37474F)
+            planBackground = Color(0xFF37474F),
+            // Light-surface legibility: pale cyan / pure orange were 1.87:1 and 2.19:1.
+            topRebarBlue = Color(0xFF2C7FA6),
+            shearPerimColor = Color(0xFFB23C00),
+            warningOrange = Color(0xFFB45309)
         )
 
         /** Dark theme drawing palette */
@@ -354,7 +358,15 @@ data class DrawingColors(
             ribFill = Color(0xFF4A4A4A),
             dropFill = Color(0xFF455A64),
             columnFill = Color(0xFF424242),
-            planBackground = Color(0xFF1E1E1E)
+            planBackground = Color(0xFF1E1E1E),
+            // These inherited the light defaults (dark purple/green/red) and dropped to
+            // 1.83:1–3.35:1 on the dark sheet. Lifted to the light tints of the same hues.
+            dimColor = Color(0xFFCE93D8),
+            coverColor = Color(0xFF66BB6A),
+            sectionLineColor = Color(0xFFEF9A9A),
+            safeGreen = Color(0xFF66BB6A),
+            unsafeRed = Color(0xFFEF9A9A),
+            shearPerimColor = Color(0xFFFFAB91)
         )
     }
 }
@@ -365,7 +377,7 @@ data class DrawingColors(
  */
 @Composable
 fun drawingColors(): DrawingColors =
-    if (isSystemInDarkTheme()) DrawingColors.Dark else DrawingColors.Light
+    if (LocalIsDarkTheme.current) DrawingColors.Dark else DrawingColors.Light
 
 // ============================================================================
 // SHARED DRAWSCOPE EXTENSIONS
