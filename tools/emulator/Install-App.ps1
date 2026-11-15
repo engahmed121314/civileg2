@@ -3,7 +3,7 @@ Install the built APK on the running emulator and optionally launch it.
 
     powershell -File tools\emulator\Install-App.ps1
     powershell -File tools\emulator\Install-App.ps1 -Launch
-    powershell -File tools\emulator\Install-App.ps1 -Apk app\build\outputs\apk\release\app-release.apk
+    powershell -File tools\emulator\Install-App.ps1 -Apk app\build\outputs\apk\play\release\app-play-release.apk
 #>
 
 param(
@@ -27,7 +27,7 @@ if (-not $Apk) {
     if (Test-Path -LiteralPath $lastApk) {
         $Apk = (Get-Content -LiteralPath $lastApk -Raw).Trim()
     } else {
-        $Apk = Join-Path $script:RepoRoot "app\build\outputs\apk\debug\app-debug.apk"
+        $Apk = Join-Path $script:RepoRoot "app\build\outputs\apk\free\debug\app-free-debug.apk"
     }
 }
 if (-not (Test-Path -LiteralPath $Apk)) {

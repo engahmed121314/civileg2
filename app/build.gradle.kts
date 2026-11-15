@@ -16,6 +16,14 @@ android {
     namespace = "com.civileg.app"
     compileSdk = 36
 
+    // Load local properties for external IDs (local.properties is NOT committed —
+    // see local.properties.template for every supported key)
+    val localProperties = Properties()
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localProperties.load(localPropertiesFile.inputStream())
+    }
+
     defaultConfig {
         applicationId = "com.civileg.app"
         minSdk = 26
@@ -45,27 +53,6 @@ android {
         resValue("string", "developer_copyright", "Copyright \u00a9 2024-2025 Eng. Ahmed Magdy. All rights reserved.")
         resValue("string", "support_email", "eng.ahmedmagdy121314@gmail.com")
 
-        // Load local properties for external IDs (local.properties is NOT committed —
-        // see local.properties.template for every supported key)
-        val localProperties = Properties()
-        val localPropertiesFile = rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
-            localProperties.load(localPropertiesFile.inputStream())
-        }
-        val admobAppId = localProperties.getProperty("admob.app.id") ?: "ca-app-pub-3940256099942544~3347511713"
-        manifestPlaceholders["admobAppId"] = admobAppId
-
-        // ── P4-3 production configuration (§9.37) ──────────────────────────
-        // AdMob ad-unit IDs: defaults are Google's well-known TEST IDs (serve test
-        // ads only, earn no revenue). For production set in local.properties:
-        //   admob.banner.id=ca-app-pub-XXXXX/YYYYY   (same for interstitial/native/rewarded)
-        fun admobId(key: String, testId: String): String =
-            localProperties.getProperty(key)?.takeIf { it.isNotBlank() } ?: testId
-        buildConfigField("String", "BANNER_AD_UNIT_ID", "\"${admobId("admob.banner.id", "ca-app-pub-3940256099942544/6300978111")}\"")
-        buildConfigField("String", "INTERSTITIAL_AD_UNIT_ID", "\"${admobId("admob.interstitial.id", "ca-app-pub-3940256099942544/1033173712")}\"")
-        buildConfigField("String", "NATIVE_AD_UNIT_ID", "\"${admobId("admob.native.id", "ca-app-pub-3940256099942544/2247696110")}\"")
-        buildConfigField("String", "REWARDED_AD_UNIT_ID", "\"${admobId("admob.rewarded.id", "ca-app-pub-3940256099942544/5224354917")}\"")
-
         // Release signer fingerprint (SHA-256 of the release keystore certificate).
         // Obtain via:  keytool -list -v -keystore your-release-key.jks -alias your-alias
         // Set in local.properties:  signing.fingerprint.sha256=AB:CD:EF:...:12:34
@@ -75,6 +62,42 @@ android {
             "EXPECTED_SIGNER_FINGERPRINT",
             "\"${localProperties.getProperty("signing.fingerprint.sha256")?.trim() ?: ""}\""
         )
+    }
+
+    // ── Distribution flavors ─────────────────────────────────────────────
+    // `play`  — the Play Store build: AdMob (banner/interstitial/native), UMP consent,
+    //           Play Billing. Everything ad-related lives in src/play.
+    // `free`  — the same app with no ads and no billing: no play-services-ads, no UMP,
+    //           no billing client, and therefore no AD_ID / BILLING permissions and no
+    //           AdMob meta-data in the merged manifest. src/free holds no-op stand-ins.
+    //
+    // Variant names change: `./gradlew :app:assembleFreeDebug` / `:app:assemblePlayDebug`
+    // (the old `assembleDebug` no longer exists). tools/emulator scripts default to
+    // `free` so screenshots never show ads or a consent dialog.
+    flavorDimensions += "distribution"
+
+    productFlavors {
+        create("free") {
+            dimension = "distribution"
+        }
+
+        create("play") {
+            dimension = "distribution"
+
+            val admobAppId = localProperties.getProperty("admob.app.id")
+                ?: "ca-app-pub-3940256099942544~3347511713"
+            manifestPlaceholders["admobAppId"] = admobAppId
+
+            // AdMob ad-unit IDs: defaults are Google's well-known TEST IDs (serve test
+            // ads only, earn no revenue). For production set in local.properties:
+            //   admob.banner.id=ca-app-pub-XXXXX/YYYYY   (same for interstitial/native/rewarded)
+            fun admobId(key: String, testId: String): String =
+                localProperties.getProperty(key)?.takeIf { it.isNotBlank() } ?: testId
+            buildConfigField("String", "BANNER_AD_UNIT_ID", "\"${admobId("admob.banner.id", "ca-app-pub-3940256099942544/6300978111")}\"")
+            buildConfigField("String", "INTERSTITIAL_AD_UNIT_ID", "\"${admobId("admob.interstitial.id", "ca-app-pub-3940256099942544/1033173712")}\"")
+            buildConfigField("String", "NATIVE_AD_UNIT_ID", "\"${admobId("admob.native.id", "ca-app-pub-3940256099942544/2247696110")}\"")
+            buildConfigField("String", "REWARDED_AD_UNIT_ID", "\"${admobId("admob.rewarded.id", "ca-app-pub-3940256099942544/5224354917")}\"")
+        }
     }
 
     buildFeatures {
@@ -239,9 +262,10 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
+    // ── Play-only: ads + billing (see productFlavors above) ──────────────
     // Play Billing
-    implementation(libs.play.billing)
-    implementation(libs.play.billing.ktx)
+    "playImplementation"(libs.play.billing)
+    "playImplementation"(libs.play.billing.ktx)
 
     // Tools
     implementation(libs.gson)
@@ -256,10 +280,11 @@ dependencies {
     // Play Integrity API
     implementation(libs.play.integrity)
 
-    // Google AdMob — Non-intrusive ads (banner + interstitial + native)
-    implementation(libs.play.services.ads)
+    // Google AdMob — Non-intrusive ads (banner + interstitial + native). Play build only;
+    // this is what drags in the AD_ID permission and the play-services-ads-lite runtime.
+    "playImplementation"(libs.play.services.ads)
     // User Messaging Platform (consent for EU/EEA users — required by Google Play)
-    implementation(libs.user.messaging.platform)
+    "playImplementation"(libs.user.messaging.platform)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

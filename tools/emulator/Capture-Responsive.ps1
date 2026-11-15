@@ -39,11 +39,11 @@ Write-Step "Screenshots -> $OutDir"
 
 if (-not $SkipBuild) {
     Write-Step "Building debug APK"
-    & "$script:RepoRoot\gradlew.bat" :app:assembleDebug --console=plain -q
-    if ($LASTEXITCODE -ne 0) { throw "assembleDebug failed (exit $LASTEXITCODE)" }
+    & "$script:RepoRoot\gradlew.bat" :app:assembleFreeDebug --console=plain -q
+    if ($LASTEXITCODE -ne 0) { throw "assembleFreeDebug failed (exit $LASTEXITCODE)" }
 }
 
-$apk = Join-Path $script:RepoRoot "app\build\outputs\apk\debug\app-debug.apk"
+$apk = Join-Path $script:RepoRoot "app\build\outputs\apk\free\debug\app-free-debug.apk"
 if (-not (Test-Path $apk)) { throw "APK not found: $apk" }
 
 Write-Step "Installing $apk"

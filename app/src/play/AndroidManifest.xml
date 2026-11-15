@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- `play` distribution flavor: AdMob + Play Billing.
+         The `free` flavor never sees these declarations, so its merged manifest has no
+         BILLING permission, no AD_ID permission (that one comes from play-services-ads)
+         and no AdMob app id. -->
+
+    <uses-permission android:name="com.android.vending.BILLING" />
+
+    <application>
+
+        <!-- Google AdMob — App ID (set admob.app.id in local.properties) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
+        <!-- Delay app measurement until user consent (GDPR/UMP compliance) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT"
+            android:value="true" />
+
+        <property
+            android:name="android.adservices.AD_SERVICES_CONFIG"
+            android:resource="@xml/gma_ad_services_config"
+            tools:replace="android:resource" />
+
+    </application>
+
+</manifest>

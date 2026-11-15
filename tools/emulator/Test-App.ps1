@@ -65,7 +65,7 @@ try {
         $apk = (Get-Content -LiteralPath $apkFile -Raw).Trim()
     }
     if (-not $apk -or -not (Test-Path -LiteralPath $apk)) {
-        $apk = Join-Path $script:RepoRoot "app\build\outputs\apk\debug\app-debug.apk"
+        $apk = Join-Path $script:RepoRoot "app\build\outputs\apk\free\debug\app-free-debug.apk"
     }
     if (-not (Test-Path -LiteralPath $apk)) {
         throw "APK not found: $apk. Run Build-App.ps1 first."

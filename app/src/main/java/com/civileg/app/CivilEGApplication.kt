@@ -5,8 +5,6 @@ import android.app.Application
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
-import com.google.android.gms.common.GoogleApiAvailability
-import com.google.android.gms.common.ConnectionResult
 import dagger.hilt.android.HiltAndroidApp
 import com.civileg.app.security.PlaySafetyChecker
 import com.civileg.app.utils.LocaleHelper

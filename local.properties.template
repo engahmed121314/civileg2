@@ -12,6 +12,7 @@
 sdk.dir=/path/to/Android/Sdk
 
 # ── AdMob — production IDs (optional, defaults are Google TEST IDs) ──
+# `play` flavor only: the `free` flavor ships without AdMob, so these are ignored there.
 # Defaults serve TEST ads only and earn NO revenue. Get real IDs from
 # https://apps.admob.com (Apps → Civil Engineer Pro → Ad units).
 # App ID format uses '~'; ad-unit IDs use '/'.

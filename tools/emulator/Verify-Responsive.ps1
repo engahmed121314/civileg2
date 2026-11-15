@@ -50,7 +50,7 @@ try {
 
     # ── 6. Unit tests ───────────────────────────────────────────────────
     Write-Step "=== Step 6: unit tests ==="
-    & ".\gradlew.bat" :app:testDebugUnitTest --console=plain
+    & ".\gradlew.bat" :app:testFreeDebugUnitTest --console=plain
     $testExit = $LASTEXITCODE
 
     # ── 7. Report ───────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ try {
 # CivilEG2 Responsive UI Verification Report
 Date: $(Get-Date)
 Emulator: $serial (civileg2_api36, API 36.1)
-Build: :app:assembleDebug + :app:assembleDebugAndroidTest — OK
+Build: :app:assembleFreeDebug + :app:assembleFreeDebugAndroidTest — OK
 Install/launch: OK
 
 Screenshots: $screensDir

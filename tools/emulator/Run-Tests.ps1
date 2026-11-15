@@ -81,16 +81,16 @@ $unitSummary = $null
 $instrumentedSummary = $null
 
 if (-not $SkipUnit) {
-    Write-Step "Running unit tests (:app:testDebugUnitTest)"
-    $gradleArgs = @(":app:testDebugUnitTest", "--console=plain")
+    Write-Step "Running unit tests (:app:testFreeDebugUnitTest)"
+    $gradleArgs = @(":app:testFreeDebugUnitTest", "--console=plain")
     if ($UnitFilter) { $gradleArgs += @("--tests", $UnitFilter) }
     if ($NoDaemon) { $gradleArgs += "--no-daemon" }
     Push-Location $script:RepoRoot
     try { & ".\gradlew.bat" @gradleArgs } finally { Pop-Location }
     if ($LASTEXITCODE -ne 0) { $exitCode = 1 }
-    $unitSummary = Get-TestSummary -Root (Join-Path $script:RepoRoot "app\build\test-results\testDebugUnitTest")
+    $unitSummary = Get-TestSummary -Root (Join-Path $script:RepoRoot "app\build\test-results\testFreeDebugUnitTest")
     Show-Summary -Title "Unit tests" -Summary $unitSummary
-    Copy-Item -Path (Join-Path $script:RepoRoot "app\build\reports\tests\testDebugUnitTest") -Destination (Join-Path $outDir "unit-html") -Recurse -Force -ErrorAction SilentlyContinue
+    Copy-Item -Path (Join-Path $script:RepoRoot "app\build\reports\tests\testFreeDebugUnitTest") -Destination (Join-Path $outDir "unit-html") -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 if (-not $SkipInstrumented) {

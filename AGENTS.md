@@ -25,6 +25,15 @@ powershell -File tools\emulator\Stop-Emulator.ps1
 ## Project facts
 
 - Root Gradle project: `SiteEngineerPro`; module `:app`; `compileSdk=36`, `minSdk=26`, `targetSdk=36`.
+- Two product flavors on dimension `distribution`:
+  - `free` — no ads, no billing: no AdMob/UMP/billing SDK, so no AD_ID or BILLING
+    permission in its merged manifest. Ad code lives in `app/src/play/java`, with
+    no-op stand-ins in `app/src/free/java`.
+  - `play` — the Play Store build: AdMob banner/interstitial/native, UMP consent,
+    Play Billing, and the AdMob app id from `local.properties`.
+- Variant names therefore carry the flavor: `:app:assembleFreeDebug`,
+  `:app:assemblePlayDebug`, `:app:bundlePlayRelease`, `:app:testFreeDebugUnitTest`.
+  The emulator scripts build and install `freeDebug` so screenshots show no ads.
 - UI is Jetpack Compose (`MainActivity`) with Hilt + Room.
 - Unit tests: `app/src/test` (JVM). Instrumented tests: `app/src/androidTest`.
 - Existing build issues unrelated to the emulator may exist in the working tree;

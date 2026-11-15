@@ -44,10 +44,10 @@ Set-Content -LiteralPath (Join-Path $script:ArtifactsRoot "last-apk.txt") -Value
 Write-Ok "APK: $apk"
 
 if ($AndroidTest) {
-    Write-Step "Building instrumented test APK (:app:assembleDebugAndroidTest)"
+    Write-Step "Building instrumented test APK (:app:assembleFreeDebugAndroidTest)"
     Push-Location $script:RepoRoot
     try {
-        & ".\gradlew.bat" ":app:assembleDebugAndroidTest" "--console=plain"
+        & ".\gradlew.bat" ":app:assembleFreeDebugAndroidTest" "--console=plain"
         $testExit = $LASTEXITCODE
     } finally {
         Pop-Location
