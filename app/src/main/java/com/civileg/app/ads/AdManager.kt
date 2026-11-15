@@ -2,56 +2,67 @@ package com.civileg.app.ads
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
+import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.civileg.app.BuildConfig
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.ump.ConsentInformation
+import com.google.android.ump.ConsentRequestParameters
+import com.google.android.ump.UserMessagingPlatform
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Centralized Ad Manager — Professional, Non-Intrusive Ad Placement.
+ * Single entry point for Google AdMob: UMP consent, SDK init, banner and interstitial.
  *
- * Ad Philosophy:
- * - Banner ads: Only at natural content breaks (between sections, NOT at top/bottom)
- * - Native ads: Blended within content lists (every 8-10 items)
- * - Interstitial: ONLY on screen transitions (design → results), NEVER on app launch
- * - Rewarded: User-initiated only (watch ad to unlock premium feature)
- * - No pop-ups, no auto-play video, no sound
+ * This replaces the two objects that used to do this in parallel
+ * (`ads.AdManager` and `utils.AdsManager`). Both kept their own preloaded interstitial,
+ * so every session fetched two interstitials and held two `InterstitialAd` instances.
+ * There is one ad slot of each kind now, and one place where premium state is read.
+ *
+ * Ad philosophy (unchanged):
+ * - Banner: only at natural content breaks, never at the top of a screen
+ * - Native: blended into lists, every 8th item
+ * - Interstitial: only on design → results, every 3rd completion
+ * - Rewarded: user initiated only
+ *
+ * Every call is wrapped so a missing Play Services, a blocked network or a consent
+ * failure can never block navigation or crash the app.
  *
  * Developer: Eng. Ahmed Magdy | eng.ahmedmagdy121314@gmail.com
  */
 object AdManager {
 
-    // ═══════════════════════════════════════════════════════════
-    // Ad Unit IDs — P4-3: loaded from BuildConfig (fed by local.properties
-    // `admob.banner.id` / `admob.interstitial.id` / `admob.native.id` /
-    // `admob.rewarded.id`), defaulting to Google's well-known TEST IDs which
-    // only serve test ads and earn no revenue. See local.properties.template
-    // and play-store/release-checklist.md for the one-line production swap.
-    // ═══════════════════════════════════════════════════════════
-    private const val TEST_DEVICE_ID = "YOUR_TEST_DEVICE_ID"
+    private const val TAG = "AdManager"
 
+    // ── Ad unit IDs ────────────────────────────────────────────────
+    // Fed by BuildConfig from local.properties (`admob.*.id`), defaulting to Google's
+    // well-known TEST IDs, which serve test ads only and earn no revenue.
+    // See local.properties.template and play-store/release-checklist.md.
     val BANNER_AD_UNIT_ID: String get() = BuildConfig.BANNER_AD_UNIT_ID
     val INTERSTITIAL_AD_UNIT_ID: String get() = BuildConfig.INTERSTITIAL_AD_UNIT_ID
     val NATIVE_AD_UNIT_ID: String get() = BuildConfig.NATIVE_AD_UNIT_ID
     val REWARDED_AD_UNIT_ID: String get() = BuildConfig.REWARDED_AD_UNIT_ID
 
-    // ═══════════════════════════════════════════════════════════
-    // Ad Frequency Control — Prevents ad fatigue
-    // ═══════════════════════════════════════════════════════════
-    private const val INTERSTITIAL_FREQUENCY = 3  // Show every 3rd design completion
+    /** Show an interstitial every Nth completed design, not on every one. */
+    private const val INTERSTITIAL_FREQUENCY = 3
     private var designCompletionCount = 0
 
-    // ═══════════════════════════════════════════════════════════
-    // Premium State
-    // ═══════════════════════════════════════════════════════════
+    // ── Premium state ──────────────────────────────────────────────
     private val _isPremiumUser = MutableStateFlow(false)
     val isPremiumUser = _isPremiumUser.asStateFlow()
 
@@ -62,43 +73,135 @@ object AdManager {
     @Composable
     fun isPremium(): Boolean = isPremiumUser.collectAsState().value
 
-    // ═══════════════════════════════════════════════════════════
-    // Interstitial Ad — Shown on design result screens only
-    // ═══════════════════════════════════════════════════════════
+    // ── SDK / ad slots ─────────────────────────────────────────────
+    private val isMobileAdsInitialized = AtomicBoolean(false)
     private var interstitialAd: InterstitialAd? = null
     private var isInterstitialLoading = false
+    private var consentInformation: ConsentInformation? = null
 
     /**
-     * Load interstitial ad in background. Call this when user starts a design.
+     * Requests UMP consent, then initializes the SDK if ads may be requested.
+     * [onComplete] is invoked exactly once, whatever happens, so callers (the splash
+     * screen) are never blocked on ads.
      */
+    fun initConsent(activity: Activity, onComplete: () -> Unit) {
+        val completed = AtomicBoolean(false)
+        fun safeComplete() {
+            if (completed.compareAndSet(false, true)) onComplete()
+        }
+
+        try {
+            val availability =
+                GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(activity)
+            if (availability != ConnectionResult.SUCCESS) {
+                Log.w(TAG, "Google Play Services unavailable ($availability), skipping UMP")
+                safeComplete()
+                return
+            }
+
+            val params = ConsentRequestParameters.Builder()
+                .setTagForUnderAgeOfConsent(false)
+                .build()
+
+            val consentInfo = UserMessagingPlatform.getConsentInformation(activity)
+            consentInformation = consentInfo
+            consentInfo.requestConsentInfoUpdate(
+                activity,
+                params,
+                {
+                    try {
+                        UserMessagingPlatform.loadAndShowConsentFormIfRequired(activity) { error ->
+                            if (error != null) Log.w(TAG, "Consent form error: ${error.message}")
+                            try {
+                                if (consentInfo.canRequestAds()) initializeMobileAds(activity)
+                            } catch (t: Throwable) {
+                                Log.w(TAG, "Init after consent failed: ${t.message}")
+                            }
+                            safeComplete()
+                        }
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "Consent form failed: ${t.message}")
+                        safeComplete()
+                    }
+                },
+                { requestError ->
+                    Log.w(TAG, "Consent request error: ${requestError.message}")
+                    try {
+                        if (consentInfo.canRequestAds()) initializeMobileAds(activity)
+                    } catch (t: Throwable) {
+                        Log.w(TAG, "Init after consent error failed: ${t.message}")
+                    }
+                    safeComplete()
+                }
+            )
+        } catch (t: Throwable) {
+            Log.w(TAG, "Consent init failed safely: ${t.message}")
+            safeComplete()
+        }
+    }
+
+    private fun initializeMobileAds(context: Context) {
+        if (isMobileAdsInitialized.getAndSet(true)) return
+        try {
+            MobileAds.initialize(context) { status ->
+                Log.d(TAG, "MobileAds initialized: $status")
+                loadInterstitialAd(context)
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "MobileAds.initialize failed safely: ${t.message}")
+        }
+    }
+
+    /** Loads a banner into [container]; safe to call with no Play Services or no network. */
+    fun loadBanner(container: FrameLayout) {
+        if (_isPremiumUser.value) return
+        try {
+            val adView = AdView(container.context).apply {
+                setAdSize(AdSize.BANNER)
+                adUnitId = BANNER_AD_UNIT_ID
+            }
+            container.removeAllViews()
+            container.addView(adView)
+            adView.loadAd(buildAdRequest())
+        } catch (t: Throwable) {
+            Log.w(TAG, "loadBanner failed safely: ${t.message}")
+        }
+    }
+
+    /** Preloads an interstitial. Call when a design starts, not while the results show. */
     fun loadInterstitialAd(context: Context) {
         if (_isPremiumUser.value) return
-        if (isInterstitialLoading) return
-        if (interstitialAd != null) return
+        if (isInterstitialLoading || interstitialAd != null) return
 
         isInterstitialLoading = true
         try {
-            InterstitialAd.load(context, INTERSTITIAL_AD_UNIT_ID, buildAdRequest(),
+            InterstitialAd.load(
+                context,
+                INTERSTITIAL_AD_UNIT_ID,
+                buildAdRequest(),
                 object : InterstitialAdLoadCallback() {
                     override fun onAdLoaded(ad: InterstitialAd) {
                         interstitialAd = ad
                         isInterstitialLoading = false
                     }
+
                     override fun onAdFailedToLoad(error: LoadAdError) {
+                        Log.d(TAG, "Interstitial failed: ${error.message}")
                         interstitialAd = null
                         isInterstitialLoading = false
                     }
                 }
             )
         } catch (t: Throwable) {
+            Log.w(TAG, "loadInterstitialAd failed safely: ${t.message}")
             interstitialAd = null
             isInterstitialLoading = false
         }
     }
 
     /**
-     * Show interstitial ad. Call when navigating from design input → results.
-     * Respects frequency control and fails safely without blocking.
+     * Shows the interstitial when the frequency budget allows it. Always calls exactly one
+     * of [onAdDismissed] / [onAdFailed], so navigation never stalls on an ad.
      */
     fun showInterstitialAd(
         activity: Activity,
@@ -126,53 +229,41 @@ object AdManager {
             ad.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
                     interstitialAd = null
+                    loadInterstitialAd(activity)
                     onAdDismissed()
                 }
+
                 override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                    Log.d(TAG, "Interstitial show failed: ${adError.message}")
                     interstitialAd = null
                     onAdFailed()
                 }
             }
             ad.show(activity)
         } catch (t: Throwable) {
+            Log.w(TAG, "showInterstitialAd failed safely: ${t.message}")
             interstitialAd = null
             onAdFailed()
         }
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // Banner Ad Placement Rules
-    // ═══════════════════════════════════════════════════════════
+    // ── Placement rules ───────────────────────────────────────────
 
-    /**
-     * Should a native ad be shown at this position in a list?
-     * Shows every 8th item, starting from position 7.
-     */
+    /** Native ads go every 8th list item, starting at index 7. */
     fun shouldShowNativeAdAt(position: Int): Boolean {
         if (_isPremiumUser.value) return false
         return position > 0 && position % 8 == 7
     }
 
-    /**
-     * Should a banner be shown between these sections?
-     * Only between major sections, not at the very top.
-     */
+    /** Banners only between major sections — after section 1 and 3, never first or last. */
     fun shouldShowBannerBetweenSections(sectionIndex: Int, totalSections: Int): Boolean {
         if (_isPremiumUser.value) return false
-        // Show banner after section 1 and 3 (not at start or end)
         return sectionIndex in setOf(1, 3) && sectionIndex < totalSections - 1
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // Ad Request Builder
-    // ═══════════════════════════════════════════════════════════
-    fun buildAdRequest(): AdRequest {
-        return AdRequest.Builder().build()
-    }
+    fun buildAdRequest(): AdRequest = AdRequest.Builder().build()
 
-    // ═══════════════════════════════════════════════════════════
-    // Cleanup
-    // ═══════════════════════════════════════════════════════════
+    /** Drops the preloaded interstitial (e.g. when the user buys the ad-free version). */
     fun destroy() {
         interstitialAd = null
         isInterstitialLoading = false

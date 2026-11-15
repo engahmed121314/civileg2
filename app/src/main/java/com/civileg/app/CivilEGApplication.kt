@@ -10,8 +10,6 @@ import com.google.android.gms.common.ConnectionResult
 import dagger.hilt.android.HiltAndroidApp
 import com.civileg.app.security.PlaySafetyChecker
 import com.civileg.app.utils.LocaleHelper
-import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.initialization.InitializationStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -42,7 +40,7 @@ class CivilEGApplication : Application() {
         // can query the current language without needing a Context parameter.
         LocaleHelper.initApplicationContext(this)
 
-        // AdMob is now initialized via AdsManager in SplashActivity for UMP consent compliance.
+        // AdMob (UMP consent + SDK init) is started from SplashActivity via AdManager.
 
         // Initialize security checks
         initializeSecurity()

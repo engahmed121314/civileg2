@@ -7,7 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.civileg.app.MainActivity
 import com.civileg.app.R
-import com.civileg.app.utils.AdsManager
+import com.civileg.app.ads.AdManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -26,8 +26,8 @@ class SplashActivity : AppCompatActivity() {
         }
 
         try {
-            // Initialize Consent and Mobile Ads with safe fallback
-            AdsManager.initConsent(this) {
+            // Requests UMP consent, then initializes AdMob if ads may be requested.
+            AdManager.initConsent(this) {
                 Log.d("SplashActivity", "Ads consent process completed")
                 navigateToMain()
             }
