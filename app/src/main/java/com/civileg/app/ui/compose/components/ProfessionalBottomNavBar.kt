@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.filled.AccountBalance
+import com.civileg.app.ui.theme.PremiumColorsDark
 import com.civileg.app.ui.theme.PremiumColorsLight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,11 +61,15 @@ import com.civileg.app.R
 // PREMIUM GEOMETRIC COLOR PALETTE – Deep Navy Dark Theme for Bottom Nav
 // ============================================================================
 
-private val NavBarBackground  = PremiumColorsLight.primary
 private val NavBarAccent      = PremiumColorsLight.accent
 private val NavBarAccentGlow  = PremiumColorsLight.accent.copy(alpha = 0.12f)
-private val TabSelectedColor  = PremiumColorsLight.accent
-private val TabUnselectedColor = PremiumColorsLight.textSecondary
+// `internal` (not private) so ThemeContrastTest can measure the exact pair the bar draws.
+internal val NavBarBackground  = PremiumColorsLight.primary
+internal val TabSelectedColor  = PremiumColorsLight.accent
+// The bar is navy in *both* themes, so its inactive labels cannot use the light palette's
+// textSecondary (#334155 on the navy ≈ 1.7:1 — effectively invisible). This is the dark
+// palette's text colour, chosen for legible text on dark surfaces (≈ 6.9:1 here).
+internal val TabUnselectedColor = PremiumColorsDark.textSecondary
 private val BadgeRed          = PremiumColorsLight.unsafe
 private val TopBorderGradient = PremiumColorsLight.primary.copy(alpha = 0.35f)
 private val IndicatorColor    = PremiumColorsLight.primary

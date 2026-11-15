@@ -128,9 +128,15 @@ fun CivilEngineerPremiumTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // Set status bar color to primary for premium feel
-            window.statusBarColor = colorScheme.primary.toArgb()
-            // Make status bar icons light on dark, dark on light
+            // The status bar follows `surface` (which matches the app bars), not `primary`.
+            // `primary` is not a surface colour in this palette: it is navy in the light
+            // scheme but `semanticPrimary` (a pastel sky blue) in the dark one, because it
+            // has to stay legible as text and button fill on dark backgrounds. Deriving the
+            // bar from it gave dark icons on navy in light mode (1.1:1) and light icons on
+            // pale blue in dark mode (1.7:1) — unreadable in both.
+            window.statusBarColor = colorScheme.surface.toArgb()
+            // `surface` is light in the light scheme and dark in the dark one, so the icon
+            // appearance can follow the theme directly.
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }

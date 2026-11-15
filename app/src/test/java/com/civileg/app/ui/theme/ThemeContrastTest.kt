@@ -1,6 +1,9 @@
 package com.civileg.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import com.civileg.app.ui.compose.components.NavBarBackground
+import com.civileg.app.ui.compose.components.TabSelectedColor
+import com.civileg.app.ui.compose.components.TabUnselectedColor
 import com.civileg.app.ui.compose.components.drawings.DrawingColors
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -131,6 +134,24 @@ class ThemeContrastTest {
                 Check("steelColor/surface", p.steelColor(), p.surface, NON_TEXT),
                 Check("concreteColor/surface", p.concreteColor(), p.surface, NON_TEXT),
                 Check("dimensionColor/surface", p.dimensionColor(), p.surface, TEXT)
+            )
+        )
+    }
+
+    /**
+     * The bottom navigation does not use scheme roles: it paints a navy surface in both
+     * themes and tints its own labels/icons. That pairing therefore has to be measured
+     * directly — 1.7.0 shipped light-palette `textSecondary` (#334155) on the navy bar,
+     * which measured 1.71:1 on a real device, so three of the five tabs were unreadable.
+     */
+    @Test
+    fun bottomNavLabelsAreReadableOnTheNavyBar() {
+        assertAll(
+            "Bottom navigation",
+            listOf(
+                Check("unselected label", TabUnselectedColor, NavBarBackground, TEXT),
+                Check("unselected icon", TabUnselectedColor, NavBarBackground, NON_TEXT),
+                Check("selected label", TabSelectedColor, NavBarBackground, TEXT)
             )
         )
     }
