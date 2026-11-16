@@ -90,6 +90,40 @@ class SBCAdvancedSlab {
         }
     }
 
+    /**
+     * تصميم شامل للبلاطة حسب SBC 304-2024
+     */
+    fun designSlab(
+        slabType: SlabType,
+        fcu: Double,
+        fy: Double,
+        deadLoad: Double,
+        liveLoad: Double,
+        inventory: RebarInventory? = null,
+        loadCombination: LoadCombination = LoadCombination.DEAD_LIVE,
+        isCorrosiveEnvironment: Boolean = false
+    ): AdvancedSlabResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.notNull("slabType", slabType)
+
+        val totalLoad = (deadLoad + liveLoad) * loadCombination.getFactorForCode(DesignCode.SBC)
+        val exposure = if (isCorrosiveEnvironment) ExposureClass.COASTAL else ExposureClass.NORMAL
+
+        val defaultSupports = SlabSupportConditions(EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED, EdgeCondition.SIMPLY_SUPPORTED)
+
+        return when (slabType) {
+            is SlabType.FlatPlate -> designFlatPlate(fcu, fy, slabType.thickness, slabType.panelLength * 1000.0, slabType.panelWidth * 1000.0, slabType.columnSize, totalLoad, exposure)
+            is SlabType.FlatSlab -> designFlatSlabWithDropPanels(fcu, fy, slabType.thickness, slabType.dropPanelThickness, slabType.dropPanelSize, slabType.panelLength * 1000.0, slabType.panelWidth * 1000.0, slabType.columnSize, totalLoad, exposure)
+            is SlabType.Hordi -> designOneWayHordiSlab(fcu, fy, slabType.totalThickness, slabType.ribWidth, slabType.ribSpacing, slabType.blockWidth, slabType.blockHeight, slabType.span * 1000.0, slabType.supportConditions, totalLoad, exposure)
+            is SlabType.Waffle -> designTwoWayWaffleSlab(fcu, fy, slabType.totalThickness, slabType.ribWidth, slabType.ribDepth, slabType.ribSpacing, slabType.shortSpan * 1000.0, slabType.longSpan * 1000.0, 1500.0, totalLoad, slabType.supportConditions, exposure)
+            is SlabType.Solid -> designFlatPlate(fcu, fy, slabType.thickness, slabType.shortSpan * 1000.0, slabType.longSpan * 1000.0, 300.0, totalLoad, exposure)
+            else -> designFlatPlate(fcu, fy, 200.0, 5000.0, 5000.0, 400.0, totalLoad, exposure)
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // 1. FLAT PLATE DESIGN — SBC 304 §8
     // ─────────────────────────────────────────────────────────────────────────

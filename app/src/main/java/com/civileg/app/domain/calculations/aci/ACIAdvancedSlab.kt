@@ -1227,11 +1227,11 @@ class ACIAdvancedSlab {
         totalLoad: Double,
         loadCombination: LoadCombination
     ): SlabDesignResult {
-        val lx = slab.shortSpan / 1000.0
+        val lx = slab.shortSpan
         val Mu = totalLoad * lx * lx / 8.0
         val Vu = totalLoad * lx / 2.0
         return baseSlab.designOneWaySlab(
-            fcPrime / 0.8, fy, slab.thickness, slab.shortSpan,
+            fcPrime / 0.8, fy, slab.thickness, slab.shortSpan * 1000.0,
             Mu, Vu, loadCombination
         )
     }
