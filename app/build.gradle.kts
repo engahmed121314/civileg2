@@ -10,6 +10,7 @@ plugins {
     id("kotlin-parcelize")
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
+    jacoco
 }
 
 android {
@@ -302,4 +303,32 @@ dependencies {
             because("CVE-2023-2976 / CVE-2020-8908")
         }
     }
+}
+
+configure<JacocoPluginExtension> {
+    toolVersion = "0.8.12"
+}
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testFreeDebugUnitTest")
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+
+    val fileFilter = listOf(
+        "**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*",
+        "**/*Test*.*", "android/**/*", "**/*_MembersInjector.*",
+        "**/Dagger*Component*.*", "**/*_Factory*.*"
+    )
+
+    val debugTree = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/freeDebug").matching {
+        exclude(fileFilter)
+    }
+    val mainSrc = "${projectDir}/src/main/java"
+
+    sourceDirectories.setFrom(files(mainSrc))
+    classDirectories.setFrom(files(debugTree))
+    executionData.setFrom(fileTree(layout.buildDirectory.get()).include("outputs/unit_test_code_coverage/freeDebugUnitTest/testFreeDebugUnitTest.exec", "jacoco/testFreeDebugUnitTest.exec"))
 }

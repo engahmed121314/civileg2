@@ -737,6 +737,8 @@ object QualityControlEngine {
         responseR: Double,
         storyDrift: Double
     ): QcOutcome {
+        require(numFloors > 0 && floorHeightM > 0) { "numFloors and floorHeightM must be positive" }
+        require(totalWeightKn > 0 && importanceFactor > 0 && sds >= 0 && responseR > 0) { "Invalid building parameters" }
         val hn = numFloors * floorHeightM
         val ta = 0.0466 * hn.pow(0.9)
         val ie = importanceFactor.coerceAtLeast(1.0)
