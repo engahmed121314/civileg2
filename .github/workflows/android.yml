@@ -26,11 +26,34 @@ permissions:
   contents: read
 
 jobs:
-  # ─── Job 1: Lint Check ────────────────────────────────────────────────
+  # ─── Job 1: Export Guard Checks ───────────────────────────────────────
+  guards:
+    name: Export Guard Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install ezdxf
+        run: pip install ezdxf
+
+      - name: Run Arabic PDF export guard
+        run: python tools/guards/no_arabic_in_exports.py
+
+      - name: Run DXF validator
+        run: python tools/guards/dxf_validate.py tools/ || true
+
+  # ─── Job 2: Lint Check ────────────────────────────────────────────────
   lint:
     name: Lint Check
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: [guards]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
