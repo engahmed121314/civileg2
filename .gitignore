@@ -67,6 +67,10 @@ build.release.out
 build.release.err
 /.kotlin/
 
+# Agent artifacts — never track
+_agent_screenshot.png
+PREMIUM_GEOMETRIC_ENHANCEMENT_SUMMARY.md
+
 # Local SQLite database
 /db/custom.db
 
