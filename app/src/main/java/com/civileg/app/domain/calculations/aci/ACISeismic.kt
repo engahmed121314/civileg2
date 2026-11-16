@@ -63,7 +63,7 @@ class ACISeismic : SeismicDesign {
         val csMax = sd1 / (ta * (responseModificationFactor / importanceFactor))
         val csMin = max(0.044 * sds * importanceFactor, 0.01)
         
-        val finalCs = cs.coerceIn(csMin, csMax)
+        val finalCs = if (csMin <= csMax) cs.coerceIn(csMin, csMax) else csMin
         
         if (cs < csMin) warnings.add("Cs increased to minimum limit per ASCE 7")
         if (cs > csMax) warnings.add("Cs capped at maximum limit")
