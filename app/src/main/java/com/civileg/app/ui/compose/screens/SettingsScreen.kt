@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.ui.theme.ThemeMode
 import com.civileg.app.utils.LocaleHelper
 import com.civileg.app.viewmodel.SettingsViewModel
 import com.civileg.app.R
@@ -120,6 +121,25 @@ fun SettingsScreen(
                         restartActivity(context)
                     }
                 )
+            }
+
+            // ─── المظهر ───
+            SettingsSectionCard(
+                title = stringResource(R.string.settings_theme),
+                icon = Icons.Default.DarkMode,
+                iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ) {
+                listOf(
+                    ThemeMode.LIGHT to stringResource(R.string.theme_light),
+                    ThemeMode.DARK to stringResource(R.string.theme_dark),
+                    ThemeMode.SYSTEM to stringResource(R.string.theme_system)
+                ).forEach { (mode, label) ->
+                    SettingsRadioRow(
+                        label = label,
+                        selected = settings.themeMode == mode,
+                        onClick = { viewModel.setThemeMode(mode) }
+                    )
+                }
             }
 
             // ─── نظام الوحدات ───

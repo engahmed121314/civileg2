@@ -350,6 +350,10 @@
     <string name="settings_language">App Language</string>
     <string name="settings_design_code">Default Design Code</string>
     <string name="settings_unit_system">Unit System</string>
+    <string name="settings_theme">Theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">System default</string>
     <string name="settings_material_prices">Material Prices</string>
     <string name="settings_currency">Default Currency</string>
     <string name="settings_about">About</string>

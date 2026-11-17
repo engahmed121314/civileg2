@@ -347,6 +347,10 @@
     <string name="settings_language">لغة التطبيق</string>
     <string name="settings_design_code">الكود الإنشائي الافتراضي</string>
     <string name="settings_unit_system">نظام الوحدات</string>
+    <string name="settings_theme">المظهر</string>
+    <string name="theme_light">فاتح</string>
+    <string name="theme_dark">داكن</string>
+    <string name="theme_system">افتراضي النظام</string>
     <string name="settings_material_prices">أسعار المواد</string>
     <string name="settings_currency">العملة الافتراضية</string>
     <string name="settings_about">حول التطبيق</string>
