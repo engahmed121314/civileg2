@@ -45,6 +45,9 @@ jobs:
       - name: Run Arabic PDF export guard
         run: python tools/guards/no_arabic_in_exports.py
 
+      - name: Run contrast + theme guard
+        run: python -I tools/guards/contrast_check.py .
+
       - name: Run DXF validator
         run: python tools/guards/dxf_validate.py tools/ || true
 
