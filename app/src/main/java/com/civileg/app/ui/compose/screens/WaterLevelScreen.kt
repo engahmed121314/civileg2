@@ -1,6 +1,11 @@
 package com.civileg.app.ui.compose.screens
 
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 import android.content.Context
 import androidx.compose.foundation.background
@@ -58,7 +63,7 @@ fun WaterLevelScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_water_level_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_water_level_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -104,8 +109,8 @@ fun WaterLevelScreen(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text(stringResource(R.string.water_level_tool), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        Text(stringResource(R.string.water_level_subtitle), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        AppText(stringResource(R.string.water_level_tool), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        AppText(stringResource(R.string.water_level_subtitle), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -116,7 +121,7 @@ fun WaterLevelScreen(
             OutlinedTextField(
                 value = benchmarkRL,
                 onValueChange = { benchmarkRL = it },
-                label = { Text(stringResource(R.string.water_level_bm)) },
+                label = { AppText(stringResource(R.string.water_level_bm)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -126,7 +131,7 @@ fun WaterLevelScreen(
             OutlinedTextField(
                 value = backSight,
                 onValueChange = { backSight = it },
-                label = { Text(stringResource(R.string.water_level_bs)) },
+                label = { AppText(stringResource(R.string.water_level_bs)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -149,7 +154,7 @@ fun WaterLevelScreen(
                         pointReadings.take(clamped)
                     }
                 },
-                label = { Text(stringResource(R.string.water_level_num_points)) },
+                label = { AppText(stringResource(R.string.water_level_num_points)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -165,12 +170,12 @@ fun WaterLevelScreen(
                     onValueChange = { newValue ->
                         pointReadings = pointReadings.toMutableList().also { it[index] = newValue }
                     },
-                    label = { Text(stringResource(R.string.water_level_fs_n, index + 1)) },
+                    label = { AppText(stringResource(R.string.water_level_fs_n, index + 1)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     leadingIcon = {
-                        Text(
+                        AppText(
                             text = "P${index + 1}",
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -216,9 +221,9 @@ fun WaterLevelScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(stringResource(R.string.water_level_hi), style = MaterialTheme.typography.labelMedium, color = Color(0xFF757575))
+                            AppText(stringResource(R.string.water_level_hi), style = MaterialTheme.typography.labelMedium, color = Color(0xFF757575))
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(
+                            AppText(
                                 stringResource(R.string.water_level_value_m, hi),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 28.sp,
@@ -226,9 +231,9 @@ fun WaterLevelScreen(
                             )
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text(stringResource(R.string.water_level_bm_bs), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                            AppText(stringResource(R.string.water_level_bm_bs), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(
+                            AppText(
                                 "%.3f + %.3f".format(bmValue, bsValue),
                                 fontSize = 13.sp,
                                 color = Color.Gray
@@ -241,7 +246,7 @@ fun WaterLevelScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // ── Results Table ──
-                Text(stringResource(R.string.water_level_results_table), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                AppText(stringResource(R.string.water_level_results_table), fontWeight = FontWeight.Bold, fontSize = 16.sp)
 
                 // Table header
                 Card(
@@ -306,7 +311,7 @@ fun WaterLevelScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
+                        AppText(
                             stringResource(R.string.water_level_hi_summary, hi, results.size),
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f),
@@ -323,7 +328,7 @@ fun WaterLevelScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.water_level_summary), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                        AppText(stringResource(R.string.water_level_summary), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
 
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -341,7 +346,8 @@ fun WaterLevelScreen(
                 }
 
                 // ── Export to PDF ──
-                OutlinedButton(
+                AppButton(
+                    label = stringResource(R.string.water_level_export_pdf),
                     onClick = {
                         scope.launch {
                             exportWaterLevelPdf(
@@ -354,12 +360,9 @@ fun WaterLevelScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.water_level_export_pdf))
-                }
+                    style = AppButtonStyle.Outline,
+                    icon = Icons.Default.PictureAsPdf
+                )
             } else {
                 // No results yet - show formula card
                 Card(
@@ -377,9 +380,9 @@ fun WaterLevelScreen(
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(stringResource(R.string.water_level_enter_data), fontWeight = FontWeight.Bold)
+                        AppText(stringResource(R.string.water_level_enter_data), fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
+                        AppText(
                             stringResource(R.string.water_level_formula_hint),
                             fontSize = 13.sp,
                             color = Color.Gray,
@@ -396,7 +399,7 @@ fun WaterLevelScreen(
 
 @Composable
 private fun SectionLabel(text: String) {
-    Text(
+    AppText(
         text = text,
         fontWeight = FontWeight.Bold,
         style = MaterialTheme.typography.titleSmall,
@@ -406,7 +409,7 @@ private fun SectionLabel(text: String) {
 
 @Composable
 private fun TableHeaderCell(text: String, modifier: Modifier = Modifier) {
-    Text(
+    AppText(
         text = text,
         color = Color.White,
         fontWeight = FontWeight.Bold,
@@ -435,10 +438,10 @@ private fun TableRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(pointName, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.weight(1.2f))
-            Text(typeLabel, fontSize = 11.sp, color = typeColor, modifier = Modifier.weight(1f))
-            Text(reading, fontSize = 12.sp, modifier = Modifier.weight(1f))
-            Text(rl, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.weight(1.2f))
+            AppText(pointName, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.weight(1.2f))
+            AppText(typeLabel, fontSize = 11.sp, color = typeColor, modifier = Modifier.weight(1f))
+            AppText(reading, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            AppText(rl, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.weight(1.2f))
         }
     }
 }
@@ -449,8 +452,8 @@ private fun SummaryRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, color = Color.Gray, fontSize = 13.sp)
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        AppText(label, color = Color.Gray, fontSize = 13.sp)
+        AppText(value, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
 }
 

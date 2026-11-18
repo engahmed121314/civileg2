@@ -1,6 +1,11 @@
 package com.civileg.app.ui.compose.screens
 
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 import android.content.Context
 import android.widget.Toast
@@ -68,7 +73,7 @@ fun InventoryScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_inventory_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_inventory_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -148,7 +153,7 @@ fun InventoryScreen(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text(stringResource(R.string.inventory_search_hint)) },
+                placeholder = { AppText(stringResource(R.string.inventory_search_hint)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 shape = RoundedCornerShape(12.dp)
             )
@@ -165,7 +170,7 @@ fun InventoryScreen(
                 }
             } else if (filteredItems.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(if(searchQuery.isEmpty()) stringResource(R.string.inventory_empty) else stringResource(R.string.inventory_no_results), color = Color.Gray)
+                    AppText(if(searchQuery.isEmpty()) stringResource(R.string.inventory_empty) else stringResource(R.string.inventory_no_results), color = Color.Gray)
                 }
             } else {
                 LazyColumn(
@@ -206,7 +211,7 @@ fun InventoryDashboard(items: List<InventoryItem>) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(stringResource(R.string.boq_feasibility_section), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            AppText(stringResource(R.string.boq_feasibility_section), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             Spacer(Modifier.height(12.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 DashboardStat(label = "Total Items", value = "${items.size}", color = MaterialTheme.colorScheme.primary)
@@ -219,8 +224,8 @@ fun InventoryDashboard(items: List<InventoryItem>) {
 @Composable
 fun DashboardStat(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontSize = 24.sp, fontWeight = FontWeight.Black, color = color)
-        Text(label, fontSize = 12.sp, color = Color.Gray)
+        AppText(value, fontSize = 24.sp, fontWeight = FontWeight.Black, color = color)
+        AppText(label, fontSize = 12.sp, color = Color.Gray)
     }
 }
 
@@ -237,13 +242,13 @@ fun InventoryUserGuide() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.secondary)
                 Spacer(Modifier.width(8.dp))
-                Text("How to use Site Inventory?", fontWeight = FontWeight.Bold)
+                AppText("How to use Site Inventory?", fontWeight = FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
                 Icon(if(expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
             }
             if (expanded) {
                 Spacer(Modifier.height(8.dp))
-                Text("1. Add items like Cement, Sand, or Equipment.\n" +
+                AppText("1. Add items like Cement, Sand, or Equipment.\n" +
                      "2. Set an 'Alert Quantity' to get notified when stock is low.\n" +
                      "3. Use the PDF button in the top bar to generate a report for the site manager.\n" +
                      "4. Low stock items are highlighted in red.", 
@@ -262,13 +267,13 @@ fun TypeFilterRow(selectedType: InventoryType?, onTypeSelected: (InventoryType?)
         FilterChip(
             selected = selectedType == null,
             onClick = { onTypeSelected(null) },
-            label = { Text(stringResource(R.string.view_all)) }
+            label = { AppText(stringResource(R.string.view_all)) }
         )
         InventoryType.entries.forEach { type ->
             FilterChip(
                 selected = selectedType == type,
                 onClick = { onTypeSelected(type) },
-                label = { Text(getInventoryTypeNameAr(type)) }
+                label = { AppText(getInventoryTypeNameAr(type)) }
             )
         }
     }
@@ -288,8 +293,8 @@ fun InventoryItemCard(item: InventoryItem, context: Context, onUpdateQuantity: (
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
-                    Text(item.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text(getInventoryTypeNameAr(item.type), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    AppText(item.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    AppText(getInventoryTypeNameAr(item.type), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                 }
                 if (isLowStock) {
                     Icon(Icons.Default.Warning, contentDescription = "Low Stock", tint = Color.Red)
@@ -299,7 +304,7 @@ fun InventoryItemCard(item: InventoryItem, context: Context, onUpdateQuantity: (
             Spacer(modifier = Modifier.height(12.dp))
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("${item.quantity} ${item.unit}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+                AppText("${item.quantity} ${item.unit}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
                 
                 Row {
                     IconButton(onClick = { onUpdateQuantity(item.quantity - 1) }) {
@@ -329,9 +334,9 @@ fun InventoryItemCard(item: InventoryItem, context: Context, onUpdateQuantity: (
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp)
             
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.inventory_last_updated, dateFormat.format(item.lastUpdated)), fontSize = 10.sp, color = Color.Gray)
+                AppText(stringResource(R.string.inventory_last_updated, dateFormat.format(item.lastUpdated)), fontSize = 10.sp, color = Color.Gray)
                 if (isLowStock) {
-                    Text(stringResource(R.string.inventory_low_stock), color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    AppText(stringResource(R.string.inventory_low_stock), color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
         }
@@ -351,24 +356,24 @@ fun AddInventoryItemDialog(onDismiss: () -> Unit, onConfirm: (String, InventoryT
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.inventory_add_dialog_title)) },
+        title = { AppText(stringResource(R.string.inventory_add_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.inventory_name_hint)) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { AppText(stringResource(R.string.inventory_name_hint)) }, modifier = Modifier.fillMaxWidth())
                 
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
                     OutlinedTextField(
                         value = getInventoryTypeNameAr(type),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text(stringResource(R.string.water_level_type)) },
+                        label = { AppText(stringResource(R.string.water_level_type)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
                     )
                     ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         InventoryType.entries.forEach { t ->
                             DropdownMenuItem(
-                                text = { Text(getInventoryTypeNameAr(t)) },
+                                text = { AppText(getInventoryTypeNameAr(t)) },
                                 onClick = {
                                     type = t
                                     expanded = false
@@ -379,20 +384,29 @@ fun AddInventoryItemDialog(onDismiss: () -> Unit, onConfirm: (String, InventoryT
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { Text(stringResource(R.string.inventory_quantity_label)) }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text(stringResource(R.string.inventory_unit_label)) }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = quantity, onValueChange = { quantity = it }, label = { AppText(stringResource(R.string.inventory_quantity_label)) }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                    OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { AppText(stringResource(R.string.inventory_unit_label)) }, modifier = Modifier.weight(1f))
                 }
                 
-                OutlinedTextField(value = alertQty, onValueChange = { alertQty = it }, label = { Text(stringResource(R.string.inventory_alert_hint)) }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                OutlinedTextField(value = alertQty, onValueChange = { alertQty = it }, label = { AppText(stringResource(R.string.inventory_alert_hint)) }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
         },
         confirmButton = {
-            Button(onClick = {
-                onConfirm(name, type, quantity.toDoubleOrNull() ?: 0.0, unit, alertQty.toDoubleOrNull() ?: 0.0)
-            }) { Text(stringResource(R.string.add)) }
+            AppButton(
+                label = stringResource(R.string.add),
+                onClick = {
+                    onConfirm(name, type, quantity.toDoubleOrNull() ?: 0.0, unit, alertQty.toDoubleOrNull() ?: 0.0)
+                },
+                fillMaxWidth = false
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            AppButton(
+                label = stringResource(R.string.cancel),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }

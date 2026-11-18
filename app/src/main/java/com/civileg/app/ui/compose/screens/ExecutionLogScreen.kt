@@ -22,6 +22,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.db.PourLog
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.db.SiteInspection
 import com.civileg.app.viewmodel.ExecutionViewModel
 import java.text.SimpleDateFormat
@@ -52,7 +57,7 @@ fun ExecutionLogScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.execution_logs_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.execution_logs_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -79,11 +84,11 @@ fun ExecutionLogScreen(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.sectionSpacing)
         ) {
             item {
-                Text(stringResource(R.string.concrete_pour_logs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.concrete_pour_logs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
 
             if (pourLogs.isEmpty()) {
-                item { Text(stringResource(R.string.no_pours_recorded), color = Color.Gray, fontSize = 12.sp) }
+                item { AppText(stringResource(R.string.no_pours_recorded), color = Color.Gray, fontSize = 12.sp) }
             }
 
             items(pourLogs) { log ->
@@ -91,11 +96,11 @@ fun ExecutionLogScreen(
             }
 
             item {
-                Text(stringResource(R.string.quality_inspections), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
+                AppText(stringResource(R.string.quality_inspections), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
             }
 
             if (inspections.isEmpty()) {
-                item { Text(stringResource(R.string.no_inspections_recorded), color = Color.Gray, fontSize = 12.sp) }
+                item { AppText(stringResource(R.string.no_inspections_recorded), color = Color.Gray, fontSize = 12.sp) }
             }
 
             items(inspections) { insp ->
@@ -158,9 +163,9 @@ fun InspectionItem(insp: SiteInspection) {
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.exec_inspection_format, SimpleDateFormat("dd MMM HH:mm", Locale.US).format(insp.date)), fontWeight = FontWeight.Bold)
-                Text(insp.comments, fontSize = 12.sp, color = Color.Gray)
-                Text(
+                AppText(stringResource(R.string.exec_inspection_format, SimpleDateFormat("dd MMM HH:mm", Locale.US).format(insp.date)), fontWeight = FontWeight.Bold)
+                AppText(insp.comments, fontSize = 12.sp, color = Color.Gray)
+                AppText(
                     "FW: ${if(insp.formworkSafe) "OK" else "NG"} | RB: ${if(insp.rebarMatchesDesign) "OK" else "NG"} | CV: ${if(insp.coverAdequate) "OK" else "NG"}",
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.primary
@@ -180,21 +185,30 @@ fun AddInspectionDialog(onDismiss: () -> Unit, onConfirm: (String, Boolean, Bool
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.exec_checklist_title)) },
+        title = { AppText(stringResource(R.string.exec_checklist_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedTextField(value = comments, onValueChange = { comments = it }, label = { Text(stringResource(R.string.exec_comments_label)) }, modifier = Modifier.fillMaxWidth())
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = fw, onCheckedChange = { fw = it }); Text(stringResource(R.string.exec_formwork_check)) }
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = rb, onCheckedChange = { rb = it }); Text(stringResource(R.string.exec_rebar_check)) }
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = cv, onCheckedChange = { cv = it }); Text(stringResource(R.string.exec_cover_check)) }
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = cl, onCheckedChange = { cl = it }); Text(stringResource(R.string.exec_clean_check)) }
+                OutlinedTextField(value = comments, onValueChange = { comments = it }, label = { AppText(stringResource(R.string.exec_comments_label)) }, modifier = Modifier.fillMaxWidth())
+                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = fw, onCheckedChange = { fw = it }); AppText(stringResource(R.string.exec_formwork_check)) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = rb, onCheckedChange = { rb = it }); AppText(stringResource(R.string.exec_rebar_check)) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = cv, onCheckedChange = { cv = it }); AppText(stringResource(R.string.exec_cover_check)) }
+                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(checked = cl, onCheckedChange = { cl = it }); AppText(stringResource(R.string.exec_clean_check)) }
             }
         },
         confirmButton = {
-            Button(onClick = { onConfirm(comments, fw, rb, cv, cl) }) { Text(stringResource(R.string.exec_approve_save)) }
+            AppButton(
+                label = stringResource(R.string.exec_approve_save),
+                onClick = { onConfirm(comments, fw, rb, cv, cl) },
+                fillMaxWidth = false
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            AppButton(
+                label = stringResource(R.string.cancel),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }
@@ -207,21 +221,30 @@ fun AddPourLogDialog(onDismiss: () -> Unit, onConfirm: (String, Double, Double) 
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.exec_record_pour_title)) },
+        title = { AppText(stringResource(R.string.exec_record_pour_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = elementId, onValueChange = { elementId = it }, label = { Text(stringResource(R.string.exec_element_id_label)) })
-                OutlinedTextField(value = slump, onValueChange = { slump = it }, label = { Text(stringResource(R.string.exec_slump_mm_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                OutlinedTextField(value = vol, onValueChange = { vol = it }, label = { Text(stringResource(R.string.exec_volume_m3_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                OutlinedTextField(value = elementId, onValueChange = { elementId = it }, label = { AppText(stringResource(R.string.exec_element_id_label)) })
+                OutlinedTextField(value = slump, onValueChange = { slump = it }, label = { AppText(stringResource(R.string.exec_slump_mm_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                OutlinedTextField(value = vol, onValueChange = { vol = it }, label = { AppText(stringResource(R.string.exec_volume_m3_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
             }
         },
         confirmButton = {
-            Button(onClick = { 
-                onConfirm(elementId, slump.toDoubleOrNull() ?: 100.0, vol.toDoubleOrNull() ?: 0.0)
-            }) { Text(stringResource(R.string.exec_record_button)) }
+            AppButton(
+                label = stringResource(R.string.exec_record_button),
+                onClick = {
+                    onConfirm(elementId, slump.toDoubleOrNull() ?: 100.0, vol.toDoubleOrNull() ?: 0.0)
+                },
+                fillMaxWidth = false
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            AppButton(
+                label = stringResource(R.string.cancel),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }
@@ -233,10 +256,10 @@ fun PourLogItem(log: PourLog) {
             Icon(Icons.Default.LocalDrink, null, tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(log.elementId, fontWeight = FontWeight.Bold)
-                Text(stringResource(R.string.execution_pour_log_format, log.slumpMm, log.volumeM3), fontSize = 12.sp)
+                AppText(log.elementId, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.execution_pour_log_format, log.slumpMm, log.volumeM3), fontSize = 12.sp)
             }
-            Text(SimpleDateFormat("dd MMM", Locale.US).format(log.date), fontSize = 11.sp, color = Color.Gray)
+            AppText(SimpleDateFormat("dd MMM", Locale.US).format(log.date), fontSize = 11.sp, color = Color.Gray)
         }
     }
 }
