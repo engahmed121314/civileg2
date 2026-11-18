@@ -111,6 +111,11 @@ import com.civileg.app.domain.entities.MemberLoadType
 import com.civileg.app.domain.entities.NodalLoad
 import com.civileg.app.domain.entities.SlabDistribution
 import com.civileg.app.ui.compose.components.drawings.SteelSectionDrawing
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.domain.entities.SlabPanel
 import com.civileg.app.domain.entities.SupportType
 import com.civileg.app.domain.entities.orderQuadJoints
@@ -418,7 +423,7 @@ fun FrameModelerTab(
                             tint = Color(0xFF1565C0)
                         )
                     }
-                    Text(
+                    AppText(
                         text = toolLabel(tool),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -518,7 +523,7 @@ fun FrameModelerTab(
                             .padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
+                        AppText(
                             t("نوع الاستناد:", "Support:"),
                             fontSize = 11.sp,
                             color = Color(0xFF1565C0),
@@ -528,7 +533,7 @@ fun FrameModelerTab(
                             FilterChip(
                                 selected = supportType == st,
                                 onClick = { supportType = st },
-                                label = { Text(st.displayName, fontSize = 10.sp) },
+                                label = { AppText(st.displayName, fontSize = 10.sp) },
                                 modifier = Modifier.padding(horizontal = 2.dp),
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = Color(0xFF2E7D32),
@@ -610,7 +615,7 @@ fun FrameModelerTab(
                                 onToggle = { mask -> layerMask = mask }
                             )
                             Spacer(Modifier.width(10.dp))
-                            Text(
+                            AppText(
                                 text = t(
                                     "النموذج: ${nodes.size} عقدة / ${members.size} عضو / ${slabs.size} بلاطة",
                                     "Model: ${nodes.size} joints / ${members.size} members / ${slabs.size} slabs"
@@ -735,8 +740,8 @@ fun FrameModelerTab(
                 shadowElevation = 2.dp
             ) {
                 Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-                    Text(hint, fontSize = 11.sp, color = Color(0xFF37474F), fontWeight = FontWeight.Medium)
-                    Text(
+                    AppText(hint, fontSize = 11.sp, color = Color(0xFF37474F), fontWeight = FontWeight.Medium)
+                    AppText(
                         text = t(
                             "الشبكة: ${gridLabel(gridMm)} • الالتقاط: ${snapLabel(snapMm)}",
                             "Grid: ${gridLabel(gridMm)} • Snap: ${snapLabel(snapMm)}"
@@ -757,7 +762,7 @@ fun FrameModelerTab(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Text(t("تحليل", "Solve"), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    AppText(t("تحليل", "Solve"), fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -779,9 +784,9 @@ fun FrameModelerTab(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(t("ابدأ الرسم", "Start drawing"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        AppText(t("ابدأ الرسم", "Start drawing"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Spacer(Modifier.height(4.dp))
-                        Text(
+                        AppText(
                             t(
                                 "اختر أداة «عقدة» وانقر على الشبكة، ثم ارسم الأعضاء.",
                                 "Choose the Joint tool and tap the grid, then draw members."
@@ -856,7 +861,7 @@ fun FrameModelerTab(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val cursor = cursorWorld
-                Text(
+                AppText(
                     text = if (cursor != null) {
                         String.format(
                             java.util.Locale.ROOT,
@@ -872,7 +877,7 @@ fun FrameModelerTab(
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(Modifier.width(14.dp))
-                Text(
+                AppText(
                     text = t(
                         "تكبير ${String.format(java.util.Locale.ROOT, "%.0f", viewport.scale / 60f * 100f)}%",
                         "Zoom ${String.format(java.util.Locale.ROOT, "%.0f", viewport.scale / 60f * 100f)}%"
@@ -881,7 +886,7 @@ fun FrameModelerTab(
                     color = Color.Gray
                 )
                 Spacer(Modifier.width(14.dp))
-                Text(
+                AppText(
                     text = t(
                         "شبكة ${gridLabel(gridMm)} • التقاط ${snapLabel(snapMm)}",
                         "Grid ${gridLabel(gridMm)} • Snap ${snapLabel(snapMm)}"
@@ -890,7 +895,7 @@ fun FrameModelerTab(
                     color = Color.Gray
                 )
                 Spacer(Modifier.width(14.dp))
-                Text(
+                AppText(
                     text = t(
                         "${nodes.size} عقدة / ${members.size} عضو / ${slabs.size} بلاطة",
                         "${nodes.size} joints / ${members.size} members / ${slabs.size} slabs"
@@ -1036,30 +1041,30 @@ private fun MemberPropsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(t("خصائص العضو ${member.id}", "Member ${member.id} properties")) },
+        title = { AppText(t("خصائص العضو ${member.id}", "Member ${member.id} properties")) },
         text = {
             Column {
-                Text(t("المادة", "Material"), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                AppText(t("المادة", "Material"), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(
                         selected = material == FrameMaterialType.Concrete,
                         onClick = { material = FrameMaterialType.Concrete },
-                        label = { Text(t("خرسانة", "Concrete"), fontSize = 11.sp) }
+                        label = { AppText(t("خرسانة", "Concrete"), fontSize = 11.sp) }
                     )
                     FilterChip(
                         selected = material == FrameMaterialType.Steel,
                         onClick = { material = FrameMaterialType.Steel },
-                        label = { Text(t("حديد", "Steel"), fontSize = 11.sp) }
+                        label = { AppText(t("حديد", "Steel"), fontSize = 11.sp) }
                     )
                 }
                 Spacer(Modifier.height(6.dp))
-                Text(t("نوع العضو", "Member type"), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                AppText(t("نوع العضو", "Member type"), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     for (mt in FrameMemberType.entries) {
                         FilterChip(
                             selected = type == mt,
                             onClick = { type = mt },
-                            label = { Text(mt.name, fontSize = 10.sp) }
+                            label = { AppText(mt.name, fontSize = 10.sp) }
                         )
                     }
                 }
@@ -1074,7 +1079,7 @@ private fun MemberPropsDialog(
                     OutlinedTextField(
                         value = steelSection,
                         onValueChange = { steelSection = it },
-                        label = { Text(t("المقطع الحديدي", "Steel Section")) },
+                        label = { AppText(t("المقطع الحديدي", "Steel Section")) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -1082,22 +1087,32 @@ private fun MemberPropsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                val w = widthMm.toDoubleOrNull() ?: 250.0
-                val d = depthMm.toDoubleOrNull() ?: 500.0
-                val updated = member.copy(
-                    materialType = material,
-                    memberType = type,
-                    concreteSection = if (material == FrameMaterialType.Concrete) ConcreteSectionProps(w, d) else null,
-                    steelSectionName = if (material == FrameMaterialType.Steel) {
-                        steelSection.trim().takeUnless { SteelFrameDesign.isAutoSection(it) }
-                    } else null
-                )
-                onSave(updated)
-            }) { Text(t("حفظ", "Save"), color = Color(0xFF1565C0)) }
+            AppButton(
+                label = t("حفظ", "Save"),
+                fillMaxWidth = false,
+                style = AppButtonStyle.Text,
+                onClick = {
+                    val w = widthMm.toDoubleOrNull() ?: 250.0
+                    val d = depthMm.toDoubleOrNull() ?: 500.0
+                    val updated = member.copy(
+                        materialType = material,
+                        memberType = type,
+                        concreteSection = if (material == FrameMaterialType.Concrete) ConcreteSectionProps(w, d) else null,
+                        steelSectionName = if (material == FrameMaterialType.Steel) {
+                            steelSection.trim().takeUnless { SteelFrameDesign.isAutoSection(it) }
+                        } else null
+                    )
+                    onSave(updated)
+                }
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(t("إلغاء", "Cancel")) }
+            AppButton(
+                label = t("إلغاء", "Cancel"),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }
@@ -1123,7 +1138,7 @@ private fun NodeInspector(
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
+                AppText(
                     t("العقدة ${node.id}", "Joint ${node.id}"),
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
@@ -1139,19 +1154,23 @@ private fun NodeInspector(
                 Spacer(Modifier.width(6.dp))
                 NumberField(yText, { yText = it }, "Y (m)", Modifier.weight(1f))
                 Spacer(Modifier.width(6.dp))
-                TextButton(
+                AppButton(
+                    label = t("تطبيق", "Apply"),
                     enabled = xText.toDoubleOrNull() != null &&
                         yText.toDoubleOrNull() != null &&
                         (xText.toDoubleOrNull() != node.x || yText.toDoubleOrNull() != node.y),
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false,
+                    fontSize = 12.sp,
                     onClick = {
-                        val x = xText.toDoubleOrNull() ?: return@TextButton
-                        val y = yText.toDoubleOrNull() ?: return@TextButton
+                        val x = xText.toDoubleOrNull() ?: return@AppButton
+                        val y = yText.toDoubleOrNull() ?: return@AppButton
                         onUpdate(x, y)
                     }
-                ) { Text(t("تطبيق", "Apply"), fontSize = 12.sp) }
+                )
             }
             Spacer(Modifier.height(4.dp))
-            Text(t("الاستناد", "Support"), fontSize = 10.sp, color = Color.Gray)
+            AppText(t("الاستناد", "Support"), fontSize = 10.sp, color = Color.Gray)
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically
@@ -1160,7 +1179,7 @@ private fun NodeInspector(
                     FilterChip(
                         selected = node.support == st,
                         onClick = { onSupportChange(st) },
-                        label = { Text(st.displayName, fontSize = 9.sp) },
+                        label = { AppText(st.displayName, fontSize = 9.sp) },
                         modifier = Modifier.padding(horizontal = 2.dp),
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = Color(0xFF2E7D32),
@@ -1171,10 +1190,10 @@ private fun NodeInspector(
             }
             if (nodalLoads.isNotEmpty()) {
                 Spacer(Modifier.height(2.dp))
-                Text(t("أحمال العقدة", "Joint loads"), fontSize = 10.sp, color = Color.Gray)
+                AppText(t("أحمال العقدة", "Joint loads"), fontSize = 10.sp, color = Color.Gray)
                 for (entry in nodalLoads.take(3)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
+                        AppText(
                             "${entry.value.loadCase}: " +
                                 "Fx=${fmtLoad(entry.value.fx)}  " +
                                 "Fy=${fmtLoad(entry.value.fy)}  " +
@@ -1197,14 +1216,18 @@ private fun NodeInspector(
                     }
                 }
                 if (nodalLoads.size > 3) {
-                    Text(t("+${nodalLoads.size - 3} أحمال أخرى", "+${nodalLoads.size - 3} more"), fontSize = 9.sp, color = Color.Gray)
+                    AppText(t("+${nodalLoads.size - 3} أحمال أخرى", "+${nodalLoads.size - 3} more"), fontSize = 9.sp, color = Color.Gray)
                 }
             }
-            TextButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFC62828), modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(t("حذف العقدة", "Delete joint"), fontSize = 11.sp, color = Color(0xFFC62828))
-            }
+            AppButton(
+                label = t("حذف العقدة", "Delete joint"),
+                onClick = onDelete,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false,
+                icon = Icons.Default.Delete,
+                contentOverride = Color(0xFFC62828),
+                fontSize = 11.sp
+            )
         }
     }
 }
@@ -1230,7 +1253,7 @@ private fun MemberInspector(
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
+                AppText(
                     t("العضو ${member.id}", "Member ${member.id}"),
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
@@ -1244,7 +1267,7 @@ private fun MemberInspector(
                     Icon(Icons.Default.Close, contentDescription = null, tint = Color.Gray)
                 }
             }
-            Text(
+            AppText(
                 t(
                     "من ${member.nodeI} إلى ${member.nodeJ} • الطول ${"%.3f".format(length)} م",
                     "Joint ${member.nodeI} → ${member.nodeJ} • ${"%.3f".format(length)} m"
@@ -1252,7 +1275,7 @@ private fun MemberInspector(
                 fontSize = 10.sp,
                 color = Color.Gray
             )
-            Text(
+            AppText(
                 "${member.materialType.name} • ${member.memberType.name}" +
                     (member.concreteSection?.takeIf { member.materialType == FrameMaterialType.Concrete }
                         ?.let { " • ${it.width.toInt()}×${it.depth.toInt()}" } ?: "") +
@@ -1269,7 +1292,7 @@ private fun MemberInspector(
                 FilterChip(
                     selected = member.releaseI,
                     onClick = onReleaseI,
-                    label = { Text(t("مفصل I", "Hinge I"), fontSize = 9.sp) },
+                    label = { AppText(t("مفصل I", "Hinge I"), fontSize = 9.sp) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = Color(0xFFF57C00),
                         selectedLabelColor = Color.White
@@ -1279,7 +1302,7 @@ private fun MemberInspector(
                 FilterChip(
                     selected = member.releaseJ,
                     onClick = onReleaseJ,
-                    label = { Text(t("مفصل J", "Hinge J"), fontSize = 9.sp) },
+                    label = { AppText(t("مفصل J", "Hinge J"), fontSize = 9.sp) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = Color(0xFFF57C00),
                         selectedLabelColor = Color.White
@@ -1288,10 +1311,10 @@ private fun MemberInspector(
             }
             if (memberLoads.isNotEmpty()) {
                 Spacer(Modifier.height(2.dp))
-                Text(t("أحمال العضو", "Member loads"), fontSize = 10.sp, color = Color.Gray)
+                AppText(t("أحمال العضو", "Member loads"), fontSize = 10.sp, color = Color.Gray)
                 for (entry in memberLoads.take(3)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
+                        AppText(
                             "${entry.value.loadCase}: ${entry.value.loadType.name} " +
                                 "${fmtLoad(entry.value.value)} @ ${fmtLoad(entry.value.position)}m",
                             fontSize = 9.sp,
@@ -1312,14 +1335,18 @@ private fun MemberInspector(
                     }
                 }
                 if (memberLoads.size > 3) {
-                    Text(t("+${memberLoads.size - 3} أحمال أخرى", "+${memberLoads.size - 3} more"), fontSize = 9.sp, color = Color.Gray)
+                    AppText(t("+${memberLoads.size - 3} أحمال أخرى", "+${memberLoads.size - 3} more"), fontSize = 9.sp, color = Color.Gray)
                 }
             }
-            TextButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFC62828), modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(t("حذف العضو", "Delete member"), fontSize = 11.sp, color = Color(0xFFC62828))
-            }
+            AppButton(
+                label = t("حذف العضو", "Delete member"),
+                onClick = onDelete,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false,
+                icon = Icons.Default.Delete,
+                contentOverride = Color(0xFFC62828),
+                fontSize = 11.sp
+            )
         }
     }
 }
@@ -1364,14 +1391,14 @@ private fun MemberPropertiesDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(t("خصائص العضو ${member.id}", "Member ${member.id} properties")) },
+        title = { AppText(t("خصائص العضو ${member.id}", "Member ${member.id} properties")) },
         text = {
             Column(
                 modifier = Modifier
                     .heightIn(max = 420.dp)
                     .verticalScroll(scrollState)
             ) {
-                Text(t("نوع العضو", "Member type"), fontSize = 10.sp, color = Color.Gray)
+                AppText(t("نوع العضو", "Member type"), fontSize = 10.sp, color = Color.Gray)
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     verticalAlignment = Alignment.CenterVertically
@@ -1380,20 +1407,20 @@ private fun MemberPropertiesDialog(
                         FilterChip(
                             selected = memberType == type,
                             onClick = { memberType = type },
-                            label = { Text(type.displayName, fontSize = 10.sp) },
+                            label = { AppText(type.displayName, fontSize = 10.sp) },
                             modifier = Modifier.padding(horizontal = 2.dp)
                         )
                     }
                 }
 
                 Spacer(Modifier.height(4.dp))
-                Text(t("المادة", "Material"), fontSize = 10.sp, color = Color.Gray)
+                AppText(t("المادة", "Material"), fontSize = 10.sp, color = Color.Gray)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     for (material in FrameMaterialType.entries) {
                         FilterChip(
                             selected = materialType == material,
                             onClick = { materialType = material },
-                            label = { Text(material.displayName, fontSize = 10.sp) },
+                            label = { AppText(material.displayName, fontSize = 10.sp) },
                             modifier = Modifier.padding(horizontal = 2.dp)
                         )
                     }
@@ -1418,15 +1445,13 @@ private fun MemberPropertiesDialog(
                     val isAutoSection = SteelFrameDesign.isAutoSection(steelSectionName)
                     Spacer(Modifier.height(6.dp))
                     Box {
-                        OutlinedButton(
+                        AppButton(
+                            label = if (isAutoSection) t("تلقائي", "Auto") else steelSectionName,
                             onClick = { steelExpanded = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                if (isAutoSection) t("تلقائي", "Auto") else steelSectionName,
-                                fontSize = 12.sp
-                            )
-                        }
+                            modifier = Modifier.fillMaxWidth(),
+                            style = AppButtonStyle.Outline,
+                            fontSize = 12.sp
+                        )
                         DropdownMenu(
                             expanded = steelExpanded,
                             onDismissRequest = { steelExpanded = false },
@@ -1434,7 +1459,7 @@ private fun MemberPropertiesDialog(
                         ) {
                             DropdownMenuItem(
                                 text = {
-                                    Text(
+                                    AppText(
                                         t("تلقائي - اختيار أفضل قطاع", "Auto - select optimal section"),
                                         fontSize = 11.sp
                                     )
@@ -1447,7 +1472,7 @@ private fun MemberPropertiesDialog(
                             for (section in steelSections) {
                                 DropdownMenuItem(
                                     text = {
-                                        Text(
+                                        AppText(
                                             "${section.name}  (${section.depth.toInt()}×${section.width.toInt()})",
                                             fontSize = 11.sp
                                         )
@@ -1461,7 +1486,7 @@ private fun MemberPropertiesDialog(
                         }
                     }
                     Spacer(Modifier.height(4.dp))
-                    Text(
+                    AppText(
                         t(
                             "تُؤخذ خصائص القطاع من جدول القطاعات القياسي.",
                             "Section properties are taken from the standard steel table."
@@ -1470,7 +1495,7 @@ private fun MemberPropertiesDialog(
                         color = Color.Gray
                     )
                     if (isAutoSection) {
-                        Text(
+                        AppText(
                             t(
                                 "سيُختار القطاع الأمثل تلقائياً عند التحليل.",
                                 "The optimal section is selected automatically during analysis."
@@ -1492,7 +1517,10 @@ private fun MemberPropertiesDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            AppButton(
+                label = t("حفظ", "Save"),
+                fillMaxWidth = false,
+                style = AppButtonStyle.Text,
                 enabled = isValid,
                 onClick = {
                     val section = if (materialType == FrameMaterialType.Concrete) {
@@ -1520,12 +1548,15 @@ private fun MemberPropertiesDialog(
                         )
                     )
                 }
-            ) {
-                Text(t("حفظ", "Save"), color = if (isValid) Color(0xFF1565C0) else Color.Gray)
-            }
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(t("إلغاء", "Cancel")) }
+            AppButton(
+                label = t("إلغاء", "Cancel"),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }
@@ -1569,7 +1600,7 @@ private fun ToolChip(
     FilterChip(
         selected = selected == value,
         onClick = { onClick(value) },
-        label = { Text(label, fontSize = 10.sp, maxLines = 1) },
+        label = { AppText(label, fontSize = 10.sp, maxLines = 1) },
         modifier = Modifier.padding(horizontal = 2.dp),
         colors = FilterChipDefaults.filterChipColors(
             selectedContainerColor = Color(0xFF1565C0),
@@ -1591,7 +1622,7 @@ private fun GridDropdown(
         AssistChip(
             onClick = { expanded = true },
             label = {
-                Text(
+                AppText(
                     "$label: ${if (LocaleHelper.isArabic()) option.labelAr else option.labelEn}",
                     fontSize = 10.sp
                 )
@@ -1601,7 +1632,7 @@ private fun GridDropdown(
             for (o in options) {
                 DropdownMenuItem(
                     text = {
-                        Text(if (LocaleHelper.isArabic()) o.labelAr else o.labelEn, fontSize = 12.sp)
+                        AppText(if (LocaleHelper.isArabic()) o.labelAr else o.labelEn, fontSize = 12.sp)
                     },
                     onClick = {
                         expanded = false
@@ -1632,7 +1663,7 @@ private fun LayerDropdown(
     Box {
         AssistChip(
             onClick = { expanded = true },
-            label = { Text(t("الطبقات", "Layers"), fontSize = 10.sp) },
+            label = { AppText(t("الطبقات", "Layers"), fontSize = 10.sp) },
             leadingIcon = {
                 Icon(
                     Icons.Default.Layers,
@@ -1644,7 +1675,7 @@ private fun LayerDropdown(
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             for ((label, bit, enabled) in items) {
                 DropdownMenuItem(
-                    text = { Text(label, fontSize = 12.sp) },
+                    text = { AppText(label, fontSize = 12.sp) },
                     trailingIcon = {
                         if (enabled) Icon(Icons.Default.Check, contentDescription = null)
                     },
@@ -1653,7 +1684,7 @@ private fun LayerDropdown(
             }
             DropdownMenuItem(
                 text = {
-                    Text(
+                    AppText(
                         t("إظهار الكل", "Show all"),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -1681,7 +1712,7 @@ private fun NumberField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, fontSize = 12.sp) },
+        label = { AppText(label, fontSize = 12.sp) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         singleLine = true,
         modifier = modifier
@@ -1702,7 +1733,7 @@ private fun NodalLoadDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
+            AppText(
                 if (initial == null) t("حمل عقدة $nodeId", "Nodal load at joint $nodeId")
                 else t("تعديل حمل العقدة $nodeId", "Edit load at joint $nodeId")
             )
@@ -1723,17 +1754,27 @@ private fun NodalLoadDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                onConfirm(
-                    fx.toDoubleOrNull() ?: 0.0,
-                    fy.toDoubleOrNull() ?: 0.0,
-                    mz.toDoubleOrNull() ?: 0.0,
-                    loadCase.ifBlank { "DL" }
-                )
-            }) { Text(if (initial == null) t("إضافة", "Add") else t("تحديث", "Update"), color = Color(0xFF1565C0)) }
+            AppButton(
+                label = if (initial == null) t("إضافة", "Add") else t("تحديث", "Update"),
+                fillMaxWidth = false,
+                style = AppButtonStyle.Text,
+                onClick = {
+                    onConfirm(
+                        fx.toDoubleOrNull() ?: 0.0,
+                        fy.toDoubleOrNull() ?: 0.0,
+                        mz.toDoubleOrNull() ?: 0.0,
+                        loadCase.ifBlank { "DL" }
+                    )
+                }
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(t("إلغاء", "Cancel")) }
+            AppButton(
+                label = t("إلغاء", "Cancel"),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }
@@ -1753,7 +1794,7 @@ private fun MemberLoadDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
+            AppText(
                 if (initial == null) t("حمل عضو $memberId", "Member load $memberId")
                 else t("تعديل حمل العضو $memberId", "Edit member load $memberId")
             )
@@ -1761,26 +1802,24 @@ private fun MemberLoadDialog(
         text = {
             Column {
                 Box {
-                    OutlinedButton(
+                    AppButton(
+                        label = when (loadType) {
+                            MemberLoadType.UDL -> t("حمل موزع منتظم", "Uniform load")
+                            MemberLoadType.PointLoad -> t("حمل مركز", "Point load")
+                            MemberLoadType.Moment -> t("عزم", "Moment")
+                            MemberLoadType.LinearVarying -> t("موزع متغير", "Varying load")
+                            MemberLoadType.Trapezoidal -> t("شبه منحرف (بلاطة)", "Trapezoidal (slab)")
+                        },
                         onClick = { typeExpanded = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            when (loadType) {
-                                MemberLoadType.UDL -> t("حمل موزع منتظم", "Uniform load")
-                                MemberLoadType.PointLoad -> t("حمل مركز", "Point load")
-                                MemberLoadType.Moment -> t("عزم", "Moment")
-                                MemberLoadType.LinearVarying -> t("موزع متغير", "Varying load")
-                                MemberLoadType.Trapezoidal -> t("شبه منحرف (بلاطة)", "Trapezoidal (slab)")
-                            },
-                            fontSize = 12.sp
-                        )
-                    }
+                        modifier = Modifier.fillMaxWidth(),
+                        style = AppButtonStyle.Outline,
+                        fontSize = 12.sp
+                    )
                     DropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
                         for (type in MemberLoadType.entries) {
                             DropdownMenuItem(
                                 text = {
-                                    Text(
+                                    AppText(
                                         when (type) {
                                             MemberLoadType.UDL -> t("حمل موزع منتظم", "Uniform load")
                                             MemberLoadType.PointLoad -> t("حمل مركز", "Point load")
@@ -1810,17 +1849,27 @@ private fun MemberLoadDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                onConfirm(
-                    loadType,
-                    value.toDoubleOrNull() ?: 0.0,
-                    position.toDoubleOrNull() ?: 0.0,
-                    loadCase.ifBlank { "DL" }
-                )
-            }) { Text(if (initial == null) t("إضافة", "Add") else t("تحديث", "Update"), color = Color(0xFF1565C0)) }
+            AppButton(
+                label = if (initial == null) t("إضافة", "Add") else t("تحديث", "Update"),
+                fillMaxWidth = false,
+                style = AppButtonStyle.Text,
+                onClick = {
+                    onConfirm(
+                        loadType,
+                        value.toDoubleOrNull() ?: 0.0,
+                        position.toDoubleOrNull() ?: 0.0,
+                        loadCase.ifBlank { "DL" }
+                    )
+                }
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(t("إلغاء", "Cancel")) }
+            AppButton(
+                label = t("إلغاء", "Cancel"),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }
@@ -1835,28 +1884,36 @@ private fun HingeDialog(
     var releaseJ by remember { mutableStateOf(member.releaseJ) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(t("مفاصل العضو ${member.id}", "Member ${member.id} releases")) },
+        title = { AppText(t("مفاصل العضو ${member.id}", "Member ${member.id} releases")) },
         text = {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Switch(checked = releaseI, onCheckedChange = { releaseI = it })
                     Spacer(Modifier.width(8.dp))
-                    Text(t("مفصل عند العقدة ${member.nodeI}", "Hinge at joint ${member.nodeI}"), fontSize = 12.sp)
+                    AppText(t("مفصل عند العقدة ${member.nodeI}", "Hinge at joint ${member.nodeI}"), fontSize = 12.sp)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Switch(checked = releaseJ, onCheckedChange = { releaseJ = it })
                     Spacer(Modifier.width(8.dp))
-                    Text(t("مفصل عند العقدة ${member.nodeJ}", "Hinge at joint ${member.nodeJ}"), fontSize = 12.sp)
+                    AppText(t("مفصل عند العقدة ${member.nodeJ}", "Hinge at joint ${member.nodeJ}"), fontSize = 12.sp)
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(releaseI, releaseJ) }) {
-                Text(t("تطبيق", "Apply"), color = Color(0xFF1565C0))
-            }
+            AppButton(
+                label = t("تطبيق", "Apply"),
+                fillMaxWidth = false,
+                style = AppButtonStyle.Text,
+                onClick = { onConfirm(releaseI, releaseJ) }
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(t("إلغاء", "Cancel")) }
+            AppButton(
+                label = t("إلغاء", "Cancel"),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }
@@ -1872,7 +1929,7 @@ private fun SlabDialog(
     var distribution by remember { mutableStateOf(SlabDistribution.TwoWay) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(t("بلاطة جديدة", "New slab panel")) },
+        title = { AppText(t("بلاطة جديدة", "New slab panel")) },
         text = {
             Column {
                 Row {
@@ -1883,33 +1940,43 @@ private fun SlabDialog(
                 Spacer(Modifier.height(6.dp))
                 NumberField(loadCase, { loadCase = it }, t("الحمل", "Case"), Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
-                Text(t("توزيع الحمل", "Load distribution"), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                AppText(t("توزيع الحمل", "Load distribution"), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(
                         selected = distribution == SlabDistribution.OneWay,
                         onClick = { distribution = SlabDistribution.OneWay },
-                        label = { Text(t("اتجاه واحد", "One-way"), fontSize = 11.sp) }
+                        label = { AppText(t("اتجاه واحد", "One-way"), fontSize = 11.sp) }
                     )
                     FilterChip(
                         selected = distribution == SlabDistribution.TwoWay,
                         onClick = { distribution = SlabDistribution.TwoWay },
-                        label = { Text(t("اتجاهين", "Two-way"), fontSize = 11.sp) }
+                        label = { AppText(t("اتجاهين", "Two-way"), fontSize = 11.sp) }
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                onConfirm(
-                    thickness.toDoubleOrNull() ?: 200.0,
-                    load.toDoubleOrNull() ?: 10.0,
-                    loadCase.ifBlank { "DL" },
-                    distribution
-                )
-            }) { Text(t("إضافة", "Add"), color = Color(0xFF1565C0)) }
+            AppButton(
+                label = t("إضافة", "Add"),
+                fillMaxWidth = false,
+                style = AppButtonStyle.Text,
+                onClick = {
+                    onConfirm(
+                        thickness.toDoubleOrNull() ?: 200.0,
+                        load.toDoubleOrNull() ?: 10.0,
+                        loadCase.ifBlank { "DL" },
+                        distribution
+                    )
+                }
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(t("إلغاء", "Cancel")) }
+            AppButton(
+                label = t("إلغاء", "Cancel"),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }
@@ -1927,7 +1994,7 @@ private fun EditSlabDialog(
     var distribution by remember { mutableStateOf(panel.distribution) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(t("بلاطة ${panel.id}", "Slab ${panel.id}")) },
+        title = { AppText(t("بلاطة ${panel.id}", "Slab ${panel.id}")) },
         text = {
             Column {
                 Row {
@@ -1942,35 +2009,49 @@ private fun EditSlabDialog(
                     FilterChip(
                         selected = distribution == SlabDistribution.OneWay,
                         onClick = { distribution = SlabDistribution.OneWay },
-                        label = { Text(t("اتجاه واحد", "One-way"), fontSize = 11.sp) }
+                        label = { AppText(t("اتجاه واحد", "One-way"), fontSize = 11.sp) }
                     )
                     FilterChip(
                         selected = distribution == SlabDistribution.TwoWay,
                         onClick = { distribution = SlabDistribution.TwoWay },
-                        label = { Text(t("اتجاهين", "Two-way"), fontSize = 11.sp) }
+                        label = { AppText(t("اتجاهين", "Two-way"), fontSize = 11.sp) }
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                onSave(
-                    panel.copy(
-                        thicknessMm = thickness.toDoubleOrNull() ?: panel.thicknessMm,
-                        loadKNm2 = load.toDoubleOrNull() ?: panel.loadKNm2,
-                        loadCase = loadCase.ifBlank { panel.loadCase },
-                        distribution = distribution
+            AppButton(
+                label = t("حفظ", "Save"),
+                fillMaxWidth = false,
+                style = AppButtonStyle.Text,
+                onClick = {
+                    onSave(
+                        panel.copy(
+                            thicknessMm = thickness.toDoubleOrNull() ?: panel.thicknessMm,
+                            loadKNm2 = load.toDoubleOrNull() ?: panel.loadKNm2,
+                            loadCase = loadCase.ifBlank { panel.loadCase },
+                            distribution = distribution
+                        )
                     )
-                )
-            }) { Text(t("حفظ", "Save"), color = Color(0xFF1565C0)) }
+                }
+            )
         },
         dismissButton = {
             Row {
-                TextButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFC62828), modifier = Modifier.size(16.dp))
-                    Text(t("حذف", "Delete"), color = Color(0xFFC62828))
-                }
-                TextButton(onClick = onDismiss) { Text(t("إلغاء", "Cancel")) }
+                AppButton(
+                    label = t("حذف", "Delete"),
+                    onClick = onDelete,
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false,
+                    icon = Icons.Default.Delete,
+                    contentOverride = Color(0xFFC62828)
+                )
+                AppButton(
+                    label = t("إلغاء", "Cancel"),
+                    onClick = onDismiss,
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         }
     )

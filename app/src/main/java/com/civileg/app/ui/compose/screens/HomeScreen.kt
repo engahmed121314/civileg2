@@ -62,6 +62,11 @@ import com.civileg.app.ui.responsive.LocalWindowSize
 import com.civileg.app.ui.responsive.WindowWidthClass
 import com.civileg.app.ui.theme.LocalIsDarkTheme
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 // ══════════════════════════════════════════════════════════════════════
 // Color palette extensions for the Home Screen
@@ -263,12 +268,12 @@ fun HomeScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text(
+                            AppText(
                                 "Civil Engineer Pro",
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 18.sp
                             )
-                            Text(
+                            AppText(
                                 "Professional Suite",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary
@@ -451,7 +456,7 @@ private fun HeaderSection(isDark: Boolean) {
                 )
                 Spacer(modifier = Modifier.width(14.dp))
                 Column {
-                    Text(
+                    AppText(
                         stringResource(R.string.home_welcome),
                         color = Color.White,
                         fontWeight = FontWeight.ExtraBold,
@@ -463,7 +468,7 @@ private fun HeaderSection(isDark: Boolean) {
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.padding(top = 4.dp)
                     ) {
-                        Text(
+                        AppText(
                         text = stringResource(R.string.home_tagline),
                             color = Color.White.copy(alpha = 0.9f),
                             fontSize = 11.sp,
@@ -477,7 +482,7 @@ private fun HeaderSection(isDark: Boolean) {
             Spacer(modifier = Modifier.height(18.dp))
 
             // Subtitle
-            Text(
+            AppText(
                 text = stringResource(R.string.home_cta),
                 color = Color.White.copy(alpha = 0.75f),
                 fontSize = 12.sp,
@@ -512,7 +517,7 @@ private fun HeaderSection(isDark: Boolean) {
                         modifier = Modifier.size(12.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
+                    AppText(
                         stringResource(R.string.home_version_badge),
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 10.sp,
@@ -530,7 +535,7 @@ private fun CodeBadge(code: String, color: Color) {
         color = color.copy(alpha = 0.2f),
         shape = RoundedCornerShape(6.dp)
     ) {
-        Text(
+        AppText(
             text = code,
             color = color,
             fontSize = 11.sp,
@@ -630,14 +635,14 @@ private fun StatCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Column {
-                    Text(
+                    AppText(
                         text = value,
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 22.sp,
                         color = if (isDark) Color.White else Color(0xFF1A1A2E),
                         lineHeight = 24.sp
                     )
-                    Text(
+                    AppText(
                         text = label,
                         fontSize = 10.sp,
                         color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
@@ -710,7 +715,7 @@ private fun EnhancedModuleCard(
 
                 // Title + subtitle
                 Column {
-                    Text(
+                    AppText(
                         text = stringResource(module.titleRes),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
@@ -718,7 +723,7 @@ private fun EnhancedModuleCard(
                         maxLines = 1
                     )
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(
+                    AppText(
                         text = stringResource(module.subtitleRes),
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
@@ -736,7 +741,7 @@ private fun EnhancedModuleCard(
                                 color = module.accentColor.copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(4.dp)
                             ) {
-                                Text(
+                                AppText(
                                     text = code,
                                     style = MaterialTheme.typography.labelSmall,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -845,7 +850,7 @@ private fun QuickToolCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             // Title
-            Text(
+            AppText(
                 text = stringResource(tool.titleRes),
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
@@ -857,7 +862,7 @@ private fun QuickToolCard(
             Spacer(modifier = Modifier.height(2.dp))
 
             // Subtitle
-            Text(
+            AppText(
                 text = stringResource(tool.subtitleRes),
                 fontSize = 9.sp,
                 color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF9E9E9E),
@@ -900,14 +905,14 @@ private fun RecentProjectsSection(
                     modifier = Modifier.size(40.dp)
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                Text(
+                AppText(
                     text = stringResource(R.string.home_no_designs),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
+                AppText(
                     text = stringResource(R.string.home_no_designs_sub),
                     fontSize = 12.sp,
                     color = if (isDark) Color(0xFF6B6B8A) else Color(0xFFBDBDBD)
@@ -963,7 +968,7 @@ private fun RecentProjectItem(
 
             // Name + type
             Column(modifier = Modifier.weight(1f)) {
-                Text(
+                AppText(
                     text = project.name,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
@@ -971,19 +976,19 @@ private fun RecentProjectItem(
                     maxLines = 1
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
+                    AppText(
                         text = project.elementType,
                         fontSize = 11.sp,
                         color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
+                    AppText(
                         text = "•",
                         color = if (isDark) Color(0xFF4A4A6A) else Color(0xFFBDBDBD),
                         fontSize = 11.sp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
+                    AppText(
                         text = project.date,
                         fontSize = 11.sp,
                         color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
@@ -996,7 +1001,7 @@ private fun RecentProjectItem(
                 color = MaterialTheme.colorScheme.secondaryContainer,
                 shape = RoundedCornerShape(6.dp)
             ) {
-                Text(
+                AppText(
                     text = project.code,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
@@ -1037,14 +1042,14 @@ private fun FooterSection(isDark: Boolean) {
             Spacer(modifier = Modifier.height(16.dp))
 
             // App branding
-            Text(
+            AppText(
                 text = "CivilEG v2.0",
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 18.sp,
                 color = if (isDark) Color(0xFF4FC3F7) else Color(0xFF1565C0)
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
+            AppText(
                 text = stringResource(R.string.home_footer_title),
                 fontSize = 11.sp,
                 color = textColor
@@ -1058,16 +1063,16 @@ private fun FooterSection(isDark: Boolean) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 CodeBadge("ECP 203", Color(0xFF4FC3F7))
-                Text("•", color = textColor, fontSize = 12.sp)
+                AppText("•", color = textColor, fontSize = 12.sp)
                 CodeBadge("ACI 318", Color(0xFF81C784))
-                Text("•", color = textColor, fontSize = 12.sp)
+                AppText("•", color = textColor, fontSize = 12.sp)
                 CodeBadge("SBC 304", Color(0xFFFFB74D))
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
             // Developer credit
-            Text(
+            AppText(
                 text = stringResource(R.string.home_footer_team),
                 fontSize = 10.sp,
                 color = textColor.copy(alpha = 0.7f),
@@ -1099,13 +1104,13 @@ private fun SectionHeader(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Column {
-            Text(
+            AppText(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
-            Text(
+            AppText(
                 text = subtitle,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

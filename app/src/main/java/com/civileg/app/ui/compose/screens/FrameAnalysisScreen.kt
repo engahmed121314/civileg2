@@ -41,6 +41,11 @@ import com.civileg.app.ui.compose.components.drawings.FrameSteelSectionDrawing
 import com.civileg.app.ui.compose.components.drawings.SteelSectionDrawing
 import com.civileg.app.utils.SteelTables
 import com.civileg.app.ui.theme.CivilEngineerTheme
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.viewmodel.DiagramType
 import com.civileg.app.viewmodel.FrameAnalysisViewModel
 import com.civileg.app.viewmodel.FrameDesignNotice
@@ -55,6 +60,9 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.hypot
+
+/** Shared action blue of the frame editor (one token instead of three raw literals, R13). */
+private val FrameActionBlue = Color(0xFF1565C0)
 
 /**
  * Frame Analysis and Design Screen (2D Frames).
@@ -125,7 +133,7 @@ fun FrameAnalysisScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
+                    AppText(
                         text = stringResource(R.string.frame_title),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
@@ -155,18 +163,18 @@ fun FrameAnalysisScreen(
                             onDismissRequest = { showActionMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.frame_save_design)) },
+                                text = { AppText(stringResource(R.string.frame_save_design)) },
                                 onClick = { showActionMenu = false; showSaveDesignDialog = true },
                                 leadingIcon = { Icon(Icons.Default.Save, contentDescription = null) }
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.frame_open_design)) },
+                                text = { AppText(stringResource(R.string.frame_open_design)) },
                                 onClick = { showActionMenu = false; showOpenDesignDialog = true },
                                 leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null) }
                             )
                             var showTemplatesMenu by remember { mutableStateOf(false) }
                             DropdownMenuItem(
-                                text = { Text("Templates") },
+                                text = { AppText("Templates") },
                                 onClick = { showTemplatesMenu = true },
                                 leadingIcon = { Icon(Icons.Default.Dashboard, contentDescription = null) }
                             )
@@ -175,14 +183,14 @@ fun FrameAnalysisScreen(
                                 onDismissRequest = { showTemplatesMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.frame_simple_portal_desc)) },
+                                    text = { AppText(stringResource(R.string.frame_simple_portal_desc)) },
                                     onClick = {
                                         showTemplatesMenu = false; showActionMenu = false
                                         viewModel.loadSimplePortalFrame(6.0, 4.0, 20.0)
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.frame_two_story_desc)) },
+                                    text = { AppText(stringResource(R.string.frame_two_story_desc)) },
                                     onClick = {
                                         showTemplatesMenu = false; showActionMenu = false
                                         viewModel.loadTwoStoryFrame(6.0, 4.0, 3.5, 15.0)
@@ -190,13 +198,13 @@ fun FrameAnalysisScreen(
                                 )
                             }
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.frame_clear_all)) },
+                                text = { AppText(stringResource(R.string.frame_clear_all)) },
                                 onClick = { showActionMenu = false; viewModel.clearAll() },
                                 leadingIcon = { Icon(Icons.Default.DeleteSweep, contentDescription = null) }
                             )
                             if (result?.hasResults == true) {
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.frame_export_pdf)) },
+                                    text = { AppText(stringResource(R.string.frame_export_pdf)) },
                                     onClick = {
                                         showActionMenu = false
                                         val inputs = viewModel.getStoredInputs()
@@ -253,7 +261,7 @@ fun FrameAnalysisScreen(
                                 selected = isSelected,
                                 onClick = { viewModel.setDiagramType(type) },
                                 label = {
-                                    Text(
+                                    AppText(
                                         text = type.localizedLabel,
                                         fontSize = 12.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
@@ -289,7 +297,7 @@ fun FrameAnalysisScreen(
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        text = { Text(title, fontSize = 13.sp, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal) }
+                        text = { AppText(title, fontSize = 13.sp, fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal) }
                     )
                 }
             }
@@ -334,7 +342,7 @@ fun FrameAnalysisScreen(
     if (validationIssues.isNotEmpty()) {
         AlertDialog(
             onDismissRequest = { viewModel.clearValidationIssues() },
-            title = { Text(stringResource(R.string.frame_validation_title)) },
+            title = { AppText(stringResource(R.string.frame_validation_title)) },
             text = {
                 Column(
                     modifier = Modifier
@@ -342,7 +350,7 @@ fun FrameAnalysisScreen(
                         .verticalScroll(rememberScrollState())
                 ) {
                     validationIssues.forEachIndexed { index, issue ->
-                        Text(
+                        AppText(
                             "${index + 1}. ${issue.message}",
                             fontSize = 12.sp,
                             modifier = Modifier.padding(vertical = 3.dp)
@@ -351,9 +359,12 @@ fun FrameAnalysisScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.clearValidationIssues() }) {
-                    Text(stringResource(R.string.frame_validation_ok))
-                }
+                AppButton(
+                    label = stringResource(R.string.frame_validation_ok),
+                    onClick = { viewModel.clearValidationIssues() },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -393,29 +404,29 @@ private fun FrameSaveDesignDialog(
     val selectedProject = projects.firstOrNull { it.id == selectedProjectId }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.frame_save_design)) },
+        title = { AppText(stringResource(R.string.frame_save_design)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (projects.isEmpty()) {
-                    Text(
+                    AppText(
                         stringResource(R.string.frame_no_projects_for_save),
                         color = MaterialTheme.colorScheme.error
                     )
                 } else {
                     Box {
-                        OutlinedButton(
+                        AppButton(
+                            label = selectedProject?.name ?: stringResource(R.string.frame_save_project),
                             onClick = { projectMenuExpanded = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(selectedProject?.name ?: stringResource(R.string.frame_save_project))
-                        }
+                            modifier = Modifier.fillMaxWidth(),
+                            style = AppButtonStyle.Outline
+                        )
                         DropdownMenu(
                             expanded = projectMenuExpanded,
                             onDismissRequest = { projectMenuExpanded = false }
                         ) {
                             for (project in projects) {
                                 DropdownMenuItem(
-                                    text = { Text(project.name) },
+                                    text = { AppText(project.name) },
                                     onClick = {
                                         selectedProjectId = project.id
                                         projectMenuExpanded = false
@@ -428,24 +439,28 @@ private fun FrameSaveDesignDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.frame_save_name)) },
+                    label = { AppText(stringResource(R.string.frame_save_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
-            TextButton(
+            AppButton(
+                label = stringResource(R.string.save),
                 enabled = name.isNotBlank() && selectedProjectId > 0,
-                onClick = { onSave(selectedProjectId, name.trim()) }
-            ) {
-                Text(stringResource(R.string.save))
-            }
+                onClick = { onSave(selectedProjectId, name.trim()) },
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
+            AppButton(
+                label = stringResource(R.string.cancel),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }
@@ -460,20 +475,20 @@ private fun FrameOpenDesignDialog(
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.frame_open_design)) },
+        title = { AppText(stringResource(R.string.frame_open_design)) },
         text = {
             if (designs.isEmpty()) {
-                Text(stringResource(R.string.frame_no_saved_designs))
+                AppText(stringResource(R.string.frame_no_saved_designs))
             } else {
                 LazyColumn(modifier = Modifier.heightIn(max = 380.dp)) {
                     items(designs, key = { it.id }) { design ->
                         val projectName = projects.firstOrNull { it.id == design.projectId }?.name
                         ListItem(
                             headlineContent = {
-                                Text(design.name, fontWeight = FontWeight.SemiBold)
+                                AppText(design.name, fontWeight = FontWeight.SemiBold)
                             },
                             supportingContent = {
-                                Text(
+                                AppText(
                                     buildString {
                                         append(dateFormat.format(design.createdAt))
                                         if (!projectName.isNullOrBlank()) append(" • $projectName")
@@ -493,9 +508,12 @@ private fun FrameOpenDesignDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
+            AppButton(
+                label = stringResource(R.string.cancel),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }
@@ -542,7 +560,7 @@ private fun DrawingTab(
                 FilterChip(
                     selected = editorMode == 0,
                     onClick = { editorMode = 0 },
-                    label = { Text(stringResource(R.string.frame_modeler_tab), fontSize = 12.sp) },
+                    label = { AppText(stringResource(R.string.frame_modeler_tab), fontSize = 12.sp) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = Color(0xFF1565C0),
                         selectedLabelColor = Color.White
@@ -552,14 +570,14 @@ private fun DrawingTab(
                 FilterChip(
                     selected = editorMode == 1,
                     onClick = { editorMode = 1 },
-                    label = { Text(stringResource(R.string.frame_modeler_view_tab), fontSize = 12.sp) },
+                    label = { AppText(stringResource(R.string.frame_modeler_view_tab), fontSize = 12.sp) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = Color(0xFF1565C0),
                         selectedLabelColor = Color.White
                     )
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                Text(
+                AppText(
                     text = stringResource(R.string.frame_modeler_short_hint),
                     fontSize = 9.sp,
                     color = Color.Gray,
@@ -596,13 +614,13 @@ private fun DrawingTab(
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(R.string.frame_design_code_label), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
+                AppText(stringResource(R.string.frame_design_code_label), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
                 Spacer(modifier = Modifier.width(8.dp))
                 for (code in DesignCode.entries) {
                     FilterChip(
                         selected = settingsVal.designCode == code,
                         onClick = { viewModel.updateDesignCode(code) },
-                        label = { Text(code.displayName, fontSize = 11.sp) },
+                        label = { AppText(code.displayName, fontSize = 11.sp) },
                         modifier = Modifier.padding(end = 4.dp),
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = Color(0xFF1565C0),
@@ -611,7 +629,7 @@ private fun DrawingTab(
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                Text("fy=${String.format(java.util.Locale.ROOT, "%.0f", steelFyVal)} MPa", fontSize = 11.sp, color = Color.Gray)
+                AppText("fy=${String.format(java.util.Locale.ROOT, "%.0f", steelFyVal)} MPa", fontSize = 11.sp, color = Color.Gray)
             }
         }
 
@@ -636,8 +654,8 @@ private fun DrawingTab(
                         },
                         text = {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(en, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                                Text(ar, fontSize = 9.sp, color = Color.Gray)
+                                AppText(en, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                AppText(ar, fontSize = 9.sp, color = Color.Gray)
                             }
                         }
                     )
@@ -671,7 +689,7 @@ private fun DrawingTab(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Default.PlayArrow, stringResource(R.string.frame_solve))
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(stringResource(R.string.frame_solve), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        AppText(stringResource(R.string.frame_solve), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -684,9 +702,9 @@ private fun DrawingTab(
                 colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.9f))
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
-                    Text("${stringResource(R.string.frame_tab_nodes)}: ${nodes.size}  |  ${stringResource(R.string.frame_tab_members)}: ${members.size}", fontSize = 11.sp, color = Color.Gray)
+                    AppText("${stringResource(R.string.frame_tab_nodes)}: ${nodes.size}  |  ${stringResource(R.string.frame_tab_members)}: ${members.size}", fontSize = 11.sp, color = Color.Gray)
                     if (result?.hasResults == true) {
-                        Text(
+                        AppText(
                             "${stringResource(R.string.safe)} ✓  |  ${stringResource(R.string.frame_tab_loads)}: ${memberLoads.size + nodalLoads.size}",
                             fontSize = 11.sp, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold
                         )
@@ -721,8 +739,9 @@ private fun NodesTab(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.frame_nodes_count, nodes.size), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Button(
+            AppText(stringResource(R.string.frame_nodes_count, nodes.size), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            AppButton(
+                label = stringResource(R.string.frame_add_node),
                 onClick = {
                     editX = ""
                     editY = ""
@@ -730,12 +749,11 @@ private fun NodesTab(
                     editingNode = null
                     showAddDialog = true
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(R.string.frame_add_node))
-            }
+                fillMaxWidth = false,
+                icon = Icons.Default.Add,
+                containerOverride = FrameActionBlue,
+                contentOverride = onColorFor(FrameActionBlue)
+            )
         }
 
         if (nodes.isEmpty()) {
@@ -743,8 +761,8 @@ private fun NodesTab(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.AddLocation, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(stringResource(R.string.frame_no_nodes), color = Color.Gray)
-                    Text(stringResource(R.string.frame_add_or_template), color = Color.Gray, fontSize = 12.sp)
+                    AppText(stringResource(R.string.frame_no_nodes), color = Color.Gray)
+                    AppText(stringResource(R.string.frame_add_or_template), color = Color.Gray, fontSize = 12.sp)
                 }
             }
             return@Column
@@ -757,11 +775,11 @@ private fun NodesTab(
                 .background(Color(0xFFE3F2FD))
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Text(stringResource(R.string.frame_node_id_header), modifier = Modifier.width(40.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Text(stringResource(R.string.frame_x_m_header), modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Text(stringResource(R.string.frame_y_m_header), modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Text(stringResource(R.string.frame_support), modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Text("", modifier = Modifier.width(60.dp))
+            AppText(stringResource(R.string.frame_node_id_header), modifier = Modifier.width(40.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            AppText(stringResource(R.string.frame_x_m_header), modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            AppText(stringResource(R.string.frame_y_m_header), modifier = Modifier.width(60.dp), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            AppText(stringResource(R.string.frame_support), modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            AppText("", modifier = Modifier.width(60.dp))
         }
 
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -774,10 +792,10 @@ private fun NodesTab(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("${node.id}", modifier = Modifier.width(40.dp), fontWeight = FontWeight.Bold)
-                    Text("${node.x}", modifier = Modifier.width(60.dp))
-                    Text("${node.y}", modifier = Modifier.width(60.dp))
-                    Text(node.support.displayName, modifier = Modifier.weight(1f), fontSize = 12.sp)
+                    AppText("${node.id}", modifier = Modifier.width(40.dp), fontWeight = FontWeight.Bold)
+                    AppText("${node.x}", modifier = Modifier.width(60.dp))
+                    AppText("${node.y}", modifier = Modifier.width(60.dp))
+                    AppText(node.support.displayName, modifier = Modifier.weight(1f), fontSize = 12.sp)
                     IconButton(onClick = {
                         editingNode = node
                         editX = node.x.toString()
@@ -797,24 +815,24 @@ private fun NodesTab(
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text(if (editingNode != null) stringResource(R.string.frame_edit_node) else stringResource(R.string.frame_add_node_title)) },
+            title = { AppText(if (editingNode != null) stringResource(R.string.frame_edit_node) else stringResource(R.string.frame_add_node_title)) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = editX, onValueChange = { editX = it },
-                        label = { Text(stringResource(R.string.frame_x_m)) },
+                        label = { AppText(stringResource(R.string.frame_x_m)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = editY, onValueChange = { editY = it },
-                        label = { Text(stringResource(R.string.frame_y_m)) },
+                        label = { AppText(stringResource(R.string.frame_y_m)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(stringResource(R.string.frame_support_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    AppText(stringResource(R.string.frame_support_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     for (st in SupportType.entries) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(2.dp)) {
@@ -822,25 +840,35 @@ private fun NodesTab(
                                 selected = editSupport == st,
                                 onClick = { editSupport = st }
                             )
-                            Text(st.displayName, fontSize = 13.sp)
+                            AppText(st.displayName, fontSize = 13.sp)
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    val x = editX.toDoubleOrNull() ?: return@TextButton
-                    val y = editY.toDoubleOrNull() ?: return@TextButton
-                    if (editingNode != null) {
-                        viewModel.updateNode(editingNode!!.id, x, y, editSupport)
-                    } else {
-                        viewModel.addNode(x, y, editSupport)
+                AppButton(
+                    label = stringResource(R.string.save),
+                    fillMaxWidth = false,
+                    style = AppButtonStyle.Text,
+                    onClick = {
+                        val x = editX.toDoubleOrNull() ?: return@AppButton
+                        val y = editY.toDoubleOrNull() ?: return@AppButton
+                        if (editingNode != null) {
+                            viewModel.updateNode(editingNode!!.id, x, y, editSupport)
+                        } else {
+                            viewModel.addNode(x, y, editSupport)
+                        }
+                        showAddDialog = false
                     }
-                    showAddDialog = false
-                }) { Text(stringResource(R.string.save), color = Color(0xFF1565C0)) }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) { Text(stringResource(R.string.cancel)) }
+                AppButton(
+                    label = stringResource(R.string.cancel),
+                    onClick = { showAddDialog = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -898,8 +926,9 @@ private fun MembersTab(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(stringResource(R.string.frame_members_count, members.size), fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Button(
+            AppText(stringResource(R.string.frame_members_count, members.size), fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            AppButton(
+                label = stringResource(R.string.frame_add_member),
                 onClick = {
                     editNodeI = ""; editNodeJ = ""; editMaterial = FrameMaterialType.Concrete
                     editMemberType = FrameMemberType.Beam; editName = ""
@@ -908,12 +937,11 @@ private fun MembersTab(
                     steelSectionExpanded = false
                     showAddDialog = true
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
-            ) {
-                Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(R.string.frame_add_member))
-            }
+                fillMaxWidth = false,
+                icon = Icons.Default.Add,
+                containerOverride = FrameActionBlue,
+                contentOverride = onColorFor(FrameActionBlue)
+            )
         }
 
         if (members.isEmpty()) {
@@ -921,7 +949,7 @@ private fun MembersTab(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Default.Straighten, null, modifier = Modifier.size(48.dp), tint = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(stringResource(R.string.frame_no_members), color = Color.Gray)
+                    AppText(stringResource(R.string.frame_no_members), color = Color.Gray)
                 }
             }
             return@Column
@@ -943,18 +971,18 @@ private fun MembersTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("#${member.id} - ${member.name.ifEmpty { stringResource(R.string.frame_no_name) }}", fontWeight = FontWeight.Bold)
-                            Text(
+                            AppText("#${member.id} - ${member.name.ifEmpty { stringResource(R.string.frame_no_name) }}", fontWeight = FontWeight.Bold)
+                            AppText(
                                 "${stringResource(R.string.frame_member_format, member.nodeI, member.nodeJ)}  |  ${member.memberType.displayName}  |  ${member.materialType.displayName}",
                                 fontSize = 11.sp, color = Color.Gray
                             )
                             if (member.materialType == FrameMaterialType.Concrete && member.concreteSection != null) {
-                                Text(
+                                AppText(
                                     "b=${member.concreteSection!!.width} h=${member.concreteSection!!.depth} f'c=${member.concreteSection!!.fcu}",
                                     fontSize = 10.sp, color = Color(0xFF1565C0)
                                 )
                             } else if (member.materialType == FrameMaterialType.Steel) {
-                                Text(
+                                AppText(
                                     member.steelSectionName
                                         ?.takeUnless { SteelFrameDesign.isAutoSection(it) }
                                         ?: stringResource(R.string.frame_steel_section_auto),
@@ -982,13 +1010,13 @@ private fun MembersTab(
                 editingMemberId = null
                 showAddDialog = false
             },
-            title = { Text(if (editingMemberId != null) stringResource(R.string.frame_edit_member) else stringResource(R.string.frame_add_member_title)) },
+            title = { AppText(if (editingMemberId != null) stringResource(R.string.frame_edit_member) else stringResource(R.string.frame_add_member_title)) },
             text = {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     item {
                         OutlinedTextField(
                             value = editNodeI, onValueChange = { editNodeI = it },
-                            label = { Text(stringResource(R.string.frame_node_i)) },
+                            label = { AppText(stringResource(R.string.frame_node_i)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -996,36 +1024,36 @@ private fun MembersTab(
                     item {
                         OutlinedTextField(
                             value = editNodeJ, onValueChange = { editNodeJ = it },
-                            label = { Text(stringResource(R.string.frame_node_j)) },
+                            label = { AppText(stringResource(R.string.frame_node_j)) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                     item {
                         OutlinedTextField(value = editName, onValueChange = { editName = it },
-                            label = { Text(stringResource(R.string.frame_member_name_hint)) }, modifier = Modifier.fillMaxWidth())
+                            label = { AppText(stringResource(R.string.frame_member_name_hint)) }, modifier = Modifier.fillMaxWidth())
                     }
                     item {
-                        Text(stringResource(R.string.frame_material_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        AppText(stringResource(R.string.frame_material_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Row {
                             for (mt in FrameMaterialType.entries) {
                                 FilterChip(
                                     selected = editMaterial == mt,
                                     onClick = { editMaterial = mt },
-                                    label = { Text(mt.displayName, fontSize = 12.sp) },
+                                    label = { AppText(mt.displayName, fontSize = 12.sp) },
                                     modifier = Modifier.padding(end = 4.dp)
                                 )
                             }
                         }
                     }
                     item {
-                        Text(stringResource(R.string.frame_member_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        AppText(stringResource(R.string.frame_member_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         Row {
                             for (mtype in FrameMemberType.entries) {
                                 FilterChip(
                                     selected = editMemberType == mtype,
                                     onClick = { editMemberType = mtype },
-                                    label = { Text(mtype.displayName, fontSize = 12.sp) },
+                                    label = { AppText(mtype.displayName, fontSize = 12.sp) },
                                     modifier = Modifier.padding(end = 4.dp)
                                 )
                             }
@@ -1033,42 +1061,40 @@ private fun MembersTab(
                     }
                     if (editMaterial == FrameMaterialType.Concrete) {
                         item {
-                            Text(stringResource(R.string.frame_concrete_section_props), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            AppText(stringResource(R.string.frame_concrete_section_props), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedTextField(value = editWidth, onValueChange = { editWidth = it },
-                                    label = { Text(stringResource(R.string.frame_b_mm_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    label = { AppText(stringResource(R.string.frame_b_mm_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     modifier = Modifier.weight(1f))
                                 OutlinedTextField(value = editDepth, onValueChange = { editDepth = it },
-                                    label = { Text(stringResource(R.string.frame_h_mm_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    label = { AppText(stringResource(R.string.frame_h_mm_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     modifier = Modifier.weight(1f))
                             }
                         }
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedTextField(value = editFcu, onValueChange = { editFcu = it },
-                                    label = { Text(stringResource(R.string.frame_fc_mpa_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    label = { AppText(stringResource(R.string.frame_fc_mpa_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     modifier = Modifier.weight(1f))
                                 OutlinedTextField(value = editFy, onValueChange = { editFy = it },
-                                    label = { Text(stringResource(R.string.frame_fy_mpa_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    label = { AppText(stringResource(R.string.frame_fy_mpa_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                     modifier = Modifier.weight(1f))
                             }
                         }
                     } else {
                         item {
                             val isAutoSection = SteelFrameDesign.isAutoSection(editSteelSection)
-                            Text(stringResource(R.string.frame_steel_section), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            AppText(stringResource(R.string.frame_steel_section), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             Box {
-                                OutlinedButton(
+                                AppButton(
+                                    label = if (isAutoSection) stringResource(R.string.frame_steel_section_auto) else editSteelSection,
                                     onClick = { steelSectionExpanded = true },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        if (isAutoSection) stringResource(R.string.frame_steel_section_auto) else editSteelSection,
-                                        fontSize = 12.sp
-                                    )
-                                }
+                                    modifier = Modifier.fillMaxWidth(),
+                                    style = AppButtonStyle.Outline,
+                                    fontSize = 12.sp
+                                )
                                 DropdownMenu(
                                     expanded = steelSectionExpanded,
                                     onDismissRequest = { steelSectionExpanded = false },
@@ -1076,7 +1102,7 @@ private fun MembersTab(
                                 ) {
                                     DropdownMenuItem(
                                         text = {
-                                            Text(
+                                            AppText(
                                                 stringResource(R.string.frame_steel_section_auto),
                                                 fontSize = 11.sp
                                             )
@@ -1089,7 +1115,7 @@ private fun MembersTab(
                                     for (section in steelSections) {
                                         DropdownMenuItem(
                                             text = {
-                                                Text(
+                                                AppText(
                                                     "${section.name}  (${section.depth.toInt()}×${section.width.toInt()})",
                                                     fontSize = 11.sp
                                                 )
@@ -1106,7 +1132,7 @@ private fun MembersTab(
                         item {
                             val isAutoSection = SteelFrameDesign.isAutoSection(editSteelSection)
                             if (isAutoSection) {
-                                Text(
+                                AppText(
                                     stringResource(R.string.frame_steel_section_auto_hint),
                                     fontSize = 9.sp,
                                     color = Color.Gray
@@ -1133,44 +1159,54 @@ private fun MembersTab(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    val nI = editNodeI.toIntOrNull() ?: return@TextButton
-                    val nJ = editNodeJ.toIntOrNull() ?: return@TextButton
-                    val concreteSec = if (editMaterial == FrameMaterialType.Concrete)
-                        ConcreteSectionProps(
-                            width = editWidth.toDoubleOrNull() ?: 250.0,
-                            depth = editDepth.toDoubleOrNull() ?: 500.0,
-                            fcu = editFcu.toDoubleOrNull() ?: 25.0,
-                            fy = editFy.toDoubleOrNull() ?: 400.0
-                        ) else null
-                    val steelSectionChoice = if (
-                        editMaterial == FrameMaterialType.Steel &&
-                        !SteelFrameDesign.isAutoSection(editSteelSection)
-                    ) {
-                        editSteelSection.trim()
-                    } else null
-                    if (editingMemberId != null) {
-                        val existing = members.find { it.id == editingMemberId }
-                        if (existing != null) {
-                            viewModel.updateMember(existing.copy(
-                                nodeI = nI, nodeJ = nJ, materialType = editMaterial,
-                                memberType = editMemberType, concreteSection = concreteSec,
-                                steelSectionName = steelSectionChoice,
-                                name = editName
-                            ))
+                AppButton(
+                    label = stringResource(R.string.save),
+                    fillMaxWidth = false,
+                    style = AppButtonStyle.Text,
+                    onClick = {
+                        val nI = editNodeI.toIntOrNull() ?: return@AppButton
+                        val nJ = editNodeJ.toIntOrNull() ?: return@AppButton
+                        val concreteSec = if (editMaterial == FrameMaterialType.Concrete)
+                            ConcreteSectionProps(
+                                width = editWidth.toDoubleOrNull() ?: 250.0,
+                                depth = editDepth.toDoubleOrNull() ?: 500.0,
+                                fcu = editFcu.toDoubleOrNull() ?: 25.0,
+                                fy = editFy.toDoubleOrNull() ?: 400.0
+                            ) else null
+                        val steelSectionChoice = if (
+                            editMaterial == FrameMaterialType.Steel &&
+                            !SteelFrameDesign.isAutoSection(editSteelSection)
+                        ) {
+                            editSteelSection.trim()
+                        } else null
+                        if (editingMemberId != null) {
+                            val existing = members.find { it.id == editingMemberId }
+                            if (existing != null) {
+                                viewModel.updateMember(existing.copy(
+                                    nodeI = nI, nodeJ = nJ, materialType = editMaterial,
+                                    memberType = editMemberType, concreteSection = concreteSec,
+                                    steelSectionName = steelSectionChoice,
+                                    name = editName
+                                ))
+                            }
+                        } else {
+                            viewModel.addMember(nI, nJ, editMaterial, editMemberType, concreteSec, steelSectionChoice, editName)
                         }
-                    } else {
-                        viewModel.addMember(nI, nJ, editMaterial, editMemberType, concreteSec, steelSectionChoice, editName)
+                        editingMemberId = null
+                        showAddDialog = false
                     }
-                    editingMemberId = null
-                    showAddDialog = false
-                }) { Text(stringResource(R.string.save), color = Color(0xFF1565C0)) }
+                )
             },
             dismissButton = {
-                TextButton(onClick = {
-                    editingMemberId = null
-                    showAddDialog = false
-                }) { Text(stringResource(R.string.cancel)) }
+                AppButton(
+                    label = stringResource(R.string.cancel),
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false,
+                    onClick = {
+                        editingMemberId = null
+                        showAddDialog = false
+                    }
+                )
             }
         )
     }
@@ -1209,28 +1245,33 @@ private fun LoadsTab(
             selectedTabIndex = loadTabIndex,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Tab(selected = loadTabIndex == 0, onClick = { loadTabIndex = 0 }, text = { Text(stringResource(R.string.frame_nodal_loads_tab)) })
-            Tab(selected = loadTabIndex == 1, onClick = { loadTabIndex = 1 }, text = { Text(stringResource(R.string.frame_member_loads_tab)) })
+            Tab(selected = loadTabIndex == 0, onClick = { loadTabIndex = 0 }, text = { AppText(stringResource(R.string.frame_nodal_loads_tab)) })
+            Tab(selected = loadTabIndex == 1, onClick = { loadTabIndex = 1 }, text = { AppText(stringResource(R.string.frame_member_loads_tab)) })
         }
 
         if (loadTabIndex == 0) {
             // Nodal loads
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.frame_nodal_loads), fontWeight = FontWeight.Bold)
-                Button(onClick = { showNodalDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)); Text(stringResource(R.string.add))
-                }
+                AppText(stringResource(R.string.frame_nodal_loads), fontWeight = FontWeight.Bold)
+                AppButton(
+                    label = stringResource(R.string.add),
+                    onClick = { showNodalDialog = true },
+                    fillMaxWidth = false,
+                    icon = Icons.Default.Add,
+                    containerOverride = FrameActionBlue,
+                    contentOverride = onColorFor(FrameActionBlue)
+                )
             }
             if (nodalLoads.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.frame_no_nodal_loads), color = Color.Gray) }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { AppText(stringResource(R.string.frame_no_nodal_loads), color = Color.Gray) }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     itemsIndexed(nodalLoads) { index, load ->
                         Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
                             Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(stringResource(R.string.frame_node_label, load.nodeId), fontWeight = FontWeight.Bold)
-                                    Text("Fx=${load.fx}, Fy=${load.fy} kN, M=${load.mz} kN.m", fontSize = 11.sp, color = Color.Gray)
+                                    AppText(stringResource(R.string.frame_node_label, load.nodeId), fontWeight = FontWeight.Bold)
+                                    AppText("Fx=${load.fx}, Fy=${load.fy} kN, M=${load.mz} kN.m", fontSize = 11.sp, color = Color.Gray)
                                 }
                                 IconButton(onClick = { viewModel.removeNodalLoad(index) }) {
                                     Icon(Icons.Default.Close, null, tint = Color.Red, modifier = Modifier.size(18.dp))
@@ -1243,13 +1284,18 @@ private fun LoadsTab(
         } else {
             // Member loads
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.frame_member_loads), fontWeight = FontWeight.Bold)
-                Button(onClick = { showMemberDialog = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp)); Text(stringResource(R.string.add))
-                }
+                AppText(stringResource(R.string.frame_member_loads), fontWeight = FontWeight.Bold)
+                AppButton(
+                    label = stringResource(R.string.add),
+                    onClick = { showMemberDialog = true },
+                    fillMaxWidth = false,
+                    icon = Icons.Default.Add,
+                    containerOverride = FrameActionBlue,
+                    contentOverride = onColorFor(FrameActionBlue)
+                )
             }
             if (memberLoads.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(R.string.frame_no_member_loads), color = Color.Gray) }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { AppText(stringResource(R.string.frame_no_member_loads), color = Color.Gray) }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     itemsIndexed(memberLoads) { index, load ->
@@ -1257,8 +1303,8 @@ private fun LoadsTab(
                             Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     val mName = members.find { it.id == load.memberId }?.name ?: stringResource(R.string.frame_tab_members, load.memberId)
-                                    Text(stringResource(R.string.frame_on_member, mName, load.memberId), fontWeight = FontWeight.Bold)
-                                    Text("${load.loadType.displayName}: ${load.value} kN/m", fontSize = 11.sp, color = Color.Gray)
+                                    AppText(stringResource(R.string.frame_on_member, mName, load.memberId), fontWeight = FontWeight.Bold)
+                                    AppText("${load.loadType.displayName}: ${load.value} kN/m", fontSize = 11.sp, color = Color.Gray)
                                 }
                                 IconButton(onClick = { viewModel.removeMemberLoad(index) }) {
                                     Icon(Icons.Default.Close, null, tint = Color.Red, modifier = Modifier.size(18.dp))
@@ -1275,30 +1321,42 @@ private fun LoadsTab(
     if (showNodalDialog) {
         AlertDialog(
             onDismissRequest = { showNodalDialog = false },
-            title = { Text(stringResource(R.string.frame_load_nodal_title)) },
+            title = { AppText(stringResource(R.string.frame_load_nodal_title)) },
             text = {
                 Column {
                     OutlinedTextField(value = nlNodeId, onValueChange = { nlNodeId = it },
-                        label = { Text(stringResource(R.string.frame_load_node_id)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                        label = { AppText(stringResource(R.string.frame_load_node_id)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(value = nlFx, onValueChange = { nlFx = it },
-                        label = { Text(stringResource(R.string.frame_load_fx)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        label = { AppText(stringResource(R.string.frame_load_fx)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(value = nlFy, onValueChange = { nlFy = it },
-                        label = { Text(stringResource(R.string.frame_load_fy)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        label = { AppText(stringResource(R.string.frame_load_fy)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(value = nlMz, onValueChange = { nlMz = it },
-                        label = { Text(stringResource(R.string.frame_load_mz)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        label = { AppText(stringResource(R.string.frame_load_mz)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    val nid = nlNodeId.toIntOrNull() ?: return@TextButton
-                    viewModel.addNodalLoad(nid, nlFx.toDoubleOrNull() ?: 0.0, nlFy.toDoubleOrNull() ?: 0.0, nlMz.toDoubleOrNull() ?: 0.0, "DL")
-                    showNodalDialog = false
-                }) { Text(stringResource(R.string.add), color = Color(0xFF1565C0)) }
+                AppButton(
+                    label = stringResource(R.string.add),
+                    fillMaxWidth = false,
+                    style = AppButtonStyle.Text,
+                    onClick = {
+                        val nid = nlNodeId.toIntOrNull() ?: return@AppButton
+                        viewModel.addNodalLoad(nid, nlFx.toDoubleOrNull() ?: 0.0, nlFy.toDoubleOrNull() ?: 0.0, nlMz.toDoubleOrNull() ?: 0.0, "DL")
+                        showNodalDialog = false
+                    }
+                )
             },
-            dismissButton = { TextButton(onClick = { showNodalDialog = false }) { Text(stringResource(R.string.cancel)) } }
+            dismissButton = {
+                AppButton(
+                    label = stringResource(R.string.cancel),
+                    onClick = { showNodalDialog = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
+            }
         )
     }
 
@@ -1306,37 +1364,49 @@ private fun LoadsTab(
     if (showMemberDialog) {
         AlertDialog(
             onDismissRequest = { showMemberDialog = false },
-            title = { Text(stringResource(R.string.frame_load_member_title)) },
+            title = { AppText(stringResource(R.string.frame_load_member_title)) },
             text = {
                 Column {
                     OutlinedTextField(value = mlMemberId, onValueChange = { mlMemberId = it },
-                        label = { Text(stringResource(R.string.frame_load_member_id)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                        label = { AppText(stringResource(R.string.frame_load_member_id)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
                     Spacer(Modifier.height(4.dp))
-                    Text(stringResource(R.string.frame_load_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    AppText(stringResource(R.string.frame_load_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Row {
                         for (lt in MemberLoadType.entries) {
                             FilterChip(selected = mlType == lt, onClick = { mlType = lt },
-                                label = { Text(lt.displayName, fontSize = 11.sp) }, modifier = Modifier.padding(end = 4.dp))
+                                label = { AppText(lt.displayName, fontSize = 11.sp) }, modifier = Modifier.padding(end = 4.dp))
                         }
                     }
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(value = mlValue, onValueChange = { mlValue = it },
-                        label = { Text(stringResource(R.string.frame_load_value)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        label = { AppText(stringResource(R.string.frame_load_value)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                     if (mlType != MemberLoadType.UDL) {
                         Spacer(Modifier.height(4.dp))
                         OutlinedTextField(value = mlPosition, onValueChange = { mlPosition = it },
-                            label = { Text(stringResource(R.string.frame_load_position)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                            label = { AppText(stringResource(R.string.frame_load_position)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    val mid = mlMemberId.toIntOrNull() ?: return@TextButton
-                    viewModel.addMemberLoad(mid, mlType, mlValue.toDoubleOrNull() ?: 0.0, mlPosition.toDoubleOrNull() ?: 0.0, "DL")
-                    showMemberDialog = false
-                }) { Text(stringResource(R.string.add), color = Color(0xFF1565C0)) }
+                AppButton(
+                    label = stringResource(R.string.add),
+                    fillMaxWidth = false,
+                    style = AppButtonStyle.Text,
+                    onClick = {
+                        val mid = mlMemberId.toIntOrNull() ?: return@AppButton
+                        viewModel.addMemberLoad(mid, mlType, mlValue.toDoubleOrNull() ?: 0.0, mlPosition.toDoubleOrNull() ?: 0.0, "DL")
+                        showMemberDialog = false
+                    }
+                )
             },
-            dismissButton = { TextButton(onClick = { showMemberDialog = false }) { Text(stringResource(R.string.cancel)) } }
+            dismissButton = {
+                AppButton(
+                    label = stringResource(R.string.cancel),
+                    onClick = { showMemberDialog = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
+            }
         )
     }
 }
@@ -1386,7 +1456,7 @@ private fun ResultsTab(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.Analytics, null, modifier = Modifier.size(48.dp), tint = Color.Gray)
                 Spacer(Modifier.height(8.dp))
-                Text(stringResource(R.string.frame_press_solve), color = Color.Gray, fontSize = 14.sp)
+                AppText(stringResource(R.string.frame_press_solve), color = Color.Gray, fontSize = 14.sp)
             }
         }
         return
@@ -1410,7 +1480,7 @@ private fun ResultsTab(
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = activeSubTab) {
             for ((i, title) in subTabs.withIndex()) {
-                Tab(selected = activeSubTab == i, onClick = { resultSubTab = i }, text = { Text(title, fontSize = 12.sp) })
+                Tab(selected = activeSubTab == i, onClick = { resultSubTab = i }, text = { AppText(title, fontSize = 12.sp) })
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -1420,17 +1490,17 @@ private fun ResultsTab(
             item {
                 Card(modifier = Modifier.fillMaxWidth().padding(4.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF3E5F5))) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text(stringResource(R.string.frame_node_displacements), fontWeight = FontWeight.Bold)
+                        AppText(stringResource(R.string.frame_node_displacements), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         for (nr in result.nodeResults.filter { it.nodeId in (nodes.map { it.id }) }) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(stringResource(R.string.frame_node_label_format, nr.nodeId), modifier = Modifier.width(50.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                Text(stringResource(R.string.frame_disp_dx, nr.dx * 1000), modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
-                                Text(stringResource(R.string.frame_disp_dy, nr.dy * 1000), modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
-                                Text(stringResource(R.string.frame_disp_theta, nr.rz), modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
+                                AppText(stringResource(R.string.frame_node_label_format, nr.nodeId), modifier = Modifier.width(50.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                AppText(stringResource(R.string.frame_disp_dx, nr.dx * 1000), modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
+                                AppText(stringResource(R.string.frame_disp_dy, nr.dy * 1000), modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
+                                AppText(stringResource(R.string.frame_disp_theta, nr.rz), modifier = Modifier.weight(1f), fontSize = 11.sp, textAlign = TextAlign.End)
                             }
                             HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
                         }
@@ -1444,10 +1514,10 @@ private fun ResultsTab(
             item {
                 Card(modifier = Modifier.fillMaxWidth().padding(4.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text(stringResource(R.string.frame_reactions), fontWeight = FontWeight.Bold)
+                        AppText(stringResource(R.string.frame_reactions), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         for (nr in result.nodeResults.filter { abs(it.reactionFx) > 0.01 || abs(it.reactionFy) > 0.01 || abs(it.reactionMz) > 0.01 }) {
-                            Text(
+                            AppText(
                                 stringResource(R.string.frame_reaction_format, nr.nodeId, nr.reactionFx, nr.reactionFy, nr.reactionMz),
                                 fontSize = 11.sp
                             )
@@ -1460,13 +1530,13 @@ private fun ResultsTab(
             item {
                 Card(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text(stringResource(R.string.frame_internal_forces), fontWeight = FontWeight.Bold)
+                        AppText(stringResource(R.string.frame_internal_forces), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(4.dp))
                         for (mf in result.memberEndForces) {
                             val mname = members.find { it.id == mf.memberId }?.name ?: stringResource(R.string.frame_member_label_format, mf.memberId)
-                            Text(stringResource(R.string.frame_member_force_header, mname, mf.memberId), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text(stringResource(R.string.frame_member_end_i, mf.fi_x, mf.fi_y, mf.mi_z), fontSize = 10.sp, color = Color.Gray)
-                            Text(stringResource(R.string.frame_member_end_j, mf.fj_x, mf.fj_y, mf.mj_z), fontSize = 10.sp, color = Color.Gray)
+                            AppText(stringResource(R.string.frame_member_force_header, mname, mf.memberId), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            AppText(stringResource(R.string.frame_member_end_i, mf.fi_x, mf.fi_y, mf.mi_z), fontSize = 10.sp, color = Color.Gray)
+                            AppText(stringResource(R.string.frame_member_end_j, mf.fj_x, mf.fj_y, mf.mj_z), fontSize = 10.sp, color = Color.Gray)
                             Spacer(Modifier.height(4.dp))
                         }
                     }
@@ -1494,22 +1564,22 @@ private fun ResultsTab(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.frame_result_member_id, cr.memberName, cr.memberId), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        AppText(stringResource(R.string.frame_result_member_id, cr.memberName, cr.memberId), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                         Spacer(Modifier.height(4.dp))
-                        Text(stringResource(R.string.frame_concrete_section_info, cr.section.width, cr.section.depth, cr.section.fcu), fontSize = 11.sp, color = Color.Gray)
+                        AppText(stringResource(R.string.frame_concrete_section_info, cr.section.width, cr.section.depth, cr.section.fcu), fontSize = 11.sp, color = Color.Gray)
                         Spacer(Modifier.height(2.dp))
-                        Text(stringResource(R.string.frame_max_forces, cr.maxMoment, cr.maxShear, cr.axialForce), fontSize = 11.sp)
+                        AppText(stringResource(R.string.frame_max_forces, cr.maxMoment, cr.maxShear, cr.axialForce), fontSize = 11.sp)
                         Spacer(Modifier.height(4.dp))
-                        Text(stringResource(R.string.frame_reinforcement_required, cr.asRequired), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
+                        AppText(stringResource(R.string.frame_reinforcement_required, cr.asRequired), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
                         if (cr.numBarsBot > 0) {
-                            Text(stringResource(R.string.frame_reinforcement_bottom, cr.numBarsBot, cr.barDia.toInt(), cr.asBot), fontSize = 11.sp)
+                            AppText(stringResource(R.string.frame_reinforcement_bottom, cr.numBarsBot, cr.barDia.toInt(), cr.asBot), fontSize = 11.sp)
                         }
                         if (cr.numBarsTop > 0) {
-                            Text(stringResource(R.string.frame_reinforcement_top, cr.numBarsTop, cr.barDia.toInt(), cr.asTop), fontSize = 11.sp)
+                            AppText(stringResource(R.string.frame_reinforcement_top, cr.numBarsTop, cr.barDia.toInt(), cr.asTop), fontSize = 11.sp)
                         }
                         if (cr.stirrupDia > 0) {
-                            Text(stringResource(R.string.frame_stirrups, cr.stirrupDia.toInt(), cr.stirrupSpacing.toInt()), fontSize = 11.sp)
+                            AppText(stringResource(R.string.frame_stirrups, cr.stirrupDia.toInt(), cr.stirrupSpacing.toInt()), fontSize = 11.sp)
                         }
                         Spacer(Modifier.height(6.dp))
                         FrameRebarSectionDrawing(
@@ -1522,19 +1592,19 @@ private fun ResultsTab(
 
                         // Utilization bars
                         Row {
-                            Text(stringResource(R.string.frame_bending), fontSize = 11.sp)
+                            AppText(stringResource(R.string.frame_bending), fontSize = 11.sp)
                             UtilizationBar(cr.momentUtilization, Modifier.weight(1f))
                         }
                         Spacer(Modifier.height(2.dp))
                         Row {
-                            Text(stringResource(R.string.frame_shear_label), fontSize = 11.sp)
+                            AppText(stringResource(R.string.frame_shear_label), fontSize = 11.sp)
                             UtilizationBar(cr.shearUtilization, Modifier.weight(1f))
                         }
 
                         if (cr.warnings.isNotEmpty()) {
                             Spacer(Modifier.height(4.dp))
                             for (w in cr.warnings) {
-                                Text("⚠ $w", fontSize = 10.sp, color = Color(0xFFF44336))
+                                AppText("⚠ $w", fontSize = 10.sp, color = Color(0xFFF44336))
                             }
                         }
                     }
@@ -1560,13 +1630,13 @@ private fun ResultsTab(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.frame_result_member_id, sr.memberName, sr.memberId), fontWeight = FontWeight.Bold)
+                            AppText(stringResource(R.string.frame_result_member_id, sr.memberName, sr.memberId), fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(4.dp))
-                        Text(stringResource(R.string.frame_selected_section, sr.selectedSection), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
-                        Text(stringResource(R.string.frame_steel_section_info, sr.sectionWeight, sr.sectionIx, sr.sectionSx), fontSize = 11.sp, color = Color.Gray)
+                        AppText(stringResource(R.string.frame_selected_section, sr.selectedSection), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
+                        AppText(stringResource(R.string.frame_steel_section_info, sr.sectionWeight, sr.sectionIx, sr.sectionSx), fontSize = 11.sp, color = Color.Gray)
                         Spacer(Modifier.height(2.dp))
-                        Text(stringResource(R.string.frame_max_forces, sr.maxMoment, sr.maxShear, sr.axialForce), fontSize = 11.sp)
+                        AppText(stringResource(R.string.frame_max_forces, sr.maxMoment, sr.maxShear, sr.axialForce), fontSize = 11.sp)
                         Spacer(Modifier.height(6.dp))
                         FrameSteelSectionDrawing(
                             result = sr,
@@ -1577,18 +1647,18 @@ private fun ResultsTab(
                         )
                         Spacer(Modifier.height(4.dp))
 
-                        Row { Text(stringResource(R.string.frame_bending), fontSize = 11.sp); UtilizationBar(sr.flexuralUtilization, Modifier.weight(1f)) }
+                        Row { AppText(stringResource(R.string.frame_bending), fontSize = 11.sp); UtilizationBar(sr.flexuralUtilization, Modifier.weight(1f)) }
                         Spacer(Modifier.height(2.dp))
-                        Row { Text(stringResource(R.string.frame_shear_label), fontSize = 11.sp); UtilizationBar(sr.shearUtilization, Modifier.weight(1f)) }
+                        Row { AppText(stringResource(R.string.frame_shear_label), fontSize = 11.sp); UtilizationBar(sr.shearUtilization, Modifier.weight(1f)) }
                         Spacer(Modifier.height(2.dp))
-                        Row { Text(stringResource(R.string.frame_axial), fontSize = 11.sp); UtilizationBar(sr.axialUtilization, Modifier.weight(1f)) }
+                        Row { AppText(stringResource(R.string.frame_axial), fontSize = 11.sp); UtilizationBar(sr.axialUtilization, Modifier.weight(1f)) }
                         Spacer(Modifier.height(2.dp))
-                        Row { Text(stringResource(R.string.frame_combined), fontSize = 11.sp); UtilizationBar(sr.combinedUtilization, Modifier.weight(1f)) }
+                        Row { AppText(stringResource(R.string.frame_combined), fontSize = 11.sp); UtilizationBar(sr.combinedUtilization, Modifier.weight(1f)) }
 
                         if (sr.warnings.isNotEmpty()) {
                             Spacer(Modifier.height(4.dp))
                             for (w in sr.warnings) {
-                                Text("⚠ $w", fontSize = 10.sp, color = Color(0xFFF44336))
+                                AppText("⚠ $w", fontSize = 10.sp, color = Color(0xFFF44336))
                             }
                         }
                     }
@@ -1618,7 +1688,7 @@ private fun UtilizationBar(ratio: Double, modifier: Modifier = Modifier) {
             trackColor = Color.LightGray
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(
+        AppText(
             "${String.format(java.util.Locale.ROOT, "%.0f", ratio * 100)}%",
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
