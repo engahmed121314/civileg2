@@ -1,6 +1,11 @@
 package com.civileg.app.ui.compose.screens
 
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -375,7 +380,7 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.home_advanced_design), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.home_advanced_design), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -399,7 +404,7 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
                         selected = moduleIndex == index,
                         onClick = { moduleIndex = index },
                         text = {
-                            Text(
+                            AppText(
                                 "${module.title} / ${module.titleAr}",
                                 fontWeight = if (moduleIndex == index) FontWeight.Bold else FontWeight.Normal
                             )
@@ -628,7 +633,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.deepContent(
     }
     item {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Continuous beam / كمرة مستمرة", modifier = Modifier.weight(1f))
+            AppText("Continuous beam / كمرة مستمرة", modifier = Modifier.weight(1f))
             Switch(checked = form.deepContinuous, onCheckedChange = { form.deepContinuous = it })
         }
     }
@@ -710,7 +715,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.pileContent(
 ) {
     item {
         SectionTitle("Pile Group (Rigid Cap)", "مجموعة خوازيق بقاعدة صلبة")
-        Text(
+        AppText(
             "Converse–Labarre efficiency and rigid-cap load distribution",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -804,7 +809,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settlementContent(
 ) {
     item {
         SectionTitle("Settlement (Elastic + Consolidation)", "الهبوط (مرن + انضغاطي)")
-        Text(
+        AppText(
             "Immediate elastic settlement and 1-D consolidation with time rate",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -889,8 +894,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settlementContent(
 @Composable
 private fun SectionTitle(english: String, arabic: String) {
     Column {
-        Text(english, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(
+        AppText(english, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        AppText(
             arabic,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -910,7 +915,7 @@ private fun <T> CodeChips(
             FilterChip(
                 selected = option == selected,
                 onClick = { onSelected(option) },
-                label = { Text(label(option)) }
+                label = { AppText(label(option)) }
             )
         }
     }
@@ -926,7 +931,7 @@ private fun NumField(
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label) },
+        label = { AppText(label) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier
@@ -935,14 +940,13 @@ private fun NumField(
 
 @Composable
 private fun CalculateButton(onClick: () -> Unit) {
-    Button(
+    AppButton(
+        label = "Calculate / احسب",
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(48.dp)
-    ) {
-        Icon(Icons.Default.Calculate, contentDescription = null)
-        Spacer(Modifier.width(8.dp))
-        Text("Calculate / احسب", fontWeight = FontWeight.Bold)
-    }
+        modifier = Modifier.fillMaxWidth().height(48.dp),
+        fontWeight = FontWeight.Bold,
+        icon = Icons.Default.Calculate
+    )
 }
 
 @Composable
@@ -967,7 +971,7 @@ private fun StatusBanner(isSafe: Boolean, incomplete: Boolean = false) {
                 contentDescription = null,
                 tint = color
             )
-            Text(
+            AppText(
                 when {
                     incomplete -> "INCOMPLETE / غير مكتمل"
                     isSafe -> "SAFE / آمن"
@@ -984,7 +988,7 @@ private fun StatusBanner(isSafe: Boolean, incomplete: Boolean = false) {
 private fun ResultCard(title: String, content: @Composable () -> Unit) {
     Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            AppText(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             HorizontalDivider()
             content()
         }
@@ -994,13 +998,13 @@ private fun ResultCard(title: String, content: @Composable () -> Unit) {
 @Composable
 private fun ResultRow(label: String, value: String, bold: Boolean = false) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(
+        AppText(
             label,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f)
         )
-        Text(
+        AppText(
             value,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium
@@ -1013,7 +1017,7 @@ private fun ChecksCard(checks: List<UiCheck>) {
     if (checks.isEmpty()) return
     Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Design checks / فحوصات التصميم", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            AppText("Design checks / فحوصات التصميم", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             HorizontalDivider()
             checks.forEach { check ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1023,7 +1027,7 @@ private fun ChecksCard(checks: List<UiCheck>) {
                         tint = if (check.passed) Color(0xFF2E7D32) else Color(0xFFC62828)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(
+                    AppText(
                         "${check.name}: ${fmt(check.calculated)} / ${fmt(check.limit)} ${check.unit}",
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -1039,13 +1043,13 @@ private fun NotesCard(warnings: List<String>, notes: List<String>) {
     Card(shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (warnings.isNotEmpty()) {
-                Text("Warnings / تحذيرات", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFFC62828))
-                warnings.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                AppText("Warnings / تحذيرات", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFFC62828))
+                warnings.forEach { AppText("• $it", style = MaterialTheme.typography.bodySmall) }
                 HorizontalDivider()
             }
             if (notes.isNotEmpty()) {
-                Text("Notes / ملاحظات", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                notes.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                AppText("Notes / ملاحظات", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                notes.forEach { AppText("• $it", style = MaterialTheme.typography.bodySmall) }
             }
         }
     }

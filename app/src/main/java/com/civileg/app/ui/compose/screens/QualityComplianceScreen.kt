@@ -18,6 +18,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.civileg.app.utils.ComplianceMatrix
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 /**
  * شاشة دليل الامتثال: قوائم فحص جاهزة حسب كود التصميم والتخصص.
@@ -77,7 +82,7 @@ fun QualityComplianceScreen() {
         // اختيار الكود
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(
+                AppText(
                     "لوائح الامتثال التنظيمية",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
@@ -93,12 +98,12 @@ fun QualityComplianceScreen() {
                         FilterChip(
                             selected = selectedCode == s.code,
                             onClick = { selectedCode = s.code },
-                            label = { Text(s.code) }
+                            label = { AppText(s.code) }
                         )
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
+                AppText(
                     standard?.let { "${it.name} — نسخة ${it.version}" } ?: "",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
@@ -111,8 +116,8 @@ fun QualityComplianceScreen() {
             Column(modifier = Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("التقدم", style = MaterialTheme.typography.titleSmall)
-                        Text(
+                        AppText("التقدم", style = MaterialTheme.typography.titleSmall)
+                        AppText(
                             "$checkedCount من ${items.size} خانة",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Gray
@@ -136,7 +141,7 @@ fun QualityComplianceScreen() {
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Text(
+                AppText(
                     "التخصص",
                     style = MaterialTheme.typography.titleSmall
                 )
@@ -161,12 +166,12 @@ fun QualityComplianceScreen() {
                         onDismissRequest = { filterExpanded = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("كل التخصصات") },
+                            text = { AppText("كل التخصصات") },
                             onClick = { disciplineFilter = null; filterExpanded = false }
                         )
                         ALL_DISCIPLINES.forEach { (key, label) ->
                             DropdownMenuItem(
-                                text = { Text(label) },
+                                text = { AppText(label) },
                                 onClick = { disciplineFilter = key; filterExpanded = false }
                             )
                         }
@@ -179,7 +184,7 @@ fun QualityComplianceScreen() {
         if (items.isEmpty()) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
+                    AppText(
                         "لا توجد بنود لهذا الكود والتخصص",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray
@@ -189,7 +194,7 @@ fun QualityComplianceScreen() {
         } else {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
+                    AppText(
                         "قائمة الفحص (${items.size})",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
@@ -219,7 +224,7 @@ fun QualityComplianceScreen() {
                             )
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
+                                    AppText(
                                         item.code,
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary,
@@ -231,7 +236,7 @@ fun QualityComplianceScreen() {
                                             shape = RoundedCornerShape(4.dp),
                                             color = MaterialTheme.colorScheme.secondaryContainer
                                         ) {
-                                            Text(
+                                            AppText(
                                                 "اختياري",
                                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                                                 style = MaterialTheme.typography.labelSmall
@@ -239,11 +244,11 @@ fun QualityComplianceScreen() {
                                         }
                                     }
                                 }
-                                Text(
+                                AppText(
                                     item.description,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
-                                Text(
+                                AppText(
                                     "المرجع: ${item.reference}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray
@@ -267,21 +272,27 @@ fun QualityComplianceScreen() {
     if (showResetConfirm) {
         AlertDialog(
             onDismissRequest = { showResetConfirm = false },
-            title = { Text("إعادة ضبط القائمة") },
-            text = { Text("سيتم إلغاء جميع الخانات المحددة. هل تريد المتابعة؟") },
+            title = { AppText("إعادة ضبط القائمة") },
+            text = { AppText("سيتم إلغاء جميع الخانات المحددة. هل تريد المتابعة؟") },
             confirmButton = {
-                TextButton(onClick = {
-                    checked.clear()
-                    prefs.edit().remove("checked_keys").apply()
-                    showResetConfirm = false
-                }) {
-                    Text("نعم، أعد الضبط")
-                }
+                AppButton(
+                    label = "نعم، أعد الضبط",
+                    fillMaxWidth = false,
+                    style = AppButtonStyle.Text,
+                    onClick = {
+                        checked.clear()
+                        prefs.edit().remove("checked_keys").apply()
+                        showResetConfirm = false
+                    }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showResetConfirm = false }) {
-                    Text("إلغاء")
-                }
+                AppButton(
+                    label = "إلغاء",
+                    onClick = { showResetConfirm = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         )
     }

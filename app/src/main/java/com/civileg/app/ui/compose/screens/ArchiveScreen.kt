@@ -21,6 +21,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.R
 import com.civileg.app.db.Design
 import com.civileg.app.db.DesignType
@@ -91,7 +96,7 @@ fun ArchiveScreen(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text(stringResource(R.string.archive_search_hint)) },
+                            placeholder = { AppText(stringResource(R.string.archive_search_hint)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -99,7 +104,7 @@ fun ArchiveScreen(
                             textStyle = MaterialTheme.typography.bodyMedium
                         )
                     } else {
-                        Text(stringResource(R.string.archive_saved_projects), fontWeight = FontWeight.Bold)
+                        AppText(stringResource(R.string.archive_saved_projects), fontWeight = FontWeight.Bold)
                     }
                 },
                 navigationIcon = {
@@ -152,9 +157,9 @@ fun ArchiveScreen(
                         tint = MaterialTheme.colorScheme.outline
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(stringResource(R.string.archive_no_projects), color = MaterialTheme.colorScheme.outline)
+                    AppText(stringResource(R.string.archive_no_projects), color = MaterialTheme.colorScheme.outline)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(stringResource(R.string.archive_add_new), color = MaterialTheme.colorScheme.outline, fontSize = 13.sp)
+                    AppText(stringResource(R.string.archive_add_new), color = MaterialTheme.colorScheme.outline, fontSize = 13.sp)
                 }
             }
         } else if (filteredProjects.isEmpty()) {
@@ -172,7 +177,7 @@ fun ArchiveScreen(
                         tint = MaterialTheme.colorScheme.outline
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(stringResource(R.string.archive_no_results_for) + "\"$searchQuery\"", color = MaterialTheme.colorScheme.outline)
+                    AppText(stringResource(R.string.archive_no_results_for) + "\"$searchQuery\"", color = MaterialTheme.colorScheme.outline)
                 }
             }
         } else {
@@ -185,7 +190,7 @@ fun ArchiveScreen(
             ) {
                 item {
                     AnimatedVisibility(visible = searchQuery.isNotBlank()) {
-                        Text(
+                        AppText(
                             stringResource(R.string.archive_results_count, filteredProjects.size),
                             style = MaterialTheme.typography.labelMedium,
                             color = Color.Gray,
@@ -210,13 +215,13 @@ fun ArchiveScreen(
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text(stringResource(R.string.archive_create_new), fontWeight = FontWeight.Bold) },
+            title = { AppText(stringResource(R.string.archive_create_new), fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = newProjectName,
                         onValueChange = { newProjectName = it },
-                        label = { Text(stringResource(R.string.archive_project_name_required)) },
+                        label = { AppText(stringResource(R.string.archive_project_name_required)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -224,7 +229,7 @@ fun ArchiveScreen(
                     OutlinedTextField(
                         value = newProjectCode,
                         onValueChange = { newProjectCode = it },
-                        label = { Text(stringResource(R.string.archive_design_code_hint)) },
+                        label = { AppText(stringResource(R.string.archive_design_code_hint)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -232,7 +237,7 @@ fun ArchiveScreen(
                     OutlinedTextField(
                         value = newProjectLocation,
                         onValueChange = { newProjectLocation = it },
-                        label = { Text(stringResource(R.string.archive_location_hint)) },
+                        label = { AppText(stringResource(R.string.archive_location_hint)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -240,7 +245,10 @@ fun ArchiveScreen(
                 }
             },
             confirmButton = {
-                Button(
+                AppButton(
+                    label = stringResource(R.string.archive_create),
+                    fillMaxWidth = false,
+                    enabled = newProjectName.isNotBlank(),
                     onClick = {
                         if (newProjectName.isNotBlank()) {
                             viewModel.insert(
@@ -255,14 +263,16 @@ fun ArchiveScreen(
                             newProjectLocation = ""
                             showCreateDialog = false
                         }
-                    },
-                    enabled = newProjectName.isNotBlank()
-                ) {
-                    Text(stringResource(R.string.archive_create))
-                }
+                    }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) { Text(stringResource(R.string.cancel)) }
+                AppButton(
+                    label = stringResource(R.string.cancel),
+                    onClick = { showCreateDialog = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -303,16 +313,16 @@ private fun ProjectCard(
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
+                    AppText(
                         text = project.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
+                    AppText(
                         text = stringResource(R.string.archive_code_label, project.code),
                         style = MaterialTheme.typography.bodySmall
                     )
-                    Text(
+                    AppText(
                         text = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(project.createdAt),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary
@@ -355,7 +365,7 @@ private fun ProjectCard(
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(
+                            AppText(
                                 text = stringResource(R.string.archive_design_count, designCount),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
@@ -384,7 +394,7 @@ private fun ProjectCard(
                         modifier = Modifier.size(12.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
+                    AppText(
                         text = project.location,
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray
@@ -424,7 +434,7 @@ private fun DesignTypeBadge(type: DesignType, count: Int) {
         shape = RoundedCornerShape(6.dp),
         color = color.copy(alpha = 0.12f)
     ) {
-        Text(
+        AppText(
             text = "$label $count",
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium,
