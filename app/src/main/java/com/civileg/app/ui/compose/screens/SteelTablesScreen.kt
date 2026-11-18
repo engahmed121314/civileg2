@@ -24,6 +24,11 @@ import com.civileg.app.utils.SteelTables
 import com.civileg.app.utils.SteelTables.SectionProperties
 import com.civileg.app.R
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,7 +68,7 @@ fun SteelTablesScreen(
         AlertDialog(
             onDismissRequest = { selectedSection = null },
             title = {
-                Text(
+                AppText(
                     section.name,
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp,
@@ -118,16 +123,20 @@ fun SteelTablesScreen(
                                 .padding(vertical = 2.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            AppText(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            AppText(value, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { selectedSection = null }) {
-                    Text(stringResource(R.string.close), fontWeight = FontWeight.Bold)
-                }
+                AppButton(
+                    label = stringResource(R.string.close),
+                    onClick = { selectedSection = null },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false,
+                    fontWeight = FontWeight.Bold
+                )
             }
         )
     }
@@ -136,7 +145,7 @@ fun SteelTablesScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_steel_tables_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_steel_tables_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -156,7 +165,7 @@ fun SteelTablesScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text(stringResource(R.string.steel_tables_search_hint)) },
+                label = { AppText(stringResource(R.string.steel_tables_search_hint)) },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -177,7 +186,7 @@ fun SteelTablesScreen(
                         selected = selectedType == index,
                         onClick = { selectedType = index },
                         text = {
-                            Text(
+                            AppText(
                                 type,
                                 fontWeight = if (selectedType == index) FontWeight.Bold else FontWeight.Normal,
                                 color = if (selectedType == index) typeColors[index] else MaterialTheme.colorScheme.onSurfaceVariant
@@ -188,7 +197,7 @@ fun SteelTablesScreen(
             }
 
             // Count
-            Text(
+            AppText(
                 text = stringResource(R.string.steel_tables_count, filteredSections.size),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -274,7 +283,7 @@ private fun TableHeaderCell(text: String, width: Dp) {
         modifier = Modifier.width(width),
         contentAlignment = Alignment.Center
     ) {
-        Text(
+        AppText(
             text = text,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
@@ -289,7 +298,7 @@ private fun TableCell(text: String, width: Dp, isName: Boolean = false, color: C
         modifier = Modifier.width(width),
         contentAlignment = Alignment.Center
     ) {
-        Text(
+        AppText(
             text = text,
             fontSize = if (isName) 12.sp else 11.sp,
             fontWeight = if (isName) FontWeight.Bold else FontWeight.Normal,

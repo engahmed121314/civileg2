@@ -2,6 +2,11 @@ package com.civileg.app.ui.compose.screens
 
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -44,35 +49,38 @@ fun SiteLayoutScreen() {
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
     Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding, vertical = MaterialTheme.dimens.screenVerticalPadding)) {
-        Text(stringResource(R.string.site_layout_title), style = MaterialTheme.typography.headlineSmall)
+        AppText(stringResource(R.string.site_layout_title), style = MaterialTheme.typography.headlineSmall)
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(value = plotWidth, onValueChange = { plotWidth = it }, label = { Text(stringResource(R.string.plot_width_label_m)) }, modifier = Modifier.weight(1f))
-            OutlinedTextField(value = plotLength, onValueChange = { plotLength = it }, label = { Text(stringResource(R.string.plot_length_label_m)) }, modifier = Modifier.weight(1f))
+            OutlinedTextField(value = plotWidth, onValueChange = { plotWidth = it }, label = { AppText(stringResource(R.string.plot_width_label_m)) }, modifier = Modifier.weight(1f))
+            OutlinedTextField(value = plotLength, onValueChange = { plotLength = it }, label = { AppText(stringResource(R.string.plot_length_label_m)) }, modifier = Modifier.weight(1f))
         }
 
         Spacer(modifier = Modifier.height(8.dp))
         
-        Button(onClick = {
-            columns.add(ColumnLoad("C${columns.size + 1}", 2000.0 * columns.size, 2000.0 * columns.size, 1000.0))
-        }, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.Add, contentDescription = null)
-            Text(stringResource(R.string.add_column_manual))
-        }
+        AppButton(
+            label = stringResource(R.string.add_column_manual),
+            onClick = {
+                columns.add(ColumnLoad("C${columns.size + 1}", 2000.0 * columns.size, 2000.0 * columns.size, 1000.0))
+            },
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.Add
+        )
 
         LazyColumn(modifier = Modifier.weight(1f).padding(vertical = 8.dp)) {
             items(columns) { col ->
                 Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                     Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(col.id, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                        AppText(col.id, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text("X: ${col.x.toInt()} Y: ${col.y.toInt()} | P: ${col.axialLoad} kN")
+                        AppText("X: ${col.x.toInt()} Y: ${col.y.toInt()} | P: ${col.axialLoad} kN")
                     }
                 }
             }
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.analyze_generate_axes),
             onClick = {
                 try {
                     siteError = null
@@ -88,16 +96,16 @@ fun SiteLayoutScreen() {
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-        ) {
-            Icon(Icons.Default.Analytics, contentDescription = null)
-            Text(stringResource(R.string.analyze_generate_axes))
-        }
+            icon = Icons.Default.Analytics,
+            containerOverride = MaterialTheme.colorScheme.secondary,
+            contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
+        )
 
         recommendation?.let { rec ->
             RecommendationCard(rec)
             
-            Button(
+            AppButton(
+                label = stringResource(R.string.export_autocad_dxf),
                 onClick = {
                     try {
                         siteError = null
@@ -115,12 +123,10 @@ fun SiteLayoutScreen() {
                     }
                 },
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-            ) {
-                Icon(Icons.Default.FileDownload, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.export_autocad_dxf))
-            }
+                icon = Icons.Default.FileDownload,
+                containerOverride = MaterialTheme.colorScheme.tertiary,
+                contentOverride = onColorFor(MaterialTheme.colorScheme.tertiary)
+            )
         }
 
         // Error display
@@ -129,7 +135,7 @@ fun SiteLayoutScreen() {
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
             ) {
-                Text(err, modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onErrorContainer)
+                AppText(err, modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onErrorContainer)
             }
         }
     }
@@ -143,13 +149,13 @@ fun RecommendationCard(rec: LayoutRecommendation) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(stringResource(R.string.expert_recommendation), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Text(rec.suggestedType, style = MaterialTheme.typography.headlineSmall)
-            Text(rec.description, style = MaterialTheme.typography.bodyMedium)
+            AppText(stringResource(R.string.expert_recommendation), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            AppText(rec.suggestedType, style = MaterialTheme.typography.headlineSmall)
+            AppText(rec.description, style = MaterialTheme.typography.bodyMedium)
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             
-            Text(stringResource(R.string.site_coverage_overlaps_format, (rec.coverageRatio * 100).toInt(), rec.overlapsFound), style = MaterialTheme.typography.labelLarge)
+            AppText(stringResource(R.string.site_coverage_overlaps_format, (rec.coverageRatio * 100).toInt(), rec.overlapsFound), style = MaterialTheme.typography.labelLarge)
             
             Spacer(modifier = Modifier.height(8.dp))
             
@@ -162,7 +168,7 @@ fun RecommendationCard(rec: LayoutRecommendation) {
                         drawLine(Color.Red, Offset(0f, y.toFloat() * 0.01f), Offset(size.width, y.toFloat() * 0.01f), 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f)))
                     }
                 }
-                Text(stringResource(R.string.site_axes_map_preview), modifier = Modifier.align(Alignment.Center), color = Color.Gray, fontSize = 10.sp)
+                AppText(stringResource(R.string.site_axes_map_preview), modifier = Modifier.align(Alignment.Center), color = Color.Gray, fontSize = 10.sp)
             }
         }
     }

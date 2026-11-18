@@ -18,6 +18,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.civileg.app.R
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.core.output.dxf.DxfEngine
 import com.civileg.core.output.pdf.PdfReportEngine
@@ -68,7 +73,7 @@ fun ExportScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
+                    AppText(
                         text = stringResource(R.string.screen_export_title),
                         fontWeight = FontWeight.Bold
                     )
@@ -98,7 +103,7 @@ fun ExportScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
+                    AppText(
                         text = stringResource(R.string.export_type),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
@@ -110,11 +115,11 @@ fun ExportScreen(
                             selected = selectedExportType == ExportType.PDF,
                             onClick = { selectedExportType = ExportType.PDF }
                         )
-                        Text(
+                        AppText(
                             text = stringResource(R.string.export_pdf),
                             fontWeight = FontWeight.Medium
                         )
-                        Text(
+                        AppText(
                             text = stringResource(R.string.export_pdf_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -127,11 +132,11 @@ fun ExportScreen(
                             selected = selectedExportType == ExportType.DXF,
                             onClick = { selectedExportType = ExportType.DXF }
                         )
-                        Text(
+                        AppText(
                             text = stringResource(R.string.export_dxf),
                             fontWeight = FontWeight.Medium
                         )
-                        Text(
+                        AppText(
                             text = stringResource(R.string.export_dxf_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -151,7 +156,7 @@ fun ExportScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
+                    AppText(
                         text = stringResource(R.string.project_info),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
@@ -159,13 +164,13 @@ fun ExportScreen(
                     OutlinedTextField(
                         value = projectName,
                         onValueChange = { projectName = it },
-                        label = { Text(stringResource(R.string.label_project_name)) },
+                        label = { AppText(stringResource(R.string.label_project_name)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = elementType,
                         onValueChange = { elementType = it },
-                        label = { Text(stringResource(R.string.label_element_type)) },
+                        label = { AppText(stringResource(R.string.label_element_type)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -182,16 +187,16 @@ fun ExportScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
+                    AppText(
                         text = stringResource(R.string.design_settings),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
+                    AppText(
                         text = stringResource(R.string.design_code) + ": $codeText",
                         fontWeight = FontWeight.Medium
                     )
-                    Text(
+                    AppText(
                         text = stringResource(R.string.language_selection) + ": $languageText",
                         fontWeight = FontWeight.Medium
                     )
@@ -201,10 +206,11 @@ fun ExportScreen(
             Spacer(Modifier.height(24.dp))
 
             // ─── زر التصدير ───
-            Button(
+            AppButton(
+                label = stringResource(R.string.btn_export_now),
                 onClick = {
                     if (projectName.isBlank() || elementType.isBlank()) {
-                        return@Button
+                        return@AppButton
                     }
 
                     isExporting = true
@@ -273,27 +279,13 @@ fun ExportScreen(
                     }
                 },
                 enabled = !isExporting && projectName.isNotBlank() && elementType.isNotBlank(),
+                loading = isExporting,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                if (isExporting) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.FileDownload,
-                        contentDescription = null
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = stringResource(R.string.btn_export_now),
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+                    .height(52.dp),
+                fontWeight = FontWeight.Bold,
+                icon = Icons.Default.FileDownload
+            )
 
             Spacer(Modifier.height(16.dp))
 
@@ -315,20 +307,21 @@ fun ExportScreen(
                                 tint = MaterialTheme.colorScheme.primary
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text(
+                            AppText(
                                 text = stringResource(R.string.export_success),
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
                         Spacer(Modifier.height(8.dp))
-                        Text(
+                        AppText(
                             text = result,
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 3
                         )
                         Spacer(Modifier.height(12.dp))
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.btn_open_file),
                             onClick = {
                                 val uri = Uri.fromFile(java.io.File(result))
                                 val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -338,9 +331,7 @@ fun ExportScreen(
                                 context.startActivity(intent)
                             },
                             modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(text = stringResource(R.string.btn_open_file))
-                        }
+                        )
                     }
                 }
             }

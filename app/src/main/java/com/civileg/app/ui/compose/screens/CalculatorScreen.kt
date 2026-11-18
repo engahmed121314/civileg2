@@ -21,6 +21,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.*
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import java.util.Locale
@@ -41,7 +46,7 @@ fun CalculatorScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_calculator_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_calculator_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -85,7 +90,7 @@ fun CalculatorScreen(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.Bottom
                 ) {
-                    Text(
+                    AppText(
                         text = expression,
                         color = Color.White.copy(alpha = 0.6f),
                         fontSize = 14.sp,
@@ -95,7 +100,7 @@ fun CalculatorScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(
+                    AppText(
                         text = result,
                         color = Color.White,
                         fontSize = 32.sp,
@@ -120,7 +125,7 @@ fun CalculatorScreen(
                             .padding(10.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        Text(
+                        AppText(
                             stringResource(R.string.calc_history),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
@@ -128,7 +133,7 @@ fun CalculatorScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         history.takeLast(10).reversed().forEach { h ->
-                            Text(
+                            AppText(
                                 h,
                                 fontSize = 13.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -251,19 +256,16 @@ private fun CalcButton(
     val bg = if (bgColor != Color.Unspecified) bgColor else MaterialTheme.colorScheme.surface
     val fg = if (bgColor != Color.Unspecified) Color.White else MaterialTheme.colorScheme.onSurface
 
-    Button(
+    AppButton(
+        label = label,
         onClick = onClick,
         modifier = modifier.height(52.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = bg, contentColor = fg),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
-    ) {
-        Text(
-            text = label,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
+        fillMaxWidth = false,
+        containerOverride = bg,
+        contentOverride = fg,
+        fontSize = 20.sp,
+        fontWeight = FontWeight.SemiBold
+    )
 }
 
 @Composable
@@ -271,24 +273,18 @@ private fun ScientificFuncButton(
     label: String,
     onClick: () -> Unit
 ) {
-    Button(
+    AppButton(
+        label = label,
         onClick = onClick,
         modifier = Modifier
             .height(40.dp)
             .widthIn(min = 52.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-        ),
-        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-    ) {
-        Text(
-            text = label,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
-        )
-    }
+        fillMaxWidth = false,
+        containerOverride = MaterialTheme.colorScheme.secondaryContainer,
+        contentOverride = MaterialTheme.colorScheme.onSecondaryContainer,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Medium
+    )
 }
 
 private fun appendNumber(
