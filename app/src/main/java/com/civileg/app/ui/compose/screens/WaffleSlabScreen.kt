@@ -43,6 +43,11 @@ import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 /**
  * شاشة تصميم بلاطة الوافل — Waffle Slab Design Screen
@@ -101,7 +106,7 @@ fun WaffleSlabScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.waffle_slab_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.waffle_slab_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -147,14 +152,14 @@ fun WaffleSlabScreen(
                     ) {
                         OutlinedTextField(
                             value = lx, onValueChange = { lx = it },
-                            label = { Text("Lx (mm)", fontSize = 12.sp) },
+                            label = { AppText("Lx (mm)", fontSize = 12.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.weight(1f),
                             shape = PremiumDesignSystem.InputShape, singleLine = true
                         )
                         OutlinedTextField(
                             value = ly, onValueChange = { ly = it },
-                            label = { Text("Ly (mm)", fontSize = 12.sp) },
+                            label = { AppText("Ly (mm)", fontSize = 12.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.weight(1f),
                             shape = PremiumDesignSystem.InputShape, singleLine = true
@@ -239,7 +244,8 @@ fun WaffleSlabScreen(
 
                 // ── Calculate Button ──────────────────────────────────
                 item {
-                    Button(
+                    AppButton(
+                        label = stringResource(R.string.waffle_slab_design_button),
                         onClick = {
                             viewModel.clearResult()
                             viewModel.calculateWaffleSlab(
@@ -261,22 +267,12 @@ fun WaffleSlabScreen(
                             )
                         },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = PremiumDesignSystem.ButtonShape,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        enabled = !isLoading
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(10.dp))
-                        } else {
-                            Icon(Icons.Default.Engineering, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Text(
-                            if (isLoading) stringResource(R.string.waffle_slab_designing) else stringResource(R.string.waffle_slab_design_button),
-                            fontWeight = FontWeight.Bold, fontSize = 15.sp
-                        )
-                    }
+                        enabled = !isLoading,
+                        loading = isLoading,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        icon = Icons.Default.Engineering
+                    )
                 }
 
                 // ── Error Message ─────────────────────────────────────
@@ -289,7 +285,7 @@ fun WaffleSlabScreen(
                             Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Error, "Error", tint = Color(0xFFE53935))
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text(err, fontSize = 13.sp, color = Color(0xFFE53935))
+                                AppText(err, fontSize = 13.sp, color = Color(0xFFE53935))
                             }
                         }
                     }
@@ -439,11 +435,11 @@ fun WaffleSlabScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Warning, "", tint = Color(0xFFFF9800))
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text(stringResource(R.string.waffle_slab_warnings), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFFF9800))
+                                        AppText(stringResource(R.string.waffle_slab_warnings), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFFF9800))
                                     }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     res.warnings.forEach { w ->
-                                        Text("• $w", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                                        AppText("• $w", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
                                     }
                                 }
                             }
@@ -542,7 +538,8 @@ fun WaffleSlabScreen(
                     // Export & Save
                     item {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
+                            AppButton(
+                                label = "Export PDF",
                                 onClick = {
                                     scope.launch {
                                         val captureBitmap = try {
@@ -553,24 +550,22 @@ fun WaffleSlabScreen(
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
-                                shape = PremiumDesignSystem.ButtonShape,
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                enabled = !isExporting
-                            ) {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (isExporting) "Exporting..." else "Export PDF", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            }
-                            OutlinedButton(
+                                enabled = !isExporting,
+                                loading = isExporting,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                icon = Icons.Default.PictureAsPdf
+                            )
+                            AppButton(
+                                label = "Save",
                                 onClick = { /* save */ },
                                 modifier = Modifier.weight(1f),
-                                shape = PremiumDesignSystem.ButtonShape,
-                                enabled = false
-                            ) {
-                                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Save", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            }
+                                enabled = false,
+                                style = AppButtonStyle.Outline,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                icon = Icons.Default.Save
+                            )
                         }
                     }
 
@@ -598,7 +593,7 @@ fun WaffleSlabScreen(
                                 color = Color(0xFF1565C0)
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text(stringResource(R.string.waffle_slab_calculating), fontSize = 14.sp, color = Color.Gray)
+                            AppText(stringResource(R.string.waffle_slab_calculating), fontSize = 14.sp, color = Color.Gray)
                         }
                     }
                 }

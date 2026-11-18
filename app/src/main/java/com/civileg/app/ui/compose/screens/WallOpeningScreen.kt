@@ -53,6 +53,11 @@ import com.civileg.app.ui.compose.components.DesignSectionHeader
 import com.civileg.app.ui.compose.components.DesignStatusBanner
 import com.civileg.app.ui.compose.components.drawings.ProfessionalWallOpeningDrawing
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.viewmodel.WallOpeningViewModel
 
 /**
@@ -105,7 +110,7 @@ fun WallOpeningScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(stringResource(R.string.wo_title), fontWeight = FontWeight.Bold)
+                    AppText(stringResource(R.string.wo_title), fontWeight = FontWeight.Bold)
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -240,7 +245,7 @@ fun WallOpeningScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
+                        AppText(
                             text = stringResource(R.string.wo_error_fix_inputs),
                             modifier = Modifier.padding(12.dp),
                             color = MaterialTheme.colorScheme.error,
@@ -257,32 +262,32 @@ fun WallOpeningScreen(
                         .padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
+                    AppButton(
+                        label = stringResource(R.string.wo_calculate),
                         onClick = {
                             viewModel.calculate(
-                                wallHeightMm = wallHeightMm.toDoubleOrNull() ?: return@Button,
-                                wallThicknessMm = wallThicknessMm.toDoubleOrNull() ?: return@Button,
-                                openingWidthMm = openingWidthMm.toDoubleOrNull() ?: return@Button,
-                                openingHeightMm = openingHeightMm.toDoubleOrNull() ?: return@Button,
-                                openingFromBaseMm = openingFromBaseMm.toDoubleOrNull() ?: return@Button,
-                                wallLengthMm = wallLengthMm.toDoubleOrNull() ?: return@Button,
-                                fcu = fcu.toDoubleOrNull() ?: return@Button,
-                                fy = fy.toDoubleOrNull() ?: return@Button,
-                                loadAboveOpeningKNm = loadAboveOpeningKNm.toDoubleOrNull() ?: return@Button,
+                                wallHeightMm = wallHeightMm.toDoubleOrNull() ?: return@AppButton,
+                                wallThicknessMm = wallThicknessMm.toDoubleOrNull() ?: return@AppButton,
+                                openingWidthMm = openingWidthMm.toDoubleOrNull() ?: return@AppButton,
+                                openingHeightMm = openingHeightMm.toDoubleOrNull() ?: return@AppButton,
+                                openingFromBaseMm = openingFromBaseMm.toDoubleOrNull() ?: return@AppButton,
+                                wallLengthMm = wallLengthMm.toDoubleOrNull() ?: return@AppButton,
+                                fcu = fcu.toDoubleOrNull() ?: return@AppButton,
+                                fy = fy.toDoubleOrNull() ?: return@AppButton,
+                                loadAboveOpeningKNm = loadAboveOpeningKNm.toDoubleOrNull() ?: return@AppButton,
                                 code = selectedCode
                             )
                         },
                         modifier = Modifier.weight(1f),
-                        enabled = validation.isValid && !isLoading
-                    ) {
-                        Text(stringResource(R.string.wo_calculate))
-                    }
-                    OutlinedButton(
+                        enabled = validation.isValid && !isLoading,
+                        loading = isLoading
+                    )
+                    AppButton(
+                        label = stringResource(R.string.reset),
                         onClick = { viewModel.reset() },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(stringResource(R.string.reset))
-                    }
+                        modifier = Modifier.weight(1f),
+                        style = AppButtonStyle.Outline
+                    )
                 }
             }
 
@@ -305,7 +310,7 @@ fun WallOpeningScreen(
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(
+                        AppText(
                             text = err,
                             modifier = Modifier.padding(12.dp),
                             color = MaterialTheme.colorScheme.error
@@ -326,7 +331,7 @@ fun WallOpeningScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.padding(vertical = 4.dp)
                         ) {
-                            Text(
+                            AppText(
                                 text = warningText,
                                 modifier = Modifier.padding(12.dp),
                                 color = MaterialTheme.colorScheme.error,
@@ -368,7 +373,8 @@ fun WallOpeningScreen(
                 }
 
                 item {
-                    Button(
+                    AppButton(
+                        label = stringResource(R.string.wo_export_pdf),
                         onClick = {
                             viewModel.exportToPdf(
                                 context = context,
@@ -387,18 +393,11 @@ fun WallOpeningScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
-                        )
-                    ) {
-                        Icon(
-                            Icons.Default.PictureAsPdf,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.wo_export_pdf), fontWeight = FontWeight.Bold)
-                    }
+                        fontWeight = FontWeight.Bold,
+                        icon = Icons.Default.PictureAsPdf,
+                        containerOverride = MaterialTheme.colorScheme.tertiary,
+                        contentOverride = onColorFor(MaterialTheme.colorScheme.tertiary)
+                    )
                 }
 
                 item { DesignSectionHeader(title = stringResource(R.string.wo_section_results)) }
@@ -451,7 +450,7 @@ fun WallOpeningScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 res.codeNotes.forEach { noteText ->
-                                    Text(
+                                    AppText(
                                         text = noteText,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant

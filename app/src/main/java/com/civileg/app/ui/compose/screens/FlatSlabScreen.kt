@@ -44,6 +44,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.launch
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,7 +101,7 @@ fun FlatSlabScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.fs_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.fs_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
@@ -143,7 +148,7 @@ fun FlatSlabScreen(
                                     contentAlignment = Alignment.Center,
                                     modifier = Modifier.clickable { panelType = type }
                                 ) {
-                                    Text(
+                                    AppText(
                                         type.name,
                                         color = if (selected) MaterialTheme.colorScheme.onPrimary
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -176,14 +181,14 @@ item {
                     ) {
                         OutlinedTextField(
                             value = lx, onValueChange = { lx = it },
-                            label = { Text(stringResource(R.string.fs_lx), fontSize = 12.sp) },
+                            label = { AppText(stringResource(R.string.fs_lx), fontSize = 12.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.weight(1f),
                             shape = PremiumDesignSystem.InputShape, singleLine = true
                         )
                         OutlinedTextField(
                             value = ly, onValueChange = { ly = it },
-                            label = { Text(stringResource(R.string.fs_ly), fontSize = 12.sp) },
+                            label = { AppText(stringResource(R.string.fs_ly), fontSize = 12.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.weight(1f),
                             shape = PremiumDesignSystem.InputShape, singleLine = true
@@ -219,7 +224,7 @@ item {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(stringResource(R.string.fs_drop_panel), fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                        AppText(stringResource(R.string.fs_drop_panel), fontWeight = FontWeight.Medium, fontSize = 14.sp)
                         Switch(checked = showDropInputs, onCheckedChange = { showDropInputs = it })
                     }
                 }
@@ -279,7 +284,8 @@ item {
 
                 // ── Calculate Button ──────────────────────────────────
                 item {
-                    Button(
+                    AppButton(
+                        label = stringResource(R.string.fs_design_button),
                         onClick = {
                             viewModel.clearResult()
                             viewModel.calculateFlatSlab(
@@ -301,22 +307,12 @@ item {
                             )
                         },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = PremiumDesignSystem.ButtonShape,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        enabled = !isLoading
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(10.dp))
-                        } else {
-                            Icon(Icons.Default.Engineering, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Text(
-                            if (isLoading) stringResource(R.string.pile_designing) else stringResource(R.string.fs_design_button),
-                            fontWeight = FontWeight.Bold, fontSize = 15.sp
-                        )
-                    }
+                        enabled = !isLoading,
+                        loading = isLoading,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        icon = Icons.Default.Engineering
+                    )
                 }
 
                 // ── Error Message ─────────────────────────────────────
@@ -329,7 +325,7 @@ item {
                             Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Error, stringResource(R.string.error), tint = Color(0xFFE53935))
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text(err, fontSize = 13.sp, color = Color(0xFFE53935))
+                                AppText(err, fontSize = 13.sp, color = Color(0xFFE53935))
                             }
                         }
                     }
@@ -507,11 +503,11 @@ item {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.Warning, "", tint = Color(0xFFFF9800))
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Warnings", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFFF9800))
+                                        AppText("Warnings", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFFFF9800))
                                     }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     res.warnings.forEach { w ->
-                                        Text("• $w", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                                        AppText("• $w", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
                                     }
                                 }
                             }
@@ -628,7 +624,7 @@ item {
                             color = Color(0xFF1565C0)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                        AppText("Calculating...", fontSize = 14.sp, color = Color.Gray)
                     }
                 }
             }

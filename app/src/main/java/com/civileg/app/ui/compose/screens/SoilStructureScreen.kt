@@ -24,6 +24,11 @@ import com.civileg.app.ui.compose.components.drawings.DrawingResultSummary
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSoilStructureDrawing
 import com.civileg.app.viewmodel.SoilStructureViewModel
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,7 +56,7 @@ fun SoilStructureScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("تفاعل المنشأ مع التربة", fontWeight = FontWeight.Bold) },
+                title = { AppText("تفاعل المنشأ مع التربة", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "عودة")
@@ -113,7 +118,8 @@ fun SoilStructureScreen(
                     .padding(vertical = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
+                AppButton(
+                    label = "حساب",
                     onClick = {
                         viewModel.calculate(
                             foundationLengthMm = foundationLengthMm.toDoubleOrNull() ?: 3000.0,
@@ -131,15 +137,13 @@ fun SoilStructureScreen(
                         )
                     },
                     modifier = Modifier.weight(1f)
-                ) {
-                    Text("حساب")
-                }
-                OutlinedButton(
+                )
+                AppButton(
+                    label = "إعادة تعيين",
                     onClick = { viewModel.reset() },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("إعادة تعيين")
-                }
+                    modifier = Modifier.weight(1f),
+                    style = AppButtonStyle.Outline
+                )
             }
 
             if (isLoading) {
@@ -151,14 +155,15 @@ fun SoilStructureScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text(err, modifier = Modifier.padding(12.dp), color = MaterialTheme.colorScheme.error)
+                    AppText(err, modifier = Modifier.padding(12.dp), color = MaterialTheme.colorScheme.error)
                 }
             }
 
             uiState?.let { res ->
                 val context = androidx.compose.ui.platform.LocalContext.current
 
-                Button(
+                AppButton(
+                    label = "تصدير تقرير PDF برو (3 قطاعات)",
                     onClick = {
                         viewModel.exportToPdf(
                             context = context,
@@ -174,16 +179,15 @@ fun SoilStructureScreen(
                         )
                     },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-                ) {
-                    Icon(androidx.compose.material.icons.Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("تصدير تقرير PDF برو (3 قطاعات)", fontWeight = FontWeight.Bold)
-                }
+                    fontWeight = FontWeight.Bold,
+                    icon = androidx.compose.material.icons.Icons.Default.PictureAsPdf,
+                    containerOverride = MaterialTheme.colorScheme.tertiary,
+                    contentOverride = onColorFor(MaterialTheme.colorScheme.tertiary)
+                )
 
                 DesignSectionHeader(title = "الرسم الهندسي لتفاعل المنشأ مع التربة")
 
-                Text(
+                AppText(
                     text = androidx.compose.ui.res.stringResource(
                         com.civileg.app.R.string.design_status_not_verified
                     ),
@@ -255,7 +259,7 @@ fun SoilStructureScreen(
                 }
 
                 res.codeNotes.forEach { noteText ->
-                    Text(noteText, style = MaterialTheme.typography.bodySmall)
+                    AppText(noteText, style = MaterialTheme.typography.bodySmall)
                 }
 
                 res.warnings.forEach { warningText ->
@@ -264,7 +268,7 @@ fun SoilStructureScreen(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.padding(vertical = 4.dp)
                     ) {
-                        Text(warningText, modifier = Modifier.padding(12.dp), color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                        AppText(warningText, modifier = Modifier.padding(12.dp), color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                     }
                 }
             }
