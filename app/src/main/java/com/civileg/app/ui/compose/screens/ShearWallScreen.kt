@@ -38,6 +38,11 @@ import com.civileg.app.ui.compose.components.DesignSectionHeader
 import com.civileg.app.ui.compose.components.DesignStatusBanner
 import com.civileg.app.ui.compose.components.UtilizationGauge
 import com.civileg.app.ui.components.drawings.ProfessionalShearWallDrawing
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.viewmodel.ShearWallViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
@@ -65,7 +70,7 @@ fun ShearWallScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.sw_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.sw_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -95,7 +100,7 @@ fun ShearWallScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.sw_design_code), style = MaterialTheme.typography.labelMedium,
+                        AppText(stringResource(R.string.sw_design_code), style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -103,7 +108,7 @@ fun ShearWallScreen(
                         FilterChip(
                             selected = uiState.designCode == code,
                             onClick = { viewModel.updateDesignCode(code) },
-                            label = { Text(code, fontSize = 13.sp,
+                            label = { AppText(code, fontSize = 13.sp,
                                 fontWeight = if (uiState.designCode == code) FontWeight.Bold else FontWeight.Normal) },
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
@@ -112,7 +117,7 @@ fun ShearWallScreen(
                         }
 
                         Spacer(Modifier.height(12.dp))
-                        Text(stringResource(R.string.sw_wall_type), style = MaterialTheme.typography.labelMedium,
+                        AppText(stringResource(R.string.sw_wall_type), style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -121,7 +126,7 @@ fun ShearWallScreen(
                             selected = uiState.wallType == type,
                             onClick = { viewModel.updateWallType(type) },
                             label = {
-                                Text(type.name, fontSize = 12.sp,
+                                AppText(type.name, fontSize = 12.sp,
                                     fontWeight = if (uiState.wallType == type) FontWeight.Bold else FontWeight.Normal)
                             },
                             shape = RoundedCornerShape(10.dp),
@@ -131,7 +136,7 @@ fun ShearWallScreen(
                         }
 
                         Spacer(Modifier.height(12.dp))
-                        Text(stringResource(R.string.sw_wall_shape), style = MaterialTheme.typography.labelMedium,
+                        AppText(stringResource(R.string.sw_wall_shape), style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -143,7 +148,7 @@ fun ShearWallScreen(
                                 FilterChip(
                                     selected = uiState.wallShape == value,
                                     onClick = { viewModel.updateWallShape(value) },
-                                    label = { Text(label, fontSize = 12.sp,
+                                    label = { AppText(label, fontSize = 12.sp,
                                         fontWeight = if (uiState.wallShape == value) FontWeight.Bold else FontWeight.Normal) },
                                     shape = RoundedCornerShape(10.dp),
                                     modifier = Modifier.weight(1f)
@@ -183,7 +188,7 @@ fun ShearWallScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text(stringResource(R.string.sw_flange_section), style = MaterialTheme.typography.labelMedium,
+                            AppText(stringResource(R.string.sw_flange_section), style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
                             Spacer(Modifier.height(8.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -255,16 +260,13 @@ fun ShearWallScreen(
 
             // ── Calculate Button ────────────────────────────────────
             item {
-                Button(
+                AppButton(
+                    label = stringResource(R.string.sw_design_button),
                     onClick = { viewModel.calculate() },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Icon(Icons.Default.Calculate, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.sw_design_button), fontWeight = FontWeight.Bold)
-                }
+                    fontWeight = FontWeight.Bold,
+                    icon = Icons.Default.Calculate
+                )
             }
 
             // ── Loading indicator ───────────────────────────────────
@@ -297,7 +299,7 @@ fun ShearWallScreen(
                                 Icon(Icons.Default.Warning, contentDescription = null,
                                     tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text(warning, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                                AppText(warning, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -316,7 +318,7 @@ fun ShearWallScreen(
                             "${"%.1f".format(result.compressionDepth)} mm")
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f))
-                        Text(stringResource(R.string.required_reinforcement), style = MaterialTheme.typography.labelSmall,
+                        AppText(stringResource(R.string.required_reinforcement), style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         DesignResultRow(stringResource(R.string.status),
                             "${result.verticalReinforcement.bars}Φ${result.verticalReinforcement.diameter} @ ${result.verticalReinforcement.spacing} mm")
@@ -342,7 +344,7 @@ fun ShearWallScreen(
                             "${"%.1f".format(result.steelShearCapacity)} kN")
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f))
-                        Text(stringResource(R.string.sw_shear_design), style = MaterialTheme.typography.labelSmall,
+                        AppText(stringResource(R.string.sw_shear_design), style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         DesignResultRow("Provided",
                             "${result.horizontalReinforcement.bars}Φ${result.horizontalReinforcement.diameter} @ ${result.horizontalReinforcement.spacing} mm")
@@ -445,7 +447,7 @@ fun ShearWallScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 result.codeNotes.forEach { note ->
-                                    Text(note, fontSize = 11.sp,
+                                    AppText(note, fontSize = 11.sp,
                                         fontFamily = FontFamily.Monospace,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(vertical = 1.dp))
@@ -520,7 +522,8 @@ fun ShearWallScreen(
                 // Export Buttons
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.sw_export_pdf),
                             onClick = {
                                 scope.launch {
                                     val captureBitmap = try {
@@ -531,18 +534,16 @@ fun ShearWallScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                        ) {
-                            Text(stringResource(R.string.sw_export_pdf), fontWeight = FontWeight.Bold)
-                        }
-                        OutlinedButton(
+                            fontWeight = FontWeight.Bold,
+                            icon = Icons.Default.PictureAsPdf
+                        )
+                        AppButton(
+                            label = "DXF",
                             onClick = { viewModel.exportToDxf(context) },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("DXF", fontWeight = FontWeight.Bold)
-                        }
+                            style = AppButtonStyle.Outline,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -566,14 +567,14 @@ private fun ResultCard(isSafe: Boolean, content: @Composable () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
+                AppText(
                     if (isSafe) "✓" else "✗",
                     color = if (isSafe) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.Bold, fontSize = 18.sp
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(
+                AppText(
                     if (isSafe) stringResource(R.string.pass) else stringResource(R.string.fail),
                     fontWeight = FontWeight.Bold,
                     color = if (isSafe) MaterialTheme.colorScheme.primary
@@ -594,7 +595,7 @@ private fun SafetyCheckRow(check: ShearWallSafetyCheck) {
             .padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
+        AppText(
             if (check.isSafe) "✓" else "✗",
             color = if (check.isSafe) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.error,
@@ -602,8 +603,8 @@ private fun SafetyCheckRow(check: ShearWallSafetyCheck) {
         )
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-            Text(check.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            Text(
+            AppText(check.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            AppText(
                 "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
                 fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
             )

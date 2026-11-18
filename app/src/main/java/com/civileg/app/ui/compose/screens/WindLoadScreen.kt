@@ -38,6 +38,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.utils.*
 import com.civileg.app.viewmodel.WindLoadViewModel
 import com.civileg.app.viewmodel.WindPreset
@@ -105,7 +110,7 @@ fun WindLoadScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.wind_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.wind_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -143,7 +148,7 @@ fun WindLoadScreen(
             SectionCard(title = stringResource(R.string.wind_wind_terrain)) {
                 LabeledTextField(stringResource(R.string.wind_speed), basicWindSpeed, { basicWindSpeed = it; syncToVm() })
                 Spacer(Modifier.height(6.dp))
-                Text(stringResource(R.string.wind_terrain_cat), style = MaterialTheme.typography.labelMedium)
+                AppText(stringResource(R.string.wind_terrain_cat), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(4.dp))
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -153,7 +158,7 @@ fun WindLoadScreen(
                         FilterChip(
                             selected = selectedTerrain == tc,
                             onClick = { viewModel.onTerrainSelected(tc) },
-                            label = { Text(tc.label, fontSize = 11.sp) }
+                            label = { AppText(tc.label, fontSize = 11.sp) }
                         )
                     }
                 }
@@ -161,7 +166,7 @@ fun WindLoadScreen(
 
             // ---- Building geometry ----
             SectionCard(title = stringResource(R.string.wind_geometry_section)) {
-                Text(stringResource(R.string.wind_shape), style = MaterialTheme.typography.labelMedium)
+                AppText(stringResource(R.string.wind_shape), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(4.dp))
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -171,7 +176,7 @@ fun WindLoadScreen(
                         FilterChip(
                             selected = selectedShape == bs,
                             onClick = { viewModel.onShapeSelected(bs) },
-                            label = { Text(bs.label, fontSize = 11.sp) }
+                            label = { AppText(bs.label, fontSize = 11.sp) }
                         )
                     }
                 }
@@ -179,17 +184,17 @@ fun WindLoadScreen(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = buildingHeight, onValueChange = { buildingHeight = it; syncToVm() },
-                        label = { Text(stringResource(R.string.wind_height)) }, modifier = Modifier.weight(1f),
+                        label = { AppText(stringResource(R.string.wind_height)) }, modifier = Modifier.weight(1f),
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                     )
                     OutlinedTextField(
                         value = buildingWidth, onValueChange = { buildingWidth = it; syncToVm() },
-                        label = { Text(stringResource(R.string.wind_width)) }, modifier = Modifier.weight(1f),
+                        label = { AppText(stringResource(R.string.wind_width)) }, modifier = Modifier.weight(1f),
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                     )
                     OutlinedTextField(
                         value = buildingDepth, onValueChange = { buildingDepth = it; syncToVm() },
-                        label = { Text(stringResource(R.string.wind_depth)) }, modifier = Modifier.weight(1f),
+                        label = { AppText(stringResource(R.string.wind_depth)) }, modifier = Modifier.weight(1f),
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                     )
                 }
@@ -197,17 +202,17 @@ fun WindLoadScreen(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = numberOfFloors, onValueChange = { numberOfFloors = it; syncToVm() },
-                        label = { Text(stringResource(R.string.wind_floors)) }, modifier = Modifier.weight(1f),
+                        label = { AppText(stringResource(R.string.wind_floors)) }, modifier = Modifier.weight(1f),
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                     )
                     OutlinedTextField(
                         value = importanceFactor, onValueChange = { importanceFactor = it; syncToVm() },
-                        label = { Text(stringResource(R.string.wind_importance)) }, modifier = Modifier.weight(1f),
+                        label = { AppText(stringResource(R.string.wind_importance)) }, modifier = Modifier.weight(1f),
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                     )
                     OutlinedTextField(
                         value = topographyFactor, onValueChange = { topographyFactor = it; syncToVm() },
-                        label = { Text(stringResource(R.string.wind_topo)) }, modifier = Modifier.weight(1f),
+                        label = { AppText(stringResource(R.string.wind_topo)) }, modifier = Modifier.weight(1f),
                         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                     )
                 }
@@ -215,7 +220,7 @@ fun WindLoadScreen(
 
             // ---- Roof & openings ----
             SectionCard(title = stringResource(R.string.wind_roof_openings)) {
-                Text(stringResource(R.string.wind_roof_type), style = MaterialTheme.typography.labelMedium)
+                AppText(stringResource(R.string.wind_roof_type), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(4.dp))
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -225,14 +230,14 @@ fun WindLoadScreen(
                         FilterChip(
                             selected = selectedRoofType == rt,
                             onClick = { viewModel.onRoofTypeSelected(rt); roofSlope = viewModel.roofSlope.value ?: "0.0" },
-                            label = { Text(rt.label, fontSize = 11.sp) }
+                            label = { AppText(rt.label, fontSize = 11.sp) }
                         )
                     }
                 }
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = roofSlope, onValueChange = { roofSlope = it; syncToVm() },
-                    label = { Text(stringResource(R.string.wind_roof_slope)) }, modifier = Modifier.fillMaxWidth(0.5f),
+                    label = { AppText(stringResource(R.string.wind_roof_slope)) }, modifier = Modifier.fillMaxWidth(0.5f),
                     textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                 )
                 Spacer(Modifier.height(8.dp))
@@ -244,12 +249,12 @@ fun WindLoadScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Switch(checked = hasOpenings, onCheckedChange = { hasOpenings = it; syncToVm() })
                         Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.wind_windward_openings), style = MaterialTheme.typography.bodySmall)
+                        AppText(stringResource(R.string.wind_windward_openings), style = MaterialTheme.typography.bodySmall)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Switch(checked = isFlexible, onCheckedChange = { isFlexible = it; syncToVm() })
                         Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.wind_flexible), style = MaterialTheme.typography.bodySmall)
+                        AppText(stringResource(R.string.wind_flexible), style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 if (isFlexible) {
@@ -257,12 +262,12 @@ fun WindLoadScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = naturalFrequency, onValueChange = { naturalFrequency = it; syncToVm() },
-                            label = { Text(stringResource(R.string.wind_freq)) }, modifier = Modifier.weight(1f),
+                            label = { AppText(stringResource(R.string.wind_freq)) }, modifier = Modifier.weight(1f),
                             textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                         )
                         OutlinedTextField(
                             value = dampingRatio, onValueChange = { dampingRatio = it; syncToVm() },
-                            label = { Text(stringResource(R.string.wind_damping)) }, modifier = Modifier.weight(1f),
+                            label = { AppText(stringResource(R.string.wind_damping)) }, modifier = Modifier.weight(1f),
                             textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
                         )
                     }
@@ -270,37 +275,29 @@ fun WindLoadScreen(
             }
 
             // ---- Calculate button ----
-            Button(
+            AppButton(
+                label = stringResource(R.string.wind_calc_button),
                 onClick = { syncToVm(); viewModel.calculate() },
                 modifier = Modifier.fillMaxWidth().height(48.dp),
-                enabled = !isCalculating
-            ) {
-                if (isCalculating) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(Modifier.width(8.dp))
-                }
-                Icon(Icons.Default.Calculate, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.wind_calc_button), fontWeight = FontWeight.SemiBold)
-            }
+                enabled = !isCalculating,
+                loading = isCalculating,
+                fontWeight = FontWeight.SemiBold,
+                icon = Icons.Default.Calculate
+            )
 
             // ---- Results ----
             result?.let { res ->
                 val context = androidx.compose.ui.platform.LocalContext.current
 
-                Button(
+                AppButton(
+                    label = "تصدير تقرير PDF برو (3 قطاعات)",
                     onClick = { viewModel.exportToPdf(context) },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-                ) {
-                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("تصدير تقرير PDF برو (3 قطاعات)", fontWeight = FontWeight.Bold)
-                }
+                    containerOverride = MaterialTheme.colorScheme.tertiary,
+                    contentOverride = onColorFor(MaterialTheme.colorScheme.tertiary),
+                    fontWeight = FontWeight.Bold,
+                    icon = Icons.Default.PictureAsPdf
+                )
 
                 // Summary cards
                 SummaryCards(result = res)
@@ -324,7 +321,7 @@ fun WindLoadScreen(
 @Composable
 private fun PresetRow(onPreset: (WindPreset) -> Unit) {
     Column {
-        Text(stringResource(R.string.wind_presets), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+        AppText(stringResource(R.string.wind_presets), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(4.dp))
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -333,7 +330,7 @@ private fun PresetRow(onPreset: (WindPreset) -> Unit) {
             WindPreset.entries.forEach { preset ->
                 SuggestionChip(
                     onClick = { onPreset(preset) },
-                    label = { Text(preset.label, fontSize = 11.sp) },
+                    label = { AppText(preset.label, fontSize = 11.sp) },
                     icon = { Icon(Icons.Default.Apartment, contentDescription = null, modifier = Modifier.size(14.dp)) }
                 )
             }
@@ -349,7 +346,7 @@ private fun SectionCard(title: String, content: @Composable ColumnScope.() -> Un
         shape = MaterialTheme.shapes.medium
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            AppText(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(8.dp))
             content()
         }
@@ -361,7 +358,7 @@ private fun LabeledTextField(label: String, value: String, onValueChange: (Strin
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = { AppText(label) },
         modifier = Modifier.fillMaxWidth(),
         textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp),
         singleLine = true
@@ -375,10 +372,10 @@ private fun ResultValueCard(label: String, value: String, unit: String, color: C
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.08f))
     ) {
         Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            AppText(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
             Spacer(Modifier.height(2.dp))
-            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
-            Text(unit, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            AppText(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = color)
+            AppText(unit, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
         }
     }
 }
@@ -389,7 +386,7 @@ private fun ResultValueCard(label: String, value: String, unit: String, color: C
 
 @Composable
 private fun SummaryCards(result: WindLoadResult) {
-    Text(stringResource(R.string.wind_results_summary), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+    AppText(stringResource(R.string.wind_results_summary), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(6.dp))
     Row(
         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -422,7 +419,7 @@ private fun SummaryCards(result: WindLoadResult) {
 @Composable
 private fun PressureTable(pressures: List<WindPressureAtHeight>) {
     Spacer(Modifier.height(6.dp))
-    Text(stringResource(R.string.wind_pressure_dist), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+    AppText(stringResource(R.string.wind_pressure_dist), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(4.dp))
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(8.dp)) {
@@ -431,11 +428,11 @@ private fun PressureTable(pressures: List<WindPressureAtHeight>) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(stringResource(R.string.seismic_floor), style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
-                Text("z (m)", style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.2f))
-                Text("Vz (m/s)", style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.2f))
-                Text(stringResource(R.string.dynamic_pressure_pz), style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.3f))
-                Text(stringResource(R.string.net_pressure_pnet), style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.2f))
+                AppText(stringResource(R.string.seismic_floor), style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1f))
+                AppText("z (m)", style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.2f))
+                AppText("Vz (m/s)", style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.2f))
+                AppText(stringResource(R.string.dynamic_pressure_pz), style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.3f))
+                AppText(stringResource(R.string.net_pressure_pnet), style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold), modifier = Modifier.weight(1.2f))
             }
             HorizontalDivider()
             pressures.forEachIndexed { idx, p ->
@@ -443,12 +440,12 @@ private fun PressureTable(pressures: List<WindPressureAtHeight>) {
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("${idx + 1}", style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace), modifier = Modifier.weight(1f))
-                    Text("%.1f".format(p.height), style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace), modifier = Modifier.weight(1.2f))
-                    Text("%.1f".format(p.velocity), style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace), modifier = Modifier.weight(1.2f))
-                    Text("%.3f".format(p.dynamicPressure), style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace), modifier = Modifier.weight(1.3f))
+                    AppText("${idx + 1}", style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace), modifier = Modifier.weight(1f))
+                    AppText("%.1f".format(p.height), style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace), modifier = Modifier.weight(1.2f))
+                    AppText("%.1f".format(p.velocity), style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace), modifier = Modifier.weight(1.2f))
+                    AppText("%.3f".format(p.dynamicPressure), style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace), modifier = Modifier.weight(1.3f))
                     val netColor = if (p.netPressure >= 0) PressurePositive else PressureNegative
-                    Text("%.3f".format(p.netPressure), style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = netColor, fontWeight = FontWeight.Medium), modifier = Modifier.weight(1.2f))
+                    AppText("%.3f".format(p.netPressure), style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = netColor, fontWeight = FontWeight.Medium), modifier = Modifier.weight(1.2f))
                 }
                 if (idx < pressures.lastIndex) HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
             }
@@ -463,7 +460,7 @@ private fun PressureTable(pressures: List<WindPressureAtHeight>) {
 @Composable
 private fun ElevationCanvas(result: WindLoadResult) {
     Spacer(Modifier.height(6.dp))
-    Text(stringResource(R.string.wind_elevation_diag), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+    AppText(stringResource(R.string.wind_elevation_diag), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(4.dp))
     Card(modifier = Modifier.fillMaxWidth()) {
         Canvas(
