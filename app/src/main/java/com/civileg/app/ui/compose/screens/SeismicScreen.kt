@@ -55,6 +55,11 @@ import com.civileg.app.viewmodel.SeismicViewModel
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSeismicDrawing
 import com.civileg.app.ui.compose.components.drawings.FloorForce
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import kotlinx.coroutines.launch
 import kotlin.math.pow
 
@@ -223,7 +228,7 @@ fun SeismicScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_seismic_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_seismic_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -261,7 +266,7 @@ fun SeismicScreen(
                                 selectedCode = code
                                 viewModel.updateDesignCode(code.designCode.name)
                             },
-                            label = { Text(code.displayName, style = MaterialTheme.typography.labelSmall) },
+                            label = { AppText(code.displayName, style = MaterialTheme.typography.labelSmall) },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -278,7 +283,7 @@ fun SeismicScreen(
                         value = selectedCode.displayName,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text(stringResource(R.string.design_code_label)) },
+                        label = { AppText(stringResource(R.string.design_code_label)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCode) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -286,7 +291,7 @@ fun SeismicScreen(
                     ExposedDropdownMenu(expanded = expandedCode, onDismissRequest = { expandedCode = false }) {
                         SeismicCodeOption.entries.forEach { code ->
                             DropdownMenuItem(
-                                text = { Text(code.displayName) },
+                                text = { AppText(code.displayName) },
                                 onClick = {
                                     selectedCode = code
                                     viewModel.updateDesignCode(code.designCode.name)
@@ -311,7 +316,7 @@ fun SeismicScreen(
                         value = selectedZone.displayName,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text(stringResource(R.string.seismic_zone)) },
+                        label = { AppText(stringResource(R.string.seismic_zone)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedZone) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -319,7 +324,7 @@ fun SeismicScreen(
                     ExposedDropdownMenu(expanded = expandedZone, onDismissRequest = { expandedZone = false }) {
                         SeismicZone.entries.forEach { zone ->
                             DropdownMenuItem(
-                                text = { Text(zone.displayName) },
+                                text = { AppText(zone.displayName) },
                                 onClick = { selectedZone = zone; expandedZone = false }
                             )
                         }
@@ -337,7 +342,7 @@ fun SeismicScreen(
                         value = "${selectedSoil.displayName} - ${selectedSoil.description}",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text(stringResource(R.string.seismic_soil_type)) },
+                        label = { AppText(stringResource(R.string.seismic_soil_type)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSoil) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -345,7 +350,7 @@ fun SeismicScreen(
                     ExposedDropdownMenu(expanded = expandedSoil, onDismissRequest = { expandedSoil = false }) {
                         getSoilTypesForCode(selectedCode).forEach { soil ->
                             DropdownMenuItem(
-                                text = { Text("${soil.displayName} - ${soil.description}") },
+                                text = { AppText("${soil.displayName} - ${soil.description}") },
                                 onClick = { selectedSoil = soil; expandedSoil = false }
                             )
                         }
@@ -386,7 +391,7 @@ fun SeismicScreen(
                     ) {
                         Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(
+                        AppText(
                             stringResource(R.string.seismic_est_height, totalHeight, numFloors.toIntOrNull() ?: 0),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -397,21 +402,14 @@ fun SeismicScreen(
 
             // ═══ Calculate Button ════════════════════════════════════════════
             item {
-                Button(
+                AppButton(
+                    label = stringResource(R.string.seismic_calc_button),
                     onClick = { calculate() },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(16.dp),
-                    enabled = !isCalculating
-                ) {
-                    if (isCalculating) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
-                    } else {
-                        Icon(Icons.Default.Calculate, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.seismic_calc_button), style = MaterialTheme.typography.titleMedium)
-                    }
-                }
+                    enabled = !isCalculating,
+                    loading = isCalculating,
+                    icon = Icons.Default.Calculate
+                )
             }
 
             // ═══ Results ══════════════════════════════════════════════════════
@@ -441,18 +439,18 @@ fun SeismicScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(
+                                    AppText(
                                         stringResource(R.string.seismic_base_shear_v),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Text(
+                                    AppText(
                                         "${"%.2f".format(res.baseShearResult.baseShear)} kN",
                                         style = MaterialTheme.typography.headlineSmall,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = MaterialTheme.colorScheme.primary
                                     )
-                                    Text(
+                                    AppText(
                                         res.baseShearResult.calculationFormula,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontFamily = FontFamily.Monospace,
@@ -472,7 +470,7 @@ fun SeismicScreen(
                                         color = utilColor,
                                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                                     )
-                                    Text(
+                                    AppText(
                                         "${(utilization * 100).toInt()}%",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.sp
@@ -495,8 +493,8 @@ fun SeismicScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("V/W ratio", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("${"%.3f".format(utilization)}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = utilColor)
+                                    AppText("V/W ratio", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    AppText("${"%.3f".format(utilization)}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = utilColor)
                                 }
                             }
                         }
@@ -516,7 +514,7 @@ fun SeismicScreen(
                             ResultRow(stringResource(R.string.seismic_soil_factor), "${"%.2f".format(res.baseShearResult.soilFactor)}")
                             ResultRow(stringResource(R.string.seismic_importance_factor_val), "${"%.2f".format(res.baseShearResult.importanceFactor)}")
                             ResultRow(stringResource(R.string.seismic_response_mod_val), "${"%.1f".format(res.baseShearResult.responseModification)}")
-                            Text(
+                            AppText(
                                 stringResource(R.string.seismic_reference, res.baseShearResult.codeReference),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -537,11 +535,11 @@ fun SeismicScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Warning, null, tint = Color(0xFFFF9800), modifier = Modifier.size(20.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text(stringResource(R.string.seismic_code_warnings), fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
+                                    AppText(stringResource(R.string.seismic_code_warnings), fontWeight = FontWeight.Bold, color = Color(0xFFE65100))
                                 }
                                 Spacer(Modifier.height(4.dp))
                                 res.baseShearResult.warnings.forEach { w ->
-                                    Text("• $w", style = MaterialTheme.typography.bodySmall, color = Color(0xFF795548))
+                                    AppText("• $w", style = MaterialTheme.typography.bodySmall, color = Color(0xFF795548))
                                 }
                             }
                         }
@@ -562,7 +560,7 @@ fun SeismicScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
                         Icon(Icons.Default.Business, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.seismic_force_distribution), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        AppText(stringResource(R.string.seismic_force_distribution), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -577,10 +575,10 @@ fun SeismicScreen(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(stringResource(R.string.seismic_floor), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                                Text(stringResource(R.string.seismic_force_kn), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
-                                Text(stringResource(R.string.seismic_shear_kn), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
-                                Text(stringResource(R.string.seismic_moment_knm), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                                AppText(stringResource(R.string.seismic_floor), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                                AppText(stringResource(R.string.seismic_force_kn), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                                AppText(stringResource(R.string.seismic_shear_kn), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                                AppText(stringResource(R.string.seismic_moment_knm), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
                             }
                             HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
 
@@ -591,10 +589,10 @@ fun SeismicScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(stringResource(R.string.seismic_floor_n, f.floorIndex + 1), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                                    Text("${"%.2f".format(f.lateralForce)}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), textAlign = TextAlign.End, color = MaterialTheme.colorScheme.primary)
-                                    Text("${"%.2f".format(f.storyShear)}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), textAlign = TextAlign.End, color = MaterialTheme.colorScheme.secondary)
-                                    Text("${"%.1f".format(f.overturningMoment)}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                                    AppText(stringResource(R.string.seismic_floor_n, f.floorIndex + 1), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                                    AppText("${"%.2f".format(f.lateralForce)}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), textAlign = TextAlign.End, color = MaterialTheme.colorScheme.primary)
+                                    AppText("${"%.2f".format(f.storyShear)}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), textAlign = TextAlign.End, color = MaterialTheme.colorScheme.secondary)
+                                    AppText("${"%.1f".format(f.overturningMoment)}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
                                 }
                                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
                             }
@@ -604,8 +602,8 @@ fun SeismicScreen(
                                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(stringResource(R.string.seismic_total), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                                Text(
+                                AppText(stringResource(R.string.seismic_total), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                                AppText(
                                     "${"%.2f".format(res.floorForces.sumOf { it.lateralForce })}",
                                     fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium,
                                     modifier = Modifier.weight(1f), textAlign = TextAlign.End,
@@ -623,7 +621,7 @@ fun SeismicScreen(
 
                 // ── Spectrum Canvas (mini inline) ────────────────────────────
                 item {
-                    Text(stringResource(R.string.seismic_response_spectrum), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
+                    AppText(stringResource(R.string.seismic_response_spectrum), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
                     SeismicSpectrumCanvas(
                         spectrumValues = res.spectrumValues,
                         designPeriod = res.fundamentalPeriod,
@@ -647,7 +645,7 @@ fun SeismicScreen(
                                     FilterChip(
                                         selected = selectedViewMode == idx,
                                         onClick = { selectedViewMode = idx },
-                                        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                                        label = { AppText(label, style = MaterialTheme.typography.labelSmall) }
                                     )
                                 }
                             }
@@ -690,9 +688,10 @@ fun SeismicScreen(
                     // Exporting state managed inline
                     val labelError = stringResource(R.string.beam_pdf_error)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.pdf_report),
                             onClick = {
-                                if (isExporting) return@Button
+                                if (isExporting) return@AppButton
                                 isExporting = true
                                 val details = mapOf(
                                     labelPdfCode to selectedCode.displayName,
@@ -765,37 +764,27 @@ fun SeismicScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            enabled = !isExporting
-                        ) {
-                            if (isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
-                            }
-                        }
+                            enabled = !isExporting,
+                            loading = isExporting,
+                            icon = Icons.Default.PictureAsPdf
+                        )
 
-                        OutlinedButton(
+                        AppButton(
+                            label = "DXF",
                             onClick = { viewModel.exportToDxf(context) },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("DXF", fontWeight = FontWeight.Bold)
-                        }
+                            style = AppButtonStyle.Outline,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.save),
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
-                        }
+                            icon = Icons.Default.Save,
+                            containerOverride = MaterialTheme.colorScheme.secondary,
+                            contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
+                        )
                     }
                 }
 
@@ -806,7 +795,7 @@ fun SeismicScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Text(stringResource(R.string.seismic_reference_equations), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                            AppText(stringResource(R.string.seismic_reference_equations), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(4.dp))
                             FormulaItem("V = Sd(T₁) × W")
                             FormulaItem(stringResource(R.string.seismic_formula_period))
@@ -871,7 +860,7 @@ fun SeismicScreen(
                         color = Color(0xFF1565C0)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(
+                    AppText(
                         "Calculating... / جاري الحساب...",
                         fontSize = 14.sp,
                         color = Color.Gray
@@ -885,19 +874,19 @@ fun SeismicScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text(stringResource(R.string.seismic_save_dialog_title)) },
+            title = { AppText(stringResource(R.string.seismic_save_dialog_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text(stringResource(R.string.seismic_design_name_hint)) },
+                        label = { AppText(stringResource(R.string.seismic_design_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
+                    AppText(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
+                        AppText(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -908,41 +897,50 @@ fun SeismicScreen(
                                     selected = selectedProjectId == project.id,
                                     onClick = { selectedProjectId = project.id }
                                 )
-                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+                                AppText(project.name, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     }
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    result?.let { res ->
-                        val engineResult = CalculatorEngine.SeismicResult(
-                            baseShear = res.baseShearResult.baseShear,
-                            storyDrift = res.baseShearResult.maxStoryDrift,
-                            timePeriod = res.fundamentalPeriod,
-                            spectralAcceleration = res.spectralAccel,
-                            isSafe = res.baseShearResult.driftIsSafe,
-                            code = when (res.code) {
-                                DesignCode.ECP -> DesignCode.ECP
-                                DesignCode.ACI -> DesignCode.ACI
-                                DesignCode.SBC -> DesignCode.SBC
-                            },
-                            zone = res.baseShearResult.zoneFactor,
-                            importance = res.baseShearResult.importanceFactor,
-                            reductionFactor = res.baseShearResult.responseModification,
-                            totalWeight = totalWeight.toDoubleOrNull() ?: 5000.0,
-                            height = totalHeight
-                        )
-                        val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
-                        projectViewModel.saveSeismic(pId, designName, engineResult)
-                        showSuccessMsg = true
+                AppButton(
+                    label = stringResource(R.string.save),
+                    fillMaxWidth = false,
+                    onClick = {
+                        result?.let { res ->
+                            val engineResult = CalculatorEngine.SeismicResult(
+                                baseShear = res.baseShearResult.baseShear,
+                                storyDrift = res.baseShearResult.maxStoryDrift,
+                                timePeriod = res.fundamentalPeriod,
+                                spectralAcceleration = res.spectralAccel,
+                                isSafe = res.baseShearResult.driftIsSafe,
+                                code = when (res.code) {
+                                    DesignCode.ECP -> DesignCode.ECP
+                                    DesignCode.ACI -> DesignCode.ACI
+                                    DesignCode.SBC -> DesignCode.SBC
+                                },
+                                zone = res.baseShearResult.zoneFactor,
+                                importance = res.baseShearResult.importanceFactor,
+                                reductionFactor = res.baseShearResult.responseModification,
+                                totalWeight = totalWeight.toDoubleOrNull() ?: 5000.0,
+                                height = totalHeight
+                            )
+                            val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
+                            projectViewModel.saveSeismic(pId, designName, engineResult)
+                            showSuccessMsg = true
+                        }
+                        showSaveDialog = false
                     }
-                    showSaveDialog = false
-                }) { Text(stringResource(R.string.save)) }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
+                AppButton(
+                    label = stringResource(R.string.cancel),
+                    onClick = { showSaveDialog = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -961,15 +959,15 @@ fun SeismicStabilityCard(res: SeismicBaseShearResult, totalHeight: Double) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Building Stability & Story Drift", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            AppText("Building Stability & Story Drift", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Max Story Drift (\u0394)", style = MaterialTheme.typography.bodySmall)
-                Text("${String.format(java.util.Locale.US, "%.1f", drift * 1000)} mm", fontWeight = FontWeight.Bold)
+                AppText("Max Story Drift (\u0394)", style = MaterialTheme.typography.bodySmall)
+                AppText("${String.format(java.util.Locale.US, "%.1f", drift * 1000)} mm", fontWeight = FontWeight.Bold)
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Allowable Limit", style = MaterialTheme.typography.bodySmall)
-                Text("${String.format(java.util.Locale.US, "%.1f", limit * 1000)} mm", color = MaterialTheme.colorScheme.secondary)
+                AppText("Allowable Limit", style = MaterialTheme.typography.bodySmall)
+                AppText("${String.format(java.util.Locale.US, "%.1f", limit * 1000)} mm", color = MaterialTheme.colorScheme.secondary)
             }
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
@@ -981,7 +979,7 @@ fun SeismicStabilityCard(res: SeismicBaseShearResult, totalHeight: Double) {
                     tint = if (isSafe) Color(0xFF2E7D32) else Color.Red
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(
+                AppText(
                     if (isSafe) "Drift Requirements Passed" else "Drift Limit Exceeded - Check Stiffness",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
@@ -1077,7 +1075,7 @@ private fun SectionHeader(title: String, iconRes: Int) {
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+        AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
     }
 }
 
@@ -1092,7 +1090,7 @@ private fun SeismicInputField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = { AppText(label) },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         modifier = modifier,
         singleLine = true,
@@ -1110,8 +1108,8 @@ private fun ResultRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge)
-        Text(
+        AppText(label, style = MaterialTheme.typography.bodyLarge)
+        AppText(
             value,
             fontWeight = FontWeight.ExtraBold,
             style = MaterialTheme.typography.bodyLarge,
@@ -1122,7 +1120,7 @@ private fun ResultRow(label: String, value: String) {
 
 @Composable
 private fun FormulaItem(formula: String) {
-    Text(
+    AppText(
         text = formula,
         fontFamily = FontFamily.Monospace,
         fontSize = 12.sp,

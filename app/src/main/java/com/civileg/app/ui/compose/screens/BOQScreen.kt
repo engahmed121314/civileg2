@@ -37,6 +37,11 @@ import com.civileg.app.domain.calculations.ecp.TrialRunManager
 import com.civileg.app.domain.entities.BoqCategory
 import com.civileg.app.utils.EstimationEngine
 import com.civileg.app.utils.PdfGenerator
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.viewmodel.BOQViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
 import java.io.File
@@ -67,7 +72,7 @@ fun BOQScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_boq_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_boq_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -82,7 +87,7 @@ fun BOQScreen(
                     Tab(
                         selected = selectedMainTab == index,
                         onClick = { selectedMainTab = index },
-                        text = { Text(title) }
+                        text = { AppText(title) }
                     )
                 }
             }
@@ -118,7 +123,7 @@ fun BOQScreen(
                         color = Color(0xFF1565C0)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(
+                    AppText(
                         "Calculating... / جاري الحساب...",
                         fontSize = 14.sp,
                         color = Color.Gray
@@ -153,11 +158,11 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.boq_what_to_calculate), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.boq_what_to_calculate), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 ExposedDropdownMenuBox(expanded = showCurrencyMenu, onExpandedChange = { showCurrencyMenu = !showCurrencyMenu }, modifier = Modifier.width(100.dp)) {
-                    OutlinedTextField(value = selectedCurrency, onValueChange = {}, readOnly = true, label = { Text(stringResource(R.string.boq_currency), fontSize = 10.sp) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCurrencyMenu) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable), textStyle = LocalTextStyle.current.copy(fontSize = 12.sp))
+                    OutlinedTextField(value = selectedCurrency, onValueChange = {}, readOnly = true, label = { AppText(stringResource(R.string.boq_currency), fontSize = 10.sp) }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCurrencyMenu) }, modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable), textStyle = LocalTextStyle.current.copy(fontSize = 12.sp))
                     ExposedDropdownMenu(expanded = showCurrencyMenu, onDismissRequest = { showCurrencyMenu = false }) {
-                        listOf("EGP", "SAR", "USD", "AED").forEach { curr -> DropdownMenuItem(text = { Text(curr) }, onClick = { selectedCurrency = curr; showCurrencyMenu = false }) }
+                        listOf("EGP", "SAR", "USD", "AED").forEach { curr -> DropdownMenuItem(text = { AppText(curr) }, onClick = { selectedCurrency = curr; showCurrencyMenu = false }) }
                     }
                 }
             }
@@ -169,7 +174,7 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
                         EstimationEngine.ProjectCategory.SPECIFIC_ITEM -> stringResource(R.string.boq_specific_item)
                         EstimationEngine.ProjectCategory.INVESTMENT_STUDY -> stringResource(R.string.boq_feasibility_study)
                     }
-                    FilterChip(selected = category == cat, onClick = { category = cat; viewModel.clearResult() }, label = { Text(label) })
+                    FilterChip(selected = category == cat, onClick = { category = cat; viewModel.clearResult() }, label = { AppText(label) })
                 }
             }
         }
@@ -178,51 +183,55 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
             Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (category == EstimationEngine.ProjectCategory.FULL_PROJECT || category == EstimationEngine.ProjectCategory.INVESTMENT_STUDY) {
-                        Text(stringResource(R.string.boq_structure_type), style = MaterialTheme.typography.labelMedium)
+                        AppText(stringResource(R.string.boq_structure_type), style = MaterialTheme.typography.labelMedium)
                         FlowRow(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             EstimationEngine.FullProjectType.entries.forEach { type ->
-                                ElevatedFilterChip(selected = projectType == type, onClick = { projectType = type }, label = { Text(type.displayName) })
+                                ElevatedFilterChip(selected = projectType == type, onClick = { projectType = type }, label = { AppText(type.displayName) })
                             }
                         }
-                        OutlinedTextField(value = area, onValueChange = { area = it }, label = { Text(stringResource(R.string.boq_land_area)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.Default.AspectRatio, null) })
+                        OutlinedTextField(value = area, onValueChange = { area = it }, label = { AppText(stringResource(R.string.boq_land_area)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.Default.AspectRatio, null) })
                         if (category == EstimationEngine.ProjectCategory.INVESTMENT_STUDY) {
-                            OutlinedTextField(value = landPrice, onValueChange = { landPrice = it }, label = { Text(stringResource(R.string.boq_land_price_per_m)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.Default.Payments, null) }, suffix = { Text(selectedCurrency) })
-                            OutlinedTextField(value = sellingPrice, onValueChange = { sellingPrice = it }, label = { Text(stringResource(R.string.boq_expected_sell_price)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, null) }, suffix = { Text(selectedCurrency) })
+                            OutlinedTextField(value = landPrice, onValueChange = { landPrice = it }, label = { AppText(stringResource(R.string.boq_land_price_per_m)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.Default.Payments, null) }, suffix = { AppText(selectedCurrency) })
+                            OutlinedTextField(value = sellingPrice, onValueChange = { sellingPrice = it }, label = { AppText(stringResource(R.string.boq_expected_sell_price)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), leadingIcon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, null) }, suffix = { AppText(selectedCurrency) })
                         }
                         if (projectType != EstimationEngine.FullProjectType.FACTORY) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedTextField(value = floors, onValueChange = { floors = it }, label = { Text(stringResource(R.string.seismic_num_floors)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
+                                OutlinedTextField(value = floors, onValueChange = { floors = it }, label = { AppText(stringResource(R.string.seismic_num_floors)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.weight(1f))
                                 Spacer(Modifier.width(16.dp))
                                 Switch(checked = hasBasement, onCheckedChange = { hasBasement = it })
-                                Text(stringResource(R.string.boq_basement), modifier = Modifier.padding(start = 8.dp))
+                                AppText(stringResource(R.string.boq_basement), modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     } else if (category == EstimationEngine.ProjectCategory.APARTMENT_FINISHING) {
-                        OutlinedTextField(value = area, onValueChange = { area = it }, label = { Text(stringResource(R.string.boq_apartment_area)) }, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = area, onValueChange = { area = it }, label = { AppText(stringResource(R.string.boq_apartment_area)) }, modifier = Modifier.fillMaxWidth())
                     }
                 }
             }
         }
 
         item {
-            Button(onClick = {
-                val a = area.toDoubleOrNull() ?: 0.0
-                val f = floors.toIntOrNull() ?: 1
-                val lp = landPrice.toDoubleOrNull() ?: 0.0
-                val sp = sellingPrice.toDoubleOrNull() ?: 0.0
-                when (category) {
-                    EstimationEngine.ProjectCategory.FULL_PROJECT,
-                    EstimationEngine.ProjectCategory.INVESTMENT_STUDY ->
-                        viewModel.estimateFullProject(projectType, a, f, hasBasement, factoryType, lp, sp, selectedCurrency)
-                    EstimationEngine.ProjectCategory.APARTMENT_FINISHING ->
-                        viewModel.estimateApartmentFinishingPro(a, selectedCurrency)
-                    EstimationEngine.ProjectCategory.SPECIFIC_ITEM ->
-                        viewModel.estimateSpecificItem("Item", a, 1.0, selectedCurrency)
-                }
-            }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(12.dp), enabled = !isLoading) {
-                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                else Text(stringResource(R.string.boq_generate_report), fontWeight = FontWeight.Bold)
-            }
+            AppButton(
+                label = stringResource(R.string.boq_generate_report),
+                onClick = {
+                    val a = area.toDoubleOrNull() ?: 0.0
+                    val f = floors.toIntOrNull() ?: 1
+                    val lp = landPrice.toDoubleOrNull() ?: 0.0
+                    val sp = sellingPrice.toDoubleOrNull() ?: 0.0
+                    when (category) {
+                        EstimationEngine.ProjectCategory.FULL_PROJECT,
+                        EstimationEngine.ProjectCategory.INVESTMENT_STUDY ->
+                            viewModel.estimateFullProject(projectType, a, f, hasBasement, factoryType, lp, sp, selectedCurrency)
+                        EstimationEngine.ProjectCategory.APARTMENT_FINISHING ->
+                            viewModel.estimateApartmentFinishingPro(a, selectedCurrency)
+                        EstimationEngine.ProjectCategory.SPECIFIC_ITEM ->
+                            viewModel.estimateSpecificItem("Item", a, 1.0, selectedCurrency)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading,
+                loading = isLoading,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         trialRunLog?.let { log ->
@@ -232,8 +241,8 @@ fun SmartEstimatorProContent(viewModel: BOQViewModel) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text(stringResource(R.string.boq_data_safety_report), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Text(log, fontSize = 10.sp, color = Color.DarkGray)
+                        AppText(stringResource(R.string.boq_data_safety_report), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        AppText(log, fontSize = 10.sp, color = Color.DarkGray)
                     }
                 }
             }
@@ -279,45 +288,64 @@ fun DesignsBOQContent(
             item {
                 val selectedIndex = projects.indexOfFirst { it.id == selectedProjectId }.coerceAtLeast(0)
                 ScrollableTabRow(selectedTabIndex = selectedIndex, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
-                    projects.forEach { project -> Tab(selected = project.id == selectedProjectId, onClick = { selectedProjectId = project.id; selectedDesignId = -1L; boqViewModel.clearResult() }, text = { Text(project.name) }) }
+                    projects.forEach { project -> Tab(selected = project.id == selectedProjectId, onClick = { selectedProjectId = project.id; selectedDesignId = -1L; boqViewModel.clearResult() }, text = { AppText(project.name) }) }
                 }
             }
             item { TotalCostCard(projectDesigns.sumOf { it.totalCost }) }
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = {
-                        val p = projects.find { it.id == selectedProjectId }
-                        if (p != null) exportProjectBOQPdf(context, p.name, projectDesigns)
-                    }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) {
-                        Icon(Icons.Default.PictureAsPdf, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.boq_export_pdf))
-                    }
+                    AppButton(
+                        label = stringResource(R.string.boq_export_pdf),
+                        onClick = {
+                            val p = projects.find { it.id == selectedProjectId }
+                            if (p != null) exportProjectBOQPdf(context, p.name, projectDesigns)
+                        },
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.PictureAsPdf,
+                        containerOverride = MaterialTheme.colorScheme.secondary,
+                        contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
+                    )
                     if (elementBoqItems.isNotEmpty()) {
-                        Button(onClick = {
-                            val items = elementBoqItems
-                            val file = PdfGenerator.generateBOQReport(context, "${selectedDesign?.name ?: "Design"} BOQ", elementBoqTotal, items.filter { it.category == BoqCategory.CONCRETE }.sumOf { it.quantity }, items.filter { it.category == BoqCategory.REINFORCEMENT }.sumOf { it.quantity }, items.map { it.description to it.total })
-                            sharePdf(context, file)
-                        }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
-                            Icon(Icons.Default.Description, null); Spacer(Modifier.width(8.dp)); Text("Export BOQ")
-                        }
-                    }
-                    
-                    Button(onClick = { onNavigateToSummary(selectedProjectId) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)) {
-                        Icon(Icons.Default.Analytics, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Executive Dashboard")
+                        AppButton(
+                            label = "Export BOQ",
+                            onClick = {
+                                val items = elementBoqItems
+                                val file = PdfGenerator.generateBOQReport(context, "${selectedDesign?.name ?: "Design"} BOQ", elementBoqTotal, items.filter { it.category == BoqCategory.CONCRETE }.sumOf { it.quantity }, items.filter { it.category == BoqCategory.REINFORCEMENT }.sumOf { it.quantity }, items.map { it.description to it.total })
+                                sharePdf(context, file)
+                            },
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Description
+                        )
                     }
 
+                    AppButton(
+                        label = "Executive Dashboard",
+                        onClick = { onNavigateToSummary(selectedProjectId) },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        icon = Icons.Default.Analytics,
+                        containerOverride = MaterialTheme.colorScheme.tertiary,
+                        contentOverride = onColorFor(MaterialTheme.colorScheme.tertiary)
+                    )
+
                     Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { onNavigateToExecution(selectedProjectId) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                            Icon(Icons.Default.Construction, null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Execution Logs", color = MaterialTheme.colorScheme.onSecondaryContainer, fontSize = 12.sp)
-                        }
-                        Button(onClick = { onNavigateToMasterBbs(selectedProjectId) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                            Icon(Icons.Default.GridOn, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Master BBS", color = MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 12.sp)
-                        }
+                        AppButton(
+                            label = "Execution Logs",
+                            onClick = { onNavigateToExecution(selectedProjectId) },
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Construction,
+                            containerOverride = MaterialTheme.colorScheme.secondaryContainer,
+                            contentOverride = onColorFor(MaterialTheme.colorScheme.secondaryContainer),
+                            fontSize = 12.sp
+                        )
+                        AppButton(
+                            label = "Master BBS",
+                            onClick = { onNavigateToMasterBbs(selectedProjectId) },
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.GridOn,
+                            containerOverride = MaterialTheme.colorScheme.primaryContainer,
+                            contentOverride = onColorFor(MaterialTheme.colorScheme.primaryContainer),
+                            fontSize = 12.sp
+                        )
                     }
                 }
             }
@@ -334,7 +362,7 @@ fun DesignsBOQContent(
                     item { Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
                 } else if (elementBoqItems.isNotEmpty()) {
                     item {
-                        Text("${selectedDesign?.name ?: "Design"} — Detailed BOQ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                        AppText("${selectedDesign?.name ?: "Design"} — Detailed BOQ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
                     }
                     item {
                         Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
@@ -342,16 +370,16 @@ fun DesignsBOQContent(
                                 elementBoqItems.forEach { item ->
                                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                                         Column(modifier = Modifier.weight(1f)) {
-                                            Text(item.description, style = MaterialTheme.typography.bodySmall)
-                                            Text("${"%.3f".format(item.quantity)} ${item.unit} × ${"%,.0f".format(item.unitPrice)}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                            AppText(item.description, style = MaterialTheme.typography.bodySmall)
+                                            AppText("${"%.3f".format(item.quantity)} ${item.unit} × ${"%,.0f".format(item.unitPrice)}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                                         }
-                                        Text(String.format(Locale.US, "%,.0f EGP", item.total), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                                        AppText(String.format(Locale.US, "%,.0f EGP", item.total), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                                     }
                                     HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
                                 }
                                 Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text("Total", fontWeight = FontWeight.Bold)
-                                    Text(String.format(Locale.US, "%,.0f EGP", elementBoqTotal), fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+                                    AppText("Total", fontWeight = FontWeight.Bold)
+                                    AppText(String.format(Locale.US, "%,.0f EGP", elementBoqTotal), fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
@@ -396,13 +424,13 @@ fun EstimationLogicInfo() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Insights, null, tint = MaterialTheme.colorScheme.secondary)
                 Spacer(Modifier.width(8.dp))
-                Text("How are these values calculated?", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                AppText("How are these values calculated?", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.weight(1f))
                 Icon(if(expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
             }
             if (expanded) {
                 Spacer(Modifier.height(8.dp))
-                Text(
+                AppText(
                     "• Structural quantities are estimated based on 'Built-up Area' and statistical ratios (e.g., 0.45m³ concrete per m² for Residential).\n" +
                     "• Steel weight is calculated as ~100kg per m³ of concrete.\n" +
                     "• Finishing costs use regional averages for 'Super Lux' levels.\n" +
@@ -418,22 +446,22 @@ fun EstimationLogicInfo() {
 fun ProfessionalEstimationCard(res: EstimationEngine.EstimationResult, onExport: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
         Column(modifier = Modifier.padding(24.dp)) {
-            Text(stringResource(R.string.boq_integrated_estimate), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(String.format(Locale.US, "%,.0f %s", res.totalCost, res.currencySymbol), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+            AppText(stringResource(R.string.boq_integrated_estimate), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            AppText(String.format(Locale.US, "%,.0f %s", res.totalCost, res.currencySymbol), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             res.items.forEach { item ->
                 Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(item.name, style = MaterialTheme.typography.bodyMedium)
-                        Text("${String.format(Locale.US, "%.1f", item.quantity)} ${item.unit}", fontSize = 10.sp, color = Color.Gray)
+                        AppText(item.name, style = MaterialTheme.typography.bodyMedium)
+                        AppText("${String.format(Locale.US, "%.1f", item.quantity)} ${item.unit}", fontSize = 10.sp, color = Color.Gray)
                     }
-                    Text(String.format(Locale.US, "%,.0f", item.totalPrice), fontWeight = FontWeight.Bold)
+                    AppText(String.format(Locale.US, "%,.0f", item.totalPrice), fontWeight = FontWeight.Bold)
                 }
             }
             res.investmentData?.let { invest ->
                 Box(modifier = Modifier.padding(top = 16.dp).background(MaterialTheme.colorScheme.primary.copy(0.1f), RoundedCornerShape(12.dp)).padding(16.dp)) {
                     Column {
-                        Text(stringResource(R.string.boq_feasibility_section), fontWeight = FontWeight.Bold)
+                        AppText(stringResource(R.string.boq_feasibility_section), fontWeight = FontWeight.Bold)
                         ResultSummaryRow(stringResource(R.string.boq_expected_roi), "${"%.1f".format(invest.roi)}%")
                         ResultSummaryRow(stringResource(R.string.boq_net_profit), String.format(Locale.US, "%,.0f %s", invest.netProfit, res.currencySymbol))
                         ResultSummaryRow(stringResource(R.string.boq_profit_margin), "${"%.1f".format(invest.profitMargin)}%")
@@ -445,9 +473,14 @@ fun ProfessionalEstimationCard(res: EstimationEngine.EstimationResult, onExport:
                     }
                 }
             }
-            Button(onClick = onExport, modifier = Modifier.fillMaxWidth().padding(top = 16.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) {
-                Icon(Icons.Default.PictureAsPdf, null); Spacer(Modifier.width(8.dp)); Text(stringResource(R.string.boq_export_report_pdf))
-            }
+            AppButton(
+                label = stringResource(R.string.boq_export_report_pdf),
+                onClick = onExport,
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                icon = Icons.Default.PictureAsPdf,
+                containerOverride = MaterialTheme.colorScheme.secondary,
+                contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
+            )
         }
     }
 }
@@ -455,16 +488,16 @@ fun ProfessionalEstimationCard(res: EstimationEngine.EstimationResult, onExport:
 @Composable
 fun ResultSummaryRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = MaterialTheme.typography.bodySmall)
-        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+        AppText(label, style = MaterialTheme.typography.bodySmall)
+        AppText(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 fun InvestmentSmallCard(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-        Text(value, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+        AppText(label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        AppText(value, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -483,10 +516,10 @@ fun DesignBOQCard(design: com.civileg.app.db.Design, isSelected: Boolean = false
             Icon(if (isSelected) Icons.Default.FolderOpen else Icons.Default.Description, null, tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(design.name, fontWeight = FontWeight.Bold)
-                Text(design.type.name, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                AppText(design.name, fontWeight = FontWeight.Bold)
+                AppText(design.type.name, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
             }
-            Text(String.format(Locale.US, "%,.0f EGP", design.totalCost), fontWeight = FontWeight.Black)
+            AppText(String.format(Locale.US, "%,.0f EGP", design.totalCost), fontWeight = FontWeight.Black)
         }
     }
 }
@@ -495,8 +528,8 @@ fun DesignBOQCard(design: com.civileg.app.db.Design, isSelected: Boolean = false
 fun TotalCostCard(cost: Double) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(24.dp)) {
-            Text(stringResource(R.string.boq_total_saved_cost), color = Color.White.copy(alpha = 0.8f))
-            Text(String.format(Locale.US, "%,.0f EGP", cost), color = Color.White, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
+            AppText(stringResource(R.string.boq_total_saved_cost), color = Color.White.copy(alpha = 0.8f))
+            AppText(String.format(Locale.US, "%,.0f EGP", cost), color = Color.White, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -506,7 +539,7 @@ fun EmptyStateView() {
     Box(modifier = Modifier.fillMaxSize().padding(top = 100.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Default.FolderOpen, null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
-            Text(stringResource(R.string.boq_no_projects_found), color = Color.Gray); Text(stringResource(R.string.boq_add_first_project), fontSize = 12.sp, color = Color.Gray)
+            AppText(stringResource(R.string.boq_no_projects_found), color = Color.Gray); AppText(stringResource(R.string.boq_add_first_project), fontSize = 12.sp, color = Color.Gray)
         }
     }
 }

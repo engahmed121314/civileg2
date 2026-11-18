@@ -20,7 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,12 +74,14 @@ fun AppButton(
     fillMaxWidth: Boolean = true,
     containerOverride: Color? = null,
     contentOverride: Color? = null,
-    fontWeight: FontWeight? = null
+    fontWeight: FontWeight? = null,
+    fontSize: TextUnit = TextUnit.Unspecified
 ) {
     val scheme = MaterialTheme.colorScheme
     val container = containerOverride ?: style.containerColor(scheme)
     val content = contentOverride ?: style.contentColor(scheme)
-    val textStyle = MaterialTheme.typography.labelLarge
+    val baseStyle = MaterialTheme.typography.labelLarge
+    val textStyle = if (fontSize == TextUnit.Unspecified) baseStyle else baseStyle.copy(fontSize = fontSize)
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
 
