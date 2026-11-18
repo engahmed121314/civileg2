@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -65,11 +66,15 @@ fun AppButton(
     labelShort: String? = null,
     icon: ImageVector? = null,
     style: AppButtonStyle = AppButtonStyle.Primary,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    loading: Boolean = false,
+    fillMaxWidth: Boolean = true,
+    containerOverride: Color? = null,
+    contentOverride: Color? = null
 ) {
     val scheme = MaterialTheme.colorScheme
-    val container = style.containerColor(scheme)
-    val content = style.contentColor(scheme)
+    val container = containerOverride ?: style.containerColor(scheme)
+    val content = contentOverride ?: style.contentColor(scheme)
     val textStyle = MaterialTheme.typography.labelLarge
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -91,8 +96,7 @@ fun AppButton(
         Button(
             onClick = onClick,
             enabled = enabled,
-            modifier = Modifier
-                .fillMaxWidth()
+            modifier = (if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
                 .heightIn(min = 48.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
@@ -104,18 +108,26 @@ fun AppButton(
             border = if (style == AppButtonStyle.Outline) BorderStroke(1.dp, scheme.primary) else null,
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            if (icon != null) {
-                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = content
+                )
+            } else {
+                if (icon != null) {
+                    Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(
+                    text = shown,
+                    style = textStyle,
+                    color = content,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-            Text(
-                text = shown,
-                style = textStyle,
-                color = content,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }

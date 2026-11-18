@@ -3,9 +3,16 @@ package com.civileg.app.ui.components
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 
 /**
  * Text roles (§12.4). Each role maps to a typography style, a default color and an
@@ -31,45 +38,88 @@ enum class AppTextRole {
 /**
  * The single text composable of the app.
  *
+ * It is a drop-in replacement for [Text]: every parameter of `Text` is accepted, so
+ * a screen can be migrated call by call without visual change. Passing a [role]
+ * instead applies the app's typography/color/overflow policy for that role:
+ *
  *  - colors come from the theme roles (no raw colors in screens, R13);
- *  - [AppTextRole.Caption] is single-line with ellipsis, [AppTextRole.Body]
- *    wraps, and [AppTextRole.Result] is never ellipsized so a value can always be
- *    read in full.
+ *  - [AppTextRole.Caption] is single-line with ellipsis;
+ *  - [AppTextRole.Result] is never ellipsized, so a value can always be read in full.
  */
 @Composable
 fun AppText(
     text: String,
-    modifier: Modifier = Modifier,
-    role: AppTextRole = AppTextRole.Body,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
     color: Color = Color.Unspecified,
-    maxLines: Int = Int.MAX_VALUE
+    fontSize: TextUnit = TextUnit.Unspecified,
+    fontStyle: FontStyle? = null,
+    fontWeight: FontWeight? = null,
+    fontFamily: FontFamily? = null,
+    letterSpacing: TextUnit = TextUnit.Unspecified,
+    textDecoration: TextDecoration? = null,
+    lineHeight: TextUnit = TextUnit.Unspecified,
+    overflow: TextOverflow = TextOverflow.Clip,
+    softWrap: Boolean = true,
+    maxLines: Int = Int.MAX_VALUE,
+    textAlign: TextAlign? = null,
+    style: TextStyle = LocalTextStyle.current,
+    role: AppTextRole? = null
 ) {
     val scheme = MaterialTheme.colorScheme
-    val style = when (role) {
-        AppTextRole.Headline -> MaterialTheme.typography.headlineSmall
-        AppTextRole.Title -> MaterialTheme.typography.titleMedium
-        AppTextRole.Body -> MaterialTheme.typography.bodyMedium
-        AppTextRole.Caption -> MaterialTheme.typography.bodySmall
-        AppTextRole.Result -> MaterialTheme.typography.titleMedium
-    }
-    val defaultColor = when (role) {
-        AppTextRole.Caption -> scheme.onSurfaceVariant
-        else -> scheme.onSurface
-    }
-    val effectiveMaxLines = when (role) {
-        AppTextRole.Caption -> minOf(maxLines, 1)
-        AppTextRole.Headline, AppTextRole.Title -> minOf(maxLines, 2)
-        AppTextRole.Body -> maxLines
-        AppTextRole.Result -> Int.MAX_VALUE
+    var effectiveColor = color
+    var effectiveStyle = style
+    var effectiveMaxLines = maxLines
+    var effectiveOverflow = overflow
+    var effectiveSoftWrap = softWrap
+
+    if (role != null) {
+        effectiveStyle = when (role) {
+            AppTextRole.Headline -> MaterialTheme.typography.headlineSmall
+            AppTextRole.Title -> MaterialTheme.typography.titleMedium
+            AppTextRole.Body -> MaterialTheme.typography.bodyMedium
+            AppTextRole.Caption -> MaterialTheme.typography.bodySmall
+            AppTextRole.Result -> MaterialTheme.typography.titleMedium
+        }
+        if (color == Color.Unspecified) {
+            effectiveColor = when (role) {
+                AppTextRole.Caption -> scheme.onSurfaceVariant
+                else -> scheme.onSurface
+            }
+        }
+        when (role) {
+            AppTextRole.Caption -> {
+                effectiveMaxLines = minOf(maxLines, 1)
+                effectiveOverflow = TextOverflow.Ellipsis
+                effectiveSoftWrap = false
+            }
+            AppTextRole.Headline, AppTextRole.Title -> {
+                effectiveMaxLines = minOf(maxLines, 2)
+                effectiveOverflow = TextOverflow.Ellipsis
+            }
+            AppTextRole.Result -> {
+                effectiveMaxLines = Int.MAX_VALUE
+                effectiveOverflow = TextOverflow.Clip
+                effectiveSoftWrap = true
+            }
+            AppTextRole.Body -> Unit
+        }
     }
 
     Text(
         text = text,
         modifier = modifier,
-        color = if (color == Color.Unspecified) defaultColor else color,
-        style = style,
+        color = effectiveColor,
+        fontSize = fontSize,
+        fontStyle = fontStyle,
+        fontWeight = fontWeight,
+        fontFamily = fontFamily,
+        letterSpacing = letterSpacing,
+        textDecoration = textDecoration,
+        lineHeight = lineHeight,
+        overflow = effectiveOverflow,
+        softWrap = effectiveSoftWrap,
         maxLines = effectiveMaxLines,
-        softWrap = role != AppTextRole.Caption,
-        overflow = if (role == AppTextRole.Result) TextOverflow.Clip else TextOverflow.Ellipsis
+        textAlign = textAlign,
+        style = effectiveStyle
     )
 }
