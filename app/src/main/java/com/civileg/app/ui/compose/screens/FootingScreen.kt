@@ -49,6 +49,11 @@ import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,7 +124,7 @@ fun FootingScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_footing_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_footing_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -142,7 +147,7 @@ fun FootingScreen(
 
             item {
                 Column {
-                    Text(stringResource(R.string.footing_type_label), fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
+                    AppText(stringResource(R.string.footing_type_label), fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
                     ExposedDropdownMenuBox(
                         expanded = expandedType,
                         onExpandedChange = { expandedType = !expandedType }
@@ -161,7 +166,7 @@ fun FootingScreen(
                         ) {
                             CalculatorEngine.FootingType.entries.forEach { type ->
                                 DropdownMenuItem(
-                                    text = { Text(type.displayName) },
+                                    text = { AppText(type.displayName) },
                                     onClick = {
                                         selectedType = type
                                         expandedType = false
@@ -204,7 +209,7 @@ fun FootingScreen(
             }
 
             item {
-                Text(stringResource(R.string.footing_boundary_label), fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.footing_boundary_label), fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FootingInputField(maxLeft, stringResource(R.string.footing_max_left_label), { maxLeft = it }, Modifier.weight(1f))
                     FootingInputField(maxRight, stringResource(R.string.footing_max_right_label), { maxRight = it }, Modifier.weight(1f))
@@ -212,7 +217,7 @@ fun FootingScreen(
             }
 
             item {
-                Text(stringResource(R.string.footing_rebar_options), fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.footing_rebar_options), fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FootingInputField(barDiameter, stringResource(R.string.footing_bar_diameter), { barDiameter = it }, Modifier.weight(1f))
                     FootingInputField(barSpacing, stringResource(R.string.footing_bar_spacing), { barSpacing = it }, Modifier.weight(1f))
@@ -227,7 +232,7 @@ fun FootingScreen(
             }
 
             item {
-                Text(stringResource(R.string.boq_site_title), fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.boq_site_title), fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     FootingInputField(excavationDepth, stringResource(R.string.boq_excavation_depth), { excavationDepth = it }, Modifier.weight(1f))
                     FootingInputField(workingSpace, stringResource(R.string.boq_working_space), { workingSpace = it }, Modifier.weight(1f))
@@ -246,16 +251,17 @@ fun FootingScreen(
                         && colWidth.toDoubleOrNull()?.let { it > 0 } == true
                         && colLength.toDoubleOrNull()?.let { it > 0 } == true
                 if (!inputValid) {
-                    Text(
+                    AppText(
                         stringResource(R.string.input_invalid_numbers),
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(bottom = 6.dp)
                     )
                 }
-                Button(
+                AppButton(
+                    label = stringResource(R.string.footing_design_now),
                     onClick = {
-                        if (!inputValid) return@Button
+                        if (!inputValid) return@AppButton
                         viewModel.excavationDepthM = excavationDepth.toDoubleOrNull() ?: 0.0
                         viewModel.workingSpaceM = workingSpace.toDoubleOrNull() ?: 0.5
                         viewModel.blindingThicknessM = blindingThickness.toDoubleOrNull() ?: 0.0
@@ -277,18 +283,10 @@ fun FootingScreen(
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading && inputValid
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Icon(Icons.Default.Calculate, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.footing_design_now))
+                    enabled = !isLoading && inputValid,
+                    loading = isLoading,
+                    icon = Icons.Default.Calculate
+                )
                     }
                 }
             }
@@ -313,14 +311,14 @@ fun FootingScreen(
                                         Icon(if (res.isOptimal) Icons.Default.Verified else Icons.Default.Info, 
                                             contentDescription = null, tint = ecoColor)
                                         Spacer(Modifier.width(8.dp))
-                                        Text(
+                                        AppText(
                                             if (res.isOptimal) stringResource(R.string.footing_safe_economical) 
                                             else stringResource(R.string.footing_safe_review),
                                             fontWeight = FontWeight.Bold,
                                             color = ecoColor
                                         )
                                     }
-                                    Text(
+                                    AppText(
                                         stringResource(R.string.consultant_ratio),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -344,7 +342,7 @@ fun FootingScreen(
                                         },
                                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                     )
-                                    Text(
+                                    AppText(
                                         "${(res.utilizationRatio * 100).toInt()}%",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp
@@ -364,7 +362,7 @@ fun FootingScreen(
                             ResultRow(stringResource(R.string.column_estimated_cost), "${"%.2f".format(res.cost)}")
                             if (selectedType == CalculatorEngine.FootingType.COMBINED) {
                                 Spacer(Modifier.height(8.dp))
-                                Text(
+                                AppText(
                                     "Method: unified combined-footing design — centroid-balanced soil pressure, " +
                                         "longitudinal and transverse bending, one-way and punching shear. " +
                                         "ECP 203-2025 uses the dedicated combined-footing engine; " +
@@ -413,7 +411,7 @@ fun FootingScreen(
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
+                                AppText(
                                     stringResource(R.string.safety_checks),
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.labelMedium,
@@ -427,7 +425,7 @@ fun FootingScreen(
                                             .padding(vertical = 4.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
+                                        AppText(
                                             if (check.isSafe) "✓" else "✗",
                                             color = if (check.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828),
                                             fontWeight = FontWeight.Bold,
@@ -435,8 +433,8 @@ fun FootingScreen(
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                            Text(check.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                                            Text(
+                                            AppText(check.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                            AppText(
                                                 "${String.format("%.2f", check.value)} / ${String.format("%.2f", check.limit)} ${check.unit}",
                                                 fontSize = 11.sp,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -451,7 +449,8 @@ fun FootingScreen(
 
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.pdf_report),
                             onClick = {
                                 scope.launch {
                                     val captureBitmap = try {
@@ -462,29 +461,19 @@ fun FootingScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
                             enabled = !isExporting,
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                        ) {
-                            if (isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
-                            }
-                        }
+                            loading = isExporting,
+                            icon = Icons.Default.PictureAsPdf
+                        )
 
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.save),
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Icon(Icons.Default.Save, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
-                        }
+                            icon = Icons.Default.Save,
+                            containerOverride = MaterialTheme.colorScheme.secondary,
+                            contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
+                        )
                     }
                 }
 
@@ -660,7 +649,7 @@ fun FootingScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(stringResource(R.string.loading), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        AppText(stringResource(R.string.loading), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -671,19 +660,19 @@ fun FootingScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text(stringResource(R.string.save_design_in_project)) },
+            title = { AppText(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text(stringResource(R.string.footing_name_hint)) },
+                        label = { AppText(stringResource(R.string.footing_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
+                    AppText(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text(stringResource(R.string.no_projects_available), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        AppText(stringResource(R.string.no_projects_available), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -696,25 +685,30 @@ fun FootingScreen(
                                     selected = selectedProjectId == project.id,
                                     onClick = { selectedProjectId = project.id }
                                 )
-                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+                                AppText(project.name, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     }
                 }
             },
             confirmButton = {
-                Button(
+                AppButton(
+                    label = stringResource(R.string.save),
+                    fillMaxWidth = false,
                     enabled = selectedProjectId != -1L,
                     onClick = {
                         result?.let { viewModel.saveFooting(selectedProjectId, designName, it) }
                         showSaveDialog = false
                     }
-                ) {
-                    Text(stringResource(R.string.save))
-                }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
+                AppButton(
+                    label = stringResource(R.string.cancel),
+                    onClick = { showSaveDialog = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -725,7 +719,7 @@ private fun SectionHeader(title: String, iconRes: Int) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
         Icon(painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+        AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
     }
 }
 
@@ -734,7 +728,7 @@ private fun FootingInputField(value: String, label: String, onValueChange: (Stri
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = { AppText(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
         shape = RoundedCornerShape(12.dp)
@@ -744,8 +738,8 @@ private fun FootingInputField(value: String, label: String, onValueChange: (Stri
 @Composable
 private fun ResultRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label)
-        Text(value, fontWeight = FontWeight.Bold)
+        AppText(label)
+        AppText(value, fontWeight = FontWeight.Bold)
     }
 }
 

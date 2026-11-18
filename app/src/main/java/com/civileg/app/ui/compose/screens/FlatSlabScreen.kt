@@ -527,7 +527,7 @@ item {
                             title = stringResource(R.string.fs_title),
                             subtitle = "Flat Slab Panel Plan",
                             drawingHeightDp = drawingHeight,
-                            viewModes = listOf("All", "Plan", "Strips"),
+                            viewModes = listOf("All", "Plan", "Sec A-A", "Sec B-B", "BBS Table"),
                             selectedViewMode = selectedViewMode,
                             onViewModeChanged = { selectedViewMode = it },
                             drawingContent = {
@@ -546,6 +546,7 @@ item {
                                     midTopRebar = res.middleStripTopRebar,
                                     midBotRebar = res.middleStripBotRebar,
                                     isSafe = res.isSafe, panelType = panelType,
+                                    viewMode = selectedViewMode,
                                     resultSummary = flatSlabDrawingSummary(res),
                                     modifier = Modifier.fillMaxSize()
                                 )

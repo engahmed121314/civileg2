@@ -8,7 +8,10 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import com.civileg.app.domain.calculations.InputGuard
@@ -17,18 +20,28 @@ import com.civileg.app.domain.PanelType
 import com.civileg.app.domain.RebarResult
 import kotlin.math.*
 
+// ============================================================================
+// PROFESSIONAL FLAT SLAB ENGINEERING DRAWING
+// v2.0 — Comprehensive Multi-View Flat Slab Detailing
+// Codes: ECP 203-2020 Ch. 6, ACI 318-19 Ch. 8 & 13, SBC 304-2018
+// ============================================================================
+
 /**
- * Professional Flat Slab Plan Drawing
+ * Professional Flat Slab Engineering Drawing
  *
- * Shows:
- *  - Panel outline with dimensions
- *  - Column locations
- *  - Column strip / middle strip boundaries (dashed lines)
- *  - Drop panel outline (if any)
- *  - Reinforcement annotation in each strip region
- *  - Punching shear critical perimeter
- *  - Status indicator (safe/unsafe)
- *  - Legend / title block
+ * Renders:
+ *  - viewMode 0 (All):         Plan + Section A-A (Column Strip / Drop) +
+ *                              Section B-B (Middle Strip) + BBS Schedule Table
+ *  - viewMode 1 (Plan View):   Full panel plan with column & middle strip boundaries,
+ *                              drop panels, columns, punching shear bo perimeter,
+ *                              top and bottom reinforcement tags, and dimensions
+ *  - viewMode 2 (Section A-A): Column strip cross-section showing slab thickness,
+ *                              drop panel depth, column stub, top negative rebar
+ *                              curtailment (0.3 Ln), bottom positive rebar, punching cone
+ *  - viewMode 3 (Section B-B): Middle strip cross-section showing continuous bottom rebar,
+ *                              curtailed top rebar (0.22 Ln), spacer chairs
+ *  - viewMode 4 (BBS Table):   Full Bar Bending Schedule with bar marks, shapes,
+ *                              diameters, counts, lengths, and total steel weight
  */
 @Composable
 fun ProfessionalFlatSlabDrawing(
@@ -39,6 +52,7 @@ fun ProfessionalFlatSlabDrawing(
     columnDepth: Double,   // mm
     dropSizeX: Double = 0.0,
     dropSizeY: Double = 0.0,
+    dropThickness: Double = 0.0, // mm (additional thickness below slab, e.g. 50-100mm)
     colStripWidthX: Double = 0.0,
     colStripWidthY: Double = 0.0,
     colTopRebar: RebarResult,
@@ -47,316 +61,576 @@ fun ProfessionalFlatSlabDrawing(
     midBotRebar: RebarResult,
     isSafe: Boolean = true,
     panelType: PanelType = PanelType.INTERIOR,
+    viewMode: Int = 0,
     designCode: DesignCode = DesignCode.ECP,
     resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier
 ) {
-    // ── InputGuard: validate key dimensions before drawing ─────────────────
-    // Flat slab panel dimensions must be positive for valid layout.
-    // InputGuard raises IllegalArgumentException on invalid input (ADR-010).
+    // ── InputGuard ─────────────────────────────────────────────────────────
     InputGuard.positive("lx", lx)
     InputGuard.positive("ly", ly)
     InputGuard.positive("slabThickness", slabThickness)
     InputGuard.positive("columnWidth", columnWidth)
     InputGuard.positive("columnDepth", columnDepth)
 
-    // ── Code-reference annotation ──────────────────────────────────────────
-    // ECP 203-2020: direct design method per ECP, Cm/Cs ratio from ECP
-    // ACI 318-19:  Chapter 13 — two-way slabs, direct design / equivalent frame
-    // SBC 304-2018: adopts ACI Chapter 13 with SBC load factors
-    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
-    // ── Responsive config ──────────────────────────────────────────────────
+    val codeLabel = designCode.version
     val cfg = drawingDimensionsConfig()
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        val w = size.width
-        val h = size.height
-        val density = this.density
+        val W = size.width
+        val H = size.height
 
-        // ── Color Palette ────────────────────────────────────────
-        val bgDark = Color(0xFF1A1A2E)
-        val panelFill = Color(0xFF2A2A40)
-        val panelStroke = Color(0xFF607D8B)
-        val columnFill = Color(0xFF78909C)
-        val columnStroke = Color(0xFFB0BEC5)
-        val dropFill = Color(0xFF37474F)
-        val dropStroke = Color(0xFF546E7A)
-        val colStripColor = Color(0xFF1B5E20)
-        val midStripColor = Color(0xFF0D47A1)
-        val topBarColor = Color(0xFFE53935)
-        val botBarColor = Color(0xFF1565C0)
-        val dimColor = Color(0xFFB0BEC5)
-        val textColor = Color(0xFFECEFF1)
-        val headerBg = Color(0xFF0D47A1)
-        val safeColor = Color(0xFF2E7D32)
-        val unsafeColor = Color(0xFFC62828)
-        val shearPerimColor = Color(0xFFFF9800)
-        val gridColor = Color(0x1AFFFFFF)
+        // ── Color Palette ──────────────────────────────────────────────────
+        val C = DrawingColorDefaults
+        val bgDark          = Color(0xFF1A1A2E)
+        val panelFill       = Color(0xFF242438)
+        val panelStroke     = Color(0xFF546E7A)
+        val columnFill      = Color(0xFF78909C)
+        val columnStroke    = Color(0xFFB0BEC5)
+        val dropFill        = Color(0xFF37474F)
+        val dropStroke      = Color(0xFF78909C)
+        val colStripColor   = Color(0xFF2E7D32)
+        val midStripColor   = Color(0xFF1565C0)
+        val topBarColor     = C.SecondaryRed
+        val botBarColor     = C.RebarBlue
+        val dimColor        = C.DimensionWhite
+        val textColor       = C.DimensionWhite
+        val safeColor       = C.SafeGreen
+        val unsafeColor     = C.UnsafeRed
+        val shearPerimColor = C.WarningOrange
+        val gridColor       = C.GridLine
 
-        // ── Background ───────────────────────────────────────────
-        drawRect(color = bgDark, topLeft = Offset.Zero, size = size)
+        val safeDropThick = if (dropThickness > 10.0) dropThickness else if (dropSizeX > 0.0) slabThickness * 0.25 else 0.0
 
-        // ── Layout calculations ──────────────────────────────────
-        val margin = cfg.margin * density
-        val titleH = 32f * density
-        val legendH = 90f * density
-        val drawAreaW = w - 2 * margin
-        val drawAreaH = h - 2 * margin - titleH - legendH
-        val drawTop = margin + titleH
+        val margin = cfg.margin
+        val headerH = cfg.headerHeight + 10f
 
-        // Scale: fit lx × ly into drawArea (maintain aspect ratio)
-        val panelAspect = lx / ly
-        val areaAspect = drawAreaW / drawAreaH
-        var panelW: Float
-        var panelH: Float
-        if (panelAspect > areaAspect) {
-            panelW = drawAreaW
-            panelH = drawAreaW / panelAspect.toFloat()
-        } else {
-            panelH = drawAreaH
-            panelW = drawAreaH * panelAspect.toFloat()
-        }
-        val panelX = margin + (drawAreaW - panelW) / 2f
-        val panelY = drawTop + (drawAreaH - panelH) / 2f
+        // ── Header band ────────────────────────────────────────────────────
+        drawFlatSlabHeader(W, cfg, codeLabel, panelType, isSafe, textColor, safeColor, unsafeColor)
 
-        // Scale factor: pixels per meter
-        val scale = (panelW / lx).toFloat()
-        val colWPx = (columnWidth / 1000.0 * scale).toFloat()
-        val colDPx = (columnDepth / 1000.0 * scale).toFloat()
-        val dropXPx = (dropSizeX / 1000.0 * scale).toFloat()
-        val dropYPx = (dropSizeY / 1000.0 * scale).toFloat()
-
-        // Column strip widths in pixels (convert from mm to m then to px)
-        val colStripXPx = (colStripWidthX / 1000.0 * scale).toFloat()
-        val colStripYPx = (colStripWidthY / 1000.0 * scale).toFloat()
-
-        // ── Zone label ───────────────────────────────────────────
-        drawZoneLabel(margin, drawTop + 4f, "PLAN", cfg)
-
-        // ── Grid lines ───────────────────────────────────────────
-        for (i in 1 until 4) {
-            val gx = panelX + panelW * i / 4f
-            drawLine(gridColor, Offset(gx, panelY), Offset(gx, panelY + panelH), 0.5f)
-        }
-        for (i in 1 until 4) {
-            val gy = panelY + panelH * i / 4f
-            drawLine(gridColor, Offset(panelX, gy), Offset(panelX + panelW, gy), 0.5f)
-        }
-
-        // ── Drop panel (if any) ──────────────────────────────────
-        if (dropXPx > 0 && dropYPx > 0) {
-            val dx = panelX + panelW / 2f - dropXPx / 2f
-            val dy = panelY + panelH / 2f - dropYPx / 2f
-            drawRect(color = dropFill, topLeft = Offset(dx, dy), size = Size(dropXPx, dropYPx))
-            drawRect(color = dropStroke, topLeft = Offset(dx, dy), size = Size(dropXPx, dropYPx), style = Stroke(1.5f))
-            drawTextAnnotated(
-                "Drop Panel",
-                dx + dropXPx / 2f, dy + dropYPx / 2f - 8f,
-                textColor, 14f, center = true, bold = true
-            )
-            drawTextAnnotated(
-                String.format("%.0f × %.0f mm", dropSizeX, dropSizeY),
-                dx + dropXPx / 2f, dy + dropYPx / 2f + 8f,
-                dimColor, 12f, center = true
-            )
-        }
-
-        // ── Column strip / middle strip dashed lines ─────────────
-        val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
-
-        // X-direction column strip boundaries (vertical lines)
-        val colStripEdgeLeftX = panelX + panelW / 2f - colStripXPx / 2f
-        val colStripEdgeRightX = panelX + panelW / 2f + colStripXPx / 2f
-        drawLine(colStripColor, Offset(colStripEdgeLeftX, panelY),
-            Offset(colStripEdgeLeftX, panelY + panelH), 1.5f, pathEffect = dashEffect)
-        drawLine(colStripColor, Offset(colStripEdgeRightX, panelY),
-            Offset(colStripEdgeRightX, panelY + panelH), 1.5f, pathEffect = dashEffect)
-
-        // Y-direction column strip boundaries (horizontal lines)
-        val colStripEdgeTopY = panelY + panelH / 2f - colStripYPx / 2f
-        val colStripEdgeBotY = panelY + panelH / 2f + colStripYPx / 2f
-        drawLine(colStripColor, Offset(panelX, colStripEdgeTopY),
-            Offset(panelX + panelW, colStripEdgeTopY), 1.5f, pathEffect = dashEffect)
-        drawLine(colStripColor, Offset(panelX, colStripEdgeBotY),
-            Offset(panelX + panelW, colStripEdgeBotY), 1.5f, pathEffect = dashEffect)
-
-        // ── Strip labels ─────────────────────────────────────────
-        // Column strip label
-        val csLabelX = panelX + panelW / 2f
-        val csLabelY = panelY + 16f
-        drawRoundRect(colStripColor.copy(alpha = 0.3f),
-            Offset(csLabelX - 40f, csLabelY - 10f), Size(80f, 20f),
-            cornerRadius = CornerRadius(4f))
-        drawTextAnnotated("Column Strip", csLabelX, csLabelY - 4f, Color.White, 11f, center = true, bold = true)
-
-        // Middle strip labels
-        val msLabelX = panelX + panelW / 4f
-        drawTextAnnotated("Mid", msLabelX, panelY + panelH / 2f - 4f, midStripColor, 11f, center = true)
-        val msLabelX2 = panelX + 3f * panelW / 4f
-        drawTextAnnotated("Mid", msLabelX2, panelY + panelH / 2f - 4f, midStripColor, 11f, center = true)
-
-        // ── Panel outline ─────────────────────────────────────────
-        drawRect(color = panelStroke, topLeft = Offset(panelX, panelY), size = Size(panelW, panelH), style = Stroke(2f))
-
-        // ── Punching shear critical perimeter (dashed rectangle) ──
-        val punchOffset = 15f  // approximate d/2 in pixels
-        val px1 = panelX + panelW / 2f - colWPx / 2f - punchOffset
-        val py1 = panelY + panelH / 2f - colDPx / 2f - punchOffset
-        val pW = colWPx + 2 * punchOffset
-        val pH = colDPx + 2 * punchOffset
-        drawRect(color = shearPerimColor, topLeft = Offset(px1, py1), size = Size(pW, pH), style = Stroke(1.5f,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f), 0f)
-        ))
-        drawTextAnnotated("bo", px1 + pW + 4f, py1 + pH / 2f - 6f, shearPerimColor, 11f)
-
-        // ── Columns (4 corners of center) ────────────────────────
-        val colPositions = listOf(
-            Offset(panelX, panelY),                          // top-left
-            Offset(panelX + panelW - colWPx, panelY),         // top-right
-            Offset(panelX, panelY + panelH - colDPx),         // bottom-left
-            Offset(panelX + panelW - colWPx, panelY + panelH - colDPx)  // bottom-right
-        )
-        colPositions.forEach { pos ->
-            drawRect(color = columnFill, topLeft = pos, size = Size(colWPx, colDPx))
-            drawRect(color = columnStroke, topLeft = pos, size = Size(colWPx, colDPx), style = Stroke(1.5f))
-            // Cross-hatch for column
-            for (i in 1..3) {
-                val hx = pos.x + colWPx * i / 4f
-                drawLine(columnStroke, Offset(hx, pos.y + 2f), Offset(hx, pos.y + colDPx - 2f), 0.5f)
+        // ── Routing by viewMode ────────────────────────────────────────────
+        when (viewMode) {
+            1 -> {
+                // Plan View Only
+                drawZoneLabel(margin, headerH + 6f, "PANEL PLAN & STRIPS", cfg)
+                drawFlatSlabPlanView(
+                    margin, headerH + 16f, W - 2 * margin, H - headerH - margin * 2.5f,
+                    lx, ly, slabThickness, columnWidth, columnDepth,
+                    dropSizeX, dropSizeY, colStripWidthX, colStripWidthY,
+                    colTopRebar, colBotRebar, midTopRebar, midBotRebar,
+                    panelFill, panelStroke, columnFill, columnStroke,
+                    dropFill, dropStroke, colStripColor, midStripColor,
+                    topBarColor, botBarColor, shearPerimColor, dimColor, textColor, gridColor,
+                    cfg
+                )
             }
-            for (i in 1..3) {
-                val hy = pos.y + colDPx * i / 4f
-                drawLine(columnStroke, Offset(pos.x + 2f, hy), Offset(pos.x + colWPx - 2f, hy), 0.5f)
+            2 -> {
+                // Section A-A: Column Strip & Drop Panel
+                drawZoneLabel(margin, headerH + 6f, "SECTION A-A: COLUMN STRIP & DROP PANEL", cfg)
+                drawFlatSlabSectionAA(
+                    margin, headerH + 16f, W - 2 * margin, H - headerH - margin * 2.5f,
+                    lx, slabThickness, columnWidth, dropSizeX, safeDropThick,
+                    colTopRebar, colBotRebar,
+                    panelFill, panelStroke, columnFill, columnStroke,
+                    dropFill, dropStroke, topBarColor, botBarColor, shearPerimColor,
+                    dimColor, textColor, cfg, designCode
+                )
+            }
+            3 -> {
+                // Section B-B: Middle Strip
+                drawZoneLabel(margin, headerH + 6f, "SECTION B-B: MIDDLE STRIP", cfg)
+                drawFlatSlabSectionBB(
+                    margin, headerH + 16f, W - 2 * margin, H - headerH - margin * 2.5f,
+                    lx, slabThickness, columnWidth,
+                    midTopRebar, midBotRebar,
+                    panelFill, panelStroke, columnFill, columnStroke,
+                    topBarColor, botBarColor, dimColor, textColor, cfg, designCode
+                )
+            }
+            4 -> {
+                // BBS Schedule Table View
+                drawZoneLabel(margin, headerH + 6f, "BAR BENDING SCHEDULE (BBS)", cfg)
+                drawFlatSlabBBSTable(
+                    margin, headerH + 16f, W - 2 * margin, H - headerH - margin * 2.5f,
+                    lx, ly, slabThickness, columnWidth, columnDepth,
+                    colTopRebar, colBotRebar, midTopRebar, midBotRebar,
+                    topBarColor, botBarColor, dimColor, textColor, cfg
+                )
+            }
+            else -> {
+                // viewMode 0 (All): Multi-view layout
+                val topH = (H - headerH - margin) * 0.46f
+                val botH = (H - headerH - margin) * 0.44f
+                val topY = headerH + 10f
+                val botY = topY + topH + 14f
+                val halfW = (W - 3 * margin) / 2f
+
+                drawSectionSeparator(botY - 7f, W, "SECTIONS & BBS REINFORCEMENT SCHEDULE", cfg)
+                drawCombinedSectionLabel(H * 0.015f, W, listOf("Plan", "Sec A-A", "Sec B-B", "BBS"), cfg)
+
+                // Top-Left: Plan View
+                drawZoneLabel(margin, topY + 2f, "PLAN", cfg)
+                drawFlatSlabPlanView(
+                    margin, topY + 12f, halfW, topH - 16f,
+                    lx, ly, slabThickness, columnWidth, columnDepth,
+                    dropSizeX, dropSizeY, colStripWidthX, colStripWidthY,
+                    colTopRebar, colBotRebar, midTopRebar, midBotRebar,
+                    panelFill, panelStroke, columnFill, columnStroke,
+                    dropFill, dropStroke, colStripColor, midStripColor,
+                    topBarColor, botBarColor, shearPerimColor, dimColor, textColor, gridColor,
+                    cfg
+                )
+
+                // Top-Right: Section A-A (Column Strip)
+                val secLeft = margin + halfW + margin
+                drawZoneLabel(secLeft, topY + 2f, "SECTION A-A (COL STRIP)", cfg)
+                drawFlatSlabSectionAA(
+                    secLeft, topY + 12f, halfW, topH - 16f,
+                    lx, slabThickness, columnWidth, dropSizeX, safeDropThick,
+                    colTopRebar, colBotRebar,
+                    panelFill, panelStroke, columnFill, columnStroke,
+                    dropFill, dropStroke, topBarColor, botBarColor, shearPerimColor,
+                    dimColor, textColor, cfg, designCode
+                )
+
+                // Bottom-Left: Section B-B (Middle Strip)
+                drawZoneLabel(margin, botY + 2f, "SECTION B-B (MID STRIP)", cfg)
+                drawFlatSlabSectionBB(
+                    margin, botY + 12f, halfW, botH - 16f,
+                    lx, slabThickness, columnWidth,
+                    midTopRebar, midBotRebar,
+                    panelFill, panelStroke, columnFill, columnStroke,
+                    topBarColor, botBarColor, dimColor, textColor, cfg, designCode
+                )
+
+                // Bottom-Right: BBS Schedule Table
+                val tblLeft = margin + halfW + margin
+                drawZoneLabel(tblLeft, botY + 2f, "BBS SCHEDULE", cfg)
+                drawFlatSlabBBSTable(
+                    tblLeft, botY + 12f, halfW, botH - 16f,
+                    lx, ly, slabThickness, columnWidth, columnDepth,
+                    colTopRebar, colBotRebar, midTopRebar, midBotRebar,
+                    topBarColor, botBarColor, dimColor, textColor, cfg
+                )
             }
         }
 
-        // ── Rebar annotations ────────────────────────────────────
-        // Column strip: top rebar (red) and bottom rebar (blue)
-        val rebarY = panelY + panelH / 2f
-        drawTextAnnotated(
-            "T: ${colTopRebar.barString}",
-            panelX + panelW / 2f, rebarY - 16f,
-            topBarColor, 12f, center = true, bold = true
-        )
-        drawTextAnnotated(
-            "B: ${colBotRebar.barString}",
-            panelX + panelW / 2f, rebarY + 2f,
-            botBarColor, 12f, center = true, bold = true
-        )
-
-        // Middle strip rebar
-        if (midBotRebar.spacing > 0) {
-            val msRebarY = panelY + panelH / 2f + 18f
-            drawTextAnnotated(
-                "B: ${midBotRebar.barString}",
-                panelX + panelW / 4f, msRebarY,
-                botBarColor.copy(alpha = 0.7f), 10f, center = true
-            )
-            drawTextAnnotated(
-                "B: ${midBotRebar.barString}",
-                panelX + 3f * panelW / 4f, msRebarY,
-                botBarColor.copy(alpha = 0.7f), 10f, center = true
-            )
-        }
-
-        // ── Dimension lines ─────────────────────────────────────
-        drawHorizontalDimension(
-            panelX, panelX + panelW, panelY + panelH + 8f,
-            String.format("%.1f m", lx), dimColor, 16f, offset = 18f
-        )
-        drawVerticalDimension(
-            panelX + panelW + 8f, panelY, panelY + panelH,
-            String.format("%.1f m", ly), dimColor, 16f, offset = 18f
-        )
-
-        // Column dimension
-        if (colWPx > 20f) {
-            drawTextAnnotated(
-                String.format("%.0f", columnWidth),
-                panelX + colWPx / 2f, panelY - 6f,
-                dimColor, 10f, center = true
-            )
-        }
-
-        // ── Title bar ────────────────────────────────────────────
-        drawRoundRect(headerBg, Offset(panelX, margin), Size(panelW, titleH),
-            cornerRadius = CornerRadius(6f))
-        drawTextAnnotated(
-            "FLAT SLAB — ${panelType.displayName} PANEL",
-            panelX + panelW / 2f, margin + titleH / 2f - 4f,
-            Color.White, 14f, center = true, bold = true
-        )
-
-        // ── Status badge ─────────────────────────────────────────
-        val statusText = if (isSafe) "DESIGN SAFE ✓" else "DESIGN FAIL ✗"
-        val statusColor = if (isSafe) safeColor else unsafeColor
-        val badgeW = 100f
-        val badgeH = 22f
-        val badgeX = panelX + panelW - badgeW
-        val badgeY = margin + titleH + 6f
-        drawRoundRect(statusColor, Offset(badgeX, badgeY), Size(badgeW, badgeH),
-            cornerRadius = CornerRadius(4f))
-        drawTextAnnotated(
-            statusText, badgeX + badgeW / 2f, badgeY + badgeH / 2f - 4f,
-            Color.White, 11f, center = true, bold = true
-        )
-
-        // ── Legend ───────────────────────────────────────────────
-        val legY = panelY + panelH + 50f
-        val legX = panelX
-        val legRowH = 16f
-
-        drawTextAnnotated("LEGEND:", legX, legY, textColor, 12f, bold = true)
-        drawRect(
-            color = columnFill,
-            topLeft = Offset(legX, legY + legRowH + 2f),
-            size = Size(14f, 10f)
-        )
-        drawTextAnnotated("Column", legX + 20f, legY + legRowH + 6f, textColor, 11f)
-        drawLine(colStripColor, Offset(legX + 80f, legY + legRowH + 7f),
-            Offset(legX + 94f, legY + legRowH + 7f), 2f,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f), 0f))
-        drawTextAnnotated("Column Strip", legX + 100f, legY + legRowH + 6f, textColor, 11f)
-        drawLine(shearPerimColor, Offset(legX + 200f, legY + legRowH + 7f),
-            Offset(legX + 214f, legY + legRowH + 7f), 1.5f,
-            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f), 0f))
-        drawTextAnnotated("Punching Perim.", legX + 220f, legY + legRowH + 6f, textColor, 11f)
-
-        // Rebar legend
-        val legY2 = legY + 2 * legRowH + 4f
-        drawTextAnnotated("T:", legX, legY2 + 4f, topBarColor, 11f, bold = true)
-        drawTextAnnotated("Top Reinforcement (negative moment)", legX + 16f, legY2 + 4f, textColor, 11f)
-        drawTextAnnotated("B:", legX + 240f, legY2 + 4f, botBarColor, 11f, bold = true)
-        drawTextAnnotated("Bottom Reinforcement (positive moment)", legX + 256f, legY2 + 4f, textColor, 11f)
-
-        // ── Title block (bottom-right) ───────────────────────────
-        val tbW = 180f
-        val tbH = 44f
-        val tbX = panelX + panelW - tbW
-        val tbY = legY + 3 * legRowH + 4f
-        drawRect(color = Color(0x11FFFFFF), topLeft = Offset(tbX, tbY), size = Size(tbW, tbH))
-        drawRect(color = Color(0x55FFFFFF), topLeft = Offset(tbX, tbY), size = Size(tbW, tbH), style = Stroke(1f))
-        drawLine(Color(0x55FFFFFF), Offset(tbX, tbY + tbH * 0.5f),
-            Offset(tbX + tbW, tbY + tbH * 0.5f), 0.5f)
-        drawTextAnnotated("Project: Flat Slab Module", tbX + 6f, tbY + tbH * 0.3f, textColor, 11f)
-        drawTextAnnotated(
-            "Scale: NTS  |  h = ${slabThickness.toInt()} mm",
-            tbX + 6f, tbY + tbH * 0.75f, textColor, 10f
-        )
-
-        // ── Responsive Title Block ───────────────────────────────
+        // ── Responsive Title Block & Annotations ───────────────────────────
         drawSheetAnnotations(
-            x = w - cfg.titleBlockWidth - margin * 0.3f,
-            y = h - cfg.titleBlockHeight - margin * 0.3f,
+            x = W - cfg.titleBlockWidth - margin * 0.3f,
+            y = H - cfg.titleBlockHeight - margin * 0.3f,
             cfg = cfg,
             summary = resultSummary
         )
         drawResponsiveTitleBlock(
-            x = w - cfg.titleBlockWidth - margin * 0.3f,
-            y = h - cfg.titleBlockHeight - margin * 0.3f,
+            x = W - cfg.titleBlockWidth - margin * 0.3f,
+            y = H - cfg.titleBlockHeight - margin * 0.3f,
             cfg = cfg,
-            drawingTitle = "Flat Slab Detail",
+            drawingTitle = "Flat Slab Detailing",
             designCode = codeLabel
         )
+        drawScaleBar(
+            x = margin, y = H - cfg.margin * 0.8f,
+            scale = 0.05f, realLengthMm = 1000f,
+            cfg = cfg
+        )
     }
+}
+
+// ============================================================================
+// 1. HEADER BAND
+// ============================================================================
+
+private fun DrawScope.drawFlatSlabHeader(
+    W: Float, cfg: DrawingDimensionsConfig,
+    codeLabel: String, panelType: PanelType, isSafe: Boolean,
+    textColor: Color, safeColor: Color, unsafeColor: Color
+) {
+    val hBg = Color(0xFF263238)
+    drawRect(color = hBg, topLeft = Offset(0f, 0f), size = Size(W, cfg.headerHeight))
+    drawTextAnnotated(
+        "FLAT SLAB STRUCTURAL DETAIL — ${panelType.displayName.uppercase()} PANEL  |  $codeLabel",
+        W / 2f, cfg.headerHeight * 0.65f,
+        textColor, cfg.headerTextSize, center = true, bold = true
+    )
+    // Subtitle
+    val statusTxt = if (isSafe) "STATUS: SAFE ✓" else "STATUS: UNSAFE ✗"
+    val statusClr = if (isSafe) safeColor else unsafeColor
+    drawTextAnnotated(
+        "Direct Design Method per ECP 203 §6 / ACI 318 §13  •  $statusTxt",
+        W / 2f, cfg.headerHeight * 0.90f,
+        statusClr, cfg.annotationTextSmall * 0.85f, center = true, bold = true
+    )
+}
+
+// ============================================================================
+// 2. PLAN VIEW: COLUMNS, STRIPS, DROP PANELS, REBAR CALLOUTS
+// ============================================================================
+
+private fun DrawScope.drawFlatSlabPlanView(
+    left: Float, top: Float, width: Float, height: Float,
+    lx: Double, ly: Double, slabThickness: Double, columnWidth: Double, columnDepth: Double,
+    dropSizeX: Double, dropSizeY: Double, colStripWidthX: Double, colStripWidthY: Double,
+    colTopRebar: RebarResult, colBotRebar: RebarResult,
+    midTopRebar: RebarResult, midBotRebar: RebarResult,
+    panelFill: Color, panelStroke: Color, columnFill: Color, columnStroke: Color,
+    dropFill: Color, dropStroke: Color, colStripColor: Color, midStripColor: Color,
+    topBarColor: Color, botBarColor: Color, shearPerimColor: Color,
+    dimColor: Color, textColor: Color, gridColor: Color,
+    cfg: DrawingDimensionsConfig
+) {
+    val pad = 35f
+    val avW = width - 2 * pad
+    val avH = height - 2 * pad
+
+    val panelAspect = lx / ly
+    val areaAspect = avW / avH
+    val panelW: Float
+    val panelH: Float
+    if (panelAspect > areaAspect) {
+        panelW = avW
+        panelH = (avW / panelAspect).toFloat()
+    } else {
+        panelH = avH
+        panelW = (avH * panelAspect).toFloat()
+    }
+    val panelX = left + pad + (avW - panelW) / 2f
+    val panelY = top + pad + (avH - panelH) / 2f
+
+    val scaleX = panelW / lx.toFloat()
+    val scaleY = panelH / ly.toFloat()
+
+    val colWPx = (columnWidth / 1000.0 * scaleX).toFloat().coerceIn(12f, panelW * 0.25f)
+    val colDPx = (columnDepth / 1000.0 * scaleY).toFloat().coerceIn(12f, panelH * 0.25f)
+    val dropXPx = (dropSizeX / 1000.0 * scaleX).toFloat()
+    val dropYPx = (dropSizeY / 1000.0 * scaleY).toFloat()
+
+    val cStripXPx = if (colStripWidthX > 0) (colStripWidthX / 1000.0 * scaleX).toFloat() else panelW * 0.5f
+    val cStripYPx = if (colStripWidthY > 0) (colStripWidthY / 1000.0 * scaleY).toFloat() else panelH * 0.5f
+
+    // Panel background
+    drawRect(color = panelFill, topLeft = Offset(panelX, panelY), size = Size(panelW, panelH))
+    drawRect(color = panelStroke, topLeft = Offset(panelX, panelY), size = Size(panelW, panelH),
+        style = Stroke(2f))
+
+    // ── Strip boundaries (dashed) ─────────────────────────────────────────
+    val dash = PathEffect.dashPathEffect(floatArrayOf(8f, 5f), 0f)
+
+    // Column strip X boundaries
+    val csLeftX = panelX + (panelW - cStripXPx) / 2f
+    val csRightX = csLeftX + cStripXPx
+    drawLine(colStripColor, Offset(csLeftX, panelY), Offset(csLeftX, panelY + panelH), 1.5f, pathEffect = dash)
+    drawLine(colStripColor, Offset(csRightX, panelY), Offset(csRightX, panelY + panelH), 1.5f, pathEffect = dash)
+
+    // Column strip Y boundaries
+    val csTopY = panelY + (panelH - cStripYPx) / 2f
+    val csBotY = csTopY + cStripYPx
+    drawLine(colStripColor, Offset(panelX, csTopY), Offset(panelX + panelW, csTopY), 1.5f, pathEffect = dash)
+    drawLine(colStripColor, Offset(panelX, csBotY), Offset(panelX + panelW, csBotY), 1.5f, pathEffect = dash)
+
+    // Strip labels
+    drawTextAnnotated("Column Strip", panelX + panelW / 2f, panelY + 14f,
+        colStripColor, cfg.annotationTextSmall * 0.85f, center = true, bold = true)
+    drawTextAnnotated("Mid Strip", csLeftX / 2f + panelX / 2f, panelY + panelH / 2f,
+        midStripColor, cfg.annotationTextSmall * 0.85f, center = true)
+
+    // ── Drop panel (if present) ───────────────────────────────────────────
+    if (dropXPx > 0 && dropYPx > 0) {
+        val dropX = panelX + (panelW - dropXPx) / 2f
+        val dropY = panelY + (panelH - dropYPx) / 2f
+        drawRect(color = dropFill, topLeft = Offset(dropX, dropY), size = Size(dropXPx, dropYPx))
+        drawRect(color = dropStroke, topLeft = Offset(dropX, dropY), size = Size(dropXPx, dropYPx),
+            style = Stroke(1.5f))
+        drawTextAnnotated("Drop Panel", dropX + dropXPx / 2f, dropY + 12f,
+            textColor, cfg.annotationTextSmall * 0.75f, center = true)
+    }
+
+    // ── Punching shear critical perimeter bo (d/2 from column face) ────────
+    val dOffset = ((slabThickness * 0.5) / 1000.0 * scaleX).toFloat().coerceIn(6f, 25f)
+    val punchW = colWPx + 2 * dOffset
+    val punchH = colDPx + 2 * dOffset
+    val punchX = panelX + (panelW - punchW) / 2f
+    val punchY = panelY + (panelH - punchH) / 2f
+
+    drawRect(color = shearPerimColor, topLeft = Offset(punchX, punchY), size = Size(punchW, punchH),
+        style = Stroke(1.8f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 3f), 0f)))
+    drawTextAnnotated("bo (d/2)", punchX + punchW + 4f, punchY + punchH / 2f,
+        shearPerimColor, cfg.annotationTextSmall * 0.8f, bold = true)
+
+    // ── Columns at 4 corners of the panel ─────────────────────────────────
+    val colCoords = listOf(
+        Offset(panelX, panelY),
+        Offset(panelX + panelW - colWPx, panelY),
+        Offset(panelX, panelY + panelH - colDPx),
+        Offset(panelX + panelW - colWPx, panelY + panelH - colDPx),
+        // Central column
+        Offset(panelX + (panelW - colWPx) / 2f, panelY + (panelH - colDPx) / 2f)
+    )
+    colCoords.forEach { pos ->
+        drawRect(color = columnFill, topLeft = pos, size = Size(colWPx, colDPx))
+        drawRect(color = columnStroke, topLeft = pos, size = Size(colWPx, colDPx), style = Stroke(1.5f))
+        // Hatch lines inside column
+        drawLine(columnStroke, Offset(pos.x, pos.y), Offset(pos.x + colWPx, pos.y + colDPx), 1f)
+        drawLine(columnStroke, Offset(pos.x + colWPx, pos.y), Offset(pos.x, pos.y + colDPx), 1f)
+    }
+
+    // ── Reinforcement callouts in strips ───────────────────────────────────
+    val cy = panelY + panelH / 2f
+    drawTextAnnotated("Top: ${colTopRebar.barString}", panelX + panelW / 2f, cy - 16f,
+        topBarColor, cfg.annotationTextSmall, center = true, bold = true)
+    drawTextAnnotated("Bot: ${colBotRebar.barString}", panelX + panelW / 2f, cy + 4f,
+        botBarColor, cfg.annotationTextSmall, center = true, bold = true)
+
+    if (midBotRebar.spacing > 0) {
+        val mx = (panelX + csLeftX) / 2f
+        drawTextAnnotated("B: ${midBotRebar.barString}", mx, cy,
+            botBarColor.copy(alpha = 0.8f), cfg.annotationTextSmall * 0.85f, center = true)
+    }
+
+    // ── Dimensions ────────────────────────────────────────────────────────
+    drawHorizontalDimension(panelX, panelX + panelW, panelY + panelH + 4f,
+        "Lx = ${String.format("%.2f", lx)} m", dimColor, cfg.dimTextSize * 0.85f, 14f, cfg)
+    drawVerticalDimension(panelY, panelY + panelH, panelX + panelW + 6f,
+        "Ly = ${String.format("%.2f", ly)} m", dimColor, cfg.dimTextSize * 0.85f, 18f, cfg)
+}
+
+// ============================================================================
+// 3. SECTION A-A: COLUMN STRIP & DROP PANEL SECTION
+// ============================================================================
+
+private fun DrawScope.drawFlatSlabSectionAA(
+    left: Float, top: Float, width: Float, height: Float,
+    lx: Double, slabThickness: Double, columnWidth: Double, dropSizeX: Double, dropThickness: Double,
+    colTopRebar: RebarResult, colBotRebar: RebarResult,
+    panelFill: Color, panelStroke: Color, columnFill: Color, columnStroke: Color,
+    dropFill: Color, dropStroke: Color, topBarColor: Color, botBarColor: Color, shearPerimColor: Color,
+    dimColor: Color, textColor: Color, cfg: DrawingDimensionsConfig, designCode: DesignCode
+) {
+    val pad = 30f
+    val avW = width - 2 * pad
+    val secScale = (avW / lx.toFloat()).coerceAtLeast(30f)
+
+    val spanPx = (lx * secScale).toFloat().coerceAtMost(avW)
+    val totalThickMm = slabThickness + dropThickness
+    val thickScale = ((height * 0.35f) / totalThickMm.toFloat()).coerceAtLeast(0.1f)
+
+    val slabThickPx = (slabThickness * thickScale).toFloat().coerceIn(18f, 50f)
+    val dropThickPx = (dropThickness * thickScale).toFloat().coerceIn(8f, 30f)
+
+    val secL = left + pad + (avW - spanPx) / 2f
+    val secY = top + height * 0.35f
+    val secR = secL + spanPx
+
+    val colWPx = (columnWidth / 1000.0 * secScale).toFloat().coerceIn(25f, 60f)
+    val dropWPx = if (dropSizeX > 0) (dropSizeX / 1000.0 * secScale).toFloat().coerceIn(colWPx * 1.5f, spanPx * 0.45f) else 0f
+
+    // ── Continuous Slab Body ──────────────────────────────────────────────
+    drawRect(color = panelFill, topLeft = Offset(secL, secY), size = Size(spanPx, slabThickPx))
+    drawHatchPattern(secL, secY, spanPx, slabThickPx, cfg.hatchSpacing, 45f, panelStroke.copy(alpha = 0.4f))
+
+    // ── Drop Panel at Left & Right Column Supports ────────────────────────
+    if (dropWPx > 0 && dropThickPx > 0) {
+        // Left drop panel (centered at secL + colWPx/2)
+        val lDropX = secL - dropWPx * 0.2f
+        drawRect(color = dropFill, topLeft = Offset(lDropX, secY + slabThickPx), size = Size(dropWPx, dropThickPx))
+        drawRect(color = dropStroke, topLeft = Offset(lDropX, secY + slabThickPx), size = Size(dropWPx, dropThickPx),
+            style = Stroke(1.5f))
+
+        // Right drop panel
+        val rDropX = secR - dropWPx * 0.8f
+        drawRect(color = dropFill, topLeft = Offset(rDropX, secY + slabThickPx), size = Size(dropWPx, dropThickPx))
+        drawRect(color = dropStroke, topLeft = Offset(rDropX, secY + slabThickPx), size = Size(dropWPx, dropThickPx),
+            style = Stroke(1.5f))
+    }
+
+    // ── Columns below slab ────────────────────────────────────────────────
+    val colBelowH = height * 0.25f
+    val colBelowTop = secY + slabThickPx + (if (dropWPx > 0) dropThickPx else 0f)
+
+    // Left column
+    drawRect(color = columnFill, topLeft = Offset(secL, colBelowTop), size = Size(colWPx, colBelowH))
+    drawRect(color = columnStroke, topLeft = Offset(secL, colBelowTop), size = Size(colWPx, colBelowH),
+        style = Stroke(1.5f))
+
+    // Right column
+    drawRect(color = columnFill, topLeft = Offset(secR - colWPx, colBelowTop), size = Size(colWPx, colBelowH))
+    drawRect(color = columnStroke, topLeft = Offset(secR - colWPx, colBelowTop), size = Size(colWPx, colBelowH),
+        style = Stroke(1.5f))
+
+    // ── Column stubs above slab ───────────────────────────────────────────
+    val colAboveH = height * 0.15f
+    drawRect(color = columnFill, topLeft = Offset(secL, secY - colAboveH), size = Size(colWPx, colAboveH))
+    drawRect(color = columnStroke, topLeft = Offset(secL, secY - colAboveH), size = Size(colWPx, colAboveH),
+        style = Stroke(1.5f))
+    drawRect(color = columnFill, topLeft = Offset(secR - colWPx, secY - colAboveH), size = Size(colWPx, colAboveH))
+    drawRect(color = columnStroke, topLeft = Offset(secR - colWPx, secY - colAboveH), size = Size(colWPx, colAboveH),
+        style = Stroke(1.5f))
+
+    // Slab outline
+    drawRect(color = panelStroke, topLeft = Offset(secL, secY), size = Size(spanPx, slabThickPx),
+        style = Stroke(2f))
+
+    // ── Punching Shear 45° Cone (Dashed) ──────────────────────────────────
+    val coneL = Path().apply {
+        moveTo(secL + colWPx, colBelowTop)
+        lineTo(secL + colWPx + slabThickPx, secY)
+    }
+    drawPath(coneL, color = shearPerimColor, style = Stroke(1.5f,
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f), 0f)))
+    drawTextAnnotated("45° Shear Cone", secL + colWPx + slabThickPx + 4f, secY - 6f,
+        shearPerimColor, cfg.annotationTextSmall * 0.75f, bold = true)
+
+    // ── Top Negative Reinforcement (over columns, curtailed at 0.3 Ln) ────
+    val lnPx = spanPx - colWPx
+    val curtailPx = lnPx * 0.30f // ECP/ACI detailing rule: top steel extends 0.3 Ln
+    val topRebarY = secY + 6f
+
+    // Left negative steel
+    drawLine(color = topBarColor, start = Offset(secL - 10f, topRebarY), end = Offset(secL + colWPx + curtailPx, topRebarY),
+        strokeWidth = 3f, cap = StrokeCap.Round)
+    // 90° hook at left end
+    drawLine(color = topBarColor, start = Offset(secL - 10f, topRebarY), end = Offset(secL - 10f, topRebarY + 10f),
+        strokeWidth = 3f, cap = StrokeCap.Round)
+
+    // Right negative steel
+    drawLine(color = topBarColor, start = Offset(secR - colWPx - curtailPx, topRebarY), end = Offset(secR + 10f, topRebarY),
+        strokeWidth = 3f, cap = StrokeCap.Round)
+    drawLine(color = topBarColor, start = Offset(secR + 10f, topRebarY), end = Offset(secR + 10f, topRebarY + 10f),
+        strokeWidth = 3f, cap = StrokeCap.Round)
+
+    drawTextAnnotated("Top Steel: ${colTopRebar.barString} (0.3 Ln)", secL + colWPx + curtailPx / 2f, topRebarY - 8f,
+        topBarColor, cfg.annotationTextSmall * 0.85f, center = true, bold = true)
+
+    // ── Bottom Positive Reinforcement (continuous through midspan) ────────
+    val botRebarY = secY + slabThickPx - 6f
+    drawLine(color = botBarColor, start = Offset(secL + colWPx * 0.5f, botRebarY), end = Offset(secR - colWPx * 0.5f, botRebarY),
+        strokeWidth = 3f, cap = StrokeCap.Round)
+    drawTextAnnotated("Bot Steel: ${colBotRebar.barString} (Continuous)", secL + spanPx / 2f, botRebarY + 12f,
+        botBarColor, cfg.annotationTextSmall * 0.85f, center = true, bold = true)
+
+    // ── Dimensions ────────────────────────────────────────────────────────
+    drawHorizontalDimension(secL, secR, colBelowTop + colBelowH + 4f,
+        "L = ${String.format("%.2f", lx)} m", dimColor, cfg.dimTextSize * 0.85f, 14f, cfg)
+    drawVerticalDimension(secY, secY + slabThickPx, secR + 8f,
+        "ts=${slabThickness.toInt()}mm", dimColor, cfg.dimTextSize * 0.85f, 16f, cfg)
+    if (dropThickness > 10.0) {
+        drawVerticalDimension(secY + slabThickPx, secY + slabThickPx + dropThickPx, secR + 8f,
+            "td=${dropThickness.toInt()}mm", dimColor, cfg.dimTextSize * 0.75f, 32f, cfg)
+    }
+}
+
+// ============================================================================
+// 4. SECTION B-B: MIDDLE STRIP SECTION
+// ============================================================================
+
+private fun DrawScope.drawFlatSlabSectionBB(
+    left: Float, top: Float, width: Float, height: Float,
+    lx: Double, slabThickness: Double, columnWidth: Double,
+    midTopRebar: RebarResult, midBotRebar: RebarResult,
+    panelFill: Color, panelStroke: Color, columnFill: Color, columnStroke: Color,
+    topBarColor: Color, botBarColor: Color, dimColor: Color, textColor: Color,
+    cfg: DrawingDimensionsConfig, designCode: DesignCode
+) {
+    val pad = 30f
+    val avW = width - 2 * pad
+    val spanPx = avW.coerceAtMost(width - 60f)
+    val thickScale = ((height * 0.35f) / slabThickness.toFloat()).coerceAtLeast(0.1f)
+    val slabThickPx = (slabThickness * thickScale).toFloat().coerceIn(18f, 50f)
+
+    val secL = left + pad
+    val secY = top + height * 0.40f
+    val secR = secL + spanPx
+
+    // Slab body
+    drawRect(color = panelFill, topLeft = Offset(secL, secY), size = Size(spanPx, slabThickPx))
+    drawHatchPattern(secL, secY, spanPx, slabThickPx, cfg.hatchSpacing, 45f, panelStroke.copy(alpha = 0.4f))
+    drawRect(color = panelStroke, topLeft = Offset(secL, secY), size = Size(spanPx, slabThickPx),
+        style = Stroke(2f))
+
+    // Middle strip top rebar (curtailed at 0.22 Ln per ECP/ACI)
+    val curtailPx = spanPx * 0.22f
+    val topY = secY + 6f
+    drawLine(color = topBarColor, start = Offset(secL, topY), end = Offset(secL + curtailPx, topY),
+        strokeWidth = 2.5f, cap = StrokeCap.Round)
+    drawLine(color = topBarColor, start = Offset(secR - curtailPx, topY), end = Offset(secR, topY),
+        strokeWidth = 2.5f, cap = StrokeCap.Round)
+    drawTextAnnotated("Top: ${midTopRebar.barString} (0.22 Ln)", secL + curtailPx / 2f, topY - 7f,
+        topBarColor, cfg.annotationTextSmall * 0.85f, center = true)
+
+    // Middle strip bottom rebar (100% continuous)
+    val botY = secY + slabThickPx - 6f
+    drawLine(color = botBarColor, start = Offset(secL, botY), end = Offset(secR, botY),
+        strokeWidth = 2.5f, cap = StrokeCap.Round)
+    drawTextAnnotated("Bottom: ${midBotRebar.barString} (Continuous Mesh)", secL + spanPx / 2f, botY + 12f,
+        botBarColor, cfg.annotationTextSmall * 0.85f, center = true, bold = true)
+
+    // Dimensions
+    drawHorizontalDimension(secL, secR, secY + slabThickPx + 20f,
+        "L = ${String.format("%.2f", lx)} m", dimColor, cfg.dimTextSize * 0.85f, 14f, cfg)
+    drawVerticalDimension(secY, secY + slabThickPx, secR + 8f,
+        "ts=${slabThickness.toInt()}mm", dimColor, cfg.dimTextSize * 0.85f, 16f, cfg)
+}
+
+// ============================================================================
+// 5. BAR BENDING SCHEDULE (BBS) & DETAILING TABLE
+// ============================================================================
+
+private fun DrawScope.drawFlatSlabBBSTable(
+    left: Float, top: Float, width: Float, height: Float,
+    lx: Double, ly: Double, slabThickness: Double, columnWidth: Double, columnDepth: Double,
+    colTopRebar: RebarResult, colBotRebar: RebarResult,
+    midTopRebar: RebarResult, midBotRebar: RebarResult,
+    topBarColor: Color, botBarColor: Color, dimColor: Color, textColor: Color,
+    cfg: DrawingDimensionsConfig
+) {
+    val headers = listOf("Mark", "Location", "Bar Size", "Cut Length", "Shape", "Weight (kg)")
+
+    // Estimate bar counts and cut lengths
+    val colTopLen = (lx * 0.60 + 0.3).coerceAtLeast(1.0)
+    val colBotLen = (lx + 0.2).coerceAtLeast(1.0)
+    val midTopLen = (lx * 0.45).coerceAtLeast(1.0)
+    val midBotLen = (lx).coerceAtLeast(1.0)
+
+    val cTopDia = colTopRebar.diameter.coerceAtLeast(10).toDouble()
+    val cBotDia = colBotRebar.diameter.coerceAtLeast(10).toDouble()
+    val mTopDia = midTopRebar.diameter.coerceAtLeast(10).toDouble()
+    val mBotDia = midBotRebar.diameter.coerceAtLeast(10).toDouble()
+
+    val colTopCount = if (colTopRebar.spacing > 0) ((ly * 500.0) / colTopRebar.spacing).toInt().coerceAtLeast(6) else 10
+    val colBotCount = if (colBotRebar.spacing > 0) ((ly * 500.0) / colBotRebar.spacing).toInt().coerceAtLeast(6) else 10
+    val midTopCount = if (midTopRebar.spacing > 0) ((ly * 500.0) / midTopRebar.spacing).toInt().coerceAtLeast(6) else 10
+    val midBotCount = if (midBotRebar.spacing > 0) ((ly * 500.0) / midBotRebar.spacing).toInt().coerceAtLeast(6) else 10
+
+    val w1 = colTopCount * colTopLen * cTopDia * cTopDia * 0.00617
+    val w2 = colBotCount * colBotLen * cBotDia * cBotDia * 0.00617
+    val w3 = midTopCount * midTopLen * mTopDia * mTopDia * 0.00617
+    val w4 = midBotCount * midBotLen * mBotDia * mBotDia * 0.00617
+    val totalW = w1 + w2 + w3 + w4
+
+    val rows = listOf(
+        listOf("CS-T", "Col Strip Top", colTopRebar.barString, "${(colTopLen * 1000).toInt()} mm", "Cranked Hook", "%.1f".format(w1)),
+        listOf("CS-B", "Col Strip Bot", colBotRebar.barString, "${(colBotLen * 1000).toInt()} mm", "Straight", "%.1f".format(w2)),
+        listOf("MS-T", "Mid Strip Top", midTopRebar.barString, "${(midTopLen * 1000).toInt()} mm", "Curtailed", "%.1f".format(w3)),
+        listOf("MS-B", "Mid Strip Bot", midBotRebar.barString, "${(midBotLen * 1000).toInt()} mm", "Straight", "%.1f".format(w4))
+    )
+
+    val colFracs = listOf(0.12f, 0.22f, 0.22f, 0.16f, 0.14f, 0.14f)
+    val colWidths = colFracs.map { it * width }
+
+    drawResponsiveReinforcementTable(
+        x = left, y = top,
+        colWidths = colWidths,
+        headers = headers,
+        rows = rows,
+        cfg = cfg,
+        headerBg = DrawingColorDefaults.TableHeaderBg,
+        altRowBg = DrawingColorDefaults.TableRowAlt,
+        textColor = textColor
+    )
+
+    // Summary line below table
+    val sumY = top + cfg.tableHeaderHeight + cfg.tableRowHeight * rows.size + 14f
+    drawTextAnnotated("Total Steel: ${String.format("%.1f", totalW)} kg  (≈ ${String.format("%.1f", totalW / (lx * ly))} kg/m²)",
+        left + width / 2f, sumY,
+        DrawingColorDefaults.SafeGreen, cfg.annotationTextSmall, center = true, bold = true)
 }

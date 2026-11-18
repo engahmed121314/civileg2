@@ -10,20 +10,37 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.DesignCode
-import androidx.compose.ui.graphics.drawscope.Stroke
 import kotlin.math.*
+
+// ============================================================================
+// PROFESSIONAL WAFFLE (TWO-WAY RIBBED) SLAB ENGINEERING DRAWING
+// v2.0 — Comprehensive Multi-View Two-Way Ribbed Slab Detailing
+// Codes: ECP 203-2020 Ch. 6, ACI 318-19 Ch. 8, SBC 304-2018
+// ============================================================================
 
 /**
  * Professional Waffle Slab Engineering Drawing
- * Renders plan view, section A-A (T-rib profile), solid head detail,
- * and reinforcement table for two-way waffle slab construction.
  *
- * ECP 203-2020: Chapter 6 — ribbed slabs, solid head per 6.3.5
- * ACI 318-19:  Chapter 8 — one-way joist construction, 8.13
+ * Renders:
+ *  - viewMode 0 (All):       Plan (2D Coffer Grid + Solid Heads) +
+ *                            Section A-A (T-Ribs with Coffer Voids & Stirrups) +
+ *                            Solid Head Detail + BBS Schedule Table
+ *  - viewMode 1 (Plan View): Full 2-way coffer grid with recessed square pans,
+ *                            solid heads around columns, column outlines, punching shear
+ *                            critical perimeter ($b_o$), and grid dimensions
+ *  - viewMode 2 (Section A-A): Transverse cross-section through multiple ribs showing
+ *                            topping flange ($t_f$), rib web ($b_w$), tapered coffer pans,
+ *                            bottom bars, top mesh, stirrups, cover
+ *  - viewMode 3 (Detail):    Solid Head & Column Connection Detail with punching shear
+ *                            perimeter ($d/2$), solid head flexure steel, column stub
+ *  - viewMode 4 (BBS Table): Complete Bar Bending Schedule with bar marks, shapes,
+ *                            diameters, counts, lengths, and total steel weight
  */
 @Composable
 fun ProfessionalWaffleSlabDrawing(
@@ -47,7 +64,7 @@ fun ProfessionalWaffleSlabDrawing(
     resultSummary: DrawingResultSummary? = null,
     modifier: Modifier = Modifier
 ) {
-    // ── InputGuard: validate key dimensions before drawing ─────────────────
+    // ── InputGuard ─────────────────────────────────────────────────────────
     InputGuard.positive("lx", lx)
     InputGuard.positive("ly", ly)
     InputGuard.positive("ribSpacing", ribSpacing)
@@ -58,412 +75,528 @@ fun ProfessionalWaffleSlabDrawing(
     InputGuard.positive("columnWidth", columnWidth)
     InputGuard.positive("cover", cover)
 
-    // ── Code-reference annotation ──────────────────────────────────────────
     val codeLabel = designCode.version
-    // ── Responsive config ──────────────────────────────────────────────────
     val cfg = drawingDimensionsConfig()
 
-    Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .fillMaxSize()
-    ) {
-        val w = size.width
-        val h = size.height
+    Canvas(modifier = modifier.fillMaxWidth().fillMaxSize()) {
+        val W = size.width
+        val H = size.height
 
-        // ── Safety checks ─────────────────────────────────────────
-        val safeLx = lx.coerceAtLeast(1.0)
-        val safeLy = ly.coerceAtLeast(1.0)
+        // ── Safe Dimensions (mm) ──────────────────────────────────────────
+        val safeLx = (if (lx < 50.0) lx * 1000.0 else lx).coerceAtLeast(1000.0)
+        val safeLy = (if (ly < 50.0) ly * 1000.0 else ly).coerceAtLeast(1000.0)
         val safeRibSpacing = ribSpacing.coerceAtLeast(300.0)
-        val safeRibWidth = ribWidth.coerceAtLeast(100.0)
-        val safeRibHeight = ribHeight.coerceAtLeast(200.0)
-        val safeTopping = toppingThickness.coerceAtLeast(50.0)
-        val safeSolidHead = solidHeadSize.coerceAtLeast(500.0)
-        val safeColW = columnWidth.coerceAtLeast(200.0)
+        val safeRibWidth = ribWidth.coerceAtLeast(80.0)
+        val safeRibHeight = ribHeight.coerceAtLeast(150.0)
+        val safeTopping = toppingThickness.coerceAtLeast(40.0)
+        val safeSolidHead = solidHeadSize.coerceIn(400.0, min(safeLx, safeLy) * 0.45)
+        val safeColW = columnWidth.coerceIn(200.0, safeSolidHead * 0.7)
         val totalDepth = safeRibHeight + safeTopping
 
-        // Normalize to mm
-        val lxMm = if (safeLx < 50.0) safeLx * 1000.0 else safeLx
-        val lyMm = if (safeLy < 50.0) safeLy * 1000.0 else safeLy
-
-        // ── Color Palette ──────────────────────────────────────────
+        // ── Color Palette ──────────────────────────────────────────────────
         val C = DrawingColorDefaults
-        val concreteFill = C.ConcreteFill
-        val concreteStroke = C.ConcreteGray
-        val toppingFill = Color(0xFF4A4A4A)
-        val ribFill = Color(0xFF3D3D3D)
-        val colFill = Color(0xFF555555)
-        val colStroke = Color(0xFF333333)
-        val barBottomColor = C.RebarBlue
-        val barTopColor = C.TopRebarBlue
-        val barHeadColor = C.SafeGreen
-        val dimColor = C.ExtensionGray
-        val textColor = C.DimensionWhite
-        val headerBg = Color(0x55333333)
-        val tableHeaderBg = Color(0x55333333)
-        val hatchColor = Color(0x55AAAAAA)
+        val concreteFill       = Color(0xFF242438)
+        val concreteStroke     = Color(0xFF78909C)
+        val toppingFill        = Color(0xFF37474F)
+        val ribFill            = Color(0xFF455A64)
+        val cofferVoidFill     = Color(0xFF161622) // dark recessed coffers
+        val cofferBorder       = Color(0xFF546E7A)
+        val solidHeadFill      = Color(0xFF424242)
+        val colFill            = Color(0xFF546E7A)
+        val colStroke          = Color(0xFF263238)
+        val barBottomColor     = C.RebarBlue
+        val barTopColor        = C.SecondaryRed
+        val barHeadColor       = C.SafeGreen
+        val stirrupColor       = C.StirrupPurple
+        val shearPerimColor    = C.WarningOrange
+        val dimColor           = C.DimensionWhite
+        val textColor          = C.DimensionWhite
+        val hatchColor         = C.HatchColor.copy(alpha = 0.35f)
 
-        // ── Layout zones (viewMode-aware) ────────────────────────
         val margin = cfg.margin
-        val planH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * 0.24f; else -> h * 0.10f }
-        val secH = when (viewMode) { 2 -> h * 0.50f; 0 -> h * 0.22f; else -> h * 0.10f }
-        val headH = when (viewMode) { 3 -> h * 0.40f; 0 -> h * 0.14f; else -> 0f }
-        val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * 0.20f; else -> h * 0.10f }
+        val headerH = cfg.headerHeight + 10f
 
-        val headerH = cfg.headerHeight + 12f
-        val planTop = headerH + 16f
-        val planBottom = planTop + planH
-        val secTop = planBottom + h * 0.015f
-        val secBottom = secTop + secH
-        val headTop = secBottom + h * 0.015f
-        val headBottom = headTop + headH
-        val tblTop = headBottom + h * 0.015f
+        // ── Header band ────────────────────────────────────────────────────
+        drawWaffleHeader(W, cfg, codeLabel, textColor)
 
-        // ══════════════════════════════════════════════════════════
-        // HEADER
-        // ══════════════════════════════════════════════════════════
-        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, cfg.headerHeight))
-        drawTextAnnotated(
-            "WAFFLE SLAB DETAIL — $codeLabel",
-            w / 2f, cfg.headerHeight * 0.65f, textColor, cfg.headerTextSize, center = true, bold = true
-        )
-
-        // ── Section separators & zone labels ───────────────────────
-        if (viewMode == 0) {
-            drawSectionSeparator(secTop - h * 0.01f, w, "PLAN / SECTION", cfg)
-            drawSectionSeparator(tblTop - h * 0.01f, w, "SECTION / TABLE", cfg)
-            drawCombinedSectionLabel(h * 0.04f, w, listOf("Plan", "Section", "Table"), cfg)
-        } else if (viewMode == 1) {
-            drawZoneLabel(margin, planTop + 4f, "PLAN", cfg)
-        } else if (viewMode == 2) {
-            drawZoneLabel(margin, secTop + 4f, "SECTION", cfg)
-        } else if (viewMode == 3) {
-            drawZoneLabel(margin, tblTop + 4f, "TABLE", cfg)
-        }
-
-        // ══════════════════════════════════════════════════════════
-        //  PLAN VIEW — Waffle grid
-        // ══════════════════════════════════════════════════════════
-        if (viewMode == 0 || viewMode == 1) {
-            val planLeft = margin * 2f
-            val planRight = w - margin
-            val planW = planRight - planLeft
-            val planDrawH = planBottom - planTop
-
-            val scaleX = planW / lxMm.toFloat()
-            val scaleY = planDrawH / lyMm.toFloat()
-            val scale = min(scaleX, scaleY) * 0.92f
-            val drawLx = lxMm.toFloat() * scale
-            val drawLy = lyMm.toFloat() * scale
-
-            val fLeft = (w - drawLx) / 2f
-            val fTop = planTop + (planH - drawLy) / 2f
-            val fRight = fLeft + drawLx
-            val fBottom = fTop + drawLy
-            val fCenterX = fLeft + drawLx / 2f
-            val fCenterY = fTop + drawLy / 2f
-
-            // Slab outline (topping)
-            drawRect(color = toppingFill, topLeft = Offset(fLeft, fTop), size = Size(drawLx, drawLy))
-            drawHatchPattern(fLeft, fTop, drawLx, drawLy, spacing = 18f, angleDeg = 45f, color = hatchColor)
-
-            // Ribs in X-direction (vertical lines)
-            val numRibsX = max(2, (lxMm / safeRibSpacing).toInt() + 1)
-            val ribWpx = (safeRibWidth * scale).toFloat().coerceIn(3f, 30f)
-            for (i in 0 until numRibsX) {
-                val rx = fLeft + drawLx * (i + 1f) / (numRibsX + 1f)
-                drawRect(
-                    color = ribFill,
-                    topLeft = Offset(rx - ribWpx / 2f, fTop),
-                    size = Size(ribWpx, drawLy)
+        // ── Route by viewMode ──────────────────────────────────────────────
+        when (viewMode) {
+            1 -> {
+                // Plan View Only
+                drawZoneLabel(margin, headerH + 6f, "WAFFLE PLAN (COFFER GRID & SOLID HEADS)", cfg)
+                drawWafflePlanView(
+                    margin, headerH + 16f, W - 2 * margin, H - headerH - margin * 2.5f,
+                    safeLx, safeLy, safeRibSpacing, safeRibWidth, safeSolidHead, safeColW,
+                    totalDepth,
+                    concreteFill, concreteStroke, toppingFill, ribFill, cofferVoidFill,
+                    cofferBorder, solidHeadFill, colFill, colStroke, shearPerimColor,
+                    dimColor, textColor, cfg
                 )
             }
-
-            // Ribs in Y-direction (horizontal lines)
-            val numRibsY = max(2, (lyMm / safeRibSpacing).toInt() + 1)
-            for (j in 0 until numRibsY) {
-                val ry = fTop + drawLy * (j + 1f) / (numRibsY + 1f)
-                drawRect(
-                    color = ribFill,
-                    topLeft = Offset(fLeft, ry - ribWpx / 2f),
-                    size = Size(drawLx, ribWpx)
+            2 -> {
+                // Transverse Section A-A (T-Ribs with Coffer Pans)
+                drawZoneLabel(margin, headerH + 6f, "SECTION A-A: TWO-WAY T-RIBS & COFFERS", cfg)
+                drawWaffleSectionAA(
+                    margin, headerH + 16f, W - 2 * margin, H - headerH - margin * 2.5f,
+                    safeRibSpacing, safeRibWidth, totalDepth, safeTopping, safeRibHeight,
+                    ribBottomDia, ribBottomCount, ribTopDia, ribTopCount,
+                    stirrupColor, cover,
+                    toppingFill, ribFill, cofferVoidFill, cofferBorder, concreteStroke,
+                    barBottomColor, barTopColor, hatchColor, dimColor, textColor, cfg
                 )
             }
-
-            // Solid heads at column locations (corners + center)
-            val headSizePx = (safeSolidHead * scale).toFloat().coerceIn(20f, drawLx * 0.3f)
-            val colWPx = (safeColW * scale).toFloat().coerceIn(10f, headSizePx * 0.6f)
-            val headPositions = listOf(
-                Offset(fLeft + drawLx / 2f, fTop + drawLy / 2f),  // center
-                Offset(fLeft + drawLx / 2f, fTop),                 // top mid
-                Offset(fLeft + drawLx / 2f, fBottom),              // bottom mid
-                Offset(fLeft, fTop + drawLy / 2f),                 // left mid
-                Offset(fRight, fTop + drawLy / 2f)                 // right mid
-            )
-            for (pos in headPositions) {
-                // Solid head fill
-                drawRect(
-                    color = Color(0xFF5A5A5A),
-                    topLeft = Offset(pos.x - headSizePx / 2f, pos.y - headSizePx / 2f),
-                    size = Size(headSizePx, headSizePx)
-                )
-                drawHatchPattern(
-                    pos.x - headSizePx / 2f, pos.y - headSizePx / 2f,
-                    headSizePx, headSizePx,
-                    spacing = 6f, angleDeg = -45f, color = Color(0x77666666)
-                )
-                // Column
-                drawRect(
-                    color = colFill,
-                    topLeft = Offset(pos.x - colWPx / 2f, pos.y - colWPx / 2f),
-                    size = Size(colWPx, colWPx)
-                )
-                drawRect(
-                    color = colStroke,
-                    topLeft = Offset(pos.x - colWPx / 2f, pos.y - colWPx / 2f),
-                    size = Size(colWPx, colWPx),
-                    style = Stroke(width = 1.5f)
+            3 -> {
+                // Solid Head & Punching Shear Detail
+                drawZoneLabel(margin, headerH + 6f, "SOLID HEAD & PUNCHING SHEAR DETAIL", cfg)
+                drawWaffleSolidHeadDetail(
+                    margin, headerH + 16f, W - 2 * margin, H - headerH - margin * 2.5f,
+                    safeSolidHead, safeColW, totalDepth, safeTopping,
+                    headBottomDia, headBottomCount,
+                    solidHeadFill, colFill, colStroke, concreteStroke,
+                    barHeadColor, shearPerimColor, hatchColor, dimColor, textColor, cfg
                 )
             }
-
-            // Border
-            drawRect(
-                color = concreteStroke,
-                topLeft = Offset(fLeft, fTop),
-                size = Size(drawLx, drawLy),
-                style = Stroke(width = 2.5f)
-            )
-
-            // Dimensions
-            drawHorizontalDimension(fLeft, fRight, fTop, "Lx=${lxMm.toInt()}", dimColor, cfg.dimTextSize, offset = -14f)
-            drawVerticalDimension(fTop, fBottom, fLeft, "Ly=${lyMm.toInt()}", dimColor, cfg.dimTextSize, offset = -14f)
-
-            // Rib spacing label
-            if (numRibsX > 1) {
-                val r1 = fLeft + drawLx / (numRibsX + 1f)
-                val r2 = fLeft + drawLx * 2f / (numRibsX + 1f)
-                drawHorizontalDimension(r1, r2, fBottom, "s=${safeRibSpacing.toInt()}", C.ExtensionGray, cfg.valueLabelTextSize, offset = 10f)
-            }
-
-            drawTextAnnotated("PLAN", fLeft + 20f, fBottom + 22f, C.ExtensionGray, cfg.dimTextSize, bold = true)
-
-            // Section cut line
-            if (viewMode == 0) {
-                drawSectionCutLine(
-                    x1 = fCenterX, y1 = fTop - 20f,
-                    x2 = fCenterX, y2 = fBottom + 6f,
-                    label = "A", color = C.SectionLine
+            4 -> {
+                // BBS Schedule Table View
+                drawZoneLabel(margin, headerH + 6f, "BAR BENDING SCHEDULE (BBS)", cfg)
+                drawWaffleBBSTable(
+                    margin, headerH + 16f, W - 2 * margin, H - headerH - margin * 2.5f,
+                    safeLx, safeLy, safeRibSpacing, safeSolidHead,
+                    ribBottomDia, ribBottomCount, ribTopDia, ribTopCount,
+                    headBottomDia, headBottomCount,
+                    barBottomColor, barTopColor, barHeadColor,
+                    dimColor, textColor, cfg
                 )
             }
-        } // end plan view
+            else -> {
+                // viewMode 0 (All): Multi-view layout
+                val topH = (H - headerH - margin) * 0.46f
+                val botH = (H - headerH - margin) * 0.44f
+                val topY = headerH + 10f
+                val botY = topY + topH + 14f
+                val halfW = (W - 3 * margin) / 2f
 
-        // ══════════════════════════════════════════════════════════
-        //  SECTION A-A — T-rib profile
-        // ══════════════════════════════════════════════════════════
-        if (viewMode == 0 || viewMode == 2) {
-            val secLeft = margin + 90f
-            val secRight = w - margin
-            val maxSecW = secRight - secLeft - 120f
+                drawSectionSeparator(botY - 7f, W, "SECTIONS & SOLID HEAD DETAIL", cfg)
+                drawCombinedSectionLabel(H * 0.015f, W, listOf("Plan", "Sec A-A", "Solid Head", "BBS"), cfg)
 
-            drawTextAnnotated("SECTION A-A", secLeft - 50f, secTop + 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
-
-            // Scale rib profile - clear, prominent engineering proportions
-            val ribSpacingPx = (maxSecW * 0.22f).coerceIn(80f, 150f)
-            val ribWPx = (ribSpacingPx * (safeRibWidth / safeRibSpacing).toFloat()).coerceIn(20f, ribSpacingPx * 0.45f)
-            val toppingPx = (ribSpacingPx * (safeTopping / safeRibSpacing).toFloat()).coerceIn(14f, 32f)
-            val ribHPx = (ribSpacingPx * (safeRibHeight / safeRibSpacing).toFloat()).coerceIn(32f, 85f)
-            val totalHPx = ribHPx + toppingPx
-
-            // Center the T-section
-            val tCenterX = secLeft + maxSecW / 2f
-            val tTop = secTop + (secH - totalHPx) / 2f + 10f
-            val ribTop = tTop + toppingPx
-            val tBottom = ribTop + ribHPx
-
-            // Draw 2 T-ribs with void between
-            for (offsetIdx in listOf(-1, 0, 1)) {
-                val ribCenterX = tCenterX + offsetIdx * ribSpacingPx
-
-                // Topping slab (flange)
-                drawRect(
-                    color = toppingFill,
-                    topLeft = Offset(ribCenterX - ribSpacingPx / 2f, tTop),
-                    size = Size(ribSpacingPx, toppingPx)
+                // Top-Left: Plan View
+                drawZoneLabel(margin, topY + 2f, "PLAN", cfg)
+                drawWafflePlanView(
+                    margin, topY + 12f, halfW, topH - 16f,
+                    safeLx, safeLy, safeRibSpacing, safeRibWidth, safeSolidHead, safeColW,
+                    totalDepth,
+                    concreteFill, concreteStroke, toppingFill, ribFill, cofferVoidFill,
+                    cofferBorder, solidHeadFill, colFill, colStroke, shearPerimColor,
+                    dimColor, textColor, cfg
                 )
 
-                // Rib web
-                drawRect(
-                    color = ribFill,
-                    topLeft = Offset(ribCenterX - ribWPx / 2f, ribTop),
-                    size = Size(ribWPx, ribHPx)
+                // Top-Right: Section A-A
+                val secLeft = margin + halfW + margin
+                drawZoneLabel(secLeft, topY + 2f, "SECTION A-A (T-RIBS)", cfg)
+                drawWaffleSectionAA(
+                    secLeft, topY + 12f, halfW, topH - 16f,
+                    safeRibSpacing, safeRibWidth, totalDepth, safeTopping, safeRibHeight,
+                    ribBottomDia, ribBottomCount, ribTopDia, ribTopCount,
+                    stirrupColor, cover,
+                    toppingFill, ribFill, cofferVoidFill, cofferBorder, concreteStroke,
+                    barBottomColor, barTopColor, hatchColor, dimColor, textColor, cfg
                 )
 
-                // Hatching on rib
-                drawHatchPattern(
-                    ribCenterX - ribWPx / 2f, ribTop, ribWPx, ribHPx,
-                    spacing = 6f, angleDeg = 45f, color = hatchColor
+                // Bottom-Left: Solid Head Detail
+                drawZoneLabel(margin, botY + 2f, "SOLID HEAD", cfg)
+                drawWaffleSolidHeadDetail(
+                    margin, botY + 12f, halfW, botH - 16f,
+                    safeSolidHead, safeColW, totalDepth, safeTopping,
+                    headBottomDia, headBottomCount,
+                    solidHeadFill, colFill, colStroke, concreteStroke,
+                    barHeadColor, shearPerimColor, hatchColor, dimColor, textColor, cfg
                 )
 
-                // Rib border
-                drawRect(
-                    color = concreteStroke,
-                    topLeft = Offset(ribCenterX - ribWPx / 2f, ribTop),
-                    size = Size(ribWPx, ribHPx),
-                    style = Stroke(width = 1.5f)
+                // Bottom-Right: BBS Schedule Table
+                val tblLeft = margin + halfW + margin
+                drawZoneLabel(tblLeft, botY + 2f, "BBS SCHEDULE", cfg)
+                drawWaffleBBSTable(
+                    tblLeft, botY + 12f, halfW, botH - 16f,
+                    safeLx, safeLy, safeRibSpacing, safeSolidHead,
+                    ribBottomDia, ribBottomCount, ribTopDia, ribTopCount,
+                    headBottomDia, headBottomCount,
+                    barBottomColor, barTopColor, barHeadColor,
+                    dimColor, textColor, cfg
                 )
-
-                // Bottom reinforcement circles
-                if (ribBottomCount > 0) {
-                    val barStep = ribWPx / (ribBottomCount + 1).toFloat()
-                    for (b in 1..ribBottomCount) {
-                        val bx = ribCenterX - ribWPx / 2f + b * barStep
-                        drawRebarCircle(bx, tBottom - 4f, ribBottomDia.toFloat(), 0.8f, barBottomColor)
-                    }
-                    drawTextAnnotated(
-                        "\u2460", ribCenterX, tBottom + 10f,
-                        barBottomColor, cfg.dimTextSize, center = true, bold = true
-                    )
-                }
-
-                // Top reinforcement (in topping)
-                if (ribTopCount > 0) {
-                    val barStepT = ribSpacingPx / (ribTopCount + 1).toFloat()
-                    for (b in 1..ribTopCount) {
-                        val bx = ribCenterX - ribSpacingPx / 2f + b * barStepT
-                        drawRebarCircle(bx, tTop + toppingPx - 4f, ribTopDia.toFloat(), 0.6f, barTopColor)
-                    }
-                }
-            }
-
-            // Void labels between ribs
-            drawTextAnnotated("VOID", tCenterX, ribTop + ribHPx / 2f, C.ExtensionGray, cfg.valueLabelTextSize, center = true)
-
-            // Topping outline
-            drawRect(
-                color = concreteStroke,
-                topLeft = Offset(tCenterX - ribSpacingPx * 1.5f, tTop),
-                size = Size(ribSpacingPx * 3f, toppingPx),
-                style = Stroke(width = 2f)
-            )
-
-            // Dimensions
-            drawVerticalDimension(tTop, tBottom, tCenterX + ribSpacingPx * 1.5f, "h=${totalDepth.toInt()}", dimColor, cfg.valueLabelTextSize, offset = 16f)
-            drawVerticalDimension(tTop, ribTop, tCenterX + ribSpacingPx * 1.5f, "tf=${safeTopping.toInt()}", C.SafeGreen, cfg.annotationTextSmall, offset = 34f)
-            drawHorizontalDimension(
-                tCenterX - ribWPx / 2f, tCenterX + ribWPx / 2f,
-                tBottom, "bw=${safeRibWidth.toInt()}", dimColor, cfg.valueLabelTextSize, offset = 10f
-            )
-
-            // Top bar mark
-            drawTextAnnotated("\u2461", tCenterX + ribSpacingPx * 0.5f, tTop + toppingPx + 10f, barTopColor, cfg.dimTextSize, center = true, bold = true)
-
-            // Cover dimension
-            val coverPx = 5f
-            drawLine(C.SafeGreen, Offset(tCenterX - ribSpacingPx * 1.5f + 10f, tBottom), Offset(tCenterX - ribSpacingPx * 1.5f + 10f, tBottom - coverPx), strokeWidth = 1f)
-            drawTextAnnotated("c=${cover.toInt()}", tCenterX - ribSpacingPx * 1.5f + 25f, tBottom - coverPx / 2f + 3f, C.SafeGreen, cfg.annotationTextSmall)
-        } // end section view
-
-        // ══════════════════════════════════════════════════════════
-        //  SOLID HEAD DETAIL
-        // ══════════════════════════════════════════════════════════
-        if (viewMode == 0 || viewMode == 3) {
-            if (viewMode == 3 && headH > h * 0.1f) {
-                val hdLeft = margin + 90f
-                val hdRight = w - margin
-                val hdW = hdRight - hdLeft
-
-                drawTextAnnotated("SOLID HEAD DETAIL", hdLeft, headTop + 4f, C.ExtensionGray, cfg.dimTextSize, bold = true)
-
-                val headSizePx = min(hdW, headH) * 0.6f
-                val colWPx = headSizePx * 0.3f
-                val headLeft = hdLeft + (hdW - headSizePx) / 2f
-                val headTopY = headTop + (headH - headSizePx) / 2f + 10f
-
-                // Solid head
-                drawRect(color = Color(0xFF5A5A5A), topLeft = Offset(headLeft, headTopY), size = Size(headSizePx, headSizePx))
-                drawHatchPattern(headLeft, headTopY, headSizePx, headSizePx, spacing = 6f, angleDeg = -45f, color = Color(0x77666666))
-                drawRect(color = concreteStroke, topLeft = Offset(headLeft, headTopY), size = Size(headSizePx, headSizePx), style = Stroke(width = 2f))
-
-                // Column
-                val colLeft = headLeft + (headSizePx - colWPx) / 2f
-                val colTopY = headTopY + (headSizePx - colWPx) / 2f
-                drawRect(color = colFill, topLeft = Offset(colLeft, colTopY), size = Size(colWPx, colWPx))
-                drawRect(color = colStroke, topLeft = Offset(colLeft, colTopY), size = Size(colWPx, colWPx), style = Stroke(width = 1.5f))
-
-                // Head reinforcement circles
-                if (headBottomCount > 0) {
-                    val gridN = ceil(sqrt(headBottomCount.toDouble())).toInt().coerceIn(2, 8)
-                    val step = headSizePx / (gridN + 1).toFloat()
-                    var placed = 0
-                    for (gi in 1..gridN) {
-                        for (gj in 1..gridN) {
-                            if (placed >= headBottomCount) break
-                            val bx = headLeft + gi * step
-                            val by = headTopY + headSizePx - 6f
-                            drawRebarCircle(bx, by, headBottomDia.toFloat(), 0.6f, barHeadColor)
-                            placed++
-                        }
-                    }
-                    drawTextAnnotated("\u2462", headLeft + headSizePx + 14f, headTopY + headSizePx / 2f, barHeadColor, cfg.valueLabelTextSize, bold = true)
-                }
-
-                // Dimensions
-                drawHorizontalDimension(headLeft, headLeft + headSizePx, headTopY, "SH=${safeSolidHead.toInt()}", dimColor, cfg.valueLabelTextSize, offset = -14f)
-                drawHorizontalDimension(colLeft, colLeft + colWPx, headTopY + headSizePx, "c=${safeColW.toInt()}", dimColor, cfg.annotationTextSmall, offset = 10f)
             }
         }
 
-        // ══════════════════════════════════════════════════════════
-        //  REINFORCEMENT TABLE
-        // ══════════════════════════════════════════════════════════
-        if (viewMode == 0 || viewMode == 3) {
-            val tblLeft = margin
-            val tblWidth = w - 2 * margin
-
-            val ribSpacingMm = safeRibSpacing
-            val ribBarLen = lxMm.toInt()
-            val topBarLen = lxMm.toInt()
-            val headBarLen = safeSolidHead.toInt()
-
-            val headers = listOf("Mark", "Location", "Dia (mm)", "Count/rib", "Spacing (mm)", "Length (mm)")
-            val colWidths = listOf(
-                tblWidth * 0.08f, tblWidth * cfg.tableHeightFraction, tblWidth * 0.14f,
-                tblWidth * 0.14f, tblWidth * 0.20f, tblWidth * cfg.tableHeightFraction
-            )
-            val rows = listOf(
-                listOf("\u2460", "Rib bottom", ribBottomDia.toInt().toString(), ribBottomCount.toString(), ribSpacingMm.toInt().toString(), ribBarLen.toString()),
-                listOf("\u2461", "Topping top", ribTopDia.toInt().toString(), ribTopCount.toString(), ribSpacingMm.toInt().toString(), topBarLen.toString()),
-                listOf("\u2462", "Solid head bot", headBottomDia.toInt().toString(), headBottomCount.toString(), "—", headBarLen.toString())
-            )
-
-            drawReinforcementTable(
-                x = tblLeft, y = tblTop,
-                colWidths = colWidths,
-                headers = headers,
-                rows = rows,
-                rowHeight = cfg.tableRowHeight,
-                headerHeight = cfg.tableHeaderHeight,
-                headerBg = tableHeaderBg,
-                altRowBg = Color(0x1AFFFFFF),
-                textColor = textColor,
-                textSize = cfg.dimTextSize
-            )
-        } // end reinforcement table
-
-        // ── Responsive Title Block ───────────────────────────────
+        // ── Responsive Title Block & Annotations ───────────────────────────
         drawSheetAnnotations(
-            x = w - cfg.titleBlockWidth - margin * 0.3f,
-            y = h - cfg.titleBlockHeight - margin * 0.3f,
+            x = W - cfg.titleBlockWidth - margin * 0.3f,
+            y = H - cfg.titleBlockHeight - margin * 0.3f,
             cfg = cfg,
-
             summary = resultSummary
         )
         drawResponsiveTitleBlock(
-            x = w - cfg.titleBlockWidth - margin * 0.3f,
-            y = h - cfg.titleBlockHeight - margin * 0.3f,
+            x = W - cfg.titleBlockWidth - margin * 0.3f,
+            y = H - cfg.titleBlockHeight - margin * 0.3f,
             cfg = cfg,
             drawingTitle = "Waffle Slab Detail",
             designCode = codeLabel
         )
+        drawScaleBar(
+            x = margin, y = H - cfg.margin * 0.8f,
+            scale = 0.05f, realLengthMm = 1000f,
+            cfg = cfg
+        )
     }
+}
+
+// ============================================================================
+// 1. HEADER BAND
+// ============================================================================
+
+private fun DrawScope.drawWaffleHeader(
+    W: Float, cfg: DrawingDimensionsConfig,
+    codeLabel: String, textColor: Color
+) {
+    val hBg = Color(0xFF263238)
+    drawRect(color = hBg, topLeft = Offset(0f, 0f), size = Size(W, cfg.headerHeight))
+    drawTextAnnotated(
+        "WAFFLE (TWO-WAY RIBBED) SLAB STRUCTURAL DETAIL  |  $codeLabel",
+        W / 2f, cfg.headerHeight * 0.65f,
+        textColor, cfg.headerTextSize, center = true, bold = true
+    )
+    drawTextAnnotated(
+        "ECP 203 §6.3.5 (Solid Heads & Waffle Coffer Pans) | ACI 318 §8.13 | SBC 304",
+        W / 2f, cfg.headerHeight * 0.90f,
+        textColor.copy(alpha = 0.6f), cfg.annotationTextSmall * 0.85f, center = true
+    )
+}
+
+// ============================================================================
+// 2. PLAN VIEW: COFFER PANS, INTERSECTING RIBS, SOLID HEADS
+// ============================================================================
+
+private fun DrawScope.drawWafflePlanView(
+    left: Float, top: Float, width: Float, height: Float,
+    safeLx: Double, safeLy: Double, safeRibSpacing: Double, safeRibWidth: Double,
+    safeSolidHead: Double, safeColW: Double, totalDepthMm: Double,
+    concreteFill: Color, concreteStroke: Color, toppingFill: Color, ribFill: Color,
+    cofferVoidFill: Color, cofferBorder: Color, solidHeadFill: Color, colFill: Color,
+    colStroke: Color, shearPerimColor: Color,
+    dimColor: Color, textColor: Color, cfg: DrawingDimensionsConfig
+) {
+    val pad = 35f
+    val avW = width - 2 * pad
+    val avH = height - 2 * pad
+
+    val scaleX = (avW / safeLx.toFloat()).coerceAtLeast(0.01f)
+    val scaleY = (avH / safeLy.toFloat()).coerceAtLeast(0.01f)
+    val scale = min(scaleX, scaleY) * 0.92f
+
+    val drawLx = (safeLx * scale).toFloat()
+    val drawLy = (safeLy * scale).toFloat()
+
+    val pX = left + pad + (avW - drawLx) / 2f
+    val pY = top + pad + (avH - drawLy) / 2f
+
+    // Slab Base
+    drawRect(color = concreteFill, topLeft = Offset(pX, pY), size = Size(drawLx, drawLy))
+
+    // ── Two-Way Coffer Grid ───────────────────────────────────────────────
+    val numPansX = ((safeLx / safeRibSpacing).toInt()).coerceAtLeast(3)
+    val numPansY = ((safeLy / safeRibSpacing).toInt()).coerceAtLeast(3)
+    val panSpacingX = drawLx / numPansX.toFloat()
+    val panSpacingY = drawLy / numPansY.toFloat()
+    val ribWPx = (safeRibWidth * scale).toFloat().coerceIn(3f, 15f)
+
+    // Draw individual coffer pans (square recesses with double borders for 3D depth)
+    for (i in 0 until numPansX) {
+        for (j in 0 until numPansY) {
+            val panL = pX + i * panSpacingX + ribWPx / 2f
+            val panT = pY + j * panSpacingY + ribWPx / 2f
+            val panW = panSpacingX - ribWPx
+            val panH = panSpacingY - ribWPx
+
+            if (panW > 6f && panH > 6f) {
+                // Outer coffer slope
+                drawRect(color = ribFill.copy(alpha = 0.5f), topLeft = Offset(panL, panT), size = Size(panW, panH))
+                // Inner recessed void
+                val inset = (min(panW, panH) * 0.18f).coerceAtLeast(2f)
+                drawRect(color = cofferVoidFill,
+                    topLeft = Offset(panL + inset, panT + inset),
+                    size = Size(panW - 2 * inset, panH - 2 * inset))
+                drawRect(color = cofferBorder,
+                    topLeft = Offset(panL, panT), size = Size(panW, panH), style = Stroke(0.6f))
+            }
+        }
+    }
+
+    // ── Solid Heads around Columns (Corners + Center) ─────────────────────
+    val headSizePx = (safeSolidHead * scale).toFloat().coerceIn(24f, drawLx * 0.38f)
+    val colWPx = (safeColW * scale).toFloat().coerceIn(12f, headSizePx * 0.55f)
+
+    val headPositions = listOf(
+        Offset(pX, pY),                                                 // Top-Left
+        Offset(pX + drawLx - headSizePx, pY),                          // Top-Right
+        Offset(pX, pY + drawLy - headSizePx),                          // Bottom-Left
+        Offset(pX + drawLx - headSizePx, pY + drawLy - headSizePx),    // Bottom-Right
+        Offset(pX + (drawLx - headSizePx) / 2f, pY + (drawLy - headSizePx) / 2f) // Center
+    )
+
+    headPositions.forEach { hPos ->
+        // Solid Head concrete
+        drawRect(color = solidHeadFill, topLeft = hPos, size = Size(headSizePx, headSizePx))
+        drawHatchPattern(hPos.x, hPos.y, headSizePx, headSizePx, cfg.hatchSpacing * 0.8f, 45f, concreteStroke.copy(alpha = 0.4f))
+        drawRect(color = concreteStroke, topLeft = hPos, size = Size(headSizePx, headSizePx), style = Stroke(1.5f))
+
+        // Column within solid head
+        val cX = hPos.x + (headSizePx - colWPx) / 2f
+        val cY = hPos.y + (headSizePx - colWPx) / 2f
+        drawRect(color = colFill, topLeft = Offset(cX, cY), size = Size(colWPx, colWPx))
+        drawRect(color = colStroke, topLeft = Offset(cX, cY), size = Size(colWPx, colWPx), style = Stroke(1.5f))
+
+        // Punching critical perimeter bo (dashed orange line)
+        val dPx = ((totalDepthMm * 0.5) * scale).toFloat().coerceIn(4f, 15f)
+        drawRect(color = shearPerimColor,
+            topLeft = Offset(cX - dPx, cY - dPx),
+            size = Size(colWPx + 2 * dPx, colWPx + 2 * dPx),
+            style = Stroke(1.2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 2f), 0f)))
+    }
+
+    // Slab border
+    drawRect(color = concreteStroke, topLeft = Offset(pX, pY), size = Size(drawLx, drawLy), style = Stroke(2.5f))
+
+    // ── Dimensions ────────────────────────────────────────────────────────
+    drawHorizontalDimension(pX, pX + drawLx, pY + drawLy + 4f,
+        "Lx = ${safeLx.toInt()} mm", dimColor, cfg.dimTextSize * 0.85f, 14f, cfg)
+    drawVerticalDimension(pY, pY + drawLy, pX + drawLx + 6f,
+        "Ly = ${safeLy.toInt()} mm", dimColor, cfg.dimTextSize * 0.85f, 18f, cfg)
+    drawHorizontalDimension(pX, pX + headSizePx, pY - 6f,
+        "SH = ${safeSolidHead.toInt()} mm", dimColor.copy(alpha = 0.85f), cfg.annotationTextSmall * 0.8f, -14f, cfg)
+}
+
+// ============================================================================
+// 3. SECTION A-A: TWO-WAY T-RIBS WITH COFFER VOIDS
+// ============================================================================
+
+private fun DrawScope.drawWaffleSectionAA(
+    left: Float, top: Float, width: Float, height: Float,
+    ribSpacingMm: Double, ribWidthMm: Double, totalDepthMm: Double, toppingThickMm: Double, ribHeightMm: Double,
+    ribBottomDia: Double, ribBottomCount: Int, ribTopDia: Double, ribTopCount: Int,
+    stirrupColor: Color, cover: Double,
+    toppingFill: Color, ribFill: Color, cofferVoidFill: Color, cofferBorder: Color, concreteStroke: Color,
+    barBottomColor: Color, barTopColor: Color, hatchColor: Color,
+    dimColor: Color, textColor: Color, cfg: DrawingDimensionsConfig
+) {
+    val pad = 35f
+    val avW = width - 2 * pad
+    val numT = 3 // show 3 ribs
+
+    val ribSpacingPx = (avW / numT.toFloat()).coerceIn(60f, 130f)
+    val scale = (ribSpacingPx / ribSpacingMm.toFloat())
+
+    val ribWPx = (ribWidthMm * scale).toFloat().coerceIn(16f, ribSpacingPx * 0.40f)
+    val toppingPx = (toppingThickMm * scale).toFloat().coerceIn(14f, 32f)
+    val ribHPx = (ribHeightMm * scale).toFloat().coerceIn(28f, 75f)
+    val totalHPx = toppingPx + ribHPx
+
+    val secL = left + pad + (avW - numT * ribSpacingPx) / 2f
+    val secY = top + (height - totalHPx) / 2f - 10f
+    val toppingBotY = secY + toppingPx
+    val secBotY = secY + totalHPx
+    val totalDrawW = numT * ribSpacingPx
+
+    // ── Continuous Topping Slab Flange ─────────────────────────────────────
+    drawRect(color = toppingFill, topLeft = Offset(secL, secY), size = Size(totalDrawW, toppingPx))
+    drawHatchPattern(secL, secY, totalDrawW, toppingPx, cfg.hatchSpacing, 45f, hatchColor)
+    drawRect(color = concreteStroke, topLeft = Offset(secL, secY), size = Size(totalDrawW, toppingPx), style = Stroke(1.5f))
+
+    // Topping reinforcement mesh
+    val meshY = secY + toppingPx * 0.5f
+    drawLine(barTopColor, Offset(secL + 10f, meshY), Offset(secL + totalDrawW - 10f, meshY), 1.5f)
+    drawTextAnnotated("Mesh: Ø${ribTopDia.toInt()}/200", secL + totalDrawW / 2f, secY - 6f,
+        barTopColor, cfg.annotationTextSmall * 0.8f, center = true, bold = true)
+
+    // ── T-Ribs & Coffer Voids ─────────────────────────────────────────────
+    for (m in 0 until numT) {
+        val ribCenterX = secL + m * ribSpacingPx + ribSpacingPx / 2f
+        val ribLeft = ribCenterX - ribWPx / 2f
+
+        // Rib Web
+        drawRect(color = ribFill, topLeft = Offset(ribLeft, toppingBotY), size = Size(ribWPx, ribHPx))
+        drawHatchPattern(ribLeft, toppingBotY, ribWPx, ribHPx, cfg.hatchSpacing * 0.8f, 45f, hatchColor)
+        drawRect(color = concreteStroke, topLeft = Offset(ribLeft, toppingBotY), size = Size(ribWPx, ribHPx), style = Stroke(1.5f))
+
+        // Stirrups in Rib
+        val sL = ribLeft + 3f
+        val sW = ribWPx - 6f
+        val sT = toppingBotY + 2f
+        val sH = ribHPx - 4f
+        drawRect(color = stirrupColor, topLeft = Offset(sL, sT), size = Size(sW, sH), style = Stroke(1.2f))
+
+        // Bottom Rebar (Circles)
+        val barR = (ribBottomDia * scale * 0.45).toFloat().coerceIn(3f, 7f)
+        val barY = secBotY - 4f - barR
+        val step = ribWPx / (ribBottomCount + 1).toFloat()
+        for (b in 1..ribBottomCount) {
+            val bx = ribLeft + b * step
+            drawCircle(color = barBottomColor, radius = barR, center = Offset(bx, barY))
+            drawCircle(color = Color.White, radius = barR * 0.3f, center = Offset(bx, barY))
+        }
+
+        // Tapered Coffer Void between this rib and next
+        if (m < numT - 1) {
+            val voidL = ribLeft + ribWPx + 3f
+            val nextRibL = ribCenterX + ribSpacingPx - ribWPx / 2f
+            val voidW = nextRibL - voidL - 3f
+
+            // Draw tapered coffer pan (trapezoidal profile typical of waffle domes)
+            val taper = voidW * 0.10f
+            val panPath = Path().apply {
+                moveTo(voidL + taper, toppingBotY + 2f)
+                lineTo(voidL + voidW - taper, toppingBotY + 2f)
+                lineTo(voidL + voidW, toppingBotY + ribHPx - 2f)
+                lineTo(voidL, toppingBotY + ribHPx - 2f)
+                close()
+            }
+            drawPath(panPath, color = cofferVoidFill)
+            drawPath(panPath, color = cofferBorder, style = Stroke(1f))
+            drawTextAnnotated("COFFER", voidL + voidW / 2f, toppingBotY + ribHPx / 2f,
+                Color(0xFF90A4AE), cfg.annotationTextSmall * 0.75f, center = true)
+        }
+    }
+
+    // Callout
+    val midRibX = secL + ribSpacingPx / 2f
+    drawTextAnnotated("${ribBottomCount}Ø${ribBottomDia.toInt()}", midRibX, secBotY + 12f,
+        barBottomColor, cfg.annotationTextSmall, center = true, bold = true)
+
+    // Dimensions
+    drawVerticalDimension(secY, secBotY, secL + totalDrawW + 6f,
+        "h=${totalDepthMm.toInt()}mm", dimColor, cfg.dimTextSize * 0.85f, 16f, cfg)
+    drawVerticalDimension(secY, toppingBotY, secL + totalDrawW + 6f,
+        "tf=${toppingThickMm.toInt()}mm", dimColor.copy(alpha = 0.8f), cfg.annotationTextSmall * 0.8f, 32f, cfg)
+    drawHorizontalDimension(midRibX - ribWPx / 2f, midRibX + ribWPx / 2f, secBotY + 4f,
+        "bw=${ribWidthMm.toInt()}", dimColor, cfg.annotationTextSmall * 0.8f, 16f, cfg)
+}
+
+// ============================================================================
+// 4. SOLID HEAD & PUNCHING SHEAR DETAIL
+// ============================================================================
+
+private fun DrawScope.drawWaffleSolidHeadDetail(
+    left: Float, top: Float, width: Float, height: Float,
+    safeSolidHead: Double, safeColW: Double, totalDepthMm: Double, toppingThickMm: Double,
+    headBottomDia: Double, headBottomCount: Int,
+    solidHeadFill: Color, colFill: Color, colStroke: Color, concreteStroke: Color,
+    barHeadColor: Color, shearPerimColor: Color, hatchColor: Color,
+    dimColor: Color, textColor: Color, cfg: DrawingDimensionsConfig
+) {
+    val pad = 35f
+    val avW = width - 2 * pad
+    val avH = height - 2 * pad
+
+    val headSizePx = min(avW, avH) * 0.70f
+    val colWPx = (headSizePx * (safeColW / safeSolidHead).toFloat()).coerceIn(20f, headSizePx * 0.60f)
+
+    val hLeft = left + pad + (avW - headSizePx) / 2f
+    val hTop = top + pad + (avH - headSizePx) / 2f
+
+    // ── Solid Head Slab Outline ───────────────────────────────────────────
+    drawRect(color = solidHeadFill, topLeft = Offset(hLeft, hTop), size = Size(headSizePx, headSizePx))
+    drawHatchPattern(hLeft, hTop, headSizePx, headSizePx, cfg.hatchSpacing * 0.9f, 45f, hatchColor)
+    drawRect(color = concreteStroke, topLeft = Offset(hLeft, hTop), size = Size(headSizePx, headSizePx), style = Stroke(2f))
+
+    // ── Column in Center ──────────────────────────────────────────────────
+    val cX = hLeft + (headSizePx - colWPx) / 2f
+    val cY = hTop + (headSizePx - colWPx) / 2f
+    drawRect(color = colFill, topLeft = Offset(cX, cY), size = Size(colWPx, colWPx))
+    drawRect(color = colStroke, topLeft = Offset(cX, cY), size = Size(colWPx, colWPx), style = Stroke(2f))
+
+    // ── Punching Shear Critical Perimeter bo (at d/2) ─────────────────────
+    val dPx = (colWPx * 0.40f).coerceIn(10f, 30f)
+    drawRect(color = shearPerimColor,
+        topLeft = Offset(cX - dPx, cY - dPx),
+        size = Size(colWPx + 2 * dPx, colWPx + 2 * dPx),
+        style = Stroke(2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 3f), 0f)))
+    drawTextAnnotated("Critical bo (d/2)", cX + colWPx / 2f, cY - dPx - 8f,
+        shearPerimColor, cfg.annotationTextSmall * 0.85f, center = true, bold = true)
+
+    // ── Solid Head Flexure Reinforcement Grid (Top/Bottom) ────────────────
+    val numBars = min(headBottomCount, 6).coerceAtLeast(3)
+    val step = headSizePx / (numBars + 1).toFloat()
+    for (i in 1..numBars) {
+        val bx = hLeft + i * step
+        // Vertical bars
+        drawLine(barHeadColor.copy(alpha = 0.7f), Offset(bx, hTop + 6f), Offset(bx, hTop + headSizePx - 6f), 2f)
+        // Horizontal bars
+        val by = hTop + i * step
+        drawLine(barHeadColor.copy(alpha = 0.7f), Offset(hLeft + 6f, by), Offset(hLeft + headSizePx - 6f, by), 2f)
+    }
+    drawTextAnnotated("Head Steel: ${headBottomCount}Ø${headBottomDia.toInt()} Mesh",
+        hLeft + headSizePx / 2f, hTop + headSizePx + 16f,
+        barHeadColor, cfg.annotationTextSmall, center = true, bold = true)
+
+    // Dimensions
+    drawHorizontalDimension(hLeft, hLeft + headSizePx, hTop - 6f,
+        "SH = ${safeSolidHead.toInt()} mm", dimColor, cfg.annotationTextSmall, -12f, cfg)
+}
+
+// ============================================================================
+// 5. BAR BENDING SCHEDULE (BBS) & DETAILING TABLE
+// ============================================================================
+
+private fun DrawScope.drawWaffleBBSTable(
+    left: Float, top: Float, width: Float, height: Float,
+    safeLxMm: Double, safeLyMm: Double, safeRibSpacingMm: Double, safeSolidHeadMm: Double,
+    ribBottomDia: Double, ribBottomCount: Int, ribTopDia: Double, ribTopCount: Int,
+    headBottomDia: Double, headBottomCount: Int,
+    barBottomColor: Color, barTopColor: Color, barHeadColor: Color,
+    dimColor: Color, textColor: Color, cfg: DrawingDimensionsConfig
+) {
+    val numRibsX = ((safeLyMm / safeRibSpacingMm).toInt() + 1).coerceAtLeast(3)
+    val numRibsY = ((safeLxMm / safeRibSpacingMm).toInt() + 1).coerceAtLeast(3)
+
+    // Bar cut lengths
+    val ribBarLenXM = (safeLxMm + 400.0) / 1000.0
+    val ribBarLenYM = (safeLyMm + 400.0) / 1000.0
+    val headBarLenM = (safeSolidHeadMm + 300.0) / 1000.0
+
+    // Counts
+    val countBotX = ribBottomCount * numRibsX
+    val countBotY = ribBottomCount * numRibsY
+    val countHead = headBottomCount * 2 * 4 // 2 layers, 4 drop heads
+
+    // Weights (kg = count * length * dia^2 * 0.00617)
+    val wBotX = countBotX * ribBarLenXM * ribBottomDia * ribBottomDia * 0.00617
+    val wBotY = countBotY * ribBarLenYM * ribBottomDia * ribBottomDia * 0.00617
+    val wHead = countHead * headBarLenM * headBottomDia * headBottomDia * 0.00617
+    val slabAreaM2 = (safeLxMm * safeLyMm) / 1e6
+    val wTopping = slabAreaM2 * 2.22 // mesh
+    val totalWeight = wBotX + wBotY + wHead + wTopping
+
+    val headers = listOf("Mark", "Component", "Rebar Size", "Cut Length", "Total No.", "Weight (kg)")
+    val rows = listOf(
+        listOf("RB-X", "X-Rib Bottom", "${ribBottomCount}Ø${ribBottomDia.toInt()}", "${(ribBarLenXM * 1000).toInt()} mm", "$countBotX", "%.1f".format(wBotX)),
+        listOf("RB-Y", "Y-Rib Bottom", "${ribBottomCount}Ø${ribBottomDia.toInt()}", "${(ribBarLenYM * 1000).toInt()} mm", "$countBotY", "%.1f".format(wBotY)),
+        listOf("SH-B", "Solid Head", "${headBottomCount}Ø${headBottomDia.toInt()}", "${(headBarLenM * 1000).toInt()} mm", "$countHead", "%.1f".format(wHead)),
+        listOf("MSH", "Topping Mesh", "Ø${ribTopDia.toInt()}/200", "Mesh Rolls", "Both Ways", "%.1f".format(wTopping))
+    )
+
+    val colFracs = listOf(0.10f, 0.24f, 0.22f, 0.16f, 0.14f, 0.14f)
+    val colWidths = colFracs.map { it * width }
+
+    drawResponsiveReinforcementTable(
+        x = left, y = top,
+        colWidths = colWidths,
+        headers = headers,
+        rows = rows,
+        cfg = cfg,
+        headerBg = DrawingColorDefaults.TableHeaderBg,
+        altRowBg = DrawingColorDefaults.TableRowAlt,
+        textColor = textColor
+    )
+
+    val sumY = top + cfg.tableHeaderHeight + cfg.tableRowHeight * rows.size + 14f
+    drawTextAnnotated("Total Steel: ${String.format("%.1f", totalWeight)} kg  (≈ ${String.format("%.1f", totalWeight / slabAreaM2)} kg/m² for ${String.format("%.1f", slabAreaM2)} m² slab)",
+        left + width / 2f, sumY,
+        DrawingColorDefaults.SafeGreen, cfg.annotationTextSmall, center = true, bold = true)
 }

@@ -49,6 +49,11 @@ import com.civileg.app.ui.compose.components.drawings.columnDrawingSummary
 import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.BarInfo
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
@@ -90,7 +95,7 @@ fun ColumnScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_column_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_column_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -130,7 +135,7 @@ fun ColumnScreen(
                             onSelected = { viewModel.updateLoadCombination(it) }
                         )
                         
-                        Text(
+                        AppText(
                             text = uiState.loadCombination.description,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary,
@@ -217,8 +222,8 @@ fun ColumnScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Seismic Confinement", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                            Text("Enable special detailing for earthquake zones", style = MaterialTheme.typography.labelSmall)
+                            AppText("Seismic Confinement", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            AppText("Enable special detailing for earthquake zones", style = MaterialTheme.typography.labelSmall)
                         }
                         Switch(
                             checked = uiState.isSeismic,
@@ -229,16 +234,13 @@ fun ColumnScreen(
             }
 
             item {
-                Button(
+                AppButton(
+                    label = stringResource(R.string.column_design_now),
                     onClick = { viewModel.calculateManual() },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Icon(Icons.Default.Calculate, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.column_design_now), fontWeight = FontWeight.Bold)
-                }
+                    fontWeight = FontWeight.Bold,
+                    icon = Icons.Default.Calculate
+                )
             }
 
             uiState.result?.let { result ->
@@ -271,7 +273,7 @@ fun ColumnScreen(
                                             tint = ecoColor
                                         )
                                         Spacer(Modifier.width(8.dp))
-                                        Text(
+                                        AppText(
                                             if (result.utilizationRatio > 1.0) stringResource(R.string.column_section_unsafe)
                                             else if (result.utilizationRatio > 0.9) stringResource(R.string.design_caution)
                                             else if (result.utilizationRatio > 0.4) stringResource(R.string.column_section_ideal)
@@ -280,7 +282,7 @@ fun ColumnScreen(
                                             color = ecoColor
                                         )
                                     }
-                                    Text(
+                                    AppText(
                                         stringResource(R.string.consultant_ratio),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -299,7 +301,7 @@ fun ColumnScreen(
                                         color = ecoColor,
                                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                     )
-                                    Text(
+                                    AppText(
                                         "${(result.utilizationRatio * 100).toInt()}%",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp
@@ -328,7 +330,7 @@ fun ColumnScreen(
 
                 if (result.mx != 0.0 || result.my != 0.0) {
                     item {
-                        Text("Biaxial Interaction (P-M)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        AppText("Biaxial Interaction (P-M)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                         com.civileg.app.ui.compose.components.charts.BiaxialInteractionChart(
                             mxPoints = emptyList(), // Needs wiring to ViewModel for actual curve
                             myPoints = emptyList(),
@@ -345,22 +347,19 @@ fun ColumnScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.column_economy_option),
                             onClick = { viewModel.applyEconomicalDesign() },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(stringResource(R.string.column_economy_option), fontSize = 12.sp)
-                        }
-                        Button(
+                            fontSize = 12.sp
+                        )
+                        AppButton(
+                            label = stringResource(R.string.column_safest_option),
                             onClick = { viewModel.applySafetyDesign() },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(stringResource(R.string.column_safest_option), fontSize = 12.sp)
-                        }
+                            style = AppButtonStyle.Secondary,
+                            fontSize = 12.sp
+                        )
                     }
                 }
 
@@ -372,7 +371,7 @@ fun ColumnScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                                Text(stringResource(R.string.column_custom_rebar), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                AppText(stringResource(R.string.column_custom_rebar), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                                 Switch(
                                     checked = uiState.autoOptimize,
                                     onCheckedChange = { viewModel.updateAutoOptimize(it) },
@@ -398,13 +397,12 @@ fun ColumnScreen(
                             }
                             if (!uiState.autoOptimize) {
                                 Spacer(Modifier.height(8.dp))
-                                Button(
+                                AppButton(
+                                    label = stringResource(R.string.column_update_rebar),
                                     onClick = { viewModel.calculateManual() },
                                     modifier = Modifier.fillMaxWidth(),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                                ) {
-                                    Text(stringResource(R.string.column_update_rebar))
-                                }
+                                    style = AppButtonStyle.Secondary
+                                )
                             }
                         }
                     }
@@ -412,7 +410,8 @@ fun ColumnScreen(
 
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.pdf_report),
                             onClick = {
                                 scope.launch {
                                     val captureBitmap = try {
@@ -423,34 +422,24 @@ fun ColumnScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            enabled = !uiState.isExporting
-                        ) {
-                            if (uiState.isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
-                            }
-                        }
+                            enabled = !uiState.isExporting,
+                            loading = uiState.isExporting,
+                            icon = Icons.Default.PictureAsPdf
+                        )
 
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.save),
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
-                        }
+                            icon = Icons.Default.Save,
+                            containerOverride = MaterialTheme.colorScheme.secondary,
+                            contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
+                        )
                     }
                 }
 
                 item {
-                    Text(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    AppText(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     EngineeringFormulasCard(uiState.designCode)
                 }
 
@@ -552,7 +541,7 @@ fun ColumnScreen(
                         color = Color(0xFF1565C0)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(
+                    AppText(
                         "Calculating... / جاري الحساب...",
                         fontSize = 14.sp,
                         color = Color.Gray
@@ -565,19 +554,19 @@ fun ColumnScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text(stringResource(R.string.save_design_in_project)) },
+            title = { AppText(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text(stringResource(R.string.column_name_hint)) },
+                        label = { AppText(stringResource(R.string.column_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
+                    AppText(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text(stringResource(R.string.no_projects_available), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        AppText(stringResource(R.string.no_projects_available), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -590,23 +579,30 @@ fun ColumnScreen(
                                     selected = selectedProjectId == project.id,
                                     onClick = { selectedProjectId = project.id }
                                 )
-                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+                                AppText(project.name, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     }
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
-                    uiState.result?.let { viewModel.saveColumn(pId, designName, it) }
-                    showSaveDialog = false
-                }) {
-                    Text(stringResource(R.string.save))
-                }
+                AppButton(
+                    label = stringResource(R.string.save),
+                    fillMaxWidth = false,
+                    onClick = {
+                        val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
+                        uiState.result?.let { viewModel.saveColumn(pId, designName, it) }
+                        showSaveDialog = false
+                    }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
+                AppButton(
+                    label = stringResource(R.string.cancel),
+                    onClick = { showSaveDialog = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -632,7 +628,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
                     tint = if (result.isSafe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
+                AppText(
                     if (result.isSafe) stringResource(R.string.column_section_safe) else stringResource(R.string.column_section_unsafe_label),
                     fontWeight = FontWeight.Bold,
                     color = if (result.isSafe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
@@ -653,7 +649,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             ResultDataRow(stringResource(R.string.column_provided_reinforcement), result.reinforcement.barString)
             
             if (result.stirrups.zones.isNotEmpty()) {
-                 Text(stringResource(R.string.stirrups_distribution), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+                 AppText(stringResource(R.string.stirrups_distribution), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
                  result.stirrups.zones.forEach { zone ->
                      ResultDataRow("${zone.name} (${String.format(java.util.Locale.US, "%.1f", (zone.endLocation - zone.startLocation)/1000.0)}m)", zone.description)
                  }
@@ -664,31 +660,31 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
             
-            Text(stringResource(R.string.column_quantities), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            AppText(stringResource(R.string.column_quantities), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ResultDataRow(stringResource(R.string.column_concrete_vol), String.format("%.3f m³", result.concreteVolume))
             ResultDataRow(stringResource(R.string.column_steel_weight), String.format("%.2f kg", result.steelWeight))
             ResultDataRow(stringResource(R.string.column_estimated_cost), String.format("%.2f", result.cost))
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
             
-            Text(stringResource(R.string.safety_checks), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            AppText(stringResource(R.string.safety_checks), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             result.safetyChecks.forEach { check ->
                 ResultCheckRow(check)
             }
 
             if (result.warnings.isNotEmpty()) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
-                Text("Warnings", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                AppText("Warnings", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
                 result.warnings.forEach { warning ->
-                    Text("• $warning", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                    AppText("• $warning", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                 }
             }
 
             if (result.codeNotes.isNotEmpty()) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
-                Text("Code Notes", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                AppText("Code Notes", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 result.codeNotes.forEach { note ->
-                    Text("• $note", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    AppText("• $note", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -703,7 +699,7 @@ private fun ResultCheckRow(check: CalculatorEngine.DesignSafetyCheck) {
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
+        AppText(
             if (check.isSafe) stringResource(R.string.safe_check) else stringResource(R.string.unsafe_check),
             color = if (check.isSafe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
             fontWeight = FontWeight.Bold,
@@ -711,8 +707,8 @@ private fun ResultCheckRow(check: CalculatorEngine.DesignSafetyCheck) {
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-            Text(check.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(
+            AppText(check.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            AppText(
                 "${String.format("%.2f", check.value)} / ${String.format("%.2f", check.limit)} ${check.unit}",
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -753,7 +749,7 @@ private fun SectionHeader(title: String, iconRes: Int) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
         Icon(painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+        AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -771,7 +767,7 @@ private fun ColumnInputField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, fontSize = 12.sp) },
+        label = { AppText(label, fontSize = 12.sp) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
         enabled = enabled,
@@ -780,7 +776,7 @@ private fun ColumnInputField(
         isError = hasValue && !isValid,
         textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
         supportingText = if (hasValue && !isValid) {
-            { Text(stringResource(R.string.column_validation_positive), color = MaterialTheme.colorScheme.error, fontSize = 11.sp) }
+            { AppText(stringResource(R.string.column_validation_positive), color = MaterialTheme.colorScheme.error, fontSize = 11.sp) }
         } else null
     )
 }
@@ -788,14 +784,14 @@ private fun ColumnInputField(
 @Composable
 private fun ResultDataRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
-        Text(value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+        AppText(label, style = MaterialTheme.typography.bodyMedium)
+        AppText(value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
 @Composable
 private fun FormulaItem(formula: String) {
-    Text(
+    AppText(
         text = formula,
         fontFamily = FontFamily.Monospace,
         fontSize = 13.sp,
@@ -806,7 +802,7 @@ private fun FormulaItem(formula: String) {
 
 @Composable
 private fun DesignCodeSelector(selectedCode: DesignCode, onCodeSelected: (DesignCode) -> Unit) {
-    Text(stringResource(R.string.column_select_code), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    AppText(stringResource(R.string.column_select_code), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -822,7 +818,7 @@ private fun DesignCodeSelector(selectedCode: DesignCode, onCodeSelected: (Design
                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
+                    AppText(
                         text = when (code) {
                             DesignCode.SBC -> stringResource(R.string.column_code_sbc)
                             DesignCode.ECP -> stringResource(R.string.column_code_ecp)
@@ -842,13 +838,13 @@ private fun DesignCodeSelector(selectedCode: DesignCode, onCodeSelected: (Design
 
 @Composable
 private fun LoadCombinationSelector(selected: LoadCombination, code: com.civileg.app.domain.entities.DesignCode, onSelected: (LoadCombination) -> Unit) {
-    Text(stringResource(R.string.column_load_combo), style = MaterialTheme.typography.labelMedium)
+    AppText(stringResource(R.string.column_load_combo), style = MaterialTheme.typography.labelMedium)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
         LoadCombination.getByCode(code).forEach { combo ->
             FilterChip(
                 selected = combo == selected,
                 onClick = { onSelected(combo) },
-                label = { Text(combo.description, fontSize = 11.sp) }
+                label = { AppText(combo.description, fontSize = 11.sp) }
             )
         }
     }
