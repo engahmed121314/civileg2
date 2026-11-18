@@ -287,8 +287,6 @@ fun FootingScreen(
                     loading = isLoading,
                     icon = Icons.Default.Calculate
                 )
-                    }
-                }
             }
 
             result?.let { res ->
