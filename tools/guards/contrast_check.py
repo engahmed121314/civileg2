@@ -129,15 +129,16 @@ def main():
     # 3. drawing palette on theme surface
     (light, _), (dark, dark_over) = parse_drawing(draw_src)
     for mode, d in (("Light", light), ("Dark", dark)):
-        bg = pal[mode]["surface"]
+        # Drawings paint their own `paper` sheet; contrast is measured against it (§12.5).
+        bg = pal[mode]["paper"]
         for f in DRAW_TEXT:
             r = ratio(d[f], bg)
             if r < TEXT_MIN:
-                failures[f"drawing:{mode}:text:{f}"] = f"{r:.2f}:1 < {TEXT_MIN} (on theme surface)"
+                failures[f"drawing:{mode}:text:{f}"] = f"{r:.2f}:1 < {TEXT_MIN} (on paper)"
         for f in DRAW_GRAPHIC:
             r = ratio(d[f], bg)
             if r < GRAPHIC_MIN:
-                failures[f"drawing:{mode}:graphic:{f}"] = f"{r:.2f}:1 < {GRAPHIC_MIN} (on theme surface)"
+                failures[f"drawing:{mode}:graphic:{f}"] = f"{r:.2f}:1 < {GRAPHIC_MIN} (on paper)"
 
     # 4. theme source
     allowed = {"MainActivity.kt", "Theme.kt"}

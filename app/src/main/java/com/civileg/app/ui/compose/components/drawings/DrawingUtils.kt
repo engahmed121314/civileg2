@@ -2,6 +2,8 @@ package com.civileg.app.ui.compose.components.drawings
 
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.ui.theme.LocalIsDarkTheme
+import com.civileg.app.ui.theme.PremiumColorsDark
+import com.civileg.app.ui.theme.PremiumColorsLight
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.CornerRadius
@@ -243,6 +245,9 @@ object DrawingColorDefaults {
  * Obtain the correct palette via the [drawingColors] composable function.
  */
 data class DrawingColors(
+    // ── The sheet the drawing is painted on (§12.5). Every drawn text/line is
+    //    checked against this, not against the theme surface behind the canvas. ──
+    val paper: Color = PremiumColorsLight.paper,
     // ── Structural element colors (same in both themes for clarity) ──
     val rebarBlue: Color = Color(0xFF4A90D9),
     val topRebarBlue: Color = Color(0xFF7EC8E3),
@@ -303,6 +308,7 @@ data class DrawingColors(
     companion object {
         /** Light theme drawing palette */
         val Light = DrawingColors(
+            paper = PremiumColorsLight.paper,
             concreteFill = Color(0xFFE0E0E0),
             concreteStroke = Color(0xFF424242),
             textPrimary = Color(0xFF212121),
@@ -335,6 +341,7 @@ data class DrawingColors(
 
         /** Dark theme drawing palette */
         val Dark = DrawingColors(
+            paper = PremiumColorsDark.paper,
             concreteFill = Color(0xFF2A2A2A),
             concreteStroke = Color(0xFF9E9E9E),
             textPrimary = Color(0xFFE0E0E0),

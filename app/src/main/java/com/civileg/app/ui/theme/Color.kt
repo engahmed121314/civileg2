@@ -38,6 +38,8 @@ object PremiumColorsLight {
     val background = Color(0xFFF4F6F9)
     val onBackground = Color(0xFF0B192C)
     val surface = Color(0xFFFFFFFF)
+    /** Drawing sheet (§12.5): drawings paint their own paper, checked against it. */
+    val paper = Color(0xFFFFFFFF)
     val onSurface = Color(0xFF0B192C)
     val surfaceVariant = Color(0xFFE2E8F0)
     val onSurfaceVariant = Color(0xFF334155)
@@ -142,6 +144,8 @@ object PremiumColorsDark {
     val background = Color(0xFF0B0F19)
     val onBackground = Color(0xFFF8FAFC)
     val surface = Color(0xFF131B2E)
+    /** Drawing sheet (§12.5): drawings paint their own paper, checked against it. */
+    val paper = Color(0xFF131B2E)
     val onSurface = Color(0xFFF8FAFC)
     val surfaceVariant = Color(0xFF1E293B)
     val onSurfaceVariant = Color(0xFF94A3B8)
