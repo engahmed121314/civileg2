@@ -60,6 +60,11 @@ import com.civileg.app.utils.captureToAndroidBitmap
 import com.civileg.app.viewmodel.PostTensionedViewModel
 import kotlinx.coroutines.launch
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 /**
  * شاشة تصميم العناصر مسبقة الإجهاد (Post-Tensioned) وفق ECP / ACI / SBC.
@@ -107,7 +112,7 @@ fun PostTensionedScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
+                    AppText(
                         stringResource(R.string.screen_post_tensioned_title),
                         fontWeight = FontWeight.Bold
                     )
@@ -130,7 +135,7 @@ fun PostTensionedScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
             item {
-                Text(
+                AppText(
                     "Post-Tensioned Element / عنصر مسبق الإجهاد",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
@@ -216,7 +221,8 @@ fun PostTensionedScreen(
                 )
             }
             item {
-                Button(
+                AppButton(
+                    label = "Calculate / احسب",
                     onClick = {
                         val input = PostTensionedInput(
                             elementType = elementType,
@@ -240,20 +246,11 @@ fun PostTensionedScreen(
                         viewModel.calculate(input)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.height(18.dp).width(18.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Icon(Icons.Default.Calculate, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Calculate / احسب", fontWeight = FontWeight.Bold)
-                    }
-                }
+                    enabled = !isLoading,
+                    loading = isLoading,
+                    fontWeight = FontWeight.Bold,
+                    icon = Icons.Default.Calculate
+                )
             }
 
             result?.let { r ->
@@ -433,7 +430,7 @@ private fun PostTensionedResultContent(
         if (result.warnings.isNotEmpty()) {
             ResultCard("Warnings / تحذيرات") {
                 result.warnings.forEach { w ->
-                    Text(
+                    AppText(
                         "• $w",
                         color = Color(0xFFE65100),
                         fontSize = 12.sp,
@@ -446,7 +443,7 @@ private fun PostTensionedResultContent(
         if (result.codeNotes.isNotEmpty()) {
             ResultCard("Code Notes / ملاحظات الكود") {
                 result.codeNotes.forEach { n ->
-                    Text(
+                    AppText(
                         "• $n",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 11.sp,
@@ -466,23 +463,16 @@ private fun ExportButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    OutlinedButton(
+    AppButton(
+        label = label,
         onClick = onClick,
         enabled = enabled,
+        loading = !enabled,
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        if (!enabled) {
-            CircularProgressIndicator(
-                modifier = Modifier.height(16.dp).width(16.dp),
-                strokeWidth = 2.dp
-            )
-        } else {
-            Icon(icon, contentDescription = null)
-        }
-        Spacer(Modifier.width(6.dp))
-        Text(label, fontSize = 12.sp)
-    }
+        style = AppButtonStyle.Outline,
+        icon = icon,
+        fontSize = 12.sp
+    )
 }
 
 @Composable
@@ -503,7 +493,7 @@ private fun StatusBanner(isSafe: Boolean) {
                 contentDescription = null,
                 tint = color
             )
-            Text(
+            AppText(
                 if (isSafe) "Design is SAFE / التصميم آمن" else "Design is UNSAFE / التصميم غير آمن",
                 color = color,
                 fontWeight = FontWeight.Bold
@@ -520,7 +510,7 @@ private fun ResultCard(title: String, content: @Composable () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            AppText(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(Modifier.height(8.dp))
             content()
         }
@@ -533,13 +523,13 @@ private fun ResultRow(label: String, value: String, bold: Boolean = false) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
+        AppText(
             label,
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f)
         )
-        Text(
+        AppText(
             value,
             fontSize = 12.sp,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium
@@ -558,7 +548,7 @@ private fun NumberField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, fontSize = 11.sp) },
+        label = { AppText(label, fontSize = 11.sp) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = modifier.fillMaxWidth()
@@ -583,7 +573,7 @@ private fun <T> EnumDropdown(
             value = display(selected),
             onValueChange = {},
             readOnly = true,
-            label = { Text(label, fontSize = 11.sp) },
+            label = { AppText(label, fontSize = 11.sp) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier.fillMaxWidth().menuAnchor()
         )
@@ -593,7 +583,7 @@ private fun <T> EnumDropdown(
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(display(option), fontSize = 13.sp) },
+                    text = { AppText(display(option), fontSize = 13.sp) },
                     onClick = {
                         onSelected(option)
                         expanded = false

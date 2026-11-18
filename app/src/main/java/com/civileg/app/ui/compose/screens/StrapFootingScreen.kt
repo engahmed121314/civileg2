@@ -48,6 +48,11 @@ import com.civileg.app.utils.captureToAndroidBitmap
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,7 +100,7 @@ fun StrapFootingScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.home_strap_footing), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.home_strap_footing), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -113,7 +118,7 @@ fun StrapFootingScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text(
+                AppText(
                     stringResource(R.string.footing_inputs),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
@@ -132,7 +137,7 @@ fun StrapFootingScreen(
             }
 
             item {
-                Text("Column 1 (Edge) Dimensions (mm)", style = MaterialTheme.typography.labelMedium)
+                AppText("Column 1 (Edge) Dimensions (mm)", style = MaterialTheme.typography.labelMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     StrapInputField(col1W, "Width (b1)", { col1W = it }, Modifier.weight(1f))
                     StrapInputField(col1D, "Depth (a1)", { col1D = it }, Modifier.weight(1f))
@@ -140,7 +145,7 @@ fun StrapFootingScreen(
             }
 
             item {
-                Text("Column 2 (Internal) Dimensions (mm)", style = MaterialTheme.typography.labelMedium)
+                AppText("Column 2 (Internal) Dimensions (mm)", style = MaterialTheme.typography.labelMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     StrapInputField(col2W, "Width (b2)", { col2W = it }, Modifier.weight(1f))
                     StrapInputField(col2D, "Depth (a2)", { col2D = it }, Modifier.weight(1f))
@@ -177,7 +182,8 @@ fun StrapFootingScreen(
             }
 
             item {
-                Button(
+                AppButton(
+                    label = stringResource(R.string.calculate),
                     onClick = {
                         viewModel.calculate(
                             col1Load.toDoubleOrNull() ?: 0.0,
@@ -196,22 +202,15 @@ fun StrapFootingScreen(
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading
-                ) {
-                    if (isLoading) {
-                        LoadingIndicator(size = 24.dp)
-                    } else {
-                        Icon(Icons.Default.Calculate, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.calculate))
-                    }
-                }
+                    enabled = !isLoading,
+                    loading = isLoading,
+                    icon = Icons.Default.Calculate
+                )
             }
 
             error?.let {
                 item {
-                    Text(it, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
+                    AppText(it, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
                 }
             }
 
@@ -232,7 +231,7 @@ fun StrapFootingScreen(
                                     FilterChip(
                                         selected = selectedViewMode == idx,
                                         onClick = { selectedViewMode = idx },
-                                        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                                        label = { AppText(label, style = MaterialTheme.typography.labelSmall) }
                                     )
                                 }
                             }
@@ -328,7 +327,8 @@ fun StrapFootingScreen(
                 
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.export_pdf),
                             onClick = {
                                 scope.launch {
                                     val captureBitmap = try {
@@ -341,20 +341,17 @@ fun StrapFootingScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.PictureAsPdf, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.export_pdf))
-                        }
-                        OutlinedButton(
+                            icon = Icons.Default.PictureAsPdf,
+                            containerOverride = MaterialTheme.colorScheme.secondary,
+                            contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
+                        )
+                        AppButton(
+                            label = "DXF",
                             onClick = { viewModel.exportToDxf(context) },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("DXF", fontWeight = FontWeight.Bold)
-                        }
+                            style = AppButtonStyle.Outline,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -382,7 +379,7 @@ fun StrapFootingScreen(
                         color = Color(0xFF1565C0)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(
+                    AppText(
                         "Calculating... / جاري الحساب...",
                         fontSize = 14.sp,
                         color = Color.Gray
@@ -431,7 +428,7 @@ fun StrapFootingResultCard(res: CalculatorEngine.StrapFootingResult) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Design Results", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            AppText("Design Results", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             
             HorizontalDivider()
             
@@ -460,7 +457,7 @@ fun StrapFootingResultCard(res: CalculatorEngine.StrapFootingResult) {
             ResultRow("Steel Weight", "${"%.1f".format(res.steelWeight)} kg")
             
             if (!res.isSafe) {
-                Text("⚠ Design Unsafe - Check dimensions", color = Color.Red, fontWeight = FontWeight.Bold)
+                AppText("⚠ Design Unsafe - Check dimensions", color = Color.Red, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -472,7 +469,7 @@ fun StrapFootingResultCard(res: CalculatorEngine.StrapFootingResult) {
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
+                AppText(
                     "Safety Checks",
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.labelMedium,
@@ -484,15 +481,15 @@ fun StrapFootingResultCard(res: CalculatorEngine.StrapFootingResult) {
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
+                        AppText(
                             if (check.isSafe) "✓" else "✗",
                             color = if (check.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
-                        Text(
+                        AppText(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                        AppText(
                             "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
@@ -510,7 +507,7 @@ fun StrapInputField(value: String, label: String, onValueChange: (String) -> Uni
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = { AppText(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
@@ -521,8 +518,8 @@ fun StrapInputField(value: String, label: String, onValueChange: (String) -> Uni
 @Composable
 private fun ResultRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
-        Text(value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+        AppText(label, style = MaterialTheme.typography.bodyMedium)
+        AppText(value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

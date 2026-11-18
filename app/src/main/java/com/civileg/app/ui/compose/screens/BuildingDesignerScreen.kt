@@ -16,6 +16,11 @@ import com.civileg.app.pricing.LivePriceFetcher
 import com.civileg.app.pricing.PriceManager
 import com.civileg.app.ui.compose.components.editor.BuildingCanvas
 import com.civileg.app.ui.compose.components.editor.BuildingDesignerToolbar
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,7 +82,7 @@ fun BuildingDesignerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("المصمم الإنشائي وحساب الكميات (2D Building Designer)") },
+                title = { AppText("المصمم الإنشائي وحساب الكميات (2D Building Designer)") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "رجوع")
@@ -110,28 +115,29 @@ fun BuildingDesignerScreen(
                 ) {
                     val summary = quantitySummary
                     if (summary == null) {
-                        Text(
+                        AppText(
                             context.getString(com.civileg.app.R.string.quantity_geometry_invalid),
                             style = MaterialTheme.typography.bodySmall
                         )
                     } else {
-                        Text(
+                        AppText(
                             "التكلفة التقديرية: ${summary.totalCost} ج.م",
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-                    Button(onClick = {
-                        scope.launch {
-                            snackbarHostState.showSnackbar(
-                                context.getString(com.civileg.app.R.string.load_distribution_unavailable)
-                            )
-                        }
-                    }) {
-                        Icon(Icons.Default.Calculate, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("تشغيل التصميم والتحليل")
-                    }
+                    AppButton(
+                        label = "تشغيل التصميم والتحليل",
+                        onClick = {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    context.getString(com.civileg.app.R.string.load_distribution_unavailable)
+                                )
+                            }
+                        },
+                        fillMaxWidth = false,
+                        icon = Icons.Default.Calculate
+                    )
                 }
             }
         }
@@ -189,38 +195,41 @@ fun BuildingDesignerScreen(
     if (showBoqDialog) {
         AlertDialog(
             onDismissRequest = { showBoqDialog = false },
-            title = { Text("جدول الكميات والتكلفة التقديرية (BOQ)") },
+            title = { AppText("جدول الكميات والتكلفة التقديرية (BOQ)") },
             text = {
                 val summary = quantitySummary
                 if (summary == null) {
-                    Text(context.getString(com.civileg.app.R.string.quantity_geometry_invalid))
+                    AppText(context.getString(com.civileg.app.R.string.quantity_geometry_invalid))
                 } else {
                     Column(modifier = Modifier.fillMaxWidth().height(400.dp)) {
-                        Text(
+                        AppText(
                             context.getString(com.civileg.app.R.string.quantity_estimate_notice),
                             style = MaterialTheme.typography.bodySmall
                         )
-                        Text("إجمالي الخرسانة: ${summary.totalConcreteVolumeM3} م³", style = MaterialTheme.typography.bodyLarge)
-                        Text("إجمالي حديد التسليح: ${summary.totalRebarWeightTon} طن", style = MaterialTheme.typography.bodyLarge)
-                        Text("إجمالي حديد الستيل الهيكلي: ${summary.totalSteelProfileWeightTon} طن", style = MaterialTheme.typography.bodyLarge)
-                        Text("إجمالي الشدات الخشبية: ${summary.totalFormworkAreaM2} م²", style = MaterialTheme.typography.bodyLarge)
-                        Text("إجمالي الحفر: ${summary.totalExcavationVolumeM3} م³", style = MaterialTheme.typography.bodyLarge)
+                        AppText("إجمالي الخرسانة: ${summary.totalConcreteVolumeM3} م³", style = MaterialTheme.typography.bodyLarge)
+                        AppText("إجمالي حديد التسليح: ${summary.totalRebarWeightTon} طن", style = MaterialTheme.typography.bodyLarge)
+                        AppText("إجمالي حديد الستيل الهيكلي: ${summary.totalSteelProfileWeightTon} طن", style = MaterialTheme.typography.bodyLarge)
+                        AppText("إجمالي الشدات الخشبية: ${summary.totalFormworkAreaM2} م²", style = MaterialTheme.typography.bodyLarge)
+                        AppText("إجمالي الحفر: ${summary.totalExcavationVolumeM3} م³", style = MaterialTheme.typography.bodyLarge)
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("التكلفة الإجمالية التقديرية: ${summary.totalCost} ج.م", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        AppText("التكلفة الإجمالية التقديرية: ${summary.totalCost} ج.م", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(8.dp))
                         HorizontalDivider()
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("بنود جدول الكميات (BOQ Items):", style = MaterialTheme.typography.titleSmall)
+                        AppText("بنود جدول الكميات (BOQ Items):", style = MaterialTheme.typography.titleSmall)
                         summary.boqItems.forEach { item ->
-                            Text("• ${item.descriptionAr}: ${item.quantity} ${item.unitAr} (${item.totalPrice} ج.م)")
+                            AppText("• ${item.descriptionAr}: ${item.quantity} ${item.unitAr} (${item.totalPrice} ج.م)")
                         }
                     }
                 }
             },
             confirmButton = {
-                Button(onClick = { showBoqDialog = false }) {
-                    Text("إغلاق")
-                }
+                AppButton(
+                    label = "إغلاق",
+                    onClick = { showBoqDialog = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         )
     }
