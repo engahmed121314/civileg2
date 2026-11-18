@@ -32,6 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.utils.ConcreteMixDesigner
 import com.civileg.app.utils.ConcreteMixDesigner.CementType
 import com.civileg.app.utils.ConcreteMixDesigner.Exposure
@@ -108,7 +113,7 @@ fun ConcreteMixScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
+                    AppText(
                         stringResource(R.string.mix_title),
                         fontWeight = FontWeight.Bold
                     )
@@ -145,7 +150,7 @@ fun ConcreteMixScreen(
                     onValueChange = { standardDeviation = it }
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
+                AppText(
                     stringResource(R.string.mix_quick_grade),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
@@ -165,9 +170,9 @@ fun ConcreteMixScreen(
                                     ConcreteMixDesigner.estimateStandardDeviation(grade.toDouble())
                                 )
                             },
-                            label = { Text("C$grade") },
+                            label = { AppText("C$grade") },
                             leadingIcon = if (grade.toDouble() == selectedGrade) {
-                                { Text("●", color = MaterialTheme.colorScheme.primary) }
+                                { AppText("●", color = MaterialTheme.colorScheme.primary) }
                             } else null
                         )
                     }
@@ -192,19 +197,19 @@ fun ConcreteMixScreen(
                             selected = exposure == selectedExposure,
                             onClick = { selectedExposure = exposure },
                             label = {
-                                Text(
+                                AppText(
                                     stringResource(labelRes),
                                     fontSize = 12.sp
                                 )
                             },
                             leadingIcon = if (exposure == selectedExposure) {
-                                { Text("●", color = MaterialTheme.colorScheme.primary) }
+                                { AppText("●", color = MaterialTheme.colorScheme.primary) }
                             } else null
                         )
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
+                AppText(
                     text = "Min cement: ${selectedExposure.minCement.toInt()} kg/m³  •  Max w/c: ${selectedExposure.maxWCRatio}  •  Min cover: ${selectedExposure.minCover.toInt()} mm",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -223,7 +228,7 @@ fun ConcreteMixScreen(
                         value = "${maxAggSize.toInt()} mm",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text(stringResource(R.string.mix_max_agg)) },
+                        label = { AppText(stringResource(R.string.mix_max_agg)) },
                         trailingIcon = {
                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = aggExpanded)
                         },
@@ -237,7 +242,7 @@ fun ConcreteMixScreen(
                     ) {
                         listOf(10.0, 20.0, 25.0, 40.0).forEach { size ->
                             DropdownMenuItem(
-                                text = { Text("${size.toInt()} mm") },
+                                text = { AppText("${size.toInt()} mm") },
                                 onClick = {
                                     maxAggSize = size
                                     aggExpanded = false
@@ -274,9 +279,9 @@ fun ConcreteMixScreen(
                         FilterChip(
                             selected = range == selectedSlump,
                             onClick = { selectedSlump = range },
-                            label = { Text("$range mm") },
+                            label = { AppText("$range mm") },
                             leadingIcon = if (range == selectedSlump) {
-                                { Text("●", color = MaterialTheme.colorScheme.primary) }
+                                { AppText("●", color = MaterialTheme.colorScheme.primary) }
                             } else null
                         )
                     }
@@ -292,9 +297,9 @@ fun ConcreteMixScreen(
                         FilterChip(
                             selected = ct == selectedCementType,
                             onClick = { selectedCementType = ct },
-                            label = { Text(ct.name) },
+                            label = { AppText(ct.name) },
                             leadingIcon = if (ct == selectedCementType) {
-                                { Text("●", color = MaterialTheme.colorScheme.primary) }
+                                { AppText("●", color = MaterialTheme.colorScheme.primary) }
                             } else null
                         )
                     }
@@ -305,7 +310,7 @@ fun ConcreteMixScreen(
                     CementType.SRC -> stringResource(R.string.cement_src)
                     CementType.PPC -> stringResource(R.string.cement_ppc)
                 }
-                Text(
+                AppText(
                     text = "$cementLabel  (SG = ${selectedCementType.specificGravity})",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -319,7 +324,7 @@ fun ConcreteMixScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(stringResource(R.string.mix_use_admix), style = MaterialTheme.typography.bodyMedium)
+                    AppText(stringResource(R.string.mix_use_admix), style = MaterialTheme.typography.bodyMedium)
                     Switch(
                         checked = hasAdmixture,
                         onCheckedChange = { hasAdmixture = it }
@@ -335,9 +340,9 @@ fun ConcreteMixScreen(
                             FilterChip(
                                 selected = adm == selectedAdmixture,
                                 onClick = { selectedAdmixture = adm },
-                                label = { Text(adm, fontSize = 12.sp) },
+                                label = { AppText(adm, fontSize = 12.sp) },
                                 leadingIcon = if (adm == selectedAdmixture) {
-                                    { Text("●", color = MaterialTheme.colorScheme.primary) }
+                                    { AppText("●", color = MaterialTheme.colorScheme.primary) }
                                 } else null
                             )
                         }
@@ -356,14 +361,15 @@ fun ConcreteMixScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Button(
+                AppButton(
+                    label = stringResource(R.string.mix_calc_button),
                     onClick = {
-                        val target = targetStrengthValue ?: return@Button
-                        val deviation = standardDeviationValue ?: return@Button
-                        val fm = finenessModulusValue ?: return@Button
-                        val fineSG = fineAggSGValue ?: return@Button
-                        val coarseSG = coarseAggSGValue ?: return@Button
-                        val dosage = if (hasAdmixture) admixtureDosageValue ?: return@Button else 0.0
+                        val target = targetStrengthValue ?: return@AppButton
+                        val deviation = standardDeviationValue ?: return@AppButton
+                        val fm = finenessModulusValue ?: return@AppButton
+                        val fineSG = fineAggSGValue ?: return@AppButton
+                        val coarseSG = coarseAggSGValue ?: return@AppButton
+                        val dosage = if (hasAdmixture) admixtureDosageValue ?: return@AppButton else 0.0
                         viewModel.designMix(
                             targetStrength = target,
                             standardDeviation = deviation,
@@ -383,12 +389,9 @@ fun ConcreteMixScreen(
                         )
                     },
                     modifier = Modifier.weight(1f),
-                    enabled = inputIsValid
-                ) {
-                    Icon(Icons.Default.Calculate, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.mix_calc_button))
-                }
+                    enabled = inputIsValid,
+                    icon = Icons.Default.Calculate
+                )
                 IconButton(
                     onClick = {
                         targetStrength = "30"
@@ -411,14 +414,14 @@ fun ConcreteMixScreen(
             }
 
             if (!inputIsValid) {
-                Text(
+                AppText(
                     stringResource(R.string.mix_input_validation),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
             calculationError?.let { error ->
-                Text(
+                AppText(
                     error,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
@@ -429,19 +432,19 @@ fun ConcreteMixScreen(
             mixResult?.let { result ->
                 val context = androidx.compose.ui.platform.LocalContext.current
 
-                Button(
+                AppButton(
+                    label = "تصدير تقرير PDF برو (3 قطاعات)",
                     onClick = { viewModel.exportToPdf(context, slump = slumpValue) },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-                ) {
-                    Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("تصدير تقرير PDF برو (3 قطاعات)", fontWeight = FontWeight.Bold)
-                }
+                    icon = Icons.Default.PictureAsPdf,
+                    containerOverride = MaterialTheme.colorScheme.tertiary,
+                    contentOverride = onColorFor(MaterialTheme.colorScheme.tertiary),
+                    fontWeight = FontWeight.Bold
+                )
 
                 Spacer(modifier = Modifier.height(4.dp))
                 MixResultCard(result = result)
-                Text(
+                AppText(
                     stringResource(R.string.mix_preliminary_notice),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
@@ -458,7 +461,7 @@ fun ConcreteMixScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                     SectionCard(title = stringResource(R.string.mix_design_notes)) {
                         result.notes.forEach { note ->
-                            Text(
+                            AppText(
                                 text = "• $note",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -490,7 +493,7 @@ private fun SectionCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
+            AppText(
                 title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
@@ -514,7 +517,7 @@ private fun InputRow(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, fontSize = 13.sp) },
+        label = { AppText(label, fontSize = 13.sp) },
         modifier = Modifier.fillMaxWidth(),
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Decimal
@@ -538,12 +541,12 @@ private fun ResultRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
+        AppText(
             label,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Text(
+        AppText(
             value,
             style = if (highlight) MaterialTheme.typography.titleMedium
             else MaterialTheme.typography.bodyMedium,
@@ -576,7 +579,7 @@ private fun MixResultCard(result: MixResult) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                AppText(
                     stringResource(R.string.mix_results_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
@@ -585,7 +588,7 @@ private fun MixResultCard(result: MixResult) {
                     color = MaterialTheme.colorScheme.primary,
                     shape = MaterialTheme.shapes.small
                 ) {
-                    Text(
+                    AppText(
                         "%.1f MPa".format(Locale.US, result.targetStrength),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
@@ -615,7 +618,7 @@ private fun MixResultCard(result: MixResult) {
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
-            Text(
+            AppText(
                 stringResource(R.string.mix_material_quantities),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
@@ -662,7 +665,7 @@ private fun MixResultCard(result: MixResult) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             // Mix Ratio prominently displayed
-            Text(
+            AppText(
                 stringResource(R.string.mix_ratio_prominent),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
@@ -672,7 +675,7 @@ private fun MixResultCard(result: MixResult) {
                 shape = MaterialTheme.shapes.medium,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
+                AppText(
                     buildMixRatioString(result),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -699,7 +702,7 @@ private fun MixResultCard(result: MixResult) {
                 "Extreme (chemical attack)" -> stringResource(R.string.exposure_extreme)
                 else -> result.exposure
             }
-            Text(
+            AppText(
                 "$resCementLabel  •  $resExposureLabel",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -824,7 +827,7 @@ private fun MixProportionBarChart(result: MixResult) {
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     // Label
-                    Text(
+                    AppText(
                         label,
                         modifier = Modifier.width(90.dp),
                         style = MaterialTheme.typography.bodySmall,
@@ -852,7 +855,7 @@ private fun MixProportionBarChart(result: MixResult) {
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     // Value
-                    Text(
+                    AppText(
                         "${"%.0f".format(Locale.US, fraction * total)} kg",
                         modifier = Modifier.width(80.dp),
                         textAlign = TextAlign.End,
@@ -864,7 +867,7 @@ private fun MixProportionBarChart(result: MixResult) {
         }
 
         Spacer(modifier = Modifier.height(4.dp))
-        Text(
+        AppText(
             "Total: ${"%.0f".format(Locale.US, total)} kg/m³  (excl. air & admixture)",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant

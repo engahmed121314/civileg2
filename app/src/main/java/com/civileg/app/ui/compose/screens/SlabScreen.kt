@@ -50,6 +50,11 @@ import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,7 +127,7 @@ fun SlabScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_slab_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_slab_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -157,7 +162,7 @@ fun SlabScreen(
                             value = selectedType.displayName,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text(stringResource(R.string.slab_type_label)) },
+                            label = { AppText(stringResource(R.string.slab_type_label)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
                             modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                             shape = RoundedCornerShape(12.dp)
@@ -165,7 +170,7 @@ fun SlabScreen(
                         ExposedDropdownMenu(expanded = expandedType, onDismissRequest = { expandedType = false }) {
                             CalculatorEngine.SlabType.values().forEach { type ->
                                 DropdownMenuItem(
-                                    text = { Text(type.displayName) },
+                                    text = { AppText(type.displayName) },
                                     onClick = {
                                         selectedType = type
                                         expandedType = false
@@ -184,7 +189,7 @@ fun SlabScreen(
                             value = selectedCode.displayName,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text(stringResource(R.string.slab_code_label)) },
+                            label = { AppText(stringResource(R.string.slab_code_label)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCode) },
                             modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                             shape = RoundedCornerShape(12.dp)
@@ -192,7 +197,7 @@ fun SlabScreen(
                         ExposedDropdownMenu(expanded = expandedCode, onDismissRequest = { expandedCode = false }) {
                             DesignCode.values().forEach { code ->
                                 DropdownMenuItem(
-                                    text = { Text(code.displayName) },
+                                    text = { AppText(code.displayName) },
                                     onClick = {
                                         selectedCode = code
                                         expandedCode = false
@@ -212,13 +217,13 @@ fun SlabScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(stringResource(R.string.slab_advanced_detailing_pro), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                            AppText(stringResource(R.string.slab_advanced_detailing_pro), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                             if (selectedType == CalculatorEngine.SlabType.FLAT) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     OutlinedTextField(
                                         value = dropPanelThickness,
                                         onValueChange = { dropPanelThickness = it },
-                                        label = { Text(stringResource(R.string.slab_drop_thick_mm)) },
+                                        label = { AppText(stringResource(R.string.slab_drop_thick_mm)) },
                                         modifier = Modifier.weight(1f),
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         shape = RoundedCornerShape(12.dp)
@@ -226,7 +231,7 @@ fun SlabScreen(
                                     OutlinedTextField(
                                         value = columnSize,
                                         onValueChange = { columnSize = it },
-                                        label = { Text(stringResource(R.string.slab_col_width_mm)) },
+                                        label = { AppText(stringResource(R.string.slab_col_width_mm)) },
                                         modifier = Modifier.weight(1f),
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                         shape = RoundedCornerShape(12.dp)
@@ -237,7 +242,7 @@ fun SlabScreen(
                                 OutlinedTextField(
                                     value = prestressForce,
                                     onValueChange = { prestressForce = it },
-                                    label = { Text(stringResource(R.string.slab_prestress_force_kn)) },
+                                    label = { AppText(stringResource(R.string.slab_prestress_force_kn)) },
                                     modifier = Modifier.fillMaxWidth(),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     shape = RoundedCornerShape(12.dp)
@@ -245,12 +250,12 @@ fun SlabScreen(
                             }
 
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                            Text(stringResource(R.string.slab_openings_shafts), style = MaterialTheme.typography.labelSmall)
+                            AppText(stringResource(R.string.slab_openings_shafts), style = MaterialTheme.typography.labelSmall)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 OutlinedTextField(
                                     value = openingWidth,
                                     onValueChange = { openingWidth = it },
-                                    label = { Text(stringResource(R.string.slab_open_width_mm)) },
+                                    label = { AppText(stringResource(R.string.slab_open_width_mm)) },
                                     modifier = Modifier.weight(1f),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     shape = RoundedCornerShape(12.dp)
@@ -258,7 +263,7 @@ fun SlabScreen(
                                 OutlinedTextField(
                                     value = openingLength,
                                     onValueChange = { openingLength = it },
-                                    label = { Text(stringResource(R.string.slab_open_length_mm)) },
+                                    label = { AppText(stringResource(R.string.slab_open_length_mm)) },
                                     modifier = Modifier.weight(1f),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     shape = RoundedCornerShape(12.dp)
@@ -349,14 +354,15 @@ fun SlabScreen(
             item {
                 // Input validation error display
                 inputError?.let { err ->
-                    Text(
+                    AppText(
                         err,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(vertical = 2.dp)
                     )
                 }
-                Button(
+                AppButton(
+                    label = stringResource(R.string.slab_design_now),
                     onClick = {
                         // Validate inputs
                         val lxVal = shortSpan.toDoubleOrNull()
@@ -370,13 +376,13 @@ fun SlabScreen(
                         if (lxVal == null || lyVal == null || dlVal == null || llVal == null ||
                             fcuVal == null || fyVal == null || tVal == null) {
                             inputError = slabInvalidMsg
-                            return@Button
+                            return@AppButton
                         }
                         if (lxVal <= 0 || lyVal <= 0 || dlVal < 0 || llVal < 0 ||
                             fcuVal < 15 || fcuVal > 60 || fyVal < 200 || fyVal > 700 ||
                             tVal < 50 || tVal > 500) {
                             inputError = slabRangeMsg
-                            return@Button
+                            return@AppButton
                         }
                         inputError = null
                         viewModel.calculateSlabPro(
@@ -400,17 +406,10 @@ fun SlabScreen(
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                    } else {
-                        Icon(Icons.Default.Calculate, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.slab_design_now))
-                    }
-                }
+                    enabled = !isLoading,
+                    loading = isLoading,
+                    icon = Icons.Default.Calculate
+                )
             }
 
             result?.let { res ->
@@ -454,7 +453,7 @@ fun SlabScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
+                                AppText(
                                     stringResource(R.string.safety_checks),
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.labelMedium,
@@ -475,8 +474,8 @@ fun SlabScreen(
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        Text(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
-                                        Text(
+                                        AppText(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        AppText(
                                             "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
@@ -490,14 +489,15 @@ fun SlabScreen(
                 }
 
                 item {
-                    Text(stringResource(R.string.slab_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    AppText(stringResource(R.string.slab_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     SlabFormulasCard()
                 }
 
                 item {
                     val pdfErrorMsg = stringResource(R.string.beam_pdf_error)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.pdf_report),
                             onClick = {
                                 scope.launch {
                                     val captureBitmap = try {
@@ -514,29 +514,19 @@ fun SlabScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !isExporting
-                        ) {
-                            if (isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
-                            }
-                        }
+                            enabled = !isExporting,
+                            loading = isExporting,
+                            icon = Icons.Default.PictureAsPdf
+                        )
 
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.save),
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
-                        }
+                            icon = Icons.Default.Save,
+                            containerOverride = MaterialTheme.colorScheme.secondary,
+                            contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
+                        )
                     }
                 }
 
@@ -725,7 +715,7 @@ fun SlabScreen(
                             color = Color(0xFF1565C0)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                        AppText("Calculating...", fontSize = 14.sp, color = Color.Gray)
                     }
                 }
             }
@@ -750,7 +740,7 @@ fun SlabScreen(
                             color = Color(0xFF1565C0)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                        AppText("Calculating...", fontSize = 14.sp, color = Color.Gray)
                     }
                 }
             }
@@ -761,19 +751,19 @@ fun SlabScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text(stringResource(R.string.save_design_in_project)) },
+            title = { AppText(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text(stringResource(R.string.slab_name_hint)) },
+                        label = { AppText(stringResource(R.string.slab_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
+                    AppText(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text(stringResource(R.string.no_projects_available), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        AppText(stringResource(R.string.no_projects_available), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -786,23 +776,30 @@ fun SlabScreen(
                                     selected = selectedProjectId == project.id,
                                     onClick = { selectedProjectId = project.id }
                                 )
-                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+                                AppText(project.name, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     }
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
-                    result?.let { viewModel.saveSlab(pId, designName, it) }
-                    showSaveDialog = false
-                }) {
-                    Text(stringResource(R.string.save))
-                }
+                AppButton(
+                    label = stringResource(R.string.save),
+                    fillMaxWidth = false,
+                    onClick = {
+                        val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
+                        result?.let { viewModel.saveSlab(pId, designName, it) }
+                        showSaveDialog = false
+                    }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
+                AppButton(
+                    label = stringResource(R.string.cancel),
+                    onClick = { showSaveDialog = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -828,7 +825,7 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
+                    AppText(
                         stringResource(R.string.consultant_ratio),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -841,7 +838,7 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text(
+                        AppText(
                             if (res.isSafe) stringResource(R.string.slab_safe) else stringResource(R.string.slab_unsafe),
                             fontWeight = FontWeight.Bold,
                             color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red
@@ -861,7 +858,7 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
                         color = utilizationColor,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
-                    Text(
+                    AppText(
                         "${(res.utilizationRatio * 100).toInt()}%",
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp
@@ -890,21 +887,21 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
 
             if (res.trimmerReinforcement.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
-                Text("Slab Opening Support", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary)
-                Text(res.trimmerReinforcement, fontWeight = FontWeight.Bold)
+                AppText("Slab Opening Support", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary)
+                AppText(res.trimmerReinforcement, fontWeight = FontWeight.Bold)
             }
             
             if (res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK) {
                 Spacer(Modifier.height(8.dp))
-                Text("Rib Reinforcement", style = MaterialTheme.typography.labelMedium)
-                Text("${res.reinforcementMain.numBars} Ø ${res.reinforcementMain.diameter} per rib", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText("Rib Reinforcement", style = MaterialTheme.typography.labelMedium)
+                AppText("${res.reinforcementMain.numBars} Ø ${res.reinforcementMain.diameter} per rib", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             } else {
                 Spacer(Modifier.height(8.dp))
-                Text(stringResource(R.string.slab_main_steel_lx), style = MaterialTheme.typography.labelMedium)
-                Text(res.reinforcementMain.barString, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText(stringResource(R.string.slab_main_steel_lx), style = MaterialTheme.typography.labelMedium)
+                AppText(res.reinforcementMain.barString, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 
-                Text(stringResource(R.string.slab_secondary_steel_ly), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
-                Text(res.reinforcementSecondary.barString, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.slab_secondary_steel_ly), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp))
+                AppText(res.reinforcementSecondary.barString, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -913,8 +910,8 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
 @Composable
 private fun ResultItem(label: String, value: String) {
     Column {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, fontWeight = FontWeight.Bold)
+        AppText(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        AppText(value, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -936,7 +933,7 @@ private fun SectionHeader(title: String, iconRes: Int) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
         Icon(painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+        AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
     }
 }
 
@@ -945,7 +942,7 @@ private fun SlabInputField(value: String, label: String, onValueChange: (String)
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = { AppText(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
         shape = RoundedCornerShape(12.dp)
@@ -954,7 +951,7 @@ private fun SlabInputField(value: String, label: String, onValueChange: (String)
 
 @Composable
 private fun FormulaItem(formula: String) {
-    Text(
+    AppText(
         text = formula,
         fontFamily = FontFamily.Monospace,
         fontSize = 12.sp,

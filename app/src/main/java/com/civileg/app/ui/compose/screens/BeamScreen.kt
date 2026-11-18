@@ -52,6 +52,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.coroutines.launch
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 private data class BeamDiagramInputSnapshot(
     val span: Double,
@@ -113,7 +118,7 @@ fun BeamScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_beam_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_beam_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -142,7 +147,7 @@ fun BeamScreen(
                         value = selectedSupport.displayName,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text(stringResource(R.string.beam_support_type)) },
+                        label = { AppText(stringResource(R.string.beam_support_type)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSupport) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -150,7 +155,7 @@ fun BeamScreen(
                     ExposedDropdownMenu(expanded = expandedSupport, onDismissRequest = { expandedSupport = false }) {
                         CalculatorEngine.SupportType.values().forEach { type ->
                             DropdownMenuItem(
-                                text = { Text(type.displayName) },
+                                text = { AppText(type.displayName) },
                                 onClick = {
                                     selectedSupport = type
                                     expandedSupport = false
@@ -187,7 +192,7 @@ fun BeamScreen(
             }
 
             item {
-                Text(stringResource(R.string.beam_material_props), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText(stringResource(R.string.beam_material_props), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     BeamInputField(fcu, stringResource(R.string.beam_fcu_mpa), { fcu = it }, Modifier.weight(1f))
                     BeamInputField(fy, stringResource(R.string.beam_fy_mpa), { fy = it }, Modifier.weight(1f))
@@ -195,12 +200,13 @@ fun BeamScreen(
             }
 
             item {
-                Text(stringResource(R.string.beam_rebar_selection), fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.beam_rebar_selection), fontWeight = FontWeight.Bold)
                 BeamInputField(barDiameter, stringResource(R.string.column_bar_diameter_label), { barDiameter = it }, Modifier.fillMaxWidth())
             }
 
             item {
-                Button(
+                AppButton(
+                    label = stringResource(R.string.beam_design_now),
                     onClick = {
                         val spanValue = span.toDoubleOrNull() ?: 5.0
                         val deadLoadValue = deadLoad.toDoubleOrNull() ?: 0.0
@@ -226,17 +232,10 @@ fun BeamScreen(
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                    } else {
-                        Icon(Icons.Default.Calculate, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.beam_design_now))
-                    }
-                }
+                    enabled = !isLoading,
+                    loading = isLoading,
+                    icon = Icons.Default.Calculate
+                )
             }
 
             result?.let { res ->
@@ -283,7 +282,7 @@ fun BeamScreen(
                                             tint = ecoColor
                                         )
                                         Spacer(Modifier.width(8.dp))
-                                        Text(
+                                        AppText(
                                             if (res.utilizationRatio > 1.0) stringResource(R.string.beam_section_unsafe)
                                             else if (res.utilizationRatio > 0.9) stringResource(R.string.design_caution)
                                             else if (res.utilizationRatio > 0.4) stringResource(R.string.beam_section_ideal)
@@ -292,7 +291,7 @@ fun BeamScreen(
                                             color = ecoColor
                                         )
                                     }
-                                    Text(
+                                    AppText(
                                         stringResource(R.string.consultant_ratio),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -311,7 +310,7 @@ fun BeamScreen(
                                         color = ecoColor,
                                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                     )
-                                    Text(
+                                    AppText(
                                         "${(res.utilizationRatio * 100).toInt()}%",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp
@@ -325,7 +324,8 @@ fun BeamScreen(
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         val beamPdfErrorMsg = stringResource(R.string.beam_pdf_error)
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.pdf_report),
                             onClick = {
                                 scope.launch {
                                     val captureBitmap = try {
@@ -342,34 +342,24 @@ fun BeamScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            enabled = !isExporting
-                        ) {
-                            if (isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
-                            }
-                        }
+                            enabled = !isExporting,
+                            loading = isExporting,
+                            icon = Icons.Default.PictureAsPdf
+                        )
 
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.save),
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
-                        }
+                            icon = Icons.Default.Save,
+                            containerOverride = MaterialTheme.colorScheme.secondary,
+                            contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
+                        )
                     }
                 }
 
                 item {
-                    Text(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    AppText(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     BeamFormulasCard()
                 }
 
@@ -517,7 +507,7 @@ fun BeamScreen(
                             color = Color(0xFF1565C0)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                        AppText("Calculating...", fontSize = 14.sp, color = Color.Gray)
                     }
                 }
             }
@@ -528,19 +518,19 @@ fun BeamScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text(stringResource(R.string.save_design_in_project)) },
+            title = { AppText(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text(stringResource(R.string.beam_name_hint)) },
+                        label = { AppText(stringResource(R.string.beam_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
+                    AppText(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
+                        AppText(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -553,23 +543,30 @@ fun BeamScreen(
                                     selected = selectedProjectId == project.id,
                                     onClick = { selectedProjectId = project.id }
                                 )
-                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+                                AppText(project.name, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     }
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
-                    result?.let { viewModel.saveBeam(pId, designName, it) }
-                    showSaveDialog = false
-                }) {
-                    Text(stringResource(R.string.save))
-                }
+                AppButton(
+                    label = stringResource(R.string.save),
+                    fillMaxWidth = false,
+                    onClick = {
+                        val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
+                        result?.let { viewModel.saveBeam(pId, designName, it) }
+                        showSaveDialog = false
+                    }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
+                AppButton(
+                    label = stringResource(R.string.cancel),
+                    onClick = { showSaveDialog = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -582,13 +579,13 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(stringResource(R.string.beam_final_results), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            AppText(stringResource(R.string.beam_final_results), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(8.dp))
             ResultRow(stringResource(R.string.beam_bottom_reinforcement), result.reinforcementBottom.barString)
             ResultRow(stringResource(R.string.beam_top_reinforcement), result.reinforcementTop.barString)
             
             if (result.stirrups.zones.isNotEmpty()) {
-                Text(stringResource(R.string.stirrups_distribution), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+                AppText(stringResource(R.string.stirrups_distribution), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
                 result.stirrups.zones.forEach { zone ->
                     ResultRow("${zone.name} (${String.format(Locale.US, "%.1f", (zone.endLocation - zone.startLocation)/1000.0)}m)", zone.description)
                 }
@@ -610,24 +607,24 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
             result.safetyChecks.forEach { check ->
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(check.name, fontSize = 12.sp)
-                    Text(if (check.isSafe) stringResource(R.string.safe_check) else stringResource(R.string.unsafe_check), color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    AppText(check.name, fontSize = 12.sp)
+                    AppText(if (check.isSafe) stringResource(R.string.safe_check) else stringResource(R.string.unsafe_check), color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
             }
 
             if (result.warnings.isNotEmpty()) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
-                Text("Warnings", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                AppText("Warnings", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                 result.warnings.forEach { warning ->
-                    Text("• $warning", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                    AppText("• $warning", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                 }
             }
 
             if (result.codeNotes.isNotEmpty()) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
-                Text("Code Notes", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText("Code Notes", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 result.codeNotes.forEach { note ->
-                    Text("• $note", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    AppText("• $note", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -652,7 +649,7 @@ private fun SectionHeader(title: String, iconRes: Int) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
         Icon(painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+        AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -661,7 +658,7 @@ private fun BeamInputField(value: String, label: String, onValueChange: (String)
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = { AppText(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
         shape = RoundedCornerShape(12.dp)
@@ -671,14 +668,14 @@ private fun BeamInputField(value: String, label: String, onValueChange: (String)
 @Composable
 private fun ResultRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, fontSize = 14.sp)
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        AppText(label, fontSize = 14.sp)
+        AppText(value, fontWeight = FontWeight.Bold, fontSize = 14.sp)
     }
 }
 
 @Composable
 private fun FormulaItem(formula: String) {
-    Text(
+    AppText(
         text = formula,
         fontFamily = FontFamily.Monospace,
         fontSize = 12.sp,

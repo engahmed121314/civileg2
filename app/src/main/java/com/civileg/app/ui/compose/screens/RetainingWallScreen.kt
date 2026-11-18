@@ -50,6 +50,11 @@ import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,7 +115,7 @@ fun RetainingWallScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_retaining_wall_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_retaining_wall_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -130,32 +135,32 @@ fun RetainingWallScreen(
             )
         ) {
             item {
-                Text(stringResource(R.string.rw_data_input), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                AppText(stringResource(R.string.rw_data_input), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(value = height, onValueChange = { height = it }, label = { Text(stringResource(R.string.rw_wall_height)) }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = height, onValueChange = { height = it }, label = { AppText(stringResource(R.string.rw_wall_height)) }, modifier = Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
-                    OutlinedTextField(value = wallLength, onValueChange = { wallLength = it }, label = { Text(stringResource(R.string.rw_wall_length)) }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = wallLength, onValueChange = { wallLength = it }, label = { AppText(stringResource(R.string.rw_wall_length)) }, modifier = Modifier.weight(1f))
                 }
             }
             item {
-                OutlinedTextField(value = soilDensity, onValueChange = { soilDensity = it }, label = { Text(stringResource(R.string.rw_soil_density)) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = soilDensity, onValueChange = { soilDensity = it }, label = { AppText(stringResource(R.string.rw_soil_density)) }, modifier = Modifier.fillMaxWidth())
             }
             item {
-                OutlinedTextField(value = frictionAngle, onValueChange = { frictionAngle = it }, label = { Text(stringResource(R.string.rw_friction_angle)) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = frictionAngle, onValueChange = { frictionAngle = it }, label = { AppText(stringResource(R.string.rw_friction_angle)) }, modifier = Modifier.fillMaxWidth())
             }
             item {
-                OutlinedTextField(value = surcharge, onValueChange = { surcharge = it }, label = { Text(stringResource(R.string.rw_surcharge)) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = surcharge, onValueChange = { surcharge = it }, label = { AppText(stringResource(R.string.rw_surcharge)) }, modifier = Modifier.fillMaxWidth())
             }
 
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(value = fcu, onValueChange = { fcu = it }, label = { Text(stringResource(R.string.rw_fcu_mpa)) }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = fcu, onValueChange = { fcu = it }, label = { AppText(stringResource(R.string.rw_fcu_mpa)) }, modifier = Modifier.weight(1f))
                     Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedTextField(value = fy, onValueChange = { fy = it }, label = { Text(stringResource(R.string.rw_fy_mpa)) }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = fy, onValueChange = { fy = it }, label = { AppText(stringResource(R.string.rw_fy_mpa)) }, modifier = Modifier.weight(1f))
                 }
             }
 
@@ -171,21 +176,22 @@ fun RetainingWallScreen(
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
             item {
-                Text(stringResource(R.string.boq_site_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                AppText(stringResource(R.string.boq_site_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             }
 
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(value = excavationDepth, onValueChange = { excavationDepth = it }, label = { Text(stringResource(R.string.boq_excavation_depth)) }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = excavationDepth, onValueChange = { excavationDepth = it }, label = { AppText(stringResource(R.string.boq_excavation_depth)) }, modifier = Modifier.weight(1f))
                     Spacer(modifier = Modifier.width(8.dp))
-                    OutlinedTextField(value = trenchWidth, onValueChange = { trenchWidth = it }, label = { Text(stringResource(R.string.boq_backfill_width)) }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = trenchWidth, onValueChange = { trenchWidth = it }, label = { AppText(stringResource(R.string.boq_backfill_width)) }, modifier = Modifier.weight(1f))
                 }
             }
 
             item { Spacer(modifier = Modifier.height(16.dp)) }
 
             item {
-                Button(
+                AppButton(
+                    label = stringResource(R.string.rw_analyze),
                     onClick = {
                         val h = height.toDoubleOrNull()
                         val wl = wallLength.toDoubleOrNull()
@@ -208,7 +214,7 @@ fun RetainingWallScreen(
 
                         if (errorMsg != null) {
                             scope.launch { snackbarHostState.showSnackbar(errorMsg) }
-                            return@Button
+                            return@AppButton
                         }
 
                         viewModel.excavationDepthM = excavationDepth.toDoubleOrNull() ?: 0.0
@@ -226,17 +232,10 @@ fun RetainingWallScreen(
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-                    } else {
-                        Icon(Icons.Default.Calculate, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.rw_analyze))
-                    }
-                }
+                    enabled = !isLoading,
+                    loading = isLoading,
+                    icon = Icons.Default.Calculate
+                )
             }
 
             result?.let { res ->
@@ -269,14 +268,14 @@ fun RetainingWallScreen(
                                             tint = ecoColor
                                         )
                                         Spacer(Modifier.width(8.dp))
-                                        Text(
+                                        AppText(
                                             if (res.isSafe) stringResource(R.string.rw_safe) else stringResource(R.string.rw_unsafe),
                                             fontWeight = FontWeight.Bold,
                                             color = ecoColor,
                                             fontSize = 18.sp
                                         )
                                     }
-                                    Text(
+                                    AppText(
                                         stringResource(R.string.consultant_ratio),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -295,7 +294,7 @@ fun RetainingWallScreen(
                                         color = ecoColor,
                                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                     )
-                                    Text(
+                                    AppText(
                                         "${(res.utilizationRatio * 100).toInt()}%",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp
@@ -356,7 +355,7 @@ fun RetainingWallScreen(
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
+                                AppText(
                                     stringResource(R.string.safety_checks),
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.labelMedium,
@@ -377,8 +376,8 @@ fun RetainingWallScreen(
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        Text(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
-                                        Text(
+                                        AppText(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        AppText(
                                             "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
@@ -395,7 +394,8 @@ fun RetainingWallScreen(
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.pdf_report),
                             onClick = {
                                 scope.launch {
                                     val captureBitmap = try {
@@ -406,29 +406,19 @@ fun RetainingWallScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            enabled = !isExporting
-                        ) {
-                            if (isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
-                            }
-                        }
+                            enabled = !isExporting,
+                            loading = isExporting,
+                            icon = Icons.Default.PictureAsPdf
+                        )
 
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.save),
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
-                        }
+                            icon = Icons.Default.Save,
+                            containerOverride = MaterialTheme.colorScheme.secondary,
+                            contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
+                        )
                     }
                 }
 
@@ -556,7 +546,7 @@ fun RetainingWallScreen(
                             color = Color(0xFF1565C0)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                        AppText("Calculating...", fontSize = 14.sp, color = Color.Gray)
                     }
                 }
             }
@@ -567,19 +557,19 @@ fun RetainingWallScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text(stringResource(R.string.save_design_in_project)) },
+            title = { AppText(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text(stringResource(R.string.rw_name_hint)) },
+                        label = { AppText(stringResource(R.string.rw_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
+                    AppText(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text(stringResource(R.string.rw_no_projects), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        AppText(stringResource(R.string.rw_no_projects), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     } else {
                         Column(modifier = Modifier.heightIn(max = 200.dp).verticalScroll(rememberScrollState())) {
                             projects.forEach { project ->
@@ -594,7 +584,7 @@ fun RetainingWallScreen(
                                         selected = selectedProjectId == project.id,
                                         onClick = { selectedProjectId = project.id }
                                     )
-                                    Text(project.name, modifier = Modifier.padding(start = 8.dp))
+                                    AppText(project.name, modifier = Modifier.padding(start = 8.dp))
                                 }
                             }
                         }
@@ -602,16 +592,23 @@ fun RetainingWallScreen(
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    val pId = if (selectedProjectId == -1L) (projects.firstOrNull()?.id ?: 1L) else selectedProjectId
-                    result?.let { viewModel.saveRetainingWall(pId, designName, it) }
-                    showSaveDialog = false
-                }) {
-                    Text(stringResource(R.string.save))
-                }
+                AppButton(
+                    label = stringResource(R.string.save),
+                    fillMaxWidth = false,
+                    onClick = {
+                        val pId = if (selectedProjectId == -1L) (projects.firstOrNull()?.id ?: 1L) else selectedProjectId
+                        result?.let { viewModel.saveRetainingWall(pId, designName, it) }
+                        showSaveDialog = false
+                    }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
+                AppButton(
+                    label = stringResource(R.string.cancel),
+                    onClick = { showSaveDialog = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -625,7 +622,7 @@ private fun ResultRow(label: String, value: String) {
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label)
-        Text(value, fontWeight = FontWeight.Bold)
+        AppText(label)
+        AppText(value, fontWeight = FontWeight.Bold)
     }
 }

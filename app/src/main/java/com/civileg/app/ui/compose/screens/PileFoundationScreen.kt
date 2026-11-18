@@ -46,6 +46,11 @@ import com.civileg.app.utils.BoqEstimator
 import com.civileg.app.viewmodel.PileFoundationViewModel
 import kotlinx.coroutines.launch
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,7 +143,7 @@ fun PileFoundationScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.pile_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.pile_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -165,7 +170,7 @@ fun PileFoundationScreen(
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.pile_header_ecp),
+                    AppText(stringResource(R.string.pile_header_ecp),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -189,13 +194,13 @@ fun PileFoundationScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.pile_config_section), fontWeight = FontWeight.Bold)
+                        AppText(stringResource(R.string.pile_config_section), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(12.dp))
 
                         // Pile type selector
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.pile_type), style = MaterialTheme.typography.labelMedium,
+                                AppText(stringResource(R.string.pile_type), style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 ExposedDropdownMenuBox(
                                     expanded = expandedPileType,
@@ -215,7 +220,7 @@ fun PileFoundationScreen(
                                     ) {
                                         PileType.entries.forEach { type ->
                                             DropdownMenuItem(
-                                                text = { Text(type.displayName) },
+                                                text = { AppText(type.displayName) },
                                                 onClick = { selectedPileType = type; expandedPileType = false }
                                             )
                                         }
@@ -223,7 +228,7 @@ fun PileFoundationScreen(
                                 }
                             }
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.pile_soil_type), style = MaterialTheme.typography.labelMedium,
+                                AppText(stringResource(R.string.pile_soil_type), style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 ExposedDropdownMenuBox(
                                     expanded = expandedSoilType,
@@ -243,7 +248,7 @@ fun PileFoundationScreen(
                                     ) {
                                         SoilType.entries.forEach { type ->
                                             DropdownMenuItem(
-                                                text = { Text(type.displayName) },
+                                                text = { AppText(type.displayName) },
                                                 onClick = { selectedSoilType = type; expandedSoilType = false }
                                             )
                                         }
@@ -264,7 +269,7 @@ fun PileFoundationScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.pile_geometry_section), fontWeight = FontWeight.Bold)
+                        AppText(stringResource(R.string.pile_geometry_section), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             PileInputField(pileDiameter, stringResource(R.string.pile_diameter), { pileDiameter = it }, Modifier.weight(1f))
@@ -274,7 +279,7 @@ fun PileFoundationScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             PileInputField(numberOfPiles, stringResource(R.string.pile_num_piles), { numberOfPiles = it }, Modifier.weight(1f), KeyboardType.Number)
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(stringResource(R.string.pile_pattern), style = MaterialTheme.typography.labelMedium,
+                                AppText(stringResource(R.string.pile_pattern), style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 ExposedDropdownMenuBox(
                                     expanded = expandedPattern,
@@ -294,7 +299,7 @@ fun PileFoundationScreen(
                                     ) {
                                         listOf("1x1", "2x1", "2x2", "3x2", "3x3", "4x3", "4x4").forEach { p ->
                                             DropdownMenuItem(
-                                                text = { Text(p) },
+                                                text = { AppText(p) },
                                                 onClick = { selectedPattern = p; expandedPattern = false }
                                             )
                                         }
@@ -320,7 +325,7 @@ fun PileFoundationScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.ArrowDownward, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.pile_loads_section), fontWeight = FontWeight.Bold)
+                            AppText(stringResource(R.string.pile_loads_section), fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -345,7 +350,7 @@ fun PileFoundationScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Science, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.pile_materials_section), fontWeight = FontWeight.Bold)
+                            AppText(stringResource(R.string.pile_materials_section), fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -375,7 +380,7 @@ fun PileFoundationScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Landscape, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pile_soil_params_section), fontWeight = FontWeight.Bold)
+                                AppText(stringResource(R.string.pile_soil_params_section), fontWeight = FontWeight.Bold)
                             }
                             IconButton(onClick = { showSoilParams = !showSoilParams }) {
                                 Icon(
@@ -429,7 +434,7 @@ fun PileFoundationScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Domain, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pile_cap_col_section), fontWeight = FontWeight.Bold)
+                                AppText(stringResource(R.string.pile_cap_col_section), fontWeight = FontWeight.Bold)
                             }
                             IconButton(onClick = { showCapParams = !showCapParams }) {
                                 Icon(
@@ -469,7 +474,7 @@ fun PileFoundationScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.Tune, null, tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pile_advanced_section), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                AppText(stringResource(R.string.pile_advanced_section), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             }
                             IconButton(onClick = { showAdvanced = !showAdvanced }) {
                                 Icon(
@@ -481,7 +486,7 @@ fun PileFoundationScreen(
 
                         if (showAdvanced) {
                             Spacer(Modifier.height(12.dp))
-                            Text(stringResource(R.string.pile_eccentricities), style = MaterialTheme.typography.labelMedium,
+                            AppText(stringResource(R.string.pile_eccentricities), style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(Modifier.height(8.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -503,7 +508,7 @@ fun PileFoundationScreen(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(Modifier.padding(16.dp)) {
-                        Text(stringResource(R.string.boq_site_title), fontWeight = FontWeight.Bold)
+                        AppText(stringResource(R.string.boq_site_title), fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             PileInputField(excavationDepth, stringResource(R.string.boq_excavation_depth), { excavationDepth = it }, Modifier.weight(1f))
@@ -528,7 +533,7 @@ fun PileFoundationScreen(
                         ) {
                             Icon(Icons.Default.Error, null, tint = Color.Red)
                             Spacer(Modifier.width(8.dp))
-                            Text(err, color = Color.Red, fontSize = 13.sp)
+                            AppText(err, color = Color.Red, fontSize = 13.sp)
                         }
                     }
                 }
@@ -543,9 +548,10 @@ fun PileFoundationScreen(
                         && fy.toDoubleOrNull()?.let { it > 0 } == true
                         && numberOfPiles.toIntOrNull()?.let { it > 0 } == true
 
-                Button(
+                AppButton(
+                    label = stringResource(R.string.pile_design_button),
                     onClick = {
-                        if (!inputValid) return@Button
+                        if (!inputValid) return@AppButton
                         viewModel.excavationDepthM = excavationDepth.toDoubleOrNull() ?: 0.0
                         viewModel.workingSpaceM = workingSpace.toDoubleOrNull() ?: 0.5
                         viewModel.blindingThicknessM = blindingThickness.toDoubleOrNull() ?: 0.0
@@ -580,20 +586,10 @@ fun PileFoundationScreen(
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading && inputValid
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Icon(Icons.Default.Engineering, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.pile_design_button))
-                    }
-                }
+                    enabled = !isLoading && inputValid,
+                    loading = isLoading,
+                    icon = Icons.Default.Engineering
+                )
             }
 
             // ─── RESULTS SECTION ──────────────────────────────────
@@ -646,13 +642,13 @@ fun PileFoundationScreen(
                                             contentDescription = null, tint = statusColor
                                         )
                                         Spacer(Modifier.width(8.dp))
-                                        Text(
+                                        AppText(
                                             if (res.isSafe) stringResource(R.string.pile_safe) else stringResource(R.string.pile_unsafe),
                                             fontWeight = FontWeight.Bold,
                                             color = statusColor
                                         )
                                     }
-                                    Text(
+                                    AppText(
                                         "ECP 203-2025 • ${res.pileType}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -677,7 +673,7 @@ fun PileFoundationScreen(
                                         },
                                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                     )
-                                    Text(
+                                    AppText(
                                         "${(res.utilizationRatio * 100).toInt()}%",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp
@@ -692,9 +688,9 @@ fun PileFoundationScreen(
                                 Spacer(Modifier.height(8.dp))
                                 res.warnings.forEach { w ->
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("⚠", color = Color(0xFFFF9800), fontSize = 13.sp)
+                                        AppText("⚠", color = Color(0xFFFF9800), fontSize = 13.sp)
                                         Spacer(Modifier.width(4.dp))
-                                        Text(w, fontSize = 12.sp, color = Color(0xFFFF9800))
+                                        AppText(w, fontSize = 12.sp, color = Color(0xFFFF9800))
                                     }
                                     Spacer(Modifier.height(2.dp))
                                 }
@@ -748,8 +744,8 @@ fun PileFoundationScreen(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(stringResource(R.string.pile_status))
-                            Text(
+                            AppText(stringResource(R.string.pile_status))
+                            AppText(
                                 if (settlement.isOk) stringResource(R.string.pile_ok) else stringResource(R.string.pile_exceeds),
                                 fontWeight = FontWeight.Bold,
                                 color = if (settlement.isOk) Color(0xFF2E7D32) else Color(0xFFC62828)
@@ -787,7 +783,7 @@ fun PileFoundationScreen(
                         ResultRow(stringResource(R.string.fs_steel), "${"%.1f".format(cap.steelWeight)} kg")
 
                         HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                        Text(stringResource(R.string.pile_shear_checks), style = MaterialTheme.typography.labelMedium,
+                        AppText(stringResource(R.string.pile_shear_checks), style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                         ShearCheckRow(
@@ -802,7 +798,7 @@ fun PileFoundationScreen(
                         )
 
                         HorizontalDivider(Modifier.padding(vertical = 4.dp))
-                        Text(stringResource(R.string.pile_reinforcement), style = MaterialTheme.typography.labelMedium,
+                        AppText(stringResource(R.string.pile_reinforcement), style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         ResultRow(stringResource(R.string.pile_flexural), cap.flexuralReinforcement.barString)
                         if (cap.punchingReinforcement != null) {
@@ -829,7 +825,8 @@ fun PileFoundationScreen(
                 // ── Export Buttons ──
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.pile_pdf_report),
                             onClick = {
                                 captureScope.launch {
                                     val captureBitmap = try {
@@ -840,22 +837,10 @@ fun PileFoundationScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
                             enabled = !isExporting,
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                        ) {
-                            if (isExporting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, null)
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Text(if (isExporting) stringResource(R.string.pile_exporting) else stringResource(R.string.pile_pdf_report))
-                        }
+                            loading = isExporting,
+                            icon = Icons.Default.PictureAsPdf
+                        )
                     }
                 }
 
@@ -962,7 +947,7 @@ fun PileFoundationScreen(
                             color = Color(0xFF1565C0)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                        AppText("Calculating...", fontSize = 14.sp, color = Color.Gray)
                     }
                 }
             }
@@ -986,7 +971,7 @@ private fun PileInputField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, fontSize = 13.sp) },
+        label = { AppText(label, fontSize = 13.sp) },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
@@ -1000,8 +985,8 @@ private fun ResultRow(label: String, value: String, valueColor: Color = Color.Un
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = valueColor)
+        AppText(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        AppText(value, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = valueColor)
     }
 }
 
@@ -1017,15 +1002,15 @@ private fun ShearCheckRow(
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
+        AppText(
             if (isOk) "✓" else "✗",
             color = if (isOk) Color(0xFF2E7D32) else Color(0xFFC62828),
             fontWeight = FontWeight.Bold,
             fontSize = 14.sp
         )
         Spacer(Modifier.width(8.dp))
-        Text(name, modifier = Modifier.weight(1f), fontSize = 13.sp)
-        Text(
+        AppText(name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+        AppText(
             "${"%.2f".format(applied)} / ${"%.2f".format(capacity)} $unit",
             fontSize = 12.sp,
             color = if (isOk) Color(0xFF2E7D32) else Color(0xFFC62828)
@@ -1050,7 +1035,7 @@ private fun ResultCard(
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                AppText(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
             Spacer(Modifier.height(12.dp))
             HorizontalDivider()

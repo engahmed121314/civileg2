@@ -49,6 +49,11 @@ import com.civileg.app.utils.captureToAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -154,7 +159,7 @@ fun TankScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_tank_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_tank_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -177,7 +182,7 @@ fun TankScreen(
 
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.tank_location), style = MaterialTheme.typography.labelMedium)
+                    AppText(stringResource(R.string.tank_location), style = MaterialTheme.typography.labelMedium)
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -187,12 +192,12 @@ fun TankScreen(
                         val isElevated = selectedType == CalculatorEngine.TankType.RECTANGULAR_ELEVATED || selectedType == CalculatorEngine.TankType.CIRCULAR_ELEVATED
                         val isUnderground = selectedType == CalculatorEngine.TankType.UNDERGROUND || selectedType == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND
 
-                        FilterChip(selected = isGround, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_GROUND }, label = { Text(stringResource(R.string.tank_location_ground), fontSize = 11.sp) })
-                        FilterChip(selected = isElevated, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_ELEVATED }, label = { Text(stringResource(R.string.tank_location_elevated), fontSize = 11.sp) })
-                        FilterChip(selected = isUnderground, onClick = { selectedType = CalculatorEngine.TankType.UNDERGROUND }, label = { Text(stringResource(R.string.tank_location_underground), fontSize = 11.sp) })
+                        FilterChip(selected = isGround, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_GROUND }, label = { AppText(stringResource(R.string.tank_location_ground), fontSize = 11.sp) })
+                        FilterChip(selected = isElevated, onClick = { selectedType = CalculatorEngine.TankType.RECTANGULAR_ELEVATED }, label = { AppText(stringResource(R.string.tank_location_elevated), fontSize = 11.sp) })
+                        FilterChip(selected = isUnderground, onClick = { selectedType = CalculatorEngine.TankType.UNDERGROUND }, label = { AppText(stringResource(R.string.tank_location_underground), fontSize = 11.sp) })
                     }
                     
-                    Text(stringResource(R.string.tank_section_shape), style = MaterialTheme.typography.labelMedium)
+                    AppText(stringResource(R.string.tank_section_shape), style = MaterialTheme.typography.labelMedium)
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -210,7 +215,7 @@ fun TankScreen(
                                     else -> selectedType
                                 }
                             }, 
-                            label = { Text(stringResource(R.string.tank_shape_rectangular), fontSize = 11.sp) }
+                            label = { AppText(stringResource(R.string.tank_shape_rectangular), fontSize = 11.sp) }
                         )
                         FilterChip(
                             selected = !isRect, 
@@ -222,7 +227,7 @@ fun TankScreen(
                                     else -> selectedType
                                 }
                             }, 
-                            label = { Text(stringResource(R.string.tank_shape_circular), fontSize = 11.sp) }
+                            label = { AppText(stringResource(R.string.tank_shape_circular), fontSize = 11.sp) }
                         )
                     }
                 }
@@ -250,7 +255,7 @@ fun TankScreen(
             }
 
             item {
-                Text(stringResource(R.string.boq_site_title), fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.boq_site_title), fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     TankInputField(excavationDepth, stringResource(R.string.boq_excavation_depth), { excavationDepth = it }, Modifier.weight(1f), "")
                     TankInputField(blindingThickness, stringResource(R.string.boq_blinding_thickness), { blindingThickness = it }, Modifier.weight(1f), "")
@@ -258,9 +263,10 @@ fun TankScreen(
             }
 
             item {
-                Button(
+                AppButton(
+                    label = stringResource(R.string.tank_start_design),
                     onClick = {
-                        if (!validateInputs()) return@Button
+                        if (!validateInputs()) return@AppButton
                         viewModel.excavationDepthM = excavationDepth.toDoubleOrNull() ?: 0.0
                         viewModel.blindingThicknessM = blindingThickness.toDoubleOrNull() ?: 0.0
                         viewModel.calculateTankPro(
@@ -274,17 +280,10 @@ fun TankScreen(
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !isLoading
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                    } else {
-                        Icon(Icons.Default.Calculate, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.tank_start_design))
-                    }
-                }
+                    enabled = !isLoading,
+                    loading = isLoading,
+                    icon = Icons.Default.Calculate
+                )
             }
 
             result?.let { res ->
@@ -317,7 +316,7 @@ fun TankScreen(
                                             tint = ecoColor
                                         )
                                         Spacer(Modifier.width(8.dp))
-                                        Text(
+                                        AppText(
                                             if (res.utilizationRatio > 1.0) stringResource(R.string.tank_design_unsafe)
                                             else if (res.utilizationRatio > 0.9) stringResource(R.string.design_caution)
                                             else if (res.utilizationRatio > 0.4) stringResource(R.string.tank_design_ideal)
@@ -326,7 +325,7 @@ fun TankScreen(
                                             color = ecoColor
                                         )
                                     }
-                                    Text(
+                                    AppText(
                                         stringResource(R.string.consultant_ratio),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -345,7 +344,7 @@ fun TankScreen(
                                         color = ecoColor,
                                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                     )
-                                    Text(
+                                    AppText(
                                         "${(res.utilizationRatio * 100).toInt()}%",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp
@@ -407,7 +406,7 @@ fun TankScreen(
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
+                                AppText(
                                     "Safety Checks",
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.labelMedium,
@@ -419,15 +418,15 @@ fun TankScreen(
                                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
+                                        AppText(
                                             if (check.isSafe) "✓" else "✗",
                                             color = if (check.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828),
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 14.sp
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        Text(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
-                                        Text(
+                                        AppText(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        AppText(
                                             "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
@@ -442,7 +441,8 @@ fun TankScreen(
 
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.pdf_report),
                             onClick = {
                                 scope.launch {
                                     val captureBitmap = try {
@@ -453,29 +453,19 @@ fun TankScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            enabled = !isExporting
-                        ) {
-                            if (isExporting) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                            } else {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.pdf_report))
-                            }
-                        }
+                            enabled = !isExporting,
+                            loading = isExporting,
+                            icon = Icons.Default.PictureAsPdf
+                        )
 
-                        Button(
+                        AppButton(
+                            label = stringResource(R.string.save),
                             onClick = { showSaveDialog = true },
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Icon(Icons.Default.Save, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.save))
-                        }
+                            icon = Icons.Default.Save,
+                            containerOverride = MaterialTheme.colorScheme.secondary,
+                            contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
+                        )
                     }
                 }
 
@@ -571,7 +561,7 @@ fun TankScreen(
                         color = Color(0xFF1565C0)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(
+                    AppText(
                         "Calculating... / جاري الحساب...",
                         fontSize = 14.sp,
                         color = Color.Gray
@@ -584,19 +574,19 @@ fun TankScreen(
     if (showSaveDialog) {
         AlertDialog(
             onDismissRequest = { showSaveDialog = false },
-            title = { Text(stringResource(R.string.save_design_in_project)) },
+            title = { AppText(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
                         onValueChange = { designName = it },
-                        label = { Text(stringResource(R.string.tank_name_hint)) },
+                        label = { AppText(stringResource(R.string.tank_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
                     )
                     
-                    Text(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
+                    AppText(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
                     if (projects.isEmpty()) {
-                        Text(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
+                        AppText(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
                     } else {
                         projects.forEach { project ->
                             Row(
@@ -609,23 +599,30 @@ fun TankScreen(
                                     selected = selectedProjectId == project.id,
                                     onClick = { selectedProjectId = project.id }
                                 )
-                                Text(project.name, modifier = Modifier.padding(start = 8.dp))
+                                AppText(project.name, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     }
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
-                    result?.let { viewModel.saveTank(pId, designName, it) }
-                    showSaveDialog = false
-                }) {
-                    Text(stringResource(R.string.save))
-                }
+                AppButton(
+                    label = stringResource(R.string.save),
+                    fillMaxWidth = false,
+                    onClick = {
+                        val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
+                        result?.let { viewModel.saveTank(pId, designName, it) }
+                        showSaveDialog = false
+                    }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showSaveDialog = false }) { Text(stringResource(R.string.cancel)) }
+                AppButton(
+                    label = stringResource(R.string.cancel),
+                    onClick = { showSaveDialog = false },
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false
+                )
             }
         )
     }
@@ -636,7 +633,7 @@ private fun TankTypeChip(type: CalculatorEngine.TankType, label: String, selecte
     FilterChip(
         selected = type == selected,
         onClick = { onSelect(type) },
-        label = { Text(label) },
+        label = { AppText(label) },
         modifier = Modifier.padding(horizontal = 4.dp)
     )
 }
@@ -646,7 +643,7 @@ private fun SectionHeader(title: String, iconRes: Int) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
         Icon(painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+        AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
     }
 }
 
@@ -656,12 +653,12 @@ private fun TankInputField(value: String, label: String, onValueChange: (String)
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text(label) },
+            label = { AppText(label) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             isError = errorText.isNotEmpty(),
-            supportingText = if (errorText.isNotEmpty()) {{ Text(errorText, color = MaterialTheme.colorScheme.error) }} else null
+            supportingText = if (errorText.isNotEmpty()) {{ AppText(errorText, color = MaterialTheme.colorScheme.error) }} else null
         )
     }
 }
@@ -669,7 +666,7 @@ private fun TankInputField(value: String, label: String, onValueChange: (String)
 @Composable
 private fun ResultRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label)
-        Text(value, fontWeight = FontWeight.Bold)
+        AppText(label)
+        AppText(value, fontWeight = FontWeight.Bold)
     }
 }
