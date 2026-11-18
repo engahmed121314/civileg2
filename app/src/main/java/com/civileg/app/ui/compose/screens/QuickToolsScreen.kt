@@ -24,6 +24,11 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedButton
 import com.civileg.app.R
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.utils.QuickToolsEngine
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,7 +52,7 @@ fun QuickToolsScreen(onNavigateBack: () -> Unit = {}) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.home_quick_tools), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.home_quick_tools), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -74,7 +79,7 @@ fun QuickToolsScreen(onNavigateBack: () -> Unit = {}) {
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
                         text = {
-                            Text(
+                            AppText(
                                 title,
                                 fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = 12.sp
@@ -105,7 +110,7 @@ fun QuickToolsScreen(onNavigateBack: () -> Unit = {}) {
 @Composable
 private fun QInput(label: String, value: String, onChange: (String) -> Unit, kt: KeyboardType = KeyboardType.Decimal, mod: Modifier = Modifier) {
     OutlinedTextField(
-        value = value, onValueChange = onChange, label = { Text(label, fontSize = 13.sp) },
+        value = value, onValueChange = onChange, label = { AppText(label, fontSize = 13.sp) },
         modifier = mod.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = kt),
         shape = RoundedCornerShape(12.dp), textStyle = MaterialTheme.typography.bodyMedium
     )
@@ -114,8 +119,8 @@ private fun QInput(label: String, value: String, onChange: (String) -> Unit, kt:
 @Composable
 private fun QRow(label: String, value: String, bold: Boolean = false) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, fontSize = 14.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.SemiBold,
+        AppText(label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        AppText(value, fontSize = 14.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.SemiBold,
             color = if (bold) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
     }
 }
@@ -136,20 +141,20 @@ private fun RebarWeightTab() {
     var res by remember { mutableStateOf<QuickToolsEngine.RebarWeightResult?>(null) }
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         QCard {
-            Text("Rebar Weight & Count", fontWeight = FontWeight.Bold)
+            AppText("Rebar Weight & Count", fontWeight = FontWeight.Bold)
             QInput("Diameter (mm)", d, { d = it })
             QInput("Length per bar (m)", len, { len = it })
             QInput("Number of bars", cnt, { cnt = it }, KeyboardType.Number)
-            Button(onClick = {
-                val dd = d.toDoubleOrNull() ?: return@Button
-                val ll = len.toDoubleOrNull() ?: return@Button
-                val cc = cnt.toIntOrNull() ?: return@Button
+            AppButton(label = "Calculate", onClick = {
+                val dd = d.toDoubleOrNull() ?: return@AppButton
+                val ll = len.toDoubleOrNull() ?: return@AppButton
+                val cc = cnt.toIntOrNull() ?: return@AppButton
                 res = QuickToolsEngine.calculateRebarWeight(dd, ll, cc)
-            }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Calculate") }
+            }, modifier = Modifier.fillMaxWidth())
         }
         res?.let { r ->
             QCard {
-                Text("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 QRow("Weight (kg/m)", "%.3f".format(r.weightPerMeterKg))
                 QRow("Total length (m)", "%.2f".format(r.totalLengthM))
                 QRow("Total weight (kg)", "%.2f".format(r.totalWeightKg))
@@ -172,20 +177,20 @@ private fun RebarSubstitutionTab() {
     var res by remember { mutableStateOf<QuickToolsEngine.RebarSubstitutionResult?>(null) }
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         QCard {
-            Text("Equivalent Rebar Substitution", fontWeight = FontWeight.Bold)
+            AppText("Equivalent Rebar Substitution", fontWeight = FontWeight.Bold)
             QInput("Original count", cnt, { cnt = it }, KeyboardType.Number)
             QInput("Original diameter (mm)", d1, { d1 = it })
             QInput("New diameter (mm)", d2, { d2 = it })
-            Button(onClick = {
-                val c = cnt.toIntOrNull() ?: return@Button
-                val a = d1.toDoubleOrNull() ?: return@Button
-                val b = d2.toDoubleOrNull() ?: return@Button
+            AppButton(label = "Calculate", onClick = {
+                val c = cnt.toIntOrNull() ?: return@AppButton
+                val a = d1.toDoubleOrNull() ?: return@AppButton
+                val b = d2.toDoubleOrNull() ?: return@AppButton
                 res = QuickToolsEngine.calculateRebarSubstitution(c, a, b)
-            }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Calculate") }
+            }, modifier = Modifier.fillMaxWidth())
         }
         res?.let { r ->
             QCard {
-                Text("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 QRow("Original area (mm²)", "%.1f".format(r.origAreaMm2))
                 QRow("New diameter (mm)", "%.0f".format(r.newDiameterMm))
                 QRow("Required count", r.requiredCount.toString(), true)
@@ -209,9 +214,9 @@ private fun DevelopmentLengthTab() {
     var res by remember { mutableStateOf<QuickToolsEngine.DevelopmentLengthResult?>(null) }
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         QCard {
-            Text("Development Length & Lap Splice", fontWeight = FontWeight.Bold)
+            AppText("Development Length & Lap Splice", fontWeight = FontWeight.Bold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = code, onValueChange = {}, readOnly = true, label = { Text("Code") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+                OutlinedTextField(value = code, onValueChange = {}, readOnly = true, label = { AppText("Code") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
                 DropdownSelector(options = listOf("ECP_203", "ACI_318", "SBC_304"), selected = code, onSelect = { code = it })
             }
             QInput("Diameter (mm)", d, { d = it })
@@ -219,20 +224,20 @@ private fun DevelopmentLengthTab() {
             QInput("fy (MPa)", fy, { fy = it })
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = top, onCheckedChange = { top = it })
-                Text("Top bar")
+                AppText("Top bar")
             }
-            Button(onClick = {
-                val dd = d.toDoubleOrNull() ?: return@Button
-                val fcc = fc.toDoubleOrNull() ?: return@Button
-                val fyy = fy.toDoubleOrNull() ?: return@Button
+            AppButton(label = "Calculate", onClick = {
+                val dd = d.toDoubleOrNull() ?: return@AppButton
+                val fcc = fc.toDoubleOrNull() ?: return@AppButton
+                val fyy = fy.toDoubleOrNull() ?: return@AppButton
                 val c = when (code) { "ACI_318" -> QuickToolsEngine.CodeStandard.ACI_318; "SBC_304" -> QuickToolsEngine.CodeStandard.SBC_304; else -> QuickToolsEngine.CodeStandard.ECP_203 }
                 val pos = if (top) QuickToolsEngine.BarPosition.TOP else QuickToolsEngine.BarPosition.BOTTOM
                 res = QuickToolsEngine.calculateDevelopmentAndSplice(c, dd, fcc, fyy, QuickToolsEngine.StressType.TENSION, pos)
-            }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Calculate") }
+            }, modifier = Modifier.fillMaxWidth())
         }
         res?.let { r ->
             QCard {
-                Text("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 QRow("Code", r.code.name)
                 QRow("Basic Ld (cm)", "%.1f".format(r.basicLdCm))
                 QRow("Ld multiple (d)", "%.1f".format(r.basicLdMultiple))
@@ -241,7 +246,7 @@ private fun DevelopmentLengthTab() {
                 QRow("Compression splice (cm)", "%.1f".format(r.compressionSpliceCm))
                 QRow("90° hook (mm)", "%.0f".format(r.standard90HookMm))
                 QRow("180° hook (mm)", "%.0f".format(r.standard180HookMm))
-                Text(r.explanation, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                AppText(r.explanation, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -255,18 +260,18 @@ private fun ConcreteBatchTab() {
     var res by remember { mutableStateOf<QuickToolsEngine.ConcreteBatchResult?>(null) }
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         QCard {
-            Text("Concrete Volume & Batch", fontWeight = FontWeight.Bold)
+            AppText("Concrete Volume & Batch", fontWeight = FontWeight.Bold)
             QInput("Volume (m³)", vol, { vol = it })
             QInput("Cement bags per m³", bags, { bags = it })
-            Button(onClick = {
-                val v = vol.toDoubleOrNull() ?: return@Button
-                val b = bags.toDoubleOrNull() ?: return@Button
+            AppButton(label = "Calculate", onClick = {
+                val v = vol.toDoubleOrNull() ?: return@AppButton
+                val b = bags.toDoubleOrNull() ?: return@AppButton
                 res = QuickToolsEngine.calculateConcreteBatch(v, b)
-            }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Calculate") }
+            }, modifier = Modifier.fillMaxWidth())
         }
         res?.let { r ->
             QCard {
-                Text("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 QRow("Volume (m³)", "%.2f".format(r.volumeM3))
                 QRow("Cement (kg/m³)", "%.0f".format(r.cementContentKgPerM3))
                 QRow("Total cement (kg)", "%.0f".format(r.totalCementKg))
@@ -289,28 +294,28 @@ private fun PreDimensioningTab() {
     val types = QuickToolsEngine.StructuralMemberType.values().map { it.name }
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         QCard {
-            Text("Structural Pre-Dimensioning", fontWeight = FontWeight.Bold)
+            AppText("Structural Pre-Dimensioning", fontWeight = FontWeight.Bold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = type, onValueChange = {}, readOnly = true, label = { Text("Member type") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+                OutlinedTextField(value = type, onValueChange = {}, readOnly = true, label = { AppText("Member type") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
                 DropdownSelector(options = types, selected = type, onSelect = { type = it })
             }
             QInput("Span (m)", span, { span = it })
-            Button(onClick = {
-                val s = span.toDoubleOrNull() ?: return@Button
+            AppButton(label = "Calculate", onClick = {
+                val s = span.toDoubleOrNull() ?: return@AppButton
                 val t = QuickToolsEngine.StructuralMemberType.valueOf(type)
                 res = QuickToolsEngine.calculatePreDimensioning(t, s)
-            }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Calculate") }
+            }, modifier = Modifier.fillMaxWidth())
         }
         res?.let { r ->
             QCard {
-                Text("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 QRow("Member type", r.memberType.name)
                 QRow("Span (m)", "%.2f".format(r.spanM))
                 QRow("Depth (cm)", "%.0f".format(r.recommendedDepthCm), true)
                 QRow("Total thickness (cm)", "%.0f".format(r.recommendedTotalThicknessCm))
                 QRow("Width (cm)", "%.0f".format(r.recommendedWidthCm))
-                Text(r.formulaUsed, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(r.notes, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                AppText(r.formulaUsed, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                AppText(r.notes, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -325,20 +330,20 @@ private fun SlopeTab() {
     var res by remember { mutableStateOf<QuickToolsEngine.SlopeLevelResult?>(null) }
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         QCard {
-            Text("Slope & Level Difference", fontWeight = FontWeight.Bold)
+            AppText("Slope & Level Difference", fontWeight = FontWeight.Bold)
             QInput("Level 1 (m)", l1, { l1 = it })
             QInput("Level 2 (m)", l2, { l2 = it })
             QInput("Horizontal distance (m)", dist, { dist = it })
-            Button(onClick = {
-                val a = l1.toDoubleOrNull() ?: return@Button
-                val b = l2.toDoubleOrNull() ?: return@Button
-                val d = dist.toDoubleOrNull() ?: return@Button
+            AppButton(label = "Calculate", onClick = {
+                val a = l1.toDoubleOrNull() ?: return@AppButton
+                val b = l2.toDoubleOrNull() ?: return@AppButton
+                val d = dist.toDoubleOrNull() ?: return@AppButton
                 res = QuickToolsEngine.calculateSlope(a, b, d)
-            }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Calculate") }
+            }, modifier = Modifier.fillMaxWidth())
         }
         res?.let { r ->
             QCard {
-                Text("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 QRow("Elevation diff (m)", "%.3f".format(r.elevationDifferenceM))
                 QRow("Elevation diff (cm)", "%.1f".format(r.elevationDifferenceCm))
                 QRow("Slope (%)", "%.2f".format(r.slopePercentage))
@@ -359,26 +364,26 @@ private fun MasonryTab() {
     var res by remember { mutableStateOf<QuickToolsEngine.MasonryResult?>(null) }
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         QCard {
-            Text("Brickwork & Mortar", fontWeight = FontWeight.Bold)
+            AppText("Brickwork & Mortar", fontWeight = FontWeight.Bold)
             QInput("Wall area (m²)", area, { area = it })
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = brick, onValueChange = {}, readOnly = true, label = { Text("Brick type") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+                OutlinedTextField(value = brick, onValueChange = {}, readOnly = true, label = { AppText("Brick type") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
                 DropdownSelector(options = QuickToolsEngine.BrickType.values().map { it.name }, selected = brick, onSelect = { brick = it })
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = thick, onValueChange = {}, readOnly = true, label = { Text("Thickness") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+                OutlinedTextField(value = thick, onValueChange = {}, readOnly = true, label = { AppText("Thickness") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
                 DropdownSelector(options = QuickToolsEngine.WallThickness.values().map { it.name }, selected = thick, onSelect = { thick = it })
             }
-            Button(onClick = {
-                val a = area.toDoubleOrNull() ?: return@Button
+            AppButton(label = "Calculate", onClick = {
+                val a = area.toDoubleOrNull() ?: return@AppButton
                 val b = QuickToolsEngine.BrickType.valueOf(brick)
                 val t = QuickToolsEngine.WallThickness.valueOf(thick)
                 res = QuickToolsEngine.calculateMasonry(a, b, t)
-            }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Calculate") }
+            }, modifier = Modifier.fillMaxWidth())
         }
         res?.let { r ->
             QCard {
-                Text("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 QRow("Wall area (m²)", "%.2f".format(r.wallAreaM2))
                 QRow("Bricks", r.numberOfBricks.toString(), true)
                 QRow("Mortar (m³)", "%.2f".format(r.mortarVolumeM3))
@@ -397,27 +402,27 @@ private fun FormworkTab() {
     var res by remember { mutableStateOf<QuickToolsEngine.FormworkStrippingResult?>(null) }
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         QCard {
-            Text("Formwork Stripping Time", fontWeight = FontWeight.Bold)
+            AppText("Formwork Stripping Time", fontWeight = FontWeight.Bold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = type, onValueChange = {}, readOnly = true, label = { Text("Element type") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+                OutlinedTextField(value = type, onValueChange = {}, readOnly = true, label = { AppText("Element type") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
                 DropdownSelector(options = QuickToolsEngine.FormworkElementType.values().map { it.name }, selected = type, onSelect = { type = it })
             }
             QInput("Span (m)", span, { span = it })
-            Button(onClick = {
-                val s = span.toDoubleOrNull() ?: return@Button
+            AppButton(label = "Calculate", onClick = {
+                val s = span.toDoubleOrNull() ?: return@AppButton
                 val t = QuickToolsEngine.FormworkElementType.valueOf(type)
                 res = QuickToolsEngine.calculateFormworkStrippingTime(t, s)
-            }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Calculate") }
+            }, modifier = Modifier.fillMaxWidth())
         }
         res?.let { r ->
             QCard {
-                Text("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 QRow("Element type", r.elementType.name)
                 QRow("Span (m)", "%.2f".format(r.spanM))
                 QRow("Min days (ordinary)", r.minimumDaysOrdinaryCement.toString(), true)
                 QRow("Min days (rapid)", r.minimumDaysRapidCement.toString())
-                Text(r.codeFormula, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(r.safetyRule, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                AppText(r.codeFormula, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                AppText(r.safetyRule, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -431,13 +436,16 @@ private fun DropdownSelector(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        OutlinedButton(onClick = { expanded = true }, shape = RoundedCornerShape(12.dp)) {
-            Text(selected, fontSize = 13.sp)
-        }
+        AppButton(
+            label = selected,
+            onClick = { expanded = true },
+            style = AppButtonStyle.Outline,
+            fontSize = 13.sp
+        )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { opt ->
                 DropdownMenuItem(
-                    text = { Text(opt) },
+                    text = { AppText(opt) },
                     onClick = { onSelect(opt); expanded = false }
                 )
             }
@@ -461,30 +469,34 @@ private fun UnitConverterTab() {
 
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         QCard {
-            Text("Unit Converter", fontWeight = FontWeight.Bold)
+            AppText("Unit Converter", fontWeight = FontWeight.Bold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = qtyType, onValueChange = {}, readOnly = true, label = { Text("Quantity") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+                OutlinedTextField(value = qtyType, onValueChange = {}, readOnly = true, label = { AppText("Quantity") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
                 DropdownSelector(options = types, selected = qtyType, onSelect = { qtyType = it; fromUnit = QuickToolsEngine.unitsFor(QuickToolsEngine.QuantityType.values().first { q -> q.label == it }).firstOrNull() ?: fromUnit; toUnit = fromUnit; result = null })
             }
             QInput("Value", value, { value = it })
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = fromUnit, onValueChange = {}, readOnly = true, label = { Text("From") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+                OutlinedTextField(value = fromUnit, onValueChange = {}, readOnly = true, label = { AppText("From") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
                 DropdownSelector(options = unitsForType, selected = fromUnit, onSelect = { fromUnit = it })
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = toUnit, onValueChange = {}, readOnly = true, label = { Text("To") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
+                OutlinedTextField(value = toUnit, onValueChange = {}, readOnly = true, label = { AppText("To") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp))
                 DropdownSelector(options = unitsForType, selected = toUnit, onSelect = { toUnit = it })
             }
-            Button(onClick = {
-                val v = value.toDoubleOrNull() ?: return@Button
-                val type = QuickToolsEngine.QuantityType.values().firstOrNull { it.label == qtyType } ?: return@Button
-                result = try { QuickToolsEngine.convertUnit(type, v, fromUnit, toUnit) } catch (_: Exception) { null }
-            }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Convert") }
+            AppButton(
+                label = "Convert",
+                onClick = {
+                    val v = value.toDoubleOrNull() ?: return@AppButton
+                    val type = QuickToolsEngine.QuantityType.values().firstOrNull { it.label == qtyType } ?: return@AppButton
+                    result = try { QuickToolsEngine.convertUnit(type, v, fromUnit, toUnit) } catch (_: Exception) { null }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
         result?.let { r ->
             QCard {
-                Text("Result", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                Text(
+                AppText("Result", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText(
                     "%.6g  $fromUnit = %.6g  $toUnit".format(value.toDoubleOrNull() ?: 0.0, r),
                     fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary
                 )
@@ -511,28 +523,28 @@ private fun EarthworkVolumeTab() {
     var res by remember { mutableStateOf<QuickToolsEngine.EarthworkVolumeResult?>(null) }
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         QCard {
-            Text("Earthwork Volume (Cut/Fill)", fontWeight = FontWeight.Bold)
+            AppText("Earthwork Volume (Cut/Fill)", fontWeight = FontWeight.Bold)
             QInput("End area 1 (m²)", a1, { a1 = it })
             QInput("End area 2 (m²)", a2, { a2 = it })
             QInput("Distance between sections (m)", dist, { dist = it })
             QInput("Mid-section area m² (optional)", am, { am = it })
-            Button(onClick = {
-                val x1 = a1.toDoubleOrNull() ?: return@Button
-                val x2 = a2.toDoubleOrNull() ?: return@Button
-                val d = dist.toDoubleOrNull() ?: return@Button
+            AppButton(label = "Calculate", onClick = {
+                val x1 = a1.toDoubleOrNull() ?: return@AppButton
+                val x2 = a2.toDoubleOrNull() ?: return@AppButton
+                val d = dist.toDoubleOrNull() ?: return@AppButton
                 val mid = am.toDoubleOrNull() ?: -1.0
                 res = QuickToolsEngine.calculateEarthworkVolume(x1, x2, d, mid)
-            }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Calculate") }
+            }, modifier = Modifier.fillMaxWidth())
         }
         res?.let { r ->
             QCard {
-                Text("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 QRow("Average end area method (m³)", "%.2f".format(r.averageEndAreaVolumeM3))
                 QRow("Prismoidal method (m³)", "%.2f".format(r.prismoidalVolumeM3), true)
                 QRow("Prismoidal correction (%)", "%.2f".format(r.prismoidalCorrectionPct))
                 QRow("Mid-section area (m²)", "%.2f".format(r.midSectionAreaM2))
                 QRow("Volume per meter run (m³/m)", "%.2f".format(r.volumePerMeterRunM3))
-                Text("Recommended volume: %.2f m³ (prismoidal)".format(r.recommendedVolumeM3), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                AppText("Recommended volume: %.2f m³ (prismoidal)".format(r.recommendedVolumeM3), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -549,24 +561,24 @@ private fun PlasterPaintTab() {
     var res by remember { mutableStateOf<QuickToolsEngine.PlasterAndPaintResult?>(null) }
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         QCard {
-            Text("Plaster & Paint Estimator", fontWeight = FontWeight.Bold)
+            AppText("Plaster & Paint Estimator", fontWeight = FontWeight.Bold)
             QInput("Gross wall area (m²)", gross, { gross = it })
             QInput("Openings area (m²)", openings, { openings = it })
             QInput("Plaster thickness (cm)", thick, { thick = it })
             QInput("Paint coats", coats, { coats = it }, KeyboardType.Number)
             QInput("Paint coverage (m²/L per coat)", coverage, { coverage = it })
-            Button(onClick = {
-                val g = gross.toDoubleOrNull() ?: return@Button
+            AppButton(label = "Calculate", onClick = {
+                val g = gross.toDoubleOrNull() ?: return@AppButton
                 val o = openings.toDoubleOrNull() ?: 0.0
-                val t = thick.toDoubleOrNull() ?: return@Button
-                val c = coats.toIntOrNull() ?: return@Button
-                val cov = coverage.toDoubleOrNull() ?: return@Button
+                val t = thick.toDoubleOrNull() ?: return@AppButton
+                val c = coats.toIntOrNull() ?: return@AppButton
+                val cov = coverage.toDoubleOrNull() ?: return@AppButton
                 res = QuickToolsEngine.calculatePlasterAndPaint(g, o, t, c, cov)
-            }, Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) { Text("Calculate") }
+            }, modifier = Modifier.fillMaxWidth())
         }
         res?.let { r ->
             QCard {
-                Text("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText("Results", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 QRow("Net plaster area (m²)", "%.2f".format(r.netAreaM2), true)
                 QRow("Plaster mortar (m³)", "%.2f".format(r.plasterMortarVolumeM3))
                 QRow("Cement bags (50kg)", r.plasterCementBags50Kg.toString())
