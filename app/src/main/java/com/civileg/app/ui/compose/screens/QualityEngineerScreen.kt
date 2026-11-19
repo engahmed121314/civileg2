@@ -49,6 +49,11 @@ import com.civileg.app.R
 import com.civileg.app.db.QualityRecord
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.ui.DesignCodeStore
 import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.charts.*
@@ -102,7 +107,7 @@ fun QualityEngineerScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             TopAppBar(
-                title = { Text(stringResource(R.string.home_quality_engineer)) },
+                title = { AppText(stringResource(R.string.home_quality_engineer)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
@@ -131,7 +136,7 @@ fun QualityEngineerScreen(
                             }
                         },
                         text = {
-                            Text(
+                            AppText(
                                 stringResource(group.titleRes),
                                 fontSize = 12.sp,
                                 maxLines = 1,
@@ -156,7 +161,7 @@ fun QualityEngineerScreen(
                             selectedTab = tab
                         },
                         text = {
-                            Text(
+                            AppText(
                                 stringResource(tab.titleRes),
                                 fontSize = 11.sp,
                                 maxLines = 1,
@@ -271,13 +276,13 @@ private fun ConcreteQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_concrete_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_concrete_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
                     value = uiState.elementId,
                     onValueChange = { viewModel.updateConcreteField("elementId", it) },
-                    label = { Text(stringResource(R.string.qc_concrete_element_id)) },
+                    label = { AppText(stringResource(R.string.qc_concrete_element_id)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -286,14 +291,14 @@ private fun ConcreteQCTab(
                     OutlinedTextField(
                         value = uiState.volume,
                         onValueChange = { viewModel.updateConcreteField("volume", it) },
-                        label = { Text(stringResource(R.string.qc_concrete_volume)) },
+                        label = { AppText(stringResource(R.string.qc_concrete_volume)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.slump,
                         onValueChange = { viewModel.updateConcreteField("slump", it) },
-                        label = { Text(stringResource(R.string.qc_concrete_slump)) },
+                        label = { AppText(stringResource(R.string.qc_concrete_slump)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
@@ -304,14 +309,14 @@ private fun ConcreteQCTab(
                     OutlinedTextField(
                         value = uiState.fcu,
                         onValueChange = { viewModel.updateConcreteField("fcu", it) },
-                        label = { Text(stringResource(R.string.qc_concrete_fcu)) },
+                        label = { AppText(stringResource(R.string.qc_concrete_fcu)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.sampleId,
                         onValueChange = { viewModel.updateConcreteField("sampleId", it) },
-                        label = { Text(stringResource(R.string.qc_concrete_sample_id)) },
+                        label = { AppText(stringResource(R.string.qc_concrete_sample_id)) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -321,14 +326,14 @@ private fun ConcreteQCTab(
                     OutlinedTextField(
                         value = uiState.strength7Days,
                         onValueChange = { viewModel.updateConcreteField("strength7Days", it) },
-                        label = { Text(stringResource(R.string.qc_concrete_strength_7days)) },
+                        label = { AppText(stringResource(R.string.qc_concrete_strength_7days)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.strength28Days,
                         onValueChange = { viewModel.updateConcreteField("strength28Days", it) },
-                        label = { Text(stringResource(R.string.qc_concrete_strength_28days)) },
+                        label = { AppText(stringResource(R.string.qc_concrete_strength_28days)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -339,14 +344,14 @@ private fun ConcreteQCTab(
                     OutlinedTextField(
                         value = uiState.airContent,
                         onValueChange = { viewModel.updateConcreteField("airContent", it) },
-                        label = { Text(stringResource(R.string.qc_concrete_air_content)) },
+                        label = { AppText(stringResource(R.string.qc_concrete_air_content)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.concreteTemp,
                         onValueChange = { viewModel.updateConcreteField("concreteTemp", it) },
-                        label = { Text(stringResource(R.string.qc_concrete_temp)) },
+                        label = { AppText(stringResource(R.string.qc_concrete_temp)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -356,7 +361,7 @@ private fun ConcreteQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_concrete_checks_header), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_concrete_checks_header), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 QualityCheckRow(
@@ -401,20 +406,19 @@ private fun ConcreteQCTab(
             }
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_concrete_save),
             onClick = {
                 runQcInputAction(scope, snackbarHostState) {
                     viewModel.saveConcretePour(context)
                 }
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.Save, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_concrete_save))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.Save
+        )
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_concrete_export),
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
@@ -424,19 +428,16 @@ private fun ConcreteQCTab(
                     designCode = uiState.designCode
                 )
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_concrete_export))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.PictureAsPdf
+        )
 
         QcOutcomeCard(uiState.outcome)
 
         // Drawing preview
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_concrete_drawing_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_concrete_drawing_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 ConcreteQcDrawing(
                     elementId = uiState.elementId,
@@ -486,10 +487,10 @@ private fun SoilFoundationQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_soil_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_soil_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(stringResource(R.string.qc_soil_calc_method), style = MaterialTheme.typography.labelLarge)
+                AppText(stringResource(R.string.qc_soil_calc_method), style = MaterialTheme.typography.labelLarge)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -499,7 +500,7 @@ private fun SoilFoundationQCTab(
                             selected = selectedMethod == method,
                             onClick = { selectedMethod = method },
                             label = {
-                                Text(
+                                AppText(
                                     when (method) {
                                         BearingMethod.TERZAGHI -> stringResource(R.string.qc_soil_method_terzaghi)
                                         BearingMethod.MEYERHOF -> stringResource(R.string.qc_soil_method_meyerhof)
@@ -514,7 +515,7 @@ private fun SoilFoundationQCTab(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(stringResource(R.string.qc_soil_soil_type), style = MaterialTheme.typography.labelLarge)
+                AppText(stringResource(R.string.qc_soil_soil_type), style = MaterialTheme.typography.labelLarge)
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -524,7 +525,7 @@ private fun SoilFoundationQCTab(
                             selected = selectedSoilType == type,
                             onClick = { selectedSoilType = type },
                             label = {
-                                Text(
+                                AppText(
                                     when (type) {
                                         SoilType.CLAY -> stringResource(R.string.qc_soil_type_clay)
                                         SoilType.SAND -> stringResource(R.string.qc_soil_type_sand)
@@ -543,14 +544,14 @@ private fun SoilFoundationQCTab(
                     OutlinedTextField(
                         value = uiState.cohesion,
                         onValueChange = { viewModel.updateSoilField("cohesion", it) },
-                        label = { Text(stringResource(R.string.qc_soil_cohesion)) },
+                        label = { AppText(stringResource(R.string.qc_soil_cohesion)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.frictionAngle,
                         onValueChange = { viewModel.updateSoilField("frictionAngle", it) },
-                        label = { Text(stringResource(R.string.qc_soil_friction_angle)) },
+                        label = { AppText(stringResource(R.string.qc_soil_friction_angle)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -561,14 +562,14 @@ private fun SoilFoundationQCTab(
                     OutlinedTextField(
                         value = uiState.unitWeight,
                         onValueChange = { viewModel.updateSoilField("unitWeight", it) },
-                        label = { Text(stringResource(R.string.qc_soil_unit_weight)) },
+                        label = { AppText(stringResource(R.string.qc_soil_unit_weight)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.waterTableDepth,
                         onValueChange = { viewModel.updateSoilField("waterTableDepth", it) },
-                        label = { Text(stringResource(R.string.qc_soil_water_table)) },
+                        label = { AppText(stringResource(R.string.qc_soil_water_table)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -578,21 +579,21 @@ private fun SoilFoundationQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_soil_foundation_dims), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_soil_foundation_dims), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = uiState.foundationWidth,
                         onValueChange = { viewModel.updateSoilField("foundationWidth", it) },
-                        label = { Text(stringResource(R.string.qc_soil_width_b)) },
+                        label = { AppText(stringResource(R.string.qc_soil_width_b)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.foundationLength,
                         onValueChange = { viewModel.updateSoilField("foundationLength", it) },
-                        label = { Text(stringResource(R.string.qc_soil_length_l)) },
+                        label = { AppText(stringResource(R.string.qc_soil_length_l)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -603,14 +604,14 @@ private fun SoilFoundationQCTab(
                     OutlinedTextField(
                         value = uiState.foundationDepth,
                         onValueChange = { viewModel.updateSoilField("foundationDepth", it) },
-                        label = { Text(stringResource(R.string.qc_soil_depth_df)) },
+                        label = { AppText(stringResource(R.string.qc_soil_depth_df)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.safetyFactor,
                         onValueChange = { viewModel.updateSoilField("safetyFactor", it) },
-                        label = { Text(stringResource(R.string.qc_soil_safety_factor)) },
+                        label = { AppText(stringResource(R.string.qc_soil_safety_factor)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -618,23 +619,21 @@ private fun SoilFoundationQCTab(
             }
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_soil_calculate),
             onClick = {
                 runQcInputAction(scope, snackbarHostState) {
                     viewModel.calculateSoilBearing(selectedMethod, selectedSoilType)
                 }
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.Calculate, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_soil_calculate))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.Calculate
+        )
 
         uiState.soilResult?.let { result ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(stringResource(R.string.qc_soil_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    AppText(stringResource(R.string.qc_soil_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
 
                     ResultRow(stringResource(R.string.qc_soil_gross), "${String.format("%.1f", result.grossBearingCapacity)} kPa")
@@ -655,7 +654,8 @@ private fun SoilFoundationQCTab(
 
         QcOutcomeCard(uiState.outcome)
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_soil_export),
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
@@ -665,12 +665,9 @@ private fun SoilFoundationQCTab(
                     designCode = uiState.designCode
                 )
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_soil_export))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.PictureAsPdf
+        )
     }
 }
 
@@ -701,21 +698,21 @@ private fun RebarQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_rebar_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_rebar_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = uiState.barDiameter,
                         onValueChange = { viewModel.updateRebarField("barDiameter", it) },
-                        label = { Text(stringResource(R.string.qc_rebar_bar_diameter)) },
+                        label = { AppText(stringResource(R.string.qc_rebar_bar_diameter)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.numBars,
                         onValueChange = { viewModel.updateRebarField("numBars", it) },
-                        label = { Text(stringResource(R.string.qc_rebar_num_bars)) },
+                        label = { AppText(stringResource(R.string.qc_rebar_num_bars)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
@@ -726,14 +723,14 @@ private fun RebarQCTab(
                     OutlinedTextField(
                         value = uiState.fy,
                         onValueChange = { viewModel.updateRebarField("fy", it) },
-                        label = { Text(stringResource(R.string.qc_rebar_fy)) },
+                        label = { AppText(stringResource(R.string.qc_rebar_fy)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.cover,
                         onValueChange = { viewModel.updateRebarField("cover", it) },
-                        label = { Text(stringResource(R.string.qc_rebar_cover)) },
+                        label = { AppText(stringResource(R.string.qc_rebar_cover)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
@@ -744,14 +741,14 @@ private fun RebarQCTab(
                     OutlinedTextField(
                         value = uiState.beamWidth,
                         onValueChange = { viewModel.updateRebarField("beamWidth", it) },
-                        label = { Text(stringResource(R.string.qc_rebar_beam_width)) },
+                        label = { AppText(stringResource(R.string.qc_rebar_beam_width)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.effectiveDepth,
                         onValueChange = { viewModel.updateRebarField("effectiveDepth", it) },
-                        label = { Text(stringResource(R.string.qc_rebar_effective_depth)) },
+                        label = { AppText(stringResource(R.string.qc_rebar_effective_depth)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
@@ -761,30 +758,28 @@ private fun RebarQCTab(
                 OutlinedTextField(
                     value = uiState.fcu,
                     onValueChange = { viewModel.updateRebarField("fcu", it) },
-                    label = { Text(stringResource(R.string.qc_rebar_fcu)) },
+                    label = { AppText(stringResource(R.string.qc_rebar_fcu)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_rebar_calculate),
             onClick = {
                 runQcInputAction(scope, snackbarHostState) {
                     viewModel.calculateRebarChecks()
                 }
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.Calculate, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_rebar_calculate))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.Calculate
+        )
 
         uiState.rebarChecks?.let { checks ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(stringResource(R.string.qc_check_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    AppText(stringResource(R.string.qc_check_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     checks.forEach { check ->
                         SafetyCheckRow(
@@ -797,7 +792,8 @@ private fun RebarQCTab(
             }
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_rebar_export),
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
@@ -807,12 +803,9 @@ private fun RebarQCTab(
                     designCode = uiState.designCode
                 )
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_rebar_export))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.PictureAsPdf
+        )
 
         QcOutcomeCard(uiState.outcome)
     }
@@ -854,7 +847,7 @@ private fun SteelStructureQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_steel_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_steel_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 var expanded by remember { mutableStateOf(false) }
@@ -868,14 +861,14 @@ private fun SteelStructureQCTab(
                         value = selectedSection,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text(stringResource(R.string.qc_steel_section)) },
+                        label = { AppText(stringResource(R.string.qc_steel_section)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
                     )
                     ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         sections.forEach { section ->
                             DropdownMenuItem(
-                                text = { Text(section) },
+                                text = { AppText(section) },
                                 onClick = {
                                     selectedSection = section
                                     viewModel.updateSteelField("sectionKey", section)
@@ -888,7 +881,7 @@ private fun SteelStructureQCTab(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Member type
-                Text(stringResource(R.string.qc_steel_member_type), style = MaterialTheme.typography.labelLarge)
+                AppText(stringResource(R.string.qc_steel_member_type), style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
                     memberTypes.forEachIndexed { index, (key, label) ->
                         FilterChip(
@@ -897,7 +890,7 @@ private fun SteelStructureQCTab(
                                 selectedMemberType = key
                                 viewModel.updateSteelField("memberType", key)
                             },
-                            label = { Text(label, fontSize = 10.sp) }
+                            label = { AppText(label, fontSize = 10.sp) }
                         )
                     }
                 }
@@ -906,14 +899,14 @@ private fun SteelStructureQCTab(
                     OutlinedTextField(
                         value = uiState.appliedMoment,
                         onValueChange = { viewModel.updateSteelField("appliedMoment", it) },
-                        label = { Text(stringResource(R.string.qc_steel_moment)) },
+                        label = { AppText(stringResource(R.string.qc_steel_moment)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.appliedShear,
                         onValueChange = { viewModel.updateSteelField("appliedShear", it) },
-                        label = { Text(stringResource(R.string.qc_steel_shear)) },
+                        label = { AppText(stringResource(R.string.qc_steel_shear)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -924,14 +917,14 @@ private fun SteelStructureQCTab(
                     OutlinedTextField(
                         value = uiState.steelFy,
                         onValueChange = { viewModel.updateSteelField("steelFy", it) },
-                        label = { Text(stringResource(R.string.qc_steel_fy)) },
+                        label = { AppText(stringResource(R.string.qc_steel_fy)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.span,
                         onValueChange = { viewModel.updateSteelField("span", it) },
-                        label = { Text(stringResource(R.string.qc_steel_span)) },
+                        label = { AppText(stringResource(R.string.qc_steel_span)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -942,14 +935,14 @@ private fun SteelStructureQCTab(
                     OutlinedTextField(
                         value = uiState.axialLoad,
                         onValueChange = { viewModel.updateSteelField("axialLoad", it) },
-                        label = { Text(stringResource(R.string.qc_steel_axial_load)) },
+                        label = { AppText(stringResource(R.string.qc_steel_axial_load)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.unbracedLength,
                         onValueChange = { viewModel.updateSteelField("unbracedLength", it) },
-                        label = { Text(stringResource(R.string.qc_steel_unbraced_length)) },
+                        label = { AppText(stringResource(R.string.qc_steel_unbraced_length)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -960,11 +953,11 @@ private fun SteelStructureQCTab(
                     OutlinedTextField(
                         value = uiState.allowableDeflection,
                         onValueChange = { viewModel.updateSteelField("allowableDeflection", it) },
-                        label = { Text(stringResource(R.string.qc_steel_allowable_deflection)) },
+                        label = { AppText(stringResource(R.string.qc_steel_allowable_deflection)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
-                    Text(
+                    AppText(
                         stringResource(R.string.qc_steel_lb_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -973,23 +966,21 @@ private fun SteelStructureQCTab(
             }
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_steel_check),
             onClick = {
                 runQcInputAction(scope, snackbarHostState) {
                     viewModel.calculateSteelChecks(selectedSection)
                 }
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.Calculate, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_steel_check))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.Calculate
+        )
 
         uiState.steelChecks?.let { checks ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(stringResource(R.string.qc_check_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    AppText(stringResource(R.string.qc_check_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     checks.forEach { check ->
                         SafetyCheckRow(
@@ -1004,7 +995,8 @@ private fun SteelStructureQCTab(
 
         QcOutcomeCard(uiState.outcome)
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_steel_export),
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
@@ -1014,12 +1006,9 @@ private fun SteelStructureQCTab(
                     designCode = uiState.designCode
                 )
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_steel_export))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.PictureAsPdf
+        )
     }
 }
 
@@ -1045,21 +1034,21 @@ private fun RoadsQCTab(
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_roads_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_roads_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = uiState.surfaceLayerThickness,
                         onValueChange = { viewModel.updateRoadsField("surfaceLayerThickness", it) },
-                        label = { Text(stringResource(R.string.qc_roads_surface)) },
+                        label = { AppText(stringResource(R.string.qc_roads_surface)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.baseLayerThickness,
                         onValueChange = { viewModel.updateRoadsField("baseLayerThickness", it) },
-                        label = { Text(stringResource(R.string.qc_roads_base)) },
+                        label = { AppText(stringResource(R.string.qc_roads_base)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
@@ -1069,7 +1058,7 @@ private fun RoadsQCTab(
                 OutlinedTextField(
                     value = uiState.subbaseLayerThickness,
                     onValueChange = { viewModel.updateRoadsField("subbaseLayerThickness", it) },
-                    label = { Text(stringResource(R.string.qc_roads_subbase)) },
+                    label = { AppText(stringResource(R.string.qc_roads_subbase)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1078,13 +1067,13 @@ private fun RoadsQCTab(
                 Divider()
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(stringResource(R.string.qc_roads_compaction_checks), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_roads_compaction_checks), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
                     value = uiState.compactionPercent,
                     onValueChange = { viewModel.updateRoadsField("compactionPercent", it) },
-                    label = { Text(stringResource(R.string.qc_roads_compaction)) },
+                    label = { AppText(stringResource(R.string.qc_roads_compaction)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1093,7 +1082,7 @@ private fun RoadsQCTab(
                 OutlinedTextField(
                     value = uiState.asphaltDensity,
                     onValueChange = { viewModel.updateRoadsField("asphaltDensity", it) },
-                    label = { Text(stringResource(R.string.qc_roads_asphalt_density)) },
+                    label = { AppText(stringResource(R.string.qc_roads_asphalt_density)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1102,27 +1091,26 @@ private fun RoadsQCTab(
                 OutlinedTextField(
                     value = uiState.airVoids,
                     onValueChange = { viewModel.updateRoadsField("airVoids", it) },
-                    label = { Text(stringResource(R.string.qc_roads_air_voids)) },
+                    label = { AppText(stringResource(R.string.qc_roads_air_voids)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_roads_check),
             onClick = {
                 runQcInputAction(scope, snackbarHostState) {
                     viewModel.calculateRoadsChecks()
                 }
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.Calculate, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_roads_check))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.Calculate
+        )
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_roads_export),
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
@@ -1132,12 +1120,9 @@ private fun RoadsQCTab(
                     designCode = uiState.designCode
                 )
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_roads_export))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.PictureAsPdf
+        )
 
         QcOutcomeCard(uiState.outcome)
     }
@@ -1165,21 +1150,21 @@ private fun BridgesQCTab(
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_bridges_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_bridges_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = uiState.concreteStrength,
                         onValueChange = { viewModel.updateBridgesField("concreteStrength", it) },
-                        label = { Text(stringResource(R.string.qc_bridges_concrete_strength)) },
+                        label = { AppText(stringResource(R.string.qc_bridges_concrete_strength)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.span,
                         onValueChange = { viewModel.updateBridgesField("span", it) },
-                        label = { Text(stringResource(R.string.qc_bridges_span)) },
+                        label = { AppText(stringResource(R.string.qc_bridges_span)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1189,7 +1174,7 @@ private fun BridgesQCTab(
                 OutlinedTextField(
                     value = uiState.requiredConcreteStrength,
                     onValueChange = { viewModel.updateBridgesField("requiredConcreteStrength", it) },
-                    label = { Text(stringResource(R.string.qc_bridges_required_strength)) },
+                    label = { AppText(stringResource(R.string.qc_bridges_required_strength)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1197,11 +1182,11 @@ private fun BridgesQCTab(
                 OutlinedTextField(
                     value = uiState.naturalFrequency,
                     onValueChange = { viewModel.updateBridgesField("naturalFrequency", it) },
-                    label = { Text(stringResource(R.string.qc_bridges_natural_frequency)) },
+                    label = { AppText(stringResource(R.string.qc_bridges_natural_frequency)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text(
+                AppText(
                     stringResource(R.string.qc_bridges_freq_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1211,14 +1196,14 @@ private fun BridgesQCTab(
                     OutlinedTextField(
                         value = uiState.measuredDeflection,
                         onValueChange = { viewModel.updateBridgesField("measuredDeflection", it) },
-                        label = { Text(stringResource(R.string.qc_bridges_measured_deflection)) },
+                        label = { AppText(stringResource(R.string.qc_bridges_measured_deflection)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.allowableDeflection,
                         onValueChange = { viewModel.updateBridgesField("allowableDeflection", it) },
-                        label = { Text(stringResource(R.string.qc_bridges_allowable_deflection)) },
+                        label = { AppText(stringResource(R.string.qc_bridges_allowable_deflection)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1226,20 +1211,19 @@ private fun BridgesQCTab(
             }
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_bridges_check),
             onClick = {
                 runQcInputAction(scope, snackbarHostState) {
                     viewModel.calculateBridgeChecks()
                 }
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.Calculate, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_bridges_check))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.Calculate
+        )
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_bridges_export),
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
@@ -1249,12 +1233,9 @@ private fun BridgesQCTab(
                     designCode = uiState.designCode
                 )
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_bridges_export))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.PictureAsPdf
+        )
 
         QcOutcomeCard(uiState.outcome)
     }
@@ -1283,18 +1264,18 @@ private fun TunnelsQCTab(
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_tunnels_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_tunnels_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 val classes = listOf("I", "II", "III", "IV", "V")
 
-                Text(stringResource(R.string.qc_tunnels_rock_class), style = MaterialTheme.typography.labelLarge)
+                AppText(stringResource(R.string.qc_tunnels_rock_class), style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     classes.forEach { cls ->
                         FilterChip(
                             selected = uiState.rockClass == cls,
                             onClick = { viewModel.updateTunnelsField("rockClass", cls) },
-                            label = { Text(cls) }
+                            label = { AppText(cls) }
                         )
                     }
                 }
@@ -1304,14 +1285,14 @@ private fun TunnelsQCTab(
                     OutlinedTextField(
                         value = uiState.tunnelConvergence,
                         onValueChange = { viewModel.updateTunnelsField("tunnelConvergence", it) },
-                        label = { Text(stringResource(R.string.qc_tunnels_convergence)) },
+                        label = { AppText(stringResource(R.string.qc_tunnels_convergence)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.tunnelDiameter,
                         onValueChange = { viewModel.updateTunnelsField("tunnelDiameter", it) },
-                        label = { Text(stringResource(R.string.qc_tunnels_diameter)) },
+                        label = { AppText(stringResource(R.string.qc_tunnels_diameter)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1321,7 +1302,7 @@ private fun TunnelsQCTab(
                 OutlinedTextField(
                     value = uiState.supportThickness,
                     onValueChange = { viewModel.updateTunnelsField("supportThickness", it) },
-                    label = { Text(stringResource(R.string.qc_tunnels_support_thickness)) },
+                    label = { AppText(stringResource(R.string.qc_tunnels_support_thickness)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -1339,7 +1320,7 @@ private fun TunnelsQCTab(
                             value = if (uiState.groundwaterPresent == "true") stringResource(R.string.qc_tunnels_groundwater_yes) else stringResource(R.string.qc_tunnels_groundwater_no),
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text(stringResource(R.string.qc_tunnels_groundwater)) },
+                            label = { AppText(stringResource(R.string.qc_tunnels_groundwater)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = groundwaterExpanded) },
                             modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
                         )
@@ -1347,14 +1328,14 @@ private fun TunnelsQCTab(
                             expanded = groundwaterExpanded,
                             onDismissRequest = { groundwaterExpanded = false }
                         ) {
-                            DropdownMenuItem(text = { Text(stringResource(R.string.qc_tunnels_groundwater_no)) }, onClick = { viewModel.updateTunnelsField("groundwaterPresent", "false"); groundwaterExpanded = false })
-                            DropdownMenuItem(text = { Text(stringResource(R.string.qc_tunnels_groundwater_yes)) }, onClick = { viewModel.updateTunnelsField("groundwaterPresent", "true"); groundwaterExpanded = false })
+                            DropdownMenuItem(text = { AppText(stringResource(R.string.qc_tunnels_groundwater_no)) }, onClick = { viewModel.updateTunnelsField("groundwaterPresent", "false"); groundwaterExpanded = false })
+                            DropdownMenuItem(text = { AppText(stringResource(R.string.qc_tunnels_groundwater_yes)) }, onClick = { viewModel.updateTunnelsField("groundwaterPresent", "true"); groundwaterExpanded = false })
                         }
                     }
                     OutlinedTextField(
                         value = uiState.shotcreteStrength,
                         onValueChange = { viewModel.updateTunnelsField("shotcreteStrength", it) },
-                        label = { Text(stringResource(R.string.qc_tunnels_shotcrete_strength)) },
+                        label = { AppText(stringResource(R.string.qc_tunnels_shotcrete_strength)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1364,27 +1345,26 @@ private fun TunnelsQCTab(
                 OutlinedTextField(
                     value = uiState.rockUcs,
                     onValueChange = { viewModel.updateTunnelsField("rockUcs", it) },
-                    label = { Text(stringResource(R.string.qc_tunnels_rock_ucs)) },
+                    label = { AppText(stringResource(R.string.qc_tunnels_rock_ucs)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_tunnels_check),
             onClick = {
                 runQcInputAction(scope, snackbarHostState) {
                     viewModel.calculateTunnelChecks()
                 }
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.Calculate, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_tunnels_check))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.Calculate
+        )
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_tunnels_export),
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
@@ -1394,12 +1374,9 @@ private fun TunnelsQCTab(
                     designCode = uiState.designCode
                 )
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_tunnels_export))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.PictureAsPdf
+        )
 
         QcOutcomeCard(uiState.outcome)
     }
@@ -1440,7 +1417,7 @@ private fun BuildingsQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_buildings_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_buildings_section_inputs), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 types.forEach { type ->
@@ -1455,7 +1432,7 @@ private fun BuildingsQCTab(
                             selected = buildingType == type,
                             onClick = { buildingType = type }
                         )
-                        Text(type, modifier = Modifier.padding(start = 8.dp))
+                        AppText(type, modifier = Modifier.padding(start = 8.dp))
                     }
                 }
             }
@@ -1463,21 +1440,21 @@ private fun BuildingsQCTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_buildings_foundation_params), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_buildings_foundation_params), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = uiState.numFloors,
                         onValueChange = { viewModel.updateBuildingsField("numFloors", it) },
-                        label = { Text(stringResource(R.string.qc_buildings_num_floors)) },
+                        label = { AppText(stringResource(R.string.qc_buildings_num_floors)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.floorHeight,
                         onValueChange = { viewModel.updateBuildingsField("floorHeight", it) },
-                        label = { Text(stringResource(R.string.qc_buildings_floor_height)) },
+                        label = { AppText(stringResource(R.string.qc_buildings_floor_height)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1488,14 +1465,14 @@ private fun BuildingsQCTab(
                     OutlinedTextField(
                         value = uiState.totalWeight,
                         onValueChange = { viewModel.updateBuildingsField("totalWeight", it) },
-                        label = { Text(stringResource(R.string.qc_buildings_total_weight)) },
+                        label = { AppText(stringResource(R.string.qc_buildings_total_weight)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.importanceFactor,
                         onValueChange = { viewModel.updateBuildingsField("importanceFactor", it) },
-                        label = { Text(stringResource(R.string.qc_buildings_importance_factor)) },
+                        label = { AppText(stringResource(R.string.qc_buildings_importance_factor)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1506,14 +1483,14 @@ private fun BuildingsQCTab(
                     OutlinedTextField(
                         value = uiState.sds,
                         onValueChange = { viewModel.updateBuildingsField("sds", it) },
-                        label = { Text(stringResource(R.string.qc_buildings_sds)) },
+                        label = { AppText(stringResource(R.string.qc_buildings_sds)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = uiState.responseR,
                         onValueChange = { viewModel.updateBuildingsField("responseR", it) },
-                        label = { Text(stringResource(R.string.qc_buildings_response_r)) },
+                        label = { AppText(stringResource(R.string.qc_buildings_response_r)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -1523,30 +1500,28 @@ private fun BuildingsQCTab(
                 OutlinedTextField(
                     value = uiState.storyDrift,
                     onValueChange = { viewModel.updateBuildingsField("storyDrift", it) },
-                    label = { Text(stringResource(R.string.qc_buildings_story_drift)) },
+                    label = { AppText(stringResource(R.string.qc_buildings_story_drift)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_buildings_check),
             onClick = {
                 runQcInputAction(scope, snackbarHostState) {
                     viewModel.calculateBuildingChecks(buildingType)
                 }
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.Calculate, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_buildings_check))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.Calculate
+        )
 
         uiState.buildingChecks?.let { checks ->
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(stringResource(R.string.qc_check_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    AppText(stringResource(R.string.qc_check_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     checks.forEach { check ->
                         SafetyCheckRow(
@@ -1559,7 +1534,8 @@ private fun BuildingsQCTab(
             }
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_buildings_export),
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
@@ -1569,12 +1545,9 @@ private fun BuildingsQCTab(
                     designCode = uiState.designCode
                 )
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_buildings_export))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.PictureAsPdf
+        )
 
         QcOutcomeCard(uiState.outcome)
     }
@@ -2153,7 +2126,7 @@ private fun DisciplineQcTab(
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(
+                AppText(
                     disciplineSubtitle,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
@@ -2165,7 +2138,7 @@ private fun DisciplineQcTab(
                         QcFieldType.NUMBER -> OutlinedTextField(
                             value = values[field.key] ?: "",
                             onValueChange = { values[field.key] = it },
-                            label = { Text(stringResource(field.labelRes)) },
+                            label = { AppText(stringResource(field.labelRes)) },
                             isError = field.key in invalidNumberKeys,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth()
@@ -2173,7 +2146,7 @@ private fun DisciplineQcTab(
                         QcFieldType.TEXT -> OutlinedTextField(
                             value = values[field.key] ?: "",
                             onValueChange = { values[field.key] = it },
-                            label = { Text(stringResource(field.labelRes)) },
+                            label = { AppText(stringResource(field.labelRes)) },
                             modifier = Modifier.fillMaxWidth()
                         )
                         QcFieldType.BOOL -> Row(
@@ -2181,7 +2154,7 @@ private fun DisciplineQcTab(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(stringResource(field.labelRes), style = MaterialTheme.typography.bodyMedium)
+                            AppText(stringResource(field.labelRes), style = MaterialTheme.typography.bodyMedium)
                             Switch(
                                 checked = (values[field.key] ?: "false").equals("true", true),
                                 onCheckedChange = { values[field.key] = it.toString() }
@@ -2193,7 +2166,8 @@ private fun DisciplineQcTab(
             }
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_reports_execute_inspection),
             onClick = {
                 if (invalidNumberKeys.isEmpty()) {
                     val result = computeDisciplineOutcome(discipline, values, designCode)
@@ -2208,14 +2182,12 @@ private fun DisciplineQcTab(
                     scope.launch { snackbarHostState.showSnackbar(invalidNumberMessage) }
                 }
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.Calculate, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_reports_execute_inspection))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.Calculate
+        )
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_reports_export_pdf_btn),
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
@@ -2225,12 +2197,9 @@ private fun DisciplineQcTab(
                     designCode = designCode
                 )
             },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_reports_export_pdf_btn))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.PictureAsPdf
+        )
 
         DisciplineDrawingCard(discipline, values, designCode, outcome?.passed == true)
         QcOutcomeCard(outcome)
@@ -2292,7 +2261,7 @@ private fun QualityReportsTab(
     ) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_reports_quality_summary), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_reports_quality_summary), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 ResultRow(stringResource(R.string.qc_reports_total_inspections), "${uiState.totalInspections}")
@@ -2308,7 +2277,7 @@ private fun QualityReportsTab(
         if (uiState.categorySummary.isNotEmpty()) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(stringResource(R.string.qc_reports_category_summary), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    AppText(stringResource(R.string.qc_reports_category_summary), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     uiState.categorySummary.forEach { row ->
                         Row(
@@ -2318,8 +2287,8 @@ private fun QualityReportsTab(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(row.category, style = MaterialTheme.typography.bodyMedium)
-                                Text(
+                                AppText(row.category, style = MaterialTheme.typography.bodyMedium)
+                                AppText(
                                     stringResource(
                                         R.string.qc_reports_passed_ratio,
                                         row.passedCount,
@@ -2329,7 +2298,7 @@ private fun QualityReportsTab(
                                     color = Color.Gray
                                 )
                             }
-                            Text(
+                            AppText(
                                 "${if (row.total > 0) row.passedCount * 100 / row.total else 0}%",
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold
@@ -2371,13 +2340,13 @@ private fun QualityReportsTab(
         // Search & Filter Bar
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(stringResource(R.string.qc_reports_filter_records), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_reports_filter_records), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
                     value = searchText,
                     onValueChange = { searchText = it },
-                    label = { Text(stringResource(R.string.qc_reports_search_hint)) },
+                    label = { AppText(stringResource(R.string.qc_reports_search_hint)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -2397,7 +2366,7 @@ private fun QualityReportsTab(
                             value = selectedCategory?.takeIf { it.isNotBlank() } ?: stringResource(R.string.qc_reports_all_categories),
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text(stringResource(R.string.qc_reports_category)) },
+                            label = { AppText(stringResource(R.string.qc_reports_category)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
                             modifier = Modifier
                                 .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
@@ -2405,12 +2374,12 @@ private fun QualityReportsTab(
                         )
                         ExposedDropdownMenu(expanded = categoryExpanded, onDismissRequest = { categoryExpanded = false }) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.qc_reports_all_categories)) },
+                                text = { AppText(stringResource(R.string.qc_reports_all_categories)) },
                                 onClick = { selectedCategory = null; categoryExpanded = false }
                             )
                             categories.forEach { cat ->
                                 DropdownMenuItem(
-                                    text = { Text(cat) },
+                                    text = { AppText(cat) },
                                     onClick = { selectedCategory = cat; categoryExpanded = false }
                                 )
                             }
@@ -2430,7 +2399,7 @@ private fun QualityReportsTab(
                             },
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text(stringResource(R.string.qc_reports_status)) },
+                            label = { AppText(stringResource(R.string.qc_reports_status)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
                             modifier = Modifier
                                 .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
@@ -2438,15 +2407,15 @@ private fun QualityReportsTab(
                         )
                         ExposedDropdownMenu(expanded = statusExpanded, onDismissRequest = { statusExpanded = false }) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.qc_reports_all_statuses)) },
+                                text = { AppText(stringResource(R.string.qc_reports_all_statuses)) },
                                 onClick = { selectedPassFilter = null; statusExpanded = false }
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.qc_reports_passed_only)) },
+                                text = { AppText(stringResource(R.string.qc_reports_passed_only)) },
                                 onClick = { selectedPassFilter = true; statusExpanded = false }
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.qc_reports_failed_only)) },
+                                text = { AppText(stringResource(R.string.qc_reports_failed_only)) },
                                 onClick = { selectedPassFilter = false; statusExpanded = false }
                             )
                         }
@@ -2460,63 +2429,54 @@ private fun QualityReportsTab(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Button(
+            AppButton(
+                label = stringResource(R.string.qc_reports_export_pdf_btn),
                 onClick = { viewModel.exportQualityReport(context) },
                 enabled = !isExporting,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(Icons.Default.PictureAsPdf, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (isExporting) stringResource(R.string.qc_reports_exporting) else stringResource(R.string.qc_reports_export_pdf_btn))
-            }
-            Button(
+                loading = isExporting,
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.PictureAsPdf
+            )
+            AppButton(
+                label = stringResource(R.string.qc_reports_export_csv),
                 onClick = { viewModel.exportQualityCsv(context) },
                 enabled = !isExporting,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(Icons.Default.TableChart, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.qc_reports_export_csv))
-            }
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.TableChart
+            )
         }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Button(
+            AppButton(
+                label = stringResource(R.string.qc_reports_json_backup),
                 onClick = { viewModel.exportQualityBackup(context) },
                 enabled = !isExporting,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(Icons.Default.Backup, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.qc_reports_json_backup))
-            }
-            Button(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Backup
+            )
+            AppButton(
+                label = stringResource(R.string.qc_reports_json_restore),
                 onClick = { jsonImportLauncher.launch(arrayOf("application/json", "text/json", "*/*")) },
                 enabled = !isExporting,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(Icons.Default.Restore, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.qc_reports_json_restore))
-            }
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Restore
+            )
         }
 
-        Button(
+        AppButton(
+            label = stringResource(R.string.qc_reports_project_settings),
             onClick = { showSettings = true },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.Settings, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.qc_reports_project_settings))
-        }
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Default.Settings
+        )
 
         if (filteredRecords.isNotEmpty()) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(stringResource(R.string.qc_reports_saved_records_format, filteredRecords.size), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    AppText(stringResource(R.string.qc_reports_saved_records_format, filteredRecords.size), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
                     filteredRecords.forEach { record ->
                         Row(
@@ -2535,18 +2495,18 @@ private fun QualityReportsTab(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(
+                                AppText(
                                     "${record.category} · ${record.elementId}",
                                     style = MaterialTheme.typography.bodyMedium
                                 )
-                                Text(
+                                AppText(
                                     "${record.designCode} — ${record.summary}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray
                                 )
                                 val photoCount = parsePhotoPaths(record.photoPathsJson).size
                                 if (record.inspectorName.isNotBlank() || photoCount > 0) {
-                                    Text(
+                                    AppText(
                                         buildString {
                                             if (record.inspectorName.isNotBlank()) append(stringResource(R.string.qc_reports_inspector, record.inspectorName))
                                             if (photoCount > 0) {
@@ -2566,15 +2526,18 @@ private fun QualityReportsTab(
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    TextButton(onClick = { viewModel.clearAllRecords() }) {
-                        Text(stringResource(R.string.qc_reports_clear_all))
-                    }
+                    AppButton(
+                        label = stringResource(R.string.qc_reports_clear_all),
+                        onClick = { viewModel.clearAllRecords() },
+                        style = AppButtonStyle.Text,
+                        fillMaxWidth = false
+                    )
                 }
             }
         } else {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text(stringResource(R.string.qc_reports_no_matching), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                    AppText(stringResource(R.string.qc_reports_no_matching), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                 }
             }
         }
@@ -2586,17 +2549,22 @@ private fun QualityReportsTab(
         showDeleteConfirm?.let { id ->
             AlertDialog(
                 onDismissRequest = { showDeleteConfirm = null },
-                title = { Text(stringResource(R.string.qc_reports_delete_record)) },
-                text = { Text(stringResource(R.string.qc_reports_delete_confirm)) },
+                title = { AppText(stringResource(R.string.qc_reports_delete_record)) },
+                text = { AppText(stringResource(R.string.qc_reports_delete_confirm)) },
                 confirmButton = {
-                    TextButton(onClick = { viewModel.deleteQualityRecord(id); showDeleteConfirm = null }) {
-                        Text(stringResource(R.string.qc_reports_delete))
-                    }
+                    AppButton(
+                        label = stringResource(R.string.qc_reports_delete),
+                        onClick = { viewModel.deleteQualityRecord(id); showDeleteConfirm = null },
+                        fillMaxWidth = false
+                    )
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteConfirm = null }) {
-                        Text(stringResource(R.string.qc_reports_cancel))
-                    }
+                    AppButton(
+                        label = stringResource(R.string.qc_reports_cancel),
+                        onClick = { showDeleteConfirm = null },
+                        style = AppButtonStyle.Text,
+                        fillMaxWidth = false
+                    )
                 }
             )
         }
@@ -2627,25 +2595,28 @@ private fun ItpSection(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.qc_reports_itp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text("${uiState.itpItems.size}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                AppText(stringResource(R.string.qc_reports_itp), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                AppText("${uiState.itpItems.size}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onLoadDefault, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.qc_reports_load_itp), fontSize = 12.sp) }
-                OutlinedButton(onClick = onClear, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.qc_reports_clear), fontSize = 12.sp) }
+                AppButton(label = stringResource(R.string.qc_reports_load_itp), onClick = onLoadDefault, modifier = Modifier.weight(1f), fontSize = 12.sp)
+                AppButton(label = stringResource(R.string.qc_reports_clear), onClick = onClear, modifier = Modifier.weight(1f), style = AppButtonStyle.Outline, fontSize = 12.sp)
             }
             if (uiState.itpItems.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Share, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.qc_reports_export_itp_csv), fontSize = 12.sp)
-                }
+                AppButton(
+                    label = stringResource(R.string.qc_reports_export_itp_csv),
+                    onClick = onExport,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = AppButtonStyle.Outline,
+                    fontSize = 12.sp,
+                    icon = Icons.Default.Share
+                )
             }
             if (uiState.itpItems.isEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(stringResource(R.string.qc_reports_no_itp), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                AppText(stringResource(R.string.qc_reports_no_itp), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             } else {
                 Spacer(modifier = Modifier.height(8.dp))
                 uiState.itpItems.take(40).forEach { item ->
@@ -2656,20 +2627,20 @@ private fun ItpSection(
                         else -> Color.Gray
                     }
                     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text("${item.discipline} — ${item.inspectionItem}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                        Text(item.acceptanceCriteria, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                        Text(stringResource(R.string.qc_reports_reference, item.referenceCode), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        AppText("${item.discipline} — ${item.inspectionItem}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        AppText(item.acceptanceCriteria, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        AppText(stringResource(R.string.qc_reports_reference, item.referenceCode), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(
+                            AppText(
                                 item.status,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = statusColor,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.weight(1f)
                             )
-                            TextButton(onClick = { onUpdateStatus(item.id, "passed") }) { Text(stringResource(R.string.qc_reports_status_passed), fontSize = 11.sp) }
-                            TextButton(onClick = { onUpdateStatus(item.id, "failed") }) { Text(stringResource(R.string.qc_reports_status_failed), fontSize = 11.sp) }
+                            AppButton(label = stringResource(R.string.qc_reports_status_passed), onClick = { onUpdateStatus(item.id, "passed") }, style = AppButtonStyle.Text, fillMaxWidth = false, fontSize = 11.sp)
+                            AppButton(label = stringResource(R.string.qc_reports_status_failed), onClick = { onUpdateStatus(item.id, "failed") }, style = AppButtonStyle.Text, fillMaxWidth = false, fontSize = 11.sp)
                         }
                     }
                     Divider()
@@ -2697,23 +2668,27 @@ private fun NcrSection(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.qc_reports_ncr), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                Text(stringResource(R.string.qc_reports_ncr_open_count, uiState.openNcrCount), fontWeight = FontWeight.Bold, color = Color(0xFFF44336))
+                AppText(stringResource(R.string.qc_reports_ncr), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                AppText(stringResource(R.string.qc_reports_ncr_open_count, uiState.openNcrCount), fontWeight = FontWeight.Bold, color = Color(0xFFF44336))
             }
             if (uiState.ncrItems.isNotEmpty()) {
-                TextButton(onClick = onExport, contentPadding = PaddingValues(0.dp)) {
-                    Text(stringResource(R.string.qc_reports_export_csv), fontSize = 12.sp)
-                }
+                AppButton(
+                    label = stringResource(R.string.qc_reports_export_csv),
+                    onClick = onExport,
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false,
+                    fontSize = 12.sp
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            OutlinedTextField(value = discipline, onValueChange = { discipline = it }, label = { Text(stringResource(R.string.qc_reports_ncr_field_discipline)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = discipline, onValueChange = { discipline = it }, label = { AppText(stringResource(R.string.qc_reports_ncr_field_discipline)) }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(6.dp))
-            OutlinedTextField(value = elementId, onValueChange = { elementId = it }, label = { Text(stringResource(R.string.qc_reports_ncr_field_element)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = elementId, onValueChange = { elementId = it }, label = { AppText(stringResource(R.string.qc_reports_ncr_field_element)) }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(6.dp))
-            OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text(stringResource(R.string.qc_reports_ncr_field_description)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = description, onValueChange = { description = it }, label = { AppText(stringResource(R.string.qc_reports_ncr_field_description)) }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(6.dp))
-            OutlinedTextField(value = reference, onValueChange = { reference = it }, label = { Text(stringResource(R.string.qc_reports_ncr_field_reference)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = reference, onValueChange = { reference = it }, label = { AppText(stringResource(R.string.qc_reports_ncr_field_reference)) }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(6.dp))
 
             ExposedDropdownMenuBox(
@@ -2724,61 +2699,61 @@ private fun NcrSection(
                     value = severity,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text(stringResource(R.string.qc_reports_ncr_field_severity)) },
+                    label = { AppText(stringResource(R.string.qc_reports_ncr_field_severity)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = severityExpanded) },
                     modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth()
                 )
                 ExposedDropdownMenu(expanded = severityExpanded, onDismissRequest = { severityExpanded = false }) {
                     listOf("minor", "major", "critical").forEach { s ->
-                        DropdownMenuItem(text = { Text(s) }, onClick = { severity = s; severityExpanded = false })
+                        DropdownMenuItem(text = { AppText(s) }, onClick = { severity = s; severityExpanded = false })
                     }
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            Button(
+            AppButton(
+                label = stringResource(R.string.qc_reports_open_ncr_report),
                 onClick = {
                     if (description.isNotBlank()) {
                         onCreate(discipline, elementId, description, reference, severity)
                         elementId = ""; description = ""; reference = ""
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.qc_reports_open_ncr_report))
-            }
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.Default.Add
+            )
 
             if (uiState.ncrItems.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
-                OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Share, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.qc_reports_export_ncr_csv))
-                }
+                AppButton(
+                    label = stringResource(R.string.qc_reports_export_ncr_csv),
+                    onClick = onExport,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = AppButtonStyle.Outline,
+                    icon = Icons.Default.Share
+                )
             }
 
             if (uiState.ncrItems.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 uiState.ncrItems.take(30).forEach { ncr ->
                     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text("${ncr.ncrNumber} • ${ncr.discipline}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                        Text(ncr.description, style = MaterialTheme.typography.bodySmall)
+                        AppText("${ncr.ncrNumber} • ${ncr.discipline}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        AppText(ncr.description, style = MaterialTheme.typography.bodySmall)
                         val sevColor = when (ncr.severity) {
                             "critical" -> Color(0xFFF44336)
                             "major" -> Color(0xFFFF9800)
                             else -> Color.Gray
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
+                            AppText(
                                 "${ncr.severity} • ${ncr.status}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = sevColor,
                                 modifier = Modifier.weight(1f)
                             )
                             if (ncr.status != "closed") {
-                                TextButton(onClick = { onClose(ncr.id) }) { Text(stringResource(R.string.qc_reports_close), fontSize = 11.sp) }
+                                AppButton(label = stringResource(R.string.qc_reports_close), onClick = { onClose(ncr.id) }, style = AppButtonStyle.Text, fillMaxWidth = false, fontSize = 11.sp)
                             }
                         }
                     }
@@ -2850,7 +2825,7 @@ private fun InspectionDetailDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.qc_reports_inspection_details)) },
+        title = { AppText(stringResource(R.string.qc_reports_inspection_details)) },
         text = {
             Column(
                 modifier = Modifier
@@ -2858,12 +2833,12 @@ private fun InspectionDetailDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
+                AppText(
                     "${record.category} · ${record.elementId}",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
-                Text(
+                AppText(
                     "${record.designCode} — ${record.summary}",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray
@@ -2872,21 +2847,21 @@ private fun InspectionDetailDialog(
                 OutlinedTextField(
                     value = inspectorName,
                     onValueChange = { inspectorName = it },
-                    label = { Text(stringResource(R.string.qc_reports_inspector_label)) },
+                    label = { AppText(stringResource(R.string.qc_reports_inspector_label)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = location,
                     onValueChange = { location = it },
-                    label = { Text(stringResource(R.string.qc_reports_location)) },
+                    label = { AppText(stringResource(R.string.qc_reports_location)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = weather,
                     onValueChange = { weather = it },
-                    label = { Text(stringResource(R.string.qc_reports_weather)) },
+                    label = { AppText(stringResource(R.string.qc_reports_weather)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -2900,7 +2875,7 @@ private fun InspectionDetailDialog(
                         value = inspectionTypeLabel(inspectionType),
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text(stringResource(R.string.qc_reports_inspection_type)) },
+                        label = { AppText(stringResource(R.string.qc_reports_inspection_type)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
                         modifier = Modifier
                             .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
@@ -2909,7 +2884,7 @@ private fun InspectionDetailDialog(
                     ExposedDropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
                         INSPECTION_TYPES.forEach { (key, labelRes) ->
                             DropdownMenuItem(
-                                text = { Text(stringResource(labelRes)) },
+                                text = { AppText(stringResource(labelRes)) },
                                 onClick = { inspectionType = key; typeExpanded = false }
                             )
                         }
@@ -2925,7 +2900,7 @@ private fun InspectionDetailDialog(
                         value = complianceStandard.ifBlank { stringResource(R.string.qc_reports_not_specified) },
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text(stringResource(R.string.qc_reports_compliance_code)) },
+                        label = { AppText(stringResource(R.string.qc_reports_compliance_code)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = standardExpanded) },
                         modifier = Modifier
                             .menuAnchor(MenuAnchorType.PrimaryNotEditable, true)
@@ -2933,12 +2908,12 @@ private fun InspectionDetailDialog(
                     )
                     ExposedDropdownMenu(expanded = standardExpanded, onDismissRequest = { standardExpanded = false }) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.qc_reports_not_specified)) },
+                            text = { AppText(stringResource(R.string.qc_reports_not_specified)) },
                             onClick = { complianceStandard = ""; standardExpanded = false }
                         )
                         COMPLIANCE_CODES.forEach { code ->
                             DropdownMenuItem(
-                                text = { Text(code) },
+                                text = { AppText(code) },
                                 onClick = { complianceStandard = code; standardExpanded = false }
                             )
                         }
@@ -2948,15 +2923,16 @@ private fun InspectionDetailDialog(
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text(stringResource(R.string.qc_reports_notes)) },
+                    label = { AppText(stringResource(R.string.qc_reports_notes)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 HorizontalDivider()
-                Text(stringResource(R.string.qc_reports_photos_format, photos.size), style = MaterialTheme.typography.titleSmall)
+                AppText(stringResource(R.string.qc_reports_photos_format, photos.size), style = MaterialTheme.typography.titleSmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
+                    AppButton(
+                        label = stringResource(R.string.qc_reports_camera),
                         onClick = {
                             val uri = runCatching {
                                 val dir = File(context.cacheDir, "qc_photos").apply { mkdirs() }
@@ -2968,24 +2944,21 @@ private fun InspectionDetailDialog(
                                 cameraLauncher.launch(uri)
                             }
                         },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.AddAPhoto, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.qc_reports_camera))
-                    }
-                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        style = AppButtonStyle.Outline,
+                        icon = Icons.Default.AddAPhoto
+                    )
+                    AppButton(
+                        label = stringResource(R.string.qc_reports_gallery),
                         onClick = {
                             galleryLauncher.launch(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
                         },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.PhotoLibrary, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.qc_reports_gallery))
-                    }
+                        modifier = Modifier.weight(1f),
+                        style = AppButtonStyle.Outline,
+                        icon = Icons.Default.PhotoLibrary
+                    )
                 }
 
                 if (photos.isNotEmpty()) {
@@ -3046,14 +3019,19 @@ private fun InspectionDetailDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(currentRecord) }) {
-                Text(stringResource(R.string.qc_reports_save))
-            }
+            AppButton(
+                label = stringResource(R.string.qc_reports_save),
+                onClick = { onSave(currentRecord) },
+                fillMaxWidth = false
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.qc_reports_cancel))
-            }
+            AppButton(
+                label = stringResource(R.string.qc_reports_cancel),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }
@@ -3097,9 +3075,9 @@ fun QualityCheckRow(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
+            AppText(label, style = MaterialTheme.typography.bodyMedium)
             if (detail.isNotEmpty()) {
-                Text(detail, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                AppText(detail, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             }
         }
     }
@@ -3113,8 +3091,8 @@ private fun ResultRow(label: String, value: String) {
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        AppText(label, style = MaterialTheme.typography.bodyMedium)
+        AppText(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -3132,7 +3110,7 @@ private fun QcOutcomeCard(outcome: QualityControlEngine.QcOutcome?) {
                     modifier = Modifier.size(22.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
+                AppText(
                     outcome.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
@@ -3140,7 +3118,7 @@ private fun QcOutcomeCard(outcome: QualityControlEngine.QcOutcome?) {
             }
             Spacer(modifier = Modifier.height(8.dp))
             if (outcome.checks.isNotEmpty()) {
-                Text(
+                AppText(
                     "Checks: $passedCount / ${outcome.checks.size}",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
@@ -3167,9 +3145,9 @@ private fun QcOutcomeCard(outcome: QualityControlEngine.QcOutcome?) {
             Spacer(modifier = Modifier.height(8.dp))
             Divider()
             Spacer(modifier = Modifier.height(8.dp))
-            Text(outcome.summary, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            AppText(outcome.summary, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             Spacer(modifier = Modifier.height(6.dp))
-            Text(
+            AppText(
                 stringResource(R.string.quality_control_screening_disclaimer),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error
@@ -3217,47 +3195,52 @@ private fun ProjectSettingsDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.qc_reports_project_settings)) },
+        title = { AppText(stringResource(R.string.qc_reports_project_settings)) },
         text = {
             Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
                 OutlinedTextField(
                     value = projectName,
                     onValueChange = { projectName = it },
-                    label = { Text(stringResource(R.string.qc_reports_project_name)) },
+                    label = { AppText(stringResource(R.string.qc_reports_project_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = engineerName,
                     onValueChange = { engineerName = it },
-                    label = { Text(stringResource(R.string.qc_reports_engineer_name)) },
+                    label = { AppText(stringResource(R.string.qc_reports_engineer_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = companyName,
                     onValueChange = { companyName = it },
-                    label = { Text(stringResource(R.string.qc_reports_company_name)) },
+                    label = { AppText(stringResource(R.string.qc_reports_company_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                prefs.edit()
-                    .putString("project_name", projectName)
-                    .putString("engineer_name", engineerName)
-                    .putString("company_name", companyName)
-                    .apply()
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.qc_reports_save))
-            }
+            AppButton(
+                label = stringResource(R.string.qc_reports_save),
+                onClick = {
+                    prefs.edit()
+                        .putString("project_name", projectName)
+                        .putString("engineer_name", engineerName)
+                        .putString("company_name", companyName)
+                        .apply()
+                    onDismiss()
+                },
+                fillMaxWidth = false
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.qc_reports_cancel))
-            }
+            AppButton(
+                label = stringResource(R.string.qc_reports_cancel),
+                onClick = onDismiss,
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false
+            )
         }
     )
 }
@@ -3276,7 +3259,7 @@ private fun DisciplineDrawingCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(stringResource(R.string.qc_reports_discipline_drawing_preview), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            AppText(stringResource(R.string.qc_reports_discipline_drawing_preview), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
             when (discipline) {
                 QcDiscipline.RETAINING_WALLS -> {
