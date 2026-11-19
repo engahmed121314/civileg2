@@ -24,6 +24,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 private data class MoreItem(
     val titleRes: Int,
@@ -53,7 +58,7 @@ fun MoreHubScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.hub_more_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.hub_more_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -73,7 +78,7 @@ fun MoreHubScreen(
             verticalArrangement = Arrangement.spacedBy(dimensions.cardSpacing)
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(
+                AppText(
                     stringResource(R.string.hub_more_management),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -112,13 +117,13 @@ fun MoreHubScreen(
                         }
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
+                            AppText(
                                 text = stringResource(item.titleRes),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
                                 color = if (isDark) Color.White else Color(0xFF1A1A2E)
                             )
-                            Text(
+                            AppText(
                                 text = stringResource(item.subtitleRes),
                                 fontSize = 11.sp,
                                 color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)

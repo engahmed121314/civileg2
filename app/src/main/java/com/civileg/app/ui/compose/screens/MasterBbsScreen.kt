@@ -17,6 +17,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.utils.BbsEntry
 import com.civileg.app.utils.BbsGenerator
 import com.civileg.app.viewmodel.MasterBbsViewModel
@@ -43,7 +48,7 @@ fun MasterBbsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Project Master BBS", fontWeight = FontWeight.Bold) },
+                title = { AppText("Project Master BBS", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -65,8 +70,8 @@ fun MasterBbsScreen(
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.cardSpacing)
             ) {
                 item {
-                    Text(projectName, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-                    Text("Factory Fabrication List", style = MaterialTheme.typography.bodyMedium)
+                    AppText(projectName, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+                    AppText("Factory Fabrication List", style = MaterialTheme.typography.bodyMedium)
                 }
 
                 if (combinedBbs.isNotEmpty()) {
@@ -75,7 +80,7 @@ fun MasterBbsScreen(
                             Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.secondary)
                                 Spacer(Modifier.width(12.dp))
-                                Text(optimization, style = MaterialTheme.typography.labelMedium)
+                                AppText(optimization, style = MaterialTheme.typography.labelMedium)
                             }
                         }
                     }
@@ -86,7 +91,7 @@ fun MasterBbsScreen(
                 } else {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(top = 40.dp), contentAlignment = Alignment.Center) {
-                            Text("No design data found for BBS generation.", color = Color.Gray)
+                            AppText("No design data found for BBS generation.", color = Color.Gray)
                         }
                     }
                 }
@@ -100,12 +105,12 @@ fun BbsListItem(entry: BbsEntry) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             Column {
-                Text("Ø${entry.diameter} - Shape ${entry.shapeCode}", fontWeight = FontWeight.Bold)
-                Text("L = ${entry.totalLengthPerBar.toInt()} mm", fontSize = 12.sp, color = Color.Gray)
+                AppText("Ø${entry.diameter} - Shape ${entry.shapeCode}", fontWeight = FontWeight.Bold)
+                AppText("L = ${entry.totalLengthPerBar.toInt()} mm", fontSize = 12.sp, color = Color.Gray)
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("Qty: ${entry.count}", fontWeight = FontWeight.Black)
-                Text("${String.format(Locale.US, "%.1f", entry.totalWeightKg)} kg", fontSize = 11.sp)
+                AppText("Qty: ${entry.count}", fontWeight = FontWeight.Black)
+                AppText("${String.format(Locale.US, "%.1f", entry.totalWeightKg)} kg", fontSize = 11.sp)
             }
         }
     }

@@ -15,6 +15,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.domain.entities.ProjectSummary
 import com.civileg.app.viewmodel.ProjectViewModel
 import com.github.mikephil.charting.charts.PieChart
@@ -46,7 +51,7 @@ fun ProjectSummaryScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Project Executive Summary", fontWeight = FontWeight.Bold) },
+                title = { AppText("Project Executive Summary", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -71,11 +76,11 @@ fun ProjectSummaryScreen(
                 .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding, vertical = MaterialTheme.dimens.screenVerticalPadding),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.sectionSpacing)
         ) {
-            Text(projectName, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+            AppText(projectName, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
             
             SummaryKPIRow(summary)
             
-            Text("Cost Breakdown by Element", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            AppText("Cost Breakdown by Element", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             
             Box(modifier = Modifier.fillMaxWidth().height(300.dp)) {
                 AndroidView(factory = { context ->
@@ -100,9 +105,9 @@ fun ProjectSummaryScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Efficiency Insights", fontWeight = FontWeight.Bold)
-                    Text("Construction IQ Index: ${String.format(Locale.US, "%.2f", summary.costEfficiencyIndex)}", style = MaterialTheme.typography.bodyMedium)
-                    Text("Potential waste savings identified: 5-8% via optimized BBS.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                    AppText("Efficiency Insights", fontWeight = FontWeight.Bold)
+                    AppText("Construction IQ Index: ${String.format(Locale.US, "%.2f", summary.costEfficiencyIndex)}", style = MaterialTheme.typography.bodyMedium)
+                    AppText("Potential waste savings identified: 5-8% via optimized BBS.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
                 }
             }
         }
@@ -130,9 +135,9 @@ fun SummaryKPIRow(summary: ProjectSummary) {
 fun KPICard(label: String, value: String, unit: String, modifier: Modifier) {
     Card(modifier = modifier) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(label, style = MaterialTheme.typography.labelSmall)
-            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
-            Text(unit, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+            AppText(label, style = MaterialTheme.typography.labelSmall)
+            AppText(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Black)
+            AppText(unit, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
         }
     }
 }

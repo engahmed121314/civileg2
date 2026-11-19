@@ -19,6 +19,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.utils.UnitConverter
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
@@ -60,7 +65,7 @@ fun UnitConverterScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.screen_unit_converter_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.screen_unit_converter_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -108,7 +113,7 @@ fun UnitConverterScreen(
                         OutlinedTextField(
                             value = inputValue,
                             onValueChange = { inputValue = it },
-                            label = { Text(stringResource(R.string.converter_input_value)) },
+                            label = { AppText(stringResource(R.string.converter_input_value)) },
                             modifier = Modifier.weight(1f),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             shape = RoundedCornerShape(12.dp)
@@ -133,7 +138,7 @@ fun UnitConverterScreen(
                             value = "%.4f".format(result),
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text(stringResource(R.string.converter_result)) },
+                            label = { AppText(stringResource(R.string.converter_result)) },
                             modifier = Modifier.weight(1f),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -155,7 +160,7 @@ fun UnitConverterScreen(
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.secondary)
                     Spacer(Modifier.width(12.dp))
-                    Text(
+                    AppText(
                         "1 $fromUnit = ${"%.4f".format(UnitConverter.convert(1.0, fromUnit, toUnit, selectedCategory))} $toUnit",
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -171,7 +176,7 @@ private fun CategoryTab(label: String, selected: Boolean, onClick: () -> Unit) {
     Tab(
         selected = selected,
         onClick = onClick,
-        text = { Text(label, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) }
+        text = { AppText(label, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal) }
     )
 }
 
@@ -197,7 +202,7 @@ private fun UnitDropdown(selected: String, options: List<String>, onSelect: (Str
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { unit ->
                 DropdownMenuItem(
-                    text = { Text(unit) },
+                    text = { AppText(unit) },
                     onClick = {
                         onSelect(unit)
                         expanded = false

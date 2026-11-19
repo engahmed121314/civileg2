@@ -27,6 +27,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 private data class DesignHubItem(
     val screen: AppScreen,
@@ -74,7 +79,7 @@ fun DesignHubScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.home_section_design_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.home_section_design_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -94,7 +99,7 @@ fun DesignHubScreen(
             verticalArrangement = Arrangement.spacedBy(dimensions.cardSpacing)
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(
+                AppText(
                     stringResource(R.string.hub_design_choose),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -143,14 +148,14 @@ private fun DesignHubCard(item: DesignHubItem, onClick: () -> Unit) {
                     Icon(item.icon, null, tint = item.accentColor, modifier = Modifier.size(22.dp))
                 }
                 Column {
-                    Text(
+                    AppText(
                         text = stringResource(item.titleRes),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         maxLines = 1,
                         color = if (isDark) Color.White else Color(0xFF1A1A2E)
                     )
-                    Text(
+                    AppText(
                         text = stringResource(item.subtitleRes),
                         fontSize = 10.sp,
                         color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
@@ -163,7 +168,7 @@ private fun DesignHubCard(item: DesignHubItem, onClick: () -> Unit) {
                                 color = item.accentColor.copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(4.dp)
                             ) {
-                                Text(code, fontSize = 8.sp, fontWeight = FontWeight.SemiBold,
+                                AppText(code, fontSize = 8.sp, fontWeight = FontWeight.SemiBold,
                                     color = item.accentColor,
                                     modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp))
                             }

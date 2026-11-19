@@ -25,6 +25,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 private data class ToolItem(
     val titleRes: Int,
@@ -63,7 +68,7 @@ fun ToolsHubScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.home_section_tools_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.home_section_tools_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -83,7 +88,7 @@ fun ToolsHubScreen(
             verticalArrangement = Arrangement.spacedBy(dimensions.cardSpacing)
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(
+                AppText(
                     stringResource(R.string.hub_tools_quick_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -133,7 +138,7 @@ private fun ToolHubCard(tool: ToolItem, onClick: () -> Unit) {
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Text(
+            AppText(
                 text = stringResource(tool.titleRes),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
@@ -141,7 +146,7 @@ private fun ToolHubCard(tool: ToolItem, onClick: () -> Unit) {
                 maxLines = 1
             )
             Spacer(modifier = Modifier.height(2.dp))
-            Text(
+            AppText(
                 text = stringResource(tool.subtitleRes),
                 fontSize = 10.sp,
                 color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
