@@ -2399,4 +2399,13 @@
     <string name="qc_reports_type_routine">اعتيادي</string>
     <string name="qc_reports_type_special">خاص</string>
     <string name="qc_reports_type_final">نهائي</string>
+    <!-- تبرع اختياري — لا يمنع استخدام التطبيق أبداً -->
+    <string name="donation_title">هل تستمتع باستخدام Civil Engineer Pro؟</string>
+    <string name="donation_message">التطبيق مجاني بالكامل، بدون إعلانات وبدون ميزات مقفلة. إذا وفّر عليك وقتاً في الموقع، يمكنك دعم تطويره بتبرع صغير. التطبيق يعمل كما هو تماماً سواء تبرعت أم لا.</string>
+    <string name="donation_confirm">تبرع</string>
+    <string name="donation_decline">ليس الآن</string>
+    <string name="donation_unavailable">لا يوجد متصفح لفتح صفحة الدعم.</string>
+    <string name="settings_support_title">دعم التطبيق</string>
+    <string name="settings_support_message">Civil Engineer Pro مجاني وبدون إعلانات. التبرعات الطوعية تموّل أكواد تصميم واختبارات ورسومات جديدة.</string>
+    <string name="settings_support_button">تبرع عبر GitHub Sponsors</string>
 </resources>

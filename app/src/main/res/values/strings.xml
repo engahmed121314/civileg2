@@ -1968,10 +1968,6 @@
     <string name="btn_open_file">Open File</string>
     <string name="export_success">Export completed successfully</string>
 
-    <!-- Telegram Bot Configuration -->
-    <string name="telegram_bot_token">YOUR_BOT_TOKEN_HERE</string>
-    <string name="telegram_chat_id">YOUR_CHAT_ID_HERE</string>
-
     <!-- Quality Engineer screen - Concrete QC tab (bilingual labels) -->
     <string name="qc_concrete_section_inputs">Concrete Pour Data</string>
     <string name="qc_concrete_element_id">Element ID</string>
@@ -2399,6 +2395,16 @@
     <string name="qc_reports_type_routine">Routine</string>
     <string name="qc_reports_type_special">Special</string>
     <string name="qc_reports_type_final">Final</string>
+
+    <!-- Optional donation (never blocks the app) -->
+    <string name="donation_title">Enjoying Civil Engineer Pro?</string>
+    <string name="donation_message">This app is completely free, with no ads and no locked features. If it saves you time on site, you can support its development with a small donation. The app keeps working exactly the same whether you donate or not.</string>
+    <string name="donation_confirm">Donate</string>
+    <string name="donation_decline">Not now</string>
+    <string name="donation_unavailable">No browser app is available to open the sponsorship page.</string>
+    <string name="settings_support_title">Support the app</string>
+    <string name="settings_support_message">Civil Engineer Pro is free and ad-free. Voluntary donations fund new design codes, tests and drawings.</string>
+    <string name="settings_support_button">Donate via GitHub Sponsors</string>
 </resources>
 
 

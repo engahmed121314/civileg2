@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -41,12 +42,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 import com.civileg.app.security.AppIntegrityChecker
+import com.civileg.app.support.DonationDialog
+import com.civileg.app.support.DonationPromptState
+import com.civileg.app.support.openSponsorsPage
 import android.util.Log
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private var openDrawerAction: (() -> Unit)? = null
+
+    /**
+     * Evaluated once per process, on first creation only, so rotating the device
+     * does not count as an extra launch.
+     */
+    private var shouldPromptDonation = false
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(LocaleHelper.wrapContext(newBase))
@@ -72,7 +82,19 @@ class MainActivity : ComponentActivity() {
         // Apply saved language before any UI is created
         LocaleHelper.applySavedLocale(this)
 
+        if (savedInstanceState == null) {
+            shouldPromptDonation = try {
+                DonationPromptState(this).registerLaunchAndCheck()
+            } catch (error: Exception) {
+                Log.w("Donation", "Donation prompt state unavailable", error)
+                false
+            }
+        }
+
         setContent {
+            val donationState = remember { DonationPromptState(this@MainActivity) }
+            var showDonationPrompt by rememberSaveable { mutableStateOf(shouldPromptDonation) }
+
             val settingsViewModel: SettingsViewModel = hiltViewModel()
             val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
             val projectViewModel: ProjectViewModel = hiltViewModel()
@@ -101,6 +123,27 @@ class MainActivity : ComponentActivity() {
 
                     val allProjectsList by projectViewModel.allProjects.observeAsState(initial = emptyList())
                     AppNavigation(drawerState, designCount, projectViewModel, allProjectsList)
+
+                    if (showDonationPrompt) {
+                        DonationDialog(
+                            onDonate = {
+                                showDonationPrompt = false
+                                donationState.markAnswered()
+                                val opened = openSponsorsPage(this@MainActivity)
+                                if (!opened) {
+                                    android.widget.Toast.makeText(
+                                        this@MainActivity,
+                                        getString(R.string.donation_unavailable),
+                                        android.widget.Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            },
+                            onDecline = {
+                                showDonationPrompt = false
+                                donationState.markAnswered()
+                            }
+                        )
+                    }
                 }
             }
         }
