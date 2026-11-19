@@ -37,7 +37,7 @@
         android:forceDarkAllowed="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:usesCleartextTraffic="false"
-        tools:targetApi="35">
+        tools:targetApi="36">
 
         <!-- Splash Screen — Single Launcher Entry Point -->
         <activity
@@ -56,9 +56,9 @@
             android:exported="false"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize" />
 
-        <!-- Legacy ViewBinding design Activities (Beam/Column/Slab/Stair/RetainingWall/Tank
-             Input+Result) removed 2026-10: unreachable — MainActivity is Compose-only, nothing
-             launched them, and nav_graph/activity_main were never inflated. -->
+        <!-- The legacy View/ViewBinding design screens (Beam/Column/Slab/Stair/Tank),
+             their layouts and the RecyclerView history adapter were removed in 1.8.0:
+             MainActivity is Compose-only and nothing referenced them. -->
 
         <!-- FileProvider — Restricted to exports directory only -->
         <provider

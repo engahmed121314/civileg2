@@ -29,8 +29,8 @@ android {
         applicationId = "com.civileg.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.7.0"
+        versionCode = 8
+        versionName = "1.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -102,8 +102,10 @@ android {
     }
 
     buildFeatures {
-        viewBinding = true
-        dataBinding = true
+        // No XML layouts use generated binding classes any more: the splash screen
+        // uses setContentView + findViewById. Keep this off to shorten builds.
+        viewBinding = false
+        dataBinding = false
         compose = true
         buildConfig = true
         resValues = true
@@ -233,13 +235,9 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
 
-    implementation(libs.androidx.navigation.fragment.ktx)
-    implementation(libs.androidx.navigation.ui.ktx)
-
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.recyclerview)
 
     // Room
     implementation(libs.room.runtime)
@@ -272,8 +270,6 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.mpandroidchart)
     implementation(libs.itext)
-    implementation(libs.glide)
-    ksp(libs.glide.compiler)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.datastore.preferences)
