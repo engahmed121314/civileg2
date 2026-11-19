@@ -42,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import com.civileg.app.ui.components.AppText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,7 +75,7 @@ fun DesignCodeSelectorRow(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
-        Text(
+        AppText(
             stringResource(R.string.sw_design_code),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
@@ -90,7 +91,7 @@ fun DesignCodeSelectorRow(
                     selected = code == selectedCode,
                     onClick = { onCodeSelected(code) },
                     label = {
-                        Text(
+                        AppText(
                             code.displayName,
                             fontSize = 13.sp,
                             fontWeight = if (code == selectedCode) FontWeight.Bold else FontWeight.Normal
@@ -138,7 +139,7 @@ fun UtilizationGauge(
             color = color,
             trackColor = MaterialTheme.colorScheme.surfaceVariant
         )
-        Text(
+        AppText(
             "${(ratio * 100).toInt()}%",
             fontWeight = FontWeight.Bold,
             fontSize = 12.sp,
@@ -171,7 +172,7 @@ fun DesignSectionHeader(
             modifier = Modifier.size(22.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(
+        AppText(
             title,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.ExtraBold,
@@ -201,8 +202,8 @@ fun DesignResultRow(
             .padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, fontSize = 13.sp, color = labelColor)
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = valueColor)
+        AppText(label, fontSize = 13.sp, color = labelColor)
+        AppText(value, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = valueColor)
     }
 }
 
@@ -247,9 +248,9 @@ fun DesignStatusBanner(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(statusIcon, contentDescription = null, tint = color)
                     Spacer(Modifier.width(8.dp))
-                    Text(statusText, fontWeight = FontWeight.Bold, color = color)
+                    AppText(statusText, fontWeight = FontWeight.Bold, color = color)
                 }
-                Text(
+                AppText(
                     "Utilization Ratio",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -283,13 +284,13 @@ fun DesignInputField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, fontSize = 13.sp) },
+        label = { AppText(label, fontSize = 13.sp) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         enabled = enabled,
         isError = isError,
-        supportingText = supportingText?.let { { Text(it, fontSize = 11.sp) } },
+        supportingText = supportingText?.let { { AppText(it, fontSize = 11.sp) } },
         textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -331,7 +332,7 @@ fun DetailedResultsCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(resolvedTitle, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                AppText(resolvedTitle, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = null,
@@ -385,7 +386,7 @@ fun BeamAnalysisResultsCard(
         modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
+            AppText(
                 "Analysis",
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
@@ -405,8 +406,8 @@ fun BeamAnalysisResultsCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Flexure", fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Text(
+                AppText("Flexure", fontSize = 13.sp, modifier = Modifier.weight(1f))
+                AppText(
                     "Mu = ${"%.1f".format(appliedMoment)} kN.m",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
@@ -427,8 +428,8 @@ fun BeamAnalysisResultsCard(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Shear", fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Text(
+                AppText("Shear", fontSize = 13.sp, modifier = Modifier.weight(1f))
+                AppText(
                     "Vu = ${"%.1f".format(appliedShear)} kN",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
@@ -493,9 +494,9 @@ fun SafetyCheckRow(
             modifier = Modifier.size(18.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(label, fontSize = 13.sp, modifier = Modifier.weight(1f))
+        AppText(label, fontSize = 13.sp, modifier = Modifier.weight(1f))
         if (detail.isNotEmpty()) {
-            Text(detail, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+            AppText(detail, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                 color = if (isSafe) Color(0xFF2E7D32) else Color(0xFFE53935))
         }
     }
@@ -541,7 +542,7 @@ fun DesignActionButton(
                     strokeWidth = 2.dp
                 )
             } else {
-                Text(
+                AppText(
                     text,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
@@ -587,7 +588,7 @@ fun FormulaCard(
                     Icon(Icons.Default.Info, contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(resolvedTitle, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    AppText(resolvedTitle, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -612,9 +613,9 @@ fun FormulaCard(
                                 .padding(vertical = 3.dp)
                         ) {
                             Column(modifier = Modifier.padding(10.dp)) {
-                                Text(name, fontSize = 11.sp,
+                                AppText(name, fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                                Text(formula, fontSize = 13.sp,
+                                AppText(formula, fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f))
                             }
                         }
@@ -654,7 +655,7 @@ fun QuickActionsRow(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier.padding(vertical = 10.dp)
                 ) {
-                    Text(text, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                    AppText(text, fontSize = 12.sp, fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }

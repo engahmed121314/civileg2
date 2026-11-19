@@ -49,6 +49,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
 import com.civileg.app.ui.theme.PremiumTypography
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
 import com.civileg.app.ui.theme.PremiumColorsLight
 import com.civileg.app.ui.theme.PremiumColorsDark
 import kotlin.math.min
@@ -167,14 +170,14 @@ fun PremiumSectionHeader(
             Spacer(modifier = Modifier.width(10.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            AppText(
                 title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = PremiumColorsLight.onSurface
             )
             if (subtitle != null) {
-                Text(
+                AppText(
                     subtitle,
                     style = MaterialTheme.typography.labelSmall,
                     color = PremiumColorsLight.onSurfaceVariant
@@ -215,7 +218,7 @@ fun PremiumInputField(
         value = value,
         onValueChange = onValueChange,
         label = {
-            Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            AppText(label, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         modifier = modifier,
@@ -237,7 +240,7 @@ fun PremiumInputField(
         },
         suffix = suffix?.let { s ->
             {
-                Text(s, fontSize = 11.sp, color = PremiumColorsLight.onSurfaceVariant)
+                AppText(s, fontSize = 11.sp, color = PremiumColorsLight.onSurfaceVariant)
             }
         },
         colors = OutlinedTextFieldDefaults.colors(
@@ -305,13 +308,13 @@ fun SafetyStatusCard(
                 }
                 // Percentage text in geometric circle
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
+                    AppText(
                         "${(utilizationRatio * 100).toInt()}%",
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 18.sp,
                         color = statusColor
                     )
-                    Text(
+                    AppText(
                         "Utilization Ratio",
                         fontSize = 8.sp,
                         color = PremiumColorsLight.onSurfaceVariant
@@ -331,7 +334,7 @@ fun SafetyStatusCard(
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
+                    AppText(
                         "${PremiumDesignSystem.statusEmoji(ratio)} ${PremiumDesignSystem.statusText(ratio)}",
                         fontWeight = FontWeight.Bold,
                         color = statusColor,
@@ -339,7 +342,7 @@ fun SafetyStatusCard(
                     )
                 }
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(
+                AppText(
                     resolvedTitle,
                     style = MaterialTheme.typography.labelSmall,
                     color = PremiumColorsLight.onSurfaceVariant
@@ -397,7 +400,7 @@ fun ResultDataCard(
                     Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(18.dp).padding(4.dp))
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = accentColor)
+                AppText(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = accentColor)
             }
 
             HorizontalDivider(
@@ -414,12 +417,12 @@ fun ResultDataCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(label, fontSize = 13.sp, color = PremiumColorsLight.onSurfaceVariant)
+                    AppText(label, fontSize = 13.sp, color = PremiumColorsLight.onSurfaceVariant)
                     Surface(
                         shape = RoundedCornerShape(6.dp),
                         color = accentColor.copy(alpha = 0.08f)
                     ) {
-                        Text(
+                        AppText(
                             value,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
@@ -450,7 +453,7 @@ fun SafetyCheckList(
         shape = PremiumDesignSystem.CardShape
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
+            AppText(
                 "Code Checks",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
@@ -479,18 +482,18 @@ fun SafetyCheckList(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
+                        AppText(
                             name,
                             fontWeight = FontWeight.Medium,
                             fontSize = 13.sp
                         )
-                        Text(
+                        AppText(
                             detail,
                             fontSize = 11.sp,
                             color = PremiumColorsLight.onSurfaceVariant
                         )
                     }
-                    Text(
+                    AppText(
                         if (isSafe) "PASS ✓" else "FAIL ✗",
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
@@ -519,45 +522,30 @@ fun PremiumActionButtons(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Export PDF button - Primary Geometric
-        Button(
+        AppButton(
+            label = "PDF Report",
+            icon = Icons.Default.PictureAsPdf,
             onClick = onExportPdf,
+            enabled = !isExporting,
+            loading = isExporting,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            containerOverride = Color.Transparent,
             modifier = Modifier
                 .weight(1f)
-                .background(PremiumDesignSystem.PrimaryGradient, PremiumDesignSystem.ButtonShape),
-            shape = PremiumDesignSystem.ButtonShape,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent
-            ),
-            enabled = !isExporting
-        ) {
-            if (isExporting) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    color = Color.White,
-                    strokeWidth = 2.dp
-                )
-            } else {
-                Icon(Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("PDF Report", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            }
-        }
+                .background(PremiumDesignSystem.PrimaryGradient, PremiumDesignSystem.ButtonShape)
+        )
 
         // Save button - Secondary Outline Geometric
-        OutlinedButton(
+        AppButton(
+            label = "Save",
+            icon = Icons.Default.Save,
             onClick = onSave,
-            modifier = Modifier.weight(1f),
-            shape = PremiumDesignSystem.ButtonShape,
-            border = androidx.compose.foundation.BorderStroke(
-                1.5.dp, PremiumColorsLight.secondary
-            )
-        ) {
-            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp),
-                tint = PremiumColorsLight.secondary)
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("Save", fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                color = PremiumColorsLight.secondary)
-        }
+            style = AppButtonStyle.Outline,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            modifier = Modifier.weight(1f)
+        )
 
         extraActions()
     }
@@ -590,11 +578,11 @@ fun FormulaCard(
                     Icon(Icons.Default.Functions, contentDescription = null,
                         tint = PremiumColorsLight.secondary, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(resolvedTitle, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = PremiumColorsLight.secondary)
+                    AppText(resolvedTitle, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = PremiumColorsLight.secondary)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 formulas.forEach { formula ->
-                    Text(
+                    AppText(
                         text = formula,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.5.sp,
@@ -635,7 +623,7 @@ fun CodeSelectorChips(
                 shadowElevation = if (isSelected) 4.dp else 0.dp
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
+                    AppText(
                         text = name,
                         color = if (isSelected) PremiumColorsLight.onPrimary
                            else PremiumColorsLight.onSurfaceVariant,
@@ -681,7 +669,7 @@ fun LoadingOverlay(message: String = "") {
                         strokeWidth = 4.dp
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(
+                    AppText(
                         resolvedMessage,
                         fontWeight = FontWeight.Medium,
                         color = PremiumColorsLight.onSurface
@@ -813,7 +801,7 @@ fun PremiumAvatar(
                     modifier = Modifier.size(size * 0.6f)
                 )
             } else {
-                Text(
+                AppText(
                     text = name.take(1).uppercase(),
                     fontWeight = FontWeight.Bold,
                     fontSize = (size.value * 0.4f).sp,
@@ -841,12 +829,16 @@ fun PremiumSnackBar(
         contentColor = PremiumColorsLight.onPrimaryContainer,
         action = action?.let {
             {
-                TextButton(onClick = it) {
-                    Text(actionLabel ?: stringResource(android.R.string.ok), color = PremiumColorsLight.primary)
-                }
+                AppButton(
+                    label = actionLabel ?: stringResource(android.R.string.ok),
+                    onClick = it,
+                    style = AppButtonStyle.Text,
+                    fillMaxWidth = false,
+                    contentOverride = PremiumColorsLight.primary
+                )
             }
         }
     ) {
-        Text(message)
+        AppText(message)
     }
 }
