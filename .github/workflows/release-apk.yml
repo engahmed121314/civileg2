@@ -1,0 +1,101 @@
+name: Release APK (free)
+
+# Publishes the ad-free `free` flavor as a downloadable GitHub Release asset.
+# Trigger: push a v* tag, or run manually with an existing tag name.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to attach the APK to (e.g. v1.8.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    name: Build and publish signed APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: temurin
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Require signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          for name in KEYSTORE_BASE64 KEY_ALIAS KEY_PASSWORD KEYSTORE_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing repository secret $name. See docs/RELEASES.md."
+              exit 1
+            fi
+          done
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > app/release.keystore
+
+      - name: Build signed free release
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_FILE: release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: ./gradlew :app:assembleFreeRelease --no-daemon
+
+      - name: Name and checksum the APK
+        id: artifact
+        run: |
+          VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)
+          APK="CivilEngineerPro-${VERSION}.apk"
+          cp app/build/outputs/apk/free/release/app-free-release.apk "$APK"
+          sha256sum "$APK" > "$APK.sha256"
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Verify signature and manifest
+        run: |
+          APK="${{ steps.artifact.outputs.apk }}"
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/apksigner" verify --print-certs "$APK"
+          "$BT/aapt2" dump badging "$APK" | grep -E "^package:|^sdkVersion|^targetSdkVersion"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          name: Civil Engineer Pro ${{ steps.artifact.outputs.version }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ steps.artifact.outputs.apk }}
+            ${{ steps.artifact.outputs.apk }}.sha256
+          body: |
+            ## Civil Engineer Pro ${{ steps.artifact.outputs.version }}
+
+            Signed, installable APK of the **free** build: no ads, no billing,
+            no advertising identifier, no locked features.
+
+            - Requirements: Android 8.0+ (API 26–36)
+            - Install: open the APK and allow "Install unknown apps" when prompted
+            - Optional donation: https://github.com/sponsors/engahmed121314
+              (declining never limits any feature)
+
+            See `CHANGELOG.md` in the repository for the full list of changes.

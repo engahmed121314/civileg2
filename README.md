@@ -19,7 +19,7 @@
 
 <br/>
 
-[![Download Latest APK](https://img.shields.io/badge/Download_APK-Direct_Download_(v1.7.0)-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/engahmed121314/civileg2/releases)
+[![Download Latest APK](https://img.shields.io/badge/Download_APK-Direct_Download_(v1.8.0)-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/engahmed121314/civileg2/releases)
 [![Monetization Guide](https://img.shields.io/badge/Monetization-Revenue_Guide-blue?style=for-the-badge&logo=googleads)](docs/MONETIZATION_GUIDE.md)
 
 <br/>
@@ -63,7 +63,17 @@ The app provides selections for the **Egyptian Code (ECP)**, **American standard
 Looking to run the app directly on your Android phone without building from source?
 - 📦 **[Download Latest APK from GitHub Releases](https://github.com/engahmed121314/civileg2/releases)**
 - Compatible with **Android 8.0 (Oreo / API 26) through Android 16 (API 36)**.
-- Simply download `app-release.apk` (or `app-debug.apk`), enable *"Install Unknown Apps"* in settings, and open the app.
+- Simply download `CivilEngineerPro-1.8.0.apk`, enable *"Install Unknown Apps"* in settings, and open the app.
+
+
+### Support the project (optional)
+
+Civil Engineer Pro is free, ad-free and has no locked features. If it saves you time,
+you can sponsor its development on **[GitHub Sponsors](https://github.com/sponsors/engahmed121314)**.
+
+Donating is entirely optional: **declining never disables or limits any feature**. The one-time
+prompt inside the app can be dismissed with *Not now*, and the same link stays available in
+**Settings → Support the app**.
 
 ---
 
@@ -322,6 +332,7 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 | 💚 **Sponsor** | [GitHub Sponsors](https://github.com/sponsors/engahmed121314) — available after the maintainer activates a Sponsors profile |
 
 ---
+
 ---
 
 # 🌐 العربية
@@ -344,6 +355,15 @@ Copyright (c) 2024 Ahmed (engahmed121314)
 - 📦 **[تنزيل أحدث ملف APK من صفحة إصدارات GitHub Releases](https://github.com/engahmed121314/civileg2/releases)**
 - متوافق مع نظام أندرويد من **Android 8.0 (Oreo / API 26)** حتى **Android 16 (API 36)**.
 - حمّل الملف وثبته على هاتفك مع السماح بـ "تثبيت التطبيقات غير المعروفة" (Install Unknown Apps) لتبدأ التصميم فوراً!
+
+
+### دعم التطبيق (اختياري)
+
+تطبيق Civil Engineer Pro مجاني بالكامل، بدون إعلانات وبدون ميزات مقفلة. إذا وفّر عليك وقتاً،
+يمكنك دعم تطويره عبر **[GitHub Sponsors](https://github.com/sponsors/engahmed121314)**.
+
+التبرع اختياري تماماً: **الرفض لا يعطّل أي ميزة ولا يحدّ منها**. تظهر رسالة الدعم مرة واحدة،
+ويمكن إغلاقها بـ «ليس الآن»، ويظل الرابط متاحاً دائماً في **الإعدادات ← دعم التطبيق**.
 
 ---
 
