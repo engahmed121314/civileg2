@@ -1,7 +1,7 @@
 # ============================================================================
 # CivilEG2 — Android CI/CD Pipeline
 # Triggers on push to master and pull requests
-# Runs: Lint → Unit Tests → Debug Build → (Release Build if tagged)
+# Runs: Guards → Lint → Unit Tests → Debug Build (two flavors)
 # ============================================================================
 
 name: Android CI/CD
@@ -9,7 +9,6 @@ name: Android CI/CD
 on:
   push:
     branches: [ "master" ]
-    tags: [ "v*" ]
   pull_request:
     branches: [ "master" ]
   workflow_dispatch:
@@ -150,131 +149,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: civileg2-debug
-          path: app/build/outputs/apk/free/debug/*.apk
-          app/build/outputs/apk/play/debug/*.apk
+          path: |
+            app/build/outputs/apk/free/debug/*.apk
+            app/build/outputs/apk/play/debug/*.apk
           retention-days: 7
           if-no-files-found: error
-
-  # ─── Job 4: Release AAB & APK (only on tags) ────────────────────────
-  build-release:
-    name: Build Release AAB & APK
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build-debug
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Validate signing secrets and configure release IDs
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          ADMOB_APP_ID: ${{ vars.ADMOB_APP_ID }}
-          ADMOB_BANNER_ID: ${{ vars.ADMOB_BANNER_ID }}
-          ADMOB_INTERSTITIAL_ID: ${{ vars.ADMOB_INTERSTITIAL_ID }}
-          ADMOB_NATIVE_ID: ${{ vars.ADMOB_NATIVE_ID }}
-          ADMOB_REWARDED_ID: ${{ vars.ADMOB_REWARDED_ID }}
-        run: |
-          for name in KEYSTORE_BASE64 KEY_ALIAS KEY_PASSWORD KEYSTORE_PASSWORD; do
-            if [ -z "${!name}" ]; then
-              echo "::error::Required GitHub Actions secret $name is not configured."
-              exit 1
-            fi
-          done
-
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > app/release.keystore
-          if ! keytool -list -keystore app/release.keystore -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
-            echo "::error::The configured release keystore, alias, or store password is invalid."
-            exit 1
-          fi
-
-          admob_ids=("$ADMOB_APP_ID" "$ADMOB_BANNER_ID" "$ADMOB_INTERSTITIAL_ID" "$ADMOB_NATIVE_ID" "$ADMOB_REWARDED_ID")
-          configured=0
-          for value in "${admob_ids[@]}"; do
-            if [ -n "$value" ]; then
-              configured=$((configured + 1))
-            fi
-          done
-
-          if [ "$configured" -eq 0 ]; then
-            echo "::warning::AdMob GitHub variables are not configured; this release will use Google test ad IDs."
-            exit 0
-          fi
-          if [ "$configured" -ne "${#admob_ids[@]}" ]; then
-            echo "::error::Configure all five AdMob repository variables or leave all of them empty."
-            exit 1
-          fi
-
-          if [[ ! "$ADMOB_APP_ID" =~ ^ca-app-pub-[0-9]{16}~[0-9]{10}$ ]]; then
-            echo "::error::ADMOB_APP_ID has an invalid format."
-            exit 1
-          fi
-          publisher="${ADMOB_APP_ID%%~*}"
-          for name in ADMOB_BANNER_ID ADMOB_INTERSTITIAL_ID ADMOB_NATIVE_ID ADMOB_REWARDED_ID; do
-            value="${!name}"
-            if [[ ! "$value" =~ ^ca-app-pub-[0-9]{16}/[0-9]{10}$ ]] || [ "${value%%/*}" != "$publisher" ]; then
-              echo "::error::$name has an invalid format or does not match ADMOB_APP_ID."
-              exit 1
-            fi
-          done
-
-          {
-            printf 'admob.app.id=%s\n' "$ADMOB_APP_ID"
-            printf 'admob.banner.id=%s\n' "$ADMOB_BANNER_ID"
-            printf 'admob.interstitial.id=%s\n' "$ADMOB_INTERSTITIAL_ID"
-            printf 'admob.native.id=%s\n' "$ADMOB_NATIVE_ID"
-            printf 'admob.rewarded.id=%s\n' "$ADMOB_REWARDED_ID"
-          } >> local.properties
-
-      - name: Build release AAB and APK
-        env:
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          KEYSTORE_FILE: release.keystore
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        run: ./gradlew bundlePlayRelease assemblePlayRelease --no-daemon
-
-      - name: Upload release AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: civileg2-release-aab
-          path: app/build/outputs/bundle/playRelease/*.aab
-          retention-days: 30
-          if-no-files-found: error
-
-      - name: Upload release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: civileg2-release-apk
-          path: app/build/outputs/apk/play/release/*.apk
-          retention-days: 30
-          if-no-files-found: error
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            app/build/outputs/bundle/playRelease/*.aab
-            app/build/outputs/apk/play/release/*.apk
-          generate_release_notes: true
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ─── Job 5: Build Summary ────────────────────────────────────────────
   summary:

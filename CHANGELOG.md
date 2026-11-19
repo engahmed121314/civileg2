@@ -27,6 +27,9 @@ Release APK: `CivilEngineerPro-1.8.0.apk` (versionCode 8, minSdk 26, targetSdk 3
 - Repository cleanup: 33 unreachable source/resource files deleted, 5 unused
   Gradle dependencies removed, `viewBinding`/`dataBinding` disabled.
 - `versionCode` 7 → 8, `versionName` 1.7.0 → 1.8.0.
+- CI: fixed an invalid `upload-artifact` path block that made every
+  `android.yml` run fail at startup with no jobs. CI now runs guards, lint,
+  unit tests and both debug builds; tag pushes no longer build releases.
 - Delivery: signed release APK instead of debug APK. See `docs/RELEASES.md`.
 
 ### Removed

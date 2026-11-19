@@ -4,10 +4,15 @@ Two ways to publish an installable APK. Both produce the same artifact:
 `CivilEngineerPro-<version>.apk`, signed with the release key, `free` flavor
 (no ads, no billing).
 
-## 1. GitHub Actions (recommended)
+## 1. GitHub Actions (manual)
 
-The workflow `.github/workflows/release-apk.yml` runs on any `v*` tag and
-uploads `app-free-release.apk` to the GitHub Release automatically.
+The workflow `.github/workflows/release-apk.yml` is **manual only**. It builds
+the signed `free` APK from a tag you name, verifies its signature, and uploads
+`CivilEngineerPro-<version>.apk` plus its `.sha256` to that GitHub Release.
+
+Pushing a tag does not publish anything: releases are deliberate, and the
+curated release notes are written by hand (running the workflow regenerates the
+body from commits).
 
 Required repository secrets:
 
@@ -18,7 +23,8 @@ Required repository secrets:
 | `KEY_PASSWORD` | release key password |
 | `KEYSTORE_PASSWORD` | release keystore password |
 
-Then:
+Then: **Actions → Release APK (free) → Run workflow**, enter the existing tag
+(e.g. `v1.8.0`). Create and push the tag first:
 
 ```bash
 git tag v1.8.0
