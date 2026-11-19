@@ -21,6 +21,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,7 +75,7 @@ fun PropertyPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                AppText(
                     text = if (node != null) "خصائص العقدة ${node.id}" else "خصائص العضو ${member?.id}",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
@@ -96,7 +99,7 @@ fun PropertyPanel(
                             undoManager.execute(cmd)
                         }
                     },
-                    label = { Text("X (m)") },
+                    label = { AppText("X (m)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -110,12 +113,12 @@ fun PropertyPanel(
                             undoManager.execute(cmd)
                         }
                     },
-                    label = { Text("Y (m)") },
+                    label = { AppText("Y (m)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Text("نوع الارتكاز:", style = MaterialTheme.typography.labelMedium)
+                AppText("نوع الارتكاز:", style = MaterialTheme.typography.labelMedium)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     SupportType.entries.forEach { st ->
                         FilterChip(
@@ -124,42 +127,38 @@ fun PropertyPanel(
                                 val cmd = ChangeSupportCommand(viewModel, node.id, node.x, node.y, node.support, st)
                                 undoManager.execute(cmd)
                             },
-                            label = { Text(st.displayName) }
+                            label = { AppText(st.displayName) }
                         )
                     }
                 }
 
-                Button(
+                AppButton(
+                    label = "حذف العقدة",
+                    icon = Icons.Default.Delete,
+                    style = AppButtonStyle.Danger,
                     onClick = {
                         val connected = members.filter { it.nodeI == node.id || it.nodeJ == node.id }
                         val cmd = DeleteNodeCommand(viewModel, node, connected)
                         undoManager.execute(cmd)
                         editorState.clearSelection()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = null)
-                    Text(" حذف العقدة")
-                }
+                    }
+                )
             } else if (member != null) {
                 val length = member.getLength(nodes)
-                Text(text = "العقد: ${member.nodeI} -> ${member.nodeJ}", style = MaterialTheme.typography.bodySmall)
-                Text(text = "الطول: ${String.format(java.util.Locale.ROOT, "%.3f", length)} m", style = MaterialTheme.typography.bodySmall)
-                Text(text = "المادة: ${member.materialType.displayName}", style = MaterialTheme.typography.bodySmall)
+                AppText(text = "العقد: ${member.nodeI} -> ${member.nodeJ}", style = MaterialTheme.typography.bodySmall)
+                AppText(text = "الطول: ${String.format(java.util.Locale.ROOT, "%.3f", length)} m", style = MaterialTheme.typography.bodySmall)
+                AppText(text = "المادة: ${member.materialType.displayName}", style = MaterialTheme.typography.bodySmall)
 
-                Button(
+                AppButton(
+                    label = "حذف العضو",
+                    icon = Icons.Default.Delete,
+                    style = AppButtonStyle.Danger,
                     onClick = {
                         val cmd = DeleteMemberCommand(viewModel, member)
                         undoManager.execute(cmd)
                         editorState.clearSelection()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = null)
-                    Text(" حذف العضو")
-                }
+                    }
+                )
             }
         }
     }

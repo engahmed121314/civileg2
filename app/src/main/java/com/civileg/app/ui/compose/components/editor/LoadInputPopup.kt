@@ -10,7 +10,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,28 +39,28 @@ fun NodalLoadDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("حمولة على العقدة $nodeId", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            AppText("حمولة على العقدة $nodeId", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = fxStr,
                     onValueChange = { fxStr = it },
-                    label = { Text("Fx (kN)") },
+                    label = { AppText("Fx (kN)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = fyStr,
                     onValueChange = { fyStr = it },
-                    label = { Text("Fy (kN)") },
+                    label = { AppText("Fy (kN)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = mzStr,
                     onValueChange = { mzStr = it },
-                    label = { Text("Mz (kN.m)") },
+                    label = { AppText("Mz (kN.m)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -67,28 +69,27 @@ fun NodalLoadDialog(
                         FilterChip(
                             selected = loadCase == case,
                             onClick = { loadCase = case },
-                            label = { Text(case) }
+                            label = { AppText(case) }
                         )
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(
+            AppButton(
+                label = "إضافة",
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false,
                 onClick = {
                     val fx = fxStr.toDoubleOrNull() ?: 0.0
                     val fy = fyStr.toDoubleOrNull() ?: 0.0
                     val mz = mzStr.toDoubleOrNull() ?: 0.0
                     onConfirm(NodalLoad(nodeId, fx, fy, mz, loadCase))
                 }
-            ) {
-                Text("إضافة")
-            }
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("إلغاء")
-            }
+            AppButton(label = "إلغاء", style = AppButtonStyle.Text, fillMaxWidth = false, onClick = onDismiss)
         }
     )
 }
@@ -107,7 +108,7 @@ fun MemberLoadDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("حمولة على العضو $memberId", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            AppText("حمولة على العضو $memberId", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -116,14 +117,14 @@ fun MemberLoadDialog(
                         FilterChip(
                             selected = selectedType == lt,
                             onClick = { selectedType = lt },
-                            label = { Text(lt.displayName, style = MaterialTheme.typography.labelSmall) }
+                            label = { AppText(lt.displayName, style = MaterialTheme.typography.labelSmall) }
                         )
                     }
                 }
                 OutlinedTextField(
                     value = valStr,
                     onValueChange = { valStr = it },
-                    label = { Text("القيمة (kN/m أو kN)") },
+                    label = { AppText("القيمة (kN/m أو kN)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -133,7 +134,7 @@ fun MemberLoadDialog(
                         value = posStr,
                         onValueChange = { posStr = it },
                         label = {
-                            Text(
+                            AppText(
                                 if (selectedType == MemberLoadType.Trapezoidal)
                                     "طول الارتفاع من كل طرف a (m)"
                                 else "الموقع من البداية (m)"
@@ -148,27 +149,26 @@ fun MemberLoadDialog(
                         FilterChip(
                             selected = loadCase == case,
                             onClick = { loadCase = case },
-                            label = { Text(case) }
+                            label = { AppText(case) }
                         )
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(
+            AppButton(
+                label = "إضافة",
+                style = AppButtonStyle.Text,
+                fillMaxWidth = false,
                 onClick = {
                     val v = valStr.toDoubleOrNull() ?: 0.0
                     val p = posStr.toDoubleOrNull() ?: 0.0
                     onConfirm(selectedType, v, p, loadCase)
                 }
-            ) {
-                Text("إضافة")
-            }
+            )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("إلغاء")
-            }
+            AppButton(label = "إلغاء", style = AppButtonStyle.Text, fillMaxWidth = false, onClick = onDismiss)
         }
     )
 }
