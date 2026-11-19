@@ -23,6 +23,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.civileg.app.ui.components.AppText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,7 +64,7 @@ fun CalculationStepsCard(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
+                AppText(
                     text = title,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -98,7 +99,7 @@ private fun StepRow(step: CalculationStep) {
                 .background(statusColor.copy(alpha = 0.15f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text(
+            AppText(
                 text = step.stepNumber.toString(),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -112,7 +113,7 @@ private fun StepRow(step: CalculationStep) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                AppText(
                     text = step.title,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
@@ -134,7 +135,7 @@ private fun StepRow(step: CalculationStep) {
                 }
             }
             if (step.formula.isNotBlank()) {
-                Text(
+                AppText(
                     text = step.formula,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
@@ -142,14 +143,14 @@ private fun StepRow(step: CalculationStep) {
                 )
             }
             if (step.formulaWithValues.isNotBlank()) {
-                Text(
+                AppText(
                     text = step.formulaWithValues,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            Text(
+            AppText(
                 text = buildString {
                     append(step.result)
                     if (step.unit.isNotBlank()) append("  [${step.unit}]")
@@ -159,7 +160,7 @@ private fun StepRow(step: CalculationStep) {
                 color = statusColor
             )
             if (step.codeReference.isNotBlank()) {
-                Text(
+                AppText(
                     text = step.codeReference,
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

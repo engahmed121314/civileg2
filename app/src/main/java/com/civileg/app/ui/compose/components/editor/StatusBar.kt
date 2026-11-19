@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.civileg.app.ui.components.AppText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +39,7 @@ fun StatusBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
+            AppText(
                 text = "X: ${String.format(Locale.ROOT, "%.3f", cursorWorldX)} m  Y: ${String.format(Locale.ROOT, "%.3f", cursorWorldY)} m",
                 style = MaterialTheme.typography.labelSmall
             )
@@ -47,11 +48,11 @@ fun StatusBar(
             } else {
                 "${mapper.gridSpacing} m"
             }
-            Text(
+            AppText(
                 text = "Zoom: ${String.format(Locale.ROOT, "%.1f", mapper.cameraScale)}× | Grid: $gridLabel",
                 style = MaterialTheme.typography.labelSmall
             )
-            Text(
+            AppText(
                 text = "Joints: $nodesCount | Members: $membersCount | ${editorState.activeTool.displayName}",
                 style = MaterialTheme.typography.labelSmall
             )

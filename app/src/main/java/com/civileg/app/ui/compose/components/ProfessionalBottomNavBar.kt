@@ -13,6 +13,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.filled.AccountBalance
 import com.civileg.app.ui.theme.PremiumColorsDark
+import com.civileg.app.ui.components.AppText
 import com.civileg.app.ui.theme.PremiumColorsLight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -281,7 +282,7 @@ private fun TabItem(
                         .background(BadgeRed, RoundedCornerShape(50.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
+                    AppText(
                         text = if (badgeCount > 9) "9+" else badgeCount.toString(),
                         color = Color.White,
                         fontSize = 11.sp,
@@ -295,7 +296,7 @@ private fun TabItem(
         Spacer(modifier = Modifier.height(4.dp))
 
         // Premium geometric label
-        Text(
+        AppText(
             text = stringResource(item.labelRes),
             color = labelColor,
             fontSize = 10.sp,

@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.civileg.app.ui.components.AppText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -111,14 +112,14 @@ fun CollapsibleCard(
                     Spacer(modifier = Modifier.width(10.dp))
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
+                    AppText(
                         text = title,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     if (!subtitle.isNullOrBlank()) {
-                        Text(
+                        AppText(
                             text = subtitle,
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -132,7 +133,7 @@ fun CollapsibleCard(
                         shape = MaterialTheme.shapes.small,
                         modifier = Modifier.padding(end = 6.dp)
                     ) {
-                        Text(
+                        AppText(
                             text = badge,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
@@ -179,7 +180,7 @@ fun EquationLine(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
+        AppText(
             text = text,
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,
@@ -189,7 +190,7 @@ fun EquationLine(
         )
         if (value != null) {
             Spacer(modifier = Modifier.width(8.dp))
-            Text(
+            AppText(
                 text = value,
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace,

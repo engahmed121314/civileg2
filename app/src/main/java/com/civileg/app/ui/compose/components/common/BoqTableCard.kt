@@ -17,6 +17,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.civileg.app.ui.components.AppText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +55,7 @@ fun BoqTableCard(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
+                AppText(
                     text = title,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -98,7 +99,7 @@ private fun androidx.compose.foundation.layout.RowScope.Cell(
     align: TextAlign = TextAlign.End,
     bold: Boolean = false
 ) {
-    Text(
+    AppText(
         text = text,
         modifier = Modifier.weight(weight),
         fontSize = 11.sp,

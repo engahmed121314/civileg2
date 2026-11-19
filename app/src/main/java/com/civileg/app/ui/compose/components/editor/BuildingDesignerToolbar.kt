@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.components.editor
 
+import com.civileg.app.ui.components.AppText
+
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -34,7 +36,7 @@ fun BuildingDesignerToolbar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("الأدوات:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            AppText("الأدوات:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
 
             ToolbarChip(
                 icon = Icons.Default.Square,
@@ -80,7 +82,7 @@ private fun ToolbarChip(
     FilterChip(
         selected = isSelected,
         onClick = onClick,
-        label = { Text(label) },
+        label = { AppText(label) },
         leadingIcon = {
             Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
         }

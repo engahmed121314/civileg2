@@ -23,6 +23,7 @@ import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Text
+import com.civileg.app.ui.components.AppText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,7 +89,7 @@ fun ProfessionalNavigationRail(
                     )
                 }
                 Spacer(Modifier.height(6.dp))
-                Text(
+                AppText(
                     text = "CivilEG",
                     color = PremiumColorsLight.onSurface,
                     fontSize = 10.sp,
@@ -113,7 +114,7 @@ fun ProfessionalNavigationRail(
                                     containerColor = PremiumColorsLight.unsafe,
                                     contentColor = PremiumColorsLight.onPrimary
                                 ) {
-                                    Text(
+                                    AppText(
                                         text = if (designCount > 99) "99+" else designCount.toString(),
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold
@@ -128,7 +129,7 @@ fun ProfessionalNavigationRail(
                     }
                 },
                 label = {
-                    Text(
+                    AppText(
                         text = stringResource(item.labelRes),
                         fontSize = 10.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
