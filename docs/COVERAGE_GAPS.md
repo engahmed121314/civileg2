@@ -34,6 +34,12 @@ T1 acceptance is **≥ 70% instructions on `domain/calculations`**: the current
 the larger gap. `domain/repository` has no counters (interface-only package);
 `domain/calculations/slab` has no branch counter.
 
+**Update 2026-11-19 (Phase 1.3, batch 1):** after golden vectors for
+`ModelCheckEngine`, that class is 685/702 instructions (97.6%); `domain/**` is
+63.6% instructions / 46.7% branches; the app suite is 143 XML / 1,935 tests.
+The package table below remains the `7c8f042` baseline; `domain/modelcheck` is no
+longer a zero-coverage package.
+
 ## Domain packages, worst first
 
 | Package | Instructions | Branches | Missed instructions |
@@ -87,10 +93,14 @@ the larger gap. `domain/repository` has no counters (interface-only package);
 
 ## Priority for Phase 1.3 (golden vectors)
 
-Pick **one engine family per batch** (§9.1). Zero-test candidates from the
-name-based audit in `AGENT_MASTER_PLAN.md` §2.4 that are still uncovered here:
-`ACIJoistSlab`, `SBCJoistSlab`, `BeamDesignEngine_Part2`, `PostTensionedDesign`,
-plus zero-coverage `ModelCheckEngine` and `SlabDrawingPackageBuilder`.
+Pick **one engine per batch** (§9.1). **Done:** `ModelCheckEngine` (golden
+vector + boundaries, 10 tests; see `ModelCheckEngineTest.kt`). Remaining
+confirmed zero-coverage candidates: `SBCJoistSlab` (0/979 instructions),
+`SlabDrawingPackageBuilder` (0/222). The name-based audit in
+`AGENT_MASTER_PLAN.md` §2.4 is stale for `ACIJoistSlab` (187/192 covered via
+`HordiSlabViewModelTest`) and `BeamDesignEnginePart2` (1583/2568 covered);
+`PostTensionedDesign` is an interface (0/0) exercised through its implementation
+and `PostTensionedTest`. Always use the report, not the name heuristic.
 
 R4 applies: before any new/changed formula, record clause + source + date in
 `docs/CLAUSE_LOG.md` (currently missing) and cite it in code. Do not treat this
