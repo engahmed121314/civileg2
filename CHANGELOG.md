@@ -16,6 +16,11 @@ Release APK: `CivilEngineerPro-1.8.0.apk` (versionCode 8, minSdk 26, targetSdk 3
 - Permanent **Settings → Support the app** entry that opens GitHub Sponsors.
 - Defensive handling for devices without a browser: the app reports the problem
   with a toast and keeps running.
+- Drawing package layer (`domain/drawing`): shared `DrawingScene` model,
+  label placement, sheet composition, and Compose/PDF/DXF renderers, plus
+  beam, column and slab package builders and a `BbsEngine`. Covered by 24
+  unit tests. This layer is internal for now — no screen uses it yet, so the
+  visible UI is unchanged.
 
 ### Changed
 
@@ -45,9 +50,14 @@ Release APK: `CivilEngineerPro-1.8.0.apk` (versionCode 8, minSdk 26, targetSdk 3
 
 ### Not changed
 
-- **No calculation, formula, clause or result value was modified.** All design
-  engines, tests and exported PDF/DXF content are byte-for-byte the same logic
-  as 1.7.0. This release is packaging, cleanup and an optional donation prompt.
+- **No design-engine formula, clause or safety factor was modified.** All
+  concrete, steel, seismic and frame-analysis engines, their tests and the
+  exported PDF content use the same logic as 1.7.0. This release is packaging,
+  cleanup and an optional donation prompt.
+- One output detail did change: beam bar-bending schedules now derive the bar
+  run from the beam's own `span` when it is set, instead of always falling back
+  to the storey height. Previously the storey height was used even when the
+  span was known, which could overstate main-bar lengths.
 
 ---
 
