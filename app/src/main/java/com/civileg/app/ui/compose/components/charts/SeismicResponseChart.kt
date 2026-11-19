@@ -12,6 +12,9 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.dp
 import com.civileg.app.domain.calculations.base.SpectrumValue
 import com.civileg.app.ui.theme.ThemeColors
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
 import kotlin.math.abs
 
 /**
@@ -32,7 +35,7 @@ fun SeismicResponseChart(
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
+            AppText(
                 "Response Spectrum Analysis", 
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
@@ -164,7 +167,7 @@ fun SeismicResponseChart(
 @Composable
 private fun InfoBox(label: String, value: String) {
     Column {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-        Text(value, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+        AppText(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+        AppText(value, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
     }
 }

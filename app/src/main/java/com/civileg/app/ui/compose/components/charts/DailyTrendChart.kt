@@ -19,6 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.civileg.app.db.DailyTrend
 import com.civileg.app.ui.theme.ThemeColors
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
 
 /**
  * رسم بياني لاتجاه الفحوصات اليومية (آخر 30 يوم).
@@ -37,13 +40,13 @@ fun DailyTrendChart(
 
     Card(modifier = modifier) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(
+            AppText(
                 "الاتجاه التاريخي (آخر 30 يوم)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
+            AppText(
                 "نسبة النجاح اليومية مقارنة بالفارق",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
@@ -51,7 +54,7 @@ fun DailyTrendChart(
 
             if (trend.isEmpty()) {
                 Spacer(modifier = Modifier.height(24.dp))
-                Text(
+                AppText(
                     "لا توجد بيانات اتجاه بعد",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray,
@@ -178,7 +181,7 @@ fun DailyTrendChart(
                     LegendDot(trendColor, "خط اتجاه النجاح")
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
+                AppText(
                     "أعلى يوم: ${chronological.maxByOrNull { it.passRate }?.date ?: "—"}  (${String.format("%.0f%%", chronological.maxOfOrNull { it.passRate } ?: 0.0)})",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray
@@ -195,6 +198,6 @@ private fun LegendDot(color: Color, label: String) {
             drawCircle(color = color)
         }
         Spacer(modifier = Modifier.width(4.dp))
-        Text(label, style = MaterialTheme.typography.bodySmall)
+        AppText(label, style = MaterialTheme.typography.bodySmall)
     }
 }

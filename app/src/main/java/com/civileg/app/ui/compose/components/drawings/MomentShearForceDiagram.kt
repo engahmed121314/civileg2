@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
+import com.civileg.app.ui.components.AppText
+
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.DesignCode
 import androidx.compose.foundation.Canvas
@@ -95,8 +97,8 @@ fun MomentShearForceDiagram(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Analysis", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text("Moment & Shear Force Diagrams", color = Color(0xAAFFFFFF), fontSize = 10.sp)
+                    AppText("Analysis", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    AppText("Moment & Shear Force Diagrams", color = Color(0xAAFFFFFF), fontSize = 10.sp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     // Legend
@@ -106,7 +108,7 @@ fun MomentShearForceDiagram(
                                 drawLine(Color(0xFF4A90D9), Offset(0f, 6f), Offset(12f, 6f), 3f)
                             }
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("M (kN.m)", color = Color(0xFF4A90D9), fontSize = 10.sp)
+                            AppText("M (kN.m)", color = Color(0xFF4A90D9), fontSize = 10.sp)
                         }
                     }
                     if (showShear) {
@@ -115,7 +117,7 @@ fun MomentShearForceDiagram(
                                 drawLine(Color(0xFFE74C3C), Offset(0f, 6f), Offset(12f, 6f), 3f)
                             }
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("V (kN)", color = Color(0xFFE74C3C), fontSize = 10.sp)
+                            AppText("V (kN)", color = Color(0xFFE74C3C), fontSize = 10.sp)
                         }
                     }
                 }
@@ -282,11 +284,11 @@ fun MomentShearForceDiagram(
                         modifier = Modifier.padding(8.dp).fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceAround
                     ) {
-                        Text("x/L = ${"%.2f".format(((selectedPoint!!.x - 50f) / (800f - 100f)).coerceIn(0f, 1f))}",
+                        AppText("x/L = ${"%.2f".format(((selectedPoint!!.x - 50f) / (800f - 100f)).coerceIn(0f, 1f))}",
                             color = Color.White, fontSize = 11.sp)
-                        Text("M = ${"%.1f".format(selectedMoment)} kN.m",
+                        AppText("M = ${"%.1f".format(selectedMoment)} kN.m",
                             color = Color(0xFF4A90D9), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Text("V = ${"%.1f".format(selectedShear)} kN",
+                        AppText("V = ${"%.1f".format(selectedShear)} kN",
                             color = Color(0xFFE74C3C), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -312,8 +314,8 @@ private fun ValueChip(label: String, value: String, color: Color) {
         color = color.copy(alpha = 0.15f)
     ) {
         Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, color = color.copy(alpha = 0.7f), fontSize = 9.sp)
-            Text(value, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            AppText(label, color = color.copy(alpha = 0.7f), fontSize = 9.sp)
+            AppText(value, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp)
         }
     }
 }

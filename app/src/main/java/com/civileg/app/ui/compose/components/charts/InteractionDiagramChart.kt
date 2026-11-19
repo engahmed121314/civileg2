@@ -16,6 +16,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.civileg.app.R
 import com.civileg.app.ui.theme.ThemeColors
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
 
 /**
  * بيانات نقطة على منحنى التفاعل
@@ -53,7 +56,7 @@ fun InteractionDiagramChart(
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
+            AppText(
                 "P-M Interaction Diagram",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
@@ -237,7 +240,7 @@ private fun LegendItem(color: Color, label: String) {
             color = color
         ) {}
         Spacer(modifier = Modifier.width(4.dp))
-        Text(label, style = MaterialTheme.typography.bodySmall)
+        AppText(label, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -248,16 +251,16 @@ private fun InteractionPointDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("تفاصيل نقطة التحميل") },
+        title = { AppText("تفاصيل نقطة التحميل") },
         text = {
             Column {
-                Text("الحمل المحوري: ${"%.1f".format(point.axialLoad)} kN")
-                Text("العزم: ${"%.1f".format(point.moment)} kN.m")
-                Text("الحالة: ${if (point.isSafe) "آمن" else "غير آمن"}")
+                AppText("الحمل المحوري: ${"%.1f".format(point.axialLoad)} kN")
+                AppText("العزم: ${"%.1f".format(point.moment)} kN.m")
+                AppText("الحالة: ${if (point.isSafe) "آمن" else "غير آمن"}")
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Close") }
+            AppButton(label = "Close", style = AppButtonStyle.Text, fillMaxWidth = false, onClick = onDismiss)
         }
     )
 }
