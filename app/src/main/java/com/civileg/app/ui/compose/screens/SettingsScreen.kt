@@ -1,6 +1,11 @@
 package com.civileg.app.ui.compose.screens
 
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +33,7 @@ import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.ui.theme.ThemeMode
 import com.civileg.app.utils.LocaleHelper
 import com.civileg.app.viewmodel.SettingsViewModel
+import com.civileg.app.support.openSponsorsPage
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 
@@ -51,7 +57,7 @@ fun SettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.settings_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -226,24 +232,24 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(stringResource(R.string.settings_version), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                        Text("v2.0.0", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        AppText(stringResource(R.string.settings_version), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        AppText("v2.0.0", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                     HorizontalDivider()
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(stringResource(R.string.settings_supported_codes), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                        Text("ECP 203 • ACI 318 • SBC 304", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        AppText(stringResource(R.string.settings_supported_codes), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        AppText("ECP 203 • ACI 318 • SBC 304", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
                     HorizontalDivider()
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(stringResource(R.string.about_developer), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                        Text(stringResource(R.string.developer_name), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        AppText(stringResource(R.string.about_developer), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        AppText(stringResource(R.string.developer_name), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                     HorizontalDivider()
                     Row(
@@ -251,28 +257,52 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(stringResource(R.string.developer_github), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                        TextButton(onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/engahmed121314"))
-                            context.startActivity(intent)
-                        }) {
-                            Text("github.com/engahmed121314", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
+                        AppText(stringResource(R.string.developer_github), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                        AppButton(
+                            label = "github.com/engahmed121314",
+                            style = AppButtonStyle.Text,
+                            fillMaxWidth = false,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/engahmed121314"))
+                                context.startActivity(intent)
+                            }
+                        )
                     }
                     HorizontalDivider()
-                    Text(
+                    AppText(
                         text = stringResource(R.string.settings_disclaimer_notice),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 11.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(
+                    AppText(
                         text = stringResource(R.string.settings_developer_team),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                 }
+            }
+
+            SettingsSectionCard(
+                title = stringResource(R.string.settings_support_title),
+                icon = Icons.Default.Favorite,
+                iconColor = Color(0xFFD81B60)
+            ) {
+                AppText(
+                    text = stringResource(R.string.settings_support_message),
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                AppButton(
+                    label = stringResource(R.string.settings_support_button),
+                    icon = Icons.Default.Favorite,
+                    fontSize = 13.sp,
+                    onClick = { openSponsorsPage(context) }
+                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -296,7 +326,7 @@ private fun SettingsSectionCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = iconColor, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            AppText(title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -329,13 +359,13 @@ private fun SettingsRadioRow(
         RadioButton(selected = selected, onClick = onClick)
         Spacer(modifier = Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            AppText(
                 label,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                 fontSize = 14.sp
             )
             if (subtitle != null) {
-                Text(
+                AppText(
                     subtitle,
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -355,8 +385,8 @@ private fun SettingsPriceInput(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label, fontSize = 13.sp) },
-        suffix = { Text(currency, fontWeight = FontWeight.Bold, fontSize = 13.sp) },
+        label = { AppText(label, fontSize = 13.sp) },
+        suffix = { AppText(currency, fontWeight = FontWeight.Bold, fontSize = 13.sp) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
