@@ -44,8 +44,8 @@ object BbsGenerator {
 
         val entries = mutableListOf<BbsEntry>()
 
-        // Span derivation: use storyHeight as span approximation if span not directly available
-        val spanMm = if (storyHeight_mm > 0.0) storyHeight_mm else result.width * 1000.0
+        // Span derivation: use result.span if present, otherwise storyHeight_mm
+        val spanMm = if (result.span > 0.0) result.span * 1000.0 else if (storyHeight_mm > 0.0) storyHeight_mm else result.width * 1000.0
 
         // Main Bottom Rebar — computed span + 9φ hook each end (ECP 203 clause)
         val hookLen = 2 * 9 * result.reinforcementBottom.diameter  // 9φ hook per end × 2 ends

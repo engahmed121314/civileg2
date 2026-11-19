@@ -158,8 +158,9 @@ class BeamViewModel @Inject constructor(
     /** Export just the CAD drawing (no PDF) for the current design. */
     fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
         val res = _result.value
+        val spanMm = ((if (res != null && res.span > 0) res.span else lastSpan) * 1000.0)
         val bbs = if (res != null) {
-            runCatching { com.civileg.app.utils.BbsGenerator.generateBeamBbs("B1", res) }.getOrDefault(emptyList())
+            runCatching { com.civileg.app.utils.BbsGenerator.generateBeamBbs("B1", res, spanMm) }.getOrDefault(emptyList())
         } else {
             emptyList()
         }
