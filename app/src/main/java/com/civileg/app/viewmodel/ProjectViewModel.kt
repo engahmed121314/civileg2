@@ -17,7 +17,6 @@ import org.json.JSONObject
 import java.util.Date
 import javax.inject.Inject
 
-import com.civileg.app.data.ProjectSyncManager
 import androidx.lifecycle.MutableLiveData
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.domain.entities.GenericSafetyCheck
@@ -30,31 +29,11 @@ import com.civileg.app.domain.calculations.InputGuard
 class ProjectViewModel @Inject constructor(
     private val projectDao: ProjectDao,
     private val designDao: DesignDao,
-    private val materialDao: MaterialDao,
-    private val syncManager: ProjectSyncManager
+    private val materialDao: MaterialDao
 ) : ViewModel() {
-
-    private val _syncStatus = MutableLiveData<Boolean?>(null)
-    val syncStatus: LiveData<Boolean?> = _syncStatus
 
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
-
-    fun syncData() {
-        viewModelScope.launch {
-            try {
-                val success = syncManager.syncAllProjects()
-                _syncStatus.value = success
-            } catch (e: Exception) {
-                _errorMessage.value = "Sync failed: ${e.message ?: "Unknown error"} / فشل المزامنة"
-                _syncStatus.value = false
-            }
-        }
-    }
-
-    fun resetSyncStatus() {
-        _syncStatus.value = null
-    }
 
     // Archive Projects — reuse main projects list sorted by date
     val allArchiveProjects: LiveData<List<Project>> = projectDao.getAllProjects()

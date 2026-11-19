@@ -242,20 +242,7 @@ fun HomeScreen(
             )
         }
 
-    val syncStatus by projectViewModel.syncStatus.observeAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    
-    LaunchedEffect(syncStatus) {
-        syncStatus?.let { success ->
-            snackbarHostState.showSnackbar(
-                if (success) "Cloud sync successful" else "Cloud sync failed"
-            )
-            projectViewModel.resetSyncStatus()
-        }
-    }
-
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -282,13 +269,6 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { projectViewModel.syncData() }) {
-                        Icon(
-                            Icons.Default.CloudSync,
-                            contentDescription = "Sync",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
                     IconButton(onClick = onShowSettings) {
                         Icon(
                             Icons.Default.Settings,
