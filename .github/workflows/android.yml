@@ -1,7 +1,7 @@
 # ============================================================================
 # CivilEG2 — Android CI/CD Pipeline
 # Triggers on push to master and pull requests
-# Runs: Guards → Lint → Unit Tests → Debug Build (two flavors)
+# Runs: Guards → Lint → Unit Tests → Coverage → Debug Build (two flavors)
 # ============================================================================
 
 name: Android CI/CD
@@ -113,6 +113,18 @@ jobs:
 
       - name: Run unit tests
         run: ./gradlew testFreeDebugUnitTest testPlayDebugUnitTest --no-daemon
+
+      - name: Generate JaCoCo coverage report
+        run: ./gradlew :app:jacocoTestReport --no-daemon
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: app/build/reports/jacoco/jacocoTestReport/
+          retention-days: 14
+          if-no-files-found: warn
 
       - name: Upload test results
         if: always()
