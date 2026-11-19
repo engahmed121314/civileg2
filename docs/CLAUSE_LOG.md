@@ -28,3 +28,23 @@ All rows accessed: **2026-11-19**.
   exact C-06 θ expression.
 
 No engineering formula was added or changed. No ECP clause was used.
+
+## Phase 1.3, batch 2 — `SBCJoistSlab` (accessed 2026-11-19)
+
+The only publicly accessible full SBC 304 text found is the **2007 edition**
+(GDA-hosted PDF, 274 pages), not SBC 304-2024 claimed in the engine comments.
+Clause numbers and several limits differ, so every 2024-specific value is
+labelled UNVERIFIED-2024 and is tested as characterization only.
+
+| ID | Clause / value | Source (accessed 2026-11-19) | Status |
+|---|---|---|---|
+| S-01 | SBC 304-2007 §8.11.2: rib width ≥ 100 mm; rib depth ≤ 3.5 × rib width | [SBC 304-2007 official PDF hosted by GDA](https://www.gda.com.sa/pdf/SBC304.pdf), text extracted via [r.jina.ai](https://r.jina.ai/https://www.gda.com.sa/pdf/SBC304.pdf) | Verified for 2007 edition (PDF extraction renders "3½" as "213"; 3.5 is corroborated by S-03) |
+| S-02 | SBC 304-2007 §8.11.3: clear spacing between ribs ≤ 800 mm | Same PDF | Verified for 2007. The engine's 700 mm limit attributed to "§8.4.1 (2024)" is **UNVERIFIED-2024**; characterized only |
+| S-03 | ACI 318-19 §8.8 joist limits: rib width ≥ 4 in (~100 mm), depth ≤ 3.5 × width, clear spacing ≤ 30 in (~750 mm), `Vc` may be taken as 1.1 × base value | [ideCAD — Nonprestressed two-way joist systems (waffle slabs) per ACI 318-19 §8.8](https://help.idecad.com/ideCAD/nonprestressed-two-way-joist-systems-waffle-slabs) | Verified (secondary: software manual quoting ACI) |
+| S-04 | SBC 304-2007 §11.3.1.1: `Vc = 0.17·√fc'·bw·d` (N, MPa) | Same PDF | Verified for 2007. The engine's `0.25·√(fcu/1.5)·0.75` partial-factor form and the 10% joist enhancement are **UNVERIFIED-2024**; characterized only |
+| S-05 | γc=1.5, γs=1.15, φflex=0.9, φshear=0.75, β₁ 0.85→0.65, min As = max(0.15%·bw·d, 1.3%·As), ρmax = min(4%, 0.375·β₁·fc/fsd) | Engine constants only (`SBCJoistSlab.kt`) | **UNVERIFIED-2024** — characterization only; no compliance claim |
+
+Use in this batch: golden vector and geometry boundaries use S-01/S-03 where
+they agree with the engine; S-02's 700 mm, S-04's shear coefficients and S-05
+are locked as current behaviour, explicitly not as verified code clauses.
+No production formula was added or changed.
