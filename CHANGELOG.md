@@ -29,7 +29,8 @@ Release APK: `CivilEngineerPro-1.8.0.apk` (versionCode 8, minSdk 26, targetSdk 3
 - `versionCode` 7 → 8, `versionName` 1.7.0 → 1.8.0.
 - CI: fixed an invalid `upload-artifact` path block that made every
   `android.yml` run fail at startup with no jobs. CI now runs guards, lint,
-  unit tests and both debug builds; tag pushes no longer build releases.
+  unit tests and both debug builds; tag pushes no longer build releases. A
+  JaCoCo coverage gap report is produced (`docs/COVERAGE_GAPS.md`).
 - Delivery: signed release APK instead of debug APK. See `docs/RELEASES.md`.
 
 ### Removed
