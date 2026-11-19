@@ -20,6 +20,9 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import com.civileg.app.domain.entities.ReinforcementResult
 import com.civileg.app.ui.theme.ThemeColors
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
 import kotlin.math.PI
 
 /**
@@ -263,18 +266,16 @@ private fun DrawScope.drawDimensions(l: Float, t: Float, w: Float, h: Float, aW:
 private fun RebarDetailDialog(info: RebarInfo, onDismiss: () -> Unit) {
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        title = { androidx.compose.material3.Text("تفاصيل السيخ #${info.index + 1}") },
+        title = { AppText("تفاصيل السيخ #${info.index + 1}") },
         text = {
             androidx.compose.foundation.layout.Column {
-                androidx.compose.material3.Text("القطر: Ø${info.diameter.toInt()} مم")
-                androidx.compose.material3.Text("المساحة: ${"%.1f".format(info.area)} مم²")
-                androidx.compose.material3.Text("طول الرباط التقديري: ${info.developmentLength.toInt()} مم")
+                AppText("القطر: Ø${info.diameter.toInt()} مم")
+                AppText("المساحة: ${"%.1f".format(info.area)} مم²")
+                AppText("طول الرباط التقديري: ${info.developmentLength.toInt()} مم")
             }
         },
         confirmButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                androidx.compose.material3.Text("Close")
-            }
+            AppButton(label = "Close", style = AppButtonStyle.Text, fillMaxWidth = false, onClick = onDismiss)
         }
     )
 }

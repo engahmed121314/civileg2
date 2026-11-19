@@ -1,5 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
+import com.civileg.app.ui.components.AppText
+
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.DesignCode
 import androidx.compose.foundation.background
@@ -122,7 +124,7 @@ fun InteractiveDrawingScreen(
                                 selected = selectedViewMode == index,
                                 onClick = { onViewModeChanged(index) },
                                 text = {
-                                    Text(
+                                    AppText(
                                         mode,
                                         fontSize = tabFontSize,
                                         color = if (selectedViewMode == index)
@@ -198,13 +200,13 @@ private fun DrawingToolbar(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Column {
-                Text(
+                AppText(
                     title,
                     color = Color.White,
                     fontSize = titleFontSize,
                     style = MaterialTheme.typography.titleSmall
                 )
-                Text(
+                AppText(
                     subtitle,
                     color = Color(0xAAFFFFFF),
                     fontSize = subtitleFontSize
@@ -227,7 +229,7 @@ private fun DrawingToolbar(
                         modifier = Modifier.size((iconSize.value * 0.9f).dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
+                    AppText(
                         "DXF",
                         color = Color(0xFFFFB300),
                         fontSize = 11.sp,
@@ -265,7 +267,7 @@ private fun InfoRow(label: String, value: String, fontSize: androidx.compose.ui.
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, color = Color(0xAAFFFFFF), fontSize = fontSize)
-        Text(value, color = Color.White, fontSize = fontSize)
+        AppText(label, color = Color(0xAAFFFFFF), fontSize = fontSize)
+        AppText(value, color = Color.White, fontSize = fontSize)
     }
 }
