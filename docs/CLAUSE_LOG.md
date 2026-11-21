@@ -48,3 +48,21 @@ Use in this batch: golden vector and geometry boundaries use S-01/S-03 where
 they agree with the engine; S-02's 700 mm, S-04's shear coefficients and S-05
 are locked as current behaviour, explicitly not as verified code clauses.
 No production formula was added or changed.
+
+## Stability track, batch — `AISCSteelDesignEngine` (accessed 2026-11-21)
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| A-01 | AISC 360-16 D2-1 gross yielding `φt·Fy·Ag`, φt = 0.90 | [ideCAD — Steel Column/Member Design per AISC 360-16](https://help.idecad.com/ideCAD/steel-column-design-aisc-360-16) | Verified (secondary) |
+| A-02 | AISC 360-16 D2-2 net rupture `φt·Fu·Ae`, φt = 0.75 | Same page family | Verified (secondary) |
+| A-03 | AISC 360-16 E3-2/E3-3/E3-4: `Fe = π²E/(KL/r)²`; inelastic `Fcr = 0.658^(Fy/Fe)·Fy` for KL/r ≤ 4.71√(E/Fy), elastic `Fcr = 0.877·Fe` otherwise; φc = 0.90 | [ideCAD — Flexural Buckling per AISC 360-16](https://help.idecad.com/ideCAD/flexural-buckling) | Verified (secondary) |
+| A-04 | AISC 360-16 J4.3 block shear `Rn = min(0.6·Fy·Agv + Ubs·Fu·Ant, 0.6·Fu·Anv + Ubs·Fu·Ant)`, φ = 0.75 | Standard AISC form; engine geometry (gauge/edge/pitch estimates) is an engine simplification | Formula verified; engine geometry CHARACTERIZED |
+| A-05 | Section properties: box `Ix = (b·h³−(b−2t)(h−2t)³)/12`, I-shape open-form Ix/Iy | Standard strength-of-materials formulas | Verified |
+| U-A1 | Welded tension: engine returns a block-shear "placeholder" `0.75·0.6·Fy·Ag` that GOVERNS the design (cuts welded tension capacity ~50%). AISC J4.3 has no block-shear limit state for full welded connections | Engine inspection | **FLAGGED, not fixed** — conservative direction; owner engineering decision |
+| U-A2 | Torsional buckling (E4) branch selection uses the FLEXURAL slenderness for the E3-3/E3-4 choice and `min(KxLx, KyLy)` as the torsional length instead of Kz·Lz | Engine inspection | **FLAGGED, not fixed** — pinned by characterization test |
+| U-A3 | Plastic modulus `Zx = 1.12·Sx` (shape-factor approximation) for I-sections | Engine constant | Approximation, characterized; within typical rolled-shape range |
+
+Golden vectors: A-01/A-02 (tension bolted, net rupture governs), A-03
+(RHS inelastic + I-section elastic), A-04 block-shear arithmetic. Torsional
+path and welded placeholder pinned as characterization (U-A1/U-A2).
+No production formula was added or changed in this batch.
