@@ -203,3 +203,13 @@ Removed provenance: the previous table ("جداول مبسطة من الكود �
 0.031/0.024 at r = 1.0 fingerprint), not ECP 203. Owner decision 2026-11-21:
 forget the Indian code and remove everything related to it; ECP 203-2020 and
 SBC PDFs are the references of record, ACI PDF to follow.
+
+## ACI footing min-steel fix — F-01 (accessed 2026-11-21)
+
+Found while building the combined-footing golden vectors: the shared ACI
+footing flexure helper's minimum-steel formula matched no ACI provision.
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| F-01 | ACI 318M-14 Table 7.6.1.1: As,min for nonprestressed one-way slabs and footings on the GROSS area Ag = b·h: deformed bars fy < 420 MPa → 0.0020·Ag; fy ≥ 420 → greater of 0.0018·420/fy·Ag and 0.0014·Ag. The helper's previous `rhoMin = max(0.0018, 1.33·√f'c/fy)` matches no ACI provision (likely a garbled reading of the 4/3 relaxation in §9.6.1.3) and produced a 1.63% "minimum" at f'c = 24, fy = 400 — about 8× the code value, inflating steel in every ACI footing result. Fixed to the table values on b·h; internal design flows now pass the real footing depth (the interface path keeps h = d). | Owner's ACI 318M-14, Table 7.6.1.1, printed p. 143 (part 1, PDF p. 152) | **Verified (primary), RESOLVED** |
+| F-02 | `SBCFooting` carries the same `max(0.0018, 1.33·√f'c/fy)` formula (line ~274). Not fixed here: SBC 304's own min-steel clause must be verified against the SBC PDF first, and the SBC batch awaits an owner decision (U-S1..U-S5). | Engine inspection | **FLAGGED, not fixed** |
