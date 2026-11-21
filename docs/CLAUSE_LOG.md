@@ -251,3 +251,70 @@ golden vectors pin combined-footing numbers; a fix for CF-01..CF-03 should
 land with golden vectors per R4.
 
 No production formula was added or changed in this batch.
+
+### F-08 — ACI column axial-moment interaction (strain compatibility), batch 2026-11-21
+
+**Finding:** `ACIColumn.calculateReinforcement` amplified the axial-formula steel
+area by an invented `max(1, 1 + 2e/h)` factor for e > 0.05h. The expression
+appears in no code; it ignored section depth, bar position and the actual
+interaction-diagram branch, and under-reinforced high-moment cases (e.g.
+Pu=1500 kN / Mx=150 kNm on 400×400/fc'=24: heuristic 12Ø14 vs 18Ø14 required by
+strain compatibility). **Fixed:** the heuristic is removed; bar count is now
+chosen by a uniaxial strain-compatibility interaction check per axis
+(φPn(c) = Pu solved by bisection, φMn(c) ≥ Mu), plus the Table 22.4.2.1 axial
+cap. Biaxial bending is checked per axis independently (no Bresler combination)
+— documented limitation. Sources opened and verified 2026-11-21 against the
+owner's bilingual ACI 318M-14 PDF (rendered pages):
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| A-19a | §22.2.1.1 equilibrium + §22.2.1.2 plane sections remain plane | ACI 318M-14 PDF, printed p. 552 (part 3, PDF p. 161) | Verified (owner PDF, printed page) |
+| A-19b | §22.2.2.1 εcu = 0.003; §22.2.2.2 tensile concrete strength neglected | ACI 318M-14 PDF, printed p. 553 (part 3, PDF p. 162) | Verified (owner PDF, printed page) |
+| A-19c | §22.2.2.4.1 stress block 0.85fc' over a = β1·c; Table 22.2.2.4.3 β1 = 0.85 (fc'≤28), 0.85−0.05(fc'−28)/7, 0.65 (fc'≥55) | ACI 318M-14 PDF, printed p. 554 (part 3, PDF p. 163); β1 table first logged A-08 | Verified (owner PDF, printed page) |
+| A-19d | §20.2.2.1 fs = Es·εs below yield else fy; §20.2.2.2 Es = 200 000 MPa | ACI 318M-14 PDF, printed p. 522 (part 3, PDF p. 131) | Verified (owner PDF, printed page) |
+| A-19e | §21.2.2.1 εty = fy/Es (= 0.002 for Gr420); Table 21.2.2 tied-column φ: 0.65 compression-controlled, 0.90 at εt ≥ 0.005, transition φ = 0.65 + 0.25(εt − εty)/(0.005 − εty) | ACI 318M-14 PDF, printed pp. 545 and 547 (part 3, PDF pp. 154 and 156) | Verified (owner PDF, printed page) |
+| A-19f | Table 22.4.2.1 design axial cap φPn,max = 0.80·φ·Po (tied), used as the steel-iteration gate | ACI 318M-14 PDF, printed p. 557 (part 3, PDF p. 166); first logged A-14 | Verified (owner PDF, printed page) |
+
+Golden vectors (hand-computed, `ACIColumnInteractionTest`): 8Ø20/400×400/fc'=24
+at Pu=1500 kN → c=283.31, φ=0.65, φMn=144.52 kNm; same at Pu=2000 kN →
+φMn=103.49 kNm (descending branch); 10Ø20 at Pu=1500 kN → φMn=162.22 kNm;
+8Ø20 at Pu=400 kN → εt=0.005679, φ=0.90, φMn=190.04 kNm (tension-controlled);
+null past φPo. End-to-end: Pu=1500/Mx=150 kNm → 18Ø14; Pu=3000 kN axial → 10Ø29.
+
+**F-08 addendum (same day) — biaxial scope and constructibility.** Review found
+the first cut checked each axis independently, which is unconservative for
+simultaneous Mx/My (8Ø20, Pu=1500 kN: per-axis allows 144.5 kNm each, true 45°
+contour radius = 130.60 kNm). Fixed: `checkBiaxial` scans the neutral-axis
+orientation, solves φPn(c)=Pu per direction, and tests the demand vector
+against the φM contour (§22.2.1.1 equilibrium at each section; §22.2.4.1
+compression zone "bounded by edges of the cross section and a line parallel to
+the neutral axis" at a=β1c; §22.2.4.2 c perpendicular to the NA — printed
+p. 554, part 3 PDF p. 163, rendered 2026-11-21). Consistency: contour radius
+along an axis = the uniaxial solve (144.516 kNm). Bar clear spacing for
+columns max(40 mm, 1.5db, (4/3)dagg) per §25.2.3 (printed p. 645, part 4 PDF
+p. 54, text-extracted 2026-11-21; the dagg term is inapplicable without an
+aggregate-size input). The design loop escalates bar diameter when spacing
+binds before declaring the section inadequate. Vectors: Mx=My=80 kNm passes
+8Ø20 (113.14 < 130.595); Mx=My=100 fails 8Ø20 and 10Ø20 (140.024), passes
+12Ø20 (149.646); end-to-end Pu=1500/Mx=My=100 → 18Ø16 (Ø14 spacing-blocked).
+
+**F-08 addendum 2 (same day) — independent benchmark, convergence, dagg exposure.**
+(a) The contour evaluation is verified against an INDEPENDENT closed-form
+derivation (analytic polygon geometry by hand, not the clipping code): 4
+corner Ø20, 400×400, fc'=24, θ=45°, c=500 mm → φPn = 2 039 460.215 N,
+φMnx = φMny = 45 278 623.759 N·mm; the engine reproduces every digit.
+(b) The pass/fail test no longer interpolates a scanned contour polygon (which
+would have needed a convexity assumption). It matches the moment-vector
+direction to the demand direction (360-direction scan + bisection brackets)
+and compares magnitudes at the matched orientation; multiple matches take the
+LOWEST capacity and ties fail closed — conservative boundary handling.
+Convergence: c-bisection 60 iterations over [1e-3, 1e12] mm (|Δc| < 1e-6 mm),
+direction error < 1e-15 rad. Verified equivalence: direction-match capacity
+at 45° = 130.5950 kNm (scan+polygon agreed), at 90° = 144.5159 kNm = the
+uniaxial solve 144.5159.
+(c) Aggregate size: no dagg input exists anywhere in the design path (UI →
+CalculatorEngine → engine signature carry none; the pricing module's aggregate
+entries are material names only). The §25.2.3 (4/3)dagg term is therefore NOT
+checked; every result now carries an explicit code note saying the spacing was
+checked against max(40 mm, 1.5db) only and the (4/3)dagg term is UNVERIFIED.
+Constructibility is not claimed as fully code-checked.
