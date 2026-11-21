@@ -15,7 +15,7 @@ plugins {
 
 android {
     namespace = "com.civileg.app"
-    compileSdk = 36
+    compileSdk = 37
 
     // Load local properties for external IDs (local.properties is NOT committed —
     // see local.properties.template for every supported key)
@@ -28,7 +28,7 @@ android {
     defaultConfig {
         applicationId = "com.civileg.app"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 8
         versionName = "1.8.0"
 

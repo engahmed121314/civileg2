@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -67,14 +68,16 @@ fun BuildingDesignerScreen(
     }
 
     // Re-calculate quantities whenever model changes
+    val geometryInvalidMessage = stringResource(com.civileg.app.R.string.quantity_geometry_invalid)
+    val loadDistributionUnavailable = stringResource(com.civileg.app.R.string.load_distribution_unavailable)
+    val slabToolUnavailable = stringResource(com.civileg.app.R.string.slab_tool_unavailable)
+    val quantityEstimateNotice = stringResource(com.civileg.app.R.string.quantity_estimate_notice)
     LaunchedEffect(model) {
         val prices = PriceManager.getAllPrices(context).mapValues { it.value.price }
         quantitySummary = try {
             BuildingQuantityEngine.calculateQuantities(model, prices)
         } catch (exception: IllegalArgumentException) {
-            snackbarHostState.showSnackbar(
-                context.getString(com.civileg.app.R.string.quantity_geometry_invalid)
-            )
+            snackbarHostState.showSnackbar(geometryInvalidMessage)
             null
         }
     }
@@ -89,12 +92,11 @@ fun BuildingDesignerScreen(
                     }
                 },
                 actions = {
+                    val livePricesUnavailable = stringResource(com.civileg.app.R.string.live_prices_unavailable)
                     IconButton(onClick = {
                         scope.launch {
                             LivePriceFetcher.fetchLivePrices(context)
-                            snackbarHostState.showSnackbar(
-                                context.getString(com.civileg.app.R.string.live_prices_unavailable)
-                            )
+                            snackbarHostState.showSnackbar(livePricesUnavailable)
                         }
                     }) {
                         Icon(Icons.Default.CloudSync, contentDescription = "تحديث الأسعار")
@@ -116,7 +118,7 @@ fun BuildingDesignerScreen(
                     val summary = quantitySummary
                     if (summary == null) {
                         AppText(
-                            context.getString(com.civileg.app.R.string.quantity_geometry_invalid),
+                            geometryInvalidMessage,
                             style = MaterialTheme.typography.bodySmall
                         )
                     } else {
@@ -130,9 +132,7 @@ fun BuildingDesignerScreen(
                         label = "تشغيل التصميم والتحليل",
                         onClick = {
                             scope.launch {
-                                snackbarHostState.showSnackbar(
-                                    context.getString(com.civileg.app.R.string.load_distribution_unavailable)
-                                )
+                                snackbarHostState.showSnackbar(loadDistributionUnavailable)
                             }
                         },
                         fillMaxWidth = false,
@@ -176,9 +176,7 @@ fun BuildingDesignerScreen(
                         }
                         "Slab" -> {
                             scope.launch {
-                                snackbarHostState.showSnackbar(
-                                    context.getString(com.civileg.app.R.string.slab_tool_unavailable)
-                                )
+                                snackbarHostState.showSnackbar(slabToolUnavailable)
                             }
                         }
                         else -> {
@@ -199,11 +197,11 @@ fun BuildingDesignerScreen(
             text = {
                 val summary = quantitySummary
                 if (summary == null) {
-                    AppText(context.getString(com.civileg.app.R.string.quantity_geometry_invalid))
+                    AppText(geometryInvalidMessage)
                 } else {
                     Column(modifier = Modifier.fillMaxWidth().height(400.dp)) {
                         AppText(
-                            context.getString(com.civileg.app.R.string.quantity_estimate_notice),
+                            quantityEstimateNotice,
                             style = MaterialTheme.typography.bodySmall
                         )
                         AppText("إجمالي الخرسانة: ${summary.totalConcreteVolumeM3} م³", style = MaterialTheme.typography.bodyLarge)

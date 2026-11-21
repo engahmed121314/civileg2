@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -472,7 +473,8 @@ private fun FrameOpenDesignDialog(
     onDismiss: () -> Unit,
     onOpen: (designId: Long) -> Unit
 ) {
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy HH:mm", Locale.getDefault()) }
+    val locale = LocalConfiguration.current.locales[0]
+    val dateFormat = remember(locale) { SimpleDateFormat("dd MMM yyyy HH:mm", locale) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { AppText(stringResource(R.string.frame_open_design)) },
