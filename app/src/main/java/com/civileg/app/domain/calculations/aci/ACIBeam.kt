@@ -289,16 +289,27 @@ class ACIBeam : BeamDesign {
         InputGuard.positive("barDiameter", barDiameter)
         InputGuard.positive("fy", fy)
         InputGuard.positive("fcu", fcu)
-        // ACI 25.4.2: Ld = (fy * ψt * ψe * ψs) / (1.7 * λ * √(fc')) * db
+        // ACI 318M-14 §25.4.2 (printed pp.651-655): simplified development
+        // length using the general-equation form with (cb+Ktr)/db = 1.5
+        // (Table 25.4.2.2 favourable-confinement case: clear spacing >= 2db
+        // with cover >= db, or spacing >= db with cover >= db and minimum
+        // ties). Denominator 1.1×1.5 = 1.65 ≈ 1.7 (code's rounded value).
+        // Assumed-confinement scope: tight "other cases" (1.4/1.1
+        // denominators) are NOT covered — documented in CLAUSE_LOG F-07.
         // λ يظهر في المقام فقط (ليس في البسط)
-        
+
         var psi_t = 1.0
         if (barLocation == BarLocation.TOP) psi_t = 1.3
-        
+
+        // Table 25.4.2.4: ψe = 1.5 when epoxy with clear cover < 3db or
+        // spacing < 6db; 1.2 otherwise. No cover input here — 1.2 assumes
+        // cover >= 3db (documented F-07 limitation).
         var psi_e = 1.0
         if (coating == CoatingType.EPOXY_COATED) psi_e = 1.2
-        
-        val psi_s = if (barDiameter <= 22.0) 1.0 else 0.8
+
+        // Table 25.4.2.4 (printed p.655): ψs = 0.8 for No.19 (19 mm) and
+        // smaller bars, 1.0 for No.22 (22 mm) and larger.
+        val psi_s = if (barDiameter >= 22.0) 1.0 else 0.8
         val lambda = LAMBDA
         val fc_prime = 0.8 * fcu  // تحويل مكعب لأسطوانة
         

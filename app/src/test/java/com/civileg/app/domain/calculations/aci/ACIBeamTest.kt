@@ -400,3 +400,45 @@ class ACIBeamTest {
         beam.calculateDoublyReinforcedBeam(DESIGN_MOMENT, WIDTH, TOTAL_DEPTH, FCU, 0.0)
     }
 }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // GOLDEN VECTORS — development length (F-07 regression, hand-verified
+    // 2026-11-21 vs ACI 318M-14 Table 25.4.2.2/25.4.2.4, printed pp.652/655)
+    // fcu=30 (fc'=24), simplified favourable-confinement case (denom 1.7):
+    // 16mm bottom uncoated fy=420: 420×0.8/(1.7√24)×16 = 645.5 → 650
+    // 25mm bottom uncoated fy=420: 420×1.0/(1.7√24)×25 = 1260.8 → 1275
+    // 32mm top epoxy fy=420: 420×1.3×1.2×1.0/(1.7√24)×32 = 2517.5 → 2525
+    // 12mm fy=280: 280×0.8/(1.7√24)×12 = 322.8 → 325 (≥ 300 min, 25.4.2.1)
+    // ══════════════════════════════════════════════════════════════════════
+
+    @Test
+    fun goldenDevLength_smallBarGetsPsiS08() {
+        val ld = beam.calculateDevelopmentLength(
+            16.0, 420.0, 30.0, BarLocation.BOTTOM, CoatingType.UNCOATED
+        )
+        assertEquals(650.0, ld, 0.001)
+    }
+
+    @Test
+    fun goldenDevLength_largeBarGetsPsiS10() {
+        val ld = beam.calculateDevelopmentLength(
+            25.0, 420.0, 30.0, BarLocation.BOTTOM, CoatingType.UNCOATED
+        )
+        assertEquals(1275.0, ld, 0.001)
+    }
+
+    @Test
+    fun goldenDevLength_topEpoxyFactors() {
+        val ld = beam.calculateDevelopmentLength(
+            32.0, 420.0, 30.0, BarLocation.TOP, CoatingType.EPOXY_COATED
+        )
+        assertEquals(2525.0, ld, 0.001)
+    }
+
+    @Test
+    fun goldenDevLength_lowFySmallBar() {
+        val ld = beam.calculateDevelopmentLength(
+            12.0, 280.0, 30.0, BarLocation.BOTTOM, CoatingType.UNCOATED
+        )
+        assertEquals(325.0, ld, 0.001)
+    }

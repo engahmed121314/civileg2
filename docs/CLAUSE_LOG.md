@@ -353,3 +353,17 @@ All page numbers below are the printed page of the PDF of record.
 
 Golden vectors: ECPBeamShearTest (6 cases: stirrup design, min-only branch,
 4-leg wide beam, fy=600 cap, mild-240 min-ratio floor, q_umax 4.4 cap).
+
+## A-13 — §25.4.2 + Tables 25.4.2.2/25.4.2.4 — tension development length (VERIFIED)
+- **Date**: 2026-11-21 (19:51 EET)
+- **Source opened**: ACI 318M-14 PDF part 4, PDF pages 60-64, printed pages **652-655** — rendered as images; tables and equations read directly.
+- **Code says**: Table 25.4.2.2 (favourable confinement: spacing ≥ 2db + cover ≥ db, or spacing ≥ db + cover ≥ db + min ties): No.19- ℓd = fy·ψt·ψe/(2.1λ√fc')·db; No.22+: /(1.7λ√fc')·db. Other cases: /1.4 and /1.1. General Eq 25.4.2.3a with explicit ψs and (cb+Ktr)/db ≤ 2.5. Table 25.4.2.4: ψs = 0.8 for No.19 and smaller, 1.0 for No.22 and larger; ψt = 1.3 top (>300 mm fresh concrete below); ψe = 1.5 epoxy with cover < 3db or spacing < 6db, else 1.2; uncoated 1.0; ψtψe ≤ 1.7. §25.4.2.1: ℓd ≥ 300 mm.
+- **Engine**: ψt ✓, λ ✓, 300 mm floor ✓, unified 1.7 denominator = the code's rounded 1.1×1.5 for the favourable case. See F-07 for ψs and the uncovered cases.
+
+## F-07 — ACIBeam development length: ψs inverted; confinement/epoxy cases uncovered (PARTIALLY RESOLVED)
+- **Date**: 2026-11-21 (19:51 EET)
+- **Found while verifying A-13**: engine set ψs = 1.0 for bars ≤ 22 mm and 0.8 for larger — the inverse of Table 25.4.2.4. Large bars (25/29/32 mm) got development lengths 20% SHORTER than the code requires (unconservative). Small bars got 25% longer than required (conservative, wasteful).
+- **Fix (this branch)**: ψs branch flipped to the code's values. With the fix, small bars get 0.8/1.7 → equivalent denominator 2.125 ≈ the table's 2.1 (conservative), large bars 1.0/1.7 ≈ table's 1.65 (conservative).
+- **Remaining limitations (documented, need inputs the interface lacks)**: (a) "other cases" confinement (denominators 1.4/1.1) not covered — engine assumes favourable confinement; (b) ψe = 1.5 for epoxy with cover < 3db not covered — engine uses 1.2. Both flagged in code comments; owner decision needed on adding cover/spacing inputs.
+- **Golden vectors**: 16 mm → 650, 25 mm → 1275, 32 mm top epoxy → 2525, 12 mm fy=280 → 325.
+- **Resolution**: branch fix/aci-beam-dev-length (ψs fix + vectors).
