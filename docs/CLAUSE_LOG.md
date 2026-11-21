@@ -391,3 +391,46 @@ vc governing case (a) 1.617 MPa, φVc=1640.3 kN, util=0.880; one-way shear at
 d=415 from face: Vu=852.2 kN vs φVc=1088.5 kN; As top governed by min
 0.0020·Ag (Table 8.6.1.1, fy=400<420) vs required — computed in test. V2 — 2×3
 eccentric grid: derived in the test source comments.
+
+### F-05 verification addendum (2026-11-21, after review feedback)
+
+Review-driven hardening of the raft implementation (no new clauses opened; these are
+method-integrity measures on top of A-20a..e):
+
+1. **Sign/face convention re-derived from first principles.** A raft strip carries
+   UPWARD soil pressure, so its moment diagram is the negative of a downward-loaded
+   beam: raft TOP steel in spans, BOTTOM steel at column lines. An early draft had the
+   beam convention carried over unchanged; corrected before implementation review.
+2. **Applicability limits (fail closed).** Full contact required (qmin >= 0 at all
+   corners; uplift returns an explicit out-of-scope failure); COMPLETE rectangular
+   column grid required (a column at every grid intersection — a missing intersection
+   breaks the continuous-strip support assumption and is rejected, not averaged over);
+   single-line layouts rejected toward combined footing; rigidity is an ASSUMPTION of
+   §13.2.6.2 and is surfaced as a standing warning (no deflection/SSI check exists;
+   flexible mats need Winkler/FE — not implemented).
+3. **Load provenance.** The caller supplies both service and factored loads; the
+   combination is not verifiable by the engine. Swapped values fail closed
+   (factored >= service required per column); ratio > 2.0 warns.
+4. **Pressure sampling.** Strip line loads are sampled per SPAN midpoint (and per
+   overhang midpoint), not as one strip average, so eccentric pressure variation
+   ALONG a strip reaches the strip moments. Across the strip, sampling is at the
+   tributary-band centroid (exact for a linear field).
+5. **Force AND moment equilibrium (runtime self-check).** Force: strip reactions sum
+   to the factored column loads (exact). Moment: each strip family's reaction first
+   moment must reproduce the first moment of its sampled piecewise-uniform load
+   (verified exact to 1e-9); equivalently, reactions + the analytic discretization
+   term (uniform-per-span sampling drops w'·len³/12 of first moment per segment)
+   reproduce the applied first moment sum(Pu·x) / sum(Pu·y) exactly. Both identities
+   are checked at runtime with 0.5% tolerance; failure marks the result unsafe.
+6. **Discretization smoothing is reported, not hidden.** The discretization term is
+   exposed on the result (momentDiscretizationX/Y, kN·m) and a warning fires when it
+   exceeds 5% of the applied eccentric moment (V2: 934.9 kN·m = 11.7% of Mx=8000).
+   Design moments already use per-span sampling; the warning advises finer strips or
+   Winkler/FE for strong eccentricity.
+7. **V2 vector re-based at t = 600 mm.** At t = 500 the heavy edge X-strip fails
+   wide-beam shear (Vu = 877 kN vs φVc = 830 kN) — a genuine design outcome, not a
+   solver artifact. The failure path remains covered by V3 (corner punching + shear).
+8. **Benchmark independence.** V1 strip moments, punching and equilibrium were
+   cross-checked by closed-form hand arithmetic (values in the F-05 vector note);
+   the three-moment/tridiagonal solver is additionally pinned by the exact force and
+   moment identities above, which do not share code with the solver's moment output.

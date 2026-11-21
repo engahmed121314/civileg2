@@ -703,6 +703,10 @@ class ACIFooting : FootingDesign {
         val punching: List<RaftPunchingResult>,
         val oneWayShear: List<RaftShearCheck>,
         val equilibriumCheck: Boolean,
+        val momentEquilibriumX: Boolean,  // X-strip reactions + discretization term reproduce sum(Pu.x)
+        val momentEquilibriumY: Boolean,  // Y-strip reactions + discretization term reproduce sum(Pu.y)
+        val momentDiscretizationX: Double,  // kN.m: first-moment smoothed by uniform-per-span sampling (X family)
+        val momentDiscretizationY: Double   // kN.m: same, Y family
         val isSafe: Boolean,
         val warnings: List<String>,
         val codeNotes: List<String>
@@ -727,12 +731,13 @@ class ACIFooting : FootingDesign {
         return PressureField(P / A, My / (Iy * 1e3), Mx / (Ix * 1e3), xc, yc) // kPa per mm offset (M[kN.m]·dy[mm]/1e3/I[m^4])
     }
 
-    /** Solves the three-moment equation for a continuous beam (downward w, supports at [positions], overhang end moments known). Returns support moments (kNm, hogging negative). */
-    private fun continuousBeamSupportMoments(positions: List<Double>, w: Double, overhangLeft: Double, overhangRight: Double): List<Double> {
+    /** Solves the three-moment equation for a continuous beam (supports at [positions]; uniform load wSpan[j] on span j, separate uniform loads on the overhangs). Returns support moments (kNm, hogging negative). */
+    private fun continuousBeamSupportMoments(positions: List<Double>, wSpan: List<Double>, wOverLeft: Double, wOverRight: Double, overhangLeft: Double, overhangRight: Double): List<Double> {
         val n = positions.size
+        require(wSpan.size == n - 1) { "one line load per span" }
         val m = DoubleArray(n)
-        m[0] = -w * overhangLeft * overhangLeft / 2.0
-        m[n - 1] = -w * overhangRight * overhangRight / 2.0
+        m[0] = -wOverLeft * overhangLeft * overhangLeft / 2.0
+        m[n - 1] = -wOverRight * overhangRight * overhangRight / 2.0
         if (n == 2) return m.toList()
         // tridiagonal system for interior supports
         val nv = n - 2
@@ -744,7 +749,7 @@ class ACIFooting : FootingDesign {
             a[i] = Lj
             b[i] = 2 * (Lj + Lk)
             cc[i] = Lk
-            r[i] = -w * (Lj * Lj * Lj + Lk * Lk * Lk) / 4.0
+            r[i] = -(wSpan[j - 1] * Lj * Lj * Lj + wSpan[j] * Lk * Lk * Lk) / 4.0
         }
         r[0] -= a[0] * m[0]
         r[nv - 1] -= cc[nv - 1] * m[n - 1]
@@ -800,6 +805,12 @@ class ACIFooting : FootingDesign {
         InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
         InputGuard.positive("raftThickness", raftThickness)
         require(columns.isNotEmpty()) { "raft needs at least one column" }
+        // Load provenance: the caller supplies BOTH loads; the engine cannot verify the
+        // combination used, but swapped or inconsistent values must fail closed.
+        columns.forEachIndexed { i, c ->
+            require(c.serviceLoad > 0.0 && c.factoredLoad > 0.0) { "column $i: service and factored loads must both be positive (kN)" }
+            require(c.factoredLoad >= c.serviceLoad) { "column $i: factored load < service load - the two look swapped; supply the unfactored (service) and strength-combination (factored) values" }
+        }
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         val fc = 0.8 * fcu
@@ -820,6 +831,11 @@ class ACIFooting : FootingDesign {
         if (!fullContact) {
             warnings.add("Uplift / partial contact (qmin < 0): outside the rigid-raft method scope - result is not valid, re-resolve with a method that handles loss of contact")
         }
+        columns.forEachIndexed { i, c ->
+            if (c.factoredLoad > 2.0 * c.serviceLoad) warnings.add("column $i: factored/service ratio ${"%.2f".format(c.factoredLoad / c.serviceLoad)} exceeds 2.0 - verify the load combination provenance")
+        }
+        // Rigidity is an assumption of the conventional method, not a verified property.
+        warnings.add("Rigidity is ASSUMED, not verified (13.2.6.2): no deflection or soil-structure interaction check is performed. Flexible mats (thin raft / wide column spacing) need a Winkler or FE analysis - not implemented here")
 
         fun lines(values: List<Double>): List<Double> {
             val out = mutableListOf<Double>()
@@ -829,10 +845,17 @@ class ACIFooting : FootingDesign {
         val xLines = lines(columns.map { it.x })
         val yLines = lines(columns.map { it.y })
         require(xLines.size >= 2 && yLines.size >= 2) { "rigid-raft strip method needs at least 2 column lines in each direction - use a combined footing for single-line layouts" }
+        // Full rectangular grid: every strip rests on a column at every crossing line;
+        // a missing intersection breaks the continuous-strip assumption - fail closed.
+        val gridComplete = yLines.all { yl -> xLines.all { xl -> columns.any { abs(it.x - xl) <= 1.0 && abs(it.y - yl) <= 1.0 } } }
+        require(gridComplete) { "rigid-raft strip method needs a COMPLETE rectangular column grid (a column at every grid intersection); missing intersections invalidate the strip assumption - resolve the layout first" }
 
         val strips = mutableListOf<RaftStripResult>()
         val shearChecks = mutableListOf<RaftShearCheck>()
         val reactionSums = mutableMapOf<String, Double>()
+        val momentSums = mutableMapOf<String, Double>()
+        val sampledMomentSums = mutableMapOf<String, Double>()
+        val discretizationSums = mutableMapOf<String, Double>()
 
         /**
          * One family of strips: strips span along [spansDir] between the support lines
@@ -848,31 +871,53 @@ class ACIFooting : FootingDesign {
             edgeHigh: Double
         ) {
             var dirReactionSum = 0.0
+            var dirMomentSum = 0.0
+            var dirSampledMomentSum = 0.0
+            var dirDiscretization = 0.0
             stripLines.forEachIndexed { rowIdx, rowPos ->
                 val (widthMm, bandCentroid) = bandOf(rowIdx)
-                // average factored pressure over the tributary band, sampled at the band
-                // CENTROID (not the column line) - they differ under eccentric pressure
-                val qAvg = if (spansDir == "X") qu.q((x0 + x1) / 2.0, bandCentroid) else qu.q(bandCentroid, (y0 + y1) / 2.0)
-                val w = qAvg * widthMm / 1000.0          // kN/m
+                // Pressure sampled at the band CENTROID across the strip, and per SPAN
+                // midpoint along it, so eccentric pressure variation along the strip is
+                // carried into the strip moments instead of being smeared into one average.
+                fun qAt(spanPos: Double) =
+                    if (spansDir == "X") qu.q(spanPos, bandCentroid) else qu.q(bandCentroid, spanPos)
                 val n = supportLines.size
                 val L = supportLines.map { it / 1000.0 }  // m
                 val oLeft = (supportLines.first() - edgeLow) / 1000.0
                 val oRight = (edgeHigh - supportLines.last()) / 1000.0
-                val M = continuousBeamSupportMoments(L, w, oLeft, oRight)
+                val wSpan = (0 until n - 1).map { j -> qAt((supportLines[j] + supportLines[j + 1]) / 2.0) * widthMm / 1000.0 }
+                val wOhL = qAt((edgeLow + supportLines.first()) / 2.0) * widthMm / 1000.0
+                val wOhR = qAt((supportLines.last() + edgeHigh) / 2.0) * widthMm / 1000.0
+                val w = qAt((edgeLow + edgeHigh) / 2.0) * widthMm / 1000.0   // strip-average line load (reported)
+                val M = continuousBeamSupportMoments(L, wSpan, wOhL, wOhR, oLeft, oRight)
                 val R = DoubleArray(n)
                 val spanM = MutableList(n - 1) { 0.0 }
                 for (j in 0 until n - 1) {
+                    val wj = wSpan[j]
                     val Lj = L[j + 1] - L[j]
-                    val vLeft = w * Lj / 2.0 + (M[j + 1] - M[j]) / Lj
+                    val vLeft = wj * Lj / 2.0 + (M[j + 1] - M[j]) / Lj
                     R[j] += vLeft
-                    R[j + 1] += w * Lj - vLeft
-                    val xStar = vLeft / w
-                    if (xStar in 0.0..Lj) spanM[j] = M[j] + vLeft * xStar - w * xStar * xStar / 2.0
+                    R[j + 1] += wj * Lj - vLeft
+                    if (wj > 1e-9) {
+                        val xStar = vLeft / wj
+                        if (xStar in 0.0..Lj) spanM[j] = M[j] + vLeft * xStar - wj * xStar * xStar / 2.0
+                    }
                     spanM[j] = maxOf(spanM[j], 0.0)
                 }
-                R[0] += w * oLeft
-                R[n - 1] += w * oRight
+                R[0] += wOhL * oLeft
+                R[n - 1] += wOhR * oRight
                 dirReactionSum += R.sum()
+                dirMomentSum += (0 until n).sumOf { R[it] * L[it] }   // first moment of this strip's reactions (kN.m)
+                // first moment of the SAMPLED piecewise-uniform load (what the beam equilibrates)
+                var sampled = wOhL * oLeft * ((edgeLow + supportLines.first()) / 2000.0) + wOhR * oRight * ((supportLines.last() + edgeHigh) / 2000.0)
+                for (j in 0 until n - 1) sampled += wSpan[j] * (L[j + 1] - L[j]) * ((supportLines[j] + supportLines[j + 1]) / 2000.0)
+                dirSampledMomentSum += sampled
+                // analytic discretization term: uniform-per-span sampling drops w' * len^3 / 12
+                // of first moment per segment (w' = line-load slope along the strip, kN/m per m)
+                val wSlope = (if (spansDir == "X") qu.cx else qu.cy) * widthMm
+                var segCubes = oLeft * oLeft * oLeft + oRight * oRight * oRight
+                for (j in 0 until n - 1) { val Lj = L[j + 1] - L[j]; segCubes += Lj * Lj * Lj }
+                dirDiscretization += wSlope * segCubes / 12.0
                 // Reinforcement: raft TOP in spans (beam sagging), raft BOTTOM at lines (beam hogging)
                 val mSpanMax = (spanM.maxOrNull() ?: 0.0) * 1e6          // N.mm
                 val mSupMax = -(M.minOrNull() ?: 0.0) * 1e6              // N.mm, positive magnitude
@@ -893,9 +938,12 @@ class ACIFooting : FootingDesign {
                         abs((if (spansDir == "X") it.y else it.x) - rowPos) <= 1.0 &&
                             abs((if (spansDir == "X") it.x else it.y) - supportLines[j]) <= 1.0
                     }.maxOfOrNull { if (spansDir == "X") it.widthX else it.widthY }?.div(2000.0) ?: 0.2
-                    val vFaceLeft = if (j > 0) w * (L[j] - L[j - 1]) / 2.0 + (M[j - 1] - M[j]) / (L[j] - L[j - 1]) else 0.0
-                    val vFaceRight = if (j < n - 1) w * (L[j + 1] - L[j]) / 2.0 + (M[j + 1] - M[j]) / (L[j + 1] - L[j]) else 0.0
-                    val vu = max(0.0, max(vFaceLeft, vFaceRight) - w * (colHalf + d / 1000.0))
+                    val wLeft = if (j > 0) wSpan[j - 1] else 0.0
+                    val wRight = if (j < n - 1) wSpan[j] else 0.0
+                    val vFaceLeft = if (j > 0) wLeft * (L[j] - L[j - 1]) / 2.0 + (M[j - 1] - M[j]) / (L[j] - L[j - 1]) else 0.0
+                    val vFaceRight = if (j < n - 1) wRight * (L[j + 1] - L[j]) / 2.0 + (M[j + 1] - M[j]) / (L[j + 1] - L[j]) else 0.0
+                    val wGoverning = max(wLeft, wRight)
+                    val vu = max(0.0, max(vFaceLeft, vFaceRight) - wGoverning * (colHalf + d / 1000.0))
                     shearChecks += RaftShearCheck(
                         "$spansDir-strip ${rowIdx + 1}", j, vu, phiVc,
                         if (phiVc > 0) vu / phiVc else Double.POSITIVE_INFINITY, vu <= phiVc
@@ -903,6 +951,9 @@ class ACIFooting : FootingDesign {
                 }
             }
             reactionSums[spansDir] = dirReactionSum
+            momentSums[spansDir] = dirMomentSum
+            sampledMomentSums[spansDir] = dirSampledMomentSum
+            discretizationSums[spansDir] = dirDiscretization
         }
 
         fun band(lines: List<Double>, idx: Int, edgeLow: Double, edgeHigh: Double): Pair<Double, Double> {
@@ -936,10 +987,35 @@ class ACIFooting : FootingDesign {
                 if (phiVc > 0) vu / phiVc else Double.POSITIVE_INFINITY, vu <= phiVc)
         }
 
-        // Global equilibrium self-check: strip reactions vs factored column loads (0.5% tolerance)
+        // Global equilibrium self-check: FORCE (strip reactions vs factored loads) and
+        // MOMENT (each strip family's reaction first moment vs the applied first moment
+        // of the column loads). With per-span pressure sampling over a linear field the
+        // moment identity is exact up to solver precision; 0.5% tolerance on both.
         val totalFactored = columns.sumOf { it.factoredLoad }
-        val equilibriumCheck = reactionSums.values.all { abs(it - totalFactored) <= 0.005 * totalFactored }
-        if (!equilibriumCheck) warnings.add("Internal equilibrium check failed: strip reactions do not sum to the factored column loads")
+        val forceOk = reactionSums.values.all { abs(it - totalFactored) <= 0.005 * totalFactored }
+        val appliedMomentX = columns.sumOf { it.factoredLoad * it.x / 1000.0 }  // kN.m, first moment in x
+        val appliedMomentY = columns.sumOf { it.factoredLoad * it.y / 1000.0 }  // kN.m, first moment in y
+        val momTolX = 0.005 * totalFactored * (x1 - x0) / 1000.0
+        val momTolY = 0.005 * totalFactored * (y1 - y0) / 1000.0
+        val momentDiscX = discretizationSums["X"] ?: 0.0
+        val momentDiscY = discretizationSums["Y"] ?: 0.0
+        // reacted + analytic discretization term must reproduce the applied first moment
+        // (identical to reacted == sampled-load moment; both identities hold to solver precision)
+        val momentEquilibriumX = abs((momentSums["X"] ?: 0.0) + momentDiscX - appliedMomentX) <= momTolX
+        val momentEquilibriumY = abs((momentSums["Y"] ?: 0.0) + momentDiscY - appliedMomentY) <= momTolY
+        val equilibriumCheck = forceOk && momentEquilibriumX && momentEquilibriumY
+        if (!forceOk) warnings.add("Internal force-equilibrium check failed: strip reactions do not sum to the factored column loads")
+        if (!momentEquilibriumX) warnings.add("Internal moment-equilibrium check failed in X: strip reactions + discretization term do not reproduce the applied first moment sum(Pu.x)")
+        if (!momentEquilibriumY) warnings.add("Internal moment-equilibrium check failed in Y: strip reactions + discretization term do not reproduce the applied first moment sum(Pu.y)")
+        // Discretization smoothing as a share of the applied ECCENTRIC moment (My for the
+        // X family, Mx for the Y family): above 5% the uniform-per-span representation is
+        // smoothing a real gradient - advise finer strips or a FE/Winkler model.
+        val eccMy = appliedMomentX - totalFactored * (x0 + x1) / 2000.0
+        val eccMx = appliedMomentY - totalFactored * (y0 + y1) / 2000.0
+        if (abs(eccMy) > 1e-6 && abs(momentDiscX) > 0.05 * abs(eccMy))
+            warnings.add("Strip discretization smooths ${"%.1f".format(100 * abs(momentDiscX) / abs(eccMy))}% of the applied eccentric moment My - design moments use per-span sampling but finer strips or a Winkler/FE model are advised for this eccentricity")
+        if (abs(eccMx) > 1e-6 && abs(momentDiscY) > 0.05 * abs(eccMx))
+            warnings.add("Strip discretization smooths ${"%.1f".format(100 * abs(momentDiscY) / abs(eccMx))}% of the applied eccentric moment Mx - design moments use per-span sampling but finer strips or a Winkler/FE model are advised for this eccentricity")
 
         codeNotes.add("Rigid-raft conventional method per ACI 318M-14 13.2.6.2/13.3.4.3 (CLAUSE_LOG F-05)")
         codeNotes.add("Elastic pressure field q = P/A ± Mx·y/Ix ± My·x/Iy; bearing at UNFACTORED loads per 13.3.1.1")
@@ -954,7 +1030,10 @@ class ACIFooting : FootingDesign {
             lengthX = x1 - x0, widthY = y1 - y0, thickness = raftThickness,
             qMaxService = qMaxService, qMinService = qMinService, fullContact = fullContact,
             strips = strips, punching = punching, oneWayShear = shearChecks,
-            equilibriumCheck = equilibriumCheck, isSafe = isSafe,
+            equilibriumCheck = equilibriumCheck,
+            momentEquilibriumX = momentEquilibriumX, momentEquilibriumY = momentEquilibriumY,
+            momentDiscretizationX = momentDiscX, momentDiscretizationY = momentDiscY,
+            isSafe = isSafe,
             warnings = warnings, codeNotes = codeNotes
         )
     }

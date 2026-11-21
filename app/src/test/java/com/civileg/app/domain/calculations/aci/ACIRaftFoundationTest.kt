@@ -32,6 +32,8 @@ class ACIRaftFoundationTest {
         assertEquals(68.0272, r.qMinService, 0.001)
         assertTrue(r.fullContact)
         assertTrue(r.equilibriumCheck)
+        assertTrue(r.momentEquilibriumX)
+        assertTrue(r.momentEquilibriumY)
         assertEquals(4, r.strips.size)
         val strip = r.strips.first { it.tag == "X-strip 1" }
         assertEquals(4200.0, strip.tributaryWidth, 1e-6)
@@ -51,6 +53,8 @@ class ACIRaftFoundationTest {
 
     @Test
     fun `V2 - 2x3 eccentric grid - trapezoid pressure and unequal strips`() {
+        // t = 600 mm: at 500 mm the heavy X-strip fails wide-beam shear (877 kN > 830 kN)
+        // - a genuine design outcome, covered as a failure path by V3 instead
         val cols = listOf(
             RaftColumn(0.0, 0.0, 400.0, 400.0, 800.0, 1000.0),
             RaftColumn(5000.0, 0.0, 400.0, 400.0, 800.0, 1000.0),
@@ -59,20 +63,28 @@ class ACIRaftFoundationTest {
             RaftColumn(0.0, 8000.0, 400.0, 400.0, 1600.0, 2000.0),
             RaftColumn(5000.0, 8000.0, 400.0, 400.0, 1600.0, 2000.0)
         )
-        val r = footing.designRaftFoundation(30.0, 400.0, cols, 1000.0, 200.0, 500.0)
+        val r = footing.designRaftFoundation(30.0, 400.0, cols, 1000.0, 200.0, 600.0)
         assertEquals(7400.0, r.lengthX, 1e-6)
         assertEquals(10400.0, r.widthY, 1e-6)
         assertEquals(131.1371, r.qMaxService, 0.01)
         assertEquals(35.1831, r.qMinService, 0.01)
         assertTrue(r.fullContact)
         assertTrue(r.equilibriumCheck)
+        assertTrue(r.momentEquilibriumX)
+        assertTrue(r.momentEquilibriumY)
+        // uniform-per-span sampling smooths ~11.7% of the eccentric moment (analytic term reported)
+        assertEquals(934.9112, r.momentDiscretizationY, 0.5)
         val x3 = r.strips.first { it.tag == "X-strip 3" }
         assertEquals(465.4996, x3.lineLoad, 0.01)
         val y1 = r.strips.first { it.tag == "Y-strip 1" }
+        // per-span sampling carries the gradient: unequal span loads 299.2717 / 469.959 kN/m
         assertEquals(3, y1.supportMoments.size)
-        assertEquals(-276.923, y1.supportMoments[0], 0.01)
+        assertEquals(-135.594, y1.supportMoments[0], 0.01)
         assertEquals(-630.769, y1.supportMoments[1], 0.01)
-        assertEquals(-276.923, y1.supportMoments[2], 0.01)
+        assertEquals(-418.252, y1.supportMoments[2], 0.01)
+        assertEquals(240.966, y1.spanMoments[0], 0.01)
+        assertEquals(418.411, y1.spanMoments[1], 0.01)
+        assertTrue(r.warnings.any { it.contains("eccentric moment Mx") })
         assertTrue(r.isSafe)
     }
 
@@ -102,6 +114,34 @@ class ACIRaftFoundationTest {
         assertTrue(r.qMinService < 0.0)
         assertFalse(r.isSafe)
         assertTrue(r.warnings.any { it.contains("outside the rigid-raft method scope") })
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `incomplete rectangular grid is rejected - missing intersection breaks the strip assumption`() {
+        footing.designRaftFoundation(
+            30.0, 400.0,
+            listOf(
+                RaftColumn(0.0, 0.0, 400.0, 400.0, 1200.0, 1500.0),
+                RaftColumn(6000.0, 0.0, 400.0, 400.0, 1200.0, 1500.0),
+                RaftColumn(0.0, 6000.0, 400.0, 400.0, 1200.0, 1500.0)
+                // (6000, 6000) missing: 2 x-lines x 2 y-lines but only 3 columns
+            ),
+            1000.0, 200.0, 500.0
+        )
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `swapped service and factored loads fail closed`() {
+        footing.designRaftFoundation(
+            30.0, 400.0,
+            listOf(
+                RaftColumn(0.0, 0.0, 400.0, 400.0, 1500.0, 1200.0),  // factored < service
+                RaftColumn(6000.0, 0.0, 400.0, 400.0, 1200.0, 1500.0),
+                RaftColumn(0.0, 6000.0, 400.0, 400.0, 1200.0, 1500.0),
+                RaftColumn(6000.0, 6000.0, 400.0, 400.0, 1200.0, 1500.0)
+            ),
+            1000.0, 200.0, 500.0
+        )
     }
 
     @Test(expected = IllegalArgumentException::class)
