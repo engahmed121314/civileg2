@@ -93,3 +93,28 @@ Behavior changes (intended, owner-approved):
 - Golden vectors updated on this branch: `verified alpha is the continuous
   API RP 2A curve`, `verified clay alpha high-strength band matches API
   psi^-0p25 form`, `verified group efficiency is standard Converse-Labarre`.
+
+## Stability track, batch — `SBCSteelDesignEngine` (accessed 2026-11-21)
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| S-01 | Resistance factors: φt = φc = φb = φv = 0.90; φ = 0.75 for bolt shear/tension, weld, net rupture, plate bearing, block shear; φc(concrete bearing) = 0.65 | Official SBC 306 PDF, alriyadh.gov.sa archive (LRFD design basis, Sections 1.5); equation-factor cross-check via [ideCAD AISC 360 pages](https://help.idecad.com/ideCAD/steel-column-design-aisc-360-16) (secondary) | Verified (official excerpt + secondary) |
+| S-02 | Column curve: Fe = π²E/(KL/r)²; Fcr = 0.658^(Fy/Fe)·Fy for KL/r ≤ 4.71√(E/Fy), else Fcr = 0.877·Fe | [ideCAD — Flexural Buckling per AISC 360-16](https://help.idecad.com/ideCAD/flexural-buckling); same curve family in AISC 360-05, the licensed SBC 306 basis | Verified (secondary) |
+| S-03 | Compact-section flexure Mn = Fy·Zx (Chapter F2). Engine NONCOMPACT path returns min(Mp, My) — conservative vs the AISC F3 flange-local-buckling interpolation. Engine SLENDER path (My·(1−0.3·…) blend) is not an AISC/SBC equation | AISC 360 F2/F3 forms via ideCAD (secondary) | Compact verified (secondary); NONCOMPACT/SLENDER CHARACTERIZED — U-S1 flagged, conservative direction |
+| S-04 | Shear Vn = 0.6·Fy·Aw with Aw = (d−2tf)·tw and no Cv factor. Cv = 1.0 is exact for webs with h/tw ≤ 2.24√(E/Fy) (all standard rolled I-shapes); slender webs are overestimated | AISC 360 G2 via ideCAD (secondary) | Verified for standard sections; CHARACTERIZED otherwise — U-S1 note |
+| S-05 | LTB: Lp = 1.76·ry·√(E/Fy), checked against ry (weak axis) | AISC 360 F2 via ideCAD (secondary) | Verified (secondary); LTB vectors deferred to a later batch |
+| S-06 | Fillet weld (J2.4): throat = 0.707·w, Fw = 0.60·FEXX, φ = 0.75; base-metal shear check 0.6·Fu with φ = 0.90 | AISC 360 J2 via ideCAD (secondary) | Verified (secondary) |
+| S-07 | Bolt shear 0.45·Fu·Ab φ = 0.75 (threads-included value of AISC Table J3.2 — engine has no thread-condition input, conservative for A325-N); bearing 2.4·Fu·d·t φ = 0.75 (J3.10); block shear J4.3 with Ubs = 1.0; engine block-shear geometry lc = 3·db is approximate | AISC 360 J3/J4 via ideCAD (secondary) | Formulas verified (secondary); 0.45Fu and lc = 3db CHARACTERIZED |
+| S-08 | Combined loading H1-1a / H1-1b with the 0.2 axial threshold | AISC 360 H1 via ideCAD (secondary) | Verified (secondary) |
+| S-09 | Base plate concrete bearing φc·0.85·f'c·A1·√(A2/A1), √ ratio capped at 2 (AISC Design Guide 1 / J8). Engine extras: a 0.5 factor inside requiredArea (plate sizing only, conservative) and cantilever X = max(m, n) without the λn' term | AISC DG1 J8 form (secondary) | Bearing formula verified (secondary); sizing/cantilever CHARACTERIZED — U-S2 flagged, conservative |
+| S-10 | Bracing tension D2: φFyAg vs φFuAn with An = 0.85·Ag hole deduction approximation | AISC 360 D2 via ideCAD (secondary) | Formula verified (secondary); 0.85·Ag CHARACTERIZED — U-S3 flagged |
+| S-11 | SBC-specific engine constants: coastal corrosion capacity reduction ÷1.1, minimum plate thickness 6 mm in corrosive environments, load factors 1.2D/1.6L, seismic width-thickness limits | No public SBC 306 clause text located for these specific values | **UNVERIFIED** (engine constants; plausible vs common practice, not opened in the source) |
+| S-12 | Live-load deflection limit L/360 | Common serviceability practice (AISC 360 Chapter L is non-mandatory guidance) | CHARACTERIZED |
+| U-S4 | Bracing CHS radius of gyration r = D/4; exact thin-tube r ≈ D/(2√2) ≈ 0.354·D, so the engine overestimates slenderness ~41% for CHS compression bracing | Engine inspection vs standard formula | **FLAGGED, not fixed** — conservative direction |
+| U-S5 | Engine header and codeNotes cite "AISC 360-16" as the SBC 306 basis; the official SBC 306 text licenses AISC 360-05/341-05 and AISC LRFD 1999. The column-curve and φ values used are identical in both, so results are unaffected; the reference label is wrong | Official SBC 306 PDF vs engine comments | **FLAGGED, documentation-only** |
+
+Golden vectors: S-01/S-02 (column inelastic + elastic branches), S-03 compact
+(beam flexure), S-04 (beam shear), S-06 (fillet weld), S-08 (H1-1a passing
+case), deflection S-12. Characterization pins: coastal factor, bolted
+connection governing stack, base-plate sizing, bracing tension.
+No production formula was added or changed in this batch.
