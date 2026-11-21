@@ -203,3 +203,51 @@ Removed provenance: the previous table ("جداول مبسطة من الكود �
 0.031/0.024 at r = 1.0 fingerprint), not ECP 203. Owner decision 2026-11-21:
 forget the Indian code and remove everything related to it; ECP 203-2020 and
 SBC PDFs are the references of record, ACI PDF to follow.
+
+## ACI 318M-14 primary verification batch — ACIPileFoundation structural clauses (accessed 2026-11-21)
+
+Source of record: the owner's ACI 318M-14 Arabic/English edition (4 PDF parts,
+801 pages, forwarded by the owner 2026-11-21). Printed page numbers below are the
+code's own page footers; the PDF part/page locators point into the owner's files.
+This batch upgrades P-04/P-05 from secondary-source to primary-source status.
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| A-01 | Table 21.2.1 strength reduction factors: shear φ = 0.75 (row b); moment/axial φ = 0.65–0.90 per §21.2.2 (tension-controlled 0.90). Engine uses φshear = 0.75, φflex = 0.90. **Upgrades P-05 to primary.** | ACI 318M-14 Table 21.2.1, printed p. 544 (part 3, PDF p. 153) | **Verified (primary)** |
+| A-02 | §22.5.5.1 one-way shear for nonprestressed members without axial force: Vc = 0.17·λ·√f'c·bw·d (Eq. 22.5.5.1). Engine: 0.17·√f'c·b·d. **Upgrades P-05 to primary.** | ACI 318M-14 §22.5.5.1, printed p. 563 (part 3, PDF p. 172) | **Verified (primary)** |
+| A-03 | Table 22.6.5.2 two-way shear: vc = least of (a) 0.33·λ√f'c, (b) 0.17·(1+2/β)·λ√f'c, (c) 0.083·(2+αs·d/bo)·λ√f'c; §22.6.5.3 αs = 40 interior / 30 edge / 20 corner. Engine matches, with αs = 40 (interior). **Upgrades P-04 to primary.** | ACI 318M-14 Table 22.6.5.2, printed p. 579 (part 3, PDF p. 188); §22.6.5.3, printed p. 580 (part 3, PDF p. 189) | **Verified (primary)** |
+| A-04 | §22.6.4.1 two-way shear critical section: perimeter bo at d/2 from edges of column / concentrated loads / reaction areas. Engine: punching perimeter at d/2 from column face. | ACI 318M-14 §22.6.4.1, printed p. 575 (part 3, PDF p. ~175) | **Verified (primary)** |
+| A-05 | Table 13.2.7.1 critical section for Mu in shallow foundations and pile caps: column or pedestal → face of column or pedestal; §13.2.7.2 shear critical sections measured from the Mu critical section location. Engine: moment at column face, one-way shear at d from column face. | ACI 318M-14 Table 13.2.7.1 + §13.2.7.2, printed p. 307 (part 2, PDF p. 116) | **Verified (primary)** |
+| A-06 | §9.6.1.2 minimum flexural reinforcement: As,min = greater of (a) 0.25·√f'c/fy·bw·d and (b) 1.4/fy·bw·d. Engine's ρmin = 0.0035 = 1.4/400 (fy = 400 MPa); with f'c = 24 MPa, case (a) = 0.0031 < 0.0035, so (b) governs. The engine applies the beam minimum to pile caps — conservative and consistent with the slab-tab note in §9.6.1.1 (engine design choice, not an error). | ACI 318M-14 §9.6.1.2, printed p. 222 (part 2, PDF p. 31) | **Verified (primary)** |
+
+Convention note (not a clause): the engine takes fcu (cube strength) and
+converts f'c = 0.8·fcu internally — an app-wide input convention, since ACI
+318M-14 works on the specified cylinder strength f'c directly. No code clause
+involved; flagged here so future audits don't misread the 0.8 factor as an ACI
+provision.
+
+Not in this batch: P-01, P-02, P-03, P-06, P-07 are geotechnical capacity
+formulas (Skempton, API RP 2A, Berezantzev, Converse-Labarre). They are not
+ACI 318 provisions and remain verified against their own secondary sources.
+
+No production formula was added or changed in this batch.
+
+### ACI combined footing audit — `ACIFooting.designCombinedFooting` (same batch)
+
+Shared checks verified against the owner PDF (entries A-01..A-06 apply here too):
+punching uses b0 = 2(c1+c2)+4d (perimeter at d/2, §22.6.4.1), vc = min of the
+three Table 22.6.5.2 cases with αs = 40, one-way Vc = 0.17·√f'c·b·d
+(§22.5.5.1), φshear = 0.75 / φflex = 0.90 (Table 21.2.1).
+
+| ID | Finding | Evidence | Status |
+|---|---|---|---|
+| CF-01 | Longitudinal bending uses the simply-supported simplification M = qu·B·L²/8. ACI 318M-14 §13.2.6.2 permits any procedure satisfying equilibrium and geometric compatibility; this form overstates mid-span sagging (≈ wL²/8 vs wL²/8 − P·S/2 for symmetric loads) but never designs top (hogging) reinforcement at the columns, and computes no transverse reinforcement under each column (beam-strip action). | Engine code; ACI 318M-14 §13.2.6.2, printed p. 307 (part 2, PDF p. 116) | **FLAGGED, not fixed** — needs an owner engineering decision (invert-beam shear/moment diagram + transverse strips is the recommended correct method) |
+| CF-02 | One-way shear check omits the xResultant offset in the shear span (overestimates Vu — conservative direction) and never checks the inner face of column 2. | Engine code (Step 9) | **FLAGGED, not fixed** — bundle with CF-01 |
+| CF-03 | The eccentricity/trapezoid block is dead code: the footing centroid is placed at the load resultant by construction, so e ≡ 0 and maxSoilPressure always equals soilPressure. Reported max/min pressures are misleading. | Engine code (Steps 2–4) | **FLAGGED, not fixed** — cosmetic/reporting |
+
+Existing test coverage: ACIFootingTest covers designCombinedFooting with a
+smoke test only (valid inputs produce a result; zero distance throws). No
+golden vectors pin combined-footing numbers; a fix for CF-01..CF-03 should
+land with golden vectors per R4.
+
+No production formula was added or changed in this batch.
