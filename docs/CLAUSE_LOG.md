@@ -170,3 +170,26 @@ the batch was authored; masked by the axialRatio compile error fixed in #50):
   Source: designBasePlate anchor bucket, SBCSteelDesignEngine.kt.
 
 No production formula was added or changed in this batch.
+
+## Owner-decision batch - ECPSlab two-way bending coefficients (accessed 2026-11-21)
+
+Replacement of the legacy simplified two-way slab moment table (BS 8110 / IS 456
+family values mislabeled as ECP) with the verified ECP 203-2020 method. Source:
+the owner's own copy of the official Arabic ECP 203-2020 PDF, sent via WhatsApp
+on 2026-11-21. Every row below was read directly from that PDF and is VERIFIED
+(primary source, first-party code text).
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| TW-01 | ECP 203-2020 §6-1-2-6-3 (simplified method, two-way solid slabs, uniform loads): `M_a = alpha·w·a²/d`, `M_b = beta·w·b²/d`; d = 8 span simply supported both ends, d = 10 continuous one end, d = 12 continuous both ends [Eq. 6-7a/b/c] | Owner-provided ECP 203-2020 PDF, printed page 6-9 (PDF p. 242) | Verified (primary) |
+| TW-02 | Table 6-1 (slabs cast monolithically with beams, LL ≤ 5 kN/m²): alpha = 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85 and beta = 0.35, 0.29, 0.25, 0.21, 0.18, 0.16, 0.14, 0.12, 0.11, 0.09, 0.08 for r = 1.0..2.0; closed form Eq. 6-8: `alpha = 0.5r − 0.15`, `beta = 0.35/r²` | Same PDF, printed page 6-9 | Verified (primary) |
+| TW-03 | Method scope (§6-1-2-6-3 + §6-2-1-6-1): rectangular panels supported on four sides, cast monolithically with beams, rectangularity ratio r ≤ 2 (r > 2 → design one-way); LL > 5 kN/m² uses Table 6-3 (not yet implemented) | Same PDF, printed pages 6-8/6-9 | Verified (primary) |
+| TW-04 | Wall-supported variant: Table 6-1(2a) alpha 0.396..0.849, beta 0.396..0.053 (not yet implemented; engine assumes monolithic-with-beams) | Same PDF, printed page 6-10 (PDF p. 243) | Verified (primary), implementation deferred |
+| TW-05 | Negative support moment between adjacent panels: `M_c = (M1·L1 + M2·L2)/(L1 + L2)` [Eq. 6-9]; single-panel scope: negative coefficient equals the continuous-span positive coefficient, zero for simply supported spans | Same PDF, printed page 6-10 | Verified (primary); single-panel mapping is an engine convention, stated in code comments |
+
+Removed provenance: the previous table ("جداول مبسطة من الكود المصري (قريبة من قيم
+ماركوس)") and the advanced-quality-fixes branch's 8-case table labeled "ECP 203
+جدول 6-1" are BS 8110 Table 3.13 / IS 456 Table 26 family values (interior-panel
+0.031/0.024 at r = 1.0 fingerprint), not ECP 203. Owner decision 2026-11-21:
+forget the Indian code and remove everything related to it; ECP 203-2020 and
+SBC PDFs are the references of record, ACI PDF to follow.

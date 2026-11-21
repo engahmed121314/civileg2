@@ -160,31 +160,59 @@ class ECPSlab : SlabDesign {
         )
     }
 
+    /**
+     * معاملات عزم الانحناء للبلاطة المصمتة ثنائية الاتجاه حسب ECP 203-2020
+     * البند ٦-١-٢-٦-٣: «طريقة مبسطة لحساب عزوم الانحناء في البلاطات المصمتة ذات الاتجاهين
+     * المعرضة لأحمال منتظمة التوزيع» — جدول (١-٦) والمعادلات [6-7a/b/c] و[6-8].
+     *
+     *   M_a = α·w·a²/d   ،   M_b = β·w·b²/d
+     *
+     * d = 8 للبحر بسيط الارتكاز من الناحيتين، 10 للمستمر من ناحية واحدة، 12 للمستمر من الناحيتين.
+     * α = 0.5r − 0.15  ،  β = 0.35/r²   (معادلة 6-8، مطابقة لجدول 6-1، r = b/a ≤ 2)
+     *
+     * حدود الطريقة (نفس البند + البند ٦-٢-١-٦-١): بلاطات مستطيلة مرتكزة على جوانبها الأربعة
+     * ومصبوبة ميليثيا مع الكمرات، r ≤ 2 (لـ r > 2 تُصمم كبلاطة أحادية الاتجاه)،
+     * حمل حي ≤ 5 كيلونيوتن/م² (للأحمال الأكبر: جدول ٦-٣ — غير منفذ بعد).
+     * البلاطات المرتكزة على حوائط مباني تستخدم جدول ٦-١(٢أ) — غير منفذ بعد.
+     * العزوم السالبة بين البلاطات المتجاورة تُحسب بمعادلة 6-9 (خارج نطاق حاسبة اللوحة المفردة).
+     * مرجعية التوثيق: docs/CLAUSE_LOG.md بنود TW-01 إلى TW-05 (متحقق منها من PDF الكود).
+     */
     private fun calculateMomentCoefficients(
         aspectRatio: Double,
         supports: SlabSupportConditions
     ): MomentCoefficients {
-        // جداول مبسطة من الكود المصري (قريبة من قيم ماركوس)
-        val isAllFixed = supports.edgeA == EdgeCondition.FIXED && 
-                        supports.edgeB == EdgeCondition.FIXED &&
-                        supports.edgeC == EdgeCondition.FIXED &&
-                        supports.edgeD == EdgeCondition.FIXED
-        
-        return if (isAllFixed) {
-            when {
-                aspectRatio <= 1.0 -> MomentCoefficients(0.031, 0.024, 0.031, 0.024)
-                aspectRatio <= 1.2 -> MomentCoefficients(0.036, 0.027, 0.028, 0.021)
-                aspectRatio <= 1.4 -> MomentCoefficients(0.040, 0.030, 0.025, 0.019)
-                else -> MomentCoefficients(0.044, 0.033, 0.022, 0.017)
+        val r = aspectRatio.coerceAtLeast(1.0).coerceAtMost(2.0)
+        val alpha = 0.5 * r - 0.15   // معادلة 6-8 = جدول 6-1
+        val beta = 0.35 / (r * r)    // معادلة 6-8
+
+        fun isContinuousEdge(e: EdgeCondition) =
+            e == EdgeCondition.FIXED || e == EdgeCondition.CONTINUOUS
+
+        fun spanDenominator(edge1: EdgeCondition, edge2: EdgeCondition): Double =
+            when (listOf(edge1, edge2).count(::isContinuousEdge)) {
+                2 -> 12.0  // مستمر من الناحيتين
+                1 -> 10.0  // مستمر من ناحية واحدة
+                else -> 8.0 // بسيط الارتكاز من الناحيتين
             }
-        } else {
-            when {
-                aspectRatio <= 1.0 -> MomentCoefficients(0.048, 0.036, 0.048, 0.036)
-                aspectRatio <= 1.2 -> MomentCoefficients(0.055, 0.041, 0.043, 0.032)
-                aspectRatio <= 1.4 -> MomentCoefficients(0.061, 0.046, 0.038, 0.029)
-                else -> MomentCoefficients(0.067, 0.050, 0.034, 0.026)
-            }
-        }
+
+        // الاتجاه القصير (a) يحدّه الحافتان الطويلتان A وC؛ الاتجاه الطويل (b) تحدّه القصيرتان B وD
+        val dShort = spanDenominator(supports.edgeA, supports.edgeC)
+        val dLong = spanDenominator(supports.edgeB, supports.edgeD)
+
+        val positiveShort = alpha / dShort
+        val positiveLong = beta / dLong
+
+        // العزوم السالبة عند الاستمرار: بقيمة العزم المحسوب للبحر المستمر (للوحة مفردة؛
+        // بين البلاطات المتجاورة تُطبق معادلة 6-9 خارج هذا النطاق)
+        val negativeShort = if (dShort == 8.0) 0.0 else positiveShort
+        val negativeLong = if (dLong == 8.0) 0.0 else positiveLong
+
+        return MomentCoefficients(
+            negativeShort = negativeShort,
+            positiveShort = positiveShort,
+            negativeLong = negativeLong,
+            positiveLong = positiveLong
+        )
     }
 
     override fun checkSlabThickness(
