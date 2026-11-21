@@ -399,8 +399,6 @@ class ACIBeamTest {
     fun calculateDoublyReinforced_zeroFy_throwsException() {
         beam.calculateDoublyReinforcedBeam(DESIGN_MOMENT, WIDTH, TOTAL_DEPTH, FCU, 0.0)
     }
-}
-
     // ══════════════════════════════════════════════════════════════════════
     // GOLDEN VECTOR — flexure (hand-verified 2026-11-21 vs ACI 318M-14)
     // fcu=30 (fc'=24), fy=400, b=250, d=550, h=600, Mu=200 kN.m:
@@ -463,3 +461,5 @@ class ACIBeamTest {
         assertEquals(0.8347, result.utilizationRatio, 0.001)
         assertTrue(result.isSafe)
     }
+
+}
