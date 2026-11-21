@@ -170,3 +170,12 @@ the batch was authored; masked by the axialRatio compile error fixed in #50):
   Source: designBasePlate anchor bucket, SBCSteelDesignEngine.kt.
 
 No production formula was added or changed in this batch.
+
+### E-01 - ECP beam deflection uses actual fy (salvage) - 2026-11-21
+
+| ID | Claim | Source | Status |
+|----|-------|--------|--------|
+| E-01 | ECP 203 §6-3-1 deflection modification factor MF = 0.55 + 477 / (fy × ρ%), capped [1.0, 2.5], uses the member's actual design fy. Previously hardcoded fyEff = 360 regardless of the designed steel grade. Interface `BeamDesign.checkDeflection` gained `fy: Double = 360.0` (default preserves prior behavior for unconverted callers); ECP implementation uses the passed fy coerced to [240, 600]; ACI/SBC implementations accept the parameter for parity (their §24.2/§9.5 tables do not use it). | Engine code comments citing ECP 203-2025 §6-3-1; formula shape from salvage branch publish/advanced-quality-fixes | **UNVERIFIED** against the official ECP 203 text (source document not opened); formula unchanged from master's own comment, only the fy source was fixed |
+
+Golden guard: ECPBeamDeflectionFyTest pins MF behavior at fy = 240/360/400
+(span 6 m, depth 500 mm, ρ = 1.0%): ratio 0.240 / 0.320 / 0.344 respectively.

@@ -1359,7 +1359,7 @@ class CalculatorEngine @Inject constructor(
         ) / (width * effectiveDepth)
         val defCheck = beamEngine.checkDeflection(
             span = span, totalDepth = height, reinforcementRatio = rho,
-            supportCondition = supportType.toDomain()
+            supportCondition = supportType.toDomain(), fy = fy
         )
 
         // ── Provided shear capacity: Vc + Vs (or φ(Vc + Vs) for ACI/SBC) ──
