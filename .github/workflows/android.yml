@@ -254,3 +254,25 @@ jobs:
           echo "| Unit Tests | ${{ needs.test.result == 'success' && 'Passed' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Debug Build | ${{ needs.build-debug.result == 'success' && 'Passed' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| UI Tests (Emulator) | ${{ needs.ui-test.result == 'success' && 'Passed' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY
+  gate:
+    name: CI Gate
+    if: always()
+    needs: [guards, lint, test, build-debug, ui-test]
+    runs-on: ubuntu-latest
+    env:
+      GUARDS_RESULT: ${{ needs.guards.result }}
+      LINT_RESULT: ${{ needs.lint.result }}
+      TEST_RESULT: ${{ needs.test.result }}
+      BUILD_RESULT: ${{ needs.build-debug.result }}
+      UITEST_RESULT: ${{ needs.ui-test.result }}
+    steps:
+      - name: Fail if any required job did not succeed
+        run: |
+          echo "guards=$GUARDS_RESULT lint=$LINT_RESULT test=$TEST_RESULT build=$BUILD_RESULT ui-test=$UITEST_RESULT"
+          for r in "$GUARDS_RESULT" "$LINT_RESULT" "$TEST_RESULT" "$BUILD_RESULT" "$UITEST_RESULT"; do
+            if [ "$r" != "success" ]; then
+              echo "CI Gate: a required job did not succeed ($r)"
+              exit 1
+            fi
+          done
+          echo "CI Gate: all required jobs succeeded"
