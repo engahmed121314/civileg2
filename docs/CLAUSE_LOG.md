@@ -391,3 +391,68 @@ vc governing case (a) 1.617 MPa, φVc=1640.3 kN, util=0.880; one-way shear at
 d=415 from face: Vu=852.2 kN vs φVc=1088.5 kN; As top governed by min
 0.0020·Ag (Table 8.6.1.1, fy=400<420) vs required — computed in test. V2 — 2×3
 eccentric grid: derived in the test source comments.
+
+### F-05 verification addendum (2026-11-21, after review feedback)
+
+Review-driven hardening of the raft implementation (no new clauses opened; these are
+method-integrity measures on top of A-20a..e):
+
+1. **Sign/face convention re-derived from first principles.** A raft strip carries
+   UPWARD soil pressure, so its moment diagram is the negative of a downward-loaded
+   beam: raft TOP steel in spans, BOTTOM steel at column lines. An early draft had the
+   beam convention carried over unchanged; corrected before implementation review.
+2. **Applicability limits (fail closed).** Full contact required (qmin >= 0 at all
+   corners; uplift returns an explicit out-of-scope failure); COMPLETE rectangular
+   column grid required (a column at every grid intersection — a missing intersection
+   breaks the continuous-strip support assumption and is rejected, not averaged over);
+   single-line layouts rejected toward combined footing; rigidity is an ASSUMPTION of
+   §13.2.6.2 and is surfaced as a standing warning (no deflection/SSI check exists;
+   flexible mats need Winkler/FE — not implemented).
+3. **Load provenance.** The caller supplies both service and factored loads; the
+   combination is not verifiable by the engine. Swapped values fail closed
+   (factored >= service required per column); ratio > 2.0 warns.
+4. **Pressure sampling.** Strip line loads are sampled per SPAN midpoint (and per
+   overhang midpoint), not as one strip average, so eccentric pressure variation
+   ALONG a strip reaches the strip moments. Across the strip, sampling is at the
+   tributary-band centroid (exact for a linear field).
+5. **Force AND moment equilibrium (runtime self-check).** Force: strip reactions sum
+   to the factored column loads (exact). Moment: each strip family's reaction first
+   moment must reproduce the first moment of its sampled piecewise-uniform load
+   (verified exact to 1e-9); equivalently, reactions + the analytic discretization
+   term (uniform-per-span sampling drops w'·len³/12 of first moment per segment)
+   reproduce the applied first moment sum(Pu·x) / sum(Pu·y) exactly. Both identities
+   are checked at runtime with 0.5% tolerance; failure marks the result unsafe.
+6. **Discretization smoothing is reported, not hidden.** The discretization term is
+   exposed on the result (momentDiscretizationX/Y, kN·m) and a warning fires when it
+   exceeds 5% of the applied eccentric moment (V2: 934.9 kN·m = 11.7% of Mx=8000).
+   Design moments already use per-span sampling; the warning advises finer strips or
+   Winkler/FE for strong eccentricity.
+7. **V2 vector re-based at t = 600 mm.** At t = 500 the heavy edge X-strip fails
+   wide-beam shear (Vu = 877 kN vs φVc = 830 kN) — a genuine design outcome, not a
+   solver artifact. The failure path remains covered by V3 (corner punching + shear).
+8. **Benchmark independence.** V1 strip moments, punching and equilibrium were
+   cross-checked by closed-form hand arithmetic (values in the F-05 vector note);
+   the three-moment/tridiagonal solver is additionally pinned by the exact force and
+   moment identities above, which do not share code with the solver's moment output.
+
+### F-05 verification addendum — REVISION (2026-11-21, supersedes items 4-6 above)
+
+Review found that uniform-per-span sampling only equilibrates a SMOOTHED load (V2: 11.7%
+of the eccentric moment Mx never reached the strips) and that reporting the analytic
+correction term is bookkeeping, not physics. Replaced with **exact trapezoidal strip
+loads**: pressure is sampled AT each support line and raft edge (band centroid across
+the strip), and the three-moment equation uses the exact linear-load RHS
+-[Lj^3(8w0+7w1) + Lk^3(7w1+8w2)]/60 with trapezoidal end shears L(2w1+w2)/6, L(w1+2w2)/6
+and overhang fixed moments a^2(2w_edge + w_support)/6. For the linear pressure field the
+strip loads are then EXACT integrals of the field, and the field equilibrates the applied
+loads by construction, so **force and moment equilibrium are exact by construction** (V2:
+reacted = applied = 40000.0000 kN.m, diff 1e-9) with no correction term and no smoothing
+to disclose. The discretization metric/warning is removed. Formula verification:
+reduction to the uniform-load closed form (M = -wL^2/8 two-span, -wL^2/12 fixed ends),
+the known fixed-fixed triangular-load reactions (3wL/20, 7wL/20), and an independent
+Mohr-integral (force method) numerical solution of a 3-support trapezoidal case
+(-400.0000 kN.m both routes). One-way shear at d from the support face now subtracts the
+exactly integrated local trapezoidal load. Remaining documented limitations (unchanged):
+rigid-mat assumption (standing warning, no deflection/SSI check), complete rectangular
+grid required, load provenance caller-supplied, no settlement analysis, ACI 336.2R never
+opened.
