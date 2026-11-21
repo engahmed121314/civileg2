@@ -266,6 +266,63 @@ class ACIFootingTest {
         assertTrue("Length must be positive", result.requiredLength > 0)
     }
 
+    /**
+     * Golden vector A (symmetric): hand-computed per CLAUSE_LOG A-05/CF batch.
+     * P1 = P2 = 1400 kN factored, S = 3 m, qa = 200 kPa, h = 700 mm (d = 615),
+     * 400×400 columns, DEAD_LIVE (factor 1.4) → P_work = 1000 kN each,
+     * xR = 1500 mm, L = 3700 mm, B = 2750 mm, q = 196.56 kPa,
+     * w = 756.757 kN/m, M+ = 805.00 kN·m at ξ* = 1.85 m, M− = −8.51 kN·m.
+     */
+    @Test
+    fun designCombinedFooting_goldenVector_symmetric() {
+        val result = footing.designCombinedFooting(
+            30.0, 400.0, 1400.0, 1400.0, 3000.0, 200.0, 700.0,
+            LoadCombination.DEAD_LIVE, 400.0, 400.0, 400.0, 400.0
+        )
+        assertEquals(3700.0, result.requiredLength, 1.0)
+        assertEquals(2750.0, result.requiredWidth, 1.0)
+        assertEquals(196.56, result.soilPressure, 0.01)
+        assertEquals(result.soilPressure, result.maxSoilPressure, 1e-9)
+        // Bottom steel: strength needs 1351 mm²/m but Table 7.6.1.1 min governs:
+        // As,min = 0.0020 × 1000 × 700 = 1400 mm²/m
+        assertEquals(1400.0, result.reinforcement.astRequired, 0.5)
+        // Hogging exists (overhang cantilever) → top steel at the minimum
+        assertNotNull(result.topReinforcement)
+        assertEquals(1400.0, result.topReinforcement!!.astRequired, 0.5)
+        // Two transverse strips, strength-governed: ρ = 0.002610 → 1604.9 mm²/m
+        assertEquals(2, result.transverseReinforcement.size)
+        assertEquals(1604.9, result.transverseReinforcement[0].astRequired, 1.0)
+        assertEquals(1604.9, result.transverseReinforcement[1].astRequired, 1.0)
+        // One-way shear: Vu = 518.4 kN ≤ φVc = 1056.4 kN; punching φVn = 3027.5 kN
+        assertTrue(result.punchingShearCheck.isSafe)
+        assertEquals(3027.5, result.punchingShearCheck.shearCapacity, 1.0)
+        assertTrue(result.isSafe)
+    }
+
+    /**
+     * Golden vector B (unequal loads, P1 ≫ P2): exercises CF-05 — the footing
+     * must extend past the lightly loaded column. Hand-computed: xR = 1117.2 mm,
+     * L = 2·max(xR + s1, S − xR + s2) = 5665.5 mm, B = 2450 mm,
+     * w = 511.87 kN/m, M+ = 476.22 kN·m at ξ* = 3.907 m, M− = −549.68 kN·m at
+     * column 1 left face, Vu_max = 627.9 kN ≤ φVc = 998.8 kN.
+     */
+    @Test
+    fun designCombinedFooting_goldenVector_unequalLoads() {
+        val result = footing.designCombinedFooting(
+            25.0, 400.0, 2000.0, 900.0, 3600.0, 150.0, 800.0,
+            LoadCombination.DEAD_LIVE, 500.0, 500.0, 400.0, 400.0
+        )
+        assertEquals(5665.5, result.requiredLength, 0.5)
+        assertEquals(2450.0, result.requiredWidth, 1.0)
+        assertEquals(149.23, result.soilPressure, 0.01)
+        // Both bottom and top land on Table 7.6.1.1 min: 0.0020 × 1000 × 800
+        assertEquals(1600.0, result.reinforcement.astRequired, 0.5)
+        assertNotNull(result.topReinforcement)
+        assertEquals(1600.0, result.topReinforcement!!.astRequired, 0.5)
+        assertEquals(2, result.transverseReinforcement.size)
+        assertTrue(result.isSafe)
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun designCombinedFooting_zeroDistance_throwsException() {
         footing.designCombinedFooting(
