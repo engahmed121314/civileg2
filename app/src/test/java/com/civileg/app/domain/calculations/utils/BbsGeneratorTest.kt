@@ -1,4 +1,4 @@
-package com.civileg.app.utils
+package com.civileg.app.domain.calculations.utils
 
 import com.civileg.app.domain.entities.DesignCode
 
