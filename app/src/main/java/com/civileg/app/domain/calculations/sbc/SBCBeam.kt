@@ -351,8 +351,11 @@ class SBCBeam : BeamDesign {
         span: Double,
         totalDepth: Double,
         reinforcementRatio: Double,
-        supportCondition: SupportCondition
+        supportCondition: SupportCondition,
+        fy: Double
     ): DeflectionCheckResult {
+        // SBC 304 §9.5 minimum-thickness table mirrors ACI 318; the shared
+        // fy parameter is accepted for parity, unused by the SBC ratios.
         // ── InputGuard — SBC 304 §9.5 ──
         InputGuard.positive("span", span)
         InputGuard.positive("totalDepth", totalDepth)

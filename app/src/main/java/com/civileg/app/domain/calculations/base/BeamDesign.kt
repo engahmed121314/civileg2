@@ -43,7 +43,8 @@ interface BeamDesign {
         span: Double,             // m - بحر الكمرة
         totalDepth: Double,       // mm - عمق الكمرة
         reinforcementRatio: Double, // نسبة التسليح
-        supportCondition: SupportCondition
+        supportCondition: SupportCondition,
+        fy: Double = 360.0        // MPa - إجهاد الخضوع الفعلي للصلب (ECP 203 §6-3-1 يستخدمه في معامل التعديل)
     ): DeflectionCheckResult
 
     /**

@@ -225,10 +225,12 @@ class ECPBeam : BeamDesign {
         span: Double,
         totalDepth: Double,
         reinforcementRatio: Double,
-        supportCondition: SupportCondition
+        supportCondition: SupportCondition,
+        fy: Double
     ): DeflectionCheckResult {
         InputGuard.positive("span", span)
         InputGuard.positive("totalDepth", totalDepth)
+        InputGuard.positive("fy", fy)
 
         // طريقة النسبة (Span/Depth) المبسطة حسب الكود المصري
         // ECP 203-2025 §6-3-1: Basic span/depth ratios
@@ -243,9 +245,10 @@ class ECPBeam : BeamDesign {
         // This modification factor accounts for service stress in reinforcement.
         // When ρ is very small, MF becomes large (more flexible), and must be capped.
         val rhoPercent = (reinforcementRatio * 100).coerceAtLeast(0.15)
-        // ECP 203-2025 §6-3-1: fy = 360 MPa default for high-grade steel (360/520)
-        // ملاحظة: الواجهة لا تمرر fy — إذا أُضيف باراميتر fy للواجهة مستقبلاً يمكن استخدامه مباشرة
-        val fyEff = 360.0  // ECP 203 default for high-grade steel (360/520)
+        // ECP 203-2025 §6-3-1: MF = 0.55 + 477 / (fy × ρ%)
+        // يُستخدم إجهاد الخضوع الفعلي fy الممرر للواجهة (وليس قيمة ثابتة 360) —
+        // القيمة الافتراضية 360 MPa (حديد 360/520) تحتفظ بالسلوك السابق عند عدم التمرير.
+        val fyEff = fy.coerceIn(240.0, 600.0)  // ECP 203: حدود درجات الصلب الشائعة
         val modificationFactor = (0.55 + 477.0 / (fyEff * rhoPercent)).coerceIn(1.0, 2.5)
         // ECP 203-2025 §6-3-1: Cap MF at 2.5 to prevent unrealistic allowable depths
         val allowableRatio = basicRatio * modificationFactor

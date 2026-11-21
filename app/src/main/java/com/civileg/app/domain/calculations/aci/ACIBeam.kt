@@ -234,8 +234,12 @@ class ACIBeam : BeamDesign {
         span: Double,
         totalDepth: Double,
         reinforcementRatio: Double,
-        supportCondition: SupportCondition
+        supportCondition: SupportCondition,
+        fy: Double
     ): DeflectionCheckResult {
+        // ACI 318 §24.2 minimum-thickness table is fy-based via its own
+        // constants; the shared-interface fy parameter is accepted here for
+        // parity but does not change the ACI span/depth ratios.
         InputGuard.positive("span", span)
         InputGuard.positive("totalDepth", totalDepth)
         // Simplified ratio method per ACI Table 24.2.2
