@@ -645,4 +645,317 @@ class ACIFooting : FootingDesign {
         val fc_prime = 0.8 * fcu
         return PHI_SHEAR * 0.33 * sqrt(fc_prime) * perimeter * effectiveDepth / 1000.0
     }
+
+
+    // ══════════════════════════════════════════════════════════════════════
+    // F-05: rigid-raft rebuild (docs/CLAUSE_LOG.md F-05, entries A-20a..e)
+    // Method: ACI 318M-14 §13.2.6.2 / §13.3.4.3 — elastic pressure field under
+    // a rigid raft, inverted-slab strips by the three-moment equation,
+    // punching per actual column. Applicability limits per CLAUSE_LOG.
+    // ══════════════════════════════════════════════════════════════════════
+
+    data class RaftColumn(
+        val x: Double, val y: Double,            // column center, mm
+        val widthX: Double, val widthY: Double,  // column dimensions, mm
+        val serviceLoad: Double,                 // kN (unfactored, §13.3.1.1)
+        val factoredLoad: Double                 // kN (Pu, for strength checks)
+    )
+
+    enum class RaftPunchingPosition { INTERIOR, EDGE, CORNER }
+
+    data class RaftPunchingResult(
+        val columnIndex: Int,
+        val position: RaftPunchingPosition,
+        val criticalPerimeter: Double,  // mm
+        val criticalArea: Double,       // m²
+        val vu: Double,                 // kN
+        val phiVc: Double,              // kN
+        val utilization: Double,
+        val isSafe: Boolean
+    )
+
+    data class RaftShearCheck(
+        val stripTag: String,
+        val lineIndex: Int,
+        val vu: Double,                 // kN at d from the support face
+        val phiVc: Double,              // kN
+        val utilization: Double,
+        val isSafe: Boolean
+    )
+
+    data class RaftStripResult(
+        val tag: String,
+        val spansDirection: String,      // "X" or "Y"
+        val tributaryWidth: Double,      // mm
+        val lineLoad: Double,            // kN/m, factored
+        val supportMoments: List<Double>,// kNm, BEAM sign (negative → raft BOTTOM steel at the line)
+        val spanMoments: List<Double>,   // kNm, max sagging per span (positive → raft TOP steel in the span)
+        val asTop: Double,               // mm² within the tributary width (midspan regions)
+        val asBottom: Double             // mm² within the tributary width (column-line regions)
+    )
+
+    data class RaftDesignResult(
+        val lengthX: Double, val widthY: Double, // mm
+        val thickness: Double,
+        val qMaxService: Double, val qMinService: Double, // kPa
+        val fullContact: Boolean,
+        val strips: List<RaftStripResult>,
+        val punching: List<RaftPunchingResult>,
+        val oneWayShear: List<RaftShearCheck>,
+        val equilibriumCheck: Boolean,
+        val isSafe: Boolean,
+        val warnings: List<String>,
+        val codeNotes: List<String>
+    )
+
+    /** Pressure-field parameters (kPa) under a rigid raft: q(x,y) = c0 + cx·(x−xc) + cy·(y−yc), x,y in mm. */
+    private data class PressureField(val c0: Double, val cx: Double, val cy: Double, val xc: Double, val yc: Double) {
+        fun q(x: Double, y: Double) = c0 + cx * (x - xc) + cy * (y - yc)
+    }
+
+    private fun pressureField(columns: List<RaftColumn>, x0: Double, x1: Double, y0: Double, y1: Double, factored: Boolean): PressureField {
+        val L = (x1 - x0) / 1000.0   // m
+        val B = (y1 - y0) / 1000.0   // m
+        val A = L * B
+        val xc = (x0 + x1) / 2.0
+        val yc = (y0 + y1) / 2.0
+        val P = columns.sumOf { if (factored) it.factoredLoad else it.serviceLoad }
+        val Mx = columns.sumOf { (if (factored) it.factoredLoad else it.serviceLoad) * (it.y - yc) / 1000.0 } // kN.m about centroidal x
+        val My = columns.sumOf { (if (factored) it.factoredLoad else it.serviceLoad) * (it.x - xc) / 1000.0 } // kN.m about centroidal y
+        val Ix = L * B * B * B / 12.0   // m⁴, about x-axis
+        val Iy = B * L * L * L / 12.0   // m⁴, about y-axis
+        return PressureField(P / A, My / (Iy * 1e3), Mx / (Ix * 1e3), xc, yc) // kPa per mm offset (M[kN.m]·dy[mm]/1e3/I[m^4])
+    }
+
+    /** Solves the three-moment equation for a continuous beam (downward w, supports at [positions], overhang end moments known). Returns support moments (kNm, hogging negative). */
+    private fun continuousBeamSupportMoments(positions: List<Double>, w: Double, overhangLeft: Double, overhangRight: Double): List<Double> {
+        val n = positions.size
+        val m = DoubleArray(n)
+        m[0] = -w * overhangLeft * overhangLeft / 2.0
+        m[n - 1] = -w * overhangRight * overhangRight / 2.0
+        if (n == 2) return m.toList()
+        // tridiagonal system for interior supports
+        val nv = n - 2
+        val a = DoubleArray(nv); val b = DoubleArray(nv); val cc = DoubleArray(nv); val r = DoubleArray(nv)
+        for (j in 1 until n - 1) {
+            val Lj = positions[j] - positions[j - 1]
+            val Lk = positions[j + 1] - positions[j]
+            val i = j - 1
+            a[i] = Lj
+            b[i] = 2 * (Lj + Lk)
+            cc[i] = Lk
+            r[i] = -w * (Lj * Lj * Lj + Lk * Lk * Lk) / 4.0
+        }
+        r[0] -= a[0] * m[0]
+        r[nv - 1] -= cc[nv - 1] * m[n - 1]
+        // Thomas algorithm
+        for (i in 1 until nv) {
+            val f = a[i] / b[i - 1]
+            b[i] -= f * cc[i - 1]
+            r[i] -= f * r[i - 1]
+        }
+        for (i in nv - 1 downTo 0) {
+            val up = if (i == nv - 1) 0.0 else cc[i] * m[i + 2]
+            m[i + 1] = (r[i] - up) / b[i]
+        }
+        return m.toList()
+    }
+
+    /** Exact As for a rectangular section (singly reinforced), mm²; Double.POSITIVE_INFINITY if the section fails. */
+    private fun asFlexure(fc: Double, fy: Double, b: Double, d: Double, mu: Double): Double {
+        val phi = 0.90
+        val k = mu / (phi * 0.85 * fc * b * d * d)
+        if (k <= 0.0) return 0.0
+        if (1.0 - 2.0 * k <= 0.0) return Double.POSITIVE_INFINITY
+        return 0.85 * fc * b * d / fy * (1.0 - sqrt(1.0 - 2.0 * k))
+    }
+
+    /** Mat minimum reinforcement per ACI 318M-14 §13.3.4.4 → Table 8.6.1.1 (verified A-20c/A-20d). */
+    fun matMinReinforcement(fy: Double, grossWidth: Double, thickness: Double): Double {
+        val ratio = if (fy < 420.0) 0.0020 else max(0.0018 * 420.0 / fy, 0.0014)
+        return ratio * grossWidth * thickness
+    }
+
+    /**
+     * Rigid-raft design from the actual column layout (F-05 rebuild).
+     * Applicability (CLAUSE_LOG F-05): rectangular plan from the column bounding box plus
+     * a uniform edge projection; ≥ 2 column lines in each direction; full soil contact
+     * (qmin ≥ 0) is required — uplift/partial contact is outside the rigid method and is
+     * returned as an explicit out-of-scope failure, never silently designed.
+     * Sign convention (re-derived after review): the strip carries UPWARD pressure and is
+     * held down at the column lines, so the raft moment is the NEGATIVE of the
+     * downward-loaded beam: TOP steel in the spans, BOTTOM steel at the column lines.
+     */
+    fun designRaftFoundation(
+        fcu: Double,
+        fy: Double,
+        columns: List<RaftColumn>,
+        edgeProjection: Double,
+        soilBearingCapacity: Double,
+        raftThickness: Double
+    ): RaftDesignResult {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("edgeProjection", edgeProjection)
+        InputGuard.positive("soilBearingCapacity", soilBearingCapacity)
+        InputGuard.positive("raftThickness", raftThickness)
+        require(columns.isNotEmpty()) { "raft needs at least one column" }
+        val warnings = mutableListOf<String>()
+        val codeNotes = mutableListOf<String>()
+        val fc = 0.8 * fcu
+        val d = raftThickness - getMinCover() - 10.0
+        require(d >= 150.0) { "ACI 318M-14 13.3.1.2: effective depth of bottom reinforcement must be at least 150 mm" }
+
+        val x0 = columns.minOf { it.x - it.widthX / 2.0 } - edgeProjection
+        val x1 = columns.maxOf { it.x + it.widthX / 2.0 } + edgeProjection
+        val y0 = columns.minOf { it.y - it.widthY / 2.0 } - edgeProjection
+        val y1 = columns.maxOf { it.y + it.widthY / 2.0 } + edgeProjection
+
+        val qs = pressureField(columns, x0, x1, y0, y1, false)
+        val qu = pressureField(columns, x0, x1, y0, y1, true)
+        val corners = listOf(x0 to y0, x0 to y1, x1 to y0, x1 to y1)
+        val qMaxService = corners.maxOf { qs.q(it.first, it.second) }
+        val qMinService = corners.minOf { qs.q(it.first, it.second) }
+        val fullContact = qMinService >= 0.0
+        if (!fullContact) {
+            warnings.add("Uplift / partial contact (qmin < 0): outside the rigid-raft method scope - result is not valid, re-resolve with a method that handles loss of contact")
+        }
+
+        fun lines(values: List<Double>): List<Double> {
+            val out = mutableListOf<Double>()
+            for (v in values.sorted()) if (out.isEmpty() || abs(out.last() - v) > 1.0) out += v
+            return out
+        }
+        val xLines = lines(columns.map { it.x })
+        val yLines = lines(columns.map { it.y })
+        require(xLines.size >= 2 && yLines.size >= 2) { "rigid-raft strip method needs at least 2 column lines in each direction - use a combined footing for single-line layouts" }
+
+        val strips = mutableListOf<RaftStripResult>()
+        val shearChecks = mutableListOf<RaftShearCheck>()
+        val reactionSums = mutableMapOf<String, Double>()
+
+        /**
+         * One family of strips: strips span along [spansDir] between the support lines
+         * (the column lines perpendicular to [spansDir]); one strip per column line in the
+         * other direction, carrying the average factored pressure over its tributary width.
+         */
+        fun analyzeStrips(
+            spansDir: String,
+            stripLines: List<Double>,
+            supportLines: List<Double>,
+            bandOf: (Int) -> Pair<Double, Double>,
+            edgeLow: Double,
+            edgeHigh: Double
+        ) {
+            var dirReactionSum = 0.0
+            stripLines.forEachIndexed { rowIdx, rowPos ->
+                val (widthMm, bandCentroid) = bandOf(rowIdx)
+                // average factored pressure over the tributary band, sampled at the band
+                // CENTROID (not the column line) - they differ under eccentric pressure
+                val qAvg = if (spansDir == "X") qu.q((x0 + x1) / 2.0, bandCentroid) else qu.q(bandCentroid, (y0 + y1) / 2.0)
+                val w = qAvg * widthMm / 1000.0          // kN/m
+                val n = supportLines.size
+                val L = supportLines.map { it / 1000.0 }  // m
+                val oLeft = (supportLines.first() - edgeLow) / 1000.0
+                val oRight = (edgeHigh - supportLines.last()) / 1000.0
+                val M = continuousBeamSupportMoments(L, w, oLeft, oRight)
+                val R = DoubleArray(n)
+                val spanM = MutableList(n - 1) { 0.0 }
+                for (j in 0 until n - 1) {
+                    val Lj = L[j + 1] - L[j]
+                    val vLeft = w * Lj / 2.0 + (M[j + 1] - M[j]) / Lj
+                    R[j] += vLeft
+                    R[j + 1] += w * Lj - vLeft
+                    val xStar = vLeft / w
+                    if (xStar in 0.0..Lj) spanM[j] = M[j] + vLeft * xStar - w * xStar * xStar / 2.0
+                    spanM[j] = maxOf(spanM[j], 0.0)
+                }
+                R[0] += w * oLeft
+                R[n - 1] += w * oRight
+                dirReactionSum += R.sum()
+                // Reinforcement: raft TOP in spans (beam sagging), raft BOTTOM at lines (beam hogging)
+                val mSpanMax = (spanM.maxOrNull() ?: 0.0) * 1e6          // N.mm
+                val mSupMax = -(M.minOrNull() ?: 0.0) * 1e6              // N.mm, positive magnitude
+                val asTopReq = asFlexure(fc, fy, widthMm, d, mSpanMax)
+                val asBotReq = asFlexure(fc, fy, widthMm, d, mSupMax)
+                val asMin = matMinReinforcement(fy, widthMm, raftThickness)
+                strips += RaftStripResult(
+                    tag = "$spansDir-strip ${rowIdx + 1}", spansDirection = spansDir,
+                    tributaryWidth = widthMm, lineLoad = w,
+                    supportMoments = M, spanMoments = spanM,
+                    asTop = max(asTopReq, asMin), asBottom = max(asBotReq, asMin)
+                )
+                // One-way shear at d from each support face (§22.5.5.1 + Table 13.2.7.1/§13.2.7.2; F-03 rule)
+                val phiVc = PHI_SHEAR * 0.17 * sqrt(fc) * widthMm * d / 1000.0
+                for (j in 0 until n) {
+                    // widest column of THIS strip sitting on support line j, half-width in the span direction (m)
+                    val colHalf = columns.filter {
+                        abs((if (spansDir == "X") it.y else it.x) - rowPos) <= 1.0 &&
+                            abs((if (spansDir == "X") it.x else it.y) - supportLines[j]) <= 1.0
+                    }.maxOfOrNull { if (spansDir == "X") it.widthX else it.widthY }?.div(2000.0) ?: 0.2
+                    val vFaceLeft = if (j > 0) w * (L[j] - L[j - 1]) / 2.0 + (M[j - 1] - M[j]) / (L[j] - L[j - 1]) else 0.0
+                    val vFaceRight = if (j < n - 1) w * (L[j + 1] - L[j]) / 2.0 + (M[j + 1] - M[j]) / (L[j + 1] - L[j]) else 0.0
+                    val vu = max(0.0, max(vFaceLeft, vFaceRight) - w * (colHalf + d / 1000.0))
+                    shearChecks += RaftShearCheck(
+                        "$spansDir-strip ${rowIdx + 1}", j, vu, phiVc,
+                        if (phiVc > 0) vu / phiVc else Double.POSITIVE_INFINITY, vu <= phiVc
+                    )
+                }
+            }
+            reactionSums[spansDir] = dirReactionSum
+        }
+
+        fun band(lines: List<Double>, idx: Int, edgeLow: Double, edgeHigh: Double): Pair<Double, Double> {
+            val lo = if (idx == 0) edgeLow else (lines[idx - 1] + lines[idx]) / 2.0
+            val hi = if (idx == lines.size - 1) edgeHigh else (lines[idx] + lines[idx + 1]) / 2.0
+            return (hi - lo) to ((lo + hi) / 2.0)   // width, centroid (mm)
+        }
+        analyzeStrips("X", yLines, xLines, { band(yLines, it, y0, y1) }, x0, x1)  // x-spanning: one strip per y-row
+        analyzeStrips("Y", xLines, yLines, { band(xLines, it, x0, x1) }, y0, y1)  // y-spanning: one strip per x-line
+
+        // Punching per actual column (§22.6.4.1 minimum-perimeter rule, Table 22.6.5.2, §22.6.5.3)
+        val punching = columns.mapIndexed { idx, col ->
+            val left = col.x - col.widthX / 2.0 - d / 2.0
+            val right = col.x + col.widthX / 2.0 + d / 2.0
+            val bot = col.y - col.widthY / 2.0 - d / 2.0
+            val top = col.y + col.widthY / 2.0 + d / 2.0
+            val cl = left < x0; val cr = right > x1; val cb = bot < y0; val ct = top > y1
+            val clipped = listOf(cl, cr, cb, ct).count { it }
+            val xl = max(left, x0); val xr = min(right, x1)
+            val yb = max(bot, y0); val yt = min(top, y1)
+            val b0 = 2 * (xr - xl) + 2 * (yt - yb)
+            val areaCrit = (xr - xl) / 1000.0 * (yt - yb) / 1000.0   // m²
+            val position = when (clipped) { 0 -> RaftPunchingPosition.INTERIOR; 1 -> RaftPunchingPosition.EDGE; else -> RaftPunchingPosition.CORNER }
+            val alphaS = when (position) { RaftPunchingPosition.INTERIOR -> 40.0; RaftPunchingPosition.EDGE -> 30.0; RaftPunchingPosition.CORNER -> 20.0 }
+            val beta = max(col.widthX, col.widthY) / min(col.widthX, col.widthY)
+            val sqrtFc = sqrt(fc)
+            val vc = minOf(0.33 * sqrtFc, 0.17 * (1.0 + 2.0 / beta) * sqrtFc, 0.083 * (2.0 + alphaS * d / b0) * sqrtFc)
+            val phiVc = PHI_SHEAR * vc * b0 * d / 1000.0
+            val vu = col.factoredLoad - qu.q(col.x, col.y) * areaCrit
+            RaftPunchingResult(idx, position, b0, areaCrit, vu, phiVc,
+                if (phiVc > 0) vu / phiVc else Double.POSITIVE_INFINITY, vu <= phiVc)
+        }
+
+        // Global equilibrium self-check: strip reactions vs factored column loads (0.5% tolerance)
+        val totalFactored = columns.sumOf { it.factoredLoad }
+        val equilibriumCheck = reactionSums.values.all { abs(it - totalFactored) <= 0.005 * totalFactored }
+        if (!equilibriumCheck) warnings.add("Internal equilibrium check failed: strip reactions do not sum to the factored column loads")
+
+        codeNotes.add("Rigid-raft conventional method per ACI 318M-14 13.2.6.2/13.3.4.3 (CLAUSE_LOG F-05)")
+        codeNotes.add("Elastic pressure field q = P/A ± Mx·y/Ix ± My·x/Iy; bearing at UNFACTORED loads per 13.3.1.1")
+        codeNotes.add("Strips: three-moment elastic analysis (13.3.4.2 prohibits DDM); raft TOP steel in spans, BOTTOM at column lines")
+        codeNotes.add("Mat min reinforcement per 13.3.4.4 -> Table 8.6.1.1 (R13.3.4.4: consider continuous steel near both faces)")
+
+        val isSafe = fullContact && equilibriumCheck && qMaxService <= soilBearingCapacity &&
+            punching.all { it.isSafe } && shearChecks.all { it.isSafe } &&
+            strips.all { it.asTop.isFinite() && it.asBottom.isFinite() }
+        if (qMaxService > soilBearingCapacity) warnings.add("qmax service exceeds the allowable bearing capacity")
+        return RaftDesignResult(
+            lengthX = x1 - x0, widthY = y1 - y0, thickness = raftThickness,
+            qMaxService = qMaxService, qMinService = qMinService, fullContact = fullContact,
+            strips = strips, punching = punching, oneWayShear = shearChecks,
+            equilibriumCheck = equilibriumCheck, isSafe = isSafe,
+            warnings = warnings, codeNotes = codeNotes
+        )
+    }
 }

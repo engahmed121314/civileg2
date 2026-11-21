@@ -307,3 +307,87 @@ Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
 - **Real rule**: ACI 318M-14 §13.3.3.3 (VERIFIED printed pp.310-311, A-07): (a) long-direction reinforcement uniform across full width; (b) short-direction reinforcement: γs = 2/(β+1) of the total concentrated in a central band whose width equals the short side; remainder (1−γs) uniform outside the band.
 - **Fix**: 20% block removed; band-rule distribution computed and detailed (band bars, spacing, outside-band area in codeNotes).
 - **Golden vector**: same case as F-03 → β=1.4783, γs=0.8070, band width=2300 mm; short-dir steel min-governed 1000 mm²/m → total 3400; band 1192.9 mm²/m → 11Ø12 @ 100mm; outside band 596 mm²/m.
+
+### F-05 — ACI raft foundation rebuild: method decision (2026-11-21, before code per R4)
+
+**Finding:** `ACIFooting.designRaftFoundation` assumes uniform pressure
+(total/area, no eccentricity), checks punching against a fabricated 600×600
+column carrying 15% of the total load, and sizes bending from
+q·(√A/3)²/10 with no code or mechanics basis. The owner approved the rebuild
+with a column-layout overload (2026-11-21).
+
+**Method decision (engineering choice, authorized by §13.2.6.2):** rigid-raft
+conventional method.
+1. Geometry from the actual column layout plus a uniform edge projection.
+2. Elastic pressure field under the rigid raft: q(x,y) = P/A ± Mx·y/Ix ±
+   My·x/Iy (strength of materials — not a code clause; equilibrium-based,
+   permitted because §13.2.6.2 allows "any procedure" satisfying equilibrium
+   and geometric compatibility). Bearing check at SERVICE loads against qa.
+3. Inverted-slab strips: each column-line strip is a continuous beam over the
+   column-line supports carrying the tributary average FACTORED pressure;
+   elastic moments/shears by the three-moment equation (exact for prismatic
+   equal-section strips — equilibrium + compatibility). SIGN/FACE CONVENTION
+   (re-derived 2026-11-21 after review caught a reversal): the strip carries
+   UPWARD soil pressure and is held down at the column lines, so its moment
+   diagram is the negative of a downward-loaded continuous beam — HOGGING at
+   midspan (TOP steel) and SAGGING at the column lines (BOTTOM steel). This
+   holds under the rigid/uniform-pressure assumption; pressure concentration
+   near columns under an elastic bed is outside the chosen method. Moment
+   critical section at the support face per Table 13.2.7.1 (already
+   verified, entry A-05, printed p. 307);
+   one-way shear at d from the support face per §22.5.5.1 (verified A-02,
+   printed p. 563) and §13.2.7.2 (verified A-05).
+4. Punching per ACTUAL column: Vu = column factored load − average factored
+   pressure × area inside the critical perimeter; b0 per §22.6.4.1 whose
+   "perimeter bo is a minimum" rule reduces the perimeter at free raft edges
+   for edge/corner columns (§22.6.4.1 printed p. 575, part 3 PDF p. 184,
+   text-extracted 2026-11-21; free-edge critical sections also shown in
+   R22.6.4.3 Fig.); αs = 40/30/20 by interior/edge/corner position per
+   §22.6.5.3 (verified A-03, printed p. 580); vc = least of Table 22.6.5.2
+   (verified A-03, printed p. 579).
+5. Flexural design reuses calculateFootingReinforcement (§9.6.1.2 minimum —
+   the engine's documented conservative choice from entry A-06).
+
+**Open verification:** §13.3.1 (minimum reinforcement scope for footings/rafts)
+still to be opened before the strip min-steel rule is pinned; the existing
+§9.6.1.2 engine choice carries over until then. Golden vectors planned: 2×2
+symmetric grid (closed-form pressure + strip moments via three-moment) and
+2×3 eccentric grid.
+
+
+**Applicability limits (added same review):** the rigid-raft method requires
+full soil contact — qmin >= 0 over the whole raft (eccentricities within the
+kern: |ex| <= Lx/6, |ey| <= Ly/6 for a rectangular raft). If qmin < 0 the
+result is returned with isSafe=false and an explicit out-of-scope warning
+(uplift/partial contact is outside the rigid method), not silently designed
+with tension "pressure". Non-rectangular plans, openings, and strongly
+irregular column layouts are outside the strip idealization and rejected with
+an explicit error. Raft rigidity itself (relative raft-soil stiffness) is not
+a 318 provision and is stated as a method assumption, not claimed as
+code-verified. Every vector will include an independent equilibrium/benchmark
+check (hand-derived, not a twin of the implementation), and the engine will
+assert global equilibrium: strip reactions must sum to the column loads and
+the pressure field resultants must reproduce P, Mx, My.
+
+**F-05 clause verification (2026-11-21, before code):**
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| A-20a | §13.3.1.1 base area from UNFACTORED forces/moments and permissible bearing pressure; §13.3.1.2 effective depth of bottom reinforcement ≥ 150 mm | ACI 318M-14, printed p. 309 (part 2, PDF p. 118), text-extracted | Verified (owner PDF) |
+| A-20b | §13.3.4.1 mat foundations per §13.3.4 + applicable Chapter 8 provisions (ACI 336.2R noted in commentary, not opened); §13.3.4.2 the DIRECT DESIGN METHOD of §8.10 shall NOT be used for mats — the chosen strip method is an elastic (three-moment) analysis, not DDM, so it is compliant; §13.3.4.3 bearing-pressure distribution consistent with soil properties and established soil/rock mechanics principles (rigid uniform/linear field is the limiting simple case; R8.10.2.5 notes a frame analysis should be performed even with uniform reaction — the elastic strip analysis satisfies this) | ACI 318M-14, printed pp. 311 and 195 (part 2, PDF pp. 120 and 4), text-extracted | Verified (owner PDF) |
+| A-20c | §13.3.4.4: minimum reinforcement in nonprestressed MAT foundations per §8.6.1.1 — NOT the beam minimum §9.6.1.2 used elsewhere in the engine; §8.6.1.1: As,min near the tension face per Table 8.6.1.1 | ACI 318M-14, printed p. 312 (part 2, PDF p. 121), text-extracted; §8.6.1.1 printed p. 172 (part 1, PDF p. 181), text-extracted | Verified (owner PDF) |
+| A-20d | Table 8.6.1.1: fy < 420 → As,min = 0.0020·Ag; fy ≥ 420 → greater of (0.0018×420/fy)·Ag and 0.0014·Ag | ACI 318M-14, printed p. 173 (part 1, PDF p. 182), RENDERED (image-only table) | Verified (owner PDF, printed page) |
+| A-20e | R13.3.4.4 (commentary): consider continuous reinforcement in each direction near BOTH faces of mat foundations | ACI 318M-14, printed p. 312 (part 2, PDF p. 121), text-extracted | Verified (owner PDF commentary) |
+
+**F-05 vectors (hand-derived before implementation):** V1 — 2×2 symmetric grid
+(400×400 columns at (0,0)/(6000,0)/(0,6000)/(6000,6000), service 1200 kN,
+factored 1500 kN each, edge projection 1000 mm, t=500 mm, fc'=24, fy=400,
+qa=200 kPa): raft 8400×8400, q_service=68.03 kPa, q_u=85.03 kPa; strip
+w=357.14 kN/m, overhang a=1200, span 6000 → beam support moment −257.14 kNm
+(raft +257.14, BOTTOM steel at column lines), beam midspan +1350.00 kNm
+(raft −1350.00, TOP steel at midspan); reaction 1500 kN = column factored
+load (equilibrium self-check); punching b0=3260 mm, Vu=1443.5 kN,
+vc governing case (a) 1.617 MPa, φVc=1640.3 kN, util=0.880; one-way shear at
+d=415 from face: Vu=852.2 kN vs φVc=1088.5 kN; As top governed by min
+0.0020·Ag (Table 8.6.1.1, fy=400<420) vs required — computed in test. V2 — 2×3
+eccentric grid: derived in the test source comments.
