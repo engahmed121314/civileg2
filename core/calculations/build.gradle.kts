@@ -1,7 +1,17 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    alias(libs.plugins.google.services)
+}
+
+// Google Services plugin 4.6+ hard-fails when google-services.json is
+// missing. This library module has no Firebase project file (the app
+// module owns ./app/google-services.json), so apply the plugin only
+// when a config file is actually present.
+if (file("google-services.json").exists() ||
+    file("src/debug/google-services.json").exists() ||
+    file("src/main/google-services.json").exists()
+) {
+    apply(plugin = "com.google.gms.google-services")
 }
 
 android {
