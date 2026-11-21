@@ -5,12 +5,44 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     reviewers:
       - "engahmed121314"
     labels:
       - "dependencies"
       - "automated"
+    # Group related bumps into one PR each to cut review noise. First matching
+    # group wins; "misc" catches everything not matched above it.
+    groups:
+      kotlin:
+        patterns:
+          - "org.jetbrains.kotlin*"
+          - "org.jetbrains.kotlinx*"
+          - "kotlin*"
+      androidx:
+        patterns:
+          - "androidx.*"
+      google-play:
+        patterns:
+          - "com.google.android.*"
+          - "com.android.billingclient*"
+      firebase:
+        patterns:
+          - "com.google.firebase*"
+      hilt:
+        patterns:
+          - "com.google.dagger*"
+      ksp:
+        patterns:
+          - "com.google.devtools.ksp*"
+      android-gradle-plugin:
+        patterns:
+          - "com.android.*"
+          - "gradle"
+          - "gradle-wrapper"
+      misc:
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -19,3 +51,8 @@ updates:
     labels:
       - "ci/cd"
       - "dependencies"
+    # One monthly PR for all action bumps instead of one PR per action.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
