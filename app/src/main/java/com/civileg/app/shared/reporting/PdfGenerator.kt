@@ -1,7 +1,7 @@
 package com.civileg.app.shared.reporting
 
 import com.civileg.app.utils.ArabicFontProvider
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.EstimationEngine
 import com.civileg.app.utils.LocaleHelper
 import com.civileg.app.utils.PdfTextSegmenter
