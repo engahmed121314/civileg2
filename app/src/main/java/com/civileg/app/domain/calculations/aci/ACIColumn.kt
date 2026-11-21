@@ -79,6 +79,8 @@ class ACIColumn : ColumnDesign {
      * Sign convention (6.2.5): M1/M2 is NEGATIVE in single curvature,
      * POSITIVE in double curvature.
      *
+     * NONSWAY frames only (6.6.4.5). Sway frames: calculateSwayMagnification (6.6.4.6).
+     *
      * @return δ moment magnifier (>= 1.0); Mc = δ × M2 (6.6.4.5.1).
      */
     fun calculateMomentMagnification(
@@ -89,8 +91,7 @@ class ACIColumn : ColumnDesign {
         width: Double,                   // mm, perpendicular to bending
         depth: Double,                   // mm, in bending direction
         fcu: Double,
-        betaDns: Double = 0.0,           // 6.6.4.4.4 sustained-axial ratio (0.6 → simplified 0.25EcIg)
-        isBraced: Boolean = true         // braced against sidesway (6.2.5(b))
+        betaDns: Double = 0.0            // 6.6.4.4.4 sustained-axial ratio (0.6 → simplified 0.25EcIg)
     ): Double {
         InputGuard.positive("Pu", Pu)
         InputGuard.positive("M2", M2)
@@ -105,13 +106,9 @@ class ACIColumn : ColumnDesign {
         val r = 0.30 * depth
         val kluOverR = kLu / r
         val mRatio = M1 / M2
-        // 6.2.5: slenderness effects may be neglected
-        val mayNeglect = if (isBraced) {
-            // 6.2.5b AND 6.2.5c (cap 40)
-            kluOverR <= (34.0 + 12.0 * mRatio).coerceAtMost(40.0)
-        } else {
-            kluOverR <= 22.0  // 6.2.5a
-        }
+        // 6.2.5(b): nonsway (braced) neglect limit — 6.2.5b AND 6.2.5c (cap 40).
+        // Sway frames are NOT this method: use calculateSwayMagnification (6.6.4.6).
+        val mayNeglect = kluOverR <= (34.0 + 12.0 * mRatio).coerceAtMost(40.0)
         if (mayNeglect) return 1.0
 
         // 6.6.4.4.4(a): EI = 0.4EcIg / (1+βdns)
@@ -126,6 +123,40 @@ class ACIColumn : ColumnDesign {
         // 6.6.4.5.2: δ = Cm / (1 − Pu/(0.75Pc)) ≥ 1.0
         val delta = cm / (1.0 - Pu / (0.75 * pc))
         return max(1.0, delta)
+    }
+
+    /**
+     * تكبير العزوم للإطارات غير المقيدة — ACI 318M-14 §6.6.4.6 (sway frames).
+     * Verified printed pages 125-126 (CLAUSE_LOG A-17).
+     *
+     * 6.6.4.6.1: M = Mns + δs·Ms (sway moments amplified, nonsway are not).
+     * 6.6.4.6.2: δs = 1/(1−Q) ≥ 1 (a) when [stabilityIndexQ] is given, else
+     * δs = 1/(1 − ΣPu/(0.75ΣPc)) ≥ 1 (b) from the story sums. Method (a) is
+     * only permitted while δs ≤ 1.5; method (b) has no such limit.
+     *
+     * @return Pair(δs, magnified moment M = Mns + δs·Ms)
+     */
+    fun calculateSwayMagnification(
+        Mns: Double,                     // kNm, first-order NONSWAY moment
+        Ms: Double,                      // kNm, first-order SWAY moment
+        sumPu: Double,                   // kN, story ΣPu (needed for 6.6.4.6.2b)
+        sumPc: Double,                   // kN, story ΣPc (needed for 6.6.4.6.2b)
+        stabilityIndexQ: Double? = null  // 6.6.4.6.2a; when null, method (b) is used
+    ): Pair<Double, Double> {
+        InputGuard.positive("sumPu", sumPu)
+        InputGuard.positive("sumPc", sumPc)
+        val deltaS = if (stabilityIndexQ != null) {
+            require(stabilityIndexQ < 1.0) { "Q must be < 1.0 (unstable otherwise)" }
+            val d = 1.0 / (1.0 - stabilityIndexQ)
+            require(d <= 1.5) {
+                "6.6.4.6.2: Q-method only permitted while δs ≤ 1.5 (δs=$d); use the ΣPc method (stabilityIndexQ = null) or second-order analysis"
+            }
+            d
+        } else {
+            1.0 / (1.0 - sumPu / (0.75 * sumPc))
+        }
+        val ds = max(1.0, deltaS)
+        return Pair(ds, Mns + ds * Ms)
     }
 
     override fun calculateReinforcement(

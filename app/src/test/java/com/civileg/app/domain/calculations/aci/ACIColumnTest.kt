@@ -261,13 +261,45 @@ class ACIColumnTest {
         assertEquals(1.0, d, 0.001)
     }
 
+    // Sway vectors — §6.6.4.6 (printed pp.125-126): story of 4 identical
+    // columns (Pc each = 21546.6335 at kLu=3000) → ΣPc = 86186.5342
+    // δs = 1/(1 − ΣPu/(0.75ΣPc)): ΣPu=8000 → 1.141243; ΣPu=20000 → 1.448030
+    // M = Mns + δs×Ms with Mns=40, Ms=60: 108.474591 / 126.881780 kNm
+
     @Test
-    fun goldenMagnification_unbracedSway() {
-        val d = column.calculateMomentMagnification(
-            Pu = 2000.0, M1 = -100.0, M2 = 100.0, kLu = 3000.0,
-            width = 400.0, depth = 400.0, fcu = 30.0, isBraced = false
+    fun goldenSwayMagnification_sumPcMethod() {
+        val (ds, m) = column.calculateSwayMagnification(
+            Mns = 40.0, Ms = 60.0, sumPu = 8000.0, sumPc = 86186.5342
         )
-        assertEquals(1.141243, d, 0.001)
+        assertEquals(1.141243, ds, 0.001)
+        assertEquals(108.474591, m, 0.001)
+    }
+
+    @Test
+    fun goldenSwayMagnification_heavyStory() {
+        val (ds, m) = column.calculateSwayMagnification(
+            Mns = 40.0, Ms = 60.0, sumPu = 20000.0, sumPc = 86186.5342
+        )
+        assertEquals(1.448030, ds, 0.001)
+        assertEquals(126.881780, m, 0.001)
+    }
+
+    @Test
+    fun goldenSwayMagnification_qMethod() {
+        val (ds, m) = column.calculateSwayMagnification(
+            Mns = 40.0, Ms = 60.0, sumPu = 8000.0, sumPc = 86186.5342,
+            stabilityIndexQ = 0.1237683
+        )
+        assertEquals(1.141243, ds, 0.001)
+        assertEquals(108.474591, m, 0.001)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun swayMagnification_qMethodBeyond15_throws() {
+        column.calculateSwayMagnification(
+            Mns = 40.0, Ms = 60.0, sumPu = 8000.0, sumPc = 86186.5342,
+            stabilityIndexQ = 0.5
+        )
     }
 
     @Test
