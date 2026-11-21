@@ -1,0 +1,387 @@
+package com.civileg.app.features.tools
+
+
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.utils.RebarCalculator
+import com.civileg.app.utils.RebarCalculator.WeightResult
+import com.civileg.app.utils.RebarCalculator.DevelopmentLengthResult
+import com.civileg.app.utils.RebarCalculator.LapSpliceResult
+import com.civileg.app.utils.RebarCalculator.RebarScheduleResult
+import com.civileg.app.utils.RebarCalculator.CrackWidthResult
+import com.civileg.app.utils.RebarCalculator.DesignCode
+import com.civileg.app.utils.RebarCalculator.LapType
+import com.civileg.app.utils.RebarCalculator.BarProperties
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+/**
+ * ViewModel for the Rebar Tool module.
+ * Manages state for weight, development length, lap splice,
+ * rebar schedule, and crack width calculations.
+ */
+class RebarToolViewModel : ViewModel() {
+
+    // ── Error message ──
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
+    // ── Loading state ──
+    private val _isLoading = MutableLiveData(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
+    // ── Tab state ──
+    private val _selectedTab = MutableStateFlow(0)
+    val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
+
+    fun selectTab(index: Int) { _selectedTab.value = index }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  WEIGHT CALCULATOR
+    // ══════════════════════════════════════════════════════════════
+    private val _weightResult = MutableStateFlow<WeightResult?>(null)
+    val weightResult: StateFlow<WeightResult?> = _weightResult.asStateFlow()
+
+    fun calculateWeight(diameter: Double, length: Double, quantity: Int) {
+        _isLoading.value = true
+        _errorMessage.value = null
+        try {
+            InputGuard.positive("diameter", diameter)
+            InputGuard.positive("length", length)
+            InputGuard.positive("quantity", quantity.toDouble())
+
+            val result = RebarCalculator.totalWeight(diameter, length, quantity)
+            _weightResult.value = result
+        } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _weightResult.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _weightResult.value = null
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  DEVELOPMENT LENGTH
+    // ══════════════════════════════════════════════════════════════
+    private val _devLengthResult = MutableStateFlow<DevelopmentLengthResult?>(null)
+    val devLengthResult: StateFlow<DevelopmentLengthResult?> = _devLengthResult.asStateFlow()
+
+    fun calculateDevelopmentLength(
+        diameter: Double,
+        fy: Double,
+        fcu: Double,
+        isTopBar: Boolean,
+        isConfined: Boolean,
+        excessRatio: Double,
+        code: DesignCode
+    ) {
+        _isLoading.value = true
+        _errorMessage.value = null
+        try {
+            InputGuard.positive("diameter", diameter)
+            InputGuard.positive("fy", fy)
+            InputGuard.positive("fcu", fcu)
+            InputGuard.nonNegative("excessRatio", excessRatio)
+            InputGuard.inRange("excessRatio", excessRatio, 0.0, 10.0)
+
+            val result = when (code) {
+                DesignCode.ECP_203 -> RebarCalculator.developmentLengthECP(
+                    diameter, fy, fcu, isTopBar, isConfined, excessRatio
+                )
+                DesignCode.ACI_318, DesignCode.SBC_304 -> {
+                    // SBC 304 follows ACI 318 methodology
+                    val fyPsi = fy * 145.038
+                    val fcPsi = fcu * 145.038
+                    val aci = RebarCalculator.developmentLengthACI(
+                        diameter, fyPsi, fcPsi, isTopBar, isConfined, excessRatio
+                    )
+                    if (code == DesignCode.SBC_304) aci.copy(code = DesignCode.SBC_304) else aci
+                }
+            }
+            _devLengthResult.value = result
+        } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _devLengthResult.value = null
+        } catch (e: ArithmeticException) {
+            _errorMessage.value = "Arithmetic error / خطأ حسابي: ${e.message}"
+            _devLengthResult.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _devLengthResult.value = null
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  LAP SPLICE
+    // ══════════════════════════════════════════════════════════════
+    private val _lapResult = MutableStateFlow<LapSpliceResult?>(null)
+    val lapResult: StateFlow<LapSpliceResult?> = _lapResult.asStateFlow()
+
+    fun calculateLapSplice(
+        diameter: Double,
+        fy: Double,
+        fcu: Double,
+        lapType: LapType,
+        code: DesignCode,
+        isTopBar: Boolean,
+        isConfined: Boolean,
+        spliceClass: String
+    ) {
+        _isLoading.value = true
+        _errorMessage.value = null
+        try {
+            InputGuard.positive("diameter", diameter)
+            InputGuard.positive("fy", fy)
+            InputGuard.positive("fcu", fcu)
+            InputGuard.notBlank("spliceClass", spliceClass)
+
+            val result = RebarCalculator.lapSpliceLength(
+                diameter, fy, fcu, lapType, code, isTopBar, isConfined, spliceClass
+            )
+            _lapResult.value = result
+        } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _lapResult.value = null
+        } catch (e: ArithmeticException) {
+            _errorMessage.value = "Arithmetic error / خطأ حسابي: ${e.message}"
+            _lapResult.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _lapResult.value = null
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  REBAR SCHEDULE
+    // ══════════════════════════════════════════════════════════════
+    private val _scheduleResult = MutableStateFlow<RebarScheduleResult?>(null)
+    val scheduleResult: StateFlow<RebarScheduleResult?> = _scheduleResult.asStateFlow()
+
+    fun generateBeamSchedule(
+        width: Double, depth: Double, length: Double, spans: Int,
+        topDia: Int, topCount: Int, botDia: Int, botCount: Int,
+        stirrupDia: Int, stirrupSpacing: Double, cover: Double
+    ) {
+        _isLoading.value = true
+        _errorMessage.value = null
+        try {
+            InputGuard.positive("width", width)
+            InputGuard.positive("depth", depth)
+            InputGuard.positive("length", length)
+            InputGuard.positive("spans", spans.toDouble())
+            InputGuard.positive("topDia", topDia.toDouble())
+            InputGuard.positive("topCount", topCount.toDouble())
+            InputGuard.positive("botDia", botDia.toDouble())
+            InputGuard.positive("botCount", botCount.toDouble())
+            InputGuard.positive("stirrupDia", stirrupDia.toDouble())
+            InputGuard.positive("stirrupSpacing", stirrupSpacing)
+            InputGuard.nonNegative("cover", cover)
+
+            _scheduleResult.value = RebarCalculator.generateBeamSchedule(
+                width, depth, length, spans, topDia, topCount, botDia, botCount,
+                stirrupDia, stirrupSpacing, cover
+            )
+        } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _scheduleResult.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _scheduleResult.value = null
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
+    fun generateSlabSchedule(
+        slabL: Double, slabW: Double, thickness: Double,
+        botShortDia: Int, botShortSp: Double,
+        botLongDia: Int, botLongSp: Double,
+        topShortDia: Int, topShortSp: Double, cover: Double
+    ) {
+        _isLoading.value = true
+        _errorMessage.value = null
+        try {
+            InputGuard.positive("slabL", slabL)
+            InputGuard.positive("slabW", slabW)
+            InputGuard.positive("thickness", thickness)
+            InputGuard.positive("botShortDia", botShortDia.toDouble())
+            InputGuard.positive("botShortSp", botShortSp)
+            InputGuard.positive("botLongDia", botLongDia.toDouble())
+            InputGuard.positive("botLongSp", botLongSp)
+            InputGuard.nonNegative("cover", cover)
+
+            _scheduleResult.value = RebarCalculator.generateSlabSchedule(
+                slabL, slabW, thickness, botShortDia, botShortSp,
+                botLongDia, botLongSp, topShortDia, topShortSp, cover
+            )
+        } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _scheduleResult.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _scheduleResult.value = null
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
+    fun generateColumnSchedule(
+        colW: Double, colD: Double, height: Double,
+        mainDia: Int, mainCount: Int,
+        tieDia: Int, tieSp: Double, cover: Double
+    ) {
+        _isLoading.value = true
+        _errorMessage.value = null
+        try {
+            InputGuard.positive("colW", colW)
+            InputGuard.positive("colD", colD)
+            InputGuard.positive("height", height)
+            InputGuard.positive("mainDia", mainDia.toDouble())
+            InputGuard.positive("mainCount", mainCount.toDouble())
+            InputGuard.positive("tieDia", tieDia.toDouble())
+            InputGuard.positive("tieSp", tieSp)
+            InputGuard.nonNegative("cover", cover)
+
+            _scheduleResult.value = RebarCalculator.generateColumnSchedule(
+                colW, colD, height, mainDia, mainCount, tieDia, tieSp, cover
+            )
+        } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _scheduleResult.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _scheduleResult.value = null
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  CRACK WIDTH
+    // ══════════════════════════════════════════════════════════════
+    private val _crackResult = MutableStateFlow<CrackWidthResult?>(null)
+    val crackResult: StateFlow<CrackWidthResult?> = _crackResult.asStateFlow()
+
+    fun calculateCrackWidth(
+        steelStress: Double,
+        barDiameter: Double,
+        barSpacing: Double,
+        coverToBarCenter: Double,
+        limitingWidth: Double
+    ) {
+        _isLoading.value = true
+        _errorMessage.value = null
+        try {
+            InputGuard.nonNegative("steelStress", steelStress)
+            InputGuard.positive("barDiameter", barDiameter)
+            InputGuard.positive("barSpacing", barSpacing)
+            InputGuard.nonNegative("coverToBarCenter", coverToBarCenter)
+            InputGuard.positive("limitingWidth", limitingWidth)
+
+            _crackResult.value = RebarCalculator.crackWidth(
+                steelStress, barDiameter, barSpacing, coverToBarCenter,
+                limitingWidth = limitingWidth
+            )
+        } catch (e: IllegalArgumentException) {
+            _errorMessage.value = "Invalid input / مدخلات غير صالحة: ${e.message}"
+            _crackResult.value = null
+        } catch (e: ArithmeticException) {
+            _errorMessage.value = "Arithmetic error / خطأ حسابي: ${e.message}"
+            _crackResult.value = null
+        } catch (e: Exception) {
+            _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            _crackResult.value = null
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
+    // ── Bar table ──
+    fun getBarTable(): List<BarProperties> = RebarCalculator.getAllBarProperties()
+
+    fun clearResults() {
+        _weightResult.value = null
+        _devLengthResult.value = null
+        _lapResult.value = null
+        _scheduleResult.value = null
+        _crackResult.value = null
+    }
+
+    /** Export Rebar Calculations report to PDF with 3-view engineering drawings. */
+    fun exportToPdf(context: android.content.Context, barDiameter: Double = 16.0, onComplete: (java.io.File?) -> Unit = {}) {
+        val dev = _devLengthResult.value
+        val lap = _lapResult.value
+        val weight = _weightResult.value
+
+        val barDia = barDiameter
+        val devL = dev?.modifiedLd ?: 0.0
+        val lapL = lap?.lapLength ?: 0.0
+        val wPerM = weight?.weightPerMeter ?: (barDia * barDia / 162.0)
+        val codeName = dev?.code?.name ?: lap?.code?.name ?: "ECP 203"
+
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val drawingBitmap = com.civileg.app.shared.reporting.PdfDrawingGenerator.generateRebarToolDrawing(
+                    barDia = barDia,
+                    devLength = devL,
+                    lapLength = lapL,
+                    weightPerM = wPerM,
+                    codeName = codeName,
+                    isSafe = true
+                )
+
+                val inputsMap = mutableMapOf(
+                    "Bar Diameter (Ø)" to "$barDia mm",
+                    "Design Code" to codeName,
+                    "Unit Weight" to "${"%.3f".format(wPerM)} kg/m"
+                )
+
+                val resultsMap = mutableMapOf<String, String>()
+                dev?.let {
+                    resultsMap["Basic L_d"] = "${"%.0f".format(it.basicLd)} mm"
+                    resultsMap["Modified L_d"] = "${"%.0f".format(it.modifiedLd)} mm"
+                }
+                lap?.let {
+                    resultsMap["Lap Splice Length (L_s)"] = "${"%.0f".format(it.lapLength)} mm"
+                    resultsMap["Lap Type"] = it.lapType.name
+                }
+                weight?.let {
+                    resultsMap["Total Bar Weight"] = "${"%.2f".format(it.totalWeight)} kg"
+                }
+
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS) ?: context.cacheDir
+                directory.mkdirs()
+                val file = java.io.File(directory, "Rebar_Tool_Report_${System.currentTimeMillis()}.pdf")
+
+                val bundle = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "تقرير حسابات حديد التسليح",
+                    titleEn = "Rebar Development & Lap Splice Report",
+                    subtitle = "Rebar Detailing & Weight Takeoff",
+                    designType = "Rebar Detailing",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    isSafe = true,
+                    drawingBitmap = drawingBitmap,
+                    outputPath = file.absolutePath,
+                    openPdfOnComplete = true
+                )
+                onComplete(bundle.pdfFile)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onComplete(null)
+            }
+        }
+    }
+}

@@ -1,0 +1,280 @@
+package com.civileg.app.features.design
+
+import android.content.Context
+import android.graphics.Bitmap
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.civileg.app.db.DesignRepository
+import com.civileg.app.domain.calculations.CalculationFactory
+import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.calculations.base.WaffleSlabDesign
+import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.GenericSafetyCheck
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.io.File
+import javax.inject.Inject
+
+@HiltViewModel
+class WaffleSlabViewModel @Inject constructor(
+    private val repository: DesignRepository
+) : ViewModel() {
+
+    private val _result = MutableLiveData<WaffleSlabDesign.WaffleSlabResult?>()
+    val result: LiveData<WaffleSlabDesign.WaffleSlabResult?> = _result
+
+    private val _isLoading = MutableLiveData(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
+    private val _isExporting = MutableLiveData(false)
+    val isExporting: LiveData<Boolean> = _isExporting
+
+    private val _error = MutableLiveData<String?>()
+    val error: LiveData<String?> = _error
+
+    // Store last input for PDF export
+    private var lastInput: WaffleSlabDesign.WaffleSlabInput? = null
+    val lastCalculatedInput: WaffleSlabDesign.WaffleSlabInput?
+        get() = lastInput
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
+
+    private val _validationReport = MutableLiveData<String?>()
+    val validationReport: LiveData<String?> = _validationReport
+
+    /**
+     * Main calculation entry point for waffle slab design.
+     */
+    fun calculateWaffleSlab(
+        lx: Double,               // mm (shorter span)
+        ly: Double,               // mm (longer span)
+        ribSpacing: Double,       // mm (center-to-center)
+        ribWidth: Double,         // mm
+        ribHeight: Double,        // mm
+        toppingThickness: Double, // mm
+        solidHeadSize: Double,    // mm
+        columnWidth: Double,      // mm
+        columnDepth: Double,      // mm
+        fcu: Double,              // MPa
+        fy: Double,               // MPa
+        liveLoad: Double,         // kN/m2
+        deadLoad: Double,         // kN/m2
+        clearCover: Double,       // mm
+        designCode: String = "ECP"
+    ) {
+        InputGuard.positive("lx", lx)
+        InputGuard.positive("ly", ly)
+        InputGuard.positive("ribSpacing", ribSpacing)
+        InputGuard.positive("ribWidth", ribWidth)
+        InputGuard.positive("ribHeight", ribHeight)
+        InputGuard.positive("toppingThickness", toppingThickness)
+        InputGuard.positive("solidHeadSize", solidHeadSize)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("liveLoad", liveLoad)
+        InputGuard.nonNegative("deadLoad", deadLoad)
+        InputGuard.positive("clearCover", clearCover)
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val code = DesignCode.valueOf(designCode)
+                val input = WaffleSlabDesign.WaffleSlabInput(
+                    lx = lx,
+                    ly = ly,
+                    ribSpacing = ribSpacing,
+                    ribWidth = ribWidth,
+                    ribHeight = ribHeight,
+                    toppingThickness = toppingThickness,
+                    solidHeadSize = solidHeadSize,
+                    columnWidth = columnWidth,
+                    columnDepth = columnDepth,
+                    fcu = fcu,
+                    fy = fy,
+                    liveLoad = liveLoad,
+                    deadLoad = deadLoad,
+                    clearCover = clearCover,
+                    designCode = code
+                )
+                lastInput = input
+
+                val designer: WaffleSlabDesign = CalculationFactory.getWaffleSlabDesign(code)
+                val result = designer.design(input)
+                _result.value = result
+            } catch (e: Exception) {
+                _error.value = "Error: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    /**
+     * Export results to PDF report.
+     */
+    /** Standalone DXF sheet for the current waffle slab design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val res = _result.value ?: return null
+        val input = lastInput ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.slabSection(
+            title = "WAFFLE SLAB",
+            spanMm = input.lx,
+            thicknessMm = input.ribHeight + input.toppingThickness,
+            coverMm = input.clearCover,
+            mainBarDiaMm = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 12.0,
+            mainSpacingMm = res.ribDesign?.flexureReinforcement?.spacing?.toDouble() ?: 150.0
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "WaffleSlab",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
+    fun exportToPdf(
+        context: Context,
+        onComplete: (File?) -> Unit
+    ) {
+        val res = _result.value ?: return
+        val input = lastInput ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            kotlinx.coroutines.withContext(Dispatchers.Main) { _isExporting.value = true }
+            try {
+                val fileName = "WaffleSlab_Report_${System.currentTimeMillis()}.pdf"
+                val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.cacheDir
+                directory.mkdirs()
+                val file = File(directory, fileName)
+
+                val inputsMap = mapOf(
+                    "Lx" to "${input.lx / 1000.0} m",
+                    "Ly" to "${input.ly / 1000.0} m",
+                    "Rib Spacing" to "${input.ribSpacing} mm",
+                    "Rib Width" to "${input.ribWidth} mm",
+                    "Rib Height" to "${input.ribHeight} mm",
+                    "Topping Thickness" to "${input.toppingThickness} mm",
+                    "Solid Head Size" to "${input.solidHeadSize} mm",
+                    "Column" to "${input.columnWidth}×${input.columnDepth} mm",
+                    "f'cu" to "${input.fcu} MPa",
+                    "fy" to "${input.fy} MPa",
+                    "Dead Load" to "${input.deadLoad} kN/m²",
+                    "Live Load" to "${input.liveLoad} kN/m²",
+                    "Clear Cover" to "${input.clearCover} mm",
+                    "Design Code" to input.designCode.displayName
+                )
+
+                val resultsMap = mutableMapOf(
+                    "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
+                    "Is Safe" to if (res.isSafe) "YES" else "NO",
+                    "Concrete Volume" to "${"%.3f".format(res.concreteVolume)} m³",
+                    "Steel Weight" to "${"%.1f".format(res.steelWeight)} kg"
+                )
+                res.ribDesign?.let { rib ->
+                    resultsMap["Rib Flexure Rebar"] = rib.flexureReinforcement.barString
+                    resultsMap["Rib Shear Rebar"] = "φ${rib.shearReinforcement.stirrupDiameter.toInt()}@${rib.shearReinforcement.stirrupSpacing.toInt()} mm"
+                    resultsMap["Rib Utilization"] = "${(rib.utilizationRatio * 100).toInt()}%"
+                }
+                res.punchingShearCheck?.let { punch ->
+                    resultsMap["Punching Vu"] = "${"%.1f".format(punch.vu)} kN"
+                    resultsMap["Punching Vc"] = "${"%.1f".format(punch.vc)} kN"
+                }
+                res.deflectionCheck?.let { defl ->
+                    resultsMap["Deflection Check"] = if (defl.isSafe) "PASS" else "FAIL"
+                }
+
+                val safetyChecks = res.safetyChecks.map {
+                    GenericSafetyCheck(
+                        name = it.name, calculated = it.calculated,
+                        limit = it.limit, unit = it.unit, passed = it.passed
+                    )
+                }
+
+                val drawingBitmap = pendingDrawingBitmap ?: runCatching {
+                    com.civileg.app.shared.reporting.PdfDrawingGenerator.generateSlabDrawingByType(
+                        slabType = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.WAFFLE,
+                        spanX = input.lx, spanY = input.ly,
+                        thickness = input.ribHeight + input.toppingThickness,
+                        mainDia = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 12.0,
+                        mainSpacing = res.ribDesign?.flexureReinforcement?.spacing?.toDouble() ?: 150.0,
+                        distDia = 12.0, distSpacing = 200.0,
+                        cover = input.clearCover,
+                        ribWidth = input.ribWidth, ribSpacing = input.ribSpacing
+                    )
+                }.getOrNull()
+                pendingDrawingBitmap = null  // consume after use
+
+                val codeName = input.designCode.displayName
+                val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                    titleAr = "????? ????? ????? ?? ??",
+                    titleEn = "Waffle Slab Design Report",
+                    subtitle = "Code: $codeName    Lx=${input.lx/1000.0}m x Ly=${input.ly/1000.0}m",
+                    designType = "Waffle Slab",
+                    inputs = inputsMap,
+                    results = resultsMap,
+                    safetyChecks = safetyChecks,
+                    isSafe = res.isSafe,
+                    bbsEntries = runCatching {
+                        com.civileg.app.domain.calculations.utils.BbsGenerator.generateWaffleSlabBbs(
+                            "WS1", res, input.lx, input.ly, input.ribSpacing,
+                            input.solidHeadSize, input.clearCover
+                        )
+                    }.getOrDefault(emptyList()),
+                    boqRows = com.civileg.app.domain.calculations.utils.BoqEstimator.waffleSlabRows(
+                        res, input.lx / 1000.0, input.ly / 1000.0, "WS1"
+                    ),
+                    drawingBitmap = drawingBitmap,
+                    drawing = buildDxfDrawing(),
+                    outputPath = file.absolutePath
+                ).pdfFile
+
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    generated?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                    onComplete(generated)
+                    _isExporting.value = false
+                }
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                kotlinx.coroutines.withContext(Dispatchers.Main) {
+                    _error.value = "PDF export failed: ${e.message}"
+                    _isExporting.value = false
+                    onComplete(null)
+                }
+            }
+        }
+    }
+
+    fun clearResult() {
+        _result.value = null
+        _error.value = null
+    }
+
+    fun saveDesign(projectId: Long, name: String) {
+        val res = _result.value ?: return
+        viewModelScope.launch {
+            val engineCode = lastInput?.designCode ?: DesignCode.ECP
+            // FIX: Use total thickness (topping + rib) instead of corrupted concreteVolume
+            val totalThickness = (lastInput?.toppingThickness ?: 0.0) + (lastInput?.ribHeight ?: 0.0)
+            repository.saveSlabDesign(projectId, name, com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabResult(
+                type = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.WAFFLE,
+                thickness = totalThickness,
+                isSafe = res.isSafe,
+                concreteVolume = res.concreteVolume,
+                steelWeight = res.steelWeight,
+                code = engineCode,
+                utilizationRatio = res.utilizationRatio
+            ))
+        }
+    }
+}

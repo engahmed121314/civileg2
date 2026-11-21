@@ -13,7 +13,7 @@ import com.civileg.app.domain.editor.UndoManager
 import com.civileg.app.domain.entities.FrameMember
 import com.civileg.app.domain.entities.FrameNode
 import com.civileg.app.domain.entities.SupportType
-import com.civileg.app.viewmodel.FrameAnalysisViewModel
+import com.civileg.app.features.frame.FrameAnalysisViewModel
 import kotlin.math.hypot
 
 /** Helper to find closest node to screen coordinate within hitRadius px */
