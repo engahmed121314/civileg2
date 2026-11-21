@@ -14,7 +14,6 @@ class ACIFooting : FootingDesign {
     companion object {
         private const val PHI_SHEAR = 0.75
         private const val PHI_BENDING = 0.90
-        private const val MIN_REIN_RATIO = 0.0018  // ACI 318-13.3.1: 0.18% للقواعد
         private const val MIN_THICKNESS = 300.0  // mm
         private const val GAMMA_CONCRETE = 25.0  // kN/m³
     }
@@ -134,8 +133,8 @@ class ACIFooting : FootingDesign {
         val punchingCheck = checkPunchingShear(fcu, columnWidth, columnDepth, d, axialLoad, loadCombination)
 
         // 12. تصميم التسليح في الاتجاهين
-        val reinfX = calculateFootingReinforcement(fcu, fy, B, L, d, Mu_x / (L / 1000.0), FootingDirection.SHORT)
-        val reinfY = calculateFootingReinforcement(fcu, fy, B, L, d, Mu_y / (B / 1000.0), FootingDirection.LONG)
+        val reinfX = flexurePerMeter(fcu, fy, footingDepth, d, Mu_x / (L / 1000.0), FootingDirection.SHORT)
+        val reinfY = flexurePerMeter(fcu, fy, footingDepth, d, Mu_y / (B / 1000.0), FootingDirection.LONG)
 
         // 13. التسليح الرئيسي = الأكبر
         val mainReinf = if (reinfX.astRequired >= reinfY.astRequired) reinfX else reinfY
@@ -240,10 +239,28 @@ class ACIFooting : FootingDesign {
         designMoment: Double,
         direction: FootingDirection
     ): ReinforcementResult {
+        // Interface path carries no gross depth; h = d preserves legacy behavior.
+        // Internal design flows call flexurePerMeter with the real footing depth.
+        return flexurePerMeter(fcu, fy, effectiveDepth, effectiveDepth, designMoment, direction)
+    }
+
+    /**
+     * ACI 318M-14 flexure per meter width: Rn–ρ strength plus the minimum of
+     * Table 7.6.1.1 on the GROSS area (As,min = 0.0020·b·h for fy < 420 MPa;
+     * max(0.0018·420/fy, 0.0014)·b·h for fy ≥ 420). Table verified against the
+     * owner's ACI 318M-14, printed p.143 — CLAUSE_LOG F-01.
+     */
+    internal fun flexurePerMeter(
+        fcu: Double,
+        fy: Double,
+        footingDepth: Double,
+        effectiveDepth: Double,
+        designMoment: Double,
+        direction: FootingDirection
+    ): ReinforcementResult {
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
-        InputGuard.positive("footingWidth", footingWidth)
-        InputGuard.positive("footingLength", footingLength)
+        InputGuard.positive("footingDepth", footingDepth)
         InputGuard.positive("effectiveDepth", effectiveDepth)
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
@@ -268,12 +285,14 @@ class ACIFooting : FootingDesign {
             0.025  // تصميم مضغوط - يحتاج زيادة العمق
         }
         
-        // ρ_min = max(0.18%, 1.33×√f'c/fy) حسب ACI 318-13.3.1
-        val rhoMin = max(MIN_REIN_RATIO, 1.33 * sqrt(fc_prime) / fy)
+        // الحد الأدنى حسب ACI 318M-14 جدول 7.6.1.1 على المساحة الكلية b·h
+        // (F-01: يستبدل max(0.0018, 1.33·√f'c/fy) التي لا تطابق أي بند في ACI)
+        val rhoMin = if (fy < 420.0) 0.0020 else max(0.0018 * 420.0 / fy, 0.0014)
+        val asMin = rhoMin * b * footingDepth
         val rhoMax = 0.025  // ACI 318 الحد الأقصى
-        
-        val rhoFinal = rho.coerceIn(rhoMin, rhoMax)
-        val asRequired = rhoFinal * b * d
+
+        val rhoCapped = rho.coerceAtMost(rhoMax)
+        val asRequired = max(rhoCapped * b * d, asMin)
         
         // اختيار القضبان
         val availableBars = listOf(12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 25.0)
@@ -293,9 +312,9 @@ class ACIFooting : FootingDesign {
         val actualBars = ceil(1000.0 / finalSpacing).toInt()
         val asProvided = actualBars * barArea
         
-        val utilization = rho / rhoFinal.coerceAtLeast(0.001)
-        codeNotes.add(String.format("ACI 318-25: %dØ%d @ %dmm", actualBars, barDiameter.toInt(), finalSpacing.toInt()))
-        codeNotes.add(String.format("ρ=%.4f, ρ_min=%.4f, Rn=%.2f", rhoFinal, rhoMin, Rn))
+        val utilization = (rhoCapped * b * d) / asRequired.coerceAtLeast(1.0)
+        codeNotes.add(String.format("ACI 318M-14: %dØ%d @ %dmm", actualBars, barDiameter.toInt(), finalSpacing.toInt()))
+        codeNotes.add(String.format("ρ=%.4f, As,min=%.0f mm²/m (Table 7.6.1.1), Rn=%.2f", rhoCapped, asMin, Rn))
         
         return ReinforcementResult(
             astRequired = asRequired,
@@ -445,9 +464,8 @@ class ACIFooting : FootingDesign {
         
         val designMoment = soilPressure * (sqrt(totalArea) / 3.0).pow(2) / 10.0
         
-        val reinforcement = calculateFootingReinforcement(
-            fcu, fy, sqrt(totalArea)*1000, sqrt(totalArea)*1000,
-            effectiveDepth, designMoment, FootingDirection.LONG
+        val reinforcement = flexurePerMeter(
+            fcu, fy, raftThickness, effectiveDepth, designMoment, FootingDirection.LONG
         )
         
         return FootingDesignResult(
@@ -514,8 +532,8 @@ class ACIFooting : FootingDesign {
         val projection = (spacing / 2.0 + pileDiameter / 2.0 - colSize / 2.0) / 1000.0
         val Mu = loadPerPile * projection
         
-        val reinf = calculateFootingReinforcement(
-            fcu, fy, capW, capL, d, Mu / (capW / 1000.0), FootingDirection.SHORT
+        val reinf = flexurePerMeter(
+            fcu, fy, capThickness, d, Mu / (capW / 1000.0), FootingDirection.SHORT
         )
         
         // فحص زاوية الخرسانة المضغوطة (Strut-and-Tie Model)
