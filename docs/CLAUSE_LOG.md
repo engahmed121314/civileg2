@@ -326,9 +326,15 @@ conventional method.
 3. Inverted-slab strips: each column-line strip is a continuous beam over the
    column-line supports carrying the tributary average FACTORED pressure;
    elastic moments/shears by the three-moment equation (exact for prismatic
-   equal-section strips — equilibrium + compatibility). Top steel at interior
-   supports, bottom steel at midspans; moment critical section at the support
-   face per Table 13.2.7.1 (already verified, entry A-05, printed p. 307);
+   equal-section strips — equilibrium + compatibility). SIGN/FACE CONVENTION
+   (re-derived 2026-11-21 after review caught a reversal): the strip carries
+   UPWARD soil pressure and is held down at the column lines, so its moment
+   diagram is the negative of a downward-loaded continuous beam — HOGGING at
+   midspan (TOP steel) and SAGGING at the column lines (BOTTOM steel). This
+   holds under the rigid/uniform-pressure assumption; pressure concentration
+   near columns under an elastic bed is outside the chosen method. Moment
+   critical section at the support face per Table 13.2.7.1 (already
+   verified, entry A-05, printed p. 307);
    one-way shear at d from the support face per §22.5.5.1 (verified A-02,
    printed p. 563) and §13.2.7.2 (verified A-05).
 4. Punching per ACTUAL column: Vu = column factored load − average factored
@@ -347,3 +353,18 @@ still to be opened before the strip min-steel rule is pinned; the existing
 §9.6.1.2 engine choice carries over until then. Golden vectors planned: 2×2
 symmetric grid (closed-form pressure + strip moments via three-moment) and
 2×3 eccentric grid.
+
+
+**Applicability limits (added same review):** the rigid-raft method requires
+full soil contact — qmin >= 0 over the whole raft (eccentricities within the
+kern: |ex| <= Lx/6, |ey| <= Ly/6 for a rectangular raft). If qmin < 0 the
+result is returned with isSafe=false and an explicit out-of-scope warning
+(uplift/partial contact is outside the rigid method), not silently designed
+with tension "pressure". Non-rectangular plans, openings, and strongly
+irregular column layouts are outside the strip idealization and rejected with
+an explicit error. Raft rigidity itself (relative raft-soil stiffness) is not
+a 318 provision and is stated as a method assumption, not claimed as
+code-verified. Every vector will include an independent equilibrium/benchmark
+check (hand-derived, not a twin of the implementation), and the engine will
+assert global equilibrium: strip reactions must sum to the column loads and
+the pressure field resultants must reproduce P, Mx, My.
