@@ -1,221 +1,121 @@
 package com.civileg.app.domain.calculations.sbc
 
-import com.civileg.app.domain.calculations.aci.ACIJoistSlab
-import com.civileg.app.domain.calculations.ecp.ECPHordiSlabDesign
 import com.civileg.app.domain.entities.LoadCombination
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.math.sqrt
 
 /**
- * Golden vectors, boundary and input-guard coverage for [SBCJoistSlab] (Phase 1.3).
+ * Golden vectors for the SBC 304-CR-2018 joist rebuild (CLAUSE_LOG batch SJ-1…SJ-9,
+ * 2026-11-22, rendered printed pages of the owner's SBC 304-CR-18 PDF).
  *
- * Provenance is recorded in docs/CLAUSE_LOG.md (S-01…S-05, accessed 2026-11-19).
- * Verified against the publicly available SBC 304-2007 text: rib width >= 100 mm,
- * rib depth <= 3.5*width, clear spacing <= 800 mm (§8.11.2/.3), corroborated by
- * ACI 318-19 §8.8. The engine's 700 mm limit, 0.25 shear coefficient and
- * partial-factor format are SBC 304-2024 claims that could not be verified;
- * those assertions are characterization of current behaviour, not code compliance.
+ * Vectors are hand-computed from the verified clauses: φ=0.90 (Table 21.2.2,
+ * printed 169), β1 (Table 22.2.2.4.3, printed 173), beff (Table 6.3.2.1,
+ * printed 40), As,min (§9.6.1.2/9.6.1.3, printed 68), geometry (§9.8, printed 72).
+ * NO shear-capacity vector exists: SJ-7 holds the printed Eq (22.5.5.1)
+ * discrepancy, so the shear check is BLOCKED and no result is a design pass.
  *
- * `span` is treated by the engine as metres (`span * 1000 / 4`), although the
- * `HordiSlabDesign` interface comments and existing callers use mm. That unit
- * mismatch is flagged as a follow-up, not changed in this batch.
+ * `span` is mm per the HordiSlabDesign interface contract (the production
+ * caller passes span_m × 1000).
  */
 class SBCJoistSlabTest {
 
     private fun design(
         fcu: Double = 30.0,
-        fy: Double = 420.0,
+        fy: Double = 400.0,
         ribWidth: Double = 150.0,
-        ribSpacing: Double = 600.0,
-        totalThickness: Double = 250.0,
+        ribSpacing: Double = 650.0,
+        totalThickness: Double = 300.0,
         toppingThickness: Double = 60.0,
-        span: Double = 6.0,
+        span: Double = 6000.0,
         designMoment: Double = 45.0,
-        designShear: Double = 25.0
+        designShear: Double = 30.0
     ) = SBCJoistSlab().designHordiSlab(
-        fcu = fcu,
-        fy = fy,
-        ribWidth = ribWidth,
-        ribSpacing = ribSpacing,
-        totalThickness = totalThickness,
-        toppingThickness = toppingThickness,
-        span = span,
-        designMoment = designMoment,
-        designShear = designShear,
+        fcu = fcu, fy = fy, ribWidth = ribWidth, ribSpacing = ribSpacing,
+        totalThickness = totalThickness, toppingThickness = toppingThickness,
+        span = span, designMoment = designMoment, designShear = designShear,
         loadCombination = LoadCombination.DEAD_LIVE
     )
 
-    private fun expectGuard(name: String, block: () -> Unit) {
-        val error = try {
-            block()
-            null
-        } catch (e: IllegalArgumentException) {
-            e
-        }
-        assertNotNull("Expected InputGuard failure for '$name'", error)
-        assertTrue("Guard message must name '$name'", error!!.message!!.contains("Input '$name'"))
-    }
-
     @Test
-    fun `golden vector flange case fcd fsd as and shear`() {
+    fun `golden vector - rectangular flange case with hand-computed values`() {
+        // fc′ = 0.8×30 = 24 MPa; d = 300−20−10 = 270; beff = min(650, 150+2·min(480,250,750)) = 650
+        // Mn,req = 45e6/0.9 = 50.0e6; a = 270 − √(270² − 2·50.0e6/(0.85·24·650)) = 14.347 mm ≤ hf=60
+        // As = 0.85·24·650·14.347/400 = 475.6 mm²
+        // As,min = max(0.25·√24/400, 1.4/400)·150·270 = 141.75; 4/3·As = 634.1 → As,design = 475.6
+        // bars: 5Φ12 needed → skip; 4Φ14 → As,prov = 615.75 mm²
+        // εt = 0.003·(270 − 14.347/0.85)/(14.347/0.85) = 0.0450 ≥ 0.005 (tension-controlled)
         val r = design()
+        assertEquals(475.6, r.requiredReinforcement, 0.5)
+        assertEquals(615.75, r.providedReinforcement, 0.5)
+        assertEquals(14.0, r.barDiameter, 1e-9)
+        assertTrue(r.codeNotes.any { it.contains("beff=650") })
+    }
 
-        // Hand computation: fc=30/1.5=20, fsd=420/1.15=365.217, d=250-20-10=220,
-        // beff=min(600, 6*1000/4+150)=600, MuFlange=0.9*0.85*20*600*60*190=104.652 kNm.
-        assertEquals(657.4708, r.requiredReinforcement, 1e-3)
-        assertEquals(452.3893, r.providedReinforcement, 1e-3)
+    @Test
+    fun `SJ-7 shear is blocked - NaN capacity and never a design pass`() {
+        val r = design()
+        assertTrue(r.shearCapacity.isNaN())
+        assertTrue(r.utilizationRatio.isNaN())
+        assertFalse(r.isSafe)
+        assertTrue(r.warnings.any { it.contains("BLOCKED (SJ-7)") })
+    }
+
+    @Test
+    fun `SJ-8 cube-to-cylinder conversion is flagged on every result`() {
+        val r = design()
+        assertTrue(r.warnings.any { it.contains("SJ-8") })
+    }
+
+    @Test
+    fun `SJ-1 rib width below 100mm is flagged`() {
+        val r = design(ribWidth = 80.0)
+        assertTrue(r.warnings.any { it.contains("§9.8.1.2") })
+        assertTrue(r.codeNotes.any { it.contains("§9.8.1.8") })
+        assertFalse(r.isSafe)
+    }
+
+    @Test
+    fun `SJ-1 clear spacing above 750mm is flagged`() {
+        val r = design(ribSpacing = 1000.0)
+        assertTrue(r.warnings.any { it.contains("§9.8.1.4") })
+    }
+
+    @Test
+    fun `SJ-2 topping below the 9-8-3-1 rule is flagged`() {
+        // clear = 500 → required = max(500/12, 50) = 50; topping 40 fails
+        val r = design(toppingThickness = 40.0)
+        assertTrue(r.warnings.any { it.contains("§9.8.3.1") })
+    }
+
+    @Test
+    fun `SJ-5 minimum steel with the one-third-greater exemption`() {
+        // Tiny moment: As,req ≈ 10.3 mm²; As,min = 141.75; exemption floor = 4/3·10.3 = 13.7
+        // → As,design = 13.7 → 1Φ12 (113.1 mm²)
+        val r = design(designMoment = 1.0)
+        assertEquals(10.3, r.requiredReinforcement, 0.2)
+        assertEquals(113.1, r.providedReinforcement, 0.2)
         assertEquals(12.0, r.barDiameter, 1e-9)
-        assertEquals(600.0, r.barSpacing, 1e-9)
-        assertEquals(27.671341, r.shearCapacity, 1e-5)
-        assertEquals(0.903462, r.utilizationRatio, 1e-5)
-        assertTrue(r.isSafe)
-        assertTrue("Unexpected warnings: ${r.warnings}", r.warnings.isEmpty())
-
-        val notes = r.codeNotes.joinToString("\n")
-        assertTrue(notes.contains("Neutral axis in flange"))
-        assertTrue(notes.contains("fcd="))
-        assertTrue(notes.contains("beff=600 mm"))
-        assertFalse(notes.contains("SBC 304-8.4.7"))
-        assertTrue(notes.contains("SBC 304-4.2.2"))
-        assertTrue(notes.contains("Shear coeff=0.25 (SBC 304-4.3.2)"))
     }
 
     @Test
-    fun `neutral axis transition at Mu flange boundary and web fallback`() {
-        val atBoundary = design(designMoment = 104.652)
-        assertTrue(atBoundary.codeNotes.any { it.contains("Neutral axis in flange") })
-        assertEquals(1675.7143, atBoundary.requiredReinforcement, 1e-2)
+    fun `heavy moment drives T-section and over-reinforcement warning`() {
+        // Mu = 200 kN·m → a = 71.5 > hf = 60 → T-section; As = 2419 > As,max = 2188 → warning
+        val r = design(designMoment = 200.0)
+        assertTrue(r.codeNotes.any { it.contains("T-section") })
+        assertTrue(r.warnings.any { it.contains("over-reinforced") })
+    }
 
-        val justAbove = design(designMoment = 104.653)
-        assertTrue(justAbove.codeNotes.any { it.contains("Neutral axis in web") })
-        assertEquals(1675.7333, justAbove.requiredReinforcement, 1e-2)
-        assertTrue(justAbove.warnings.any { it.contains("ρ=") && it.contains("over-reinforced") })
-
-        val compressionFailure = design(designMoment = 140.0)
-        assertEquals(2081.7857, compressionFailure.requiredReinforcement, 1e-2)
-        assertTrue(compressionFailure.warnings.any { it.contains("compression failure", ignoreCase = true) })
+    @Test(expected = IllegalArgumentException::class)
+    fun `input guard rejects zero fcu`() {
+        design(fcu = 0.0)
     }
 
     @Test
-    fun `geometry limits at inclusive boundaries and just beyond`() {
-        val atMinimums = design(ribWidth = 100.0, ribSpacing = 800.0, designShear = 10.0)
-        assertTrue("Unexpected warnings: ${atMinimums.warnings}", atMinimums.warnings.isEmpty())
-        assertTrue(atMinimums.isSafe)
-
-        val narrow = design(ribWidth = 99.9, ribSpacing = 800.0, designShear = 10.0)
-        assertTrue(narrow.warnings.any { it.contains("8.4.2") })
-        assertFalse(narrow.isSafe)
-
-        val depthAtLimit = design(totalThickness = 410.0, ribWidth = 100.0, ribSpacing = 800.0, designShear = 10.0)
-        assertFalse(depthAtLimit.warnings.any { it.contains("8.4.3") })
-        val tooDeep = design(totalThickness = 411.0, ribWidth = 100.0, ribSpacing = 800.0, designShear = 10.0)
-        assertTrue(tooDeep.warnings.any { it.contains("8.4.3") })
-
-        val spacingAtLimit = design(ribSpacing = 850.0, designShear = 10.0)
-        assertFalse(spacingAtLimit.warnings.any { it.contains("8.4.1") })
-        val spacingOver = design(ribSpacing = 850.1, designShear = 10.0)
-        assertTrue(spacingOver.warnings.any { it.contains("8.4.1") })
-
-        val toppingAtLimit = design(toppingThickness = 50.0, designShear = 10.0)
-        assertFalse(toppingAtLimit.warnings.any { it.contains("8.4.7") })
-        val toppingUnder = design(toppingThickness = 49.9, designShear = 10.0)
-        assertTrue(toppingUnder.warnings.any { it.contains("8.4.7") })
-    }
-
-    @Test
-    fun `shear capacity boundary and joist enhancement factor cap`() {
-        val safe = design(designShear = 27.671341)
-        assertTrue(safe.isSafe)
-        assertEquals(1.0, safe.utilizationRatio, 1e-5)
-
-        val unsafe = design(designShear = 27.672)
-        assertFalse(unsafe.isSafe)
-        assertTrue(unsafe.warnings.any { it.contains("Design shear") })
-
-        // Characterization: 10% enhancement for close ribs (UNVERIFIED-2024).
-        val enhanced = design(ribWidth = 200.0, ribSpacing = 250.0, designMoment = 30.0, designShear = 10.0)
-        assertEquals(39.662256, enhanced.shearCapacity, 1e-4)
-        assertTrue(enhanced.codeNotes.any { it.contains("joist factor=") })
-
-        val capped = design(ribWidth = 200.0, ribSpacing = 200.0, designMoment = 30.0, designShear = 10.0)
-        assertEquals(40.584634, capped.shearCapacity, 1e-4)
-    }
-
-    @Test
-    fun `input guards reject zero negative and non finite values`() {
-        expectGuard("fcu") { design(fcu = 0.0) }
-        expectGuard("fcu") { design(fcu = Double.NaN) }
-        expectGuard("fy") { design(fy = -420.0) }
-        expectGuard("ribWidth") { design(ribWidth = 0.0) }
-        expectGuard("ribSpacing") { design(ribSpacing = 0.0) }
-        expectGuard("totalThickness") { design(totalThickness = 0.0) }
-        expectGuard("toppingThickness") { design(toppingThickness = 0.0) }
-        expectGuard("span") { design(span = 0.0) }
-        expectGuard("designMoment") { design(designMoment = -1.0) }
-        expectGuard("designShear") { design(designShear = -1.0) }
-    }
-
-    @Test
-    fun `cross code divergence shear coefficient geometry limits and reinforcement`() {
-        val sbc = SBCJoistSlab()
-        val aci = ACIJoistSlab()
-        val ecp = ECPHordiSlabDesign()
-
-        fun run(engine: com.civileg.app.domain.calculations.base.HordiSlabDesign, spacing: Double) =
-            engine.designHordiSlab(
-                fcu = 30.0, fy = 420.0, ribWidth = 150.0, ribSpacing = spacing,
-                totalThickness = 250.0, toppingThickness = 60.0, span = 6.0,
-                designMoment = 45.0, designShear = 10.0,
-                loadCombination = LoadCombination.DEAD_LIVE
-            )
-
-        val sbcResult = run(sbc, 600.0)
-        val aciResult = run(aci, 600.0)
-        val ecpResult = run(ecp, 600.0)
-
-        // 0.25 (SBC) vs 0.24 (ECP) shear coefficient, same fc/d/bw/phi.
-        assertEquals(0.25 / 0.24, sbcResult.shearCapacity / ecpResult.shearCapacity, 1e-9)
-        assertTrue(aciResult.shearCapacity < ecpResult.shearCapacity)
-        assertTrue("SBC shear=${sbcResult.shearCapacity}, ACI shear=${aciResult.shearCapacity}",
-            sbcResult.shearCapacity > aciResult.shearCapacity)
-
-        // Different flexural widths: ECP rib only, SBC effective flange, ACI full spacing.
-        assertTrue(ecpResult.requiredReinforcement > sbcResult.requiredReinforcement)
-        assertTrue(sbcResult.requiredReinforcement > aciResult.requiredReinforcement)
-
-        // 750 mm clear spacing: SBC's 700 mm cap (2024 claim) rejects it, ACI's
-        // 30 in (~762 mm) and ECP's unbounded check accept it (S-02/S-03).
-        val sbcWide = run(sbc, 900.0)
-        val aciWide = run(aci, 900.0)
-        val ecpWide = run(ecp, 900.0)
-        assertTrue(sbcWide.warnings.any { it.contains("8.4.1") })
-        assertFalse(sbcWide.isSafe)
-        assertTrue(aciWide.isSafe)
-        assertTrue(ecpWide.isSafe)
-    }
-
-    @Test
-    fun `effective flange width uses span over four when smaller than spacing`() {
-        val shortSpan = design(span = 1.5)
-        assertTrue(shortSpan.codeNotes.any { it.contains("beff=525 mm") })
-        assertEquals(663.1996, shortSpan.requiredReinforcement, 1e-3)
-
-        val longSpan = design(span = 6.0)
-        assertTrue(longSpan.codeNotes.any { it.contains("beff=600 mm") })
-    }
-
-    @Test
-    fun `zero moment and shear are allowed by guards and produce finite output`() {
-        val r = design(designMoment = 0.0, designShear = 0.0)
-        assertEquals(0.0, r.requiredReinforcement, 1e-9)
-        assertEquals(113.0973, r.providedReinforcement, 1e-3)
-        assertEquals(0.0, r.utilizationRatio, 1e-9)
-        assertTrue(r.isSafe)
-        assertTrue(r.warnings.isEmpty())
-        assertEquals(sqrt(20.0) * 0.25 * 150.0 * 220.0 / 1000.0 * 0.75, r.shearCapacity, 1e-9)
+    fun `edition label is SBC 304-CR-2018 with no 2024 claim`() {
+        val r = design()
+        assertTrue(r.codeNotes.any { it.contains("SBC 304-CR-2018") })
+        assertFalse(r.codeNotes.any { it.contains("304-2024") })
     }
 }
