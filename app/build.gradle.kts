@@ -308,6 +308,21 @@ configure<JacocoPluginExtension> {
     toolVersion = "0.8.12"
 }
 
+// Shared JaCoCo scope for the report and the verification gate below.
+val jacocoFileFilter = listOf(
+    "**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*",
+    "**/*Test*.*", "android/**/*", "**/*_MembersInjector.*",
+    "**/Dagger*Component*.*", "**/*_Factory*.*"
+)
+val jacocoClassTree = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/freeDebug").matching {
+    exclude(jacocoFileFilter)
+}
+val jacocoSources = "${projectDir}/src/main/java"
+val jacocoExecData = fileTree(layout.buildDirectory.get()).include(
+    "outputs/unit_test_code_coverage/freeDebugUnitTest/testFreeDebugUnitTest.exec",
+    "jacoco/testFreeDebugUnitTest.exec"
+)
+
 tasks.register<JacocoReport>("jacocoTestReport") {
     dependsOn("testFreeDebugUnitTest")
 
@@ -316,18 +331,32 @@ tasks.register<JacocoReport>("jacocoTestReport") {
         html.required.set(true)
     }
 
-    val fileFilter = listOf(
-        "**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*",
-        "**/*Test*.*", "android/**/*", "**/*_MembersInjector.*",
-        "**/Dagger*Component*.*", "**/*_Factory*.*"
-    )
+    sourceDirectories.setFrom(files(jacocoSources))
+    classDirectories.setFrom(files(jacocoClassTree))
+    executionData.setFrom(jacocoExecData)
+}
 
-    val debugTree = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/freeDebug").matching {
-        exclude(fileFilter)
+// Coverage ratchet: fails when :app freeDebug unit-test coverage drops below
+// the baseline measured on master (19.4% instructions / 11.4% branches - see
+// the CI "coverage-report" artifact). Raise these minimums as coverage grows;
+// never lower them without a comment explaining why.
+tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
+    dependsOn("testFreeDebugUnitTest")
+
+    violationRules {
+        rule {
+            limit {
+                counter = "INSTRUCTION"
+                minimum = "0.19".toBigDecimal()
+            }
+            limit {
+                counter = "BRANCH"
+                minimum = "0.11".toBigDecimal()
+            }
+        }
     }
-    val mainSrc = "${projectDir}/src/main/java"
 
-    sourceDirectories.setFrom(files(mainSrc))
-    classDirectories.setFrom(files(debugTree))
-    executionData.setFrom(fileTree(layout.buildDirectory.get()).include("outputs/unit_test_code_coverage/freeDebugUnitTest/testFreeDebugUnitTest.exec", "jacoco/testFreeDebugUnitTest.exec"))
+    sourceDirectories.setFrom(files(jacocoSources))
+    classDirectories.setFrom(files(jacocoClassTree))
+    executionData.setFrom(jacocoExecData)
 }

@@ -48,7 +48,7 @@ jobs:
         run: python -I tools/guards/contrast_check.py .
 
       - name: Run DXF validator
-        run: python tools/guards/dxf_validate.py tools/ || true
+        run: python tools/guards/dxf_validate.py tools/
 
   # ─── Job 2: Lint Check ────────────────────────────────────────────────
   lint:
@@ -69,30 +69,49 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Run Android Lint (non-blocking)
+      # Lint always runs to completion so the report exists for the budget
+      # check and the uploaded artifacts, even when errors are found.
+      - name: Run Android Lint
         run: ./gradlew lintFreeDebug --no-daemon
         continue-on-error: true
 
-      - name: Check lint severity
+      # Ratchet: fail only when errors exceed the budget recorded in
+      # .github/lint-error-budget, so NEW lint errors block the build while
+      # pre-existing ones are tolerated until fixed. Lower the budget file
+      # whenever errors are fixed; never raise it without a comment.
+      - name: Enforce lint error budget
         run: |
-          if [ -f app/build/reports/lint-results-debug.xml ]; then
-            ERRORS=$(grep -c 'severity="error"' app/build/reports/lint-results-debug.xml 2>/dev/null || true)
-            echo "Lint errors found: $ERRORS"
-            if [ "$ERRORS" -gt 0 ]; then
-              echo "::warning::$ERRORS lint error(s) found; see the uploaded lint report"
-            fi
+          REPORT=app/build/reports/lint-results-freeDebug.xml
+          if [ ! -f "$REPORT" ]; then
+            echo "::error::Lint report not found at $REPORT - lint did not run to completion (build/configuration failure)"
+            exit 1
           fi
+          ERRORS=$(grep -c 'severity="Error"' "$REPORT" || true)
+          echo "Lint errors found: $ERRORS"
+          BUDGET_FILE=.github/lint-error-budget
+          if [ ! -f "$BUDGET_FILE" ]; then
+            echo "::warning::$ERRORS lint error(s) found; no budget set yet ($BUDGET_FILE missing), so this is non-blocking"
+            exit 0
+          fi
+          BUDGET=$(tr -d '[:space:]' < "$BUDGET_FILE")
+          if [ "$ERRORS" -gt "$BUDGET" ]; then
+            echo "::error::$ERRORS lint error(s) exceed the budget of $BUDGET; fix the new lint errors before merging"
+            exit 1
+          fi
+          echo "Lint errors within budget ($ERRORS <= $BUDGET)"
 
       - name: Upload lint report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lint-report
-          path: app/build/reports/lint-results-debug.html
+          path: |
+            app/build/reports/lint-results-freeDebug.html
+            app/build/reports/lint-results-freeDebug.xml
           retention-days: 14
           if-no-files-found: ignore
 
-  # ─── Job 2: Unit Tests ────────────────────────────────────────────────
+  # ─── Job 3: Unit Tests ────────────────────────────────────────────────
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -117,6 +136,11 @@ jobs:
       - name: Generate JaCoCo coverage report
         run: ./gradlew :app:jacocoTestReport --no-daemon
 
+      # Coverage ratchet: fails if coverage drops below the baseline defined
+      # in app/build.gradle.kts (jacocoCoverageVerification).
+      - name: Verify coverage thresholds
+        run: ./gradlew :app:jacocoCoverageVerification --no-daemon
+
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
@@ -135,7 +159,7 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
-  # ─── Job 3: Debug APK Build ──────────────────────────────────────────
+  # ─── Job 4: Debug APK Build ──────────────────────────────────────────
   build-debug:
     name: Build Debug APK
     runs-on: ubuntu-latest
