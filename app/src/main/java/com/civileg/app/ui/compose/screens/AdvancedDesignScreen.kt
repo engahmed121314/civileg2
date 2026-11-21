@@ -62,7 +62,15 @@ import com.civileg.app.R
 import com.civileg.app.domain.calculations.compositebeam.CompositeBeamDesign
 import com.civileg.app.domain.calculations.compositebeam.CompositeBeamDesignResult
 import com.civileg.app.domain.calculations.compositebeam.CompositeBeamInput
+import com.civileg.app.domain.calculations.aci.ACIAdvancedBeam
 import com.civileg.app.domain.calculations.compositebeam.CompositeDesignCode
+import com.civileg.app.domain.calculations.ecp.ECPAdvancedBeam
+import com.civileg.app.domain.calculations.sbc.SBCAdvancedBeam
+import com.civileg.app.domain.entities.AdvancedBeamResult
+import com.civileg.app.domain.entities.BeamSectionType
+import com.civileg.app.domain.entities.BeamType
+import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.calculations.deepbeam.DeepBeamCode
 import com.civileg.app.domain.calculations.deepbeam.DeepBeamDesign
 import com.civileg.app.domain.calculations.deepbeam.DeepBeamInput
@@ -80,6 +88,7 @@ import com.civileg.app.domain.calculations.settlement.SettlementInput
 import com.civileg.app.domain.calculations.settlement.SettlementResult
 
 private enum class AdvancedModule(val title: String, val titleAr: String) {
+    Beam("Beam", "كمرة"),
     CompositeBeam("Composite", "مركبة"),
     FireResistance("Fire", "حريق"),
     DeepBeam("Deep Beam", "كمرة عميقة"),
@@ -95,8 +104,27 @@ private data class UiCheck(
     val passed: Boolean
 )
 
+/** أنواع الكمرات المدعومة في تبويب الكمرة المتقدمة. */
+private enum class BeamKind(val title: String) {
+    SIMPLY_SUPPORTED("Simple / بسيطة"),
+    FIXED("Fixed / ثابتة"),
+    CANTILEVER("Cantilever / كابولي")
+}
+
 /** حالة إدخال واحدة لكل الوحدات حتى لا تُفقد القيم عند تبديل التبويبات. */
 private class AdvancedFormState {
+    // Advanced beam (ECP/SBC/ACI)
+    var beamCode by mutableStateOf(DesignCode.ECP)
+    var beamKind by mutableStateOf(BeamKind.SIMPLY_SUPPORTED)
+    var beamCombo by mutableStateOf(LoadCombination.DEAD_LIVE)
+    var bSpan by mutableStateOf("6.0")
+    var bWidth by mutableStateOf("250")
+    var bDepth by mutableStateOf("600")
+    var bFcu by mutableStateOf("30")
+    var bFy by mutableStateOf("400")
+    var bDead by mutableStateOf("20")
+    var bLive by mutableStateOf("10")
+
     // Composite beam
     var compositeCode by mutableStateOf(CompositeDesignCode.ECP)
     var cSpan by mutableStateOf("8.0")
@@ -200,6 +228,10 @@ private fun AdvancedFormState.pileSignature() = inputSignature(
     pColW, pColD, pAllowSettle
 )
 
+private fun AdvancedFormState.beamSignature() = inputSignature(
+    beamCode, beamKind, beamCombo, bSpan, bWidth, bDepth, bFcu, bFy, bDead, bLive
+)
+
 private fun AdvancedFormState.settlementSignature() = inputSignature(
     sWidth, sLength, sPressure, sModulus, sPoisson, sInfluence, sLayer, sCc, sCr,
     sE0, sSigma0, sSigmaP, sCv, sDrainage, sTime, sAllowSettle
@@ -223,6 +255,8 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
     var deepResultSignature by remember { mutableStateOf<String?>(null) }
     var pileResultSignature by remember { mutableStateOf<String?>(null) }
     var settlementResultSignature by remember { mutableStateOf<String?>(null) }
+    var beamResult by remember { mutableStateOf<AdvancedBeamResult?>(null) }
+    var beamResultSignature by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
@@ -259,6 +293,43 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
                 compositeResultSignature = signature
             }
             .onFailure { errorMessage = it.message ?: "Composite beam calculation failed" }
+    }
+
+    fun calculateBeam() {
+        val signature = form.beamSignature()
+        beamResult = null
+        beamResultSignature = null
+        runCatching {
+            val span = form.bSpan.num("span")
+            val beamType = when (form.beamKind) {
+                BeamKind.SIMPLY_SUPPORTED -> BeamType.SimplySupported(span)
+                BeamKind.FIXED -> BeamType.Fixed(span)
+                BeamKind.CANTILEVER -> BeamType.Cantilever(span)
+            }
+            val fcu = form.bFcu.num("fcu")
+            val fy = form.bFy.num("fy")
+            val dead = form.bDead.num("dead load")
+            val live = form.bLive.num("live load")
+            val width = form.bWidth.num("width")
+            val depth = form.bDepth.num("depth")
+            when (form.beamCode) {
+                DesignCode.ECP -> ECPAdvancedBeam().designBeam(
+                    beamType, BeamSectionType.RECTANGULAR, fcu, fy, dead, live, width, depth,
+                    inventory = null, loadCombination = form.beamCombo
+                )
+                DesignCode.SBC -> SBCAdvancedBeam().designBeam(
+                    beamType, BeamSectionType.RECTANGULAR, fcu, fy, dead, live, width, depth,
+                    inventory = null, loadCombination = form.beamCombo
+                )
+                DesignCode.ACI -> ACIAdvancedBeam().designBeam(
+                    beamType, BeamSectionType.RECTANGULAR, fcu, fy, dead, live, width, depth,
+                    inventory = null, loadCombination = form.beamCombo
+                )
+            }
+        }.onSuccess {
+            beamResult = it
+            beamResultSignature = signature
+        }.onFailure { errorMessage = it.message ?: "Beam calculation failed" }
     }
 
     fun calculateFire() {
@@ -422,6 +493,11 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
             ) {
                 item { Spacer(Modifier.height(4.dp)) }
                 when (AdvancedModule.entries[moduleIndex]) {
+                    AdvancedModule.Beam ->                     beamContent(
+                        form,
+                        beamResult.takeIf { beamResultSignature == form.beamSignature() },
+                        ::calculateBeam
+                    )
                     AdvancedModule.CompositeBeam ->                     compositeContent(
                         form,
                         compositeResult.takeIf { compositeResultSignature == form.compositeSignature() },
@@ -451,6 +527,97 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
                 item { Spacer(Modifier.height(24.dp)) }
             }
         }
+    }
+}
+
+// ───────────────────────────── Advanced beam (ECP/SBC/ACI) ─────────────────────────────
+
+private fun androidx.compose.foundation.lazy.LazyListScope.beamContent(
+    form: AdvancedFormState,
+    result: AdvancedBeamResult?,
+    onCalculate: () -> Unit
+) {
+    item {
+        SectionTitle("Advanced Beam Design", "تصميم كمرة متقدم")
+        Spacer(Modifier.height(8.dp))
+        CodeChips(
+            options = DesignCode.entries,
+            selected = form.beamCode,
+            label = { it.version },
+            onSelected = { form.beamCode = it }
+        )
+        Spacer(Modifier.height(8.dp))
+        CodeChips(
+            options = BeamKind.entries,
+            selected = form.beamKind,
+            label = { it.title },
+            onSelected = { form.beamKind = it }
+        )
+    }
+    item {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NumField("Span (m)", form.bSpan, Modifier.weight(1f)) { form.bSpan = it }
+            NumField("Width (mm)", form.bWidth, Modifier.weight(1f)) { form.bWidth = it }
+            NumField("Depth (mm)", form.bDepth, Modifier.weight(1f)) { form.bDepth = it }
+        }
+    }
+    item {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NumField("fcu (MPa)", form.bFcu, Modifier.weight(1f)) { form.bFcu = it }
+            NumField("fy (MPa)", form.bFy, Modifier.weight(1f)) { form.bFy = it }
+        }
+    }
+    item {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NumField("Dead (kN/m)", form.bDead, Modifier.weight(1f)) { form.bDead = it }
+            NumField("Live (kN/m)", form.bLive, Modifier.weight(1f)) { form.bLive = it }
+        }
+    }
+    item {
+        CodeChips(
+            options = LoadCombination.entries.toList(),
+            selected = form.beamCombo,
+            label = { it.name },
+            onSelected = { form.beamCombo = it }
+        )
+    }
+    item { CalculateButton(onCalculate) }
+    result?.let { r ->
+        item {
+            StatusBanner(
+                isSafe = r.flexureResult.isSafe && r.shearResult.isSafe && r.deflectionCheck.isSafe
+            )
+        }
+        item {
+            ResultCard("Flexure / الانحناء") {
+                ResultRow("As required", "%.0f mm²".format(r.flexureResult.astRequired), bold = true)
+                ResultRow("As provided", "%.0f mm²".format(r.flexureResult.astProvided))
+                ResultRow("Bars", "${r.flexureResult.numberOfBars}Ø${r.flexureResult.barDiameter.toInt()}")
+                ResultRow("Utilization", "%.2f".format(r.flexureResult.utilizationRatio))
+            }
+        }
+        item {
+            ResultCard("Shear / القص") {
+                ResultRow("Stirrups", "Ø${r.shearResult.stirrupDiameter.toInt()} @ ${r.shearResult.stirrupSpacing.toInt()} mm", bold = true)
+                ResultRow("Utilization", "%.2f".format(r.shearResult.utilizationRatio))
+            }
+        }
+        item {
+            ResultCard("Deflection / الترخيم") {
+                ResultRow("Calculated", "%.1f mm".format(r.deflectionCheck.calculatedDeflection), bold = true)
+                ResultRow("Allowable", "%.1f mm".format(r.deflectionCheck.allowableDeflection))
+                if (r.deflectionCheck.message.isNotBlank()) ResultRow("Note", r.deflectionCheck.message)
+            }
+        }
+        r.crackWidthCheck?.let { cw ->
+            item {
+                ResultCard("Crack width / عرض الشقوق") {
+                    ResultRow("Calculated", "%.3f mm".format(cw.calculatedWidth), bold = true)
+                    ResultRow("Allowable", "%.3f mm".format(cw.allowableWidth))
+                }
+            }
+        }
+        item { NotesCard(r.warnings, r.codeNotes) }
     }
 }
 
