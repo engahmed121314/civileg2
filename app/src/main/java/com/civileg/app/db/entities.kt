@@ -44,7 +44,8 @@ data class Design(
     val inputData: String, // JSON string (contains specific input for each type)
     val results: String,   // JSON string (contains specific result for each type)
     val isSafe: Boolean,
-    val utilizationRatio: Double = 0.0,
+    /** Null = not evaluated (blocked check); never NaN/fake numbers. */
+    val utilizationRatio: Double? = null,
     val codeUsed: String,
     val concreteVolume: Double = 0.0,
     val steelWeight: Double = 0.0,
@@ -162,7 +163,8 @@ data class Slab(
     val concreteVolume: Double,
     val steelWeight: Double,
     val cost: Double,
-    val utilizationRatio: Double = 0.0
+    /** Null = not evaluated (blocked check); never NaN/fake numbers. */
+    val utilizationRatio: Double? = null
 )
 
 @Entity(

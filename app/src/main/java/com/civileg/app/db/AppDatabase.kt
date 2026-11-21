@@ -30,7 +30,7 @@ import androidx.room.TypeConverters
         BuildingLayoutEntity::class,
         ExportEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -74,7 +74,8 @@ abstract class AppDatabase : RoomDatabase() {
                     Migrations.MIGRATION_10_11,
                     Migrations.MIGRATION_11_12,
                     Migrations.MIGRATION_12_13,
-                    Migrations.MIGRATION_13_14
+                    Migrations.MIGRATION_13_14,
+                    Migrations.MIGRATION_14_15
                 )
                 .fallbackToDestructiveMigrationFrom(true, 1, 2, 3, 4, 5)
                 .fallbackToDestructiveMigrationOnDowngrade(true)

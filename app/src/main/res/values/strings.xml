@@ -1880,6 +1880,7 @@
     <string name="hordi_slab_config">Configuration</string>
     <string name="hordi_slab_geometry">Geometry</string>
     <string name="hordi_slab_material_properties">Material Properties</string>
+    <string name="hordi_slab_fc_cylinder">f\'c cylinder (MPa) — required for SBC</string>
     <string name="hordi_slab_design_forces">Design Forces</string>
     <string name="hordi_slab_design_button">Design Hordi Slab</string>
     <string name="hordi_slab_designing">Designing…</string>

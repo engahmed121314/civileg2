@@ -31,7 +31,7 @@ class DesignRepositoryImpl(
 
     private data class ResultFields(
         val isSafe: Boolean = false,
-        val utilizationRatio: Double = 0.0,
+        val utilizationRatio: Double? = null,
         val concreteVolume: Double = 0.0,
         val steelWeight: Double = 0.0,
         val cost: Double = 0.0,
@@ -222,7 +222,7 @@ class DesignRepositoryImpl(
     // ── Private helpers ──────────────────────────────────────────────────
 
     private suspend fun saveGeneralDesign(
-        projectId: Long, type: DesignType, name: String, isSafe: Boolean, utilizationRatio: Double,
+        projectId: Long, type: DesignType, name: String, isSafe: Boolean, utilizationRatio: Double?,
         concreteVolume: Double, steelWeight: Double, totalCost: Double, result: Any, codeUsed: String
     ) {
         val design = Design(

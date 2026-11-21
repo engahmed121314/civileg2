@@ -15,16 +15,24 @@ import kotlin.math.*
  * with ECP-style partial factors (γc/γs) and fabricated §8.4/§4.2/§4.3
  * numbering is removed wholesale.
  *
- * Edition policy (user decision 2026-11-22): implement the supplied English
- * 2018 copy now; edition differences isolated in the clause-referenced
- * constants below for a future 2024 upgrade. No 2024 compliance claim.
+ * Edition policy: the supplied English 2018 copy is the implemented basis;
+ * edition differences are isolated in the clause-referenced constants below
+ * for a future 2024 upgrade. No 2024 compliance claim.
  *
  * HELD ITEM (SJ-7): the one-way shear capacity is NOT computed. The printed
  * Eq (22.5.5.1) (p. 174) duplicates the Eq (22.5.1.2) cross-section cap and is
  * circular as a definition of Vc; the discrepancy is unresolved (no official
- * erratum found). The result therefore carries shearCapacity = NaN,
- * isSafe = false and a BLOCKED warning: no overall design pass until SJ-7
- * resolves. The joist 1.1×Vc factor of §9.8.1.5 is likewise not applied.
+ * erratum found). The result therefore carries shearCapacity = null,
+ * utilizationRatio = null, isSafe = false and a BLOCKED warning: no overall
+ * design pass until SJ-7 resolves. The joist 1.1×Vc factor of §9.8.1.5 is
+ * likewise not applied.
+ *
+ * STRENGTH INPUT (SJ-8 resolved by removal): SBC 304 is specified on cylinder
+ * strength fc′ and NO cube-to-cylinder conversion basis exists in any Saudi
+ * source on file (304-CR-18, 303-CR-18, 304-2007). The engine therefore
+ * REQUIRES the explicit cylinder strength: [cylinderStrengthMPa]; without it
+ * design is refused with [MissingCylinderStrengthException]. The legacy cube
+ * input is preserved untouched in saved data, never silently converted.
  */
 class SBCJoistSlab : HordiSlabDesign {
 
@@ -45,11 +53,6 @@ class SBCJoistSlab : HordiSlabDesign {
         private const val MIN_COVER = 20.0       // UNVERIFIED: §20.6.1 not yet opened
         private const val HALF_BAR_DIA = 10.0    // assumed half bar diameter (mm)
 
-        // SJ-8: SBC 304 is specified on cylinder strength fc′; the engine input
-        // is cube strength fcu (UI semantics preserved). 0.8 is an approximation,
-        // flagged in every result — not a code clause.
-        private const val CUBE_TO_CYLINDER = 0.8
-
         // Bar diameters tried in order for the rib bottom reinforcement
         private val BAR_DIAMETERS = listOf(12.0, 14.0, 16.0, 18.0, 20.0)
         private const val MAX_BARS_PER_RIB = 4
@@ -65,9 +68,11 @@ class SBCJoistSlab : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        cylinderStrengthMPa: Double?
     ): SlabDesignResult {
-        // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
+        // fcu (cube) stays accepted for interface/legacy compatibility but is NOT
+        // used by this cylinder-based engine; the cylinder value governs.
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("ribWidth", ribWidth)
@@ -81,11 +86,9 @@ class SBCJoistSlab : HordiSlabDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
-        // ── Materials (SJ-8: cube input → cylinder approximation) ──
-        val fcPrime = CUBE_TO_CYLINDER * fcu
-        warnings.add(String.format(
-            "SJ-8: SBC 304-CR-2018 is specified on cylinder strength fc′; input fcu=%.0f MPa (cube) converted with the 0.8 approximation (fc′=%.1f MPa) — UNVERIFIED conversion, enter the cylinder-equivalent strength where known",
-            fcu, fcPrime))
+        // ── Materials (SJ-8): explicit cylinder strength, no conversion ──
+        val fcPrime = cylinderStrengthMPa ?: throw MissingCylinderStrengthException()
+        InputGuard.positive("cylinderStrengthMPa", fcPrime)
 
         val d = totalThickness - MIN_COVER - HALF_BAR_DIA   // effective depth (mm)
         val hf = toppingThickness                            // flange thickness (mm)
@@ -194,8 +197,8 @@ class SBCJoistSlab : HordiSlabDesign {
 
         // ── SJ-7: shear BLOCKED — printed Eq (22.5.5.1) discrepancy unresolved ──
         warnings.add("BLOCKED (SJ-7): one-way shear capacity not computed — SBC 304-CR-18 printed Eq (22.5.5.1) (p. 174) duplicates the Eq (22.5.1.2) cap and is circular as a definition of Vc; the §9.8.1.5 joist 1.1×Vc factor is therefore not applied. No design pass until the discrepancy resolves (see CLAUSE_LOG SJ-7).")
-        val shearCapacity = Double.NaN
-        val utilization = Double.NaN
+        val shearCapacity: Double? = null      // not evaluated - never a fake number
+        val utilization: Double? = null        // not evaluated
 
         // No overall pass while shear is blocked (and only if every other check passes)
         val geometrySafe = ribWidthOk && ribDepthOk && spacingOk && toppingOk
@@ -208,7 +211,7 @@ class SBCJoistSlab : HordiSlabDesign {
         codeNotes.add("§9.8.1.7: provide reinforcement perpendicular to ribs per §24.4 (shrinkage/temperature)")
 
         codeNotes.add(0, "SBC 304-CR-2018 §9.8 one-way joist design (English CR; 2024 upgrade pending — no 2024 claim)")
-        codeNotes.add(1, String.format("fc′=%.1f MPa (0.8·fcu approx), fy=%.0f MPa, φ=%.2f, β1=%.3f", fcPrime, fy, PHI_FLEXURE, beta1))
+        codeNotes.add(1, String.format("fc′=%.1f MPa (cylinder, user-entered), fy=%.0f MPa, φ=%.2f, β1=%.3f", fcPrime, fy, PHI_FLEXURE, beta1))
         codeNotes.add(2, String.format("beff=%.0f mm (Table 6.3.2.1), d=%.0f mm, As,req=%.0f mm², As,min=%.0f mm², As,prov=%.0f mm² (%dΦ%.0f)", beff, d, asReq, asMin, asProvided, nBars, barDia))
 
         return SlabDesignResult(
@@ -232,3 +235,16 @@ class SBCJoistSlab : HordiSlabDesign {
         else -> 0.85 - 0.05 * (fcPrime - 28.0) / 7.0
     }
 }
+
+/**
+ * SBC 304-CR-2018 joist design was requested without the cylinder compressive
+ * strength. This is an INCOMPLETE-INPUT condition, not a failed computation:
+ * the caller must collect the explicit fc′ (MPa) and retry; legacy cube data
+ * is preserved and loadable but cannot drive the Saudi cylinder-based clauses.
+ */
+class MissingCylinderStrengthException : IllegalArgumentException(
+    "SBC 304-CR-2018 requires the cylinder compressive strength fc' (MPa): " +
+    "no cube-to-cylinder conversion basis exists in the Saudi sources (SJ-8). " +
+    "Enter the cylinder strength explicitly / أدخل مقاومة الأسطوانة صراحة"
+)
+

@@ -69,10 +69,12 @@ fun HordiSlabScreen(
     val config = LocalConfiguration.current
     val screenWidthPx = (config.screenWidthDp * density.density).toInt()
     val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+    val isArabic = com.civileg.app.utils.LocaleHelper.isArabic()
 
     // ── Input state ────────────────────────────────────────────────
     var designCode by remember { mutableStateOf(defaultDesignCode().name) }
     var fcu by remember { mutableStateOf("30") }
+    var fcCylinder by remember { mutableStateOf("") }   // SBC-only: cylinder f'c (MPa), required
     var fy by remember { mutableStateOf("400") }
     var ribWidth by remember { mutableStateOf("120") }
     var ribSpacing by remember { mutableStateOf("500") }
@@ -158,6 +160,17 @@ fun HordiSlabScreen(
                     ) {
                         PremiumInputField(fcu, "fcu (MPa)", { fcu = it }, modifier = Modifier.weight(1f))
                         PremiumInputField(fy, "fy (MPa)", { fy = it }, modifier = Modifier.weight(1f))
+                    }
+                }
+                if (designCode == "SBC") {
+                    // SBC 304-CR-2018 is cylinder-based; no cube conversion basis (SJ-8).
+                    item {
+                        PremiumInputField(
+                            fcCylinder,
+                            stringResource(R.string.hordi_slab_fc_cylinder),
+                            { fcCylinder = it },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
 
@@ -277,7 +290,8 @@ fun HordiSlabScreen(
                                 designMoment = designMoment.toDoubleOrNull() ?: 80.0,
                                 designShear = designShear.toDoubleOrNull() ?: 30.0,
                                 loadCombination = loadCombination,
-                                designCode = designCode
+                                designCode = designCode,
+                                cylinderStrength = if (designCode == "SBC") fcCylinder.toDoubleOrNull() else null
                             )
                         },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -334,11 +348,22 @@ fun HordiSlabScreen(
 
                     // Safety Status Gauge
                     item {
-                        SafetyStatusCard(
-                            utilizationRatio = res.utilizationRatio,
-                            isSafe = res.isSafe,
-                            title = stringResource(R.string.hordi_slab_safety_title, designCode)
-                        )
+                        val util = res.utilizationRatio
+                        if (util != null) {
+                            SafetyStatusCard(
+                                utilizationRatio = util,
+                                isSafe = res.isSafe,
+                                title = stringResource(R.string.hordi_slab_safety_title, designCode)
+                            )
+                        } else {
+                            // Blocked check: no gauge, explicit incomplete status
+                            ResultDataCard(
+                                stringResource(R.string.hordi_slab_safety_title, designCode),
+                                listOf("Status" to HordiResultPresentation.statusText(res.isSafe, false, isArabic)),
+                                icon = Icons.Default.Shield,
+                                accentColor = Color(0xFFE53935)
+                            )
+                        }
                     }
 
                     // Reinforcement Result
@@ -362,10 +387,10 @@ fun HordiSlabScreen(
                         ResultDataCard(
                             stringResource(R.string.hordi_slab_shear_check),
                             listOf(
-                                "Shear Capacity" to String.format("%.1f kN", res.shearCapacity),
+                                "Shear Capacity" to HordiResultPresentation.shearCapacityText(res.shearCapacity, isArabic),
                                 "Min Thickness" to String.format("%.0f mm", res.minThickness),
-                                "Utilization" to String.format("%.1f%%", res.utilizationRatio * 100),
-                                "Status" to if (res.isSafe) "PASS ✓" else "FAIL ✗"
+                                "Utilization" to HordiResultPresentation.utilizationText(res.utilizationRatio, isArabic),
+                                "Status" to HordiResultPresentation.statusText(res.isSafe, res.utilizationRatio != null, isArabic)
                             ),
                             icon = Icons.Default.Shield,
                             accentColor = if (res.isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)

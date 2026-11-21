@@ -2,6 +2,8 @@ package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.entities.LoadCombination
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,17 +32,19 @@ class SBCJoistSlabTest {
         toppingThickness: Double = 60.0,
         span: Double = 6000.0,
         designMoment: Double = 45.0,
-        designShear: Double = 30.0
+        designShear: Double = 30.0,
+        cylinderStrength: Double? = 24.0
     ) = SBCJoistSlab().designHordiSlab(
         fcu = fcu, fy = fy, ribWidth = ribWidth, ribSpacing = ribSpacing,
         totalThickness = totalThickness, toppingThickness = toppingThickness,
         span = span, designMoment = designMoment, designShear = designShear,
-        loadCombination = LoadCombination.DEAD_LIVE
+        loadCombination = LoadCombination.DEAD_LIVE,
+        cylinderStrengthMPa = cylinderStrength
     )
 
     @Test
     fun `golden vector - rectangular flange case with hand-computed values`() {
-        // fc′ = 0.8×30 = 24 MPa; d = 300−20−10 = 270; beff = min(650, 150+2·min(480,250,750)) = 650
+        // fc′ = 24 MPa (explicit cylinder input — no conversion); d = 300−20−10 = 270; beff = min(650, 150+2·min(480,250,750)) = 650
         // Mn,req = 45e6/0.9 = 50.0e6; a = 270 − √(270² − 2·50.0e6/(0.85·24·650)) = 14.347 mm ≤ hf=60
         // As = 0.85·24·650·14.347/400 = 475.6 mm²
         // As,min = max(0.25·√24/400, 1.4/400)·150·270 = 141.75; 4/3·As = 634.1 → As,design = 475.6
@@ -54,18 +58,26 @@ class SBCJoistSlabTest {
     }
 
     @Test
-    fun `SJ-7 shear is blocked - NaN capacity and never a design pass`() {
+    fun `SJ-7 shear is blocked - null capacity and never a design pass`() {
         val r = design()
-        assertTrue(r.shearCapacity.isNaN())
-        assertTrue(r.utilizationRatio.isNaN())
+        // Explicit not-evaluated schema: null, never NaN or a fake number
+        assertNull(r.shearCapacity)
+        assertNull(r.utilizationRatio)
         assertFalse(r.isSafe)
         assertTrue(r.warnings.any { it.contains("BLOCKED (SJ-7)") })
     }
 
     @Test
-    fun `SJ-8 cube-to-cylinder conversion is flagged on every result`() {
-        val r = design()
-        assertTrue(r.warnings.any { it.contains("SJ-8") })
+    fun `SJ-8 cube input is never converted - cylinder strength required`() {
+        // Missing cylinder strength refuses the Saudi computation loudly
+        assertThrows(MissingCylinderStrengthException::class.java) {
+            design(cylinderStrength = null)
+        }
+        // The legacy cube value is NOT converted: with cylinder = 30 the engine
+        // uses exactly 30 MPa, not 0.8 x fcu
+        val r = design(fcu = 25.0, cylinderStrength = 30.0)
+        assertTrue(r.codeNotes.any { it.contains("fc′=30.0 MPa (cylinder, user-entered)") })
+        assertTrue(r.warnings.none { it.contains("0.8") })
     }
 
     @Test

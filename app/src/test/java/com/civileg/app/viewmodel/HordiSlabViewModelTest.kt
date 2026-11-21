@@ -173,8 +173,8 @@ class HordiSlabViewModelTest {
             loadCombination = LoadCombination.DEAD_LIVE
         )
         // Both should produce valid results; exact values may differ by code
-        assertTrue("ECP utilization should be non-negative", ecpResult.utilizationRatio >= 0.0)
-        assertTrue("ACI utilization should be non-negative", aciResult.utilizationRatio >= 0.0)
+        assertTrue("ECP utilization should be non-negative", (ecpResult.utilizationRatio ?: -1.0) >= 0.0)
+        assertTrue("ACI utilization should be non-negative", (aciResult.utilizationRatio ?: -1.0) >= 0.0)
     }
 
     // ── Additional coverage tests ──────────────────────────────────────────
@@ -201,8 +201,8 @@ class HordiSlabViewModelTest {
             span = defaultSpan, designMoment = defaultMoment, designShear = defaultShear,
             loadCombination = LoadCombination.DEAD_LIVE
         )
-        assertTrue("Utilization ratio should be non-negative", result.utilizationRatio >= 0.0)
-        assertTrue("Shear capacity should be non-negative", result.shearCapacity >= 0.0)
+        assertTrue("Utilization ratio should be non-negative", (result.utilizationRatio ?: -1.0) >= 0.0)
+        assertTrue("Shear capacity should be non-negative", (result.shearCapacity ?: -1.0) >= 0.0)
     }
 
     @Test(expected = IllegalArgumentException::class)

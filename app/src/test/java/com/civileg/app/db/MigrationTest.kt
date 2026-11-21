@@ -3,6 +3,7 @@ package com.civileg.app.db
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -275,5 +276,87 @@ class MigrationTest {
         assertTrue(hasTable("non_conformities"))
         assertTrue(hasTable("building_layouts"))
         assertTrue(hasTable("exports"))
+    }
+
+    @Test
+    fun migration14To15_nullableUtilization_preservesDataIndexesAndForeignKeys() {
+        // v14 schema: both tables carry NOT NULL utilizationRatio with a stored value
+        database.execSQL(
+            "CREATE TABLE IF NOT EXISTS designs (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "projectId INTEGER NOT NULL, " +
+                "type TEXT NOT NULL, " +
+                "name TEXT NOT NULL, " +
+                "inputData TEXT NOT NULL, " +
+                "results TEXT NOT NULL, " +
+                "isSafe INTEGER NOT NULL, " +
+                "utilizationRatio REAL NOT NULL DEFAULT 0.0, " +
+                "codeUsed TEXT NOT NULL, " +
+                "concreteVolume REAL NOT NULL DEFAULT 0.0, " +
+                "steelWeight REAL NOT NULL DEFAULT 0.0, " +
+                "totalCost REAL NOT NULL DEFAULT 0.0, " +
+                "createdAt INTEGER, " +
+                "FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE" +
+                ")"
+        )
+        database.execSQL("CREATE INDEX IF NOT EXISTS index_designs_projectId ON designs(projectId)")
+        database.execSQL(
+            "CREATE TABLE IF NOT EXISTS slabs (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "projectId INTEGER NOT NULL, " +
+                "type TEXT NOT NULL, spanX REAL NOT NULL, spanY REAL NOT NULL, " +
+                "thickness REAL NOT NULL, load REAL NOT NULL, fcu REAL NOT NULL, fy REAL NOT NULL, " +
+                "reinforcement TEXT NOT NULL, " +
+                "concreteVolume REAL NOT NULL, steelWeight REAL NOT NULL, cost REAL NOT NULL, " +
+                "utilizationRatio REAL NOT NULL DEFAULT 0.0, " +
+                "FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE" +
+                ")"
+        )
+        database.execSQL("CREATE INDEX IF NOT EXISTS index_slabs_projectId ON slabs(projectId)")
+        database.execSQL("INSERT INTO projects (name, createdAt, updatedAt) VALUES ('P1', 1, 1)")
+        database.execSQL("INSERT INTO designs (projectId, type, name, inputData, results, isSafe, utilizationRatio, codeUsed, createdAt) " +
+            "VALUES (1, 'HORDI_SLAB', 'old-joist', '{}', '{}', 0, 0.85, 'SBC', 7)")
+        database.execSQL("INSERT INTO slabs (projectId, type, spanX, spanY, thickness, load, fcu, fy, reinforcement, concreteVolume, steelWeight, cost, utilizationRatio) " +
+            "VALUES (1, 'Hollow', 4.0, 5.0, 300.0, 5.0, 30.0, 400.0, '4T14', 1.0, 50.0, 100.0, 0.66)")
+
+        Migrations.MIGRATION_14_15.migrate(database)
+
+        // Data preserved verbatim
+        database.query("SELECT utilizationRatio, codeUsed, createdAt FROM designs WHERE name='old-joist'").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(0.85, c.getDouble(0), 1e-9)
+            assertEquals("SBC", c.getString(1))
+            assertEquals(7L, c.getLong(2))
+        }
+        database.query("SELECT utilizationRatio, reinforcement FROM slabs").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(0.66, c.getDouble(0), 1e-9)
+            assertEquals("4T14", c.getString(1))
+        }
+        // NULL is now storable in both tables (blocked state)
+        database.execSQL("INSERT INTO designs (projectId, type, name, inputData, results, isSafe, utilizationRatio, codeUsed, createdAt) " +
+            "VALUES (1, 'HORDI_SLAB', 'blocked-joist', '{}', '{}', 0, NULL, 'SBC 304-CR-2018', 8)")
+        database.execSQL("INSERT INTO slabs (projectId, type, spanX, spanY, thickness, load, fcu, fy, reinforcement, concreteVolume, steelWeight, cost, utilizationRatio) " +
+            "VALUES (1, 'Hollow', 4.0, 5.0, 300.0, 5.0, 30.0, 400.0, '4T14', 1.0, 50.0, 100.0, NULL)")
+        database.query("SELECT COUNT(*) FROM designs WHERE utilizationRatio IS NULL").use { c ->
+            assertTrue(c.moveToFirst()); assertEquals(1, c.getInt(0))
+        }
+        database.query("SELECT COUNT(*) FROM slabs WHERE utilizationRatio IS NULL").use { c ->
+            assertTrue(c.moveToFirst()); assertEquals(1, c.getInt(0))
+        }
+        // Indexes recreated
+        database.query("SELECT name FROM sqlite_master WHERE type='index' AND name='index_designs_projectId'").use { c ->
+            assertTrue(c.moveToFirst())
+        }
+        database.query("SELECT name FROM sqlite_master WHERE type='index' AND name='index_slabs_projectId'").use { c ->
+            assertTrue(c.moveToFirst())
+        }
+        // FK clause restated in the new table definitions
+        database.query("SELECT sql FROM sqlite_master WHERE type='table' AND name='designs'").use { c ->
+            assertTrue(c.moveToFirst()); assertTrue(c.getString(0).contains("FOREIGN KEY"))
+        }
+        database.query("SELECT sql FROM sqlite_master WHERE type='table' AND name='slabs'").use { c ->
+            assertTrue(c.moveToFirst()); assertTrue(c.getString(0).contains("FOREIGN KEY"))
+        }
     }
 }

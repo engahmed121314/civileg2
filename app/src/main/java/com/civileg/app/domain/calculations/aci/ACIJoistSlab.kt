@@ -20,8 +20,8 @@ class ACIJoistSlab : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
-    ): SlabDesignResult {
+        loadCombination: LoadCombination,
+        cylinderStrengthMPa: Double?    ): SlabDesignResult {
         // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)

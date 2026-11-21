@@ -1793,6 +1793,7 @@
     <string name="hordi_slab_config">إعدادات</string>
     <string name="hordi_slab_geometry">الأبعاد</string>
     <string name="hordi_slab_material_properties">خواص المواد</string>
+    <string name="hordi_slab_fc_cylinder">مقاومة الأسطوانة f\'c (MPa) — مطلوبة للكود السعودي</string>
     <string name="hordi_slab_design_forces">قوى التصميم</string>
     <string name="hordi_slab_design_button">تصميم البلاطة</string>
     <string name="hordi_slab_designing">جاري التصميم…</string>

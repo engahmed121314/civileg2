@@ -61,8 +61,16 @@ class HordiSlabViewModel @Inject constructor(
         designMoment: Double,     // kN.m/rib
         designShear: Double,      // kN/rib
         loadCombination: LoadCombination,
-        designCode: String = "ECP"
+        designCode: String = "ECP",
+        cylinderStrength: Double? = null
     ) {
+        // SBC 304-CR-2018 is cylinder-based and no cube conversion basis exists
+        // (SJ-8): refuse the computation up front with an explicit incomplete
+        // input state instead of letting it fail mid-engine.
+        if (designCode == "SBC" && cylinderStrength == null) {
+            _error.value = "SBC 304-CR-2018 requires the cylinder strength f'c (MPa) — enter it explicitly; the cube value cannot be converted / الكود السعودي يتطلب مقاومة الأسطوانة صراحة — أدخل قيمة f'c"
+            return
+        }
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("ribWidth", ribWidth)
@@ -82,7 +90,8 @@ class HordiSlabViewModel @Inject constructor(
                     fcu = fcu, fy = fy, ribWidth = ribWidth, ribSpacing = ribSpacing,
                     totalThickness = totalThickness, toppingThickness = toppingThickness,
                     span = span, designMoment = designMoment, designShear = designShear,
-                    loadCombination = loadCombination, designCode = designCode
+                    loadCombination = loadCombination, designCode = designCode,
+                    cylinderStrength = cylinderStrength
                 )
 
                 val designer: HordiSlabDesign = CalculationFactory.getHordiSlabDesign(code)
@@ -96,7 +105,8 @@ class HordiSlabViewModel @Inject constructor(
                     span = span,
                     designMoment = designMoment,
                     designShear = designShear,
-                    loadCombination = loadCombination
+                    loadCombination = loadCombination,
+                    cylinderStrengthMPa = cylinderStrength
                 )
                 _result.value = result
             } catch (e: Exception) {
@@ -158,7 +168,8 @@ class HordiSlabViewModel @Inject constructor(
                     "Span" to "${params.span / 1000.0} m",
                     "Design Moment" to "${"%.2f".format(params.designMoment)} kN.m/rib",
                     "Design Shear" to "${"%.2f".format(params.designShear)} kN/rib",
-                    "f'cu" to "${params.fcu} MPa",
+                    (if (params.designCode == "SBC") "f'c (cylinder)" else "f'cu") to
+                        "${if (params.designCode == "SBC") params.cylinderStrength?.toString() ?: "MISSING" else params.fcu.toString()} MPa",
                     "fy" to "${params.fy} MPa",
                     "Load Combination" to params.loadCombination.description,
                     "Design Code" to params.designCode
@@ -170,8 +181,8 @@ class HordiSlabViewModel @Inject constructor(
                     "Bar Diameter" to "${res.barDiameter} mm",
                     "Bar Spacing" to "${res.barSpacing} mm",
                     "Min Thickness" to "${res.minThickness} mm",
-                    "Shear Capacity" to "${"%.1f".format(res.shearCapacity)} kN",
-                    "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
+                    "Shear Capacity" to com.civileg.app.ui.compose.screens.HordiResultPresentation.exportShearCapacity(res.shearCapacity),
+                    "Utilization" to com.civileg.app.ui.compose.screens.HordiResultPresentation.exportUtilization(res.utilizationRatio),
                     "Is Safe" to if (res.isSafe) "YES" else "NO"
                 )
 
@@ -277,6 +288,7 @@ class HordiSlabViewModel @Inject constructor(
         val span: Double,
         val designMoment: Double,
         val designShear: Double,
+        val cylinderStrength: Double? = null,
         val loadCombination: LoadCombination,
         val designCode: String
     )

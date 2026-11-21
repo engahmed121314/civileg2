@@ -256,7 +256,9 @@ class CalculatorEngine @Inject constructor(
         val momentX: Double = 0.0, val momentY: Double = 0.0, val totalLoad: Double = 0.0,
         val punchingSafe: Boolean = true, val safetyChecks: List<DesignSafetyCheck> = emptyList(),
         val minThickness: Double = 0.0,
-        val utilizationRatio: Double = 0.0,
+        /** Null when not evaluated (e.g. blocked SBC joist shear) - explicit
+         *  incomplete status, never NaN/zero-as-capacity. */
+        val utilizationRatio: Double? = null,
         val efficiencyScore: Double = 0.0,
         val suggestions: List<String> = emptyList(),
         val trimmerReinforcement: String = "",
@@ -1771,6 +1773,16 @@ class CalculatorEngine @Inject constructor(
                 suggestions = mainRes.warnings + mainRes.codeNotes,
                 calculationSteps = steps
             )
+        } catch (e: com.civileg.app.domain.calculations.sbc.MissingCylinderStrengthException) {
+            // Incomplete INPUT, not a failed computation: never masquerade as a
+            // completed design. Saved/legacy projects stay loadable; the user
+            // must supply the cylinder strength before any Saudi computation.
+            SlabResult(thickness = ts, isSafe = false, code = code, type = type,
+                safetyChecks = listOf(DesignSafetyCheck(
+                    "INPUT INCOMPLETE: SBC 304-CR-2018 requires cylinder strength f'c (MPa) - not a completed design",
+                    0.0, 1.0, "", false)),
+                suggestions = listOf(
+                    "Input incomplete: enter the cylinder strength f'c explicitly; legacy cube values cannot be converted (SJ-8) / أدخل مقاومة الأسطوانة صراحة — لا يمكن تحويل قيمة المكعب"))
         } catch (e: Exception) {
             // ADR-010: لا تُرجع isSafe=true عند الفشل — loud failure, no silent safe
             SlabResult(thickness = ts, isSafe = false, code = code, type = type,
