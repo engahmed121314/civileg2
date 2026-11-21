@@ -76,12 +76,14 @@ class SolidSlabCodeDivergenceTest {
     fun `two-way display moments follow each engine's own convention`() {
         // ECP: positive coefficient x span of that direction.
         // ACI/SBC: max(positive, support) x lx² (their long coefficient is pre-scaled by 1/ratio²).
-        // ratio = 1.25 → ECP (neg/pos short 0.061/0.046, neg/pos long 0.038/0.029),
+        // ratio = 1.25 → ECP 203-2020 §6-1-2-6-3 / Table 6-1 / Eq 6-8 (CLAUSE_LOG TW-01/02):
+        // alpha = 0.5·1.25 − 0.15 = 0.475, beta = 0.35/1.5625 = 0.224; simply supported span
+        // → d = 8 (Eq 6-7a): short 0.475/8 = 0.059375, long 0.224/8 = 0.028.
         // ACI·SBC shortCoeff 0.070, cs 0.076, cm 0.071.
         val wuEcp = 1.4 * 6.0 + 1.6 * 3.0
         val wuAci = 1.2 * 6.0 + 1.6 * 3.0
-        assertEquals("ECP Mx", 0.046 * wuEcp * 16.0, twoWay(DesignCode.ECP).momentX, 1e-9)
-        assertEquals("ECP My", 0.029 * wuEcp * 25.0, twoWay(DesignCode.ECP).momentY, 1e-9)
+        assertEquals("ECP Mx", 0.059375 * wuEcp * 16.0, twoWay(DesignCode.ECP).momentX, 1e-9)
+        assertEquals("ECP My", 0.028 * wuEcp * 25.0, twoWay(DesignCode.ECP).momentY, 1e-9)
         assertEquals("ACI Mx", 0.076 * wuAci * 16.0, twoWay(DesignCode.ACI).momentX, 1e-9)
         assertEquals("ACI My", 0.071 * wuAci * 16.0, twoWay(DesignCode.ACI).momentY, 1e-9)
         // SBC 304 follows ACI for two-way panels (SBCSlab.designTwoWaySlab)
