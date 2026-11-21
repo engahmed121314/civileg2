@@ -50,6 +50,9 @@ jobs:
       - name: Run DXF validator
         run: python tools/guards/dxf_validate.py tools/
 
+      - name: Run duplicate-engine guard (Phase 2 single source of truth)
+        run: python tools/guards/no_duplicate_engines.py
+
   # ─── Job 2: Lint Check ────────────────────────────────────────────────
   lint:
     name: Lint Check
