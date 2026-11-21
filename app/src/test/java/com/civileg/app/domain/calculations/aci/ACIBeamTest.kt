@@ -399,8 +399,6 @@ class ACIBeamTest {
     fun calculateDoublyReinforced_zeroFy_throwsException() {
         beam.calculateDoublyReinforcedBeam(DESIGN_MOMENT, WIDTH, TOTAL_DEPTH, FCU, 0.0)
     }
-}
-
     // ══════════════════════════════════════════════════════════════════════
     // GOLDEN VECTORS — development length (F-07 regression, hand-verified
     // 2026-11-21 vs ACI 318M-14 Table 25.4.2.2/25.4.2.4, printed pp.652/655)
@@ -442,3 +440,5 @@ class ACIBeamTest {
         )
         assertEquals(325.0, ld, 0.001)
     }
+
+}
