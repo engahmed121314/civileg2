@@ -9,8 +9,7 @@ name: Android CI/CD
 on:
   push:
     branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+  pull_request:   # every PR, including stacked PRs whose base is another feature branch
   workflow_dispatch:
 
 concurrency:
