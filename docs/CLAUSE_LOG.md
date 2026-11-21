@@ -295,3 +295,15 @@ Golden guard: ACIFootingTest `designIsolatedFooting_goldenVector_squareNoMoment`
 (P = 1500 kN, 400×400 column, qa = 200, h = 600: B = L = 2450 mm, q = 178.50
 kPa, Mu = 321.62 kN·m, As = 1200 mm²/m at the Table 7.6.1.1 minimum,
 Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
+## F-03 — Isolated footing one-way shear checked at d/2 instead of d (RESOLVED)
+- **Date**: 2026-11-21 (19:53 EET) — owner approved the relaxation (WhatsApp reply "١ ايوه" to findings list item 1, relayed via main agent).
+- **Clause**: ACI 318M-14 §13.2.7.1 + Table 13.2.7.1 (VERIFIED printed p.307, part 2 PDF p.116, A-02): one-way shear critical section for footings at distance d from the column face. Engine used d/2 (more demanding, safe direction, but rejects valid designs).
+- **Fix**: critical section moved to d in both directions.
+- **Golden vector**: fcu=30, fy=400, col 400x900, P=2000 kN factored, SBC=200, h=500 → B=2300, L=3400, d=415: Vu_y@d = 491.2 ≤ φVc = 596.2 (passes); at the old d/2 section Vu_y = 613.2 would have failed. Test locks the relaxed result.
+
+## F-04 — "20% distribution steel" cited nonexistent ACI rule (RESOLVED)
+- **Date**: 2026-11-21 (19:53 EET) — owner approved replacement (WhatsApp reply "٢ استبدل" to findings list item 2).
+- **Old code**: comment cited "ACI 318-13.3.4: no less than 20% of main reinforcement" — §13.3.4 contains no such rule (verified); added 20% of main steel as extra "distribution" bars.
+- **Real rule**: ACI 318M-14 §13.3.3.3 (VERIFIED printed pp.310-311, A-07): (a) long-direction reinforcement uniform across full width; (b) short-direction reinforcement: γs = 2/(β+1) of the total concentrated in a central band whose width equals the short side; remainder (1−γs) uniform outside the band.
+- **Fix**: 20% block removed; band-rule distribution computed and detailed (band bars, spacing, outside-band area in codeNotes).
+- **Golden vector**: same case as F-03 → β=1.4783, γs=0.8070, band width=2300 mm; short-dir steel min-governed 1000 mm²/m → total 3400; band 1192.9 mm²/m → 11Ø12 @ 100mm; outside band 596 mm²/m.

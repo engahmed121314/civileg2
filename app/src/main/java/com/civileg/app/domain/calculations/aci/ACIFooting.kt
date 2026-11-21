@@ -111,9 +111,10 @@ class ACIFooting : FootingDesign {
         val Mu_x = q_factored * (L / 1000.0) * cantX * cantX / 2.0  // kN.m
         val Mu_y = q_factored * (B / 1000.0) * cantY * cantY / 2.0  // kN.m
 
-        // 10. فحص القص الأحادي عند بعد d/2 من وجه العمود (ACI 318-22.5) — factored pressure
-        val Vu_x = q_factored * (L / 1000.0) * max(cantX - d / 2000.0, 0.0)  // kN
-        val Vu_y = q_factored * (B / 1000.0) * max(cantY - d / 2000.0, 0.0)  // kN
+        // 10. فحص القص الأحادي عند بعد d من وجه العمود — ACI 318M-14 §13.2.7.1 (printed p.307)
+        // F-03 (owner-approved 2026-11-21): critical section at d, not d/2 — factored pressure
+        val Vu_x = q_factored * (L / 1000.0) * max(cantX - d / 1000.0, 0.0)  // kN
+        val Vu_y = q_factored * (B / 1000.0) * max(cantY - d / 1000.0, 0.0)  // kN
         // One-way shear capacity: Vc = φ × 0.17√f'c × b × d (ACI 318-22.5.5.1)
         val fc_prime = 0.8 * fcu
         val vc_oneWay = 0.17 * sqrt(fc_prime)  // MPa
@@ -139,22 +140,36 @@ class ACIFooting : FootingDesign {
         // 13. التسليح الرئيسي = الأكبر
         val mainReinf = if (reinfX.astRequired >= reinfY.astRequired) reinfX else reinfY
 
-        // 14. التسليح التوزيعي - ACI 318-13.3.4: لا يقل عن 20% من التسليح الرئيسي
-        // في الاتجاه الطويل يتم وضع تسليح توزيعي = 20% من As الرئيسي
-        val mainAs = max(reinfX.astRequired, reinfY.astRequired)
-        val distAs = 0.20 * mainAs
-        val distBarDia = listOf(12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 25.0).firstOrNull { dia ->
-            val area = PI * dia * dia / 4.0
-            val bars = ceil(distAs / area).toInt()
-            bars in 5..20
-        } ?: 12.0
-        val distBarArea = PI * distBarDia * distBarDia / 4.0
-        val distBarsPerMeter = if (distAs > 0) ceil(distAs / distBarArea).toInt() else 0
-        val distSpacing = if (distBarsPerMeter > 0) {
-            val maxSp = min(450.0, min(3.0 * d, 750.0))
-            floor(1000.0 / distBarsPerMeter).coerceIn(100.0, maxSp)
+        // 14. توزيع التسليح — ACI 318M-14 §13.3.3.3 (printed pp.310-311)
+        // F-04 (owner-approved 2026-11-21): the old "20% of main steel / 13.3.4" rule
+        // cited a clause that does not contain it. Real rule:
+        // (a) تسليح الاتجاه الطويل: يوزع بالتساوي على كامل العرض (reinfY كما هو)
+        // (b) تسليح الاتجاه القصير: γs = 2/(β+1) من إجمالي التسليح يتركز في شريحة
+        //     وسطية عرضها = طول الضلع القصير، والباقي (1−γs) يوزع بالتساوي خارجها
+        val longSide = max(B, L)
+        val shortSide = min(B, L)
+        val betaFooting = longSide / shortSide
+        val gammaS = 2.0 / (betaFooting + 1.0)
+        // reinfX = تسليح الاتجاه القصير لكل متر، موزع على طول الضلع الطويل
+        val asShortTotal = reinfX.astRequired * (longSide / 1000.0)
+        val asBandPerM = gammaS * asShortTotal / (shortSide / 1000.0)
+        val outsideWidth = longSide - shortSide
+        val asOutsidePerM = if (outsideWidth > 0) {
+            (1.0 - gammaS) * asShortTotal / (outsideWidth / 1000.0)
         } else {
-            200.0
+            0.0
+        }
+        val bandBarDia = listOf(12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 25.0).firstOrNull { dia ->
+            val area = PI * dia * dia / 4.0
+            ceil(asBandPerM / area).toInt() in 5..20
+        } ?: 16.0
+        val bandBarArea = PI * bandBarDia * bandBarDia / 4.0
+        val bandBarsPerMeter = if (asBandPerM > 0) ceil(asBandPerM / bandBarArea).toInt() else 0
+        val maxDistSpacing = min(450.0, min(3.0 * d, 750.0))
+        val bandSpacing = if (bandBarsPerMeter > 0) {
+            floor(1000.0 / bandBarsPerMeter).coerceIn(100.0, maxDistSpacing)
+        } else {
+            maxDistSpacing
         }
 
         codeNotes.add("ACI 318-25: Isolated Footing Design")
@@ -166,9 +181,14 @@ class ACIFooting : FootingDesign {
         codeNotes.add(String.format("Mu_x=%.1f, Mu_y=%.1f kN.m", Mu_x, Mu_y))
         codeNotes.add(String.format("Short dir: %s", reinfX.barString))
         codeNotes.add(String.format("Long dir: %s", reinfY.barString))
-        if (distBarsPerMeter > 0) {
-            codeNotes.add(String.format("Distribution: %dØ%d @ %dmm", 
-                distBarsPerMeter, distBarDia.toInt(), distSpacing.toInt()
+        codeNotes.add(String.format(
+            "Band rule 13.3.3.3(b): beta=%.2f, gamma_s=%.3f, band width=%.0f mm",
+            betaFooting, gammaS, shortSide
+        ))
+        if (bandBarsPerMeter > 0) {
+            codeNotes.add(String.format(
+                "Short-dir band: %dØ%d @ %dmm; outside band: %.0f mm2/m",
+                bandBarsPerMeter, bandBarDia.toInt(), bandSpacing.toInt(), asOutsidePerM
             ))
         }
 
