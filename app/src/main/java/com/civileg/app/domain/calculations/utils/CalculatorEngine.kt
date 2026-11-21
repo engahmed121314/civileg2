@@ -1,5 +1,8 @@
 package com.civileg.app.domain.calculations.utils
 
+import com.civileg.app.utils.LocaleHelper
+import com.civileg.app.utils.SettingsManager
+import com.civileg.app.utils.SteelTables
 import android.os.Parcelable
 import com.civileg.app.domain.calculations.CalculationFactory
 import com.civileg.app.domain.calculations.InputGuard
