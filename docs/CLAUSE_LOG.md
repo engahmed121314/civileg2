@@ -281,3 +281,17 @@ kN·m, bottom/top at the 1400 mm²/m Table 7.6.1.1 minimum, transverse strips
 strength-governed at 1604.9 mm²/m, Vu = 518.4 ≤ 1056.4 kN) and
 `designCombinedFooting_goldenVector_unequalLoads` (P1 = 2000, P2 = 900 kN:
 L = 5665.5 covers column 2 — CF-05 — M− = −549.7 kN·m hogging at column 1).
+
+## ACI isolated footing batch (accessed 2026-11-21)
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| A-07 | §13.3.3 two-way isolated footings: square → uniform both directions; rectangular → long-direction uniform, short-direction portion γs = 2/(β+1) of As in the central band of width = short side, remainder outside (β = L/B). | Owner's ACI 318M-14 §13.3.3.2–13.3.3.3, printed pp. 310–311 (part 2, PDF pp. ~119–120) | **Verified (primary)** |
+| F-03 | `designIsolatedFooting` evaluates one-way shear at d/2 from the column face (comment cites §22.5) instead of d (§13.2.7.2 → §7.4.3.1/§22.5). The checked demand is LARGER than the code's, so the deviation is conservative. Characterized; relaxation to d needs an owner decision. | Engine inspection vs verified §13.2.7.2 (A-05) | **FLAGGED (conservative), not fixed** |
+| F-04 | `designIsolatedFooting` adds "distribution steel = 20% of main" citing "ACI 318-13.3.4". No such rule exists: §13.3.4 covers combined/mat foundations, and the real distribution rule is the §13.3.3.3(b) band rule (A-07). Affects reporting only (codeNotes); main reinforcement and safety checks are unaffected. | Engine inspection vs verified §13.3.3/§13.3.4 | **FLAGGED, not fixed — replace with the band rule (needs owner OK)** |
+| F-05 | `designRaftFoundation` is a crude placeholder: max column load estimated as 15% of total, design moment = q·(√A/3)²/10 (no clause basis), punching checked for a guessed 600×600 column. §13.3.4.3 requires pressure distribution consistent with factored loads; a real raft needs a grid/strip method. | Engine inspection; ACI 318M-14 §13.3.4.1–13.3.4.3, printed p. 311 | **FLAGGED, not fixed — raft needs a proper method decision from the owner** |
+
+Golden guard: ACIFootingTest `designIsolatedFooting_goldenVector_squareNoMoment`
+(P = 1500 kN, 400×400 column, qa = 200, h = 600: B = L = 2450 mm, q = 178.50
+kPa, Mu = 321.62 kN·m, As = 1200 mm²/m at the Table 7.6.1.1 minimum,
+Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).

@@ -251,6 +251,30 @@ class ACIFootingTest {
         )
     }
 
+    /**
+     * Golden vector (square, no moment): hand-computed per CLAUSE_LOG A-02/A-03/
+     * A-05/F-01. P = 1500 kN factored, 400×400 column, qa = 200 kPa, h = 600 mm
+     * (d = 515), DEAD_LIVE (factor 1.4): P_serv = 1071.43, netSBC = 185,
+     * A = 5.79 m² → B = L = 2450 mm, q = 178.50 kPa, qf = 249.90,
+     * Mu = 321.62 kN·m (131.27 kN·m/m) → strength 719.9 < min →
+     * As = 0.0020×1000×600 = 1200 mm²/m; Vu = 469.9 ≤ φVc = 719.4 kN;
+     * punching φVn = 2086.3 kN.
+     */
+    @Test
+    fun designIsolatedFooting_goldenVector_squareNoMoment() {
+        val result = footing.designIsolatedFooting(
+            25.0, 400.0, 400.0, 400.0, 1500.0, 0.0, 0.0, 200.0, 600.0,
+            LoadCombination.DEAD_LIVE, BoundaryConstraints()
+        )
+        assertEquals(2450.0, result.requiredWidth, 1.0)
+        assertEquals(2450.0, result.requiredLength, 1.0)
+        assertEquals(178.50, result.soilPressure, 0.01)
+        assertEquals(1200.0, result.reinforcement.astRequired, 0.5)
+        assertEquals(2086.3, result.punchingShearCheck.shearCapacity, 1.0)
+        assertTrue(result.punchingShearCheck.isSafe)
+        assertTrue(result.isSafe)
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     // 6. Combined Footing
     // ══════════════════════════════════════════════════════════════════════
