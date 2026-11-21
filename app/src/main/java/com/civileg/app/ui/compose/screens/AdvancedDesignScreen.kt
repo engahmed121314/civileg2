@@ -64,11 +64,14 @@ import com.civileg.app.domain.calculations.compositebeam.CompositeBeamDesignResu
 import com.civileg.app.domain.calculations.compositebeam.CompositeBeamInput
 import com.civileg.app.domain.calculations.aci.ACIAdvancedBeam
 import com.civileg.app.domain.calculations.aci.ACIAdvancedColumn
+import com.civileg.app.domain.calculations.aci.ACIAdvancedSlab
 import com.civileg.app.domain.calculations.compositebeam.CompositeDesignCode
 import com.civileg.app.domain.calculations.ecp.ECPAdvancedBeam
 import com.civileg.app.domain.calculations.ecp.ECPAdvancedColumn
+import com.civileg.app.domain.calculations.ecp.ECPAdvancedSlab
 import com.civileg.app.domain.calculations.sbc.SBCAdvancedBeam
 import com.civileg.app.domain.calculations.sbc.SBCAdvancedColumn
+import com.civileg.app.domain.calculations.sbc.SBCAdvancedSlab
 import com.civileg.app.domain.entities.AdvancedBeamResult
 import com.civileg.app.domain.entities.BeamSectionType
 import com.civileg.app.domain.entities.BeamType
@@ -77,6 +80,12 @@ import com.civileg.app.domain.entities.ColumnEndConditions
 import com.civileg.app.domain.entities.ColumnType
 import com.civileg.app.domain.entities.ConnectedSlabType
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.AdvancedSlabResult
+import com.civileg.app.domain.entities.EdgeCondition
+import com.civileg.app.domain.entities.PrestressType
+import com.civileg.app.domain.entities.SlabSupportConditions
+import com.civileg.app.domain.entities.SlabType
+import com.civileg.app.domain.entities.TendonType
 import com.civileg.app.domain.entities.EndCondition
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.calculations.deepbeam.DeepBeamCode
@@ -98,6 +107,7 @@ import com.civileg.app.domain.calculations.settlement.SettlementResult
 private enum class AdvancedModule(val title: String, val titleAr: String) {
     Beam("Beam", "كمرة"),
     Column("Column", "عمود"),
+    Slab("Slab", "بلاطة"),
     CompositeBeam("Composite", "مركبة"),
     FireResistance("Fire", "حريق"),
     DeepBeam("Deep Beam", "كمرة عميقة"),
@@ -149,6 +159,35 @@ private class AdvancedFormState {
     var colMx by mutableStateOf("50")
     var colMy by mutableStateOf("0")
     var colLength by mutableStateOf("3.0")
+
+    // Advanced slab (ECP/SBC/ACI)
+    var slabCode by mutableStateOf(DesignCode.ECP)
+    var slabKind by mutableStateOf(SlabKind.SOLID)
+    var slabCombo by mutableStateOf(LoadCombination.DEAD_LIVE)
+    var slFcu by mutableStateOf("30")
+    var slFy by mutableStateOf("400")
+    var slDead by mutableStateOf("6")
+    var slLive by mutableStateOf("4")
+    var slThickness by mutableStateOf("200")
+    var slSpan1 by mutableStateOf("5.0")
+    var slSpan2 by mutableStateOf("6.0")
+    var slWidth by mutableStateOf("1.0")
+    var slRibWidth by mutableStateOf("120")
+    var slRibSpacing by mutableStateOf("500")
+    var slRibDepth by mutableStateOf("280")
+    var slBlockWidth by mutableStateOf("380")
+    var slBlockHeight by mutableStateOf("200")
+    var slColumnSize by mutableStateOf("400")
+    var slDropThickness by mutableStateOf("300")
+    var slDropSize by mutableStateOf("2.0")
+    var slEdge by mutableStateOf(EdgeCondition.SIMPLY_SUPPORTED)
+    var slDropPanel by mutableStateOf(false)
+    var slColCapital by mutableStateOf(false)
+    var slTendon by mutableStateOf(TendonType.BONDED)
+    var slPrestressForce by mutableStateOf("1000")
+    var slEccentricity by mutableStateOf("50")
+    var slTopping by mutableStateOf("50")
+    var slPrestressType by mutableStateOf(PrestressType.POSTTENSIONED)
 
     // Composite beam
     var compositeCode by mutableStateOf(CompositeDesignCode.ECP)
@@ -262,6 +301,14 @@ private fun AdvancedFormState.columnSignature() = inputSignature(
     colWidth, colDepth, colFcu, colFy, colAxial, colMx, colMy, colLength
 )
 
+private fun AdvancedFormState.slabSignature() = inputSignature(
+    slabCode, slabKind, slabCombo, slFcu, slFy, slDead, slLive, slThickness,
+    slSpan1, slSpan2, slWidth, slRibWidth, slRibSpacing, slRibDepth,
+    slBlockWidth, slBlockHeight, slColumnSize, slDropThickness, slDropSize,
+    slEdge, slDropPanel, slColCapital, slTendon, slPrestressForce,
+    slEccentricity, slTopping, slPrestressType
+)
+
 private fun AdvancedFormState.settlementSignature() = inputSignature(
     sWidth, sLength, sPressure, sModulus, sPoisson, sInfluence, sLayer, sCc, sCr,
     sE0, sSigma0, sSigmaP, sCv, sDrainage, sTime, sAllowSettle
@@ -289,6 +336,8 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
     var beamResultSignature by remember { mutableStateOf<String?>(null) }
     var columnResult by remember { mutableStateOf<AdvancedColumnResult?>(null) }
     var columnResultSignature by remember { mutableStateOf<String?>(null) }
+    var slabResult by remember { mutableStateOf<AdvancedSlabResult?>(null) }
+    var slabResultSignature by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
@@ -398,6 +447,96 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
             columnResult = it
             columnResultSignature = signature
         }.onFailure { errorMessage = it.message ?: "Column calculation failed" }
+    }
+
+    fun calculateSlab() {
+        val signature = form.slabSignature()
+        slabResult = null
+        slabResultSignature = null
+        runCatching {
+            val supports = SlabSupportConditions(form.slEdge, form.slEdge, form.slEdge, form.slEdge)
+            val type = when (form.slabKind) {
+                SlabKind.SOLID -> SlabType.Solid(
+                    thickness = form.slThickness.num("thickness"),
+                    shortSpan = form.slSpan1.num("short span"),
+                    longSpan = form.slSpan2.num("long span"),
+                    supportConditions = supports
+                )
+                SlabKind.ONE_WAY -> SlabType.OneWay(
+                    thickness = form.slThickness.num("thickness"),
+                    span = form.slSpan1.num("span"),
+                    width = form.slWidth.num("width")
+                )
+                SlabKind.TWO_WAY -> SlabType.TwoWay(
+                    thickness = form.slThickness.num("thickness"),
+                    shortSpan = form.slSpan1.num("short span"),
+                    longSpan = form.slSpan2.num("long span"),
+                    supportConditions = supports,
+                    dropPanel = form.slDropPanel,
+                    columnCapital = form.slColCapital
+                )
+                SlabKind.HORDI -> SlabType.Hordi(
+                    totalThickness = form.slThickness.num("total thickness"),
+                    ribWidth = form.slRibWidth.num("rib width"),
+                    ribSpacing = form.slRibSpacing.num("rib spacing"),
+                    blockWidth = form.slBlockWidth.num("block width"),
+                    blockHeight = form.slBlockHeight.num("block height"),
+                    span = form.slSpan1.num("span"),
+                    supportConditions = supports
+                )
+                SlabKind.WAFFLE -> SlabType.Waffle(
+                    totalThickness = form.slThickness.num("total thickness"),
+                    ribWidth = form.slRibWidth.num("rib width"),
+                    ribDepth = form.slRibDepth.num("rib depth"),
+                    ribSpacing = form.slRibSpacing.num("rib spacing"),
+                    shortSpan = form.slSpan1.num("short span"),
+                    longSpan = form.slSpan2.num("long span"),
+                    supportConditions = supports
+                )
+                SlabKind.POST_TENSIONED -> SlabType.PostTensioned(
+                    thickness = form.slThickness.num("thickness"),
+                    shortSpan = form.slSpan1.num("short span"),
+                    longSpan = form.slSpan2.num("long span"),
+                    tendonType = form.slTendon,
+                    prestressForce = form.slPrestressForce.num("prestress force"),
+                    eccentricity = form.slEccentricity.num("eccentricity"),
+                    supportConditions = supports
+                )
+                SlabKind.FLAT_PLATE -> SlabType.FlatPlate(
+                    thickness = form.slThickness.num("thickness"),
+                    panelLength = form.slSpan1.num("panel length"),
+                    panelWidth = form.slSpan2.num("panel width"),
+                    columnSize = form.slColumnSize.num("column size")
+                )
+                SlabKind.FLAT_SLAB -> SlabType.FlatSlab(
+                    thickness = form.slThickness.num("thickness"),
+                    dropPanelThickness = form.slDropThickness.num("drop panel thickness"),
+                    dropPanelSize = form.slDropSize.num("drop panel size"),
+                    panelLength = form.slSpan1.num("panel length"),
+                    panelWidth = form.slSpan2.num("panel width"),
+                    columnSize = form.slColumnSize.num("column size")
+                )
+                SlabKind.PRECAST -> SlabType.Precast(
+                    thickness = form.slThickness.num("thickness"),
+                    width = form.slWidth.num("width"),
+                    length = form.slSpan1.num("length"),
+                    toppingThickness = form.slTopping.num("topping thickness"),
+                    prestressType = form.slPrestressType
+                )
+            }
+            val fcu = form.slFcu.num("fcu")
+            val fy = form.slFy.num("fy")
+            val dead = form.slDead.num("dead load")
+            val live = form.slLive.num("live load")
+            when (form.slabCode) {
+                DesignCode.ECP -> ECPAdvancedSlab().designSlab(type, fcu, fy, dead, live, null, form.slabCombo)
+                DesignCode.SBC -> SBCAdvancedSlab().designSlab(type, fcu, fy, dead, live, null, form.slabCombo)
+                DesignCode.ACI -> ACIAdvancedSlab().designSlab(type, fcu, fy, dead, live, null, form.slabCombo)
+            }
+        }.onSuccess {
+            slabResult = it
+            slabResultSignature = signature
+        }.onFailure { errorMessage = it.message ?: "Slab calculation failed" }
     }
 
     fun calculateFire() {
@@ -570,6 +709,11 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
                         form,
                         columnResult.takeIf { columnResultSignature == form.columnSignature() },
                         ::calculateColumn
+                    )
+                    AdvancedModule.Slab ->                     slabContent(
+                        form,
+                        slabResult.takeIf { slabResultSignature == form.slabSignature() },
+                        ::calculateSlab
                     )
                     AdvancedModule.CompositeBeam ->                     compositeContent(
                         form,
@@ -1234,6 +1378,215 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settlementContent(
 }
 
 // ───────────────────────────── Shared UI ─────────────────────────────────
+
+// ───────────────────────────── Advanced slab (ECP/SBC/ACI) ─────────────────────────────
+
+private enum class SlabKind(val title: String, val titleAr: String) {
+    SOLID("Solid", "مصمتة"),
+    ONE_WAY("One-Way", "أحادية الاتجاه"),
+    TWO_WAY("Two-Way", "ثنائية الاتجاه"),
+    HORDI("Hordi", "هوردي"),
+    WAFFLE("Waffle", "وافل"),
+    POST_TENSIONED("Post-Tensioned", "لاحقة الإجهاد"),
+    FLAT_PLATE("Flat Plate", "لاكمرية"),
+    FLAT_SLAB("Flat Slab", "فلات سلاب بإسقاطات"),
+    PRECAST("Precast", "سابقة الصب")
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
+    form: AdvancedFormState,
+    result: AdvancedSlabResult?,
+    onCalculate: () -> Unit
+) {
+    item {
+        SectionTitle("Advanced Slab Design", "تصميم بلاطة متقدم")
+        Spacer(Modifier.height(8.dp))
+        CodeChips(
+            options = DesignCode.entries,
+            selected = form.slabCode,
+            label = { it.version },
+            onSelected = { form.slabCode = it }
+        )
+        Spacer(Modifier.height(8.dp))
+        CodeChips(
+            options = SlabKind.entries,
+            selected = form.slabKind,
+            label = { "${it.title} / ${it.titleAr}" },
+            onSelected = { form.slabKind = it }
+        )
+    }
+    item {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NumField("fcu (MPa)", form.slFcu, Modifier.weight(1f)) { form.slFcu = it }
+            NumField("fy (MPa)", form.slFy, Modifier.weight(1f)) { form.slFy = it }
+        }
+    }
+    item {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NumField("Dead (kN/m²)", form.slDead, Modifier.weight(1f)) { form.slDead = it }
+            NumField("Live (kN/m²)", form.slLive, Modifier.weight(1f)) { form.slLive = it }
+        }
+    }
+    item {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NumField("Thickness (mm)", form.slThickness, Modifier.weight(1f)) { form.slThickness = it }
+            when (form.slabKind) {
+                SlabKind.ONE_WAY, SlabKind.PRECAST ->
+                    NumField("Width (m)", form.slWidth, Modifier.weight(1f)) { form.slWidth = it }
+                else ->
+                    NumField(
+                        if (form.slabKind == SlabKind.FLAT_PLATE || form.slabKind == SlabKind.FLAT_SLAB) "Panel length (m)" else "Short span (m)",
+                        form.slSpan1, Modifier.weight(1f)
+                    ) { form.slSpan1 = it }
+            }
+        }
+    }
+    if (form.slabKind != SlabKind.ONE_WAY && form.slabKind != SlabKind.PRECAST) {
+        item {
+            NumField(
+                if (form.slabKind == SlabKind.FLAT_PLATE || form.slabKind == SlabKind.FLAT_SLAB) "Panel width (m)" else "Long span (m)",
+                form.slSpan2, Modifier.fillMaxWidth()
+            ) { form.slSpan2 = it }
+        }
+    }
+    if (form.slabKind == SlabKind.PRECAST) {
+        item {
+            NumField("Length (m)", form.slSpan1, Modifier.fillMaxWidth()) { form.slSpan1 = it }
+        }
+    }
+    when (form.slabKind) {
+        SlabKind.HORDI -> item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NumField("Rib width (mm)", form.slRibWidth, Modifier.weight(1f)) { form.slRibWidth = it }
+                NumField("Rib spacing (mm)", form.slRibSpacing, Modifier.weight(1f)) { form.slRibSpacing = it }
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NumField("Block width (mm)", form.slBlockWidth, Modifier.weight(1f)) { form.slBlockWidth = it }
+                NumField("Block height (mm)", form.slBlockHeight, Modifier.weight(1f)) { form.slBlockHeight = it }
+            }
+        }
+        SlabKind.WAFFLE -> item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NumField("Rib width (mm)", form.slRibWidth, Modifier.weight(1f)) { form.slRibWidth = it }
+                NumField("Rib spacing (mm)", form.slRibSpacing, Modifier.weight(1f)) { form.slRibSpacing = it }
+                NumField("Rib depth (mm)", form.slRibDepth, Modifier.weight(1f)) { form.slRibDepth = it }
+            }
+        }
+        SlabKind.TWO_WAY -> item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AppText("Drop panel / إسقاط", modifier = Modifier.weight(1f))
+                Switch(checked = form.slDropPanel, onCheckedChange = { form.slDropPanel = it })
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AppText("Column capital / تاج عمود", modifier = Modifier.weight(1f))
+                Switch(checked = form.slColCapital, onCheckedChange = { form.slColCapital = it })
+            }
+        }
+        SlabKind.FLAT_PLATE -> item {
+            NumField("Column size (mm)", form.slColumnSize, Modifier.fillMaxWidth()) { form.slColumnSize = it }
+        }
+        SlabKind.FLAT_SLAB -> item {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NumField("Drop thickness (mm)", form.slDropThickness, Modifier.weight(1f)) { form.slDropThickness = it }
+                NumField("Drop size (m)", form.slDropSize, Modifier.weight(1f)) { form.slDropSize = it }
+                NumField("Column (mm)", form.slColumnSize, Modifier.weight(1f)) { form.slColumnSize = it }
+            }
+        }
+        SlabKind.POST_TENSIONED -> item {
+            CodeChips(
+                options = TendonType.entries.toList(),
+                selected = form.slTendon,
+                label = { it.displayName },
+                onSelected = { form.slTendon = it }
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NumField("Prestress (kN)", form.slPrestressForce, Modifier.weight(1f)) { form.slPrestressForce = it }
+                NumField("Eccentricity (mm)", form.slEccentricity, Modifier.weight(1f)) { form.slEccentricity = it }
+            }
+        }
+        SlabKind.PRECAST -> item {
+            CodeChips(
+                options = PrestressType.entries.toList(),
+                selected = form.slPrestressType,
+                label = { it.displayName },
+                onSelected = { form.slPrestressType = it }
+            )
+            Spacer(Modifier.height(8.dp))
+            NumField("Topping (mm)", form.slTopping, Modifier.fillMaxWidth()) { form.slTopping = it }
+        }
+        else -> {}
+    }
+    if (form.slabKind == SlabKind.SOLID || form.slabKind == SlabKind.TWO_WAY ||
+        form.slabKind == SlabKind.HORDI || form.slabKind == SlabKind.WAFFLE ||
+        form.slabKind == SlabKind.POST_TENSIONED
+    ) {
+        item {
+            AppText("Edges (all four) / الأطراف", style = MaterialTheme.typography.bodySmall)
+            CodeChips(
+                options = EdgeCondition.entries.toList(),
+                selected = form.slEdge,
+                label = { it.name },
+                onSelected = { form.slEdge = it }
+            )
+        }
+    }
+    item {
+        CodeChips(
+            options = LoadCombination.entries.toList(),
+            selected = form.slabCombo,
+            label = { it.name },
+            onSelected = { form.slabCombo = it }
+        )
+    }
+    item { CalculateButton(onCalculate) }
+    result?.let { r ->
+        item { StatusBanner(isSafe = r.flexureResult.isSafe) }
+        item {
+            ResultCard("Flexure / الانحناء") {
+                ResultRow("As required", "%.0f mm²/m".format(r.flexureResult.requiredReinforcement), bold = true)
+                ResultRow("As provided", "%.0f mm²/m".format(r.flexureResult.providedReinforcement))
+                ResultRow("Bars", "Ø${r.flexureResult.barDiameter.toInt()} @ ${r.flexureResult.barSpacing.toInt()} mm")
+                ResultRow("Min thickness", "%.0f mm".format(r.flexureResult.minThickness))
+                ResultRow("Utilization", "%.2f".format(r.flexureResult.utilizationRatio))
+            }
+        }
+        item {
+            ResultCard("Shear / القص") {
+                ResultRow("Applied", "%.1f kN".format(r.shearCheck.appliedShear))
+                ResultRow("Capacity", "%.1f kN".format(r.shearCheck.shearCapacity), bold = true)
+                ResultRow("Utilization", "%.2f".format(r.shearCheck.utilizationRatio))
+                ResultRow("Safe?", if (r.shearCheck.isSafe) "Yes / نعم" else "No / لا")
+            }
+        }
+        item {
+            ResultCard("Deflection / الترخيم") {
+                ResultRow("Calculated", "%.2f mm".format(r.deflectionCheck.calculatedDeflection))
+                ResultRow("Allowable", "%.2f mm".format(r.deflectionCheck.allowableDeflection))
+                ResultRow("Ratio", "%.2f".format(r.deflectionCheck.ratio), bold = true)
+                ResultRow("Safe?", if (r.deflectionCheck.isSafe) "Yes / نعم" else "No / لا")
+            }
+        }
+        r.punchingShearCheck?.let { p ->
+            item {
+                ResultCard("Punching shear / القص الاختراقي") {
+                    ResultRow("Applied", "%.1f kN".format(p.appliedShear))
+                    ResultRow("Capacity", "%.1f kN".format(p.shearCapacity), bold = true)
+                    ResultRow("Utilization", "%.2f".format(p.utilizationRatio))
+                    ResultRow("Safe?", if (p.isSafe) "Yes / نعم" else "No / لا")
+                }
+            }
+        }
+        item {
+            ResultCard("Quantities / الكميات") {
+                ResultRow("Concrete", "%.2f m³".format(r.concreteVolume))
+                ResultRow("Formwork", "%.1f m²".format(r.formworkArea))
+            }
+        }
+        item { NotesCard(r.warnings, r.codeNotes) }
+    }
+}
 
 @Composable
 private fun SectionTitle(english: String, arabic: String) {
