@@ -704,7 +704,7 @@ class ACIFooting : FootingDesign {
         val oneWayShear: List<RaftShearCheck>,
         val equilibriumCheck: Boolean,
         val momentEquilibriumX: Boolean,  // X-strip reactions reproduce the applied first moment sum(Pu.x)
-        val momentEquilibriumY: Boolean   // Y-strip reactions reproduce the applied first moment sum(Pu.y)
+        val momentEquilibriumY: Boolean,  // Y-strip reactions reproduce the applied first moment sum(Pu.y)
         val isSafe: Boolean,
         val warnings: List<String>,
         val codeNotes: List<String>
