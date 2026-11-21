@@ -16,7 +16,7 @@ import androidx.core.view.drawToBitmap
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.unit.dp
 import com.civileg.app.domain.entities.BlockedSeismicCheck
 import com.civileg.app.domain.entities.DesignCode
@@ -194,7 +194,7 @@ class ColumnSeismicDetailingSectionTest {
             rule.onNodeWithText("الأسياخ الطولية لكل وجه", substring = true).performScrollTo().assertIsDisplayed()
             rule.onNodeWithText("لا يمكن استنتاج عدد الأسياخ", substring = true).assertIsDisplayed()
             rule.onNodeWithText("قص التصميم بالسعة", substring = true).assertIsDisplayed()
-            rule.onNodeWithText("BLOCKED:", substring = true).assertDoesNotExist()
+            assertEquals(0, rule.onAllNodesWithText("BLOCKED:", substring = true).fetchSemanticsNodes().size)
 
             captureRootOrNote("ecp-column-limited-detailing-ar")
         } finally {
