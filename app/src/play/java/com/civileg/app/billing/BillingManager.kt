@@ -187,7 +187,8 @@ class BillingManager @Inject constructor(
             QueryPurchasesParams.newBuilder()
                 .setProductType(BillingClient.ProductType.SUBS)
                 .build()
-        ) { billingResult, purchases ->
+        ) { billingResult, purchasesResult ->
+            val purchases = purchasesResult.purchasesList
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 val hasActiveSub = purchases.any {
                     it.purchaseState == Purchase.PurchaseState.PURCHASED &&
@@ -216,7 +217,8 @@ class BillingManager @Inject constructor(
             .setProductList(productList)
             .build()
 
-        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+        billingClient.queryProductDetailsAsync(params) { billingResult, queryResult ->
+            val productDetailsList = queryResult.productDetailsList
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 productDetailsList.forEach { detail ->
                     productDetailsMap[detail.productId] = detail
