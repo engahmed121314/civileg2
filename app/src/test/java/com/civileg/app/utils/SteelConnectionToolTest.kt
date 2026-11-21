@@ -10,6 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 
 /**
  * Connection quick-tools must route through the code-specific engines.
