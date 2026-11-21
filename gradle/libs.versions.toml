@@ -4,8 +4,8 @@ kotlin = "2.2.20"
 coreKtx = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
-mockk = "1.13.13"
-robolectric = "4.14.1"
+mockk = "1.14.12"
+robolectric = "4.18.1"
 androidxTestCore = "1.6.1"
 espressoCore = "3.6.1"
 androidxComposeUiTest = "1.8.0"
@@ -20,7 +20,7 @@ material = "1.12.0"
 constraintlayout = "2.2.0"
 navigation = "2.9.6"
 ksp = "2.3.6"
-gson = "2.13.1"
+gson = "2.15.0"
 itext = "8.0.5"
 coroutines = "1.10.2"
 mpandroidchart = "v3.1.0"
@@ -94,5 +94,5 @@ navigation-safeargs = { id = "androidx.navigation.safeargs.kotlin", version.ref 
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-google-services = { id = "com.google.gms.google-services", version = "4.4.2" }
+google-services = { id = "com.google.gms.google-services", version = "4.6.0" }
 google-firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "googleFirebaseCrashlytics" }
