@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.*
 import com.civileg.app.utils.*
+import com.civileg.app.domain.calculations.utils.*
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +14,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.calculations.utils.BbsEntry
+import com.civileg.app.domain.calculations.utils.BbsGenerator
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 
 @HiltViewModel
 class MasterBbsViewModel @Inject constructor(

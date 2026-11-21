@@ -333,7 +333,7 @@ class RebarToolViewModel : ViewModel() {
 
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val drawingBitmap = com.civileg.app.utils.PdfDrawingGenerator.generateRebarToolDrawing(
+                val drawingBitmap = com.civileg.app.shared.reporting.PdfDrawingGenerator.generateRebarToolDrawing(
                     barDia = barDia,
                     devLength = devL,
                     lapLength = lapL,

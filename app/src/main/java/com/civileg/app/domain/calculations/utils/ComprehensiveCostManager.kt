@@ -1,7 +1,7 @@
-package com.civileg.app.utils
+package com.civileg.app.domain.calculations.utils
 
 import android.content.Context
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.pricing.PriceManager
 import com.civileg.app.pricing.Currency
 

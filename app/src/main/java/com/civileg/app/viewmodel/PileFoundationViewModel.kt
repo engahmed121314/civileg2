@@ -12,7 +12,7 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.PileFoundationDesign
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
-import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.shared.reporting.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -290,9 +290,9 @@ class PileFoundationViewModel @Inject constructor(
                     isSafe = res.isSafe,
                     calculationSteps = res.calculationSteps,
                     bbsEntries = runCatching {
-                        com.civileg.app.utils.BbsGenerator.generatePileBbs("PG1", res)
+                        com.civileg.app.domain.calculations.utils.BbsGenerator.generatePileBbs("PG1", res)
                     }.getOrDefault(emptyList()),
-                    boqRows = com.civileg.app.utils.BoqEstimator.pileRows(res, "PG1", excavationDepthM, workingSpaceM, blindingThicknessM),
+                    boqRows = com.civileg.app.domain.calculations.utils.BoqEstimator.pileRows(res, "PG1", excavationDepthM, workingSpaceM, blindingThicknessM),
                     drawingBitmap = drawingBitmap,
                     drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath

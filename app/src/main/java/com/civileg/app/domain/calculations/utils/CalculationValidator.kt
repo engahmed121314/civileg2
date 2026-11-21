@@ -1,8 +1,8 @@
-package com.civileg.app.utils
+package com.civileg.app.domain.calculations.utils
 
 import com.civileg.app.domain.entities.DesignCode
 
-import com.civileg.app.utils.CalculatorEngine.*
+import com.civileg.app.domain.calculations.utils.CalculatorEngine.*
 
 /**
  * Utility class to validate the consistency and correctness of engineering calculations.

@@ -167,12 +167,59 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+
+  # --- Job 4: Compose UI tests on an emulator -------------------------------
+  ui-test:
+    name: Compose UI Tests (Emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: [test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run instrumentation tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./gradlew connectedFreeDebugAndroidTest --no-daemon
+
+      - name: Upload instrumentation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-report
+          path: app/build/reports/androidTests/
+          retention-days: 14
+          if-no-files-found: ignore
+
   # ─── Job 5: Build Summary ────────────────────────────────────────────
   summary:
     name: Build Summary
     runs-on: ubuntu-latest
     if: always()
-    needs: [lint, test, build-debug]
+    needs: [lint, test, build-debug, ui-test]
     steps:
       - name: Check results
         run: |
@@ -182,3 +229,4 @@ jobs:
           echo "| Lint | ${{ needs.lint.result == 'success' && 'Passed' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Unit Tests | ${{ needs.test.result == 'success' && 'Passed' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Debug Build | ${{ needs.build-debug.result == 'success' && 'Passed' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| UI Tests (Emulator) | ${{ needs.ui-test.result == 'success' && 'Passed' || 'Failed' }} |" >> $GITHUB_STEP_SUMMARY

@@ -35,7 +35,7 @@ class SBCSteelDesignEngineTest {
     }
 
     // I 300x150x10x7 (h x bf, tf=10, tw=7): Ag = 4960 mm2,
-    // Ix = 7.5905e7 mm4, Sx = 506,035.6 mm3, Zx = 1.12*Sx = 566,759.8 mm3,
+    // Ix = 7.5905e7 mm4, Sx = 506,035.6 mm3, Zx = 572,200 mm3 (exact, CLAUSE_LOG A-08),
     // rx = 123.71 mm, ry = 33.70 mm
     private val iS355 = SteelSectionType.ISection(
         h = 300.0, bf = 150.0, tf = 10.0, tw = 7.0, grade = SteelGrade.S355
@@ -51,7 +51,7 @@ class SBCSteelDesignEngineTest {
         // Hand computation (S355: Fy=355, Fu=510):
         //   classification: flange (150-7)/(2*10)=7.15 <= 0.38*sqrt(200000/355)=9.02,
         //     web 280/7=40 <= 3.76*sqrt(E/Fy)=89.2 -> COMPACT
-        //   Mn = 355*566759.8/1e6 = 201.20 kN.m -> phiMn = 0.9*201.20 = 181.08
+        //   Mn = 355*572200/1e6 = 203.13 kN.m -> phiMn = 0.9*203.13 = 182.82
         //   Aw = 280*7 = 1960 mm2, Vn = 0.6*355*1960/1000 = 417.48 kN
         //     -> phiVn = 375.73 kN
         //   delta = 5*10*6^4/(384*200000e3*7.5905e-5) = 11.12 mm
@@ -62,12 +62,12 @@ class SBCSteelDesignEngineTest {
             Lb = 0.0, Cb = 1.0, isCoastal = false, isSeismic = false
         )
         assertEquals(SBCSteelDesignEngine.SectionClassification.COMPACT, r.sectionClassification)
-        assertClose(201.20, r.Mn_nominal, "Mn nominal")
-        assertClose(181.08, r.phiMn, "phiMn")
+        assertClose(203.13, r.Mn_nominal, "Mn nominal")
+        assertClose(182.82, r.phiMn, "phiMn")
         assertClose(375.73, r.phiVn, "phiVn")
         assertClose(11.12, r.deflection, "deflection")
         assertClose(16.667, r.deflectionAllowable, "deflection allowable")
-        assertClose(150.0 / 181.08, r.momentRatio, "moment ratio")
+        assertClose(150.0 / 182.82, r.momentRatio, "moment ratio")
         assertTrue(r.isSafe)
     }
 
@@ -83,7 +83,7 @@ class SBCSteelDesignEngineTest {
             Mu = 150.0, Vu = 100.0, w_LL = 10.0, span = 6000.0,
             Lb = 0.0, Cb = 1.0, isCoastal = true, isSeismic = false
         )
-        assertClose(181.08 / 1.1, r.phiMn, "phiMn coastal")
+        assertClose(182.82 / 1.1, r.phiMn, "phiMn coastal")
         assertClose(375.73 / 1.1, r.phiVn, "phiVn coastal")
         assertTrue(r.warnings.any { it.contains("التآكل الساحلي") })
     }
@@ -143,11 +143,11 @@ class SBCSteelDesignEngineTest {
 
     @Test
     fun `verified combined loading H1-1a passing`() {
-        // Same column as test 3: phiPn = 872.7, phiMnx = 181.08,
+        // Same column as test 3: phiPn = 872.7, phiMnx = 182.82 (exact Zx),
         // phiMny = 0.9*355*Zy/1e6 with Zy = 1.12*Sy, Sy = 5633034/75 = 75107.1
         //   -> Zy = 84120.0 mm3, phiMny = 26.87 kN.m
         // pr = 400/872.7 = 0.458 >= 0.2 -> H1-1a
-        // IR = 0.458 + (8/9)*(40/181.08 + 10/26.87) = 0.985
+        // IR = 0.458 + (8/9)*(40/182.82 + 10/26.87) = 0.984
         val r = engine.checkCombinedLoading(
             Pu = 400.0, Mux = 40.0, Muy = 10.0,
             section = iS355, grade = SteelGrade.S355,
@@ -156,7 +156,7 @@ class SBCSteelDesignEngineTest {
         )
         assertEquals("H1-1a", r.equation)
         assertClose(0.458, r.pr, "pr")
-        assertClose(0.985, r.interactionRatio, "interaction ratio")
+        assertClose(0.984, r.interactionRatio, "interaction ratio")
         assertTrue(r.isSafe)
     }
 

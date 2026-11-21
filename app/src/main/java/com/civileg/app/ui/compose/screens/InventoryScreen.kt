@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.db.InventoryItem
 import com.civileg.app.db.InventoryType
-import com.civileg.app.utils.PdfGenerator
+import com.civileg.app.shared.reporting.PdfGenerator
 import com.civileg.app.viewmodel.InventoryViewModel
 import com.civileg.app.ui.compose.components.ResultDataCard
 import com.civileg.app.ui.compose.components.PremiumSectionHeader
