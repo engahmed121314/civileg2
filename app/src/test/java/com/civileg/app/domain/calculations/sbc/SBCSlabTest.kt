@@ -49,7 +49,7 @@ class SBCSlabTest {
         assertTrue("Should have provided reinforcement", result.providedReinforcement > 0)
         assertTrue("Bar diameter should be positive", result.barDiameter > 0)
         assertTrue("Bar spacing should be positive", result.barSpacing > 0)
-        assertTrue("Shear capacity should be positive", result.shearCapacity > 0)
+        assertTrue("Shear capacity should be positive", (result.shearCapacity ?: 0.0) > 0)
     }
 
     @Test

@@ -56,7 +56,7 @@ class SolidSlabCodeDivergenceTest {
             assertEquals("preferred bar diameter kept for secondary steel", 12, r.reinforcementSecondary.diameter)
             assertTrue("$code concrete volume > 0", r.concreteVolume > 0.0)
             assertTrue("$code steel weight > 0", r.steelWeight > 0.0)
-            assertTrue("$code utilization > 0", r.utilizationRatio > 0.0)
+            assertTrue("$code utilization > 0", (r.utilizationRatio ?: 0.0) > 0.0)
             assertTrue("$code has the 4 safety checks (flexure x2, shear, thickness)",
                 r.safetyChecks.size >= 4)
         }

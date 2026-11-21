@@ -1694,7 +1694,10 @@ class CalculatorEngine @Inject constructor(
             val costVal = concreteVol * 120.0 + steelW * 1.5
             val vu = wu * shortM / 2.0
             val flexureSafe = mainProvided >= mainRequired - 1e-6
-            val shearSafe = vu <= mainRes.shearCapacity
+            // Solid-slab engines always evaluate shear; a null capacity means NOT EVALUATED
+            // and must surface as its own state, never as a fabricated number or silent pass.
+            val shearCap = mainRes.shearCapacity
+            val shearSafe = shearCap != null && vu <= shearCap
             val thicknessSafe = ts >= mainRes.minThickness
 
             val ref = codeNoteRef(domainCode)
@@ -1737,13 +1740,20 @@ class CalculatorEngine @Inject constructor(
                     codeReference = ref, isPass = secondarySafe,
                     status = if (secondarySafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
                 ),
-                CalculationStep(
+                if (shearCap != null) CalculationStep(
                     stepNumber = 6, title = "Shear Check",
                     formula = "vu = wu·L/2 ≤ vc",
-                    formulaWithValues = "vu = ${"%.2f".format(vu)} kN/m vs vc = ${"%.2f".format(mainRes.shearCapacity)} kN/m",
+                    formulaWithValues = "vu = ${"%.2f".format(vu)} kN/m vs vc = ${"%.2f".format(shearCap)} kN/m",
                     result = if (shearSafe) "OK" else "Shear reinforcement required", unit = "kN/m",
                     codeReference = ref, isPass = shearSafe,
                     status = if (shearSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                ) else CalculationStep(
+                    stepNumber = 6, title = "Shear Check",
+                    formula = "vu = wu·L/2 ≤ vc",
+                    formulaWithValues = "vu = ${"%.2f".format(vu)} kN/m vs vc = NOT EVALUATED",
+                    result = "NOT EVALUATED", unit = "kN/m",
+                    codeReference = ref, isPass = false,
+                    status = StepStatus.INFO
                 )
             )
 
@@ -1764,10 +1774,10 @@ class CalculatorEngine @Inject constructor(
                 steelWeight = steelW,
                 cost = costVal,
                 minThickness = mainRes.minThickness,
-                safetyChecks = listOf(
+                safetyChecks = listOfNotNull(
                     DesignSafetyCheck("Flexure (main)", mainProvided, mainRequired, "mm²/m", flexureSafe),
                     DesignSafetyCheck("Flexure (secondary)", secondaryProvided, secondaryRequired, "mm²/m", secondarySafe),
-                    DesignSafetyCheck("Shear", vu, mainRes.shearCapacity, "kN/m", shearSafe),
+                    shearCap?.let { DesignSafetyCheck("Shear", vu, it, "kN/m", shearSafe) },
                     DesignSafetyCheck("Min Thickness", ts, mainRes.minThickness, "mm", thicknessSafe)
                 ),
                 suggestions = mainRes.warnings + mainRes.codeNotes,

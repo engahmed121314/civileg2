@@ -96,7 +96,7 @@ class ACISlabTest {
             FCU, FY, THICKNESS, CLEAR_SPAN, DESIGN_MOMENT, DESIGN_SHEAR,
             LoadCombination.DEAD_LIVE
         )
-        assertTrue("Shear capacity must be positive", result.shearCapacity > 0)
+        assertTrue("Shear capacity must be positive", (result.shearCapacity ?: 0.0) > 0)
     }
 
     @Test
