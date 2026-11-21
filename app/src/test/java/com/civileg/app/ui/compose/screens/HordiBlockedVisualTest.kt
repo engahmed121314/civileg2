@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
@@ -111,8 +111,8 @@ class HordiBlockedVisualTest {
         rule.onNodeWithText("NOT EVALUATED", substring = true).assertIsDisplayed()
         rule.onNodeWithText("N/E", substring = true).assertIsDisplayed()
         rule.onNodeWithText("INCOMPLETE", substring = true).assertIsDisplayed()
-        rule.onNodeWithText("PASS", substring = true).assertDoesNotExist()
-        rule.onNodeWithText("0%", substring = true).assertDoesNotExist()
+        assertEquals(0, rule.onAllNodesWithText("PASS", substring = true).fetchSemanticsNodes().size)
+        assertEquals(0, rule.onAllNodesWithText("0%", substring = true).fetchSemanticsNodes().size)
         captureRootOrNote("hordi-sbc-blocked-en")
     }
 
@@ -125,7 +125,7 @@ class HordiBlockedVisualTest {
 
         rule.onNodeWithText("غير مقيّمة", substring = true).assertIsDisplayed()
         rule.onNodeWithText("غير مكتمل", substring = true).assertIsDisplayed()
-        rule.onNodeWithText("آمن ✓", substring = true).assertDoesNotExist()
+        assertEquals(0, rule.onAllNodesWithText("آمن ✓", substring = true).fetchSemanticsNodes().size)
         captureRootOrNote("hordi-sbc-blocked-ar")
     }
 
