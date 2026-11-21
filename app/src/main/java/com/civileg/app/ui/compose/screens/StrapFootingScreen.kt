@@ -34,14 +34,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.BoqTableCard
-import com.civileg.app.utils.BoqEstimator
+import com.civileg.app.domain.calculations.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.compose.components.drawings.ProfessionalStrapFootingDrawing
 import com.civileg.app.ui.compose.components.drawings.strapFootingDrawingSummary
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.ExportUtils
-import com.civileg.app.utils.BbsGenerator
+import com.civileg.app.domain.calculations.utils.BbsGenerator
 import com.civileg.app.viewmodel.StrapFootingViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap

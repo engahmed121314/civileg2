@@ -752,7 +752,11 @@ class AISCSteelDesignEngine {
         codeNotes.add("Ag = ${"%.0f".format(Ag)} mm²")
         codeNotes.add("φ×Pn (yielding) = ${"%.1f".format(phiPnGross)} kN — D2-1")
         codeNotes.add("φ×Pn (rupture) = ${"%.1f".format(phiPnNet)} kN — D2-2 (U=${"%.2f".format(U)})")
-        codeNotes.add("φ×Rn (block shear) = ${"%.1f".format(phiRnBlockShear)} kN — J4.3")
+        if (phiRnBlockShear.isInfinite()) {
+            codeNotes.add("قص الكتلة غير منطبق على هذا النوع من الوصلة (J4.3 — N/A)")
+        } else {
+            codeNotes.add("φ×Rn (block shear) = ${"%.1f".format(phiRnBlockShear)} kN — J4.3")
+        }
         codeNotes.add("القدرة التصميمية = ${"%.1f".format(designCapacity)} kN")
 
         // Warnings
@@ -934,17 +938,21 @@ class AISCSteelDesignEngine {
                 return PHI_RUPTURE * Rn / 1000.0  // kN
             }
             is ConnectionType.Welded -> {
-                // For welded connections, block shear is not typically governing
-                // Return a high value (not applicable)
-                val Ag = section.area
-                return PHI_RUPTURE * 0.6 * grade.fy * Ag / 1000.0
+                // AISC J4.3 block shear is a BOLTED-connection limit state; it
+                // does not apply to welded connections (owner decision
+                // 2026-11-21, CLAUSE_LOG A-06). The old placeholder
+                // 0.75*0.6*Fy*Ag GOVERNED welded tension and understated
+                // capacity by ~50%. Returning +infinity excludes it from the
+                // min() in designTensionMember.
+                return Double.POSITIVE_INFINITY
             }
             is ConnectionType.Hybrid -> {
                 return calculateBlockShear(section, grade, connectionType.bolted, warnings)
             }
             is ConnectionType.Pressed -> {
-                val Ag = section.area
-                return PHI_RUPTURE * 0.6 * grade.fy * Ag / 1000.0
+                // Swaged/pressed fitting: no bolt holes, so no J4.3 block-shear
+                // limit state either (same owner decision, CLAUSE_LOG A-06).
+                return Double.POSITIVE_INFINITY
             }
         }
     }
@@ -1095,9 +1103,12 @@ class AISCSteelDesignEngine {
         val term2 = G_STEEL * J
         val Fe = (term1 + term2) / (Ag * ro2).coerceAtLeast(1.0)
 
-        // Apply AISC E3-3/E3-4 to get Fcr from Fe
-        val lambdaC = 4.71 * sqrt(E_STEEL / Fy)
-        return if (lambdaFlexural <= lambdaC) {
+        // AISC E4: Fcr comes from E3 using the TORSIONAL elastic stress Fe,
+        // with the inelastic/elastic branch chosen by Fy/Fe <= 2.25
+        // (equivalently the torsional equivalent slenderness), NOT by the
+        // flexural slenderness (owner decision 2026-11-21, CLAUSE_LOG A-07;
+        // fixes U-A2). lambdaFlexural is kept in the signature for callers.
+        return if (Fy / Fe <= 2.25) {
             minOf(0.658.pow(Fy / Fe) * Fy, Fy)
         } else {
             minOf(0.877 * Fe, Fy)

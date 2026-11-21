@@ -30,7 +30,7 @@ import java.util.Locale
 
 /**
  * On-screen Bill of Quantities shared by the element screens. Rows come straight from
- * [com.civileg.app.utils.BoqEstimator], so the table and the exported BOQ use one source.
+ * [com.civileg.app.domain.calculations.utils.BoqEstimator], so the table and the exported BOQ use one source.
  */
 @Composable
 fun BoqTableCard(

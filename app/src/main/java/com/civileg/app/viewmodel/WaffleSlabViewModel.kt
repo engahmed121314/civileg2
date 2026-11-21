@@ -202,8 +202,8 @@ class WaffleSlabViewModel @Inject constructor(
                 }
 
                 val drawingBitmap = pendingDrawingBitmap ?: runCatching {
-                    com.civileg.app.utils.PdfDrawingGenerator.generateSlabDrawingByType(
-                        slabType = com.civileg.app.utils.CalculatorEngine.SlabType.WAFFLE,
+                    com.civileg.app.shared.reporting.PdfDrawingGenerator.generateSlabDrawingByType(
+                        slabType = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.WAFFLE,
                         spanX = input.lx, spanY = input.ly,
                         thickness = input.ribHeight + input.toppingThickness,
                         mainDia = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 12.0,
@@ -226,12 +226,12 @@ class WaffleSlabViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     bbsEntries = runCatching {
-                        com.civileg.app.utils.BbsGenerator.generateWaffleSlabBbs(
+                        com.civileg.app.domain.calculations.utils.BbsGenerator.generateWaffleSlabBbs(
                             "WS1", res, input.lx, input.ly, input.ribSpacing,
                             input.solidHeadSize, input.clearCover
                         )
                     }.getOrDefault(emptyList()),
-                    boqRows = com.civileg.app.utils.BoqEstimator.waffleSlabRows(
+                    boqRows = com.civileg.app.domain.calculations.utils.BoqEstimator.waffleSlabRows(
                         res, input.lx / 1000.0, input.ly / 1000.0, "WS1"
                     ),
                     drawingBitmap = drawingBitmap,
@@ -266,8 +266,8 @@ class WaffleSlabViewModel @Inject constructor(
             val engineCode = lastInput?.designCode ?: DesignCode.ECP
             // FIX: Use total thickness (topping + rib) instead of corrupted concreteVolume
             val totalThickness = (lastInput?.toppingThickness ?: 0.0) + (lastInput?.ribHeight ?: 0.0)
-            repository.saveSlabDesign(projectId, name, com.civileg.app.utils.CalculatorEngine.SlabResult(
-                type = com.civileg.app.utils.CalculatorEngine.SlabType.WAFFLE,
+            repository.saveSlabDesign(projectId, name, com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabResult(
+                type = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.WAFFLE,
                 thickness = totalThickness,
                 isSafe = res.isSafe,
                 concreteVolume = res.concreteVolume,

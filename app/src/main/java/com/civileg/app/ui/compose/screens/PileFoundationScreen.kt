@@ -38,11 +38,11 @@ import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalPileDrawing
 import com.civileg.app.ui.compose.components.drawings.pileDrawingSummary
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
-import com.civileg.app.utils.BbsGenerator
-import com.civileg.app.utils.BoqEstimator
+import com.civileg.app.domain.calculations.utils.BbsGenerator
+import com.civileg.app.domain.calculations.utils.BoqEstimator
 import com.civileg.app.viewmodel.PileFoundationViewModel
 import kotlinx.coroutines.launch
 import com.civileg.app.ui.defaultDesignCode

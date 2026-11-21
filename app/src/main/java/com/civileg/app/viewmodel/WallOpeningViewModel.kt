@@ -10,7 +10,7 @@ import com.civileg.app.domain.calculations.wallopenings.ECPWallOpening
 import com.civileg.app.domain.calculations.wallopenings.ACIWallOpening
 import com.civileg.app.domain.calculations.wallopenings.SBCWallOpening
 import com.civileg.app.domain.entities.DesignCode
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -95,7 +95,7 @@ class WallOpeningViewModel @Inject constructor(
         val res = _result.value ?: return
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val drawingBitmap = com.civileg.app.utils.PdfDrawingGenerator.generateWallOpeningDrawing(
+                val drawingBitmap = com.civileg.app.shared.reporting.PdfDrawingGenerator.generateWallOpeningDrawing(
                     wallHeight = wallHeightMm,
                     wallThickness = wallThicknessMm,
                     openingWidth = openingWidthMm,
