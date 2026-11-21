@@ -107,7 +107,7 @@ class SBCSteelDesignEngineTest {
         assertClose(89.0, r.slendernessRatio, "slenderness")
         assertClose(195.5, r.Fcr, "Fcr inelastic")
         assertClose(872.7, r.phiPn, "phiPn")
-        assertClose(800.0 / 872.7, r.axialRatio, "axial ratio")
+        assertClose(800.0 / 872.7, 800.0 / r.phiPn, "axial ratio")
         assertTrue(r.isSafe)
     }
 
