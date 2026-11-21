@@ -1,7 +1,7 @@
 package com.civileg.app.ui.compose.components.drawings
 
 import com.civileg.app.domain.entities.GenericSafetyCheck
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 
 /**
  * Maps engine-level safety checks into the drawing-level [GenericSafetyCheck]

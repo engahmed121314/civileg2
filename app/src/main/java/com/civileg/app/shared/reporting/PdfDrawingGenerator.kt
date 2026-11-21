@@ -1,4 +1,4 @@
-package com.civileg.app.utils
+package com.civileg.app.shared.reporting
 
 import android.content.Context
 import android.graphics.*
@@ -949,7 +949,7 @@ object PdfDrawingGenerator {
     // WAFFLE      → two-way ribbed slab with voids in both directions
     // POST_TENSION → flat slab with parabolic tendon profile
     fun generateSlabDrawingByType(
-        slabType: com.civileg.app.utils.CalculatorEngine.SlabType,
+        slabType: com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType,
         spanX: Double, spanY: Double, thickness: Double,
         mainDia: Double, mainSpacing: Double,
         distDia: Double, distSpacing: Double,
@@ -960,15 +960,15 @@ object PdfDrawingGenerator {
         columnSize: Double = 400.0
     ): Bitmap {
         return when (slabType) {
-            com.civileg.app.utils.CalculatorEngine.SlabType.SOLID ->
+            com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.SOLID ->
                 generateSolidSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover)
-            com.civileg.app.utils.CalculatorEngine.SlabType.FLAT ->
+            com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.FLAT ->
                 generateFlatSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, dropPanelSize, columnSize)
-            com.civileg.app.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK ->
+            com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK ->
                 generateHordiSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
-            com.civileg.app.utils.CalculatorEngine.SlabType.WAFFLE ->
+            com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.WAFFLE ->
                 generateWaffleSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
-            com.civileg.app.utils.CalculatorEngine.SlabType.POST_TENSION ->
+            com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.POST_TENSION ->
                 generatePostTensionSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover)
         }
     }

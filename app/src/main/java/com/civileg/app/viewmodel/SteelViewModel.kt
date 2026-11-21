@@ -10,9 +10,9 @@ import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.calculations.ecp.SteelBasePlateDesign
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.calculations.InputGuard
-import com.civileg.app.utils.CalculatorEngine
-import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.CalculationValidator
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
+import com.civileg.app.shared.reporting.PdfDrawingGenerator
+import com.civileg.app.domain.calculations.utils.CalculationValidator
 import com.civileg.app.utils.ExportUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers

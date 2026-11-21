@@ -203,8 +203,8 @@ class FlatSlabViewModel @Inject constructor(
                 }
 
                 val drawingBitmap = pendingDrawingBitmap ?: runCatching {
-                    com.civileg.app.utils.PdfDrawingGenerator.generateSlabDrawingByType(
-                        slabType = com.civileg.app.utils.CalculatorEngine.SlabType.FLAT,
+                    com.civileg.app.shared.reporting.PdfDrawingGenerator.generateSlabDrawingByType(
+                        slabType = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.FLAT,
                         spanX = input.lx, spanY = input.ly, thickness = input.slabThickness,
                         mainDia = res.columnStripBotRebar.diameter.toDouble(),
                         mainSpacing = res.columnStripBotRebar.spacing.toDouble(),
@@ -225,9 +225,9 @@ class FlatSlabViewModel @Inject constructor(
                     safetyChecks = safetyChecks, isSafe = res.isSafe,
                     calculationSteps = res.calculationSteps,
                     bbsEntries = runCatching {
-                        com.civileg.app.utils.BbsGenerator.generateFlatSlabBbs("FS1", res, input.lx, input.ly)
+                        com.civileg.app.domain.calculations.utils.BbsGenerator.generateFlatSlabBbs("FS1", res, input.lx, input.ly)
                     }.getOrDefault(emptyList()),
-                    boqRows = com.civileg.app.utils.BoqEstimator.flatSlabRows(
+                    boqRows = com.civileg.app.domain.calculations.utils.BoqEstimator.flatSlabRows(
                         res, input.lx / 1000.0, input.ly / 1000.0, "FS1"
                     ),
                     drawingBitmap = drawingBitmap,

@@ -23,7 +23,7 @@ import com.civileg.app.ui.components.AppText
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.utils.BbsEntry
-import com.civileg.app.utils.BbsGenerator
+import com.civileg.app.domain.calculations.utils.BbsGenerator
 import com.civileg.app.viewmodel.MasterBbsViewModel
 import java.util.Locale
 

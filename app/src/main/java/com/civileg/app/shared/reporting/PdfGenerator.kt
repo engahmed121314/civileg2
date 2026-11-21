@@ -1,4 +1,4 @@
-package com.civileg.app.utils
+package com.civileg.app.shared.reporting
 
 import android.content.Context
 import android.graphics.Bitmap

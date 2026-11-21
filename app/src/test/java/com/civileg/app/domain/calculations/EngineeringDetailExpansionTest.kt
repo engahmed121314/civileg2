@@ -17,7 +17,7 @@ import com.civileg.app.domain.ShearWallInput
 import com.civileg.app.domain.calculations.base.SoilType
 import com.civileg.app.domain.calculations.base.SeismicZone
 import com.civileg.app.domain.entities.DesignCode
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.core.engineering.StrapFootingDesignEngine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

@@ -31,12 +31,12 @@ import com.civileg.app.domain.*
 import com.civileg.app.ui.compose.components.*
 import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.BoqTableCard
-import com.civileg.app.utils.BoqEstimator
+import com.civileg.app.domain.calculations.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalFlatSlabDrawing
 import com.civileg.app.ui.compose.components.drawings.flatSlabDrawingSummary
-import com.civileg.app.utils.BbsGenerator
+import com.civileg.app.domain.calculations.utils.BbsGenerator
 import com.civileg.app.viewmodel.FlatSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap

@@ -1,7 +1,7 @@
 package com.civileg.app.utils
 
 import com.civileg.app.domain.entities.DesignCode
-import com.civileg.app.utils.CalculatorEngine.*
+import com.civileg.app.domain.calculations.utils.CalculatorEngine.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

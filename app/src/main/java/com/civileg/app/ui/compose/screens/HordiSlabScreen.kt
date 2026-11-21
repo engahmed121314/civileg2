@@ -37,8 +37,8 @@ import com.civileg.app.ui.compose.components.drawings.ProfessionalHordiSlabDrawi
 import com.civileg.app.ui.compose.components.drawings.hordiSlabDrawingSummary
 import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.BoqTableCard
-import com.civileg.app.utils.BoqEstimator
-import com.civileg.app.utils.BbsGenerator
+import com.civileg.app.domain.calculations.utils.BoqEstimator
+import com.civileg.app.domain.calculations.utils.BbsGenerator
 import com.civileg.app.viewmodel.HordiSlabViewModel
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap

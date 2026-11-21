@@ -8,11 +8,11 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
 import com.civileg.app.domain.entities.*
-import com.civileg.app.utils.BoqEstimator
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.BoqEstimator
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
-import com.civileg.app.utils.CalculationValidator
-import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.domain.calculations.utils.CalculationValidator
+import com.civileg.app.shared.reporting.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -364,7 +364,7 @@ class ColumnViewModel @Inject constructor(
                     isSafe = res.isSafe,
                     calculationSteps = res.calculationSteps,
                     bbsEntries = runCatching {
-                        com.civileg.app.utils.BbsGenerator.generateColumnBbs("C1", res, h * 1000.0)
+                        com.civileg.app.domain.calculations.utils.BbsGenerator.generateColumnBbs("C1", res, h * 1000.0)
                     }.getOrDefault(emptyList()),
                     boqRows = BoqEstimator.columnRows(res, h, "C1"),
                     drawingBitmap = drawingBitmap,

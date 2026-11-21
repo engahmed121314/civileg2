@@ -220,7 +220,7 @@ class SeismicViewModel @Inject constructor(
                 val drawingBitmap = pendingDrawingBitmap ?: try {
                     val fundPeriod = state.spectrumValues.maxByOrNull { it.spectralAcceleration }?.period ?: 0.0
                     val spectralAccel = state.spectrumValues.maxOfOrNull { it.spectralAcceleration } ?: 0.0
-                    com.civileg.app.utils.PdfDrawingGenerator.generateSeismicDrawing(
+                    com.civileg.app.shared.reporting.PdfDrawingGenerator.generateSeismicDrawing(
                         totalHeight = state.buildingHeight.toDoubleOrNull() ?: 0.0,
                         numFloors = state.floorHeights.size,
                         floorForces = state.forceDistribution,
@@ -274,7 +274,7 @@ class SeismicViewModel @Inject constructor(
         val res = _uiState.value.result ?: return
         viewModelScope.launch {
             val engineCode = DesignCode.valueOf(_uiState.value.designCode)
-            repository.saveSeismicDesign(projectId, name, com.civileg.app.utils.CalculatorEngine.SeismicResult(
+            repository.saveSeismicDesign(projectId, name, com.civileg.app.domain.calculations.utils.CalculatorEngine.SeismicResult(
                 baseShear = res.baseShear,
                 storyDrift = res.maxStoryDrift,  // mm — equivalent-SDOF drift estimate
                 isSafe = res.driftIsSafe && res.warnings.isEmpty(),

@@ -1,4 +1,4 @@
-package com.civileg.app.utils
+package com.civileg.app.domain.calculations.utils
 
 import android.os.Parcelable
 import com.civileg.app.domain.calculations.CalculationFactory

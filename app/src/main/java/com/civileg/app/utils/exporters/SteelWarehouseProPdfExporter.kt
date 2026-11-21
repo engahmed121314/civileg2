@@ -3,7 +3,7 @@ package com.civileg.app.utils.exporters
 import android.content.Context
 import android.graphics.Bitmap
 import com.civileg.app.domain.entities.*
-import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.shared.reporting.PdfDrawingGenerator
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.kernel.colors.ColorConstants
 import com.itextpdf.kernel.colors.DeviceRgb

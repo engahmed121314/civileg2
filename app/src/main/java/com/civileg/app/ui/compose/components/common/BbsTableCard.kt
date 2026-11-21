@@ -31,7 +31,7 @@ import java.util.Locale
 
 /**
  * On-screen Bar Bending Schedule shared by the element screens. Entries come straight from
- * [com.civileg.app.utils.BbsGenerator], so the table and the exported BBS use one source.
+ * [com.civileg.app.domain.calculations.utils.BbsGenerator], so the table and the exported BBS use one source.
  */
 @Composable
 fun BbsTableCard(

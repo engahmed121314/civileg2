@@ -28,14 +28,14 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.civileg.app.utils.CalculatorEngine
-import com.civileg.app.utils.BbsGenerator
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.BbsGenerator
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.viewmodel.FootingViewModel
 import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.BoqTableCard
-import com.civileg.app.utils.BoqEstimator
+import com.civileg.app.domain.calculations.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.drawings.footingDrawingSummary
 import com.civileg.app.ui.compose.components.common.CalculationStepsCard
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen

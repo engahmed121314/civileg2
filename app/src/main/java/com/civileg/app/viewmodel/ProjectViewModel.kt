@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.*
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.domain.entities.ProjectSummary
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel

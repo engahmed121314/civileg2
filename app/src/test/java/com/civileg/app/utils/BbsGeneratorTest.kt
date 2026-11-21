@@ -3,7 +3,7 @@ package com.civileg.app.utils
 import com.civileg.app.domain.entities.DesignCode
 
 import com.civileg.app.domain.entities.StirrupZone
-import com.civileg.app.utils.CalculatorEngine.*
+import com.civileg.app.domain.calculations.utils.CalculatorEngine.*
 import org.junit.Assert.*
 import org.junit.Test
 
