@@ -1133,7 +1133,7 @@ class CalculatorEngine @Inject constructor(
             calculationSteps = columnSteps(
                 code, pu, puDesign, selfWeightKn, designMx, designMy, fcu, fy, res,
                 width, depth, clearHeight, slenderness, slendernessLimit,
-                momentMagnifier, axialCapacity, reinforcementPercent
+                momentMagnifier, axialCapacity, reinforcementPercent, seismicDetailing
             )
         )
     }
@@ -1252,7 +1252,8 @@ class CalculatorEngine @Inject constructor(
         res: com.civileg.app.domain.entities.ReinforcementResult,
         width: Double, depth: Double, clearHeight: Double,
         slenderness: Double, slendernessLimit: Double, momentMagnifier: Double,
-        axialCapacity: Double, reinforcementPercent: Double
+        axialCapacity: Double, reinforcementPercent: Double,
+        seismicDetailing: com.civileg.app.domain.entities.EcpColumnSeismicDetailing? = null
     ): List<CalculationStep> {
         val ref = when (code) {
             DesignCode.ECP -> "ECP 203-2020 §4-2"
@@ -1309,7 +1310,16 @@ class CalculatorEngine @Inject constructor(
                 status = if (slender) StepStatus.WARNING else StepStatus.CHECK_PASS,
                 isPass = !slender
             )
-        )
+        ) + if (seismicDetailing != null) listOf(
+            CalculationStep(
+                stepNumber = 6, title = "Confined Tie Design (ductile)", subtitle = "Critical region per ECP 203-2020 6-8",
+                formula = "Lo = max(h/6, max(b,h), 500mm) ; S0 = min(8db [fy<=420] or 6db [fy500], 24dt, min(b,h)/2, 150mm)",
+                formulaWithValues = "Lo = ${"%.0f".format(seismicDetailing.criticalRegionLengthMm)} mm, S0 = ${"%.0f".format(seismicDetailing.criticalTieSpacingMm)} mm, first tie <= ${"%.0f".format(seismicDetailing.firstTieMaxOffsetMm)} mm from beam face, elsewhere <= ${"%.0f".format(seismicDetailing.elsewhereTieSpacingMm)} mm",
+                result = "S0 = ${"%.0f".format(seismicDetailing.criticalTieSpacingMm)} mm in Lo", unit = "mm",
+                codeReference = "ECP 203-2020 6-8-1-3 + 6-8-2-2-3 / 6-8-2-3-2 (printed 6-87..6-97)",
+                status = StepStatus.CALCULATION
+            )
+        ) else emptyList()
     }
 
     fun designBeam(

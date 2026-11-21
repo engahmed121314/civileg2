@@ -7,14 +7,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.performScrollTo
+import androidx.core.view.drawToBitmap
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertExists
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import com.civileg.app.domain.entities.BlockedSeismicCheck
 import com.civileg.app.domain.entities.DesignCode
@@ -50,7 +52,7 @@ import java.io.FileOutputStream
 class ColumnSeismicDetailingSectionTest {
 
     @get:Rule
-    val rule = createComposeRule()
+    val rule = createAndroidComposeRule<ComponentActivity>()
 
     private val limitedFixture = EcpColumnSeismicDetailing(
         mode = EcpColumnDuctilityMode.LIMITED,
@@ -58,18 +60,17 @@ class ColumnSeismicDetailingSectionTest {
         criticalTieSpacingMm = 150.0,
         firstTieMaxOffsetMm = 75.0,
         elsewhereTieSpacingMm = 200.0,
-        checks = listOf(
-            EcpColumnSeismicCheck(
-                name = "Longitudinal bars per face (estimated from total 8 bars)",
-                clause = "ECP 203-2020 §6-8-2-2-3 / §6-8-2-3-2 (printed 6-92 / 6-95)",
-                demand = "4 bars/face (est.)", limit = "≥ 3 bars each face", satisfied = true
-            )
-        ),
+        checks = emptyList(),
         blockedChecks = listOf(
             BlockedSeismicCheck(
                 name = "Capacity-design shear (column)",
                 clause = "ECP 203-2020 §6-8-2-2-3 + fig 6-39 (printed 6-92..6-93)",
                 reason = "Needs column end moments from a frame analysis at the axial level giving the larger flexural resistance; not derivable from single-column inputs."
+            ),
+            BlockedSeismicCheck(
+                name = "Longitudinal bars per face (>= 3 each face)",
+                clause = "ECP 203-2020 §6-8-2-2-3 / §6-8-2-3-2 (printed 6-92 / 6-95)",
+                reason = "Per-face bar count cannot be derived from the total bar count without the actual arrangement; verify at least 3 bars on each face on the section drawing."
             )
         ),
         clauseReferences = listOf("ECP 203-2020 §6-8-2-2-3 limited-ductility columns (printed 6-92)"),
@@ -81,21 +82,22 @@ class ColumnSeismicDetailingSectionTest {
         rule.setContent {
             MaterialTheme {
                 Card {
-                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
                         ColumnSeismicDetailingSection(limitedFixture)
                     }
                 }
             }
         }
 
-        // Semantic assertions: the INCOMPLETE banner, the computed values and the
-        // blocked frame-context check are all visible.
+        // Visible verification: scroll each required row into the viewport and
+        // confirm it is actually displayed (existence alone proves nothing visual).
         rule.onNodeWithTag("seismic-detailing-header").assertIsDisplayed()
-        rule.onNodeWithText("Critical region Lo (each end)", substring = true).assertExists()
-        rule.onNodeWithText("600 mm", substring = true).assertExists()
-        rule.onNodeWithText("150 mm", substring = true).assertExists()
-        rule.onNodeWithTag("seismic-blocked-Capacity-design shear (column)").assertExists()
-        rule.onNodeWithText("INCOMPLETE", substring = true).assertExists()
+        rule.onNodeWithText("Critical region Lo (each end)", substring = true).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("600 mm", substring = true).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("150 mm", substring = true).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithTag("seismic-blocked-Capacity-design shear (column)").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithTag("seismic-blocked-Longitudinal bars per face (>= 3 each face)").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("INCOMPLETE", substring = true).assertIsDisplayed()
 
         // Rendered-pixel capture for post-CI visual inspection. Window capture can
         // time out under Robolectric CI (forceRedraw); capture is best-effort
@@ -140,6 +142,7 @@ class ColumnSeismicDetailingSectionTest {
             inputs = mapOf("Design Code" to "ECP 203", "Width" to "400 mm", "Depth" to "600 mm"),
             results = resultsMap,
             safetyChecks = checks,
+            calculationSteps = res.calculationSteps,
             isSafe = res.isSafe,   // false for ductile modes -> STATUS: UNSAFE in the PDF
             drawingBitmap = null,
             outputPath = out.absolutePath
@@ -157,7 +160,7 @@ class ColumnSeismicDetailingSectionTest {
             rule.setContent {
                 MaterialTheme {
                     Card {
-                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
                             ColumnSeismicDetailingSection(limitedFixture)
                         }
                     }
@@ -166,7 +169,7 @@ class ColumnSeismicDetailingSectionTest {
 
             rule.onNodeWithTag("seismic-detailing-header").assertIsDisplayed()
             rule.onNodeWithText("تكسيح الممطولية", substring = true).assertIsDisplayed()
-            rule.onNodeWithText("طول المنطقة الحرجة", substring = true).assertIsDisplayed()
+            rule.onNodeWithText("طول المنطقة الحرجة", substring = true).performScrollTo().assertIsDisplayed()
 
             captureRootOrNote("ecp-column-limited-detailing-ar")
         } finally {
@@ -184,7 +187,8 @@ class ColumnSeismicDetailingSectionTest {
         val dir = File("build/reports/tests/compose-shots").apply { mkdirs() }
         val out = File(dir, "$name.png")
         try {
-            val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
+            val content = rule.activity.findViewById<android.view.ViewGroup>(android.R.id.content)
+            val bitmap = content.drawToBitmap()
             FileOutputStream(out).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         } catch (e: Exception) {
             File(dir, "$name-capture-failed.txt").writeText(

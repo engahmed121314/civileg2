@@ -262,7 +262,8 @@ object ProfessionalEnglishPdfReporter {
 
     private fun addCalculationMethodology(document: Document, designCode: String,
                                           reportType: ReportType,
-                                          steps: List<CalculationStep>) {
+                                          steps: List<CalculationStep>,
+                                          columnDuctile: Boolean = false) {
         document.add(sectionTitle("2. Calculation Methodology & Verification"))
         document.add(separator())
         document.add(Paragraph().add(text("Applicable design basis: $designCode", createPdfFont(), 10f, SECONDARY)))
@@ -275,7 +276,7 @@ object ProfessionalEnglishPdfReporter {
             }
         } else {
             // Generate default calculation steps based on report type
-            val defaultSteps = getDefaultCalculationSteps(reportType, designCode)
+            val defaultSteps = getDefaultCalculationSteps(reportType, designCode, columnDuctile)
             for (step in defaultSteps) {
                 addCalculationStep(document, step)
             }
@@ -324,7 +325,7 @@ object ProfessionalEnglishPdfReporter {
         document.add(Paragraph(" "))  // spacing
     }
 
-    private fun getDefaultCalculationSteps(reportType: ReportType, designCode: String): List<CalculationStep> {
+    private fun getDefaultCalculationSteps(reportType: ReportType, designCode: String, columnDuctile: Boolean = false): List<CalculationStep> {
         return when (reportType) {
             ReportType.BEAM -> listOf(
                 CalculationStep(1, "Load Combination",
@@ -379,10 +380,16 @@ object ProfessionalEnglishPdfReporter {
                     "rho = As / Ag ; rho_min = 0.01 ; rho_max = 0.08",
                     "$designCode Reinforcement Limits",
                     "Code limits on steel ratio"),
-                CalculationStep(7, "Tie/Stirrup Design",
-                    "s = min(16db, 48dtie, b) ; spacing requirements",
-                    "$designCode Lateral Ties",
-                    "Tie spacing and diameter requirements")
+                if (columnDuctile)
+                    CalculationStep(7, "Confined Tie Design (ductile)",
+                        "Lo = max(h/6, max(b,h), 500mm) ; S0 = min(8db [fy<=420] or 6db [fy500], 24dtie, min(b,h)/2, 150mm)",
+                        "ECP 203-2020 6-8-1-3 + 6-8-2-2-3 / 6-8-2-3-2",
+                        "Critical-region confined tie spacing (ordinary tie rule not applicable)")
+                else
+                    CalculationStep(7, "Tie/Stirrup Design",
+                        "s = min(16db, 48dtie, b) ; spacing requirements",
+                        "$designCode Lateral Ties",
+                        "Tie spacing and diameter requirements")
             )
             ReportType.SLAB -> listOf(
                 CalculationStep(1, "Load Combination",
@@ -662,6 +669,10 @@ object ProfessionalEnglishPdfReporter {
             // Data Rows
             safetyChecks.forEachIndexed { i, check ->
                 val bg = if (i % 2 == 0) null else ROW_ALT
+                // Blocked (not evaluated) checks carry placeholder 0/1 numbers in the
+                // numeric pipeline; the report must show them as not evaluated,
+                // never as a computed pass/fail.
+                val blockedRow = check.name.startsWith("BLOCKED")
                 val nameCell = dataCell(check.name, 9f, false, bg, TextAlignment.LEFT)
                 if (!check.reference.isNullOrBlank()) {
                     nameCell.add(Paragraph().add(text(check.reference, createPdfFont(), 7f, SECONDARY))
@@ -669,22 +680,23 @@ object ProfessionalEnglishPdfReporter {
                 }
                 table.addCell(nameCell)
 
-                val calcStr = if (check.calculated.isNaN() || check.calculated.isInfinite()) "---"
+                val calcStr = if (blockedRow) "---"
+                else if (check.calculated.isNaN() || check.calculated.isInfinite()) "---"
                 else String.format(Locale.US, "%.2f", check.calculated)
                 table.addCell(dataCell(calcStr, 9f, false, bg))
 
-                val limitStr = if (check.limit.isNaN() || check.limit.isInfinite()) "---"
+                val limitStr = if (blockedRow) "---"
+                else if (check.limit.isNaN() || check.limit.isInfinite()) "---"
                 else String.format(Locale.US, "%.2f", check.limit)
                 table.addCell(dataCell(limitStr, 9f, false, bg))
 
                 table.addCell(dataCell(check.unit, 8f, false, bg))
 
-                val statusStr = if (check.passed) "PASS" else "FAIL"
-                val statusClr = if (check.passed) SUCCESS else ERROR
-                table.addCell(dataCell(statusStr, 9f, true, bg).also {
-                    // Color the cell text
-                    it.add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr)).setTextAlignment(TextAlignment.CENTER))
-                })
+                val statusStr = if (blockedRow) "NOT EVALUATED" else if (check.passed) "PASS" else "FAIL"
+                val statusClr = if (blockedRow) SECONDARY else if (check.passed) SUCCESS else ERROR
+                val statusCell = dataCell("", 9f, true, bg)
+                statusCell.add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr)).setTextAlignment(TextAlignment.CENTER))
+                table.addCell(statusCell)
             }
             document.add(table)
         }
@@ -885,7 +897,10 @@ object ProfessionalEnglishPdfReporter {
             addDesignParameters(document, inputs)
 
             // 3. Calculation Methodology
-            addCalculationMethodology(document, designCode, reportType, calculationSteps)
+            // A ductile ECP column (mode row present in results) must never show the
+            // ordinary tie formula; the template falls back to the confined-tie step.
+            val columnDuctile = results.keys.any { it.startsWith("Ductility Mode (ECP 203") }
+            addCalculationMethodology(document, designCode, reportType, calculationSteps, columnDuctile)
 
             // 4. Results
             addResultsSection(document, results)
@@ -1009,7 +1024,7 @@ object ProfessionalEnglishPdfReporter {
                     page.resources,
                     docEvent.document
                 )
-                val pageNumber = docEvent.document.numberOfPages
+                val pageNumber = docEvent.document.getPageNumber(page)
                 canvas.beginText()
                     .setFontAndSize(font, 8f)
                     .setColor(footerColor, true)

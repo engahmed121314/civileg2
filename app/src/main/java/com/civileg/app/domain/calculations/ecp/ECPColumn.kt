@@ -561,16 +561,14 @@ class ECPColumn : ColumnDesign {
         clauseRefs += "ECP 203-2020 §6-8-1-3(و) + fig 6-35 critical regions (printed 6-87..6-88)"
 
         // ≥3 longitudinal bars each face — §6-8-2-2-3 (printed 6-92) and
-        // §6-8-2-3-2 (printed 6-95). Per-face count estimated from total bars.
-        val barArea = PI * barDiameter * barDiameter / 4.0
-        val totalBars = (providedLongitudinalArea / barArea).roundToInt().coerceAtLeast(4)
-        val estPerFace = 2 + (totalBars - 4 + 1) / 2
-        checks += EcpColumnSeismicCheck(
-            name = "Longitudinal bars per face (estimated from total $totalBars bars)",
+        // §6-8-2-3-2 (printed 6-95). The per-face count is NOT derivable from the
+        // total bar count alone: with the arrangement unknown the check is not
+        // evaluated here (never a fabricated pass) and must be verified on the
+        // actual section arrangement.
+        blocked += BlockedSeismicCheck(
+            name = "Longitudinal bars per face (>= 3 each face)",
             clause = "ECP 203-2020 §6-8-2-2-3 / §6-8-2-3-2 (printed 6-92 / 6-95)",
-            demand = "$estPerFace bars/face (est.)",
-            limit = "≥ 3 bars each face",
-            satisfied = estPerFace >= 3
+            reason = "Per-face bar count cannot be derived from the total bar count without the actual arrangement; verify at least 3 bars on each face on the section drawing."
         )
 
         if (mode == EcpColumnDuctilityMode.LIMITED) {
