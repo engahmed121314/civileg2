@@ -307,3 +307,43 @@ Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
 - **Real rule**: ACI 318M-14 §13.3.3.3 (VERIFIED printed pp.310-311, A-07): (a) long-direction reinforcement uniform across full width; (b) short-direction reinforcement: γs = 2/(β+1) of the total concentrated in a central band whose width equals the short side; remainder (1−γs) uniform outside the band.
 - **Fix**: 20% block removed; band-rule distribution computed and detailed (band bars, spacing, outside-band area in codeNotes).
 - **Golden vector**: same case as F-03 → β=1.4783, γs=0.8070, band width=2300 mm; short-dir steel min-governed 1000 mm²/m → total 3400; band 1192.9 mm²/m → 11Ø12 @ 100mm; outside band 596 mm²/m.
+
+### F-05 — ACI raft foundation rebuild: method decision (2026-11-21, before code per R4)
+
+**Finding:** `ACIFooting.designRaftFoundation` assumes uniform pressure
+(total/area, no eccentricity), checks punching against a fabricated 600×600
+column carrying 15% of the total load, and sizes bending from
+q·(√A/3)²/10 with no code or mechanics basis. The owner approved the rebuild
+with a column-layout overload (2026-11-21).
+
+**Method decision (engineering choice, authorized by §13.2.6.2):** rigid-raft
+conventional method.
+1. Geometry from the actual column layout plus a uniform edge projection.
+2. Elastic pressure field under the rigid raft: q(x,y) = P/A ± Mx·y/Ix ±
+   My·x/Iy (strength of materials — not a code clause; equilibrium-based,
+   permitted because §13.2.6.2 allows "any procedure" satisfying equilibrium
+   and geometric compatibility). Bearing check at SERVICE loads against qa.
+3. Inverted-slab strips: each column-line strip is a continuous beam over the
+   column-line supports carrying the tributary average FACTORED pressure;
+   elastic moments/shears by the three-moment equation (exact for prismatic
+   equal-section strips — equilibrium + compatibility). Top steel at interior
+   supports, bottom steel at midspans; moment critical section at the support
+   face per Table 13.2.7.1 (already verified, entry A-05, printed p. 307);
+   one-way shear at d from the support face per §22.5.5.1 (verified A-02,
+   printed p. 563) and §13.2.7.2 (verified A-05).
+4. Punching per ACTUAL column: Vu = column factored load − average factored
+   pressure × area inside the critical perimeter; b0 per §22.6.4.1 whose
+   "perimeter bo is a minimum" rule reduces the perimeter at free raft edges
+   for edge/corner columns (§22.6.4.1 printed p. 575, part 3 PDF p. 184,
+   text-extracted 2026-11-21; free-edge critical sections also shown in
+   R22.6.4.3 Fig.); αs = 40/30/20 by interior/edge/corner position per
+   §22.6.5.3 (verified A-03, printed p. 580); vc = least of Table 22.6.5.2
+   (verified A-03, printed p. 579).
+5. Flexural design reuses calculateFootingReinforcement (§9.6.1.2 minimum —
+   the engine's documented conservative choice from entry A-06).
+
+**Open verification:** §13.3.1 (minimum reinforcement scope for footings/rafts)
+still to be opened before the strip min-steel rule is pinned; the existing
+§9.6.1.2 engine choice carries over until then. Golden vectors planned: 2×2
+symmetric grid (closed-form pressure + strip moments via three-moment) and
+2×3 eccentric grid.
