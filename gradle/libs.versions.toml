@@ -1,6 +1,6 @@
 [versions]
-agp = "9.5.0"
-kotlin = "2.2.20"
+agp = "9.5.2"
+kotlin = "2.4.21"
 coreKtx = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -14,12 +14,12 @@ androidxComposeUiTestManifest = "1.8.0"
 androidxTestRules = "1.6.1"
 lifecycleRuntimeKtx = "2.8.7"
 room = "2.7.1"
-hilt = "2.56.1"
+hilt = "2.60.1"
 appcompat = "1.7.0"
 material = "1.12.0"
 constraintlayout = "2.2.0"
 navigation = "2.9.6"
-ksp = "2.3.6"
+ksp = "2.3.14"
 gson = "2.13.1"
 itext = "8.0.5"
 coroutines = "1.10.2"
@@ -94,5 +94,5 @@ navigation-safeargs = { id = "androidx.navigation.safeargs.kotlin", version.ref 
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-google-services = { id = "com.google.gms.google-services", version = "4.4.2" }
+google-services = { id = "com.google.gms.google-services", version = "4.6.0" }
 google-firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "googleFirebaseCrashlytics" }

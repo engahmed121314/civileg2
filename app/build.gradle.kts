@@ -297,10 +297,11 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 
     // Security: force patched Guava pulled transitively by play-services-ads-lite.
-    // Resolved 31.1-android is affected by CVE-2023-2976 and CVE-2020-8908.
+    // Older resolved lines are affected by CVE-2023-2976, CVE-2020-8908 and
+    // GHSA-xxph-c9ww-hj94 (CompactHashMap deserialization, patched in 33.7.2).
     constraints {
-        implementation("com.google.guava:guava:33.4.0-android") {
-            because("CVE-2023-2976 / CVE-2020-8908")
+        implementation("com.google.guava:guava:33.8.0-android") {
+            because("CVE-2023-2976 / CVE-2020-8908 / GHSA-xxph-c9ww-hj94")
         }
     }
 }
