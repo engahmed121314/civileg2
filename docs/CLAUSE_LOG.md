@@ -368,3 +368,26 @@ code-verified. Every vector will include an independent equilibrium/benchmark
 check (hand-derived, not a twin of the implementation), and the engine will
 assert global equilibrium: strip reactions must sum to the column loads and
 the pressure field resultants must reproduce P, Mx, My.
+
+**F-05 clause verification (2026-11-21, before code):**
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| A-20a | §13.3.1.1 base area from UNFACTORED forces/moments and permissible bearing pressure; §13.3.1.2 effective depth of bottom reinforcement ≥ 150 mm | ACI 318M-14, printed p. 309 (part 2, PDF p. 118), text-extracted | Verified (owner PDF) |
+| A-20b | §13.3.4.1 mat foundations per §13.3.4 + applicable Chapter 8 provisions (ACI 336.2R noted in commentary, not opened); §13.3.4.2 the DIRECT DESIGN METHOD of §8.10 shall NOT be used for mats — the chosen strip method is an elastic (three-moment) analysis, not DDM, so it is compliant; §13.3.4.3 bearing-pressure distribution consistent with soil properties and established soil/rock mechanics principles (rigid uniform/linear field is the limiting simple case; R8.10.2.5 notes a frame analysis should be performed even with uniform reaction — the elastic strip analysis satisfies this) | ACI 318M-14, printed pp. 311 and 195 (part 2, PDF pp. 120 and 4), text-extracted | Verified (owner PDF) |
+| A-20c | §13.3.4.4: minimum reinforcement in nonprestressed MAT foundations per §8.6.1.1 — NOT the beam minimum §9.6.1.2 used elsewhere in the engine; §8.6.1.1: As,min near the tension face per Table 8.6.1.1 | ACI 318M-14, printed p. 312 (part 2, PDF p. 121), text-extracted; §8.6.1.1 printed p. 172 (part 1, PDF p. 181), text-extracted | Verified (owner PDF) |
+| A-20d | Table 8.6.1.1: fy < 420 → As,min = 0.0020·Ag; fy ≥ 420 → greater of (0.0018×420/fy)·Ag and 0.0014·Ag | ACI 318M-14, printed p. 173 (part 1, PDF p. 182), RENDERED (image-only table) | Verified (owner PDF, printed page) |
+| A-20e | R13.3.4.4 (commentary): consider continuous reinforcement in each direction near BOTH faces of mat foundations | ACI 318M-14, printed p. 312 (part 2, PDF p. 121), text-extracted | Verified (owner PDF commentary) |
+
+**F-05 vectors (hand-derived before implementation):** V1 — 2×2 symmetric grid
+(400×400 columns at (0,0)/(6000,0)/(0,6000)/(6000,6000), service 1200 kN,
+factored 1500 kN each, edge projection 1000 mm, t=500 mm, fc'=24, fy=400,
+qa=200 kPa): raft 8400×8400, q_service=68.03 kPa, q_u=85.03 kPa; strip
+w=357.14 kN/m, overhang a=1200, span 6000 → beam support moment −257.14 kNm
+(raft +257.14, BOTTOM steel at column lines), beam midspan +1350.00 kNm
+(raft −1350.00, TOP steel at midspan); reaction 1500 kN = column factored
+load (equilibrium self-check); punching b0=3260 mm, Vu=1443.5 kN,
+vc governing case (a) 1.617 MPa, φVc=1640.3 kN, util=0.880; one-way shear at
+d=415 from face: Vu=852.2 kN vs φVc=1088.5 kN; As top governed by min
+0.0020·Ag (Table 8.6.1.1, fy=400<420) vs required — computed in test. V2 — 2×3
+eccentric grid: derived in the test source comments.
