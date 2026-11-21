@@ -11,6 +11,13 @@ updates:
     labels:
       - "dependencies"
       - "automated"
+    # itext 8 -> 9 is a breaking major (removes setBold/setItalic/setBorder/
+    # setPadding used by PdfGenerator). Keep 8.x until a deliberate
+    # PdfGenerator migration is scheduled.
+    ignore:
+      - dependency-name: "com.itextpdf:itext-core"
+        update-types:
+          - "version-update:semver-major"
     # Group related bumps into one PR each to cut review noise. First matching
     # group wins; "misc" catches everything not matched above it.
     groups:
