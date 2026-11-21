@@ -72,19 +72,16 @@ class ACIRaftFoundationTest {
         assertTrue(r.equilibriumCheck)
         assertTrue(r.momentEquilibriumX)
         assertTrue(r.momentEquilibriumY)
-        // uniform-per-span sampling smooths ~11.7% of the eccentric moment (analytic term reported)
-        assertEquals(934.9112, r.momentDiscretizationY, 0.5)
         val x3 = r.strips.first { it.tag == "X-strip 3" }
         assertEquals(465.4996, x3.lineLoad, 0.01)
         val y1 = r.strips.first { it.tag == "Y-strip 1" }
-        // per-span sampling carries the gradient: unequal span loads 299.2717 / 469.959 kN/m
+        // exact trapezoidal loads carry the full gradient: line loads 213.9281 -> 555.3027 kN/m
         assertEquals(3, y1.supportMoments.size)
-        assertEquals(-135.594, y1.supportMoments[0], 0.01)
+        assertEquals(-129.449, y1.supportMoments[0], 0.01)
         assertEquals(-630.769, y1.supportMoments[1], 0.01)
-        assertEquals(-418.252, y1.supportMoments[2], 0.01)
-        assertEquals(240.966, y1.spanMoments[0], 0.01)
-        assertEquals(418.411, y1.spanMoments[1], 0.01)
-        assertTrue(r.warnings.any { it.contains("eccentric moment Mx") })
+        assertEquals(-424.397, y1.supportMoments[2], 0.01)
+        assertEquals(234.366, y1.spanMoments[0], 0.01)
+        assertEquals(419.116, y1.spanMoments[1], 0.01)
         assertTrue(r.isSafe)
     }
 

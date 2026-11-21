@@ -434,3 +434,25 @@ method-integrity measures on top of A-20a..e):
    cross-checked by closed-form hand arithmetic (values in the F-05 vector note);
    the three-moment/tridiagonal solver is additionally pinned by the exact force and
    moment identities above, which do not share code with the solver's moment output.
+
+### F-05 verification addendum — REVISION (2026-11-21, supersedes items 4-6 above)
+
+Review found that uniform-per-span sampling only equilibrates a SMOOTHED load (V2: 11.7%
+of the eccentric moment Mx never reached the strips) and that reporting the analytic
+correction term is bookkeeping, not physics. Replaced with **exact trapezoidal strip
+loads**: pressure is sampled AT each support line and raft edge (band centroid across
+the strip), and the three-moment equation uses the exact linear-load RHS
+-[Lj^3(8w0+7w1) + Lk^3(7w1+8w2)]/60 with trapezoidal end shears L(2w1+w2)/6, L(w1+2w2)/6
+and overhang fixed moments a^2(2w_edge + w_support)/6. For the linear pressure field the
+strip loads are then EXACT integrals of the field, and the field equilibrates the applied
+loads by construction, so **force and moment equilibrium are exact by construction** (V2:
+reacted = applied = 40000.0000 kN.m, diff 1e-9) with no correction term and no smoothing
+to disclose. The discretization metric/warning is removed. Formula verification:
+reduction to the uniform-load closed form (M = -wL^2/8 two-span, -wL^2/12 fixed ends),
+the known fixed-fixed triangular-load reactions (3wL/20, 7wL/20), and an independent
+Mohr-integral (force method) numerical solution of a 3-support trapezoidal case
+(-400.0000 kN.m both routes). One-way shear at d from the support face now subtracts the
+exactly integrated local trapezoidal load. Remaining documented limitations (unchanged):
+rigid-mat assumption (standing warning, no deflection/SSI check), complete rectangular
+grid required, load provenance caller-supplied, no settlement analysis, ACI 336.2R never
+opened.
