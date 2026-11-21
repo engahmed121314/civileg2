@@ -1,0 +1,1101 @@
+package com.civileg.app.features.project
+
+import com.civileg.app.ui.compose.screens.AppScreen
+importandroidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.features.project.ProjectViewModel
+import com.civileg.app.db.DesignType
+import java.text.SimpleDateFormat
+import java.util.Locale
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.civileg.app.R
+import com.civileg.app.ui.responsive.LocalWindowSize
+import com.civileg.app.ui.responsive.WindowWidthClass
+import com.civileg.app.ui.theme.LocalIsDarkTheme
+import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
+
+// ══════════════════════════════════════════════════════════════════════
+// Color palette extensions for the Home Screen
+// ══════════════════════════════════════════════════════════════════════
+private val HeaderGradientStart   = Color(0xFF0D1B3E)
+private val HeaderGradientMid     = Color(0xFF162B5B)
+private val HeaderGradientEnd     = Color(0xFF2A1B5E) // deep purple
+private val HeaderOverlay         = Color(0xFF0F9DFF).copy(alpha = 0.06f)
+
+private val StatCardBlue          = Color(0xFF1565C0)
+private val StatCardGreen         = Color(0xFF2E7D32)
+private val StatCardOrange        = Color(0xFFE65100)
+
+private val CardAccentBeam        = Color(0xFF1976D2)
+private val CardAccentColumn      = Color(0xFF7B1FA2)
+private val CardAccentSlab        = Color(0xFF00838F)
+private val CardAccentFooting     = Color(0xFF4E342E)
+private val CardAccentTank        = Color(0xFF0277BD)
+private val CardAccentWall        = Color(0xFF558B2F)
+private val CardAccentStair       = Color(0xFFAD1457)
+private val CardAccentSteel       = Color(0xFF37474F)
+private val CardAccentSeismic     = Color(0xFFBF360C)
+private val CardAccentFrame       = Color(0xFF1A237E)
+
+private val ToolCalcBg            = Color(0xFF1B5E20).copy(alpha = 0.12f)
+private val ToolCalcAccent        = Color(0xFF2E7D32)
+private val ToolConvBg            = Color(0xFF0D47A1).copy(alpha = 0.12f)
+private val ToolConvAccent        = Color(0xFF1565C0)
+private val ToolSteelBg           = Color(0xFF4E342E).copy(alpha = 0.12f)
+private val ToolSteelAccent       = Color(0xFF5D4037)
+private val ToolQtyBg             = Color(0xFFE65100).copy(alpha = 0.12f)
+private val ToolQtyAccent         = Color(0xFFEF6C00)
+private val ToolPdfBg             = Color(0xFFB71C1C).copy(alpha = 0.12f)
+private val ToolPdfAccent         = Color(0xFFD32F2F)
+
+private val FooterBackground      = Color(0xFFF8F9FA)
+private val FooterDarkBg          = Color(0xFF161622)
+
+// ══════════════════════════════════════════════════════════════════════
+// Data models
+// ══════════════════════════════════════════════════════════════════════
+
+@Immutable
+data class DesignModuleItem(
+    val screen: AppScreen,
+    val titleRes: Int,
+    val subtitleRes: Int,
+    val supportedCodes: List<String>,
+    val accentColor: Color,
+    val icon: ImageVector
+)
+
+@Immutable
+data class QuickTool(
+    val titleRes: Int,
+    val subtitleRes: Int,
+    val icon: ImageVector,
+    val bgColor: Color,
+    val accentColor: Color,
+    val route: String
+)
+
+@Immutable
+data class RecentProject(
+    val name: String,
+    val elementType: String,
+    val date: String,
+    val code: String,
+    val icon: ImageVector
+)
+
+private val enhancedDesignModules = listOf(
+    DesignModuleItem(AppScreen.BeamDesign,     R.string.home_beam,     R.string.home_beam_sub,     listOf("ECP", "ACI", "SBC"), CardAccentBeam,   Icons.Default.AccountBalance),
+    DesignModuleItem(AppScreen.ColumnDesign,    R.string.home_column,   R.string.home_column_sub,   listOf("ECP", "ACI", "SBC"), CardAccentColumn,  Icons.Default.ViewColumn),
+    DesignModuleItem(AppScreen.SlabDesign,      R.string.home_slab,     R.string.home_slab_sub,     listOf("ECP", "ACI", "SBC"),        CardAccentSlab,    Icons.Default.ViewWeek),
+    DesignModuleItem(AppScreen.FootingDesign,   R.string.home_footing,  R.string.home_footing_sub,  listOf("ECP", "ACI", "SBC"),        CardAccentFooting, Icons.Default.Layers),
+    DesignModuleItem(AppScreen.TankDesign,      R.string.home_tank,     R.string.home_tank_sub,     listOf("ECP", "ACI", "SBC"),        CardAccentTank,    Icons.Default.WaterDrop),
+    DesignModuleItem(AppScreen.RetainingWall,   R.string.home_retaining_wall, R.string.home_retaining_wall_sub, listOf("ECP", "ACI", "SBC"), CardAccentWall, Icons.Default.SensorDoor),
+    DesignModuleItem(AppScreen.StairDesign,     R.string.home_stair,    R.string.home_stair_sub,    listOf("ECP", "ACI", "SBC"),        CardAccentStair,   Icons.Default.Stairs),
+    DesignModuleItem(AppScreen.SteelDesign,     R.string.home_steel,    R.string.home_steel_sub,    listOf("ECP 205", "AISC", "SBC 306"),      CardAccentSteel,   Icons.Default.Build),
+    DesignModuleItem(AppScreen.SeismicAnalysis, R.string.home_seismic,  R.string.home_seismic_sub,  listOf("ASCE", "SBC"),       CardAccentSeismic, Icons.Default.Warning),
+    DesignModuleItem(AppScreen.FrameAnalysis,  R.string.home_frame,    R.string.home_frame_sub,    listOf("ECP", "ACI", "AISC"), CardAccentFrame, Icons.Default.AccountTree),
+    DesignModuleItem(AppScreen.PileFoundation, R.string.home_pile,     R.string.home_pile_sub,     listOf("ECP", "ACI", "SBC"),              StatCardGreen,   Icons.Default.Foundation),
+    DesignModuleItem(AppScreen.FlatSlab,      R.string.home_flat_slab, R.string.home_flat_slab_sub, listOf("ECP", "ACI", "SBC"),      CardAccentSlab,    Icons.Default.Dashboard),
+    DesignModuleItem(AppScreen.ShearWall,     R.string.home_shear_wall, R.string.home_shear_wall_sub, listOf("ECP", "ACI", "SBC"),    CardAccentWall,    Icons.Default.SensorDoor),
+    DesignModuleItem(AppScreen.WallOpening,   R.string.home_wall_opening, R.string.home_wall_opening_sub, listOf("ECP", "ACI", "SBC"), CardAccentWall, Icons.Default.DoorFront),
+    DesignModuleItem(AppScreen.SoilStructure, R.string.home_soil_structure, R.string.home_soil_structure_sub, listOf("ECP", "ACI", "SBC"), CardAccentFooting, Icons.Default.Terrain),
+    DesignModuleItem(AppScreen.QualityEngineer, R.string.home_quality_engineer, R.string.home_quality_engineer_sub, listOf("ECP", "ACI", "SBC"), StatCardGreen, Icons.Default.Verified)
+)
+
+private val quickTools = listOf(
+    QuickTool(R.string.home_calculator,    R.string.home_calculator_sub,    Icons.Default.Calculate,        ToolCalcBg,  ToolCalcAccent,  AppScreen.Calculator.route),
+    QuickTool(R.string.home_unit_converter, R.string.home_unit_converter_sub, Icons.Default.SwapHoriz,       ToolConvBg,  ToolConvAccent,  AppScreen.UnitConverter.route),
+    QuickTool(R.string.home_steel_tables,  R.string.home_steel_tables_sub, Icons.Default.TableChart,      ToolSteelBg, ToolSteelAccent, AppScreen.SteelTables.route),
+    QuickTool(R.string.home_boq,           R.string.home_boq_sub,           Icons.AutoMirrored.Filled.Assignment,      ToolQtyBg,   ToolQtyAccent,   AppScreen.BOQ.route),
+    QuickTool(R.string.home_site_layout_title, R.string.home_site_layout_sub, Icons.Default.Map, ToolConvBg, ToolConvAccent, AppScreen.SiteLayout.route),
+    QuickTool(R.string.nav_inventory, R.string.tool_execution_logs_sub, Icons.Default.History, ToolPdfBg, ToolPdfAccent, AppScreen.ExecutionLog.route),
+    QuickTool(R.string.home_rebar_tool,   R.string.home_rebar_sub,        Icons.Default.LinearScale, StatCardGreen.copy(alpha=0.1f), StatCardGreen, AppScreen.RebarTool.route),
+    QuickTool(R.string.home_quick_tools,  R.string.home_quick_tools_sub,  Icons.Default.Build,       ToolCalcBg, ToolCalcAccent, AppScreen.QuickTools.route),
+    QuickTool(R.string.home_concrete_mix, R.string.home_concrete_mix_sub,  Icons.Default.Science, ToolCalcBg, ToolCalcAccent, AppScreen.ConcreteMix.route),
+    QuickTool(R.string.home_wind_load,    R.string.home_wind_load_sub,     Icons.Default.Air, ToolConvBg, ToolConvAccent, AppScreen.WindLoad.route),
+    QuickTool(R.string.home_section_tools_title, R.string.home_site_layout_sub, Icons.Default.Architecture, ToolQtyBg, ToolQtyAccent, AppScreen.BuildingDesigner.route)
+)
+
+// Recent projects now loaded from DB via ViewModel in HomeScreen composable
+
+// ══════════════════════════════════════════════════════════════════════
+// Main Home Screen
+// ══════════════════════════════════════════════════════════════════════
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(
+    onNavigateTo: (String) -> Unit,
+    onShowSettings: () -> Unit,
+    projectViewModel: ProjectViewModel = hiltViewModel()
+) {
+    // Follows the in-app theme choice, not the OS setting.
+    val isDark = LocalIsDarkTheme.current
+    val dimensions = MaterialTheme.dimens
+    val allDesigns by projectViewModel.allDesigns.observeAsState(initial = emptyList())
+    val allProjects by projectViewModel.allProjects.observeAsState(initial = emptyList())
+    val designCount = allDesigns.size
+    val uniqueCodes = allDesigns.map { it.codeUsed }.distinct().size
+    val uniqueTypes = allDesigns.map { it.type }.distinct().size
+
+    val recentProjects = allDesigns
+        .sortedByDescending { it.createdAt }
+        .take(5)
+        .map { design ->
+            val typeLabel = when (design.type) {
+                DesignType.BEAM -> stringResource(R.string.design_type_beam)
+                DesignType.COLUMN -> stringResource(R.string.design_type_column)
+                DesignType.SLAB -> stringResource(R.string.design_type_slab)
+                DesignType.FOOTING -> stringResource(R.string.design_type_footing)
+                DesignType.STAIRCASE -> stringResource(R.string.design_type_staircase)
+                DesignType.RETAINING_WALL -> stringResource(R.string.design_type_retaining_wall)
+                DesignType.WATER_TANK -> stringResource(R.string.design_type_water_tank)
+                DesignType.SEISMIC -> stringResource(R.string.design_type_seismic)
+                DesignType.STEEL_MEMBER -> stringResource(R.string.design_type_steel_member)
+                DesignType.PILE -> stringResource(R.string.design_type_pile)
+                DesignType.STEEL_WAREHOUSE -> stringResource(R.string.design_type_steel_warehouse)
+                DesignType.FRAME_ANALYSIS -> stringResource(R.string.design_type_frame_analysis)
+                DesignType.PILE_FOUNDATION -> stringResource(R.string.design_type_pile_foundation)
+                DesignType.FLAT_SLAB -> stringResource(R.string.design_type_flat_slab)
+                DesignType.SHEAR_WALL -> stringResource(R.string.design_type_shear_wall)
+                DesignType.CONCRETE_MIX -> stringResource(R.string.design_type_concrete_mix)
+                DesignType.SOIL_BEARING -> stringResource(R.string.design_type_soil_bearing)
+                DesignType.WIND_LOAD -> stringResource(R.string.design_type_wind_load)
+                DesignType.WAFFLE_SLAB -> "Waffle Slab"
+                DesignType.HORDI_SLAB -> "Hordi Slab"
+                DesignType.COMBINED_FOOTING -> "Combined Footing"
+            }
+            val icon = when (design.type) {
+                DesignType.BEAM -> Icons.Default.AccountBalance
+                DesignType.COLUMN -> Icons.Default.ViewColumn
+                DesignType.SLAB -> Icons.Default.ViewWeek
+                DesignType.FOOTING -> Icons.Default.Layers
+                DesignType.STAIRCASE -> Icons.Default.Stairs
+                DesignType.RETAINING_WALL -> Icons.Default.SensorDoor
+                DesignType.WATER_TANK -> Icons.Default.WaterDrop
+                DesignType.SEISMIC -> Icons.Default.Warning
+                DesignType.STEEL_MEMBER -> Icons.Default.Build
+                else -> Icons.Default.Description
+            }
+            val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(design.createdAt)
+            RecentProject(
+                name = design.name,
+                elementType = typeLabel,
+                date = dateStr,
+                code = design.codeUsed,
+                icon = icon
+            )
+        }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_logo),
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            AppText(
+                                "Civil Engineer Pro",
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 18.sp
+                            )
+                            AppText(
+                                "Professional Suite",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onShowSettings) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        }
+    ) { padding ->
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = dimensions.gridMinItemWidth),
+            horizontalArrangement = Arrangement.spacedBy(dimensions.cardSpacing),
+            verticalArrangement = Arrangement.spacedBy(dimensions.cardSpacing),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(
+                    if (isDark) Color(0xFF0F0F1A) else Color(0xFFF5F6FA)
+                )
+                .padding(horizontal = dimensions.screenHorizontalPadding)
+        ) {
+            // ══════════════════════════════════════════
+            // A. HEADER SECTION
+            // ══════════════════════════════════════════
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                HeaderSection(isDark = isDark)
+            }
+
+            // ══════════════════════════════════════════
+            // B. QUICK STATS ROW
+            // ══════════════════════════════════════════
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                QuickStatsRow(isDark = isDark, designCount = designCount, codeCount = uniqueCodes, typeCount = uniqueTypes)
+            }
+
+            // ══════════════════════════════════════════
+            // C. MAIN DESIGN MODULES GRID
+            // ══════════════════════════════════════════
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                SectionHeader(
+                    icon = Icons.Default.Engineering,
+                    title = stringResource(R.string.home_section_design_title),
+                    subtitle = stringResource(R.string.home_section_design_sub)
+                )
+            }
+
+            items(enhancedDesignModules) { module ->
+                EnhancedModuleCard(
+                    module = module,
+                    isDark = isDark,
+                    onClick = { onNavigateTo(module.screen.route) }
+                )
+            }
+
+            // ══════════════════════════════════════════
+            // D. QUICK TOOLS SECTION (horizontal)
+            // ══════════════════════════════════════════
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                SectionHeader(
+                    icon = Icons.Default.Build,
+                    title = stringResource(R.string.home_section_tools_title),
+                    subtitle = stringResource(R.string.home_section_tools_sub)
+                )
+            }
+
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                QuickToolsRow(
+                    isDark = isDark,
+                    onToolClick = { onNavigateTo(it) }
+                )
+            }
+
+            // ══════════════════════════════════════════
+            // E. RECENT PROJECTS SECTION
+            // ══════════════════════════════════════════
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                SectionHeader(
+                    icon = Icons.Default.History,
+                    title = stringResource(R.string.home_section_recent_title),
+                    subtitle = stringResource(R.string.home_section_recent_sub)
+                )
+            }
+
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                RecentProjectsSection(
+                    projects = recentProjects,
+                    isDark = isDark
+                )
+            }
+
+            // ══════════════════════════════════════════
+            // F. FOOTER
+            // ══════════════════════════════════════════
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                FooterSection(isDark = isDark)
+            }
+
+            // Bottom spacer
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// A. HEADER SECTION
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun HeaderSection(isDark: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .shadow(12.dp, RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        HeaderGradientStart,
+                        HeaderGradientMid,
+                        HeaderGradientEnd
+                    ),
+                    start = Offset.Zero,
+                    end = Offset(600f, 300f)
+                )
+            )
+    ) {
+        // Decorative circles
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = (-20).dp, y = (-20).dp)
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.04f))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = 30.dp, y = 30.dp)
+                .size(80.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.03f))
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 28.dp)
+        ) {
+            // Logo + version badge row
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(42.dp),
+                    tint = Color.White.copy(alpha = 0.95f)
+                )
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    AppText(
+                        stringResource(R.string.home_welcome),
+                        color = Color.White,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 26.sp,
+                        lineHeight = 32.sp
+                    )
+                    Surface(
+                        color = Color.White.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        AppText(
+                        text = stringResource(R.string.home_tagline),
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Subtitle
+            AppText(
+                text = stringResource(R.string.home_cta),
+                color = Color.White.copy(alpha = 0.75f),
+                fontSize = 12.sp,
+                lineHeight = 18.sp
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Code badges row
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CodeBadge("ECP 203", Color(0xFF4FC3F7))
+                CodeBadge("ACI 318", Color(0xFF81C784))
+                CodeBadge("SBC 304", Color(0xFFFFB74D))
+                CodeBadge("AISC", Color(0xFFEF9A9A))
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Version badge
+            Surface(
+                color = Color.White.copy(alpha = 0.1f),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Verified,
+                        contentDescription = null,
+                        tint = Color(0xFF4FC3F7),
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    AppText(
+                        stringResource(R.string.home_version_badge),
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CodeBadge(code: String, color: Color) {
+    Surface(
+        color = color.copy(alpha = 0.2f),
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        AppText(
+            text = code,
+            color = color,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+        )
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// B. QUICK STATS ROW
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun QuickStatsRow(isDark: Boolean, designCount: Int, codeCount: Int, typeCount: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        StatCard(
+            value = "$designCount",
+            label = stringResource(R.string.home_stat_saved),
+            accentColor = StatCardBlue,
+            icon = Icons.Default.Save,
+            isDark = isDark,
+            modifier = Modifier.weight(1f)
+        )
+        StatCard(
+            value = "$codeCount",
+            label = stringResource(R.string.home_stat_codes),
+            accentColor = StatCardGreen,
+            icon = Icons.Default.Gavel,
+            isDark = isDark,
+            modifier = Modifier.weight(1f)
+        )
+        StatCard(
+            value = "$typeCount+",
+            label = stringResource(R.string.home_stat_types),
+            accentColor = StatCardOrange,
+            icon = Icons.Default.Grid3x3,
+            isDark = isDark,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun StatCard(
+    value: String,
+    label: String,
+    accentColor: Color,
+    icon: ImageVector,
+    isDark: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val animatedValue by animateFloatAsState(
+        targetValue = 1f,
+        animationSpec = tween(800, delayMillis = 100, easing = FastOutSlowInEasing),
+        label = "stat_animate"
+    )
+
+    Card(
+        modifier = modifier.heightIn(min = MaterialTheme.dimens.statCardMinHeight),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDark) Color(0xFF1E1E30) else Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp)
+        ) {
+            // Accent bar on the left
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .width(3.dp)
+                    .height(36.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(accentColor)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 12.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(18.dp)
+                )
+                Column {
+                    AppText(
+                        text = value,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 22.sp,
+                        color = if (isDark) Color.White else Color(0xFF1A1A2E),
+                        lineHeight = 24.sp
+                    )
+                    AppText(
+                        text = label,
+                        fontSize = 10.sp,
+                        color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
+                        lineHeight = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// C. ENHANCED DESIGN MODULE CARD
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun EnhancedModuleCard(
+    module: DesignModuleItem,
+    isDark: Boolean,
+    onClick: () -> Unit
+) {
+    val cardBg = if (isDark) Color(0xFF1E1E30) else Color.White
+    val subtleBg = module.accentColor.copy(alpha = 0.06f)
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier.heightIn(min = MaterialTheme.dimens.moduleCardMinHeight),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(subtleBg)
+        ) {
+            // Top-right decorative circle
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 12.dp, y = (-12).dp)
+                    .size(50.dp)
+                    .clip(CircleShape)
+                    .background(module.accentColor.copy(alpha = 0.08f))
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Icon with accent background
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(module.accentColor.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = module.icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = module.accentColor
+                    )
+                }
+
+                // Title + subtitle
+                Column {
+                    AppText(
+                        text = stringResource(module.titleRes),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = if (isDark) Color.White else Color(0xFF1A1A2E),
+                        maxLines = 1
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    AppText(
+                        text = stringResource(module.subtitleRes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575),
+                        maxLines = 2,
+                        lineHeight = 15.sp,
+                        fontSize = 11.sp
+                    )
+                }
+
+                // Code badges
+                if (module.supportedCodes.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        module.supportedCodes.forEach { code ->
+                            Surface(
+                                color = module.accentColor.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(4.dp)
+                            ) {
+                                AppText(
+                                    text = code,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = module.accentColor
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// D. QUICK TOOLS ROW (horizontal scroll)
+// ══════════════════════════════════════════════════════════════════════
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun QuickToolsRow(
+    isDark: Boolean,
+    onToolClick: (String) -> Unit
+) {
+    val windowSize = LocalWindowSize.current
+    val spacing = MaterialTheme.dimens.cardSpacing
+
+    // Phones keep the familiar horizontal carousel. Tablets have enough room
+    // to wrap the tools into a balanced flow/grid, which removes the extra
+    // horizontal scrolling gesture.
+    if (windowSize.widthClass == WindowWidthClass.COMPACT) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing)
+        ) {
+            quickTools.forEach { tool ->
+                QuickToolCard(
+                    tool = tool,
+                    isDark = isDark,
+                    onClick = { onToolClick(tool.route) }
+                )
+            }
+        }
+    } else {
+        FlowRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(spacing),
+            verticalArrangement = Arrangement.spacedBy(spacing),
+            maxItemsInEachRow = 6
+        ) {
+            quickTools.forEach { tool ->
+                QuickToolCard(
+                    tool = tool,
+                    isDark = isDark,
+                    onClick = { onToolClick(tool.route) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickToolCard(
+    tool: QuickTool,
+    isDark: Boolean,
+    onClick: () -> Unit
+) {
+    val cardBg = if (isDark) Color(0xFF1E1E30) else Color.White
+
+    Card(
+        onClick = onClick,
+        modifier = Modifier.width(MaterialTheme.dimens.quickToolWidth),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Icon
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(tool.bgColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = tool.icon,
+                    contentDescription = null,
+                    tint = tool.accentColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Title
+            AppText(
+                text = stringResource(tool.titleRes),
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                color = if (isDark) Color.White else Color(0xFF1A1A2E),
+                maxLines = 1,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // Subtitle
+            AppText(
+                text = stringResource(tool.subtitleRes),
+                fontSize = 9.sp,
+                color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF9E9E9E),
+                maxLines = 1,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// E. RECENT PROJECTS SECTION
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun RecentProjectsSection(
+    projects: List<RecentProject>,
+    isDark: Boolean
+) {
+    val cardBg = if (isDark) Color(0xFF1E1E30) else Color.White
+
+    if (projects.isEmpty()) {
+        // Empty state
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = cardBg),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FolderOpen,
+                    contentDescription = null,
+                    tint = if (isDark) Color(0xFF4A4A6A) else Color(0xFFBDBDBD),
+                    modifier = Modifier.size(40.dp)
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                AppText(
+                    text = stringResource(R.string.home_no_designs),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                AppText(
+                    text = stringResource(R.string.home_no_designs_sub),
+                    fontSize = 12.sp,
+                    color = if (isDark) Color(0xFF6B6B8A) else Color(0xFFBDBDBD)
+                )
+            }
+        }
+    } else {
+        // List of recent projects
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            projects.take(3).forEach { project ->
+                RecentProjectItem(project = project, isDark = isDark)
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentProjectItem(
+    project: RecentProject,
+    isDark: Boolean
+) {
+    val cardBg = if (isDark) Color(0xFF1E1E30) else Color.White
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Element icon
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = project.icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            // Name + type
+            Column(modifier = Modifier.weight(1f)) {
+                AppText(
+                    text = project.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = if (isDark) Color.White else Color(0xFF1A1A2E),
+                    maxLines = 1
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AppText(
+                        text = project.elementType,
+                        fontSize = 11.sp,
+                        color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    AppText(
+                        text = "•",
+                        color = if (isDark) Color(0xFF4A4A6A) else Color(0xFFBDBDBD),
+                        fontSize = 11.sp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    AppText(
+                        text = project.date,
+                        fontSize = 11.sp,
+                        color = if (isDark) Color(0xFF9E9E9E) else Color(0xFF757575)
+                    )
+                }
+            }
+
+            // Code badge
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = RoundedCornerShape(6.dp)
+            ) {
+                AppText(
+                    text = project.code,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                )
+            }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// F. FOOTER
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun FooterSection(isDark: Boolean) {
+    val footerBg = if (isDark) FooterDarkBg else FooterBackground
+    val textColor = if (isDark) Color(0xFF6B6B8A) else Color(0xFF9E9E9E)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = footerBg,
+        shape = RoundedCornerShape(20.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 20.dp, horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Divider
+            HorizontalDivider(
+                color = if (isDark) Color(0xFF2A2A3E) else Color(0xFFE0E0E0),
+                thickness = 1.dp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // App branding
+            AppText(
+                text = "CivilEG v2.0",
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 18.sp,
+                color = if (isDark) Color(0xFF4FC3F7) else Color(0xFF1565C0)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            AppText(
+                text = stringResource(R.string.home_footer_title),
+                fontSize = 11.sp,
+                color = textColor
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Code badges
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CodeBadge("ECP 203", Color(0xFF4FC3F7))
+                AppText("•", color = textColor, fontSize = 12.sp)
+                CodeBadge("ACI 318", Color(0xFF81C784))
+                AppText("•", color = textColor, fontSize = 12.sp)
+                CodeBadge("SBC 304", Color(0xFFFFB74D))
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Developer credit
+            AppText(
+                text = stringResource(R.string.home_footer_team),
+                fontSize = 10.sp,
+                color = textColor.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// SHARED — Section Header
+// ══════════════════════════════════════════════════════════════════════
+
+@Composable
+private fun SectionHeader(
+    icon: ImageVector,
+    title: String,
+    subtitle: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(top = 14.dp, bottom = 6.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column {
+            AppText(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            AppText(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}

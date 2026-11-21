@@ -1,0 +1,1046 @@
+package com.civileg.app.features.design
+
+import com.civileg.app.ui.responsive.dimens
+
+import com.civileg.app.domain.entities.DesignCode
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.civileg.app.R
+import com.civileg.app.domain.*
+import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
+import com.civileg.app.ui.compose.components.common.BbsTableCard
+import com.civileg.app.ui.compose.components.common.BoqTableCard
+import com.civileg.app.ui.compose.components.common.CalculationStepsCard
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
+import com.civileg.app.ui.compose.components.drawings.ProfessionalPileDrawing
+import com.civileg.app.ui.compose.components.drawings.pileDrawingSummary
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
+import com.civileg.app.utils.ComposeDrawingCaptureUtil
+import com.civileg.app.utils.captureToAndroidBitmap
+import com.civileg.app.domain.calculations.utils.BbsGenerator
+import com.civileg.app.domain.calculations.utils.BoqEstimator
+import com.civileg.app.features.design.PileFoundationViewModel
+import kotlinx.coroutines.launch
+import com.civileg.app.ui.defaultDesignCode
+import com.civileg.app.ui.components.AppButton
+import com.civileg.app.ui.components.AppButtonStyle
+import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextRole
+import com.civileg.app.ui.theme.onColorFor
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PileFoundationScreen(
+    viewModel: PileFoundationViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit = {}
+) {
+    val context = LocalContext.current
+    val result by viewModel.result.observeAsState()
+    val isLoading by viewModel.isLoading.observeAsState(false)
+    val isExporting by viewModel.isExporting.observeAsState(false)
+    val error by viewModel.error.observeAsState()
+
+    // PDF drawing capture: the export embeds the view that is on screen right now.
+    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
+    val captureScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val config = LocalConfiguration.current
+    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
+    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+    // Hoisted out of the drawing item so the invisible capture area (below the list) can
+    // render the same tab the user has selected.
+    var selectedViewMode by remember { mutableStateOf(0) }
+
+    // Show errors via Snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(error) {
+        error?.let {
+            snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long)
+        }
+    }
+
+    // ── Pile type & soil type selectors ──
+    var expandedPileType by remember { mutableStateOf(false) }
+    var expandedSoilType by remember { mutableStateOf(false) }
+    var expandedPattern by remember { mutableStateOf(false) }
+    var selectedPileType by remember { mutableStateOf(PileType.BORED) }
+    var selectedSoilType by remember { mutableStateOf(SoilType.CLAY) }
+    var selectedPattern by remember { mutableStateOf("2x2") }
+
+    // ── Pile geometry ──
+    var pileDiameter by remember { mutableStateOf("600") }
+    var pileLength by remember { mutableStateOf("15") }
+    var numberOfPiles by remember { mutableStateOf("4") }
+    var spacing by remember { mutableStateOf("3") }
+
+    // ── Loads ──
+    var axialLoad by remember { mutableStateOf("2000") }
+    var lateralLoad by remember { mutableStateOf("100") }
+    var momentLoad by remember { mutableStateOf("50") }
+
+    // ── Material ──
+    var fcu by remember { mutableStateOf("30") }
+    var fy by remember { mutableStateOf("400") }
+    var fyp by remember { mutableStateOf("400") }
+
+    // ── Soil parameters ──
+    var cu by remember { mutableStateOf("50") }
+    var phi by remember { mutableStateOf("30") }
+    var gammaSoil by remember { mutableStateOf("18") }
+    var waterTableDepth by remember { mutableStateOf("5") }
+    var embedmentDepth by remember { mutableStateOf("1.5") }
+    var safetyFactor by remember { mutableStateOf("3") }
+    var scourDepth by remember { mutableStateOf("0") }
+
+    // Site quantities (cap excavation / blinding)
+    var excavationDepth by remember { mutableStateOf("1.5") }
+    var workingSpace by remember { mutableStateOf("0.5") }
+    var blindingThickness by remember { mutableStateOf("0.1") }
+
+    // ── Eccentricity ──
+    var eccentricityX by remember { mutableStateOf("0") }
+    var eccentricityY by remember { mutableStateOf("0") }
+
+    // ── Pile cap / column ──
+    var capCover by remember { mutableStateOf("75") }
+    var columnWidth by remember { mutableStateOf("400") }
+    var columnLength by remember { mutableStateOf("400") }
+
+    // ── Design code (ADR-002: per-code engine dispatch) ──
+    var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
+    var calculatedCode by remember { mutableStateOf(defaultDesignCode()) }
+
+    // ── Expandable sections ──
+    var showSoilParams by remember { mutableStateOf(true) }
+    var showCapParams by remember { mutableStateOf(true) }
+    var showAdvanced by remember { mutableStateOf(false) }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { AppText(stringResource(R.string.pile_title), fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // ─── HEADER ─────────────────────────────────────────
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Foundation,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    AppText(stringResource(R.string.pile_header_ecp),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            }
+
+            // ─── DESIGN CODE ────────────────────────────────────
+            item {
+                DesignCodeSelectorRow(
+                    selectedCode = selectedCode,
+                    onCodeSelected = { selectedCode = it }
+                )
+            }
+
+            // ─── PILE TYPE & SOIL TYPE ────────────────────────────
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        AppText(stringResource(R.string.pile_config_section), fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(12.dp))
+
+                        // Pile type selector
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                AppText(stringResource(R.string.pile_type), style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                ExposedDropdownMenuBox(
+                                    expanded = expandedPileType,
+                                    onExpandedChange = { expandedPileType = !expandedPileType }
+                                ) {
+                                    OutlinedTextField(
+                                        value = selectedPileType.displayName,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPileType) },
+                                        modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = expandedPileType,
+                                        onDismissRequest = { expandedPileType = false }
+                                    ) {
+                                        PileType.entries.forEach { type ->
+                                            DropdownMenuItem(
+                                                text = { AppText(type.displayName) },
+                                                onClick = { selectedPileType = type; expandedPileType = false }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                AppText(stringResource(R.string.pile_soil_type), style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                ExposedDropdownMenuBox(
+                                    expanded = expandedSoilType,
+                                    onExpandedChange = { expandedSoilType = !expandedSoilType }
+                                ) {
+                                    OutlinedTextField(
+                                        value = selectedSoilType.displayName,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedSoilType) },
+                                        modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = expandedSoilType,
+                                        onDismissRequest = { expandedSoilType = false }
+                                    ) {
+                                        SoilType.entries.forEach { type ->
+                                            DropdownMenuItem(
+                                                text = { AppText(type.displayName) },
+                                                onClick = { selectedSoilType = type; expandedSoilType = false }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ─── PILE GEOMETRY ───────────────────────────────────
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        AppText(stringResource(R.string.pile_geometry_section), fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            PileInputField(pileDiameter, stringResource(R.string.pile_diameter), { pileDiameter = it }, Modifier.weight(1f))
+                            PileInputField(pileLength, stringResource(R.string.pile_length), { pileLength = it }, Modifier.weight(1f))
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            PileInputField(numberOfPiles, stringResource(R.string.pile_num_piles), { numberOfPiles = it }, Modifier.weight(1f), KeyboardType.Number)
+                            Column(modifier = Modifier.weight(1f)) {
+                                AppText(stringResource(R.string.pile_pattern), style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                ExposedDropdownMenuBox(
+                                    expanded = expandedPattern,
+                                    onExpandedChange = { expandedPattern = !expandedPattern }
+                                ) {
+                                    OutlinedTextField(
+                                        value = selectedPattern,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedPattern) },
+                                        modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = expandedPattern,
+                                        onDismissRequest = { expandedPattern = false }
+                                    ) {
+                                        listOf("1x1", "2x1", "2x2", "3x2", "3x3", "4x3", "4x4").forEach { p ->
+                                            DropdownMenuItem(
+                                                text = { AppText(p) },
+                                                onClick = { selectedPattern = p; expandedPattern = false }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        PileInputField(spacing, stringResource(R.string.pile_spacing_dia), { spacing = it }, Modifier.fillMaxWidth())
+                    }
+                }
+            }
+
+            // ─── LOADS ────────────────────────────────────────────
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.ArrowDownward, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            AppText(stringResource(R.string.pile_loads_section), fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            PileInputField(axialLoad, stringResource(R.string.pile_axial_load), { axialLoad = it }, Modifier.weight(1f))
+                            PileInputField(lateralLoad, stringResource(R.string.pile_lateral_load), { lateralLoad = it }, Modifier.weight(1f))
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        PileInputField(momentLoad, stringResource(R.string.pile_moment_load), { momentLoad = it }, Modifier.fillMaxWidth())
+                    }
+                }
+            }
+
+            // ─── MATERIAL STRENGTHS ───────────────────────────────
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Science, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            AppText(stringResource(R.string.pile_materials_section), fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            PileInputField(fcu, stringResource(R.string.pile_fcu), { fcu = it }, Modifier.weight(1f))
+                            PileInputField(fy, stringResource(R.string.pile_fy_cap), { fy = it }, Modifier.weight(1f))
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        PileInputField(fyp, stringResource(R.string.pile_fy_pile), { fyp = it }, Modifier.fillMaxWidth())
+                    }
+                }
+            }
+
+            // ─── SOIL PARAMETERS (expandable) ─────────────────────
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Landscape, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
+                                AppText(stringResource(R.string.pile_soil_params_section), fontWeight = FontWeight.Bold)
+                            }
+                            IconButton(onClick = { showSoilParams = !showSoilParams }) {
+                                Icon(
+                                    if (showSoilParams) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = "Toggle"
+                                )
+                            }
+                        }
+
+                        if (showSoilParams) {
+                            Spacer(Modifier.height(12.dp))
+
+                            // Dynamic soil fields based on type
+                            if (selectedSoilType == SoilType.CLAY || selectedSoilType == SoilType.MIXED) {
+                                PileInputField(cu, stringResource(R.string.pile_cu), { cu = it }, Modifier.fillMaxWidth())
+                                Spacer(Modifier.height(8.dp))
+                            }
+                            if (selectedSoilType == SoilType.SAND || selectedSoilType == SoilType.MIXED) {
+                                PileInputField(phi, stringResource(R.string.pile_phi), { phi = it }, Modifier.fillMaxWidth())
+                                Spacer(Modifier.height(8.dp))
+                            }
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                PileInputField(gammaSoil, stringResource(R.string.pile_gamma), { gammaSoil = it }, Modifier.weight(1f))
+                                PileInputField(waterTableDepth, stringResource(R.string.pile_water_table), { waterTableDepth = it }, Modifier.weight(1f))
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                PileInputField(embedmentDepth, stringResource(R.string.pile_embedment), { embedmentDepth = it }, Modifier.weight(1f))
+                                PileInputField(safetyFactor, stringResource(R.string.pile_fos), { safetyFactor = it }, Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ─── PILE CAP & COLUMN (expandable) ──────────────────
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Domain, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
+                                AppText(stringResource(R.string.pile_cap_col_section), fontWeight = FontWeight.Bold)
+                            }
+                            IconButton(onClick = { showCapParams = !showCapParams }) {
+                                Icon(
+                                    if (showCapParams) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = "Toggle"
+                                )
+                            }
+                        }
+
+                        if (showCapParams) {
+                            Spacer(Modifier.height(12.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                PileInputField(columnWidth, stringResource(R.string.pile_col_width), { columnWidth = it }, Modifier.weight(1f))
+                                PileInputField(columnLength, stringResource(R.string.pile_col_length), { columnLength = it }, Modifier.weight(1f))
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            PileInputField(capCover, stringResource(R.string.pile_conc_cover), { capCover = it }, Modifier.fillMaxWidth())
+                        }
+                    }
+                }
+            }
+
+            // ─── ADVANCED PARAMETERS (expandable) ────────────────
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Tune, null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(8.dp))
+                                AppText(stringResource(R.string.pile_advanced_section), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            }
+                            IconButton(onClick = { showAdvanced = !showAdvanced }) {
+                                Icon(
+                                    if (showAdvanced) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = "Toggle"
+                                )
+                            }
+                        }
+
+                        if (showAdvanced) {
+                            Spacer(Modifier.height(12.dp))
+                            AppText(stringResource(R.string.pile_eccentricities), style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                PileInputField(eccentricityX, stringResource(R.string.pile_ex), { eccentricityX = it }, Modifier.weight(1f))
+                                PileInputField(eccentricityY, stringResource(R.string.pile_ey), { eccentricityY = it }, Modifier.weight(1f))
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            PileInputField(scourDepth, stringResource(R.string.pile_scour), { scourDepth = it }, Modifier.fillMaxWidth())
+                        }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        AppText(stringResource(R.string.boq_site_title), fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            PileInputField(excavationDepth, stringResource(R.string.boq_excavation_depth), { excavationDepth = it }, Modifier.weight(1f))
+                            PileInputField(workingSpace, stringResource(R.string.boq_working_space), { workingSpace = it }, Modifier.weight(1f))
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        PileInputField(blindingThickness, stringResource(R.string.boq_blinding_thickness), { blindingThickness = it }, Modifier.fillMaxWidth())
+                    }
+                }
+            }
+
+            // ─── ERROR DISPLAY ────────────────────────────────────
+            error?.let { err ->
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0x22FF0000)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Error, null, tint = Color.Red)
+                            Spacer(Modifier.width(8.dp))
+                            AppText(err, color = Color.Red, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+
+            // ─── DESIGN BUTTON ────────────────────────────────────
+            item {
+                val inputValid = axialLoad.toDoubleOrNull()?.let { it > 0 } == true
+                        && pileDiameter.toDoubleOrNull()?.let { it > 0 } == true
+                        && pileLength.toDoubleOrNull()?.let { it > 0 } == true
+                        && fcu.toDoubleOrNull()?.let { it > 0 } == true
+                        && fy.toDoubleOrNull()?.let { it > 0 } == true
+                        && numberOfPiles.toIntOrNull()?.let { it > 0 } == true
+
+                AppButton(
+                    label = stringResource(R.string.pile_design_button),
+                    onClick = {
+                        if (!inputValid) return@AppButton
+                        viewModel.excavationDepthM = excavationDepth.toDoubleOrNull() ?: 0.0
+                        viewModel.workingSpaceM = workingSpace.toDoubleOrNull() ?: 0.5
+                        viewModel.blindingThicknessM = blindingThickness.toDoubleOrNull() ?: 0.0
+                        calculatedCode = selectedCode
+                        viewModel.designPileFoundation(
+                            pileType = selectedPileType,
+                            pileDiameter = pileDiameter.toDouble()!!,
+                            pileLength = pileLength.toDouble()!!,
+                            numberOfPiles = numberOfPiles.toInt()!!,
+                            spacing = spacing.toDouble() ?: 3.0,
+                            axialLoad = axialLoad.toDouble()!!,
+                            lateralLoad = lateralLoad.toDoubleOrNull() ?: 0.0,
+                            momentLoad = momentLoad.toDoubleOrNull() ?: 0.0,
+                            fcu = fcu.toDouble()!!,
+                            fy = fy.toDouble()!!,
+                            fyp = fyp.toDoubleOrNull() ?: fy.toDouble()!!,
+                            soilType = selectedSoilType,
+                            cu = cu.toDoubleOrNull() ?: 50.0,
+                            phi = phi.toDoubleOrNull() ?: 30.0,
+                            gammaSoil = gammaSoil.toDoubleOrNull() ?: 18.0,
+                            waterTableDepth = waterTableDepth.toDoubleOrNull() ?: 5.0,
+                            embedmentDepth = embedmentDepth.toDoubleOrNull() ?: 1.5,
+                            safetyFactor = safetyFactor.toDoubleOrNull() ?: 3.0,
+                            pileGroupPattern = selectedPattern,
+                            eccentricityX = eccentricityX.toDoubleOrNull() ?: 0.0,
+                            eccentricityY = eccentricityY.toDoubleOrNull() ?: 0.0,
+                            scourDepth = scourDepth.toDoubleOrNull() ?: 0.0,
+                            capConcreteCover = capCover.toDoubleOrNull() ?: 75.0,
+                            columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
+                            columnLength = columnLength.toDoubleOrNull() ?: 400.0,
+                            code = selectedCode
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isLoading && inputValid,
+                    loading = isLoading,
+                    icon = Icons.Default.Engineering
+                )
+            }
+
+            // ─── RESULTS SECTION ──────────────────────────────────
+            result?.let { res ->
+                val cap = res.capResult
+                val capacity = res.capacityResult
+                val group = res.groupResult
+                val settlement = res.settlementResult
+                val reinf = res.pileReinforcement
+
+                // ── Status Card ──
+                if (res.calculationSteps.isNotEmpty()) {
+                    item { CalculationStepsCard(res.calculationSteps, title = "Pile Calculation Steps") }
+
+                    val bbsEntries = runCatching {
+                        BbsGenerator.generatePileBbs("PG1", res)
+                    }.getOrDefault(emptyList())
+                    if (bbsEntries.isNotEmpty()) {
+                        item { BbsTableCard(bbsEntries, title = "Pile Bar Bending Schedule") }
+                    }
+
+                    val boqRows = runCatching {
+                        BoqEstimator.pileRows(
+                            res, "PG1",
+                            viewModel.excavationDepthM, viewModel.workingSpaceM, viewModel.blindingThicknessM
+                        )
+                    }.getOrDefault(emptyList())
+                    if (boqRows.isNotEmpty()) {
+                        item { BoqTableCard(boqRows, title = "Pile Bill of Quantities") }
+                    }
+                }
+                item {
+                    val statusColor = if (res.isSafe) Color(0xFF2E7D32) else Color(0xFFF57C00)
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            if (res.isSafe) Icons.Default.Verified else Icons.Default.Warning,
+                                            contentDescription = null, tint = statusColor
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        AppText(
+                                            if (res.isSafe) stringResource(R.string.pile_safe) else stringResource(R.string.pile_unsafe),
+                                            fontWeight = FontWeight.Bold,
+                                            color = statusColor
+                                        )
+                                    }
+                                    AppText(
+                                        "ECP 203-2025 • ${res.pileType}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                // Utilization gauge
+                                Box(contentAlignment = Alignment.Center) {
+                                    val animatedRatio by animateFloatAsState(
+                                        targetValue = res.utilizationRatio.toFloat().coerceIn(0f, 1.5f),
+                                        animationSpec = tween(1000), label = ""
+                                    )
+                                    CircularProgressIndicator(
+                                        progress = { animatedRatio.coerceIn(0f, 1f) },
+                                        modifier = Modifier.size(60.dp),
+                                        strokeWidth = 6.dp,
+                                        color = when {
+                                            res.utilizationRatio > 1.0 -> Color.Red
+                                            res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
+                                            res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
+                                            else -> Color(0xFF2196F3)
+                                        },
+                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    )
+                                    AppText(
+                                        "${(res.utilizationRatio * 100).toInt()}%",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+
+                            // Warnings
+                            if (res.warnings.isNotEmpty()) {
+                                Spacer(Modifier.height(8.dp))
+                                HorizontalDivider()
+                                Spacer(Modifier.height(8.dp))
+                                res.warnings.forEach { w ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        AppText("⚠", color = Color(0xFFFF9800), fontSize = 13.sp)
+                                        Spacer(Modifier.width(4.dp))
+                                        AppText(w, fontSize = 12.sp, color = Color(0xFFFF9800))
+                                    }
+                                    Spacer(Modifier.height(2.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ── Pile Capacity Card ──
+                item {
+                    ResultCard(
+                        title = stringResource(R.string.pile_capacity_card),
+                        icon = Icons.Default.Speed
+                    ) {
+                        ResultRow(stringResource(R.string.pile_ultimate_cap), "${"%.1f".format(capacity.ultimateCapacity)} kN")
+                        ResultRow(stringResource(R.string.pile_allowable_cap), "${"%.1f".format(capacity.allowableCapacity)} kN")
+                        ResultRow(stringResource(R.string.pile_shaft_res), "${"%.1f".format(capacity.shaftResistance)} kN")
+                        ResultRow(stringResource(R.string.pile_end_bearing), "${"%.1f".format(capacity.endBearingResistance)} kN")
+                        ResultRow(stringResource(R.string.pile_fos), "${"%.1f".format(capacity.fs)}")
+                        ResultRow(stringResource(R.string.pile_load_per_pile), "${"%.1f".format(res.axialLoad / res.numberOfPiles)} kN")
+                    }
+                }
+
+                // ── Group Efficiency Card ──
+                item {
+                    ResultCard(
+                        title = stringResource(R.string.pile_group_eff_card),
+                        icon = Icons.Default.GridView
+                    ) {
+                        ResultRow(stringResource(R.string.pile_pattern), "${group.pattern} (${group.numberOfPiles} piles)")
+                        ResultRow(stringResource(R.string.rebar_excess_mod), "${"%.3f".format(group.efficiencyFactor)}")
+                        ResultRow(stringResource(R.string.pile_indiv_cap), "${"%.1f".format(group.individualCapacity)} kN")
+                        ResultRow(stringResource(R.string.pile_group_cap), "${"%.1f".format(group.groupCapacity)} kN")
+                        ResultRow(stringResource(R.string.rebar_bar_spacing_label), "${group.spacing.toInt()} mm")
+                    }
+                }
+
+                // ── Settlement Card ──
+                item {
+                    ResultCard(
+                        title = stringResource(R.string.pile_settlement_card),
+                        icon = Icons.Default.Height
+                    ) {
+                        ResultRow(stringResource(R.string.pile_immediate_set), "${"%.2f".format(settlement.immediateSettlement)} mm")
+                        if (settlement.consolidationSettlement > 0.01) {
+                            ResultRow(stringResource(R.string.pile_consolidation), "${"%.2f".format(settlement.consolidationSettlement)} mm")
+                        }
+                        ResultRow(stringResource(R.string.pile_total_set), "${"%.2f".format(settlement.totalSettlement)} mm")
+                        ResultRow(stringResource(R.string.pile_allowable_set), "${"%.1f".format(settlement.allowableSettlement)} mm")
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            AppText(stringResource(R.string.pile_status))
+                            AppText(
+                                if (settlement.isOk) stringResource(R.string.pile_ok) else stringResource(R.string.pile_exceeds),
+                                fontWeight = FontWeight.Bold,
+                                color = if (settlement.isOk) Color(0xFF2E7D32) else Color(0xFFC62828)
+                            )
+                        }
+                    }
+                }
+
+                // ── Lateral Capacity Card ──
+                if (res.lateralCapacity > 0) {
+                    item {
+                        ResultCard(
+                            title = stringResource(R.string.pile_lateral_cap_card),
+                            icon = Icons.Default.SwapHoriz
+                        ) {
+                            ResultRow(stringResource(R.string.pile_allow_lateral), "${"%.1f".format(res.lateralCapacity)} kN")
+                            ResultRow(stringResource(R.string.pile_applied_lateral), "${"%.1f".format(res.lateralLoad / res.numberOfPiles)} kN/pile")
+                            ResultRow(stringResource(R.string.steel_util_ratio), "${"%.0f".format(res.lateralUtilizationRatio * 100)}%")
+                            if (res.negativeSkinFriction > 0) {
+                                HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                                ResultRow(stringResource(R.string.pile_neg_friction), "${"%.1f".format(res.negativeSkinFriction)} kN")
+                            }
+                        }
+                    }
+                }
+
+                // ── Pile Cap Design Card ──
+                item {
+                    ResultCard(
+                        title = stringResource(R.string.pile_cap_design_card),
+                        icon = Icons.Default.Domain
+                    ) {
+                        ResultRow(stringResource(R.string.pile_cap_size), "${cap.capWidth.toInt()} × ${cap.capLength.toInt()} × ${cap.capThickness.toInt()} mm")
+                        ResultRow(stringResource(R.string.fs_concrete), "${"%.3f".format(cap.concreteVolume)} m³")
+                        ResultRow(stringResource(R.string.fs_steel), "${"%.1f".format(cap.steelWeight)} kg")
+
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                        AppText(stringResource(R.string.pile_shear_checks), style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                        ShearCheckRow(
+                            stringResource(R.string.pile_punching_shear),
+                            cap.punchingShearStress, cap.punchingShearCapacity, "MPa",
+                            cap.punchingShearOk
+                        )
+                        ShearCheckRow(
+                            stringResource(R.string.pile_beam_shear),
+                            cap.beamShearStress, cap.beamShearCapacity, "MPa",
+                            cap.beamShearOk
+                        )
+
+                        HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                        AppText(stringResource(R.string.pile_reinforcement), style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        ResultRow(stringResource(R.string.pile_flexural), cap.flexuralReinforcement.barString)
+                        if (cap.punchingReinforcement != null) {
+                            ResultRow(stringResource(R.string.pile_punching_reinf), cap.punchingReinforcement!!.barString)
+                        }
+                    }
+                }
+
+                // ── Pile Reinforcement Card ──
+                item {
+                    ResultCard(
+                        title = stringResource(R.string.pile_struct_reinf_card),
+                        icon = Icons.Default.BuildCircle
+                    ) {
+                        ResultRow(stringResource(R.string.pile_longitudinal), reinf.barString)
+                        ResultRow(stringResource(R.string.pile_steel_ratio), "${"%.3f".format(reinf.ratio)} (${"%.2f".format(reinf.ratio * 100)}%)")
+                        ResultRow(stringResource(R.string.pile_status),
+                            if (reinf.isSafe) stringResource(R.string.pile_adequate) else stringResource(R.string.pile_increase_bars),
+                            if (reinf.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828)
+                        )
+                    }
+                }
+
+                // ── Export Buttons ──
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        AppButton(
+                            label = stringResource(R.string.pile_pdf_report),
+                            onClick = {
+                                captureScope.launch {
+                                    val captureBitmap = try {
+                                        pdfCaptureLayer.captureToAndroidBitmap()
+                                    } catch (_: Exception) { null }
+                                    viewModel.pendingDrawingBitmap = captureBitmap
+                                    viewModel.exportToPdf(context) { }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = !isExporting,
+                            loading = isExporting,
+                            icon = Icons.Default.PictureAsPdf
+                        )
+                    }
+                }
+
+                // ─── DRAWING ────────────────────────────────────
+                item {
+                    val configuration = LocalConfiguration.current
+                    val drawingHeight = if (configuration.smallestScreenWidthDp >= 600) 580 else 480
+                    InteractiveDrawingScreen(
+                        onExportDxf = { viewModel.exportToDxf(context) },
+                        title = stringResource(R.string.pile_detail_drawing),
+                        subtitle = stringResource(R.string.pile_drawing_sub),
+                        drawingHeightDp = drawingHeight,
+                        viewModes = listOf("All", "Plan", "Section", "Elevation"),
+                        selectedViewMode = selectedViewMode,
+                        onViewModeChanged = { selectedViewMode = it },
+                        drawingContent = {
+                            ProfessionalPileDrawing(
+                                pileDiameter = res.pileDiameterMm,
+                                pileLength = res.pileLengthM,
+                                numberOfPiles = res.numberOfPiles,
+                                pileSpacing = group.spacing,
+                                pattern = group.pattern,
+                                capWidth = cap.capWidth,
+                                capLength = cap.capLength,
+                                capThickness = cap.capThickness,
+                                columnWidth = res.columnWidth, // from input, use default
+                                columnLength = res.columnLength,
+                                longitBars = reinf.longitudinalBars,
+                                longitDia = reinf.longitudinalDiameter,
+                                tiesDia = reinf.tiesDiameter,
+                                tiesSpacing = reinf.tiesSpacing,
+                                capRebarDia = cap.flexuralReinforcement.diameter,
+                                capRebarCount = cap.flexuralReinforcement.bars,
+                                soilType = res.soilType,
+                                viewMode = selectedViewMode,
+                                designCode = calculatedCode,
+                                resultSummary = pileDrawingSummary(res),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(32.dp)) }
+        }
+
+        // Invisible duplicate of the on-screen drawing, rendered at the selected view mode, so
+        // the exported PDF shows exactly what the user is looking at. The ViewModel still falls
+        // back to PdfDrawingGenerator.generatePileDrawing when no capture is available.
+        result?.let { res ->
+            val cap = res.capResult
+            val group = res.groupResult
+            val reinf = res.pileReinforcement
+            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+                captureLayer = pdfCaptureLayer,
+                widthPx = screenWidthPx,
+                heightPx = screenHeightPx
+            ) {
+                Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
+                    ProfessionalPileDrawing(
+                        pileDiameter = res.pileDiameterMm,
+                        pileLength = res.pileLengthM,
+                        numberOfPiles = res.numberOfPiles,
+                        pileSpacing = group.spacing,
+                        pattern = group.pattern,
+                        capWidth = cap.capWidth,
+                        capLength = cap.capLength,
+                        capThickness = cap.capThickness,
+                        columnWidth = res.columnWidth,
+                        columnLength = res.columnLength,
+                        longitBars = reinf.longitudinalBars,
+                        longitDia = reinf.longitudinalDiameter,
+                        tiesDia = reinf.tiesDiameter,
+                        tiesSpacing = reinf.tiesSpacing,
+                        capRebarDia = cap.flexuralReinforcement.diameter,
+                        capRebarCount = cap.flexuralReinforcement.bars,
+                        soilType = res.soilType,
+                        viewMode = selectedViewMode,
+                        designCode = calculatedCode,
+                        resultSummary = pileDrawingSummary(res),
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
+        // Loading overlay
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier.padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = 4.dp,
+                            color = Color(0xFF1565C0)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        AppText("Calculating...", fontSize = 14.sp, color = Color.Gray)
+                    }
+                }
+            }
+        }
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════
+// REUSABLE COMPOSABLE COMPONENTS
+// ══════════════════════════════════════════════════════════
+
+@Composable
+private fun PileInputField(
+    value: String,
+    label: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    keyboardType: KeyboardType = KeyboardType.Decimal
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { AppText(label, fontSize = 13.sp) },
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        singleLine = true
+    )
+}
+
+@Composable
+private fun ResultRow(label: String, value: String, valueColor: Color = Color.Unspecified) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        AppText(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        AppText(value, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = valueColor)
+    }
+}
+
+@Composable
+private fun ShearCheckRow(
+    name: String,
+    applied: Double,
+    capacity: Double,
+    unit: String,
+    isOk: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AppText(
+            if (isOk) "✓" else "✗",
+            color = if (isOk) Color(0xFF2E7D32) else Color(0xFFC62828),
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp
+        )
+        Spacer(Modifier.width(8.dp))
+        AppText(name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+        AppText(
+            "${"%.2f".format(applied)} / ${"%.2f".format(capacity)} $unit",
+            fontSize = 12.sp,
+            color = if (isOk) Color(0xFF2E7D32) else Color(0xFFC62828)
+        )
+    }
+}
+
+@Composable
+private fun ResultCard(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                AppText(title, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            }
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(8.dp))
+            content()
+        }
+    }
+}

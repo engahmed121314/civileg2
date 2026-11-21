@@ -19,8 +19,8 @@ import com.civileg.app.ui.theme.CivilEngineerTheme
 import com.civileg.app.ui.theme.CivilEngineerPremiumTheme
 import com.civileg.app.ui.theme.ThemeMode
 import com.civileg.app.utils.LocaleHelper
-import com.civileg.app.viewmodel.ProjectViewModel
-import com.civileg.app.viewmodel.SettingsViewModel
+import com.civileg.app.features.project.ProjectViewModel
+import com.civileg.app.features.project.SettingsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

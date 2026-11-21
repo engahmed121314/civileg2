@@ -1,0 +1,264 @@
+package com.civileg.app.features.design
+
+import com.civileg.app.domain.entities.DesignCode
+
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.civileg.app.db.DesignRepository
+import com.civileg.app.domain.calculations.utils.BbsGenerator
+import com.civileg.app.domain.calculations.utils.BoqEstimator
+import com.civileg.app.domain.calculations.utils.CalculationValidator
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
+import com.civileg.app.shared.reporting.PdfDrawingGenerator
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
+import android.graphics.Bitmap
+import com.civileg.app.domain.entities.GenericSafetyCheck
+import com.civileg.app.domain.calculations.InputGuard
+import javax.inject.Inject
+
+@HiltViewModel
+class RetainingWallViewModel @Inject constructor(
+    private val repository: DesignRepository,
+    private val calculatorEngine: CalculatorEngine
+) : ViewModel() {
+
+    private val _result = MutableLiveData<CalculatorEngine.RetainingWallResult?>()
+    val result: LiveData<CalculatorEngine.RetainingWallResult?> = _result
+
+    private val _isLoading = MutableLiveData(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
+    private val _isExporting = MutableLiveData(false)
+    val isExporting: LiveData<Boolean> = _isExporting
+
+    private val _error = MutableLiveData<String?>()
+    val error: LiveData<String?> = _error
+
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+
+    private val _validationReport = MutableLiveData<CalculationValidator.ValidationReport?>()
+    val validationReport: LiveData<CalculationValidator.ValidationReport?> = _validationReport
+
+    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
+    @Volatile
+    var pendingDrawingBitmap: Bitmap? = null
+
+    /** Wall length used for schedules and quantities (design itself is per metre run). */
+    @Volatile
+    var wallLengthM: Double = 1.0
+        private set
+
+    var excavationDepthM: Double = 0.0
+    var backfillWidthM: Double = 1.0
+
+    fun calculateRetainingWallPro(
+        height: Double,
+        soilDensity: Double,
+        frictionAngle: Double,
+        surcharge: Double,
+        fcu: Double,
+        fy: Double,
+        preferredDiameter: Int,
+        code: DesignCode,
+        wallLengthM: Double = 1.0
+    ) {
+        InputGuard.positive("height", height)
+        InputGuard.positive("soilDensity", soilDensity)
+        InputGuard.positive("frictionAngle", frictionAngle)
+        InputGuard.nonNegative("surcharge", surcharge)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("preferredDiameter", preferredDiameter)
+        InputGuard.positive("wallLength", wallLengthM)
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            this@RetainingWallViewModel.wallLengthM = wallLengthM
+            pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
+            try {
+                val res = calculatorEngine.designRetainingWall(
+                    height = height,
+                    soilDensity = soilDensity,
+                    frictionAngle = frictionAngle,
+                    surcharge = surcharge,
+                    fcu = fcu,
+                    fy = fy,
+                    preferredDiameter = preferredDiameter,
+                    code = code
+                )
+                
+                // Validate Retaining Wall
+                val report = CalculationValidator.validateRetainingWall(res)
+                _validationReport.value = report
+                
+                _result.value = res
+                _error.value = null
+            } catch (e: Exception) {
+                _error.value = "Error: ${e.message}"
+                _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    // Legacy method for backward compatibility
+    fun calculateRetainingWall(height: Double, soilDensity: Double, frictionAngle: Double, surcharge: Double, fcu: Double, fy: Double, code: com.civileg.app.domain.entities.DesignCode = com.civileg.app.ui.defaultDesignCode()) {
+        calculateRetainingWallPro(height, soilDensity, frictionAngle, surcharge, fcu, fy, 16, code)
+    }
+
+    fun saveRetainingWall(projectId: Long, name: String, result: CalculatorEngine.RetainingWallResult) {
+        viewModelScope.launch {
+            repository.saveRetainingWallDesign(projectId, name, result)
+        }
+    }
+
+    /** Standalone DXF sheet for the current retaining wall design (null when no result). */
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        val currentResult = _result.value ?: return null
+        return com.civileg.app.utils.ElementDxfDrawings.retainingWallSection(
+            title = "RETAINING WALL",
+            baseWidthMm = currentResult.baseWidth,
+            baseThicknessMm = currentResult.stemThickness * 1.2,
+            stemHeightMm = currentResult.height * 1000.0,
+            stemThicknessMm = currentResult.stemThickness,
+            coverMm = 50.0,
+            barDiaMm = currentResult.stemReinforcement.diameter.toDouble(),
+            barSpacingMm = currentResult.stemReinforcement.spacing.toDouble()
+        )
+    }
+
+    /** Export just the CAD drawing (no PDF) for the current design. */
+    fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        com.civileg.app.utils.DxfQuickExport.export(
+            context = context,
+            drawing = buildDxfDrawing(),
+            baseName = "RetainingWall",
+            scope = viewModelScope,
+            onComplete = onComplete
+        )
+    }
+
+    fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
+        val currentResult = _result.value ?: return
+        viewModelScope.launch {
+            _isExporting.value = true
+            try {
+                val exportedFile = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    // PDF + DXF via ExportManager.exportReportAndDxf (iText, EN-only per ADR-005/009).
+                    val fileName = "RetainingWall_Report_${System.currentTimeMillis()}.pdf"
+                    val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)
+                        ?: context.cacheDir
+                    directory.mkdirs()
+                    val file = java.io.File(directory, fileName)
+
+                    // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                    val drawingBitmap = pendingDrawingBitmap ?: try {
+                        PdfDrawingGenerator.generateRetainingWallDrawing(
+                            wallHeight = currentResult.height,
+                            wallTopThickness = currentResult.stemThickness * 0.6,
+                            wallBottomThickness = currentResult.stemThickness,
+                            baseWidth = currentResult.baseWidth,
+                            baseThickness = currentResult.stemThickness * 1.2,
+                            toeLength = currentResult.baseWidth * 0.25,
+                            heelLength = currentResult.baseWidth * 0.6,
+                            mainRebarDia = currentResult.stemReinforcement.diameter.toDouble(),
+                            mainRebarSpacing = currentResult.stemReinforcement.spacing.toDouble(),
+                            distRebarDia = currentResult.stemReinforcement.diameter.toDouble() * 0.7,
+                            distRebarSpacing = currentResult.stemReinforcement.spacing.toDouble() * 1.5,
+                            baseRebarDia = currentResult.baseReinforcement.diameter.toDouble(),
+                            baseRebarSpacing = currentResult.baseReinforcement.spacing.toDouble(),
+                            cover = 0.05,
+                            backfillAngle = currentResult.backfillAngle,
+                            hasKey = true,
+                            keyDepth = 0.15,
+                            fsOverturning = currentResult.factorOfSafetyOverturning,
+                            fsSliding = currentResult.factorOfSafetySliding,
+                            maxBearingPressure = currentResult.maxBearingPressure,
+                            allowableBearingPressure = 200.0
+                        )
+                    } catch (e: Exception) { null }
+                    pendingDrawingBitmap = null  // consume after use
+
+                    val codeName = when(currentResult.code) {
+                        DesignCode.ACI -> "ACI 318"
+                        DesignCode.SBC -> "SBC 304"
+                        else -> "ECP 203"
+                    }
+                    val inputsMap = mapOf(
+                        "Wall Height" to "${currentResult.height} m",
+                        "Stem Thickness" to "${currentResult.stemThickness} mm",
+                        "Base Width" to "${currentResult.baseWidth} mm",
+                        "Backfill Angle" to "${String.format("%.1f", currentResult.backfillAngle)}°",
+                        "Wall Length" to "$wallLengthM m",
+                        "Soil Density" to "${currentResult.soilDensity} kN/m3",
+                        "fcu" to "${currentResult.fcu} MPa",
+                        "fy" to "${currentResult.fy} MPa",
+                        "Excavation Depth" to "$excavationDepthM m",
+                        "Trench Width" to "$backfillWidthM m",
+                        "Design Code" to codeName
+                    )
+                    val resultsMap = mutableMapOf(
+                        "Active Pressure Pa" to "${String.format("%.2f", currentResult.pa)} kN/m",
+                        "Stem Moment" to "${String.format("%.2f", currentResult.muStem)} kN.m/m",
+                        "Stem Reinforcement" to currentResult.stemReinforcement.barString,
+                        "Base Reinforcement" to currentResult.baseReinforcement.barString,
+                        "FS Overturning" to String.format("%.2f", currentResult.factorOfSafetyOverturning),
+                        "FS Sliding" to String.format("%.2f", currentResult.factorOfSafetySliding),
+                        "Max Bearing Pressure" to "${String.format("%.1f", currentResult.maxBearingPressure)} kPa",
+                        "Min Bearing Pressure" to "${String.format("%.1f", currentResult.minBearingPressure)} kPa",
+                        "Bearing FS" to String.format("%.2f", currentResult.bearingFS),
+                        "Utilization" to String.format("%.2f", currentResult.utilizationRatio),
+                        "Concrete Volume" to "${String.format("%.3f", currentResult.concreteVolume)} m³",
+                        "Steel Weight" to "${String.format("%.1f", currentResult.steelWeight)} kg"
+                    )
+                    val safetyChecks = currentResult.safetyChecks.map { chk ->
+                        GenericSafetyCheck(
+                            name = chk.name, calculated = chk.value,
+                            limit = chk.limit, unit = chk.unit, passed = chk.isSafe
+                        )
+                    }
+
+                    // Professional English PDF Report — English only, no Arabic encoding issues
+                    val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
+                        titleAr = "تقرير تصميم حائط ساند",
+                        titleEn = "Retaining Wall Design Report",
+                        subtitle = "Code: $codeName  •  H=${currentResult.height}m",
+                        designType = "Retaining Wall",
+                        inputs = inputsMap,
+                        results = resultsMap,
+                        safetyChecks = safetyChecks,
+                        isSafe = currentResult.isSafe,
+                        calculationSteps = currentResult.calculationSteps,
+                        bbsEntries = runCatching {
+                            BbsGenerator.generateRetainingWallBbs("RW1", currentResult, wallLengthM)
+                        }.getOrDefault(emptyList()),
+                        boqRows = BoqEstimator.retainingWallRows(
+                            currentResult, wallLengthM, "RW1",
+                            excavationDepthM, backfillWidthM,
+                            waterproofingAreaM2 = currentResult.height * wallLengthM
+                        ),
+                        drawingBitmap = drawingBitmap,
+                        drawing = buildDxfDrawing(),
+                        outputPath = file.absolutePath
+                    ).pdfFile
+                    generated
+                }
+                exportedFile?.let { com.civileg.app.utils.ExportUtils.openPdf(context, it) }
+                onComplete(exportedFile)
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                _error.value = "PDF export failed: ${e.message ?: "Unknown error"}"
+                _errorMessage.value = "PDF export failed / فشل تصدير PDF: ${e.message ?: "Unknown error"}"
+                onComplete(null)
+            } finally {
+                _isExporting.value = false
+            }
+        }
+    }
+}

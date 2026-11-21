@@ -1,0 +1,142 @@
+package com.civileg.app.features.project
+
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.repository.ProjectRepository
+import com.civileg.app.ui.theme.ThemeMode
+import com.civileg.app.utils.LocaleHelper
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+import com.civileg.app.domain.calculations.InputGuard
+
+data class AppSettings(
+    val defaultCode: DesignCode = DesignCode.ECP,
+    val concretePrice: Double = 1500.0,
+    val steelPrice: Double = 45000.0,
+    val formworkPrice: Double = 300.0,
+    val currency: String = "EGP",
+    val unitSystem: String = "SI",
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val reportLanguage: String = "ar"
+)
+
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    private val repository: ProjectRepository,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: android.content.Context
+) : ViewModel() {
+    
+    private val _settings = MutableStateFlow(AppSettings())
+    val settings: StateFlow<AppSettings> = _settings.asStateFlow()
+
+    private val _errorMessage = MutableLiveData<String?>()
+    val errorMessage: LiveData<String?> = _errorMessage
+    
+    init {
+        viewModelScope.launch {
+            val flows = arrayOf<Flow<Any>>(
+                repository.getDefaultDesignCode(),
+                repository.getConcretePrice(),
+                repository.getSteelPrice(),
+                repository.getFormworkPrice(),
+                repository.getCurrency(),
+                repository.getUnitSystem(),
+                repository.getThemeMode(),
+                repository.getReportLanguage()
+            )
+            combine(*flows) { args: Array<Any> ->
+                val code = args[0] as String
+                val concrete = args[1] as Double
+                val steel = args[2] as Double
+                val formwork = args[3] as Double
+                val currency = args[4] as String
+                val unitSystem = args[5] as String
+                val theme = args[6] as String
+                val reportLang = args[7] as String
+
+                val parsed = try { DesignCode.valueOf(code) } catch (e: Exception) { DesignCode.ECP }
+                // Keep synchronous store in sync with DataStore (covers upgrades and external writes)
+                com.civileg.app.ui.DesignCodeStore.set(appContext, parsed)
+                AppSettings(
+                    defaultCode = parsed,
+                    concretePrice = concrete,
+                    steelPrice = steel,
+                    formworkPrice = formwork,
+                    currency = currency,
+                    unitSystem = unitSystem,
+                    themeMode = try { ThemeMode.valueOf(theme) } catch (e: Exception) { ThemeMode.SYSTEM },
+                    reportLanguage = reportLang
+                )
+            }.collect { _settings.value = it }
+        }
+    }
+    
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            repository.setThemeMode(mode.name)
+        }
+    }
+
+    fun setReportLanguage(lang: String) {
+        viewModelScope.launch {
+            repository.setReportLanguage(lang)
+        }
+    }
+
+    fun setAppLanguage(lang: String) {
+        viewModelScope.launch {
+            repository.setReportLanguage(lang)
+            // Actually change the app locale so the UI updates
+            LocaleHelper.getAppContext()?.let { ctx ->
+                LocaleHelper.setLocale(ctx, lang)
+            }
+        }
+    }
+
+    fun setDefaultCode(code: DesignCode) {
+        viewModelScope.launch {
+            repository.setDefaultDesignCode(code.name)
+            // Keep the synchronous store in sync so design screens pick it up immediately
+            com.civileg.app.ui.DesignCodeStore.set(appContext, code)
+        }
+    }
+    
+    fun setConcretePrice(price: Double) {
+        viewModelScope.launch {
+            repository.updatePrices(concrete = price, steel = null, formwork = null)
+        }
+    }
+    
+    fun setSteelPrice(price: Double) {
+        viewModelScope.launch {
+            repository.updatePrices(concrete = null, steel = price, formwork = null)
+        }
+    }
+    
+    fun setFormworkPrice(price: Double) {
+        viewModelScope.launch {
+            repository.updatePrices(concrete = null, steel = null, formwork = price)
+        }
+    }
+    
+    fun setCurrency(currency: String) {
+        viewModelScope.launch {
+            repository.setCurrency(currency)
+        }
+    }
+    
+    fun setUnitSystem(system: String) {
+        viewModelScope.launch {
+            repository.setUnitSystem(system)
+        }
+    }
+}

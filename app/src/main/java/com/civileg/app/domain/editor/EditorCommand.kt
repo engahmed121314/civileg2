@@ -7,7 +7,7 @@ import com.civileg.app.domain.entities.FrameNode
 import com.civileg.app.domain.entities.MemberLoad
 import com.civileg.app.domain.entities.NodalLoad
 import com.civileg.app.domain.entities.SupportType
-import com.civileg.app.viewmodel.FrameAnalysisViewModel
+import com.civileg.app.features.frame.FrameAnalysisViewModel
 
 /** Interface for undoable editor commands */
 interface EditorCommand {
