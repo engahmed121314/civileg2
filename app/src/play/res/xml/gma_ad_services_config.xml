@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Privacy Sandbox / AdServices declaration referenced by the play
+     manifest's android.adservices.AD_SERVICES_CONFIG property. The new
+     play-services-ads no longer ships this resource, so the app must
+     provide it. Ads init stays consent-gated (DELAY_APP_MEASUREMENT_INIT). -->
+<ad-services-config>
+    <topics />
+</ad-services-config>
