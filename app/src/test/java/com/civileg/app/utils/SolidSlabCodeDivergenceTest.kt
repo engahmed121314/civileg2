@@ -5,6 +5,7 @@ import com.civileg.app.domain.entities.*
 import io.mockk.mockk
 import org.junit.Assert.*
 import org.junit.Test
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 
 /**
  * P0-2 regression guard for CalculatorEngine.designSlab (solid panels).
