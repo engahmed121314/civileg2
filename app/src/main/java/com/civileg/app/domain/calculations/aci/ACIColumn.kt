@@ -143,6 +143,100 @@ class ACIColumn : ColumnDesign {
         return InteractionCheckResult(c, 0.003 * (dt - c) / c, phi, phi * Pn, phi * Mn)
     }
 
+    /**
+     * حساب نسبة النحافة ونسبة التحميل المسموحة
+     * ACI 318-22.4: λ = KL/r, Pn = Fcr × Ag
+     */
+    fun calculateSlendernessEffect(
+        unsupportedLength: Double, // m
+        effectiveLengthFactor: Double, // K
+        width: Double, depth: Double, // mm
+        fcu: Double, reinforcementRatio: Double = 0.01
+    ): Triple<Double, Boolean, Double> {
+        InputGuard.positive("unsupportedLength", unsupportedLength)
+        InputGuard.positive("effectiveLengthFactor", effectiveLengthFactor)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("fcu", fcu)
+        val Ag = width * depth
+        // نصف القطر الدوراني (المحور الأضع)
+        val minDimension = min(width, depth)
+        val r = minDimension / sqrt(12.0)
+        val L_mm = unsupportedLength * 1000.0
+        val slendernessRatio = effectiveLengthFactor * L_mm / r
+        
+        // ACI 318-22.4.2.1: العمود قصير إذا λ ≤ 22 (مربوط) أو λ ≤ 28 (حلزوني)
+        val isShort = slendernessRatio <= 22.0
+        
+        // حساب إجهاد الانبعاج الحرج Fcr
+        // ACI 22.4.2.1: EI = 0.4 × Ec × Ig + Es × As × (h/2 - d')^2
+        // Ig = b × h^3 / 12 (moment of inertia of gross concrete section)
+        val fc_prime = 0.8 * fcu
+        val Ig = width * depth.pow(3) / 12.0  // mm^4
+        val Ec = 4700.0 * sqrt(fc_prime)      // MPa
+        val Es = 200000.0                       // MPa
+        val As = reinforcementRatio * Ag
+        val d_prime = 40.0  // cover + tie dia (approximate, mm)
+        val EI = 0.4 * Ec * Ig + Es * As * ((minDimension / 2.0) - d_prime).pow(2)  // N.mm^2
+        val PI2_EI = PI * PI * EI / 1e6  // kN.m^2 (unit conversion)
+        val Pc = PI2_EI / (unsupportedLength * unsupportedLength)  // kN
+        
+        return Triple(slendernessRatio, !isShort, Pc)
+    }
+
+    override fun calculateAxialCapacity(
+        fcu: Double,
+        fy: Double,
+        width: Double,
+        depth: Double,
+        reinforcementArea: Double,
+        loadCombination: LoadCombination
+    ): Double {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        val Ag = width * depth
+        val Ast = reinforcementArea.coerceAtMost(Ag * 0.08)
+        
+        // ACI 318-22.4.2: Pn = 0.85*fc'*(Ag-Ast) + fy*Ast
+        // fc' = 0.8 × fcu (cube to cylinder conversion)
+        val fc_prime = 0.8 * fcu
+        val concreteCapacity = 0.85 * fc_prime * (Ag - Ast)
+        val steelCapacity = fy * Ast
+        val nominalCapacity = concreteCapacity + steelCapacity
+        
+        // ACI 318-25 §22.4.2.2: Pn,max = 0.80*Po for tied, 0.85*Po for spiral (حد اللامركزية الدنيا)
+        // ثم φPn,max = φ * Pn,max
+        val alpha = 0.80 // tied column limit
+        val phi = PHI_TIED
+        return phi * alpha * nominalCapacity / 1000.0 // kN
+    }
+    
+    /**
+     * حساب القدرة المحورية مع اختيار نوع العمود (مربوط/حلزوني)
+     * ACI 318-21.2.1: φ=0.65 (tied) أو φ=0.75 (spiral)
+     */
+    fun calculateAxialCapacityWithPhi(
+        fcu: Double, fy: Double, width: Double, depth: Double,
+        reinforcementArea: Double, isSpiral: Boolean
+    ): Double {
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        val Ag = width * depth
+        val Ast = reinforcementArea.coerceAtMost(Ag * 0.08)
+        val fc_prime = 0.8 * fcu
+        val concreteCapacity = 0.85 * fc_prime * (Ag - Ast)
+        val steelCapacity = fy * Ast
+        val nominalCapacity = concreteCapacity + steelCapacity
+        val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
+        val alpha = if (isSpiral) 0.85 else 0.80 // ACI 22.4.2.2
+        return phi * alpha * nominalCapacity / 1000.0
+    }
+    
+
     /** Clips the centered rectangle by the compression-zone half-plane (a from the extreme fiber, normal n). Returns the polygon and the extreme-fiber distance tmax. */
     private fun clipRectHalfPlane(
         width: Double, depth: Double, nx: Double, ny: Double, a: Double
