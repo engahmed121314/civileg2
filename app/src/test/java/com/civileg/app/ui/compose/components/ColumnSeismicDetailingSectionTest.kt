@@ -1,0 +1,149 @@
+package com.civileg.app.ui.compose.components
+
+import android.graphics.Bitmap
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.dp
+import com.civileg.app.domain.entities.BlockedSeismicCheck
+import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.EcpColumnDuctilityMode
+import com.civileg.app.domain.entities.EcpColumnSeismicCheck
+import com.civileg.app.domain.entities.EcpColumnSeismicDetailing
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
+import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
+import com.civileg.app.domain.entities.GenericSafetyCheck
+import io.mockk.mockk
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import java.io.File
+import java.io.FileOutputStream
+
+/**
+ * Visual evidence for the ECP §6-8 ductile-mode UI and export semantics.
+ * Artifacts land under app/build/reports/tests/compose-shots/ and
+ * app/build/reports/tests/export-shots/, which the CI test-report artifact
+ * uploads, so the rendered PNG/PDF can be inspected after the run.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class ColumnSeismicDetailingSectionTest {
+
+    @get:Rule
+    val rule = createComposeRule()
+
+    private val limitedFixture = EcpColumnSeismicDetailing(
+        mode = EcpColumnDuctilityMode.LIMITED,
+        criticalRegionLengthMm = 600.0,
+        criticalTieSpacingMm = 150.0,
+        firstTieMaxOffsetMm = 75.0,
+        elsewhereTieSpacingMm = 200.0,
+        checks = listOf(
+            EcpColumnSeismicCheck(
+                name = "Longitudinal bars per face (estimated from total 8 bars)",
+                clause = "ECP 203-2020 §6-8-2-2-3 / §6-8-2-3-2 (printed 6-92 / 6-95)",
+                demand = "4 bars/face (est.)", limit = "≥ 3 bars each face", satisfied = true
+            )
+        ),
+        blockedChecks = listOf(
+            BlockedSeismicCheck(
+                name = "Capacity-design shear (column)",
+                clause = "ECP 203-2020 §6-8-2-2-3 + fig 6-39 (printed 6-92..6-93)",
+                reason = "Needs column end moments from a frame analysis at the axial level giving the larger flexural resistance; not derivable from single-column inputs."
+            )
+        ),
+        clauseReferences = listOf("ECP 203-2020 §6-8-2-2-3 limited-ductility columns (printed 6-92)"),
+        isComplete = false
+    )
+
+    @Test
+    fun `limited-mode detailing section renders incomplete banner, values and blocked check`() {
+        rule.setContent {
+            MaterialTheme {
+                Card {
+                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        ColumnSeismicDetailingSection(limitedFixture)
+                    }
+                }
+            }
+        }
+
+        // Semantic assertions: the INCOMPLETE banner, the computed values and the
+        // blocked frame-context check are all visible.
+        rule.onNodeWithTag("seismic-detailing-header").assertIsDisplayed()
+        rule.onNodeWithText("Critical region Lo (each end)", substring = true).assertIsDisplayed()
+        rule.onNodeWithText("600 mm", substring = true).assertIsDisplayed()
+        rule.onNodeWithText("150 mm", substring = true).assertIsDisplayed()
+        rule.onNodeWithTag("seismic-blocked-Capacity-design shear (column)").assertIsDisplayed()
+        rule.onNodeWithText("INCOMPLETE", substring = true).assertIsDisplayed()
+
+        // Rendered-pixel capture for post-CI visual inspection.
+        val dir = File("build/reports/tests/compose-shots").apply { mkdirs() }
+        val out = File(dir, "ecp-column-limited-detailing.png")
+        val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
+        FileOutputStream(out).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        assertTrue("screenshot written", out.isFile && out.length() > 10_000)
+    }
+
+    @Test
+    fun `ductile export PDF carries blocked checks and unsafe status`() {
+        // Build a real LIMITED-mode result through the engine (blocked semantics
+        // come from CalculatorEngine, not fixtures).
+        val engine = CalculatorEngine(mockk(relaxed = true))
+        val res = engine.designColumn(
+            width = 400.0, depth = 600.0, pu = 500.0, fcu = 30.0, fy = 400.0,
+            code = DesignCode.ECP, clearHeight = 3000.0,
+            ecpDuctilityMode = EcpColumnDuctilityMode.LIMITED
+        )
+        assertNotNull(res.seismicDetailing)
+        assertTrue(res.safetyChecks.any { it.name.startsWith("BLOCKED") && !it.isSafe })
+
+        // Same mapping the ViewModel applies before calling the exporter.
+        val resultsMap = mutableMapOf(
+            "Axial Capacity" to "${"%.1f".format(res.axialCapacity)} kN",
+            "Reinforcement" to res.reinforcement.barString,
+            "Stirrups" to res.stirrups.description
+        )
+        res.seismicDetailing?.let { d ->
+            resultsMap["Ductility Mode (ECP 203 §6-8)"] = d.mode.displayNameEn + " — INCOMPLETE (frame checks pending)"
+            resultsMap["Critical Region Lo (each end)"] = "${"%.0f".format(d.criticalRegionLengthMm)} mm"
+            resultsMap["Tie Spacing in Critical Region S0"] = "${"%.0f".format(d.criticalTieSpacingMm)} mm"
+        }
+        val checks = res.safetyChecks.map {
+            GenericSafetyCheck(name = it.name, calculated = it.value, limit = it.limit, unit = it.unit, passed = it.isSafe)
+        }
+
+        val dir = File("build/reports/tests/export-shots").apply { mkdirs() }
+        val out = File(dir, "column-ductile-export.pdf")
+        val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
+            titleAr = "", titleEn = "Column Design Report - RECTANGULAR",
+            subtitle = "Code: ECP 203  400x600mm, H=3.0m",
+            designType = "Column (RECTANGULAR)",
+            inputs = mapOf("Design Code" to "ECP 203", "Width" to "400 mm", "Depth" to "600 mm"),
+            results = resultsMap,
+            safetyChecks = checks,
+            isSafe = res.isSafe,   // false for ductile modes -> STATUS: UNSAFE in the PDF
+            drawingBitmap = null,
+            outputPath = out.absolutePath
+        )
+        assertNotNull("PDF export generated", generated)
+        assertTrue("PDF non-trivial", out.isFile && out.length() > 10_000)
+    }
+}

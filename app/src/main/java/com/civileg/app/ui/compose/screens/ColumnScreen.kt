@@ -689,21 +689,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             ResultDataRow(stringResource(R.string.column_reinforcement_ratio), String.format("%.2f %%", result.reinforcementRatio))
 
             result.seismicDetailing?.let { d ->
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
-                AppText("Ductile detailing — ${d.mode.displayNameAr} (INCOMPLETE: frame checks pending)",
-                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                ResultDataRow("Critical region Lo (each end)", String.format("%.0f mm", d.criticalRegionLengthMm))
-                ResultDataRow("Tie spacing in critical region S0", String.format("%.0f mm", d.criticalTieSpacingMm))
-                ResultDataRow("First tie from beam face", String.format("≤ %.0f mm", d.firstTieMaxOffsetMm))
-                ResultDataRow("Tie spacing outside critical region", String.format("≤ %.0f mm", d.elsewhereTieSpacingMm))
-                d.checks.forEach { c ->
-                    AppText("${if (c.satisfied) "✓" else "✗"} ${c.name}: ${c.demand} — ${c.limit}  [${c.clause}]",
-                        fontSize = 11.sp, color = if (c.satisfied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
-                }
-                d.blockedChecks.forEach { b ->
-                    AppText("⚠ BLOCKED: ${b.name} — ${b.reason}  [${b.clause}]",
-                        fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
-                }
+                com.civileg.app.ui.compose.components.ColumnSeismicDetailingSection(d)
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))

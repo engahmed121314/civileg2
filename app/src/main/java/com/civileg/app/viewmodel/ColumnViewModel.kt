@@ -356,6 +356,18 @@ class ColumnViewModel @Inject constructor(
                         resultsMap["Tie Distribution Zone ${i+1}"] = "${zone.name}: ${zone.description} [${String.format("%.1f", (zone.endLocation-zone.startLocation)/1000.0)}m]"
                     }
                 }
+                // ECP §6-8 ductile detailing must reach the export too: the mode,
+                // its computed values, and every blocked frame-context check.
+                res.seismicDetailing?.let { d ->
+                    resultsMap["Ductility Mode (ECP 203 §6-8)"] = d.mode.displayNameEn + " — INCOMPLETE (frame checks pending)"
+                    resultsMap["Critical Region Lo (each end)"] = "${"%.0f".format(d.criticalRegionLengthMm)} mm"
+                    resultsMap["Tie Spacing in Critical Region S0"] = "${"%.0f".format(d.criticalTieSpacingMm)} mm"
+                    resultsMap["First Tie from Beam Face"] = "≤ ${"%.0f".format(d.firstTieMaxOffsetMm)} mm"
+                    resultsMap["Tie Spacing Outside Critical Region"] = "≤ ${"%.0f".format(d.elsewhereTieSpacingMm)} mm"
+                    d.checks.forEach { c ->
+                        resultsMap["Ductile: ${c.name}"] = "${c.demand} — ${c.limit} [${if (c.satisfied) "PASS" else "FAIL"}] ${c.clause}"
+                    }
+                }
                 val safetyChecks = res.safetyChecks.map { chk ->
                     GenericSafetyCheck(
                         name = chk.name, calculated = chk.value,
