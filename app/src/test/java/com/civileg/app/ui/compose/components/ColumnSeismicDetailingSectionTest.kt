@@ -16,7 +16,6 @@ import androidx.core.view.drawToBitmap
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.unit.dp
 import com.civileg.app.domain.entities.BlockedSeismicCheck
 import com.civileg.app.domain.entities.DesignCode
@@ -142,7 +141,17 @@ class ColumnSeismicDetailingSectionTest {
             inputs = mapOf("Design Code" to "ECP 203", "Width" to "400 mm", "Depth" to "600 mm"),
             results = resultsMap,
             safetyChecks = checks,
-            calculationSteps = res.calculationSteps,
+            calculationSteps = res.calculationSteps.map { step ->
+                ProfessionalEnglishPdfReporter.CalculationStep(
+                    stepNumber = step.stepNumber,
+                    description = step.title,
+                    equation = step.formulaWithValues.ifBlank { step.formula },
+                    reference = step.codeReference.ifBlank { null },
+                    result = listOf(step.result, step.unit)
+                        .filter { it.isNotBlank() }
+                        .joinToString(" ")
+                )
+            },
             isSafe = res.isSafe,   // false for ductile modes -> STATUS: UNSAFE in the PDF
             drawingBitmap = null,
             outputPath = out.absolutePath
