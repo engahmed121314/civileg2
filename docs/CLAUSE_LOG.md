@@ -270,3 +270,10 @@ No production formula was added or changed in this batch.
 - **Verified addition**: §6.6.4.6.1/6.6.4.6.2 (printed pp.125-126, part 1 PDF pp.134-135) — rendered and read directly. Also noted: the printed 6.6.4.5.4 shows M2,min = Pu(0.6 + 0.03h) in US-inch form inside this metric edition; NOT implemented — flagged here, no golden vectors depend on it.
 - **Golden vectors (story of 4 columns, Pc=21546.6335 each)**: ΣPu=8000 → δs=1.141243, M=108.474591; ΣPu=20000 → δs=1.448030, M=126.881780; Q-method (Q=0.1237683) reproduces 1.141243; Q-method beyond δs>1.5 correctly refused.
 - **Caller safety**: full-repo grep — removed calculateSlendernessEffect had no callers outside ACIColumnTest; the same-named functions in ACIAdvancedColumn/SBC/ECP engines are separate implementations, untouched.
+
+## A-18 — §6.6.4.5.4 minimum design moment M2,min (VERIFIED + enforced)
+- **Date**: 2026-11-21 (20:14 EET)
+- **Source opened**: ACI 318M-14 PDF part 1, PDF pages 134-135, printed pages **125-126** — rendered and read directly; equation shown as M2,min = Pu(0.6 + 0.03h).
+- **Printing resolution**: the 0.6+0.03h form is the US-inch form; the official metric 318M-14 uses M2,min = Pu(15 + 0.03h) with h in mm (corroborated by independent engineering references for ACI 318(M)-14 §6.6.4.5.4, e.g. zetastruct.app/column-design). The bilingual printing kept the inch form — treated as a printing error; metric form enforced.
+- **Enforcement**: INSIDE calculateMomentMagnification — the function now returns Pair(δ, M2_used); when M2,min > M2, M2 is replaced by M2,min and Cm = 1.0 per the clause's own rule. Not left to callers. Golden vector: Pu=2000, h=400 → M2,min=54 > M2=30 → δ=1.980395, M2_used=54.
+- **API change note**: return type changed Double → Pair<Double, Double> within this same unmerged PR; no external callers exist (verified by full-repo grep).

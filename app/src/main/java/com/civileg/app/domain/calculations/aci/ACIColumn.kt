@@ -81,7 +81,13 @@ class ACIColumn : ColumnDesign {
      *
      * NONSWAY frames only (6.6.4.5). Sway frames: calculateSwayMagnification (6.6.4.6).
      *
-     * @return δ moment magnifier (>= 1.0); Mc = δ × M2 (6.6.4.5.1).
+     * 6.6.4.5.4 minimum moment is enforced here: when M2,min = Pu(15+0.03h) mm
+     * exceeds M2, M2 is replaced by M2,min and Cm is taken 1.0 (printed pp.125-126;
+     * metric form 15+0.03h — the bilingual printing shows the US-inch 0.6+0.03h
+     * form, see CLAUSE_LOG F-09/A-18).
+     *
+     * @return Pair(δ, M2_used): δ >= 1.0 and the moment to magnify (M2 or M2,min);
+     *         design moment Mc = δ × M2_used (6.6.4.5.1).
      */
     fun calculateMomentMagnification(
         Pu: Double,                      // kN, factored axial load
@@ -92,7 +98,7 @@ class ACIColumn : ColumnDesign {
         depth: Double,                   // mm, in bending direction
         fcu: Double,
         betaDns: Double = 0.0            // 6.6.4.4.4 sustained-axial ratio (0.6 → simplified 0.25EcIg)
-    ): Double {
+    ): Pair<Double, Double> {
         InputGuard.positive("Pu", Pu)
         InputGuard.positive("M2", M2)
         InputGuard.positive("kLu", kLu)
@@ -109,7 +115,10 @@ class ACIColumn : ColumnDesign {
         // 6.2.5(b): nonsway (braced) neglect limit — 6.2.5b AND 6.2.5c (cap 40).
         // Sway frames are NOT this method: use calculateSwayMagnification (6.6.4.6).
         val mayNeglect = kluOverR <= (34.0 + 12.0 * mRatio).coerceAtMost(40.0)
-        if (mayNeglect) return 1.0
+        // 6.6.4.5.4: minimum design moment M2,min = Pu(15 + 0.03h) mm → kNm
+        val m2Min = Pu * (15.0 + 0.03 * depth) / 1000.0
+        val m2Used = max(M2, m2Min)
+        if (mayNeglect) return Pair(1.0, m2Used)
 
         // 6.6.4.4.4(a): EI = 0.4EcIg / (1+βdns)
         val fcPrime = 0.8 * fcu
@@ -118,11 +127,11 @@ class ACIColumn : ColumnDesign {
         val ei = 0.4 * ec * ig / (1.0 + betaDns)
         // 6.6.4.4.2: Pc = π²EI / (kℓu)²
         val pc = PI * PI * ei / (kLu * kLu) / 1000.0  // N → kN
-        // 6.6.4.5.3(a): Cm = 0.6 − 0.4(M1/M2)
-        val cm = 0.6 - 0.4 * mRatio
+        // 6.6.4.5.3(a): Cm = 0.6 − 0.4(M1/M2); 6.6.4.5.4: Cm = 1.0 when M2,min governs
+        val cm = if (m2Min > M2) 1.0 else 0.6 - 0.4 * mRatio
         // 6.6.4.5.2: δ = Cm / (1 − Pu/(0.75Pc)) ≥ 1.0
         val delta = cm / (1.0 - Pu / (0.75 * pc))
-        return max(1.0, delta)
+        return Pair(max(1.0, delta), m2Used)
     }
 
     /**

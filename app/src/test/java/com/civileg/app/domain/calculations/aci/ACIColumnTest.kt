@@ -236,16 +236,17 @@ class ACIColumnTest {
 
     @Test
     fun goldenMagnification_singleCurvature() {
-        val d = column.calculateMomentMagnification(
+        val (d, m2) = column.calculateMomentMagnification(
             Pu = 2000.0, M1 = -50.0, M2 = 100.0, kLu = 6000.0,
             width = 400.0, depth = 400.0, fcu = 30.0
         )
         assertEquals(1.584316, d, 0.001)
+        assertEquals(100.0, m2, 0.001)  // M2=100 > M2,min=54, unchanged
     }
 
     @Test
     fun goldenMagnification_doubleCurvatureFloorsAtOne() {
-        val d = column.calculateMomentMagnification(
+        val (d, _) = column.calculateMomentMagnification(
             Pu = 2000.0, M1 = 50.0, M2 = 100.0, kLu = 6000.0,
             width = 400.0, depth = 400.0, fcu = 30.0
         )
@@ -254,7 +255,7 @@ class ACIColumnTest {
 
     @Test
     fun goldenMagnification_bracedShortColumnNeglected() {
-        val d = column.calculateMomentMagnification(
+        val (d, _) = column.calculateMomentMagnification(
             Pu = 2000.0, M1 = -50.0, M2 = 100.0, kLu = 3000.0,
             width = 400.0, depth = 400.0, fcu = 30.0
         )
@@ -304,11 +305,24 @@ class ACIColumnTest {
 
     @Test
     fun goldenMagnification_creepBetaDns() {
-        val d = column.calculateMomentMagnification(
+        val (d, _) = column.calculateMomentMagnification(
             Pu = 2000.0, M1 = -50.0, M2 = 100.0, kLu = 6000.0,
             width = 400.0, depth = 400.0, fcu = 30.0, betaDns = 0.6
         )
         assertEquals(3.847642, d, 0.001)
+    }
+
+    // 6.6.4.5.4 minimum-moment vector: Pu=2000, h=400 → M2,min = 54 kNm > M2=30
+    // → M2 replaced by 54, Cm=1.0, δ = 1/(1−2000/(0.75×5386.6584)) = 1.980395
+
+    @Test
+    fun goldenMagnification_minimumMomentGoverns() {
+        val (d, m2) = column.calculateMomentMagnification(
+            Pu = 2000.0, M1 = 0.0, M2 = 30.0, kLu = 6000.0,
+            width = 400.0, depth = 400.0, fcu = 30.0
+        )
+        assertEquals(1.980395, d, 0.001)
+        assertEquals(54.0, m2, 0.001)
     }
 
     @Test(expected = IllegalArgumentException::class)
