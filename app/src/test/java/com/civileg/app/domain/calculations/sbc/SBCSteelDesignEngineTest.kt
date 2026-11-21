@@ -226,7 +226,8 @@ class SBCSteelDesignEngineTest {
         //   A1 = 202,500, sqrt(A2/A1) = 2 -> phiPp = 6712.9 kN >= 1000 OK
         //   m = 75, n = 150 -> X = 150; fP = 4.938 MPa
         //   tp_req = 150*sqrt(2*4.938/(0.9*355)) = 26.4 -> tp = 28 mm
-        //   anchors: 4 x Ø24, length max(12*24, 250) = 288 mm
+        //   anchors: 4 x Ø27 (Pu=1000 hits the Pu<2000 bucket, NOT Pu<1000),
+        //   length max(12*27, 250) = 324 mm  (CLAUSE_LOG S-13)
         val r = engine.designBasePlate(
             Pu = 1000.0, Mux = 0.0, Muy = 0.0,
             columnSection = iS355, grade = SteelGrade.S355,
@@ -236,8 +237,8 @@ class SBCSteelDesignEngineTest {
         assertClose(450.0, r.plateLength, "plate length")
         assertClose(28.0, r.plateThickness, "plate thickness")
         assertEquals(4, r.anchorBolts)
-        assertClose(24.0, r.anchorDiameter, "anchor diameter")
-        assertClose(288.0, r.anchorLength, "anchor length")
+        assertClose(27.0, r.anchorDiameter, "anchor diameter")
+        assertClose(324.0, r.anchorLength, "anchor length")
         assertTrue(r.isSafe)
     }
 
@@ -250,9 +251,11 @@ class SBCSteelDesignEngineTest {
         // I 300x150x10x7, S355, axial = -600 kN (tension):
         //   phiPn_yield   = 0.9*355*4960/1000      = 1584.7 kN  <- governs
         //   phiPn_rupture = 0.75*510*0.85*4960/1000 = 1612.6 kN
+        // Weld 5x1100 E70XX sized so the connection does NOT govern (CLAUSE_LOG S-13):
+        //   weld: 0.75*0.6*482*(5/sqrt2)*1100/1000 = 843.5 kN; base metal: 2120.6 kN
         val welded = ConnectionType.Welded(
             weldType = WeldType.FILLET,
-            weldSize = 8.0, weldLength = 300.0,
+            weldSize = 5.0, weldLength = 1100.0,
             electrodeType = ElectrodeType.E70XX
         )
         val r = engine.designBracing(
@@ -262,6 +265,7 @@ class SBCSteelDesignEngineTest {
         )
         assertTrue(r.isTension)
         assertClose(1584.7, r.phiPn, "bracing tension capacity")
+        assertClose(843.5, r.connectionCapacity, "weld connection capacity")
         assertTrue(r.isSafe)
     }
 
@@ -276,9 +280,11 @@ class SBCSteelDesignEngineTest {
         //   Fe = pi^2*200000/24.25^2 = 3357.4 MPa
         //   Fcr = 0.658^(355/3357.4)*355 = 339.6 MPa
         //   phiPn = 0.9*339.6*4960/1000 = 1516.1 kN
+        // Weld 5x1100 E70XX sized so the connection does NOT govern (CLAUSE_LOG S-13):
+        //   weld capacity 843.5 kN >= 800 kN load
         val welded = ConnectionType.Welded(
             weldType = WeldType.FILLET,
-            weldSize = 8.0, weldLength = 300.0,
+            weldSize = 5.0, weldLength = 1100.0,
             electrodeType = ElectrodeType.E70XX
         )
         val r = engine.designBracing(
@@ -289,6 +295,7 @@ class SBCSteelDesignEngineTest {
         assertTrue(!r.isTension)
         assertClose(24.25, r.slendernessRatio, "slenderness")
         assertClose(1516.1, r.phiPn, "bracing compression capacity")
+        assertClose(843.5, r.connectionCapacity, "weld connection capacity")
         assertTrue(r.isSafe)
     }
 }
