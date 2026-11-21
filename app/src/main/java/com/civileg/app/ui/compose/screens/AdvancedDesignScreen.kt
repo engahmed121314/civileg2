@@ -1379,7 +1379,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settlementContent(
 
 // ───────────────────────────── Shared UI ─────────────────────────────────
 
-@Composable
 // ───────────────────────────── Advanced slab (ECP/SBC/ACI) ─────────────────────────────
 
 private enum class SlabKind(val title: String, val titleAr: String) {
@@ -1589,6 +1588,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
     }
 }
 
+@Composable
 private fun SectionTitle(english: String, arabic: String) {
     Column {
         AppText(english, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
