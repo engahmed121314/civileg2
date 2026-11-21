@@ -400,3 +400,33 @@ class ACIBeamTest {
         beam.calculateDoublyReinforcedBeam(DESIGN_MOMENT, WIDTH, TOTAL_DEPTH, FCU, 0.0)
     }
 }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // GOLDEN VECTOR — flexure (hand-verified 2026-11-21 vs ACI 318M-14)
+    // fcu=30 (fc'=24), fy=400, b=250, d=550, h=600, Mu=200 kN.m:
+    // Rn = 200e6/(0.9×250×550²) = 2.93848 → ρ = 0.007969 → As = 1095.7
+    // min (9.6.1.2): max(0.25√24/400, 1.4/400)×250×550 = 481.2 → not governing
+    // ρ_max_tc = 0.85×0.85×(24/400)×0.375 = 0.016256 → OK
+    // 6Ø16 → As_prov=1206.4, a=94.62, φMn=218.32, util=0.916, c=a/β1=111.31
+    // Clauses: Table 22.2.2.4.3 (β1, p.554), 22.2.2.4.1 (a=β1c), 9.6.1.2 (p.222)
+    // ══════════════════════════════════════════════════════════════════════
+
+    @Test
+    fun goldenFlexure_reinforcementArea() {
+        val result = beam.calculateFlexureReinforcement(
+            30.0, 400.0, 250.0, 550.0, 600.0, 200.0, LoadCombination.DEAD_LIVE
+        )
+        assertEquals(1095.7, result.astRequired, 0.2)
+    }
+
+    @Test
+    fun goldenFlexure_barSelectionAndCapacity() {
+        val result = beam.calculateFlexureReinforcement(
+            30.0, 400.0, 250.0, 550.0, 600.0, 200.0, LoadCombination.DEAD_LIVE
+        )
+        assertEquals(16.0, result.barDiameter, 0.001)
+        assertEquals(6, result.numberOfBars)
+        assertEquals(0.9161, result.utilizationRatio, 0.001)
+        assertEquals(111.31, result.neutralAxisDepth, 0.05)
+        assertTrue(result.isSafe)
+    }

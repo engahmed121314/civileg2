@@ -353,3 +353,10 @@ All page numbers below are the printed page of the PDF of record.
 
 Golden vectors: ECPBeamShearTest (6 cases: stirrup design, min-only branch,
 4-leg wide beam, fy=600 cap, mild-240 min-ratio floor, q_umax 4.4 cap).
+## A-08 — Table 22.2.2.4.3 — β1 for equivalent rectangular stress distribution (VERIFIED)
+- **Date**: 2026-11-21 (19:35 EET)
+- **Source opened**: ACI 318M-14 PDF part 3, PDF page 163, printed page **554** — rendered as image; bilingual table read directly.
+- **Code says**: β1 = 0.85 for 17 ≤ fc' ≤ 28 MPa; 0.85 − 0.05(fc'−28)/7 for 28 < fc' < 55; 0.65 for fc' ≥ 55.
+- **Also verified same page**: §22.2.2.4.1 — stress 0.85fc' uniform over zone of depth a = β1·c.
+- **Engine**: ACIBeam.kt `calculateBeta1` (fc≤28 → 0.85; fc≥55 → 0.65; else interpolation) — matches (below 17 MPa the table is silent; 0.85 is standard continuation).
+- **Action**: no code change; golden flexure vector added to ACIBeamTest locking the Rn–ρ method + bar selection against this clause and 9.6.1.2.
