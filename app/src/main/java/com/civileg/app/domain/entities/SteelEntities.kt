@@ -284,14 +284,25 @@ val SteelSectionType.ry: Double
 /** معامل المقطع اللدن حول X - mm³ */
 val SteelSectionType.zx: Double
     get() = when (this) {
-        is SteelSectionType.ISection -> sx * 1.12
+        // Exact plastic section moduli (owner decision 2026-11-21,
+        // CLAUSE_LOG A-08; fixes the arbitrary 1.12*Sx approximation):
+        //   I (doubly symmetric): Zx = bf*tf*(h-tf) + tw*(h-2tf)^2/4
+        //   CHS / Pipe:           Z  = (D^3 - (D-2t)^3) / 6
+        //   RHS:                  Zx = (w*h^2 - (w-2t)*(h-2t)^2) / 4
+        is SteelSectionType.ISection ->
+            bf * tf * (h - tf) + tw * (h - 2 * tf).pow(2) / 4.0
+        is SteelSectionType.RHS ->
+            (width * height.pow(2) - (width - 2 * thickness) * (height - 2 * thickness).pow(2)) / 4.0
+        is SteelSectionType.CHS ->
+            (outerDiameter.pow(3) - (outerDiameter - 2 * thickness).pow(3)) / 6.0
+        is SteelSectionType.Pipe ->
+            (outerDiameter.pow(3) - (outerDiameter - 2 * wallThickness).pow(3)) / 6.0
+        // Singly symmetric / built-up shapes keep shape-factor approximations
+        // (exact Z needs their plastic-neutral-axis location).
         is SteelSectionType.CSection -> sx * 1.10
-        is SteelSectionType.RHS -> sx * 1.08
-        is SteelSectionType.CHS -> sx * 1.12
         is SteelSectionType.LSection -> sx * 1.05
         is SteelSectionType.TSection -> sx * 1.05
         is SteelSectionType.PlateGirder -> sx * 1.12
-        is SteelSectionType.Pipe -> sx * 1.12
         is SteelSectionType.BuiltUp -> 110.0
     }
 

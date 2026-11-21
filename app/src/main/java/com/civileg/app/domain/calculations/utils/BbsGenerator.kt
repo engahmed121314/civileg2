@@ -1,4 +1,4 @@
-package com.civileg.app.utils
+package com.civileg.app.domain.calculations.utils
 
 import android.os.Parcelable
 import com.civileg.app.domain.FlatSlabResult
@@ -8,7 +8,7 @@ import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResul
 import com.civileg.app.domain.calculations.ecp.CombinedFootingResult
 import com.civileg.app.domain.entities.SlabDesignResult
 import com.civileg.app.domain.calculations.InputGuard
-import com.civileg.app.utils.CalculatorEngine.*
+import com.civileg.app.domain.calculations.utils.CalculatorEngine.*
 import kotlinx.parcelize.Parcelize
 import kotlin.math.*
 

@@ -72,7 +72,7 @@ import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen as AppInteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSteelDrawing
 import com.civileg.app.ui.compose.components.drawings.ProfessionalWarehouseDrawing
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import com.civileg.app.viewmodel.SteelViewModel

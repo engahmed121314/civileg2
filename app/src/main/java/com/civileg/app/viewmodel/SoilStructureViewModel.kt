@@ -92,7 +92,7 @@ class SoilStructureViewModel @Inject constructor() : ViewModel() {
         val res = _result.value ?: return
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val drawingBitmap = com.civileg.app.utils.PdfDrawingGenerator.generateSoilBearingDrawing(
+                val drawingBitmap = com.civileg.app.shared.reporting.PdfDrawingGenerator.generateSoilBearingDrawing(
                     width = foundationWidthMm / 1000.0,
                     length = foundationLengthMm / 1000.0,
                     depth = embedmentDepthMm / 1000.0,
