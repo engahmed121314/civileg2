@@ -399,8 +399,6 @@ class ACIBeamTest {
     fun calculateDoublyReinforced_zeroFy_throwsException() {
         beam.calculateDoublyReinforcedBeam(DESIGN_MOMENT, WIDTH, TOTAL_DEPTH, FCU, 0.0)
     }
-}
-
     // ══════════════════════════════════════════════════════════════════════
     // GOLDEN VECTOR — deflection min-depth (F-06 regression, hand-verified
     // 2026-11-21 vs ACI 318M-14 Table 9.3.1.1 + §9.3.1.1.1, printed p.211)
@@ -440,3 +438,5 @@ class ACIBeamTest {
         assertEquals(1.5, result.ratio, 0.001)
         assertTrue(!result.isSafe)
     }
+
+}
