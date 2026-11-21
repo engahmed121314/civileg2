@@ -57,6 +57,42 @@ class ACIColumnInteractionTest {
         assertNull(col.checkInteraction(30.0, 400.0, 400.0, 400.0, ordinates(8, 400.0, 400.0, 60.0), 2800e3))
     }
 
+    private fun centeredBars(nBars: Int, w: Double, h: Double, dp: Double, ab: Double) =
+        col.layoutPerimeterBars(nBars, w, h, dp).map { Triple(it.first - w / 2.0, it.second - h / 2.0, ab) }
+
+    @Test
+    fun `biaxial contour - 8T20 passes Mx=My=80 kNm at Pu 1500 kN`() {
+        // Contour radius at 45 deg = 130.595 kNm > |Mu| = 113.14 kNm (hand-computed, CLAUSE_LOG F-08)
+        assertTrue(col.checkBiaxial(30.0, 400.0, 400.0, 400.0, centeredBars(8, 400.0, 400.0, 60.0, ab20), 1500e3, 80e6, 80e6))
+    }
+
+    @Test
+    fun `biaxial contour - 8T20 fails Mx=My=100 kNm, 12T20 passes`() {
+        // |Mu| = 141.42 kNm: 8T20 contour 130.595 (fail), 10T20 140.024 (fail), 12T20 149.646 (pass).
+        // The independent per-axis check wrongly accepted 8T20 (144.5 per axis) - this is the F-08 gap.
+        assertFalse(col.checkBiaxial(30.0, 400.0, 400.0, 400.0, centeredBars(8, 400.0, 400.0, 60.0, ab20), 1500e3, 100e6, 100e6))
+        assertFalse(col.checkBiaxial(30.0, 400.0, 400.0, 400.0, centeredBars(10, 400.0, 400.0, 60.0, ab20), 1500e3, 100e6, 100e6))
+        assertTrue(col.checkBiaxial(30.0, 400.0, 400.0, 400.0, centeredBars(12, 400.0, 400.0, 60.0, ab20), 1500e3, 100e6, 100e6))
+    }
+
+    @Test
+    fun `biaxial contour reproduces the uniaxial solution on the axis`() {
+        val bars = centeredBars(8, 400.0, 400.0, 60.0, ab20)
+        // contour radius along the y direction = 144.516 kNm = the uniaxial checkInteraction result
+        assertTrue(col.checkBiaxial(30.0, 400.0, 400.0, 400.0, bars, 1500e3, 0.0, 144.0e6))
+        assertFalse(col.checkBiaxial(30.0, 400.0, 400.0, 400.0, bars, 1500e3, 0.0, 145.0e6))
+    }
+
+    @Test
+    fun `calculateReinforcement escalates bar diameter when biaxial demand and spacing require it`() {
+        // Pu=1500 kN, Mx=My=100 kNm: dia.14 blocked by 25.2.3 spacing at the counts that pass the
+        // contour; escalation lands on 18 dia.16 (hand-computed, CLAUSE_LOG F-08).
+        val res = col.calculateReinforcement(30.0, 400.0, 400.0, 400.0, 1500.0, 100.0, 100.0, stubCombo())
+        assertEquals(16.0, res.barDiameter, 1e-9)
+        assertEquals(18, res.numberOfBars)
+        assertTrue(res.isSafe)
+    }
+
     @Test
     fun `calculateReinforcement raises steel above axial seed when moment demands it`() {
         // Old 1+2e/h heuristic gave 12 bars here; strain compatibility requires 18 (CLAUSE_LOG F-08).

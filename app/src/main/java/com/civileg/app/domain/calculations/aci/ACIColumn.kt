@@ -143,6 +143,129 @@ class ACIColumn : ColumnDesign {
         return InteractionCheckResult(c, 0.003 * (dt - c) / c, phi, phi * Pn, phi * Mn)
     }
 
+    /** Clips the centered rectangle by the compression-zone half-plane (a from the extreme fiber, normal n). Returns the polygon and the extreme-fiber distance tmax. */
+    private fun clipRectHalfPlane(
+        width: Double, depth: Double, nx: Double, ny: Double, a: Double
+    ): Pair<List<Pair<Double, Double>>, Double> {
+        val pts = listOf(
+            -width / 2 to -depth / 2, width / 2 to -depth / 2,
+            width / 2 to depth / 2, -width / 2 to depth / 2
+        )
+        val tmax = pts.maxOf { it.first * nx + it.second * ny }
+        val lim = tmax - a
+        fun f(p: Pair<Double, Double>) = p.first * nx + p.second * ny - lim
+        val out = mutableListOf<Pair<Double, Double>>()
+        for (i in 0 until 4) {
+            val cur = pts[i]
+            val prv = pts[(i + 3) % 4]
+            val fCur = f(cur)
+            val fPrv = f(prv)
+            if (fCur >= 0) {
+                if (fPrv < 0) {
+                    val t = fPrv / (fPrv - fCur)
+                    out += (prv.first + t * (cur.first - prv.first)) to (prv.second + t * (cur.second - prv.second))
+                }
+                out += cur
+            } else if (fPrv >= 0) {
+                val t = fPrv / (fPrv - fCur)
+                out += (prv.first + t * (cur.first - prv.first)) to (prv.second + t * (cur.second - prv.second))
+            }
+        }
+        return out to tmax
+    }
+
+    private fun polyAreaCentroid(poly: List<Pair<Double, Double>>): Pair<Double, Pair<Double, Double>> {
+        var A = 0.0
+        var cx = 0.0
+        var cy = 0.0
+        for (i in poly.indices) {
+            val (x0, y0) = poly[i]
+            val (x1, y1) = poly[(i + 1) % poly.size]
+            val cr = x0 * y1 - x1 * y0
+            A += cr
+            cx += (x0 + x1) * cr
+            cy += (y0 + y1) * cr
+        }
+        A *= 0.5
+        if (abs(A) < 1e-12) return 0.0 to (0.0 to 0.0)
+        return abs(A) to (cx / (6 * A) to cy / (6 * A))
+    }
+
+    /** φPn, φMnx, φMny at neutral-axis orientation [theta] (normal from centroid toward max-compression fiber) and depth [c]. */
+    private fun contourPoint(
+        fc: Double, fy: Double, width: Double, depth: Double,
+        bars: List<Triple<Double, Double, Double>>, theta: Double, c: Double
+    ): Triple<Double, Double, Double> {
+        val nx = cos(theta)
+        val ny = sin(theta)
+        val a = beta1(fc) * c
+        val (poly, tmax) = clipRectHalfPlane(width, depth, nx, ny, min(a, 2.0 * max(width, depth)))
+        val (Ac, centroid) = if (poly.isEmpty()) 0.0 to (0.0 to 0.0) else polyAreaCentroid(poly)
+        val Cc = 0.85 * fc * Ac
+        var Pn = Cc
+        var Mnx = Cc * centroid.second
+        var Mny = Cc * centroid.first
+        var dt = 0.0
+        for ((x, y, As) in bars) {
+            val sBar = tmax - (x * nx + y * ny)
+            dt = max(dt, sBar)
+            val es = 0.003 * (c - sBar) / c
+            var fs = (200000.0 * es).coerceIn(-fy, fy)
+            if (sBar < a) fs -= 0.85 * fc
+            val F = fs * As
+            Pn += F
+            Mnx += F * y
+            Mny += F * x
+        }
+        val epsT = 0.003 * (dt - c) / c
+        val phi = phiTied(epsT, fy / 200000.0)
+        return Triple(phi * Pn, phi * Mnx, phi * Mny)
+    }
+
+    /**
+     * Biaxial axial-moment interaction check per ACI 318M-14 §22.2.1.1 (equilibrium at
+     * each section), §22.2.4.1 (0.85fc' over the compression zone bounded by the section
+     * edges and a line parallel to the neutral axis at a = β1c) and §22.2.4.2 (c measured
+     * perpendicular to the neutral axis). Scans the neutral-axis orientation, solves
+     * φPn(c) = Pu by bisection in each direction (φ per Table 21.2.2 from the extreme
+     * tension bar), and tests whether the demand vector (Mux, Muy) lies inside the
+     * resulting φM contour. Uniaxial demands are included as contour directions, so this
+     * check alone covers both cases.
+     *
+     * @param bars bars in CENTROID coordinates: (x mm, y mm, area mm²)
+     */
+    fun checkBiaxial(
+        fcu: Double, fy: Double, width: Double, depth: Double,
+        bars: List<Triple<Double, Double, Double>>,
+        Pu: Double, Mux: Double, Muy: Double,
+        steps: Int = 720
+    ): Boolean {
+        val fc = 0.8 * fcu
+        val contour = ArrayList<Pair<Double, Double>>(steps)
+        for (k in 0 until steps) {
+            val theta = 2 * PI * k / steps
+            var lo = 1e-3
+            var hi = 1e12
+            if (contourPoint(fc, fy, width, depth, bars, theta, hi).first < Pu) continue
+            repeat(100) {
+                val mid = (lo + hi) / 2.0
+                if (contourPoint(fc, fy, width, depth, bars, theta, mid).first < Pu) lo = mid else hi = mid
+            }
+            val p = contourPoint(fc, fy, width, depth, bars, theta, (lo + hi) / 2.0)
+            contour += p.second to p.third
+        }
+        if (contour.size < 3) return false
+        var inside = false
+        var j = contour.size - 1
+        for (i in contour.indices) {
+            val (xi, yi) = contour[i]
+            val (xj, yj) = contour[j]
+            if ((yi > Muy) != (yj > Muy) && Mux < (xj - xi) * (Muy - yi) / (yj - yi) + xi) inside = !inside
+            j = i
+        }
+        return inside
+    }
+
     override fun calculateAxialCapacity(
         fcu: Double,
         fy: Double,
@@ -298,40 +421,62 @@ class ACIColumn : ColumnDesign {
             codeNotes.add("Safest: ${alternatives.last()}")
         }
         
-        val barArea = PI * selectedBarDia * selectedBarDia / 4
-        val barDiameter = selectedBarDia
-
-        // Ties per ACI 318M-14 §25.7.2.2 (Ø10 for longitudinal bars ≤ Ø32)
-        val tiesDiameter = if (barDiameter <= 32.0) 10.0 else 12.0
-        val dPrime = getMinCover() + tiesDiameter + barDiameter / 2.0
-
         // F-08: strain-compatibility interaction per ACI 318M-14 §22.2 + Table 21.2.2
         // replaces the removed invented 1+2e/h moment-amplification heuristic.
         // Axial cap per Table 22.4.2.1 (0.80φPo for tied); φ from the actual strain state.
+        // Biaxial demands checked on the full φM contour (§22.2.1.1/§22.2.4.1/§22.2.4.2),
+        // bar clear spacing per §25.2.3 (max(40, 1.5db); the (4/3)dagg term needs the
+        // aggregate size, which the inputs do not carry). If the selected diameter cannot
+        // satisfy both, escalate to larger diameters before declaring the section inadequate.
         val Mux = abs(momentX) * 1e6  // N.mm, bending in the depth direction
         val Muy = abs(momentY) * 1e6  // N.mm, bending in the width direction
-        var numberOfBars = ceil(astRequired / barArea).toInt().coerceIn(4, 24)
-        if (numberOfBars % 2 == 1) numberOfBars += 1
+        val diameters = availableBars.dropWhile { it < selectedBarDia }
+        var barDiameter = selectedBarDia
+        var numberOfBars = 4
         var interactionOk = false
-        while (numberOfBars <= 24 && !interactionOk) {
-            val astTrial = numberOfBars * barArea
-            val po = 0.85 * fc_prime * (Ag - astTrial) + fy * astTrial
-            if (Pu > 0.80 * PHI_TIED * po) { numberOfBars += 2; continue }
-            val layout = layoutPerimeterBars(numberOfBars, width, depth, dPrime)
-            val okX = Mux <= 0.0 || checkInteraction(fcu, fy, width, depth, groupLayers(layout.map { it.second }, barArea), Pu)
-                ?.let { it.phiMn >= Mux } == true
-            val okY = Muy <= 0.0 || checkInteraction(fcu, fy, depth, width, groupLayers(layout.map { it.first }, barArea), Pu)
-                ?.let { it.phiMn >= Muy } == true
-            interactionOk = okX && okY
-            if (!interactionOk) numberOfBars += 2
+        var dPrime = 0.0
+        var barArea = 0.0
+        outer@ for (dia in diameters) {
+            barArea = PI * dia * dia / 4
+            val tiesD = if (dia <= 32.0) 10.0 else 12.0
+            dPrime = getMinCover() + tiesD + dia / 2.0
+            var n = ceil(astRequired / barArea).toInt().coerceIn(4, 24)
+            if (n % 2 == 1) n += 1
+            while (n <= 24) {
+                val astTrial = n * barArea
+                val po = 0.85 * fc_prime * (Ag - astTrial) + fy * astTrial
+                if (Pu > 0.80 * PHI_TIED * po) { n += 2; continue }
+                val layout = layoutPerimeterBars(n, width, depth, dPrime)
+                val extra = n - 4
+                val perFace = extra / 4
+                val rem = (extra % 4) / 2
+                val spacingX = (width - 2 * dPrime) / (perFace + rem + 1)
+                val spacingY = (depth - 2 * dPrime) / (perFace + 1)
+                val spacingOk = min(spacingX, spacingY) - dia >= max(40.0, 1.5 * dia)
+                val barsCentered = layout.map { Triple(it.first - width / 2.0, it.second - depth / 2.0, barArea) }
+                val contourOk = (Mux <= 0.0 && Muy <= 0.0) ||
+                    checkBiaxial(fcu, fy, width, depth, barsCentered, Pu, Mux, Muy)
+                if (contourOk && spacingOk) {
+                    barDiameter = dia
+                    numberOfBars = n
+                    interactionOk = true
+                    break@outer
+                }
+                n += 2
+            }
+            numberOfBars = n
         }
         if (!interactionOk) {
-            warnings.add("Section inadequate for the axial-moment combination per ACI 318M-14 22.2 interaction - increase section dimensions")
-            numberOfBars = 24
+            barArea = PI * barDiameter * barDiameter / 4
+            warnings.add("Section inadequate for the axial-moment combination per ACI 318M-14 22.2 interaction and 25.2.3 spacing - increase section dimensions")
+            numberOfBars = numberOfBars.coerceAtMost(24)
         } else if (Mux > 0.0 || Muy > 0.0) {
-            codeNotes.add("Axial-moment interaction checked by strain compatibility (ACI 318M-14 22.2, Table 21.2.2)")
+            codeNotes.add("Axial-moment interaction checked by strain compatibility incl. biaxial contour (ACI 318M-14 22.2.1.1/22.2.4.1/22.2.4.2, Table 21.2.2)")
         }
         val astProvided = numberOfBars * barArea
+
+        // Ties per ACI 318M-14 §25.7.2.2 (Ø10 for longitudinal bars ≤ Ø32)
+        val tiesDiameter = if (barDiameter <= 32.0) 10.0 else 12.0
         val tiesSpacing = minOf(
             16 * barDiameter,           // 16 x longitudinal bar diameter
             48 * tiesDiameter,          // 48 x tie bar diameter
@@ -357,7 +502,7 @@ class ACIColumn : ColumnDesign {
             numberOfBars = numberOfBars,
             tiesDiameter = tiesDiameter,
             tiesSpacing = tiesSpacing,
-            isSafe = utilizationRatio <= 1.0,
+            isSafe = utilizationRatio <= 1.0 && interactionOk,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
             codeNotes = codeNotes

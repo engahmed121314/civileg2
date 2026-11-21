@@ -280,3 +280,20 @@ at Pu=1500 kN → c=283.31, φ=0.65, φMn=144.52 kNm; same at Pu=2000 kN →
 φMn=103.49 kNm (descending branch); 10Ø20 at Pu=1500 kN → φMn=162.22 kNm;
 8Ø20 at Pu=400 kN → εt=0.005679, φ=0.90, φMn=190.04 kNm (tension-controlled);
 null past φPo. End-to-end: Pu=1500/Mx=150 kNm → 18Ø14; Pu=3000 kN axial → 10Ø29.
+
+**F-08 addendum (same day) — biaxial scope and constructibility.** Review found
+the first cut checked each axis independently, which is unconservative for
+simultaneous Mx/My (8Ø20, Pu=1500 kN: per-axis allows 144.5 kNm each, true 45°
+contour radius = 130.60 kNm). Fixed: `checkBiaxial` scans the neutral-axis
+orientation, solves φPn(c)=Pu per direction, and tests the demand vector
+against the φM contour (§22.2.1.1 equilibrium at each section; §22.2.4.1
+compression zone "bounded by edges of the cross section and a line parallel to
+the neutral axis" at a=β1c; §22.2.4.2 c perpendicular to the NA — printed
+p. 554, part 3 PDF p. 163, rendered 2026-11-21). Consistency: contour radius
+along an axis = the uniaxial solve (144.516 kNm). Bar clear spacing for
+columns max(40 mm, 1.5db, (4/3)dagg) per §25.2.3 (printed p. 645, part 4 PDF
+p. 54, text-extracted 2026-11-21; the dagg term is inapplicable without an
+aggregate-size input). The design loop escalates bar diameter when spacing
+binds before declaring the section inadequate. Vectors: Mx=My=80 kNm passes
+8Ø20 (113.14 < 130.595); Mx=My=100 fails 8Ø20 and 10Ø20 (140.024), passes
+12Ø20 (149.646); end-to-end Pu=1500/Mx=My=100 → 18Ø16 (Ø14 spacing-blocked).
