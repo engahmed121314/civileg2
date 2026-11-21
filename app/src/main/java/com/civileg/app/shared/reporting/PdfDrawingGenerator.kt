@@ -1,5 +1,7 @@
 package com.civileg.app.shared.reporting
 
+import com.civileg.app.utils.ArabicFontProvider
+import com.civileg.app.utils.LocaleHelper
 import android.content.Context
 import android.graphics.*
 import android.text.Layout
