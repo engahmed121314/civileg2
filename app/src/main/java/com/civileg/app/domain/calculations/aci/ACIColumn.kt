@@ -69,44 +69,63 @@ class ACIColumn : ColumnDesign {
     }
     
     /**
-     * حساب نسبة النحافة ونسبة التحميل المسموحة
-     * ACI 318-22.4: λ = KL/r, Pn = Fcr × Ag
+     * معامل تكبير العزم بالطريقة الصحيحة من الكود — ACI 318M-14 §6.2.5 + §6.6.4.4/§6.6.4.5
+     * (F-09 fix; owner-approved 2026-11-21).
+     *
+     * Verified printed pages: 6.2.5 + 6.2.5.1 (printed pp.103-104),
+     * 6.6.4.4.2/4.4.3/4.4.4 (printed pp.122-123),
+     * 6.6.4.5.1/5.2/5.3 (printed pp.124-125) — CLAUSE_LOG A-17.
+     *
+     * Sign convention (6.2.5): M1/M2 is NEGATIVE in single curvature,
+     * POSITIVE in double curvature.
+     *
+     * @return δ moment magnifier (>= 1.0); Mc = δ × M2 (6.6.4.5.1).
      */
-    fun calculateSlendernessEffect(
-        unsupportedLength: Double, // m
-        effectiveLengthFactor: Double, // K
-        width: Double, depth: Double, // mm
-        fcu: Double, reinforcementRatio: Double = 0.01
-    ): Triple<Double, Boolean, Double> {
-        InputGuard.positive("unsupportedLength", unsupportedLength)
-        InputGuard.positive("effectiveLengthFactor", effectiveLengthFactor)
+    fun calculateMomentMagnification(
+        Pu: Double,                      // kN, factored axial load
+        M1: Double,                      // kNm, smaller end moment, signed
+        M2: Double,                      // kNm, larger end moment, positive
+        kLu: Double,                     // mm, effective length k×ℓu
+        width: Double,                   // mm, perpendicular to bending
+        depth: Double,                   // mm, in bending direction
+        fcu: Double,
+        betaDns: Double = 0.0,           // 6.6.4.4.4 sustained-axial ratio (0.6 → simplified 0.25EcIg)
+        isBraced: Boolean = true         // braced against sidesway (6.2.5(b))
+    ): Double {
+        InputGuard.positive("Pu", Pu)
+        InputGuard.positive("M2", M2)
+        InputGuard.positive("kLu", kLu)
         InputGuard.positive("width", width)
         InputGuard.positive("depth", depth)
         InputGuard.positive("fcu", fcu)
-        val Ag = width * depth
-        // نصف القطر الدوراني (المحور الأضع)
-        val minDimension = min(width, depth)
-        val r = minDimension / sqrt(12.0)
-        val L_mm = unsupportedLength * 1000.0
-        val slendernessRatio = effectiveLengthFactor * L_mm / r
-        
-        // ACI 318-22.4.2.1: العمود قصير إذا λ ≤ 22 (مربوط) أو λ ≤ 28 (حلزوني)
-        val isShort = slendernessRatio <= 22.0
-        
-        // حساب إجهاد الانبعاج الحرج Fcr
-        // ACI 22.4.2.1: EI = 0.4 × Ec × Ig + Es × As × (h/2 - d')^2
-        // Ig = b × h^3 / 12 (moment of inertia of gross concrete section)
-        val fc_prime = 0.8 * fcu
-        val Ig = width * depth.pow(3) / 12.0  // mm^4
-        val Ec = 4700.0 * sqrt(fc_prime)      // MPa
-        val Es = 200000.0                       // MPa
-        val As = reinforcementRatio * Ag
-        val d_prime = 40.0  // cover + tie dia (approximate, mm)
-        val EI = 0.4 * Ec * Ig + Es * As * ((minDimension / 2.0) - d_prime).pow(2)  // N.mm^2
-        val PI2_EI = PI * PI * EI / 1e6  // kN.m^2 (unit conversion)
-        val Pc = PI2_EI / (unsupportedLength * unsupportedLength)  // kN
-        
-        return Triple(slendernessRatio, !isShort, Pc)
+        require(M2 >= abs(M1)) { "M2 must be the larger end moment in absolute value" }
+        require(betaDns in 0.0..1.0) { "betaDns must be in 0..1" }
+
+        // 6.2.5.1(b): r = 0.30 × dimension in the direction stability is considered
+        val r = 0.30 * depth
+        val kluOverR = kLu / r
+        val mRatio = M1 / M2
+        // 6.2.5: slenderness effects may be neglected
+        val mayNeglect = if (isBraced) {
+            // 6.2.5b AND 6.2.5c (cap 40)
+            kluOverR <= (34.0 + 12.0 * mRatio).coerceAtMost(40.0)
+        } else {
+            kluOverR <= 22.0  // 6.2.5a
+        }
+        if (mayNeglect) return 1.0
+
+        // 6.6.4.4.4(a): EI = 0.4EcIg / (1+βdns)
+        val fcPrime = 0.8 * fcu
+        val ec = 4700.0 * sqrt(fcPrime)
+        val ig = width * depth.pow(3) / 12.0
+        val ei = 0.4 * ec * ig / (1.0 + betaDns)
+        // 6.6.4.4.2: Pc = π²EI / (kℓu)²
+        val pc = PI * PI * ei / (kLu * kLu) / 1000.0  // N → kN
+        // 6.6.4.5.3(a): Cm = 0.6 − 0.4(M1/M2)
+        val cm = 0.6 - 0.4 * mRatio
+        // 6.6.4.5.2: δ = Cm / (1 − Pu/(0.75Pc)) ≥ 1.0
+        val delta = cm / (1.0 - Pu / (0.75 * pc))
+        return max(1.0, delta)
     }
 
     override fun calculateReinforcement(

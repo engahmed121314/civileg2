@@ -251,3 +251,14 @@ golden vectors pin combined-footing numbers; a fix for CF-01..CF-03 should
 land with golden vectors per R4.
 
 No production formula was added or changed in this batch.
+## F-09 — ACIColumn.calculateSlendernessEffect deviated from §6.6.4 (RESOLVED)
+- **Date**: 2026-11-21 (20:05 EET) — owner approved fixing it accurately (WhatsApp 20:03: "٤ و٥ صلحها بدقه", replying to findings 4/5).
+- **Was**: comment cited "22.4.2.1 λ≤22 tied / ≤28 spiral" (§22.4 is axial strength — wrong clause; 28 is not ACI); EI formula 0.4EcIg + EsAs(h/2−d')² with no 1+βdns creep term and Pc divided by L² without k²; universal 22 limit ignoring braced/unbraced and M1/M2.
+- **Now**: calculateMomentMagnification(Pu, M1, M2, kLu, width, depth, fcu, betaDns, isBraced) implementing the verified clauses below. Old function removed (it was dormant — only test callers).
+- **Golden vectors**: single curvature δ=1.584316; double curvature floors at 1.0; braced-short neglect (6.2.5b+c) δ=1.0; unbraced sway δ=1.141243; creep βdns=0.6 δ=3.847642. All hand-computed from the printed equations.
+
+## A-17 — §6.2.5 + §6.2.5.1 + §6.6.4.4/§6.6.4.5 — slenderness & moment magnification (VERIFIED)
+- **Date**: 2026-11-21 (20:04 EET)
+- **Source opened**: ACI 318M-14 PDF part 1, PDF pages 110-113 (printed **101-104**), 131-134 (printed **122-125**) — rendered and read directly.
+- **Code says**: slenderness may be neglected if klu/r ≤ 22 unbraced (6.2.5a), ≤ 34+12(M1/M2) and ≤ 40 braced (6.2.5b, c), with M1/M2 negative in single curvature; r = √(Ig/Ag), 0.30×dim rect, 0.25×dia circ (6.2.5.1); Pc = π²(EI)eff/(klu)² (6.6.4.4.2); (EI)eff = 0.4EcIg/(1+βdns) (6.6.4.4.4a), βdns=0.6 simplification → 0.25EcIg; Mc = δM2 (6.6.4.5.1); δ = Cm/(1 − Pu/(0.75Pc)) ≥ 1.0 (6.6.4.5.2); Cm = 0.6 − 0.4(M1/M2) (6.6.4.5.3a), 1.0 with transverse loads (b).
+- **Note**: this bilingual 318M-14 printing shows 6.2.5b as 34+12(M1/M2) and 6.6.4.5.3a as Cm = 0.6 − 0.4(M1/M2) under the stated sign convention (negative = single curvature); both are internally consistent and implemented exactly as printed. No ≥0.4 floor on Cm appears in this printing.
