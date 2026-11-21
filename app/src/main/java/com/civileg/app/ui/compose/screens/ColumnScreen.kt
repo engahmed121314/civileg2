@@ -39,12 +39,12 @@ import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.utils.CalculatorEngine
-import com.civileg.app.utils.BbsGenerator
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.BbsGenerator
 import com.civileg.app.viewmodel.ColumnViewModel
 import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.BoqTableCard
-import com.civileg.app.utils.BoqEstimator
+import com.civileg.app.domain.calculations.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.drawings.columnDrawingSummary
 import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen

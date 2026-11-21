@@ -17,7 +17,7 @@ import com.civileg.app.db.QualityRecord
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.utils.BearingMethod
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.CsvEncoder
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.ItpTemplates

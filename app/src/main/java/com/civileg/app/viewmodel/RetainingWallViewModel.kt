@@ -7,12 +7,12 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
-import com.civileg.app.utils.BbsGenerator
-import com.civileg.app.utils.BoqEstimator
-import com.civileg.app.utils.CalculationValidator
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.BbsGenerator
+import com.civileg.app.domain.calculations.utils.BoqEstimator
+import com.civileg.app.domain.calculations.utils.CalculationValidator
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
-import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.shared.reporting.PdfDrawingGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import android.graphics.Bitmap

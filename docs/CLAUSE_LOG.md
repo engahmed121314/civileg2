@@ -48,3 +48,109 @@ Use in this batch: golden vector and geometry boundaries use S-01/S-03 where
 they agree with the engine; S-02's 700 mm, S-04's shear coefficients and S-05
 are locked as current behaviour, explicitly not as verified code clauses.
 No production formula was added or changed.
+
+## Stability track, batch — `ACIPileFoundation` (accessed 2026-11-21)
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| P-01 | Deep foundation in clay: end bearing `Qb = Nc·cu·Ab` with Skempton `Nc = 9` | [LibreTexts Example 6.1 — pile capacity in clay](https://eng.libretexts.org/Bookshelves/Civil_Engineering/Fundamentals_of_Foundation_Engineering_(Tsiampousi)/06:_Pile_Foundations/6.31:_Example_-_Pile_capacity_in_clay) | Verified (secondary: textbook example) |
+| P-02 | Alpha shaft method; API RP 2A-WSD §6.4.2 form `α = 0.5·ψ^-0.5` (ψ≤1), `α = 0.5·ψ^-0.25` (ψ>1), with `α ≤ 1.0`; the engine's high band `α = 0.5·sqrt(100/cu)` matches the ψ≤1 form with p'0 = 100 kPa | [OpenBrIM docs — API RP 2A-WSD clay shaft friction](https://docs.openbrim.org/) (API alpha method page) | Verified for the high band; the engine's middle band `α = 1−(cu−25)/100` and the flat 0.5 band (50–100 kPa) are engine-specific — characterized only |
+| P-03 | Beta method (sand) `Qs = K·tan(φ)·σ'v·As`; Berezantzev `Nq = e^(π·tanφ)·tan²(45°+φ/2)` | Standard textbook form (Das, Principles of Foundation Engineering); not re-opened this batch | UNVERIFIED-SOURCE — characterization only |
+| P-04 | ACI 318-19 Table 22.6.5.2: two-way shear `vc` = least of (a) 0.33·λ√f'c, (b) 0.17·(1+2/β)·λ√f'c, (c) 0.083·(2+αs·d/bo)·λ√f'c; αs = 40 interior / 30 edge / 20 corner | [ideCAD — two-way (punching) shear per ACI 318-19](https://help.idecad.com/ideCAD/two-way-shear-punching) | Verified (secondary: software manual quoting ACI table structure and αs values) |
+| P-05 | One-way shear `Vc = 0.17·λ·√f'c·b·d` (ACI 318-19 §22.5.5.1), φshear = 0.75, φflex = 0.9 (§21.2.1) | ideCAD shear pages + engine constants | Verified (secondary) |
+| U-P1 | Alpha curve discontinuity at cu = 50 kPa: middle band yields 0.75 just below 50, next band pins 0.5 | Engine inspection | **KNOWN DEFECT — FLAGGED, not fixed** (needs an engineering decision on curve smoothing) |
+| U-P2 | Group efficiency is a Converse-Labarre variant: uses atan(s/d) and only the (m−1) term; standard form uses θ = atan(d/s) with both terms (3×3 @ s=3d: standard ≈0.73, engine ≈0.65) | Engine inspection vs standard formula (Das) | **FLAGGED, not fixed** — conservative direction; pinned by characterization test |
+
+Engineering fixes applied in this batch (documented, with golden vectors):
+
+1. **Pile-cap flexure moment unit error** — `Mu` held kN·mm but was converted to
+   N·mm with ×1e6 instead of ×1e3, inflating Rn 1000×, pinning ρ at the 0.025 cap
+   and producing As ≈ 7× the correct value (22,720 vs 3,181 mm² on the golden
+   vector). Fixed to ×1e3.
+2. **Pile-cap bar selection could under-provide** — the selection loop accepted a
+   diameter whose bar count fit spacing limits without checking the provided area;
+   after spacing coercion it could provide less steel than required. Now a
+   diameter is accepted only when provided ≥ required.
+
+No other production formula was added or changed. Group-efficiency and the
+alpha-curve shape remain as-is pending owner engineering decisions (U-P1, U-P2).
+
+## Owner-decision batch — pile alpha curve + group efficiency (accessed 2026-11-21)
+
+The owner reviewed U-P1/U-P2 (from the ACIPileFoundation batch) and directed:
+"apply the correct and most accurate engineering option" for both.
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| P-06 | API RP 2A-WSD §6.4.2 alpha method as a continuous curve: `α = 0.5·ψ^-0.5` (ψ ≤ 1), `α = 0.5·ψ^-0.25` (ψ > 1), `α ≤ 1.0`, ψ = cu/p'0; applied with the engine's implicit p'0 = 100 kPa. Replaces the banded curve that jumped 0.75 → 0.5 at cu = 50 kPa (U-P1, RESOLVED). Continuous at cu = 25 (α = 1.0) and cu = 100 (α = 0.5). | OpenBrIM API RP 2A-WSD alpha method page (opened earlier today, this session) | Verified (secondary) |
+| P-07 | Standard Converse-Labarre group efficiency: `η = 1 − θ·[(m−1)·nc + (nc−1)·m] / (90·m·nc)`, θ = atan(d/s) in degrees. Replaces the engine variant (atan(s/d), single term; U-P2, RESOLVED). 3×3 @ s=3d: η = 0.7269 (was 0.6466). | [FireCAD — Pile Group Efficiency (Converse–Labarre)](https://calc.firecad.com/civil/foundations/pile-group-efficiency); [Converse-Labarre calculator reference](https://calculatgeek.com/pile-group-efficiency-calculator-converse-labarre/) | Verified (secondary; textbook-standard form) |
+
+Behavior changes (intended, owner-approved):
+- Clay shaft capacity for 25 < cu ≤ 100 kPa increases (e.g. cu = 50: α 0.5 →
+  0.707); for cu > 100 kPa it also increases slightly (ψ^-0.25 form).
+- Group efficiency increases to the standard values (3×3 @ 3d: 0.727; 2×2 @
+  3d: 0.795). The engine's 0.5..1.0 clamp is retained.
+- Golden vectors updated on this branch: `verified alpha is the continuous
+  API RP 2A curve`, `verified clay alpha high-strength band matches API
+  psi^-0p25 form`, `verified group efficiency is standard Converse-Labarre`.
+
+## Stability track, batch — `AISCSteelDesignEngine` (accessed 2026-11-21)
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| A-01 | AISC 360-16 D2-1 gross yielding `φt·Fy·Ag`, φt = 0.90 | [ideCAD — Steel Column/Member Design per AISC 360-16](https://help.idecad.com/ideCAD/steel-column-design-aisc-360-16) | Verified (secondary) |
+| A-02 | AISC 360-16 D2-2 net rupture `φt·Fu·Ae`, φt = 0.75 | Same page family | Verified (secondary) |
+| A-03 | AISC 360-16 E3-2/E3-3/E3-4: `Fe = π²E/(KL/r)²`; inelastic `Fcr = 0.658^(Fy/Fe)·Fy` for KL/r ≤ 4.71√(E/Fy), elastic `Fcr = 0.877·Fe` otherwise; φc = 0.90 | [ideCAD — Flexural Buckling per AISC 360-16](https://help.idecad.com/ideCAD/flexural-buckling) | Verified (secondary) |
+| A-04 | AISC 360-16 J4.3 block shear `Rn = min(0.6·Fy·Agv + Ubs·Fu·Ant, 0.6·Fu·Anv + Ubs·Fu·Ant)`, φ = 0.75 | Standard AISC form; engine geometry (gauge/edge/pitch estimates) is an engine simplification | Formula verified; engine geometry CHARACTERIZED |
+| A-05 | Section properties: box `Ix = (b·h³−(b−2t)(h−2t)³)/12`, I-shape open-form Ix/Iy | Standard strength-of-materials formulas | Verified |
+| U-A1 | Welded tension: engine returns a block-shear "placeholder" `0.75·0.6·Fy·Ag` that GOVERNS the design (cuts welded tension capacity ~50%). AISC J4.3 has no block-shear limit state for full welded connections | Engine inspection | **FLAGGED, not fixed** — conservative direction; owner engineering decision |
+| U-A2 | Torsional buckling (E4) branch selection uses the FLEXURAL slenderness for the E3-3/E3-4 choice and `min(KxLx, KyLy)` as the torsional length instead of Kz·Lz | Engine inspection | **FLAGGED, not fixed** — pinned by characterization test |
+| U-A3 | Plastic modulus `Zx = 1.12·Sx` (shape-factor approximation) for I-sections | Engine constant | Approximation, characterized; within typical rolled-shape range |
+
+Golden vectors: A-01/A-02 (tension bolted, net rupture governs), A-03
+(RHS inelastic + I-section elastic), A-04 block-shear arithmetic. Torsional
+path and welded placeholder pinned as characterization (U-A1/U-A2).
+No production formula was added or changed in this batch.
+
+## Owner-decision batch — AISC steel corrections (accessed 2026-11-21)
+
+The owner directed the engineering-correct fix for all three AISC findings
+from the member-design batch (his standing rule: fix correctly, document,
+separate PR, nothing merges without his OK).
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| A-06 | AISC 360-16 J4.3 block shear applies to BOLTED (holed) connections; welded and pressed connections have no block-shear limit state. The placeholder `0.75·0.6·Fy·Ag` that governed welded tension is removed; those paths now return +infinity (excluded from the governing min). Welded tension capacity rises ~2x to the D2-1/D2-2 value. U-A1 RESOLVED. | [ideCAD — Steel Member Design per AISC 360-16](https://help.idecad.com/ideCAD/steel-column-design-aisc-360-16) (J4.3 scope, secondary) | Verified (secondary) |
+| A-07 | AISC 360-16 E4: Fcr for torsional/flexural-torsional buckling comes from the E3 equations applied to the TORSIONAL elastic stress Fe, with the inelastic/elastic branch at Fy/Fe = 2.25. The branch no longer keys on the flexural slenderness. U-A2 RESOLVED. Remaining simplification: L = min(KxLx, KyLy) pending a Kz·Lz input (U-A2a, conservative). | [ideCAD — Flexural Buckling per AISC 360-16](https://help.idecad.com/ideCAD/flexural-buckling) | Verified (secondary) |
+| A-08 | Exact plastic section modulus replaces the 1.12·Sx approximation: I-shape `Zx = bf·tf·(h−tf) + tw·(h−2tf)²/4`; CHS/Pipe `(D³−(D−2t)³)/6`; RHS `(w·h²−(w−2t)(h−2t)²)/4`. Singly symmetric shapes (C/L/T/PG) keep shape factors pending plastic-NA work. U-A3 RESOLVED for I/CHS/RHS/Pipe. | Standard strength-of-materials exact forms (Zx of I 300x150x10x7 = 572,200 mm³, shape factor 1.131 vs the old flat 1.12) | Verified (textbook) |
+
+Behavior changes (intended, owner-approved): welded/pressed tension capacity
+increases to the correct D2 values; torsional branch selection corrected;
+flexural capacities via Zx shift slightly (I-shapes up to ~1%, more accurate).
+Golden vectors updated on this branch (welded tension governs D2-1;
+torsional-governed compression re-pinned).
+
+## Stability track, batch — `SBCSteelDesignEngine` (accessed 2026-11-21)
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| S-01 | Resistance factors: φt = φc = φb = φv = 0.90; φ = 0.75 for bolt shear/tension, weld, net rupture, plate bearing, block shear; φc(concrete bearing) = 0.65 | Official SBC 306 PDF, alriyadh.gov.sa archive (LRFD design basis, Sections 1.5); equation-factor cross-check via [ideCAD AISC 360 pages](https://help.idecad.com/ideCAD/steel-column-design-aisc-360-16) (secondary) | Verified (official excerpt + secondary) |
+| S-02 | Column curve: Fe = π²E/(KL/r)²; Fcr = 0.658^(Fy/Fe)·Fy for KL/r ≤ 4.71√(E/Fy), else Fcr = 0.877·Fe | [ideCAD — Flexural Buckling per AISC 360-16](https://help.idecad.com/ideCAD/flexural-buckling); same curve family in AISC 360-05, the licensed SBC 306 basis | Verified (secondary) |
+| S-03 | Compact-section flexure Mn = Fy·Zx (Chapter F2). Engine NONCOMPACT path returns min(Mp, My) — conservative vs the AISC F3 flange-local-buckling interpolation. Engine SLENDER path (My·(1−0.3·…) blend) is not an AISC/SBC equation | AISC 360 F2/F3 forms via ideCAD (secondary) | Compact verified (secondary); NONCOMPACT/SLENDER CHARACTERIZED — U-S1 flagged, conservative direction |
+| S-04 | Shear Vn = 0.6·Fy·Aw with Aw = (d−2tf)·tw and no Cv factor. Cv = 1.0 is exact for webs with h/tw ≤ 2.24√(E/Fy) (all standard rolled I-shapes); slender webs are overestimated | AISC 360 G2 via ideCAD (secondary) | Verified for standard sections; CHARACTERIZED otherwise — U-S1 note |
+| S-05 | LTB: Lp = 1.76·ry·√(E/Fy), checked against ry (weak axis) | AISC 360 F2 via ideCAD (secondary) | Verified (secondary); LTB vectors deferred to a later batch |
+| S-06 | Fillet weld (J2.4): throat = 0.707·w, Fw = 0.60·FEXX, φ = 0.75; base-metal shear check 0.6·Fu with φ = 0.90 | AISC 360 J2 via ideCAD (secondary) | Verified (secondary) |
+| S-07 | Bolt shear 0.45·Fu·Ab φ = 0.75 (threads-included value of AISC Table J3.2 — engine has no thread-condition input, conservative for A325-N); bearing 2.4·Fu·d·t φ = 0.75 (J3.10); block shear J4.3 with Ubs = 1.0; engine block-shear geometry lc = 3·db is approximate | AISC 360 J3/J4 via ideCAD (secondary) | Formulas verified (secondary); 0.45Fu and lc = 3db CHARACTERIZED |
+| S-08 | Combined loading H1-1a / H1-1b with the 0.2 axial threshold | AISC 360 H1 via ideCAD (secondary) | Verified (secondary) |
+| S-09 | Base plate concrete bearing φc·0.85·f'c·A1·√(A2/A1), √ ratio capped at 2 (AISC Design Guide 1 / J8). Engine extras: a 0.5 factor inside requiredArea (plate sizing only, conservative) and cantilever X = max(m, n) without the λn' term | AISC DG1 J8 form (secondary) | Bearing formula verified (secondary); sizing/cantilever CHARACTERIZED — U-S2 flagged, conservative |
+| S-10 | Bracing tension D2: φFyAg vs φFuAn with An = 0.85·Ag hole deduction approximation | AISC 360 D2 via ideCAD (secondary) | Formula verified (secondary); 0.85·Ag CHARACTERIZED — U-S3 flagged |
+| S-11 | SBC-specific engine constants: coastal corrosion capacity reduction ÷1.1, minimum plate thickness 6 mm in corrosive environments, load factors 1.2D/1.6L, seismic width-thickness limits | No public SBC 306 clause text located for these specific values | **UNVERIFIED** (engine constants; plausible vs common practice, not opened in the source) |
+| S-12 | Live-load deflection limit L/360 | Common serviceability practice (AISC 360 Chapter L is non-mandatory guidance) | CHARACTERIZED |
+| U-S4 | Bracing CHS radius of gyration r = D/4; exact thin-tube r ≈ D/(2√2) ≈ 0.354·D, so the engine overestimates slenderness ~41% for CHS compression bracing | Engine inspection vs standard formula | **FLAGGED, not fixed** — conservative direction |
+| U-S5 | Engine header and codeNotes cite "AISC 360-16" as the SBC 306 basis; the official SBC 306 text licenses AISC 360-05/341-05 and AISC LRFD 1999. The column-curve and φ values used are identical in both, so results are unaffected; the reference label is wrong | Official SBC 306 PDF vs engine comments | **FLAGGED, documentation-only** |
+
+Golden vectors: S-01/S-02 (column inelastic + elastic branches), S-03 compact
+(beam flexure), S-04 (beam shear), S-06 (fillet weld), S-08 (H1-1a passing
+case), deflection S-12. Characterization pins: coastal factor, bolted
+connection governing stack, base-plate sizing, bracing tension.
+No production formula was added or changed in this batch.

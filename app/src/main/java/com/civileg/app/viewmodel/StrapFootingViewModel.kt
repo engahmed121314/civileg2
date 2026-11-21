@@ -7,7 +7,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -162,9 +162,9 @@ class StrapFootingViewModel @Inject constructor(
                     isSafe = res.isSafe,
                     calculationSteps = res.calculationSteps,
                     bbsEntries = runCatching {
-                        com.civileg.app.utils.BbsGenerator.generateStrapFootingBbs("SF1", res, lastDistanceMm)
+                        com.civileg.app.domain.calculations.utils.BbsGenerator.generateStrapFootingBbs("SF1", res, lastDistanceMm)
                     }.getOrDefault(emptyList()),
-                    boqRows = com.civileg.app.utils.BoqEstimator.strapFootingRows(
+                    boqRows = com.civileg.app.domain.calculations.utils.BoqEstimator.strapFootingRows(
                         res, lastDistanceMm / 1000.0, "SF1"
                     ),
                     drawingBitmap = drawingBitmap,
