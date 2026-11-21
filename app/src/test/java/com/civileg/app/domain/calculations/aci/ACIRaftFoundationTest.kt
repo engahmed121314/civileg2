@@ -86,6 +86,29 @@ class ACIRaftFoundationTest {
     }
 
     @Test
+    fun `V2b - same eccentric grid at t=500 fails wide-beam shear - the failing design case is pinned`() {
+        // Same geometry as V2 but t = 500 (d = 415): the heavy edge X-strip's shear demand
+        // (877.47 kN at d from the face) exceeds phi-Vc (829.50 kN) -> util 1.058 -> unsafe.
+        // This regression keeps the failing design case visible; V2's t = 600 is the fix.
+        val cols = listOf(
+            RaftColumn(0.0, 0.0, 400.0, 400.0, 800.0, 1000.0),
+            RaftColumn(5000.0, 0.0, 400.0, 400.0, 800.0, 1000.0),
+            RaftColumn(0.0, 4000.0, 400.0, 400.0, 800.0, 1000.0),
+            RaftColumn(5000.0, 4000.0, 400.0, 400.0, 800.0, 1000.0),
+            RaftColumn(0.0, 8000.0, 400.0, 400.0, 1600.0, 2000.0),
+            RaftColumn(5000.0, 8000.0, 400.0, 400.0, 1600.0, 2000.0)
+        )
+        val r = footing.designRaftFoundation(30.0, 400.0, cols, 1000.0, 200.0, 500.0)
+        assertFalse(r.isSafe)
+        val failing = r.oneWayShear.filter { it.stripTag == "X-strip 3" }
+        assertTrue(failing.isNotEmpty())
+        assertTrue(failing.all { !it.isSafe })
+        assertEquals(877.47, failing.maxOf { it.vu }, 0.5)
+        assertEquals(829.50, failing.first().phiVc, 0.5)
+        assertEquals(1.0578, failing.maxOf { it.utilization }, 0.001)
+    }
+
+    @Test
     fun `V3 - tight edge projection - corner punching with reduced perimeter fails as derived`() {
         val r = footing.designRaftFoundation(30.0, 400.0, v1Columns(), 100.0, 200.0, 500.0)
         val p = r.punching[0]
