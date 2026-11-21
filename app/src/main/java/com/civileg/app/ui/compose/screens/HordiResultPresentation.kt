@@ -27,4 +27,41 @@ object HordiResultPresentation {
 
     fun exportUtilization(utilization: Double?): String =
         utilization?.let { String.format("%.0f%%", it * 100) } ?: "N/E"
+
+    /** English export input rows; SBC cylinder is required, never silently converted (SJ-8). */
+    fun exportInputsMap(
+        fcu: Double, fy: Double, ribWidth: Double, ribSpacing: Double,
+        totalThickness: Double, toppingThickness: Double, span: Double,
+        designMoment: Double, designShear: Double, cylinderStrength: Double?,
+        loadCombinationDescription: String, designCode: String
+    ): Map<String, String> = mapOf(
+        "Rib Width" to "$ribWidth mm",
+        "Rib Spacing" to "$ribSpacing mm",
+        "Total Thickness" to "$totalThickness mm",
+        "Topping Thickness" to "$toppingThickness mm",
+        "Span" to "${span / 1000.0} m",
+        "Design Moment" to "${"%.2f".format(designMoment)} kN.m/rib",
+        "Design Shear" to "${"%.2f".format(designShear)} kN/rib",
+        (if (designCode == "SBC") "f'c (cylinder)" else "f'cu") to
+            "${if (designCode == "SBC") cylinderStrength?.toString() ?: "MISSING" else fcu.toString()} MPa",
+        "fy" to "$fy MPa",
+        "Load Combination" to loadCombinationDescription,
+        "Design Code" to designCode
+    )
+
+    /** English export result rows; not-evaluated fields stay explicit, never 0 or a fake pass. */
+    fun exportResultsMap(
+        requiredReinforcement: Double, providedReinforcement: Double,
+        barDiameter: Double, barSpacing: Double, minThickness: Double,
+        shearCapacity: Double?, utilizationRatio: Double?, isSafe: Boolean
+    ): Map<String, String> = mapOf(
+        "Required As" to "${"%.2f".format(requiredReinforcement)} mm²",
+        "Provided As" to "${"%.2f".format(providedReinforcement)} mm²",
+        "Bar Diameter" to "$barDiameter mm",
+        "Bar Spacing" to "$barSpacing mm",
+        "Min Thickness" to "$minThickness mm",
+        "Shear Capacity" to exportShearCapacity(shearCapacity),
+        "Utilization" to exportUtilization(utilizationRatio),
+        "Is Safe" to if (isSafe) "YES" else "NO"
+    )
 }

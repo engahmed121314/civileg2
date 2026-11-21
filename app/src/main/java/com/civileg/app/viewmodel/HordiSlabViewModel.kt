@@ -160,30 +160,24 @@ class HordiSlabViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = File(directory, fileName)
 
-                val inputsMap = mapOf(
-                    "Rib Width" to "${params.ribWidth} mm",
-                    "Rib Spacing" to "${params.ribSpacing} mm",
-                    "Total Thickness" to "${params.totalThickness} mm",
-                    "Topping Thickness" to "${params.toppingThickness} mm",
-                    "Span" to "${params.span / 1000.0} m",
-                    "Design Moment" to "${"%.2f".format(params.designMoment)} kN.m/rib",
-                    "Design Shear" to "${"%.2f".format(params.designShear)} kN/rib",
-                    (if (params.designCode == "SBC") "f'c (cylinder)" else "f'cu") to
-                        "${if (params.designCode == "SBC") params.cylinderStrength?.toString() ?: "MISSING" else params.fcu.toString()} MPa",
-                    "fy" to "${params.fy} MPa",
-                    "Load Combination" to params.loadCombination.description,
-                    "Design Code" to params.designCode
+                val inputsMap = com.civileg.app.ui.compose.screens.HordiResultPresentation.exportInputsMap(
+                    fcu = params.fcu, fy = params.fy,
+                    ribWidth = params.ribWidth, ribSpacing = params.ribSpacing,
+                    totalThickness = params.totalThickness, toppingThickness = params.toppingThickness,
+                    span = params.span, designMoment = params.designMoment,
+                    designShear = params.designShear, cylinderStrength = params.cylinderStrength,
+                    loadCombinationDescription = params.loadCombination.description,
+                    designCode = params.designCode
                 )
 
-                val resultsMap = mapOf(
-                    "Required As" to "${"%.2f".format(res.requiredReinforcement)} mm²",
-                    "Provided As" to "${"%.2f".format(res.providedReinforcement)} mm²",
-                    "Bar Diameter" to "${res.barDiameter} mm",
-                    "Bar Spacing" to "${res.barSpacing} mm",
-                    "Min Thickness" to "${res.minThickness} mm",
-                    "Shear Capacity" to com.civileg.app.ui.compose.screens.HordiResultPresentation.exportShearCapacity(res.shearCapacity),
-                    "Utilization" to com.civileg.app.ui.compose.screens.HordiResultPresentation.exportUtilization(res.utilizationRatio),
-                    "Is Safe" to if (res.isSafe) "YES" else "NO"
+                val resultsMap = com.civileg.app.ui.compose.screens.HordiResultPresentation.exportResultsMap(
+                    requiredReinforcement = res.requiredReinforcement,
+                    providedReinforcement = res.providedReinforcement,
+                    barDiameter = res.barDiameter, barSpacing = res.barSpacing,
+                    minThickness = res.minThickness,
+                    shearCapacity = res.shearCapacity,
+                    utilizationRatio = res.utilizationRatio,
+                    isSafe = res.isSafe
                 )
 
                 val safetyChecks = emptyList<GenericSafetyCheck>()
