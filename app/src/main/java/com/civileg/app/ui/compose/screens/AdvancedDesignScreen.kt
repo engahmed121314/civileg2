@@ -63,13 +63,21 @@ import com.civileg.app.domain.calculations.compositebeam.CompositeBeamDesign
 import com.civileg.app.domain.calculations.compositebeam.CompositeBeamDesignResult
 import com.civileg.app.domain.calculations.compositebeam.CompositeBeamInput
 import com.civileg.app.domain.calculations.aci.ACIAdvancedBeam
+import com.civileg.app.domain.calculations.aci.ACIAdvancedColumn
 import com.civileg.app.domain.calculations.compositebeam.CompositeDesignCode
 import com.civileg.app.domain.calculations.ecp.ECPAdvancedBeam
+import com.civileg.app.domain.calculations.ecp.ECPAdvancedColumn
 import com.civileg.app.domain.calculations.sbc.SBCAdvancedBeam
+import com.civileg.app.domain.calculations.sbc.SBCAdvancedColumn
 import com.civileg.app.domain.entities.AdvancedBeamResult
 import com.civileg.app.domain.entities.BeamSectionType
 import com.civileg.app.domain.entities.BeamType
+import com.civileg.app.domain.entities.AdvancedColumnResult
+import com.civileg.app.domain.entities.ColumnEndConditions
+import com.civileg.app.domain.entities.ColumnType
+import com.civileg.app.domain.entities.ConnectedSlabType
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.EndCondition
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.calculations.deepbeam.DeepBeamCode
 import com.civileg.app.domain.calculations.deepbeam.DeepBeamDesign
@@ -89,6 +97,7 @@ import com.civileg.app.domain.calculations.settlement.SettlementResult
 
 private enum class AdvancedModule(val title: String, val titleAr: String) {
     Beam("Beam", "كمرة"),
+    Column("Column", "عمود"),
     CompositeBeam("Composite", "مركبة"),
     FireResistance("Fire", "حريق"),
     DeepBeam("Deep Beam", "كمرة عميقة"),
@@ -124,6 +133,22 @@ private class AdvancedFormState {
     var bFy by mutableStateOf("400")
     var bDead by mutableStateOf("20")
     var bLive by mutableStateOf("10")
+
+    // Advanced column (ECP/SBC/ACI)
+    var colCode by mutableStateOf(DesignCode.ECP)
+    var colCombo by mutableStateOf(LoadCombination.DEAD_LIVE)
+    var colTop by mutableStateOf(EndCondition.PINNED)
+    var colBottom by mutableStateOf(EndCondition.FIXED)
+    var colSlab by mutableStateOf(ConnectedSlabType.SOLID)
+    var colHasCap by mutableStateOf(true)
+    var colWidth by mutableStateOf("300")
+    var colDepth by mutableStateOf("600")
+    var colFcu by mutableStateOf("30")
+    var colFy by mutableStateOf("400")
+    var colAxial by mutableStateOf("1500")
+    var colMx by mutableStateOf("50")
+    var colMy by mutableStateOf("0")
+    var colLength by mutableStateOf("3.0")
 
     // Composite beam
     var compositeCode by mutableStateOf(CompositeDesignCode.ECP)
@@ -232,6 +257,11 @@ private fun AdvancedFormState.beamSignature() = inputSignature(
     beamCode, beamKind, beamCombo, bSpan, bWidth, bDepth, bFcu, bFy, bDead, bLive
 )
 
+private fun AdvancedFormState.columnSignature() = inputSignature(
+    colCode, colCombo, colTop, colBottom, colSlab, colHasCap,
+    colWidth, colDepth, colFcu, colFy, colAxial, colMx, colMy, colLength
+)
+
 private fun AdvancedFormState.settlementSignature() = inputSignature(
     sWidth, sLength, sPressure, sModulus, sPoisson, sInfluence, sLayer, sCc, sCr,
     sE0, sSigma0, sSigmaP, sCv, sDrainage, sTime, sAllowSettle
@@ -257,6 +287,8 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
     var settlementResultSignature by remember { mutableStateOf<String?>(null) }
     var beamResult by remember { mutableStateOf<AdvancedBeamResult?>(null) }
     var beamResultSignature by remember { mutableStateOf<String?>(null) }
+    var columnResult by remember { mutableStateOf<AdvancedColumnResult?>(null) }
+    var columnResultSignature by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
@@ -330,6 +362,42 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
             beamResult = it
             beamResultSignature = signature
         }.onFailure { errorMessage = it.message ?: "Beam calculation failed" }
+    }
+
+    fun calculateColumn() {
+        val signature = form.columnSignature()
+        columnResult = null
+        columnResultSignature = null
+        runCatching {
+            val section = ColumnType.Rectangular(
+                width = form.colWidth.num("column width"),
+                depth = form.colDepth.num("column depth")
+            )
+            val fcu = form.colFcu.num("fcu")
+            val fy = form.colFy.num("fy")
+            val axial = form.colAxial.num("axial load")
+            val mx = form.colMx.num("moment X")
+            val my = form.colMy.num("moment Y")
+            val length = form.colLength.num("unsupported length")
+            val ends = ColumnEndConditions(form.colTop, form.colBottom)
+            when (form.colCode) {
+                DesignCode.ECP -> ECPAdvancedColumn().designAdvancedColumn(
+                    section, fcu, fy, axial, mx, my, length, ends,
+                    form.colSlab, form.colHasCap, null, form.colCombo
+                )
+                DesignCode.SBC -> SBCAdvancedColumn().designAdvancedColumn(
+                    section, fcu, fy, axial, mx, my, length, ends,
+                    form.colSlab, form.colHasCap, null, form.colCombo
+                )
+                DesignCode.ACI -> ACIAdvancedColumn().designAdvancedColumn(
+                    section, fcu, fy, axial, mx, my, length, ends,
+                    form.colSlab, form.colHasCap, null, form.colCombo
+                )
+            }
+        }.onSuccess {
+            columnResult = it
+            columnResultSignature = signature
+        }.onFailure { errorMessage = it.message ?: "Column calculation failed" }
     }
 
     fun calculateFire() {
@@ -498,6 +566,11 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
                         beamResult.takeIf { beamResultSignature == form.beamSignature() },
                         ::calculateBeam
                     )
+                    AdvancedModule.Column ->                     columnContent(
+                        form,
+                        columnResult.takeIf { columnResultSignature == form.columnSignature() },
+                        ::calculateColumn
+                    )
                     AdvancedModule.CompositeBeam ->                     compositeContent(
                         form,
                         compositeResult.takeIf { compositeResultSignature == form.compositeSignature() },
@@ -615,6 +688,110 @@ private fun androidx.compose.foundation.lazy.LazyListScope.beamContent(
                     ResultRow("Calculated", "%.3f mm".format(cw.calculatedWidth), bold = true)
                     ResultRow("Allowable", "%.3f mm".format(cw.allowableWidth))
                 }
+            }
+        }
+        item { NotesCard(r.warnings, r.codeNotes) }
+    }
+}
+
+// ───────────────────────────── Advanced column (ECP/SBC/ACI) ─────────────────────────────
+
+private fun androidx.compose.foundation.lazy.LazyListScope.columnContent(
+    form: AdvancedFormState,
+    result: AdvancedColumnResult?,
+    onCalculate: () -> Unit
+) {
+    item {
+        SectionTitle("Advanced Column Design", "تصميم عمود متقدم")
+        Spacer(Modifier.height(8.dp))
+        CodeChips(
+            options = DesignCode.entries,
+            selected = form.colCode,
+            label = { it.version },
+            onSelected = { form.colCode = it }
+        )
+    }
+    item {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NumField("Width (mm)", form.colWidth, Modifier.weight(1f)) { form.colWidth = it }
+            NumField("Depth (mm)", form.colDepth, Modifier.weight(1f)) { form.colDepth = it }
+            NumField("Length (m)", form.colLength, Modifier.weight(1f)) { form.colLength = it }
+        }
+    }
+    item {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NumField("fcu (MPa)", form.colFcu, Modifier.weight(1f)) { form.colFcu = it }
+            NumField("fy (MPa)", form.colFy, Modifier.weight(1f)) { form.colFy = it }
+        }
+    }
+    item {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NumField("Axial (kN)", form.colAxial, Modifier.weight(1f)) { form.colAxial = it }
+            NumField("Mx (kN.m)", form.colMx, Modifier.weight(1f)) { form.colMx = it }
+            NumField("My (kN.m)", form.colMy, Modifier.weight(1f)) { form.colMy = it }
+        }
+    }
+    item {
+        AppText("Top end / طرف أعلى", style = MaterialTheme.typography.bodySmall)
+        CodeChips(
+            options = EndCondition.entries.toList(),
+            selected = form.colTop,
+            label = { it.displayName },
+            onSelected = { form.colTop = it }
+        )
+        Spacer(Modifier.height(4.dp))
+        AppText("Bottom end / طرف أسفل", style = MaterialTheme.typography.bodySmall)
+        CodeChips(
+            options = EndCondition.entries.toList(),
+            selected = form.colBottom,
+            label = { it.displayName },
+            onSelected = { form.colBottom = it }
+        )
+    }
+    item {
+        CodeChips(
+            options = ConnectedSlabType.entries.toList(),
+            selected = form.colSlab,
+            label = { it.displayName },
+            onSelected = { form.colSlab = it }
+        )
+        Spacer(Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AppText("Column cap / تاج عمود", modifier = Modifier.weight(1f))
+            Switch(checked = form.colHasCap, onCheckedChange = { form.colHasCap = it })
+        }
+    }
+    item {
+        CodeChips(
+            options = LoadCombination.entries.toList(),
+            selected = form.colCombo,
+            label = { it.name },
+            onSelected = { form.colCombo = it }
+        )
+    }
+    item { CalculateButton(onCalculate) }
+    result?.let { r ->
+        item { StatusBanner(isSafe = r.reinforcementResult.isSafe) }
+        item {
+            ResultCard("Capacity / القدرة") {
+                ResultRow("Axial capacity", "%.0f kN".format(r.axialCapacity), bold = true)
+                ResultRow("Moment capacity X", "%.1f kN.m".format(r.momentCapacityX))
+                ResultRow("Moment capacity Y", "%.1f kN.m".format(r.momentCapacityY))
+            }
+        }
+        item {
+            ResultCard("Slenderness / النحافة") {
+                ResultRow("Effective length", "%.2f m".format(r.effectiveLength))
+                ResultRow("Slenderness ratio", "%.1f".format(r.slendernessRatio), bold = true)
+                ResultRow("Slender?", if (r.isSlender) "Yes / نعم" else "No / لا")
+            }
+        }
+        item {
+            ResultCard("Reinforcement / التسليح") {
+                ResultRow("As required", "%.0f mm²".format(r.reinforcementResult.astRequired), bold = true)
+                ResultRow("As provided", "%.0f mm²".format(r.reinforcementResult.astProvided))
+                ResultRow("Bars", "${r.reinforcementResult.numberOfBars}Ø${r.reinforcementResult.barDiameter.toInt()}")
+                ResultRow("Utilization", "%.2f".format(r.reinforcementResult.utilizationRatio))
             }
         }
         item { NotesCard(r.warnings, r.codeNotes) }
