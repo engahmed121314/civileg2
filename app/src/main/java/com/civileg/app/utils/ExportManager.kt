@@ -17,6 +17,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import com.civileg.app.domain.calculations.utils.BbsEntry
 
 /**
  * Unified Export Manager — Single entry point for all exports (PDF, DXF, IFC, CSV).

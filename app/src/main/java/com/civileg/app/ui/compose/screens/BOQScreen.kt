@@ -36,7 +36,7 @@ import androidx.compose.ui.res.stringResource
 import com.civileg.app.domain.calculations.ecp.TrialRunManager
 import com.civileg.app.domain.entities.BoqCategory
 import com.civileg.app.utils.EstimationEngine
-import com.civileg.app.utils.PdfGenerator
+import com.civileg.app.shared.reporting.PdfGenerator
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText

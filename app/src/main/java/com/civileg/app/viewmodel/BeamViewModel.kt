@@ -7,11 +7,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.db.DesignRepository
-import com.civileg.app.utils.BoqEstimator
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.BoqEstimator
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
-import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.CalculationValidator
+import com.civileg.app.shared.reporting.PdfDrawingGenerator
+import com.civileg.app.domain.calculations.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import android.graphics.Bitmap
@@ -160,7 +160,7 @@ class BeamViewModel @Inject constructor(
         val res = _result.value
         val spanMm = ((if (res != null && res.span > 0) res.span else lastSpan) * 1000.0)
         val bbs = if (res != null) {
-            runCatching { com.civileg.app.utils.BbsGenerator.generateBeamBbs("B1", res, spanMm) }.getOrDefault(emptyList())
+            runCatching { com.civileg.app.domain.calculations.utils.BbsGenerator.generateBeamBbs("B1", res, spanMm) }.getOrDefault(emptyList())
         } else {
             emptyList()
         }
@@ -288,7 +288,7 @@ class BeamViewModel @Inject constructor(
                     isSafe = res.isSafe,
                     calculationSteps = res.calculationSteps,
                     bbsEntries = runCatching {
-                        com.civileg.app.utils.BbsGenerator.generateBeamBbs("B1", res, res.span * 1000.0)
+                        com.civileg.app.domain.calculations.utils.BbsGenerator.generateBeamBbs("B1", res, res.span * 1000.0)
                     }.getOrDefault(emptyList()),
                     boqRows = BoqEstimator.beamRows(res, "B1"),
                     drawingBitmap = drawingBitmap,

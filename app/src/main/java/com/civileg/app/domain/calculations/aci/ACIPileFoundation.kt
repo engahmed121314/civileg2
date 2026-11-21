@@ -291,11 +291,18 @@ class ACIPileFoundation : PileFoundationDesign {
     }
 
     private fun calculateAlphaFactor(cu: Double, pileType: PileType): Double {
-        val baseAlpha = when {
-            cu <= 25.0 -> 1.0
-            cu <= 50.0 -> 1.0 - (cu - 25.0) / 100.0
-            cu <= 100.0 -> 0.5
-            else -> 0.5 * sqrt(100.0 / cu)
+        // API RP 2A-WSD 6.4.2 alpha method, applied as a CONTINUOUS curve
+        // (owner decision 2026-11-21: replace the old banded curve that dropped
+        // alpha 0.75 -> 0.5 at cu = 50 kPa). With the engine's implicit
+        // overburden p'0 = 100 kPa, psi = cu/100:
+        //   psi <= 1: alpha = min(1.0, 0.5 * psi^-0.5)
+        //   psi >  1: alpha = 0.5 * psi^-0.25
+        // Continuous at cu = 25 (1.0) and cu = 100 (0.5) by construction.
+        val psi = cu / 100.0
+        val baseAlpha = if (psi <= 1.0) {
+            (0.5 * psi.pow(-0.5)).coerceAtMost(1.0)
+        } else {
+            0.5 * psi.pow(-0.25)
         }
         return when (pileType) {
             PileType.DRIVEN -> baseAlpha
@@ -369,8 +376,12 @@ class ACIPileFoundation : PileFoundationDesign {
         val beamShearCapacity = PHI_SHEAR * 0.17 * sqrt(fc)
 
         // ── Flexure (ACI Rn-ρ, φ=0.9) ──────────────────────────────
-        val Mu = PperPile * shearSpan  // kN.m per meter strip
-        val MuNmm = Mu * 1e6
+        val Mu = PperPile * shearSpan  // kN*mm (PperPile kN x shearSpan mm)
+        // Mu is in kN*mm, so N*mm = kN*mm x 1e3. The old factor 1e6 inflated
+        // the moment 1000x, driving Rn to ~1343 MPa, rhoReq past the 0.025 cap,
+        // and AsRequired to 2.5% of b*d (7x the correct steel for typical
+        // inputs). (AUDIT 2026-11-21, golden vector: As drops 22720 -> 3181 mm2)
+        val MuNmm = Mu * 1e3
         val b = capLength
         val Rn = MuNmm / (PHI_FLEXURE * b * dCap * dCap)
         val m = input.fy / (0.85 * fc)
@@ -381,13 +392,21 @@ class ACIPileFoundation : PileFoundationDesign {
         val AsMin = rhoMin * b * dCap
         val AsDesign = max(AsRequired, AsMin)
 
-        var selDia = 16.0
-        var selSpacing = 200
+        // Bar selection must PROVIDE at least AsDesign, not just space the
+        // required COUNT at a coerced spacing. The old loop accepted the first
+        // diameter whose count fit within 300 mm spacing after coercing the
+        // spacing up to 100 mm, which silently provided less steel than
+        // required (e.g. the golden-vector case: 25 T12 = 2827 mm2 provided
+        // vs 3181 mm2 required). Now a diameter is accepted only if the
+        // provided area meets the requirement (AUDIT 2026-11-21).
+        var selDia = BAR_DIAMETERS.last()
+        var selSpacing = 100
         for (dia in BAR_DIAMETERS) {
             val area = PI * dia * dia / 4
             val nBars = ceil(AsDesign / area).toInt().coerceAtLeast(4)
             val sp = floor(b / nBars).toInt().coerceAtLeast(100)
-            if (sp <= 300) {
+            val provided = area * (b / sp).toInt()
+            if (sp <= 300 && provided >= AsDesign) {
                 selDia = dia; selSpacing = sp; break
             }
         }
@@ -480,9 +499,14 @@ class ACIPileFoundation : PileFoundationDesign {
         val d = input.pileDiameter / 1000.0
         val s = input.spacing * d
 
+        // Standard Converse-Labarre (owner decision 2026-11-21: replace the
+        // engine variant that used atan(s/d) and dropped the (n-1)*m term):
+        //   eta = 1 - theta * ((m-1)*ncols + (ncols-1)*m) / (90 * m * ncols)
+        //   theta = atan(d/s) in DEGREES, m rows x ncols piles.
         val m = ceil(sqrt(n.toDouble())).toInt()
-        val angle = atan(s / d.coerceAtLeast(0.01))
-        val efficiency = 1.0 - (m - 1) * (s - d).coerceAtLeast(0.0) / (m * s.coerceAtLeast(0.01)) * angle * 2.0 / PI
+        val ncols = ceil(n.toDouble() / m).toInt()
+        val thetaDeg = atan(d / s.coerceAtLeast(0.01)) * 180.0 / PI
+        val efficiency = 1.0 - thetaDeg * ((m - 1) * ncols + (ncols - 1) * m) / (90.0 * m * ncols)
 
         val singleCapacity = 500.0  // kN conservative default
         val groupCapacity = efficiency * n * singleCapacity

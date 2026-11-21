@@ -294,6 +294,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 
     // Security: force patched Guava pulled transitively by play-services-ads-lite.
     // Older resolved lines are affected by CVE-2023-2976, CVE-2020-8908 and

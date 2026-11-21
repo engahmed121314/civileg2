@@ -66,7 +66,7 @@ import com.civileg.app.utils.BearingMethod
 import com.civileg.app.utils.QualityControlEngine
 import com.civileg.app.utils.QualityControlEngineNew
 import com.civileg.app.utils.QcLimits
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.SoilType
 import com.civileg.app.viewmodel.QualityEngineerViewModel
 import com.civileg.app.viewmodel.ReportsQCState

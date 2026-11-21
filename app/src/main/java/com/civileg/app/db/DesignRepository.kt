@@ -4,7 +4,7 @@ import com.civileg.app.domain.entities.DesignCode
 
 import com.civileg.app.domain.entities.SteelMemberResult
 import com.civileg.app.domain.entities.SteelWarehouseAnalysisResult
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 import org.json.JSONObject
