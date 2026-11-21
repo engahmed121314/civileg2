@@ -1,5 +1,8 @@
 package com.civileg.core.calculations.entities
 
+import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.ReinforcementResult
+
 /**
  * كيانات خاصة بتقسيم البلاطات المسطحة إلى شرائط
  */

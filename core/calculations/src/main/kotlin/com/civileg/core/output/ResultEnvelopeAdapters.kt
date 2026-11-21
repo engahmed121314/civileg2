@@ -1,7 +1,7 @@
 package com.civileg.core.output
 
-import com.civileg.core.calculations.entities.DesignCode
-import com.civileg.core.calculations.entities.ElementType
+import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.ElementType
 import com.civileg.core.engine.rc.ecp.ECP203Engine
 import kotlin.math.max
 
