@@ -66,3 +66,21 @@ Golden vectors: A-01/A-02 (tension bolted, net rupture governs), A-03
 (RHS inelastic + I-section elastic), A-04 block-shear arithmetic. Torsional
 path and welded placeholder pinned as characterization (U-A1/U-A2).
 No production formula was added or changed in this batch.
+
+## Owner-decision batch — AISC steel corrections (accessed 2026-11-21)
+
+The owner directed the engineering-correct fix for all three AISC findings
+from the member-design batch (his standing rule: fix correctly, document,
+separate PR, nothing merges without his OK).
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| A-06 | AISC 360-16 J4.3 block shear applies to BOLTED (holed) connections; welded and pressed connections have no block-shear limit state. The placeholder `0.75·0.6·Fy·Ag` that governed welded tension is removed; those paths now return +infinity (excluded from the governing min). Welded tension capacity rises ~2x to the D2-1/D2-2 value. U-A1 RESOLVED. | [ideCAD — Steel Member Design per AISC 360-16](https://help.idecad.com/ideCAD/steel-column-design-aisc-360-16) (J4.3 scope, secondary) | Verified (secondary) |
+| A-07 | AISC 360-16 E4: Fcr for torsional/flexural-torsional buckling comes from the E3 equations applied to the TORSIONAL elastic stress Fe, with the inelastic/elastic branch at Fy/Fe = 2.25. The branch no longer keys on the flexural slenderness. U-A2 RESOLVED. Remaining simplification: L = min(KxLx, KyLy) pending a Kz·Lz input (U-A2a, conservative). | [ideCAD — Flexural Buckling per AISC 360-16](https://help.idecad.com/ideCAD/flexural-buckling) | Verified (secondary) |
+| A-08 | Exact plastic section modulus replaces the 1.12·Sx approximation: I-shape `Zx = bf·tf·(h−tf) + tw·(h−2tf)²/4`; CHS/Pipe `(D³−(D−2t)³)/6`; RHS `(w·h²−(w−2t)(h−2t)²)/4`. Singly symmetric shapes (C/L/T/PG) keep shape factors pending plastic-NA work. U-A3 RESOLVED for I/CHS/RHS/Pipe. | Standard strength-of-materials exact forms (Zx of I 300x150x10x7 = 572,200 mm³, shape factor 1.131 vs the old flat 1.12) | Verified (textbook) |
+
+Behavior changes (intended, owner-approved): welded/pressed tension capacity
+increases to the correct D2 values; torsional branch selection corrected;
+flexural capacities via Zx shift slightly (I-shapes up to ~1%, more accurate).
+Golden vectors updated on this branch (welded tension governs D2-1;
+torsional-governed compression re-pinned).
