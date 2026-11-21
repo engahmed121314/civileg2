@@ -297,3 +297,24 @@ aggregate-size input). The design loop escalates bar diameter when spacing
 binds before declaring the section inadequate. Vectors: Mx=My=80 kNm passes
 8Ø20 (113.14 < 130.595); Mx=My=100 fails 8Ø20 and 10Ø20 (140.024), passes
 12Ø20 (149.646); end-to-end Pu=1500/Mx=My=100 → 18Ø16 (Ø14 spacing-blocked).
+
+**F-08 addendum 2 (same day) — independent benchmark, convergence, dagg exposure.**
+(a) The contour evaluation is verified against an INDEPENDENT closed-form
+derivation (analytic polygon geometry by hand, not the clipping code): 4
+corner Ø20, 400×400, fc'=24, θ=45°, c=500 mm → φPn = 2 039 460.215 N,
+φMnx = φMny = 45 278 623.759 N·mm; the engine reproduces every digit.
+(b) The pass/fail test no longer interpolates a scanned contour polygon (which
+would have needed a convexity assumption). It matches the moment-vector
+direction to the demand direction (360-direction scan + bisection brackets)
+and compares magnitudes at the matched orientation; multiple matches take the
+LOWEST capacity and ties fail closed — conservative boundary handling.
+Convergence: c-bisection 60 iterations over [1e-3, 1e12] mm (|Δc| < 1e-6 mm),
+direction error < 1e-15 rad. Verified equivalence: direction-match capacity
+at 45° = 130.5950 kNm (scan+polygon agreed), at 90° = 144.5159 kNm = the
+uniaxial solve 144.5159.
+(c) Aggregate size: no dagg input exists anywhere in the design path (UI →
+CalculatorEngine → engine signature carry none; the pricing module's aggregate
+entries are material names only). The §25.2.3 (4/3)dagg term is therefore NOT
+checked; every result now carries an explicit code note saying the spacing was
+checked against max(40 mm, 1.5db) only and the (4/3)dagg term is UNVERIFIED.
+Constructibility is not claimed as fully code-checked.

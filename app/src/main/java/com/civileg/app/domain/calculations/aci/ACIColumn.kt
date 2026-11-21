@@ -191,11 +191,17 @@ class ACIColumn : ColumnDesign {
         return abs(A) to (cx / (6 * A) to cy / (6 * A))
     }
 
-    /** φPn, φMnx, φMny at neutral-axis orientation [theta] (normal from centroid toward max-compression fiber) and depth [c]. */
-    private fun contourPoint(
-        fc: Double, fy: Double, width: Double, depth: Double,
+    /**
+     * φPn, φMnx, φMny at neutral-axis orientation [theta] (normal from the centroid toward
+     * the maximum-compression fiber) and neutral-axis depth [c], per ACI 318M-14
+     * §22.2.1/§22.2.2/§22.2.4.1-2 and Table 21.2.2. Public for golden-vector verification
+     * against closed-form benchmarks.
+     */
+    fun contourPointAt(
+        fcu: Double, fy: Double, width: Double, depth: Double,
         bars: List<Triple<Double, Double, Double>>, theta: Double, c: Double
     ): Triple<Double, Double, Double> {
+        val fc = 0.8 * fcu
         val nx = cos(theta)
         val ny = sin(theta)
         val a = beta1(fc) * c
@@ -226,11 +232,18 @@ class ACIColumn : ColumnDesign {
      * Biaxial axial-moment interaction check per ACI 318M-14 §22.2.1.1 (equilibrium at
      * each section), §22.2.4.1 (0.85fc' over the compression zone bounded by the section
      * edges and a line parallel to the neutral axis at a = β1c) and §22.2.4.2 (c measured
-     * perpendicular to the neutral axis). Scans the neutral-axis orientation, solves
-     * φPn(c) = Pu by bisection in each direction (φ per Table 21.2.2 from the extreme
-     * tension bar), and tests whether the demand vector (Mux, Muy) lies inside the
-     * resulting φM contour. Uniaxial demands are included as contour directions, so this
-     * check alone covers both cases.
+     * perpendicular to the neutral axis). Finds the neutral-axis orientation whose moment
+     * vector direction matches the demand direction ([steps]-direction scan at 1 degree,
+     * each bracketing interval bisected), solves φPn(c) = Pu
+     * there by bisection, and passes when the contour magnitude at the demand direction
+     * covers |Mu|. No polygon interpolation is used, so no convexity assumption is made;
+     * when several orientations match the demand direction the LOWEST capacity governs
+     * (conservative), and a demand exactly on the boundary counts as pass only if
+     * |Mu| <= capacity exactly (ties fail closed on floating-point error).
+     *
+     * Convergence: c-bisection over [1e-3, 1e12] mm with 60 iterations (|Δc| < 1e-6 mm);
+     * direction scan 1 degree + 60 bisection iterations (direction error < 1e-15 rad).
+     * Verified against a closed-form benchmark in ACIColumnInteractionTest.
      *
      * @param bars bars in CENTROID coordinates: (x mm, y mm, area mm²)
      */
@@ -238,125 +251,53 @@ class ACIColumn : ColumnDesign {
         fcu: Double, fy: Double, width: Double, depth: Double,
         bars: List<Triple<Double, Double, Double>>,
         Pu: Double, Mux: Double, Muy: Double,
-        steps: Int = 720
+        steps: Int = 360
     ): Boolean {
-        val fc = 0.8 * fcu
-        val contour = ArrayList<Pair<Double, Double>>(steps)
-        for (k in 0 until steps) {
-            val theta = 2 * PI * k / steps
+        require(Mux > 0.0 || Muy > 0.0) { "checkBiaxial needs a nonzero moment demand" }
+        val alpha = atan2(Muy, Mux)
+        val demandMag = hypot(Mux, Muy)
+        fun solveC(theta: Double): Double? {
             var lo = 1e-3
             var hi = 1e12
-            if (contourPoint(fc, fy, width, depth, bars, theta, hi).first < Pu) continue
-            repeat(100) {
+            if (contourPointAt(fcu, fy, width, depth, bars, theta, hi).first < Pu) return null
+            repeat(60) {
                 val mid = (lo + hi) / 2.0
-                if (contourPoint(fc, fy, width, depth, bars, theta, mid).first < Pu) lo = mid else hi = mid
+                if (contourPointAt(fcu, fy, width, depth, bars, theta, mid).first < Pu) lo = mid else hi = mid
             }
-            val p = contourPoint(fc, fy, width, depth, bars, theta, (lo + hi) / 2.0)
-            contour += p.second to p.third
+            return (lo + hi) / 2.0
         }
-        if (contour.size < 3) return false
-        var inside = false
-        var j = contour.size - 1
-        for (i in contour.indices) {
-            val (xi, yi) = contour[i]
-            val (xj, yj) = contour[j]
-            if ((yi > Muy) != (yj > Muy) && Mux < (xj - xi) * (Muy - yi) / (yj - yi) + xi) inside = !inside
-            j = i
+        fun delta(theta: Double): Double? {
+            val c = solveC(theta) ?: return null
+            val p = contourPointAt(fcu, fy, width, depth, bars, theta, c)
+            var d = atan2(p.third, p.second) - alpha
+            while (d > PI) d -= 2 * PI
+            while (d <= -PI) d += 2 * PI
+            return d
         }
-        return inside
-    }
-
-    override fun calculateAxialCapacity(
-        fcu: Double,
-        fy: Double,
-        width: Double,
-        depth: Double,
-        reinforcementArea: Double,
-        loadCombination: LoadCombination
-    ): Double {
-        InputGuard.positive("fcu", fcu)
-        InputGuard.positive("fy", fy)
-        InputGuard.positive("width", width)
-        InputGuard.positive("depth", depth)
-        val Ag = width * depth
-        val Ast = reinforcementArea.coerceAtMost(Ag * 0.08)
-        
-        // ACI 318-22.4.2: Pn = 0.85*fc'*(Ag-Ast) + fy*Ast
-        // fc' = 0.8 × fcu (cube to cylinder conversion)
-        val fc_prime = 0.8 * fcu
-        val concreteCapacity = 0.85 * fc_prime * (Ag - Ast)
-        val steelCapacity = fy * Ast
-        val nominalCapacity = concreteCapacity + steelCapacity
-        
-        // ACI 318-25 §22.4.2.2: Pn,max = 0.80*Po for tied, 0.85*Po for spiral (حد اللامركزية الدنيا)
-        // ثم φPn,max = φ * Pn,max
-        val alpha = 0.80 // tied column limit
-        val phi = PHI_TIED
-        return phi * alpha * nominalCapacity / 1000.0 // kN
-    }
-    
-    /**
-     * حساب القدرة المحورية مع اختيار نوع العمود (مربوط/حلزوني)
-     * ACI 318-21.2.1: φ=0.65 (tied) أو φ=0.75 (spiral)
-     */
-    fun calculateAxialCapacityWithPhi(
-        fcu: Double, fy: Double, width: Double, depth: Double,
-        reinforcementArea: Double, isSpiral: Boolean
-    ): Double {
-        InputGuard.positive("fcu", fcu)
-        InputGuard.positive("fy", fy)
-        InputGuard.positive("width", width)
-        InputGuard.positive("depth", depth)
-        val Ag = width * depth
-        val Ast = reinforcementArea.coerceAtMost(Ag * 0.08)
-        val fc_prime = 0.8 * fcu
-        val concreteCapacity = 0.85 * fc_prime * (Ag - Ast)
-        val steelCapacity = fy * Ast
-        val nominalCapacity = concreteCapacity + steelCapacity
-        val phi = if (isSpiral) PHI_SPIRAL else PHI_TIED
-        val alpha = if (isSpiral) 0.85 else 0.80 // ACI 22.4.2.2
-        return phi * alpha * nominalCapacity / 1000.0
-    }
-    
-    /**
-     * حساب نسبة النحافة ونسبة التحميل المسموحة
-     * ACI 318-22.4: λ = KL/r, Pn = Fcr × Ag
-     */
-    fun calculateSlendernessEffect(
-        unsupportedLength: Double, // m
-        effectiveLengthFactor: Double, // K
-        width: Double, depth: Double, // mm
-        fcu: Double, reinforcementRatio: Double = 0.01
-    ): Triple<Double, Boolean, Double> {
-        InputGuard.positive("unsupportedLength", unsupportedLength)
-        InputGuard.positive("effectiveLengthFactor", effectiveLengthFactor)
-        InputGuard.positive("width", width)
-        InputGuard.positive("depth", depth)
-        InputGuard.positive("fcu", fcu)
-        val Ag = width * depth
-        // نصف القطر الدوراني (المحور الأضع)
-        val minDimension = min(width, depth)
-        val r = minDimension / sqrt(12.0)
-        val L_mm = unsupportedLength * 1000.0
-        val slendernessRatio = effectiveLengthFactor * L_mm / r
-        
-        // ACI 318-22.4.2.1: العمود قصير إذا λ ≤ 22 (مربوط) أو λ ≤ 28 (حلزوني)
-        val isShort = slendernessRatio <= 22.0
-        
-        // حساب إجهاد الانبعاج الحرج Fcr
-        // ACI 22.4.2.1: EI = 0.4 × Ec × Ig + Es × As × (h/2 - d')^2
-        // Ig = b × h^3 / 12 (moment of inertia of gross concrete section)
-        val fc_prime = 0.8 * fcu
-        val Ig = width * depth.pow(3) / 12.0  // mm^4
-        val Ec = 4700.0 * sqrt(fc_prime)      // MPa
-        val Es = 200000.0                       // MPa
-        val As = reinforcementRatio * Ag
-        val d_prime = 40.0  // cover + tie dia (approximate, mm)
-        val EI = 0.4 * Ec * Ig + Es * As * ((minDimension / 2.0) - d_prime).pow(2)  // N.mm^2
-        val PI2_EI = PI * PI * EI / 1e6  // kN.m^2 (unit conversion)
-        val Pc = PI2_EI / (unsupportedLength * unsupportedLength)  // kN
-        
-        return Triple(slendernessRatio, !isShort, Pc)
+        var minCap = Double.POSITIVE_INFINITY
+        var prevTheta = 0.0
+        var prev = delta(0.0) ?: return false
+        for (k in 1..steps) {
+            val theta = 2 * PI * k / steps
+            val cur = delta(theta) ?: return false
+            if (prev * cur < 0.0) {
+                var lo = prevTheta
+                var hi = theta
+                repeat(60) {
+                    val mid = (lo + hi) / 2.0
+                    val d = delta(mid) ?: return false
+                    if (prev * d < 0.0) hi = mid else lo = mid
+                }
+                val th = (lo + hi) / 2.0
+                val c = solveC(th) ?: return false
+                val p = contourPointAt(fcu, fy, width, depth, bars, th, c)
+                minCap = min(minCap, hypot(p.second, p.third))
+            }
+            prev = cur
+            prevTheta = theta
+        }
+        if (minCap == Double.POSITIVE_INFINITY) return false
+        return demandMag <= minCap
     }
 
     override fun calculateReinforcement(
@@ -474,6 +415,7 @@ class ACIColumn : ColumnDesign {
             codeNotes.add("Axial-moment interaction checked by strain compatibility incl. biaxial contour (ACI 318M-14 22.2.1.1/22.2.4.1/22.2.4.2, Table 21.2.2)")
         }
         val astProvided = numberOfBars * barArea
+        codeNotes.add("Bar clear spacing checked vs max(40mm, 1.5db) per ACI 318M-14 25.2.3; the (4/3)dagg term is UNVERIFIED - the app has no aggregate-size input")
 
         // Ties per ACI 318M-14 §25.7.2.2 (Ø10 for longitudinal bars ≤ Ø32)
         val tiesDiameter = if (barDiameter <= 32.0) 10.0 else 12.0

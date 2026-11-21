@@ -2,7 +2,7 @@ package com.civileg.app.domain.calculations.aci
 
 import org.junit.Assert.*
 import org.junit.Test
-import kotlin.math.PI
+import kotlin.math.*
 
 /**
  * Golden vectors for the F-08 strain-compatibility interaction in [ACIColumn.checkInteraction].
@@ -59,6 +59,18 @@ class ACIColumnInteractionTest {
 
     private fun centeredBars(nBars: Int, w: Double, h: Double, dp: Double, ab: Double) =
         col.layoutPerimeterBars(nBars, w, h, dp).map { Triple(it.first - w / 2.0, it.second - h / 2.0, ab) }
+
+    @Test
+    fun `inclined neutral axis at 45 degrees matches a closed-form benchmark`() {
+        // Independent hand derivation (no clipping code): 4 corner dia.20, 400x400, fc=24,
+        // theta=45deg, c=500mm. Compression zone = square minus a right triangle of leg
+        // 198.9592 mm; per-bar strains from s = tmax - (x+y)/sqrt(2). See CLAUSE_LOG F-08.
+        val bars = centeredBars(4, 400.0, 400.0, 60.0, ab20)
+        val (phiPn, phiMnx, phiMny) = col.contourPointAt(30.0, 400.0, 400.0, 400.0, bars, PI / 4, 500.0)
+        assertEquals(2039460.215, phiPn, 1.0)
+        assertEquals(45278623.759, phiMnx, 1.0)
+        assertEquals(45278623.759, phiMny, 1.0)
+    }
 
     @Test
     fun `biaxial contour - 8T20 passes Mx=My=80 kNm at Pu 1500 kN`() {
