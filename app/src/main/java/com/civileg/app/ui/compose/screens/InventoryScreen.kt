@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -282,7 +283,7 @@ fun TypeFilterRow(selectedType: InventoryType?, onTypeSelected: (InventoryType?)
 @Composable
 fun InventoryItemCard(item: InventoryItem, context: Context, onUpdateQuantity: (Double) -> Unit, onDelete: () -> Unit) {
     val isLowStock = item.quantity <= item.alertQuantity
-    val dateFormat = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("yyyy/MM/dd HH:mm", LocalConfiguration.current.locales[0])
 
     Card(
         modifier = Modifier.fillMaxWidth(),

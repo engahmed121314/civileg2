@@ -37,6 +37,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Alignment
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
@@ -232,7 +233,7 @@ fun HomeScreen(
                 DesignType.STEEL_MEMBER -> Icons.Default.Build
                 else -> Icons.Default.Description
             }
-            val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(design.createdAt)
+            val dateStr = SimpleDateFormat("dd/MM/yyyy", LocalConfiguration.current.locales[0]).format(design.createdAt)
             RecentProject(
                 name = design.name,
                 elementType = typeLabel,

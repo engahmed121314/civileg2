@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -323,7 +324,7 @@ private fun ProjectCard(
                         style = MaterialTheme.typography.bodySmall
                     )
                     AppText(
-                        text = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(project.createdAt),
+                        text = SimpleDateFormat("dd MMM yyyy, hh:mm a", LocalConfiguration.current.locales[0]).format(project.createdAt),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary
                     )
