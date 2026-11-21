@@ -354,80 +354,129 @@ class ACIFooting : FootingDesign {
         InputGuard.positive("columnWidth", columnWidth)
         InputGuard.positive("columnDepth", columnDepth)
 
+        val warnings = mutableListOf<String>()
+        val codeNotes = mutableListOf<String>()
         val code = DesignCode.ACI
         val factor = loadCombination.getFactorForCode(code)
         val p1Working = axialLoad1 / factor
         val p2Working = axialLoad2 / factor
         val totalWorkingLoad = p1Working + p2Working
 
-        // ── Step 1: Locate resultant of column loads ──
-        // Distance from column 1 to resultant
+        // ── Step 1: resultant of (working) column loads, from column 1 centerline ──
         val xResultant = if (totalWorkingLoad > 0) (p2Working * distanceBetweenColumns) / totalWorkingLoad else distanceBetweenColumns / 2.0
 
-        // ── Step 2: Determine footing length ──
-        // Place resultant at centroid: L/2 = xResultant + s1 (overhang from col1)
-        val s1 = (columnDepth / 2.0 + 150.0).coerceIn(300.0, 800.0)  // overhang past column 1 edge
-        val footingLength = 2.0 * (xResultant + s1)
+        // ── Step 2: footing length — centroid under the resultant AND covering
+        // both columns (CF-05: the old L = 2(xR + s1) placed column 2 off the
+        // footing whenever P1 > P2, i.e. xR < S/2) ──
+        val s1 = (columnDepth / 2.0 + 150.0).coerceIn(300.0, 800.0)   // overhang past column 1
+        val s2 = (col2Depth / 2.0 + 150.0).coerceIn(300.0, 800.0)     // overhang past column 2
+        val footingLength = 2.0 * maxOf(xResultant + s1, (distanceBetweenColumns - xResultant) + s2)
 
-        // ── Step 3: Determine footing width ──
+        // ── Step 3: footing width from service bearing ──
         val requiredArea = totalWorkingLoad / soilBearingCapacity
-        var footingWidth = (requiredArea * 1e6) / footingLength
-        footingWidth = ceil(footingWidth / 50.0) * 50.0  // round up to 50mm
+        val footingWidth = ceil((requiredArea * 1e6) / footingLength / 50.0) * 50.0  // round up to 50mm
 
-        val actualArea = (footingLength * footingWidth) / 1e6  // m²
+        val actualArea = footingLength * footingWidth / 1e6  // m²
+        // Centroid sits at the resultant by construction → uniform pressure (CF-03:
+        // the old trapezoid block was dead code, e ≡ 0). Reported max = average.
         val soilPressure = totalWorkingLoad / actualArea  // kN/m²
+        val maxSoilPressure = soilPressure
 
-        // ── Step 4: Compute eccentricity and max/min soil pressure ──
-        // Centroid distance from left edge
-        val centroidFromLeft = footingLength / 2.0
-        // Eccentricity of resultant from centroid
-        val e = (xResultant + s1) - centroidFromLeft
-        // Soil pressure with eccentricity (trapezoidal distribution)
-        val I = footingWidth * footingLength.pow(3) / 12.0 / 1e12  // m⁴ (section modulus)
-        val M_ecc = totalWorkingLoad * e / 1000.0  // kN.m (moment due to eccentricity)
-        val S_section = I / (footingLength / 2000.0)  // m³ (section modulus)
-        val maxSoilPressure = if (S_section > 0) soilPressure + M_ecc / S_section else soilPressure
-        val minSoilPressure = if (S_section > 0) (soilPressure - M_ecc / S_section).coerceAtLeast(0.0) else soilPressure
-
-        // ── Step 5: Ultimate net soil pressure for reinforcement design ──
+        // ── Step 4: inverted-beam model — ACI 318M-14 §13.2.6.2 (any procedure
+        // satisfying equilibrium and geometric compatibility). Upward factored
+        // pressure, column loads as point loads; critical sections at column
+        // faces per Table 13.2.7.1 (CF-01). ──
         val effectiveDepth = footingDepth - getMinCover() - 10.0
-        val qu_ultimate = (axialLoad1 + axialLoad2) / actualArea  // kN/m² (factored)
+        val qu = (axialLoad1 + axialLoad2) / actualArea  // kN/m² factored
+        val wLin = qu * footingWidth / 1000.0            // kN/m along the length
+        val a1 = (footingLength / 2.0 - xResultant) / 1000.0   // m, col1 center from left edge
+        val a2 = a1 + distanceBetweenColumns / 1000.0          // m, col2 center
+        val lengthM = footingLength / 1000.0
 
-        // ── Step 6: Longitudinal bending — positive moment (between columns) ──
-        // Treat as beam loaded by qu, with point loads at column locations
-        // Maximum positive moment between columns (approximate: at resultant location)
-        val L_m = footingLength / 1000.0  // m
-        val maxPosMoment = qu_ultimate * footingWidth / 1000.0 * L_m.pow(2) / 8.0  // kN.m
+        fun momentAt(xi: Double) =
+            -wLin * xi * xi / 2.0 +
+            axialLoad1 * maxOf(0.0, xi - a1) +
+            axialLoad2 * maxOf(0.0, xi - a2)
 
-        // ── Step 7: Longitudinal bending — negative moment (cantilever at col1 side) ──
-        // Cantilever from edge to column 1
-        val cantileverL1 = s1 / 1000.0  // m
-        val negMoment1 = qu_ultimate * footingWidth / 1000.0 * cantileverL1.pow(2) / 2.0  // kN.m
-
-        // Take the larger moment for reinforcement design
-        val maxMoment = maxOf(maxPosMoment, negMoment1)
-
-        val reinforcement = calculateFootingReinforcement(
-            fcu, fy, footingWidth, footingLength, effectiveDepth,
-            maxMoment, FootingDirection.LONG
+        val xStar = axialLoad1 / wLin   // zero-shear point between columns
+        val candidates = mutableListOf(
+            a1 - columnDepth / 2000.0, a1 + columnDepth / 2000.0,
+            a2 - col2Depth / 2000.0, a2 + col2Depth / 2000.0
         )
+        if (xStar in a1..a2) candidates.add(xStar)
+        val moments = candidates.filter { it in 0.0..lengthM }.map { it to momentAt(it) }
+        val mPos = moments.maxOf { it.second }            // sagging → bottom steel
+        val mNeg = moments.minOf { it.second }            // hogging → top steel
 
-        // ── Step 8: Punching shear check at both columns ──
-        val punching1 = checkPunchingShear(fcu, columnWidth, columnDepth, effectiveDepth, axialLoad1, loadCombination)
-        val punching2 = checkPunchingShear(fcu, col2Width, col2Depth, effectiveDepth, axialLoad2, loadCombination)  // FIX: use col2 dimensions for col2 punching
+        // ── Step 5: longitudinal reinforcement (bottom and top), per meter of width ──
+        val widthM = footingWidth / 1000.0
+        val bottomReinf = flexurePerMeter(fcu, fy, footingDepth, effectiveDepth, mPos / widthM, FootingDirection.LONG)
+        val topReinf = if (mNeg < 0.0)
+            flexurePerMeter(fcu, fy, footingDepth, effectiveDepth, -mNeg / widthM, FootingDirection.LONG)
+        else null
 
-        // ── Step 9: One-way shear check at critical section (d from column face) ──
-        // V at distance d from column face: V = qu × B × (L/2 - colDepth/2 - d)
-        val shearDistance = footingLength / 2.0 - columnDepth / 2.0 - effectiveDepth
-        val Vu_oneWay = if (shearDistance > 0) qu_ultimate * footingWidth / 1000.0 * shearDistance / 1000.0 else 0.0  // kN
+        // ── Step 6: transverse beam strips under each column (CF-01). Column load
+        // spreads over a strip of width (column length + d); the strip cantilevers
+        // (B − c)/2 each side of the column face (classic combined-footing method
+        // per Das, Principles of Foundation Engineering — §13.2.6.2 equilibrium). ──
+        val transverse = mutableListOf<ReinforcementResult>()
+        listOf(
+            Triple(axialLoad1, columnWidth, columnDepth),
+            Triple(axialLoad2, col2Width, col2Depth)
+        ).forEachIndexed { idx, (pi, cTrans, cLong) ->
+            val stripWidth = (cLong + effectiveDepth).coerceAtMost(footingLength)
+            val cantilever = (footingWidth - cTrans) / 2000.0   // m
+            val pLine = pi / widthM                             // kN per m of strip length
+            val muStrip = pLine * cantilever * cantilever / 2.0 // kN·m total in the strip
+            val stripReinf = flexurePerMeter(
+                fcu, fy, footingDepth, effectiveDepth,
+                muStrip / (stripWidth / 1000.0), FootingDirection.SHORT
+            )
+            transverse += stripReinf
+            codeNotes.add(
+                "Transverse strip ${idx + 1}: width ${stripWidth.toInt()}mm, " +
+                "Mu = ${"%.1f".format(muStrip)} kN·m, As = ${"%.0f".format(stripReinf.astRequired)} mm²/m"
+            )
+        }
+
+        // ── Step 7: one-way shear at d from EACH column face, all four sections
+        // (CF-02: §13.2.7.2 + §22.5.5.1; the old check dropped the resultant
+        // offset and never checked column 2's inner face) ──
+        val dM = effectiveDepth / 1000.0
+        fun shearAt(xi: Double) =
+            wLin * xi -
+            (if (xi > a1) axialLoad1 else 0.0) -
+            (if (xi > a2) axialLoad2 else 0.0)
+
+        var vuOneWay = 0.0
+        val xLeft = a1 - columnDepth / 2000.0 - dM
+        if (xLeft > 0.0) vuOneWay = maxOf(vuOneWay, abs(shearAt(xLeft)))
+        val xInner1 = a1 + columnDepth / 2000.0 + dM
+        if (xInner1 < a2) vuOneWay = maxOf(vuOneWay, abs(shearAt(xInner1)))
+        val xInner2 = a2 - col2Depth / 2000.0 - dM
+        if (xInner2 > a1) vuOneWay = maxOf(vuOneWay, abs(shearAt(xInner2)))
+        val xRight = lengthM - (a2 + col2Depth / 2000.0 + dM)
+        if (xRight > 0.0) vuOneWay = maxOf(vuOneWay, wLin * xRight)
+
         val fcPrime = 0.8 * fcu
-        val Vc_oneWay = 0.17 * sqrt(fcPrime) * footingWidth * effectiveDepth / 1000.0 * PHI_SHEAR  // kN (ACI 22.5.5.1)
-        val isOneWayShearSafe = Vu_oneWay <= Vc_oneWay
+        val vcOneWay = PHI_SHEAR * 0.17 * sqrt(fcPrime) * footingWidth * effectiveDepth / 1000.0  // kN (§22.5.5.1)
+        val isOneWayShearSafe = vuOneWay <= vcOneWay
+        if (!isOneWayShearSafe) {
+            warnings.add("ACI: one-way shear Vu=${"%.0f".format(vuOneWay)}kN > φVc=${"%.0f".format(vcOneWay)}kN — increase depth")
+        }
+
+        // ── Step 8: punching shear at both columns (Table 22.6.5.2, αs = 40) ──
+        val punching1 = checkPunchingShear(fcu, columnWidth, columnDepth, effectiveDepth, axialLoad1, loadCombination)
+        val punching2 = checkPunchingShear(fcu, col2Width, col2Depth, effectiveDepth, axialLoad2, loadCombination)
 
         val isSafe = maxSoilPressure <= soilBearingCapacity * 1.05 &&  // allow 5% over for rounding
                      punching1.isSafe && punching2.isSafe &&
                      isOneWayShearSafe &&
-                     minSoilPressure >= 0.0  // no tension under footing
+                     bottomReinf.isSafe &&
+                     (topReinf?.isSafe ?: true)
+
+        codeNotes.add("ACI 318M-14 §13.2.6.2 inverted beam: M+ = ${"%.1f".format(mPos)} kN·m, M− = ${"%.1f".format(mNeg)} kN·m")
+        codeNotes.add(CodeReference.ACI.FOOTING_REINFORCEMENT)
 
         return FootingDesignResult(
             requiredWidth = footingWidth,
@@ -435,9 +484,13 @@ class ACIFooting : FootingDesign {
             requiredThickness = footingDepth,
             soilPressure = soilPressure,
             maxSoilPressure = maxSoilPressure,
-            reinforcement = reinforcement,
+            reinforcement = bottomReinf,
             punchingShearCheck = if (punching1.utilizationRatio > punching2.utilizationRatio) punching1 else punching2,
-            isSafe = isSafe
+            isSafe = isSafe,
+            warnings = warnings,
+            codeNotes = codeNotes,
+            topReinforcement = topReinf,
+            transverseReinforcement = transverse
         )
     }
 
