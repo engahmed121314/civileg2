@@ -115,7 +115,7 @@ fun BuildingDesignerScreen(
                     val summary = quantitySummary
                     if (summary == null) {
                         AppText(
-                            context.getString(com.civileg.app.R.string.quantity_geometry_invalid),
+                            geometryInvalidMessage,
                             style = MaterialTheme.typography.bodySmall
                         )
                     } else {
@@ -198,7 +198,7 @@ fun BuildingDesignerScreen(
             text = {
                 val summary = quantitySummary
                 if (summary == null) {
-                    AppText(context.getString(com.civileg.app.R.string.quantity_geometry_invalid))
+                    AppText(geometryInvalidMessage)
                 } else {
                     Column(modifier = Modifier.fillMaxWidth().height(400.dp)) {
                         AppText(
