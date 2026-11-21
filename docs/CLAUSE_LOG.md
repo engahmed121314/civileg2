@@ -274,6 +274,6 @@ No production formula was added or changed in this batch.
 ## A-18 — §6.6.4.5.4 minimum design moment M2,min (VERIFIED + enforced)
 - **Date**: 2026-11-21 (20:14 EET)
 - **Source opened**: ACI 318M-14 PDF part 1, PDF pages 134-135, printed pages **125-126** — rendered and read directly; equation shown as M2,min = Pu(0.6 + 0.03h).
-- **Printing resolution**: the 0.6+0.03h form is the US-inch form; the official metric 318M-14 uses M2,min = Pu(15 + 0.03h) with h in mm (corroborated by independent engineering references for ACI 318(M)-14 §6.6.4.5.4, e.g. zetastruct.app/column-design). The bilingual printing kept the inch form — treated as a printing error; metric form enforced.
+- **Printing resolution**: the 0.6+0.03h form is the US-inch form; the official metric 318M-14 uses M2,min = Pu(15 + 0.03h) with h in mm (corroborated by independent engineering reference https://www.zetastruct.app/column-design — quotes ACI 318(M)-14 §6.6.4.5.4 as M2,min = Pu·(15 + 0.03h) with h in mm; retrieved 2026-11-21). The bilingual printing kept the inch form — treated as a printing error; metric form enforced.
 - **Enforcement**: INSIDE calculateMomentMagnification — the function now returns Pair(δ, M2_used); when M2,min > M2, M2 is replaced by M2,min and Cm = 1.0 per the clause's own rule. Not left to callers. Golden vector: Pu=2000, h=400 → M2,min=54 > M2=30 → δ=1.980395, M2_used=54.
 - **API change note**: return type changed Double → Pair<Double, Double> within this same unmerged PR; no external callers exist (verified by full-repo grep).
