@@ -251,3 +251,32 @@ golden vectors pin combined-footing numbers; a fix for CF-01..CF-03 should
 land with golden vectors per R4.
 
 No production formula was added or changed in this batch.
+
+### F-08 — ACI column axial-moment interaction (strain compatibility), batch 2026-11-21
+
+**Finding:** `ACIColumn.calculateReinforcement` amplified the axial-formula steel
+area by an invented `max(1, 1 + 2e/h)` factor for e > 0.05h. The expression
+appears in no code; it ignored section depth, bar position and the actual
+interaction-diagram branch, and under-reinforced high-moment cases (e.g.
+Pu=1500 kN / Mx=150 kNm on 400×400/fc'=24: heuristic 12Ø14 vs 18Ø14 required by
+strain compatibility). **Fixed:** the heuristic is removed; bar count is now
+chosen by a uniaxial strain-compatibility interaction check per axis
+(φPn(c) = Pu solved by bisection, φMn(c) ≥ Mu), plus the Table 22.4.2.1 axial
+cap. Biaxial bending is checked per axis independently (no Bresler combination)
+— documented limitation. Sources opened and verified 2026-11-21 against the
+owner's bilingual ACI 318M-14 PDF (rendered pages):
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| A-19a | §22.2.1.1 equilibrium + §22.2.1.2 plane sections remain plane | ACI 318M-14 PDF, printed p. 552 (part 3, PDF p. 161) | Verified (owner PDF, printed page) |
+| A-19b | §22.2.2.1 εcu = 0.003; §22.2.2.2 tensile concrete strength neglected | ACI 318M-14 PDF, printed p. 553 (part 3, PDF p. 162) | Verified (owner PDF, printed page) |
+| A-19c | §22.2.2.4.1 stress block 0.85fc' over a = β1·c; Table 22.2.2.4.3 β1 = 0.85 (fc'≤28), 0.85−0.05(fc'−28)/7, 0.65 (fc'≥55) | ACI 318M-14 PDF, printed p. 554 (part 3, PDF p. 163); β1 table first logged A-08 | Verified (owner PDF, printed page) |
+| A-19d | §20.2.2.1 fs = Es·εs below yield else fy; §20.2.2.2 Es = 200 000 MPa | ACI 318M-14 PDF, printed p. 522 (part 3, PDF p. 131) | Verified (owner PDF, printed page) |
+| A-19e | §21.2.2.1 εty = fy/Es (= 0.002 for Gr420); Table 21.2.2 tied-column φ: 0.65 compression-controlled, 0.90 at εt ≥ 0.005, transition φ = 0.65 + 0.25(εt − εty)/(0.005 − εty) | ACI 318M-14 PDF, printed pp. 545 and 547 (part 3, PDF pp. 154 and 156) | Verified (owner PDF, printed page) |
+| A-19f | Table 22.4.2.1 design axial cap φPn,max = 0.80·φ·Po (tied), used as the steel-iteration gate | ACI 318M-14 PDF, printed p. 557 (part 3, PDF p. 166); first logged A-14 | Verified (owner PDF, printed page) |
+
+Golden vectors (hand-computed, `ACIColumnInteractionTest`): 8Ø20/400×400/fc'=24
+at Pu=1500 kN → c=283.31, φ=0.65, φMn=144.52 kNm; same at Pu=2000 kN →
+φMn=103.49 kNm (descending branch); 10Ø20 at Pu=1500 kN → φMn=162.22 kNm;
+8Ø20 at Pu=400 kN → εt=0.005679, φ=0.90, φMn=190.04 kNm (tension-controlled);
+null past φPo. End-to-end: Pu=1500/Mx=150 kNm → 18Ø14; Pu=3000 kN axial → 10Ø29.
