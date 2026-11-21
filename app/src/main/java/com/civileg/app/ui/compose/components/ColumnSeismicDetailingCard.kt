@@ -26,21 +26,22 @@ import com.civileg.app.ui.components.AppText
  */
 @Composable
 fun ColumnSeismicDetailingSection(d: EcpColumnSeismicDetailing) {
+    val ar = com.civileg.app.utils.LocaleHelper.isArabic()
     HorizontalDivider(
         modifier = Modifier.padding(vertical = 8.dp),
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f)
     )
     AppText(
-        "Ductile detailing — ${d.mode.displayNameAr} (INCOMPLETE: frame checks pending)",
+        if (ar) "تكسيح الممطولية — ${d.mode.displayNameAr} (غير مكتمل: فحوصات الإطار معلقة)" else "Ductile detailing — ${d.mode.displayNameEn} (INCOMPLETE: frame checks pending)",
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.error,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.testTag("seismic-detailing-header")
     )
-    DetailingRow("Critical region Lo (each end)", String.format("%.0f mm", d.criticalRegionLengthMm))
-    DetailingRow("Tie spacing in critical region S0", String.format("%.0f mm", d.criticalTieSpacingMm))
-    DetailingRow("First tie from beam face", String.format("≤ %.0f mm", d.firstTieMaxOffsetMm))
-    DetailingRow("Tie spacing outside critical region", String.format("≤ %.0f mm", d.elsewhereTieSpacingMm))
+    DetailingRow(if (ar) "طول المنطقة الحرجة Lo (كل طرف)" else "Critical region Lo (each end)", String.format("%.0f mm", d.criticalRegionLengthMm))
+    DetailingRow(if (ar) "تباعد الكانات بالمنطقة الحرجة S0" else "Tie spacing in critical region S0", String.format("%.0f mm", d.criticalTieSpacingMm))
+    DetailingRow(if (ar) "أول كانة من وجه الكمرة" else "First tie from beam face", String.format("≤ %.0f mm", d.firstTieMaxOffsetMm))
+    DetailingRow(if (ar) "تباعد الكانات خارج المنطقة الحرجة" else "Tie spacing outside critical region", String.format("≤ %.0f mm", d.elsewhereTieSpacingMm))
     d.checks.forEach { c ->
         AppText(
             "${if (c.satisfied) "✓" else "✗"} ${c.name}: ${c.demand} — ${c.limit}  [${c.clause}]",

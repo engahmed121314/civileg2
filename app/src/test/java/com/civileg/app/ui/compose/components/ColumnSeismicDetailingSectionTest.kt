@@ -23,7 +23,9 @@ import com.civileg.app.domain.entities.EcpColumnSeismicDetailing
 import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.domain.entities.GenericSafetyCheck
+import com.civileg.app.utils.LocaleHelper
 import io.mockk.mockk
+import org.robolectric.RuntimeEnvironment
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -145,5 +147,35 @@ class ColumnSeismicDetailingSectionTest {
         )
         assertNotNull("PDF export generated", generated)
         assertTrue("PDF non-trivial", out.isFile && out.length() > 10_000)
+    }
+
+    @Test
+    fun `arabic locale renders arabic detailing header and labels`() {
+        val app = RuntimeEnvironment.getApplication()
+        LocaleHelper.initApplicationContext(app)
+        LocaleHelper.setLocale(app, "ar")
+        try {
+            rule.setContent {
+                MaterialTheme {
+                    Card {
+                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                            ColumnSeismicDetailingSection(limitedFixture)
+                        }
+                    }
+                }
+            }
+
+            rule.onNodeWithTag("seismic-detailing-header").assertIsDisplayed()
+            rule.onNodeWithText("تكسيح الممطولية", substring = true).assertIsDisplayed()
+            rule.onNodeWithText("طول المنطقة الحرجة", substring = true).assertIsDisplayed()
+
+            val dir = File("build/reports/tests/compose-shots").apply { mkdirs() }
+            val out = File(dir, "ecp-column-limited-detailing-ar.png")
+            val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
+            FileOutputStream(out).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            assertTrue("arabic screenshot written", out.isFile && out.length() > 10_000)
+        } finally {
+            LocaleHelper.setLocale(app, "en")
+        }
     }
 }

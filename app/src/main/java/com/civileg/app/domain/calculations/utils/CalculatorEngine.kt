@@ -1052,10 +1052,18 @@ class CalculatorEngine @Inject constructor(
             if (!momentSafe) add("Biaxial moment demand exceeds the section capacity — increase the section or reinforcement")
             if (!ratioSafe) add("Reinforcement ratio ${"%.2f".format(reinforcementPercent)}% is outside the code limits")
             if (seismicIncomplete && domainCode == DesignCode.ECP && ecpDuctilityMode != EcpColumnDuctilityMode.ORDINARY) {
-                add("ECP seismic ductility mode (${ecpDuctilityMode.displayNameEn}): design INCOMPLETE — frame-context checks (capacity shear, strong-column/weak-beam) are blocked; not a ductile design pass / وضع الممطولية: التصميم غير مكتمل — فحوصات إطارية معلقة وليست اعتماداً نهائياً")
+                if (LocaleHelper.isArabic()) {
+                    add("وضع الممطولية (${ecpDuctilityMode.displayNameAr}): التصميم غير مكتمل — فحوصات إطارية معلقة (قص الاتزان، عمود قوي/كمرة ضعيفة) وليست اعتماداً نهائياً")
+                } else {
+                    add("ECP seismic ductility mode (${ecpDuctilityMode.displayNameEn}): design INCOMPLETE — frame-context checks (capacity shear, strong-column/weak-beam) are blocked; not a ductile design pass")
+                }
             }
             if (isCircular && domainCode == DesignCode.ECP && ecpDuctilityMode != EcpColumnDuctilityMode.ORDINARY) {
-                add("Ductile detailing is implemented for rectangular sections only (ECP figs 7-7أ/ب); circular section is not covered")
+                if (LocaleHelper.isArabic()) {
+                    add("تكسيح الممطولية مطبق للقطاعات المستطيلة فقط (أشكال 7-7أ/ب)؛ القطاع الدائري غير مغطى")
+                } else {
+                    add("Ductile detailing is implemented for rectangular sections only (ECP figs 7-7a/b); circular section is not covered")
+                }
             }
         }).distinct()
 

@@ -242,9 +242,9 @@ fun ColumnScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            AppText("مستوى الممطولية (ECP 203 §6-8)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            AppText(if (com.civileg.app.utils.LocaleHelper.isArabic()) "مستوى الممطولية (ECP 203 §6-8)" else "Ductility level (ECP 203 §6-8)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                             AppText(
-                                "Ductility level: limited/adequate modes add §6-8 detailing but stay INCOMPLETE until frame checks (capacity shear, strong-column/weak-beam) are closed",
+                                if (com.civileg.app.utils.LocaleHelper.isArabic()) "الممطولية المحدودة/الكافية تضيف تكسيح §6-8 لكنها تبقى غير مكتملة حتى إغلاق فحوصات الإطار (قص الاتزان، عمود قوي/كمرة ضعيفة)" else "Ductility level: limited/adequate modes add §6-8 detailing but stay INCOMPLETE until frame checks (capacity shear, strong-column/weak-beam) are closed",
                                 style = MaterialTheme.typography.labelSmall
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -253,7 +253,7 @@ fun ColumnScreen(
                                     FilterChip(
                                         selected = uiState.ecpDuctilityMode == mode,
                                         onClick = { viewModel.updateEcpDuctilityMode(mode) },
-                                        label = { AppText(mode.displayNameAr, fontSize = 12.sp) },
+                                        label = { AppText(if (com.civileg.app.utils.LocaleHelper.isArabic()) mode.displayNameAr else mode.displayNameEn, fontSize = 12.sp) },
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
