@@ -65,20 +65,20 @@ class ACIPileFoundationTest {
     }
 
     @Test
-    fun `verified clay alpha high-strength band matches API 0p5 sqrt form`() {
-        // P-02: for cu > 100 kPa the engine uses alpha = 0.5*sqrt(100/cu),
-        // the API RP 2A-WSD 6.4.2 form 0.5*psi^-0.5 with p'0 = 100 kPa.
-        // cu = 150 -> alpha = 0.5*sqrt(100/150) = 0.408248
+    fun `verified clay alpha high-strength band matches API psi^-0p25 form`() {
+        // P-02/P-06: for cu > 100 kPa (psi > 1) the API RP 2A-WSD 6.4.2 form is
+        // alpha = 0.5*psi^-0.25 with p'0 = 100 kPa.
+        // cu = 150 -> alpha = 0.5 * 1.5^-0.25 = 0.451801
         val input = PileInput(
             pileType = PileType.DRIVEN, pileDiameter = 450.0, pileLength = 12.0,
             soilType = SoilType.CLAY, cu = 150.0, waterTableDepth = 12.0,
             safetyFactor = 2.5, axialLoad = 0.0
         )
         val r = engine.calculatePileCapacity(input)
-        val alpha = 0.5 * sqrt(100.0 / 150.0)
+        val alpha = 0.5 * Math.pow(1.5, -0.25)
         val expectedQs = alpha * 150.0 * PI * 0.45 * 12.0
         assertClose(expectedQs, r.shaftResistance, "Qs high band")
-        assertClose(0.408248, r.shaftResistance / (150.0 * PI * 0.45 * 12.0), "alpha")
+        assertClose(0.451801, r.shaftResistance / (150.0 * PI * 0.45 * 12.0), "alpha")
     }
 
     @Test
@@ -100,12 +100,14 @@ class ACIPileFoundationTest {
     // ---------------------------------------------------------------
 
     @Test
-    fun `characterization alpha middle band and the 50 kPa discontinuity`() {
-        // KNOWN DEFECT (CLAUSE_LOG U-P1): the middle band alpha = 1-(cu-25)/100
-        // reaches 0.75 at cu = 50-, while the 50..100 band pins alpha = 0.5.
-        // That is a 33% capacity drop for a 0.2 kPa change in cu. This test
-        // pins the current behavior; the discontinuity needs an engineering
-        // decision (smooth the curve), NOT a silent fix.
+    fun `verified alpha is the continuous API RP 2A curve`() {
+        // Owner decision 2026-11-21 (CLAUSE_LOG P-06): continuous API RP
+        // 2A-WSD 6.4.2 curve with p'0 = 100 kPa, replacing the old banded
+        // curve that dropped alpha 0.75 -> 0.5 at cu = 50 kPa.
+        //   cu = 25  -> alpha = 1.0 (cap)
+        //   cu = 50  -> 0.5 * 0.5^-0.5 = 0.707107
+        //   cu = 100 -> 0.5 (both branches agree; continuity)
+        //   cu = 200 -> 0.5 * 2^-0.25 = 0.420448 (psi > 1 branch)
         fun alphaAt(cu: Double): Double {
             val r = engine.calculatePileCapacity(
                 PileInput(
@@ -116,9 +118,11 @@ class ACIPileFoundationTest {
             )
             return r.shaftResistance / (cu * PI * 0.45 * 12.0)
         }
-        assertClose(0.751, alphaAt(49.9), "alpha(49.9)")
-        assertClose(0.5, alphaAt(50.1), "alpha(50.1)")
-        assertClose(0.85, alphaAt(40.0), "alpha(40)")
+        assertClose(1.0, alphaAt(25.0), "alpha(25)")
+        assertClose(0.707107, alphaAt(50.0), "alpha(50)")
+        assertClose(0.5, alphaAt(100.0), "alpha(100)")
+        assertClose(0.5, alphaAt(100.5), "alpha continuity at 100")
+        assertClose(0.420448, alphaAt(200.0), "alpha(200)")
     }
 
     // ---------------------------------------------------------------
@@ -263,18 +267,24 @@ class ACIPileFoundationTest {
     // ---------------------------------------------------------------
 
     @Test
-    fun `characterization group efficiency pins current variant`() {
-        // KNOWN GAP (CLAUSE_LOG U-P2): this is a Converse-Labarre VARIANT:
-        // it uses atan(s/d) instead of the standard atan(d/s) and drops the
-        // (n-1)m term. For 3x3 at s = 3d the standard formula gives ~0.73,
-        // this variant gives ~0.65. Pins current behavior; flagged for an
-        // engineering decision rather than silently changed.
+    fun `verified group efficiency is standard Converse-Labarre`() {
+        // Owner decision 2026-11-21 (CLAUSE_LOG P-07): standard
+        // Converse-Labarre, eta = 1 - theta*((m-1)*nc + (nc-1)*m)/(90*m*nc),
+        // theta = atan(d/s) in degrees. For 3x3 at s = 3d:
+        //   theta = atan(1/3) = 18.4349 deg
+        //   eta = 1 - 18.4349 * 12 / 810 = 0.726890
         val r = engine.checkGroupEfficiency(
             PileGroupInput(numberOfPiles = 9, pileDiameter = 600.0, spacing = 3.0)
         )
-        assertEquals(0.65, r.efficiencyFactor, 0.02)
+        assertEquals(0.726890, r.efficiencyFactor, 0.002)
         assertTrue(r.pattern.startsWith("3×3"))
         assertEquals(9, r.numberOfPiles)
+
+        // 2x2 at s = 3d: eta = 1 - 18.4349 * 4 / 360 = 0.795168
+        val r2 = engine.checkGroupEfficiency(
+            PileGroupInput(numberOfPiles = 4, pileDiameter = 600.0, spacing = 3.0)
+        )
+        assertEquals(0.795168, r2.efficiencyFactor, 0.002)
     }
 
     // ---------------------------------------------------------------

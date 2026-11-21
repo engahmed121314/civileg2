@@ -74,3 +74,22 @@ Engineering fixes applied in this batch (documented, with golden vectors):
 
 No other production formula was added or changed. Group-efficiency and the
 alpha-curve shape remain as-is pending owner engineering decisions (U-P1, U-P2).
+
+## Owner-decision batch — pile alpha curve + group efficiency (accessed 2026-11-21)
+
+The owner reviewed U-P1/U-P2 (from the ACIPileFoundation batch) and directed:
+"apply the correct and most accurate engineering option" for both.
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| P-06 | API RP 2A-WSD §6.4.2 alpha method as a continuous curve: `α = 0.5·ψ^-0.5` (ψ ≤ 1), `α = 0.5·ψ^-0.25` (ψ > 1), `α ≤ 1.0`, ψ = cu/p'0; applied with the engine's implicit p'0 = 100 kPa. Replaces the banded curve that jumped 0.75 → 0.5 at cu = 50 kPa (U-P1, RESOLVED). Continuous at cu = 25 (α = 1.0) and cu = 100 (α = 0.5). | OpenBrIM API RP 2A-WSD alpha method page (opened earlier today, this session) | Verified (secondary) |
+| P-07 | Standard Converse-Labarre group efficiency: `η = 1 − θ·[(m−1)·nc + (nc−1)·m] / (90·m·nc)`, θ = atan(d/s) in degrees. Replaces the engine variant (atan(s/d), single term; U-P2, RESOLVED). 3×3 @ s=3d: η = 0.7269 (was 0.6466). | [FireCAD — Pile Group Efficiency (Converse–Labarre)](https://calc.firecad.com/civil/foundations/pile-group-efficiency); [Converse-Labarre calculator reference](https://calculatgeek.com/pile-group-efficiency-calculator-converse-labarre/) | Verified (secondary; textbook-standard form) |
+
+Behavior changes (intended, owner-approved):
+- Clay shaft capacity for 25 < cu ≤ 100 kPa increases (e.g. cu = 50: α 0.5 →
+  0.707); for cu > 100 kPa it also increases slightly (ψ^-0.25 form).
+- Group efficiency increases to the standard values (3×3 @ 3d: 0.727; 2×2 @
+  3d: 0.795). The engine's 0.5..1.0 clamp is retained.
+- Golden vectors updated on this branch: `verified alpha is the continuous
+  API RP 2A curve`, `verified clay alpha high-strength band matches API
+  psi^-0p25 form`, `verified group efficiency is standard Converse-Labarre`.
