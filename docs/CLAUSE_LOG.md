@@ -367,3 +367,28 @@ Golden vectors: ECPBeamShearTest (6 cases: stirrup design, min-only branch,
 - **Remaining limitations (documented, need inputs the interface lacks)**: (a) "other cases" confinement (denominators 1.4/1.1) not covered — engine assumes favourable confinement; (b) ψe = 1.5 for epoxy with cover < 3db not covered — engine uses 1.2. Both flagged in code comments; owner decision needed on adding cover/spacing inputs.
 - **Golden vectors**: 16 mm → 650, 25 mm → 1275, 32 mm top epoxy → 2525, 12 mm fy=280 → 325.
 - **Resolution**: branch fix/aci-beam-dev-length (ψs fix + vectors).
+
+## F-07 update — denominator unified to 1.65 + optional detailing-inputs toggle (RESOLVED)
+- **Date**: 2026-11-21 (20:01 EET) — owner approved the optional toggle (WhatsApp 19:58: "ضيفهم كأضافه اذا اراد المستخدم تفعيلها").
+- **Denominator correction**: the unified denominator is now 1.65 = 1.1×1.5, the code's own basis for Table 25.4.2.2 row 1 via Eq 25.4.2.3a (printed pp.652-653). The previous 1.7 made small bars 1.2% shorter than the table's 2.1 form; 1.65 is conservative for BOTH sizes vs the table (0.8/1.65 ≥ 1/2.1; 1.0/1.65 ≥ 1/1.7). Default-path vectors updated: 16→675, 25→1300, 32 top epoxy→2600, 12/fy280→350.
+- **Optional toggle**: new `DevLengthInputs(clearCover, clearSpacing, hasMinTies)` + overload. When supplied: full Table 25.4.2.2 row evaluation (favourable vs other cases → 1.65/1.1 denominators), full Table 25.4.2.4 ψe (1.5 for epoxy with cover < 3db or spacing < 6db), and the ψtψe ≤ 1.7 cap (footnote). When null: documented favourable-confinement default. Toggle vectors: favourable 16→675, other-cases 16→1000, epoxy tight 25→1950, top epoxy tight (capped) 25→2225.
+- **Verified clauses**: Table 25.4.2.2 (printed p.652), Eq 25.4.2.3a/b (p.653), Table 25.4.2.4 + footnote (p.655), §25.4.2.1 300 mm floor (p.651) — all rendered and read directly.
+
+## A-14 — §22.4.2.1 + Table 22.4.2.1 + Eq 22.4.2.2 — column axial strength (VERIFIED)
+- **Date**: 2026-11-21 (19:59 EET)
+- **Source opened**: ACI 318M-14 PDF part 3, PDF page 166, printed page **557** — rendered and read directly.
+- **Code says**: Pn,max per Table 22.4.2.1: 0.80Po (tied) / 0.85Po (spiral); Po = 0.85fc'(Ag − Ast) + fy·Ast (Eq 22.4.2.2).
+- **Engine**: ACIColumn.calculateAxialCapacity/WithPhi match exactly (φ 0.65/0.75 per Table 21.2.1, verified A-01 printed p.544).
+
+## A-15 — §10.6.1.1 — column longitudinal reinforcement limits (VERIFIED)
+- **Date**: 2026-11-21 (20:00 EET)
+- **Source opened**: ACI 318M-14 PDF part 2, PDF page 63, printed page **254** — rendered and read directly.
+- **Code says**: 0.01Ag ≤ Ast ≤ 0.08Ag for nonprestressed columns.
+- **Engine**: ACIColumn getMin/MaxReinforcementRatio (0.01/0.08) match.
+
+## A-16 — §25.7.2.1 + §25.7.2.2 — column ties (VERIFIED)
+- **Date**: 2026-11-21 (20:00 EET)
+- **Source opened**: ACI 318M-14 PDF part 4, PDF pages 97-100, printed pages **688-691** — rendered and read directly.
+- **Code says**: tie spacing ≤ least of 16db (longitudinal), 48db (tie bar), smallest member dimension; tie dia ≥ No.10 for No.32 and smaller, No.13 for No.36+/bundled; 25.7.2.3: every corner and alternate bar laterally supported (135° max hook angle), no unsupported bar farther than 150 mm clear.
+- **Engine**: ACIColumn ties match (extra 300 mm cap is an additional conservative bound; bar list stops at 32 mm so the No.13 branch never fires).
+- **Detailing gap (for the detailing wave)**: engine outputs tie dia + spacing but does NOT check 25.7.2.3's 150 mm lateral-support rule or whether crossties are needed for the chosen bar count/layout.
