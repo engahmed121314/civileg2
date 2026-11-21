@@ -63,8 +63,10 @@ class DesignPagesUiTest {
     @Test
     fun home_bottomNavigationIsVisible() {
         rule.waitForIdle()
-        rule.onNodeWithText(arString(R.string.nav_home)).assertIsDisplayed()
-        rule.onNodeWithText(arString(R.string.nav_design_hub)).assertIsDisplayed()
+        // The Home label also appears elsewhere on screen (e.g. header), so
+        // assert on the first matching node instead of a unique one.
+        rule.onAllNodesWithText(arString(R.string.nav_home)).onFirst().assertIsDisplayed()
+        rule.onAllNodesWithText(arString(R.string.nav_design_hub)).onFirst().assertIsDisplayed()
     }
 
     @Test
