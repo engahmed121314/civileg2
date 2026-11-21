@@ -8,7 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.domain.entities.*
 import com.civileg.app.utils.ElementDxfDrawings
-import com.civileg.app.utils.PdfDrawingGenerator
+import com.civileg.app.shared.reporting.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext

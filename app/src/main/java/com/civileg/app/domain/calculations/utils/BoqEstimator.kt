@@ -1,10 +1,10 @@
-package com.civileg.app.utils
+package com.civileg.app.domain.calculations.utils
 
 import com.civileg.app.domain.FlatSlabResult
 import com.civileg.app.domain.PileDesignResult
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
 import com.civileg.app.domain.calculations.ecp.CombinedFootingResult
-import com.civileg.app.utils.CalculatorEngine.*
+import com.civileg.app.domain.calculations.utils.CalculatorEngine.*
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.BoqRow
 import kotlin.math.pow
 import kotlin.math.sqrt

@@ -287,7 +287,7 @@ class CombinedFootingViewModel @Inject constructor(
                         val transDia = transNums.getOrNull(1)?.toDouble() ?: 12.0
                         val longSpacing = ((eR.footingLength * 1000.0 - 2 * 75.0) / (longCount - 1).coerceAtLeast(1)).coerceIn(100.0, 250.0)
                         val transSpacing = ((eR.footingWidth * 1000.0 - 2 * 75.0) / (transCount - 1).coerceAtLeast(1)).coerceIn(100.0, 250.0)
-                        com.civileg.app.utils.PdfDrawingGenerator.generateCombinedFootingDrawing(
+                        com.civileg.app.shared.reporting.PdfDrawingGenerator.generateCombinedFootingDrawing(
                             footingLength = eR.footingLength * 1000, footingWidth = eR.footingWidth * 1000,
                             footingThickness = eR.footingThickness,
                             col1W = c1wDraw, col1D = c1dDraw, col2W = c2wDraw, col2D = c2dDraw,
@@ -301,7 +301,7 @@ class CombinedFootingViewModel @Inject constructor(
                         val barSpacing = fR.reinforcement.spacing.takeIf { it > 0 } ?: 150.0
                         val numBarsLong = kotlin.math.max(5, kotlin.math.ceil(fR.requiredWidth / barSpacing).toInt())
                         val numBarsTrans = kotlin.math.max(5, kotlin.math.ceil(fR.requiredLength / barSpacing).toInt())
-                        com.civileg.app.utils.PdfDrawingGenerator.generateCombinedFootingDrawing(
+                        com.civileg.app.shared.reporting.PdfDrawingGenerator.generateCombinedFootingDrawing(
                             footingLength = fR.requiredLength, footingWidth = fR.requiredWidth,
                             footingThickness = fR.requiredThickness,
                             col1W = c1wDraw, col1D = c1dDraw, col2W = c2wDraw, col2D = c2dDraw,
@@ -364,11 +364,11 @@ class CombinedFootingViewModel @Inject constructor(
                     isSafe = isSafe,
                     bbsEntries = eR?.let { r ->
                         runCatching {
-                            com.civileg.app.utils.BbsGenerator.generateCombinedFootingBbs("CF1", r)
+                            com.civileg.app.domain.calculations.utils.BbsGenerator.generateCombinedFootingBbs("CF1", r)
                         }.getOrDefault(emptyList())
                     } ?: emptyList(),
                     boqRows = eR?.let { r ->
-                        com.civileg.app.utils.BoqEstimator.combinedFootingRows(r, "CF1", excavationDepthM, workingSpaceM, blindingThicknessM)
+                        com.civileg.app.domain.calculations.utils.BoqEstimator.combinedFootingRows(r, "CF1", excavationDepthM, workingSpaceM, blindingThicknessM)
                     } ?: emptyList(),
                     drawingBitmap = drawingBitmap,
                     drawing = dxfDrawing,
@@ -397,14 +397,14 @@ class CombinedFootingViewModel @Inject constructor(
         val ecpRes = _uiState.value.result ?: return
         viewModelScope.launch {
             val engineCode = DesignCode.valueOf(_uiState.value.designCode)
-            repository.saveFootingDesign(projectId, name, com.civileg.app.utils.CalculatorEngine.FootingResult(
-                type = com.civileg.app.utils.CalculatorEngine.FootingType.COMBINED,
+            repository.saveFootingDesign(projectId, name, com.civileg.app.domain.calculations.utils.CalculatorEngine.FootingResult(
+                type = com.civileg.app.domain.calculations.utils.CalculatorEngine.FootingType.COMBINED,
                 width = ecpRes.footingWidth * 1000, // m to mm
                 length = ecpRes.footingLength * 1000,
                 thickness = ecpRes.footingThickness,
                 soilPressure = ecpRes.qMax,
                 allowablePressure = ecpRes.qMax,
-                reinforcementBottom = com.civileg.app.utils.CalculatorEngine.ReinforcementBar(),
+                reinforcementBottom = com.civileg.app.domain.calculations.utils.CalculatorEngine.ReinforcementBar(),
                 isSafe = ecpRes.isSafe,
                 code = engineCode,
                 concreteVolume = ecpRes.concreteVolume,

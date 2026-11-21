@@ -43,7 +43,7 @@ import androidx.compose.ui.res.stringResource
 import com.civileg.app.db.Project
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.DesignCode
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.ExportUtils
 import com.civileg.app.utils.captureToAndroidBitmap
@@ -725,7 +725,7 @@ fun SeismicScreen(
                                         val drawingBitmap = if (capturedBitmap != null) {
                                             capturedBitmap
                                         } else try {
-                                            com.civileg.app.utils.PdfDrawingGenerator.generateSeismicDrawing(
+                                            com.civileg.app.shared.reporting.PdfDrawingGenerator.generateSeismicDrawing(
                                                 totalHeight = totalHeight,
                                                 numFloors = numFloors.toIntOrNull() ?: 5,
                                                 floorForces = res.floorForces,

@@ -315,7 +315,7 @@ class WindLoadViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val input = buildInput()
-                val drawingBitmap = com.civileg.app.utils.PdfDrawingGenerator.generateWindLoadDrawing(
+                val drawingBitmap = com.civileg.app.shared.reporting.PdfDrawingGenerator.generateWindLoadDrawing(
                     basicSpeed = input.basicWindSpeed,
                     height = input.buildingHeight,
                     width = input.buildingWidth,

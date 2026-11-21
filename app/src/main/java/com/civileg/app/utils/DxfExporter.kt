@@ -4,6 +4,7 @@ import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
+import com.civileg.app.domain.calculations.utils.BbsEntry
 
 /**
  * DxfExporter — standards-compliant AC1027 (AutoCAD 2007+) DXF writer.
