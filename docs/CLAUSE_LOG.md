@@ -154,3 +154,19 @@ Golden vectors: S-01/S-02 (column inelastic + elastic branches), S-03 compact
 case), deflection S-12. Characterization pins: coastal factor, bolted
 connection governing stack, base-plate sizing, bracing tension.
 No production formula was added or changed in this batch.
+
+### S-13 - SBC vector corrections (test-only, engine unchanged) - 2026-11-21
+
+Three SBC golden vectors asserted values the engine never produced (latent since
+the batch was authored; masked by the axialRatio compile error fixed in #50):
+
+- Bracing tests used a fillet weld 8x300 E70XX whose engine capacity is 368 kN,
+  below the applied loads (600/800 kN), so isSafe could never be true. Welds
+  resized to 5x1100 E70XX (capacity 843.5 kN per the engine's AISC J2-4 weld
+  path vs 2120.6 kN base-metal path, J4.2) so the member curve governs, as the
+  tests intend. Source: engine designWeldedConnection, SBCSteelDesignEngine.kt.
+- Base plate anchors at Pu=1000 kN: engine bucket is Pu<1000 -> Ø24 else
+  Pu<2000 -> Ø27, so Ø27 x 324 mm (12*27 > 250) is the characterized output.
+  Source: designBasePlate anchor bucket, SBCSteelDesignEngine.kt.
+
+No production formula was added or changed in this batch.
