@@ -369,8 +369,12 @@ class ACIPileFoundation : PileFoundationDesign {
         val beamShearCapacity = PHI_SHEAR * 0.17 * sqrt(fc)
 
         // ── Flexure (ACI Rn-ρ, φ=0.9) ──────────────────────────────
-        val Mu = PperPile * shearSpan  // kN.m per meter strip
-        val MuNmm = Mu * 1e6
+        val Mu = PperPile * shearSpan  // kN*mm (PperPile kN x shearSpan mm)
+        // Mu is in kN*mm, so N*mm = kN*mm x 1e3. The old factor 1e6 inflated
+        // the moment 1000x, driving Rn to ~1343 MPa, rhoReq past the 0.025 cap,
+        // and AsRequired to 2.5% of b*d (7x the correct steel for typical
+        // inputs). (AUDIT 2026-11-21, golden vector: As drops 22720 -> 3181 mm2)
+        val MuNmm = Mu * 1e3
         val b = capLength
         val Rn = MuNmm / (PHI_FLEXURE * b * dCap * dCap)
         val m = input.fy / (0.85 * fc)
@@ -381,13 +385,21 @@ class ACIPileFoundation : PileFoundationDesign {
         val AsMin = rhoMin * b * dCap
         val AsDesign = max(AsRequired, AsMin)
 
-        var selDia = 16.0
-        var selSpacing = 200
+        // Bar selection must PROVIDE at least AsDesign, not just space the
+        // required COUNT at a coerced spacing. The old loop accepted the first
+        // diameter whose count fit within 300 mm spacing after coercing the
+        // spacing up to 100 mm, which silently provided less steel than
+        // required (e.g. the golden-vector case: 25 T12 = 2827 mm2 provided
+        // vs 3181 mm2 required). Now a diameter is accepted only if the
+        // provided area meets the requirement (AUDIT 2026-11-21).
+        var selDia = BAR_DIAMETERS.last()
+        var selSpacing = 100
         for (dia in BAR_DIAMETERS) {
             val area = PI * dia * dia / 4
             val nBars = ceil(AsDesign / area).toInt().coerceAtLeast(4)
             val sp = floor(b / nBars).toInt().coerceAtLeast(100)
-            if (sp <= 300) {
+            val provided = area * (b / sp).toInt()
+            if (sp <= 300 && provided >= AsDesign) {
                 selDia = dia; selSpacing = sp; break
             }
         }
