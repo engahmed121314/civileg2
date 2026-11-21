@@ -168,36 +168,46 @@ class ECPBeam : BeamDesign {
         
         val Vu = abs(designShear) * 1000  // N (القوة القصية التصميمية — always positive)
         
-        // قدرة الخرسانة على تحمل القص حسب ECP 203 البند 4-3-1-2
-        // qcu = 0.24 × √(fcu/γc) — ECP 203 §4-3-1-2
-        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
-        val concreteShearCapacity = qcu * width * effectiveDepth / 1000  // kN
+        // مقاومة الخرسانة للقص — ECP 203-2020 البند ٤-٢-٢-١-٣:
+        // q_cu(uncracked) = 0.16√(fcu/γc) — معادلة (٤-٢٩)، ص ١٨-٤ (عتبة الاكتفاء بالخرسانة + الحد الأدنى)
+        // q_cu(cracked)   = 0.12√(fcu/γc) — معادلة (٤-٣٠)، ص ٢٠-٤ (نصيب الخرسانة عند وجود كانات)
+        val qcuUncracked = 0.16 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
+        val qcuCracked = 0.12 * sqrt(fcu / GAMMA_C)    // MPa (includes γc)
+        val concreteShearCapacity = qcuUncracked * width * effectiveDepth / 1000  // kN
         InputGuard.finite("concreteShearCapacity", concreteShearCapacity)
         
-        // إذا كان القص أقل من قدرة الخرسانة، نضع تسليح أدنى
-        val minStirrups = getMinShearReinforcementRatio() * width * 1000 // mm²/m
+        // الحد الأدنى لنسبة التسليح الجذئي — معادلة (٤-٤٠) والبند ٤-٢-٢-١-٦(أ)، ص ٢٢-٤:
+        // μ_min = 0.4/fy وبحد أدنى 0.15% للصلب الأملس العادي (240) و0.10% لعالي المقاومة
+        val muMin = max(0.4 / fy, if (fy <= 280.0) 0.0015 else 0.0010)
+        val minStirrups = muMin * width * 1000 // mm²/m
+        
+        // إجهاد حديد الكانات لا يتجاوز 420 ن/مم² — البند ٤-٢-٢-١-٦(هـ)، ص ٢٢-٤
+        val fydWeb = minOf(fy, 420.0) / GAMMA_S
         
         var requiredStirrups = 0.0
         if (Vu / 1000 > concreteShearCapacity) {
-            // حساب تسليح القص المطلوب
-            val excessShear = (Vu / 1000 - concreteShearCapacity) * 1000 // N
-            requiredStirrups = excessShear / (fy / GAMMA_S * effectiveDepth) * 1000  // mm²/m
+            // q_su = q_u - q_cu(cracked) — معادلة (٤-٣٣)، ص ٢٠-٤؛ μ_st = q_su/(fy/γs) — معادلة (٤-٣٤)، ص ٢١-٤
+            val excessShear = Vu - qcuCracked * width * effectiveDepth // N
+            requiredStirrups = excessShear / (fydWeb * effectiveDepth) * 1000  // mm²/m
             requiredStirrups = max(requiredStirrups, minStirrups)
         } else {
             requiredStirrups = minStirrups
             warnings.add("Shear reinforcement at minimum per code")
         }
         
-        // اختيار قطر الكانة (8, 10, 12 مم)
+        // اختيار قطر الكانة (8, 10, 12 مم) — بحد أدنى 8 مم طبقاً للبند ٤-٢-٢-١-٦(أ)، ص ٢٢-٤
         val stirrupDiameter = if (width < 250) 8.0 else 10.0
-        val stirrupArea = 2 * PI * stirrupDiameter * stirrupDiameter / 4  // كانة مغلقة = فرعين
+        // الكمرات التي يساوي أو يزيد عرض جانبها عن 400 مم: كانات 4 فروع على الأقل
+        // والمسافة بين الفروع لا تزيد عن 250 مم — البند ٤-٢-٢-١-٦(ب)، ص ٢٢-٤
+        val stirrupLegs = if (width >= 400.0) maxOf(4, ceil(width / 250.0).toInt() + 1) else 2
+        val stirrupArea = stirrupLegs * PI * stirrupDiameter * stirrupDiameter / 4
         
         // حساب التباعد
         var stirrupSpacing = if (requiredStirrups > 0) stirrupArea * 1000 / requiredStirrups else getMaxShearSpacing()
         stirrupSpacing = stirrupSpacing.coerceIn(50.0, getMaxShearSpacing())
         
-        // الحد الأقصى لإجهاد القص: qcu_max = 0.7 × √(fcu/γc) (ECP 203)
-        val maxShearStress = 0.7 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
+        // الحد الأقصى لإجهاد القص: q_umax = 0.70√(fcu/γc) وبحد أقصى 4.4 ن/مم² — معادلة (٤-٢٧)، ص ١٧-٤
+        val maxShearStress = minOf(0.7 * sqrt(fcu / GAMMA_C), 4.4)  // MPa (includes γc)
         val maxShearCapacity = maxShearStress * width * effectiveDepth / 1000  // kN
         val isSafe = (Vu / 1000) <= maxShearCapacity
         
@@ -206,7 +216,8 @@ class ECPBeam : BeamDesign {
         }
         
         codeNotes.add(CodeReference.ECP.BEAM_SHEAR)
-        codeNotes.add("qcu = ${String.format("%.3f", qcu)} MPa")
+        codeNotes.add("q_cu(uncracked) = ${String.format("%.3f", qcuUncracked)} MPa [Eq.4-29]")
+        codeNotes.add("q_cu(cracked) = ${String.format("%.3f", qcuCracked)} MPa [Eq.4-30]")
         
         return ShearReinforcementResult(
             concreteShearCapacity = concreteShearCapacity,
@@ -214,6 +225,7 @@ class ECPBeam : BeamDesign {
             providedShearReinforcement = stirrupArea * 1000 / stirrupSpacing,
             stirrupDiameter = stirrupDiameter,
             stirrupSpacing = stirrupSpacing,
+            numLegs = stirrupLegs,
             isSafe = isSafe,
             utilizationRatio = if (maxShearCapacity > 0) (Vu / 1000) / maxShearCapacity else 2.0,
             warnings = warnings,

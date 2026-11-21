@@ -318,3 +318,38 @@ entries are material names only). The §25.2.3 (4/3)dagg term is therefore NOT
 checked; every result now carries an explicit code note saying the spacing was
 checked against max(40 mm, 1.5db) only and the (4/3)dagg term is UNVERIFIED.
 Constructibility is not claimed as fully code-checked.
+
+---
+
+**E-BS-1 (2026-11-21) — ECPBeam shear engine rebuilt against ECP 203-2020 printed pages.**
+Source of record: owner's ECP 203-2020 PDF (489-page scan), verified by direct
+page renders this date (PDF pp.96-102 = printed 4-16..4-22, الباب الرابع).
+All page numbers below are the printed page of the PDF of record.
+
+1. **Concrete-only shear threshold** — Eq. [4-29], printed 4-18:
+   q_cu(uncracked) = 0.16 × √(fcu/γc). Applied as the capacity below which only
+   minimum web reinforcement is required.
+2. **Concrete share in stirrup design** — Eq. [4-30] + Eq. [4-33], printed 4-20:
+   q_cu(cracked) = 0.12 × √(fcu/γc); q_su = q_u − q_cu(cracked).
+   PREVIOUS CODE USED 0.24 × √(fcu/γc) FOR BOTH ROLES, MIS-CITED AS "§4-3-1-2".
+   0.24 exists in the code ONLY as Eq. [4-39] (printed 4-22), a cap on the
+   bent-up-bars share q_sub — never a concrete shear resistance. The error
+   overstated concrete capacity 1.5–2× and understated required stirrups.
+3. **Web reinforcement amount** — Eq. [4-34], printed 4-21:
+   μ_st = A_st/(b·s) = q_su/(fy/γs) (algebra unchanged; inputs corrected by 2).
+4. **Minimum web reinforcement ratio** — Eq. [4-40] + §4-2-2-1-6(أ), printed 4-22:
+   μ_min = 0.4/fy, with floors 0.15% (mild, yield 240) / 0.10% (HSS).
+   Previous code hardcoded 0.15% for all grades (understated for mild 240 by ~11%).
+5. **Stirrup legs for wide beams** — §4-2-2-1-6(ب), printed 4-22: web width
+   ≥ 400 mm → at least 4 legs, leg spacing ≤ 250 mm. Previous code always
+   assumed 2 legs ("كانة مغلقة = فرعين"), halving shear steel for wide beams.
+6. **Web steel yield cap** — §4-2-2-1-6(هـ), printed 4-22: fy taken ≤ 420 MPa
+   in stirrup strength. Previous code used full fy (up to 600).
+7. **Maximum stirrup spacing** — §4-2-2-1-6(و), printed 4-22: s ≤ 200 mm along
+   the member axis (the ≤ d limit in the same item applies to bent bars, which
+   this engine does not provide). Previous code already correct (200 mm).
+8. **Maximum shear stress** — Eq. [4-27], printed 4-17: q_umax = 0.70√(fcu/γc)
+   with an absolute cap of 4.4 MPa. Previous code missed the 4.4 MPa cap.
+
+Golden vectors: ECPBeamShearTest (6 cases: stirrup design, min-only branch,
+4-leg wide beam, fy=600 cap, mild-240 min-ratio floor, q_umax 4.4 cap).
