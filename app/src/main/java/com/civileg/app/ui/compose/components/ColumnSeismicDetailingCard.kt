@@ -14,6 +14,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.civileg.app.R
+import com.civileg.app.domain.entities.BlockedSeismicCheck
+import com.civileg.app.domain.entities.EcpColumnSeismicCheck
 import com.civileg.app.domain.entities.EcpColumnSeismicDetailing
 import com.civileg.app.ui.components.AppText
 
@@ -44,19 +48,48 @@ fun ColumnSeismicDetailingSection(d: EcpColumnSeismicDetailing) {
     DetailingRow(if (ar) "تباعد الكانات خارج المنطقة الحرجة" else "Tie spacing outside critical region", String.format("≤ %.0f mm", d.elsewhereTieSpacingMm))
     d.checks.forEach { c ->
         AppText(
-            "${if (c.satisfied) "✓" else "✗"} ${c.name}: ${c.demand} — ${c.limit}  [${c.clause}]",
+            "${if (c.satisfied) "✓" else "✗"} ${seismicCheckName(c)}: ${c.demand} — ${c.limit}  [${c.clause}]",
             fontSize = 11.sp,
             color = if (c.satisfied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
         )
     }
     d.blockedChecks.forEach { b ->
         AppText(
-            "⚠ BLOCKED: ${b.name} — ${b.reason}  [${b.clause}]",
+            "⚠ ${stringResource(R.string.seismic_blocked_prefix)}: ${blockedCheckName(b)} — ${blockedCheckReason(b)}  [${b.clause}]",
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.testTag("seismic-blocked-${b.name}")
         )
     }
+}
+
+/** Localized UI display for keyed blocked checks; engine data and PDF exports stay English. */
+@Composable
+private fun blockedCheckName(b: BlockedSeismicCheck): String = when (b.key) {
+    "bars_per_face" -> stringResource(R.string.seismic_blocked_bars_per_face_name)
+    "capacity_shear_limited", "capacity_shear_adequate" -> stringResource(R.string.seismic_blocked_capacity_shear_name)
+    "strong_column_weak_beam" -> stringResource(R.string.seismic_blocked_scwb_name)
+    "joint_beam_bars" -> stringResource(R.string.seismic_blocked_joint_beam_bars_name)
+    else -> b.name
+}
+
+@Composable
+private fun blockedCheckReason(b: BlockedSeismicCheck): String = when (b.key) {
+    "bars_per_face" -> stringResource(R.string.seismic_blocked_bars_per_face_reason)
+    "capacity_shear_limited" -> stringResource(R.string.seismic_blocked_capacity_shear_limited_reason)
+    "capacity_shear_adequate" -> stringResource(R.string.seismic_blocked_capacity_shear_adequate_reason)
+    "strong_column_weak_beam" -> stringResource(R.string.seismic_blocked_scwb_reason)
+    "joint_beam_bars" -> stringResource(R.string.seismic_blocked_joint_beam_bars_reason)
+    else -> b.reason
+}
+
+@Composable
+private fun seismicCheckName(c: EcpColumnSeismicCheck): String = when (c.key) {
+    "min_dimension" -> stringResource(R.string.seismic_check_min_dimension_name)
+    "aspect_ratio" -> stringResource(R.string.seismic_check_aspect_ratio_name)
+    "rho_min" -> stringResource(R.string.seismic_check_rho_min_name)
+    "tie_area" -> stringResource(R.string.seismic_check_tie_area_name)
+    else -> c.name
 }
 
 @Composable

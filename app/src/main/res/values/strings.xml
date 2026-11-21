@@ -2405,6 +2405,19 @@
     <string name="settings_support_title">Support the app</string>
     <string name="settings_support_message">Civil Engineer Pro is free and ad-free. Voluntary donations fund new design codes, tests and drawings.</string>
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
+    <!-- ECP column seismic detailing: blocked/computed check display (R-1) -->
+    <string name="seismic_blocked_prefix">BLOCKED</string>
+    <string name="seismic_blocked_bars_per_face_name">Longitudinal bars per face (>= 3 each face)</string>
+    <string name="seismic_blocked_bars_per_face_reason">Per-face bar count cannot be derived from the total bar count without the actual arrangement; verify at least 3 bars on each face on the section drawing.</string>
+    <string name="seismic_blocked_capacity_shear_name">Capacity-design shear (column)</string>
+    <string name="seismic_blocked_capacity_shear_limited_reason">Needs column end moments from a frame analysis at the axial level giving the larger flexural resistance; not derivable from single-column inputs.</string>
+    <string name="seismic_blocked_capacity_shear_adequate_reason">Needs probable column end moments from a frame analysis; not derivable from single-column inputs.</string>
+    <string name="seismic_blocked_scwb_name">Strong-column/weak-beam (ΣMc ≥ 1.2·ΣMg)</string>
+    <string name="seismic_blocked_scwb_reason">Needs the connected beam design moments at each joint from a frame analysis; not derivable from single-column inputs.</string>
+    <string name="seismic_blocked_joint_beam_bars_name">Joint dimension vs beam bars (≥ 20·db through joint)</string>
+    <string name="seismic_blocked_joint_beam_bars_reason">Needs the largest beam bar diameter passing through the joint; not a column-tool input.</string>
+    <string name="seismic_check_min_dimension_name">Smallest section dimension</string>
+    <string name="seismic_check_aspect_ratio_name">Section aspect ratio (short/long)</string>
+    <string name="seismic_check_rho_min_name">Longitudinal reinforcement ratio</string>
+    <string name="seismic_check_tie_area_name">Critical-region tie area (Eqs 6-63a/b at s = S0)</string>
 </resources>
-
-

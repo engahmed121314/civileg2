@@ -16,6 +16,7 @@ import androidx.core.view.drawToBitmap
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.unit.dp
 import com.civileg.app.domain.entities.BlockedSeismicCheck
 import com.civileg.app.domain.entities.DesignCode
@@ -28,6 +29,7 @@ import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.utils.LocaleHelper
 import io.mockk.mockk
 import org.robolectric.RuntimeEnvironment
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -64,12 +66,14 @@ class ColumnSeismicDetailingSectionTest {
             BlockedSeismicCheck(
                 name = "Capacity-design shear (column)",
                 clause = "ECP 203-2020 §6-8-2-2-3 + fig 6-39 (printed 6-92..6-93)",
-                reason = "Needs column end moments from a frame analysis at the axial level giving the larger flexural resistance; not derivable from single-column inputs."
+                reason = "Needs column end moments from a frame analysis at the axial level giving the larger flexural resistance; not derivable from single-column inputs.",
+                key = "capacity_shear_limited"
             ),
             BlockedSeismicCheck(
                 name = "Longitudinal bars per face (>= 3 each face)",
                 clause = "ECP 203-2020 §6-8-2-2-3 / §6-8-2-3-2 (printed 6-92 / 6-95)",
-                reason = "Per-face bar count cannot be derived from the total bar count without the actual arrangement; verify at least 3 bars on each face on the section drawing."
+                reason = "Per-face bar count cannot be derived from the total bar count without the actual arrangement; verify at least 3 bars on each face on the section drawing.",
+                key = "bars_per_face"
             )
         ),
         clauseReferences = listOf("ECP 203-2020 §6-8-2-2-3 limited-ductility columns (printed 6-92)"),
@@ -102,6 +106,7 @@ class ColumnSeismicDetailingSectionTest {
         rule.onNodeWithTag("seismic-blocked-Capacity-design shear (column)").performScrollTo().assertIsDisplayed()
         rule.onNodeWithTag("seismic-blocked-Longitudinal bars per face (>= 3 each face)").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("INCOMPLETE", substring = true).assertIsDisplayed()
+        rule.onNodeWithText("BLOCKED:", substring = true).assertIsDisplayed()
 
         // Rendered-pixel capture for post-CI visual inspection. Window capture can
         // time out under Robolectric CI (forceRedraw); capture is best-effort
@@ -184,11 +189,53 @@ class ColumnSeismicDetailingSectionTest {
             rule.onNodeWithTag("seismic-detailing-header").assertIsDisplayed()
             rule.onNodeWithText("تكسيح الممطولية", substring = true).assertIsDisplayed()
             rule.onNodeWithText("طول المنطقة الحرجة", substring = true).performScrollTo().assertIsDisplayed()
+            // R-1: blocked checks localize too (prefix, name, reason) — no English leaks
+            rule.onNodeWithText("معلّق", substring = true).performScrollTo().assertIsDisplayed()
+            rule.onNodeWithText("الأسياخ الطولية لكل وجه", substring = true).performScrollTo().assertIsDisplayed()
+            rule.onNodeWithText("لا يمكن استنتاج عدد الأسياخ", substring = true).assertIsDisplayed()
+            rule.onNodeWithText("قص التصميم بالسعة", substring = true).assertIsDisplayed()
+            rule.onNodeWithText("BLOCKED:", substring = true).assertDoesNotExist()
 
             captureRootOrNote("ecp-column-limited-detailing-ar")
         } finally {
             LocaleHelper.setLocale(app, "en")
         }
+    }
+
+    @Test
+    fun `production-derived result renders same values in UI and export map`() {
+        // Same engine inputs as the export test: parity is exercised on ONE result,
+        // never on a hand-built fixture that could drift from production output.
+        pinLocaleEn()
+        val engine = CalculatorEngine(mockk(relaxed = true))
+        val res = engine.designColumn(
+            width = 400.0, depth = 600.0, pu = 500.0, fcu = 30.0, fy = 400.0,
+            code = DesignCode.ECP, clearHeight = 3000.0,
+            ecpDuctilityMode = EcpColumnDuctilityMode.LIMITED
+        )
+        val d = res.seismicDetailing!!
+        rule.setContent {
+            MaterialTheme {
+                Card {
+                    Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
+                        ColumnSeismicDetailingSection(d)
+                    }
+                }
+            }
+        }
+        // Engine chose 10Ø16: S0 = min(8x16, 24x10, 200, 150) = 128
+        val s0 = "%.0f mm".format(d.criticalTieSpacingMm)
+        rule.onNodeWithText(s0, substring = true).performScrollTo().assertIsDisplayed()
+        assertEquals("128 mm", s0)
+        assertEquals("600 mm", "%.0f mm".format(d.criticalRegionLengthMm))
+        assertTrue(d.blockedChecks.all { it.key.isNotEmpty() })
+        captureRootOrNote("ecp-column-limited-detailing-parity")
+    }
+
+    private fun pinLocaleEn() {
+        val app = RuntimeEnvironment.getApplication()
+        LocaleHelper.initApplicationContext(app)
+        LocaleHelper.setLocale(app, "en")
     }
 
     /**
