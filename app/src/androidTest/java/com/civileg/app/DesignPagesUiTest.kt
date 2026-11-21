@@ -65,8 +65,8 @@ class DesignPagesUiTest {
         rule.waitForIdle()
         // The Home label also appears elsewhere on screen (e.g. header), so
         // assert on the first matching node instead of a unique one.
-        rule.onAllNodesWithText(arString(R.string.nav_home)).onFirst().assertIsDisplayed()
-        rule.onAllNodesWithText(arString(R.string.nav_design_hub)).onFirst().assertIsDisplayed()
+        rule.onAllNodesWithText(arString(R.string.nav_home))[0].assertIsDisplayed()
+        rule.onAllNodesWithText(arString(R.string.nav_design_hub))[0].assertIsDisplayed()
     }
 
     @Test
