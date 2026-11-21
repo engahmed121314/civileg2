@@ -1,6 +1,7 @@
 package com.civileg.core.engineering
 
 import com.civileg.core.calculations.entities.*
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.core.math.SafeMath
 import com.civileg.core.sanity.*
 import kotlin.math.PI

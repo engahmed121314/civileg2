@@ -1,5 +1,9 @@
 package com.civileg.core.calculations.entities
 
+import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.ReinforcementResult
+import com.civileg.app.domain.entities.ShearReinforcementResult
+
 /**
  * مدخلات تصميم القواعد الشريطية (Strap Footing)
  */

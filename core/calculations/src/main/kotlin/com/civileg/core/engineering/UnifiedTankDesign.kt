@@ -1,6 +1,6 @@
 package com.civileg.core.engineering
 
-import com.civileg.core.calculations.entities.DesignCode
+import com.civileg.app.domain.entities.DesignCode
 import kotlin.math.*
 
 // Minimal standalone implementation that preserves original intent
