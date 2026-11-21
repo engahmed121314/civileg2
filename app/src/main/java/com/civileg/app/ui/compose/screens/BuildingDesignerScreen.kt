@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -67,14 +68,13 @@ fun BuildingDesignerScreen(
     }
 
     // Re-calculate quantities whenever model changes
+    val geometryInvalidMessage = stringResource(com.civileg.app.R.string.quantity_geometry_invalid)
     LaunchedEffect(model) {
         val prices = PriceManager.getAllPrices(context).mapValues { it.value.price }
         quantitySummary = try {
             BuildingQuantityEngine.calculateQuantities(model, prices)
         } catch (exception: IllegalArgumentException) {
-            snackbarHostState.showSnackbar(
-                context.getString(com.civileg.app.R.string.quantity_geometry_invalid)
-            )
+            snackbarHostState.showSnackbar(geometryInvalidMessage)
             null
         }
     }
