@@ -260,6 +260,8 @@ private fun ConcreteQCTab(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
+    val qcConcreteReportTitle = stringResource(R.string.qc_concrete_report_title)
+    val qcConcreteReportSubtitle = stringResource(R.string.qc_concrete_report_subtitle)
     val uiState by viewModel.concreteState.collectAsState()
 
     Column(
@@ -422,8 +424,8 @@ private fun ConcreteQCTab(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = context.getString(R.string.qc_concrete_report_title),
-                    subtitle = context.getString(R.string.qc_concrete_report_subtitle),
+                    title = qcConcreteReportTitle,
+                    subtitle = qcConcreteReportSubtitle,
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -469,6 +471,8 @@ private fun SoilFoundationQCTab(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
+    val qcSoilReportTitle = stringResource(R.string.qc_soil_report_title)
+    val qcSoilReportSubtitle = stringResource(R.string.qc_soil_report_subtitle)
     val uiState by viewModel.soilState.collectAsState()
     var selectedMethod by remember { mutableStateOf(BearingMethod.TERZAGHI) }
     var selectedSoilType by remember { mutableStateOf(SoilType.CLAY) }
@@ -659,8 +663,8 @@ private fun SoilFoundationQCTab(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = context.getString(R.string.qc_soil_report_title),
-                    subtitle = context.getString(R.string.qc_soil_report_subtitle),
+                    title = qcSoilReportTitle,
+                    subtitle = qcSoilReportSubtitle,
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -682,6 +686,8 @@ private fun RebarQCTab(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
+    val qcRebarReportTitle = stringResource(R.string.qc_rebar_report_title)
+    val qcRebarReportSubtitle = stringResource(R.string.qc_rebar_report_subtitle)
     val uiState by viewModel.rebarState.collectAsState()
 
     Column(
@@ -797,8 +803,8 @@ private fun RebarQCTab(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = context.getString(R.string.qc_rebar_report_title),
-                    subtitle = context.getString(R.string.qc_rebar_report_subtitle),
+                    title = qcRebarReportTitle,
+                    subtitle = qcRebarReportSubtitle,
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -823,6 +829,8 @@ private fun SteelStructureQCTab(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
+    val qcSteelReportTitle = stringResource(R.string.qc_steel_report_title)
+    val qcSteelReportSubtitle = stringResource(R.string.qc_steel_report_subtitle)
     val uiState by viewModel.steelState.collectAsState()
     var selectedSection by remember { mutableStateOf(uiState.sectionKey.ifBlank { "IPE 200" }) }
     val memberTypes = listOf(
@@ -1000,8 +1008,8 @@ private fun SteelStructureQCTab(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = context.getString(R.string.qc_steel_report_title),
-                    subtitle = context.getString(R.string.qc_steel_report_subtitle),
+                    title = qcSteelReportTitle,
+                    subtitle = qcSteelReportSubtitle,
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -1023,6 +1031,8 @@ private fun RoadsQCTab(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
+    val qcRoadsReportTitle = stringResource(R.string.qc_roads_report_title)
+    val qcRoadsReportSubtitle = stringResource(R.string.qc_roads_report_subtitle)
     val uiState by viewModel.roadsState.collectAsState()
 
     Column(
@@ -1114,8 +1124,8 @@ private fun RoadsQCTab(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = context.getString(R.string.qc_roads_report_title),
-                    subtitle = context.getString(R.string.qc_roads_report_subtitle),
+                    title = qcRoadsReportTitle,
+                    subtitle = qcRoadsReportSubtitle,
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -1139,6 +1149,8 @@ private fun BridgesQCTab(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
+    val qcBridgesReportTitle = stringResource(R.string.qc_bridges_report_title)
+    val qcBridgesReportSubtitle = stringResource(R.string.qc_bridges_report_subtitle)
     val uiState by viewModel.bridgesState.collectAsState()
 
     Column(
@@ -1227,8 +1239,8 @@ private fun BridgesQCTab(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = context.getString(R.string.qc_bridges_report_title),
-                    subtitle = context.getString(R.string.qc_bridges_report_subtitle),
+                    title = qcBridgesReportTitle,
+                    subtitle = qcBridgesReportSubtitle,
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -1253,6 +1265,8 @@ private fun TunnelsQCTab(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
+    val qcTunnelsReportTitle = stringResource(R.string.qc_tunnels_report_title)
+    val qcTunnelsReportSubtitle = stringResource(R.string.qc_tunnels_report_subtitle)
     val uiState by viewModel.tunnelsState.collectAsState()
 
     Column(
@@ -1368,8 +1382,8 @@ private fun TunnelsQCTab(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = context.getString(R.string.qc_tunnels_report_title),
-                    subtitle = context.getString(R.string.qc_tunnels_report_subtitle),
+                    title = qcTunnelsReportTitle,
+                    subtitle = qcTunnelsReportSubtitle,
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -1393,6 +1407,8 @@ private fun BuildingsQCTab(
     scope: CoroutineScope
 ) {
     val context = LocalContext.current
+    val qcBuildingsReportTitle = stringResource(R.string.qc_buildings_report_title)
+    val qcBuildingsReportSubtitle = stringResource(R.string.qc_buildings_report_subtitle)
     val uiState by viewModel.buildingsState.collectAsState()
     val defaultBuildingType = stringResource(R.string.qc_buildings_type_residential)
     var buildingType by remember(defaultBuildingType) { mutableStateOf(defaultBuildingType) }
@@ -1539,8 +1555,8 @@ private fun BuildingsQCTab(
             onClick = {
                 viewModel.exportDisciplineReport(
                     context = context,
-                    title = context.getString(R.string.qc_buildings_report_title),
-                    subtitle = context.getString(R.string.qc_buildings_report_subtitle),
+                    title = qcBuildingsReportTitle,
+                    subtitle = qcBuildingsReportSubtitle,
                     outcome = uiState.outcome,
                     designCode = uiState.designCode
                 )
@@ -2220,6 +2236,10 @@ private fun QualityReportsTab(
     val uiState by viewModel.reportsState.collectAsState()
     val isExporting by viewModel.isExporting.collectAsState()
     val context = LocalContext.current
+    val qcReportsImportSuccess = stringResource(R.string.qc_reports_import_success)
+    val qcReportsImportFailed = stringResource(R.string.qc_reports_import_failed)
+    val qcReportsNcrExportSuccess = stringResource(R.string.qc_reports_ncr_export_success)
+    val qcReportsNcrExportFailed = stringResource(R.string.qc_reports_ncr_export_failed)
 
     var searchText by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
@@ -2235,7 +2255,7 @@ private fun QualityReportsTab(
             viewModel.importQualityBackupUri(context, uri) { ok ->
                 scope.launch {
                     snackbarHostState.showSnackbar(
-                        if (ok) context.getString(R.string.qc_reports_import_success) else context.getString(R.string.qc_reports_import_failed)
+                        if (ok) qcReportsImportSuccess else qcReportsImportFailed
                     )
                 }
             }
@@ -2330,7 +2350,7 @@ private fun QualityReportsTab(
                 viewModel.exportNcrCsv(context) { file ->
                     scope.launch {
                         snackbarHostState.showSnackbar(
-                            if (file != null) context.getString(R.string.qc_reports_ncr_export_success) else context.getString(R.string.qc_reports_ncr_export_failed)
+                            if (file != null) qcReportsNcrExportSuccess else qcReportsNcrExportFailed
                         )
                     }
                 }
