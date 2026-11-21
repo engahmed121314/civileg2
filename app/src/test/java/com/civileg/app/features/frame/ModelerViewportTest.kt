@@ -1,4 +1,4 @@
-package com.civileg.app.ui.compose.screens
+package com.civileg.app.features.frame
 
 import androidx.compose.ui.geometry.Offset
 import org.junit.Assert.assertEquals

@@ -1,4 +1,4 @@
-package com.civileg.app.ui.compose.screens
+package com.civileg.app.features.design
 
 import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import org.junit.Assert.assertEquals

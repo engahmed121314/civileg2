@@ -1,4 +1,4 @@
-package com.civileg.app.viewmodel
+package com.civileg.app.features.design
 
 import com.civileg.app.domain.DesignMethod
 import com.civileg.app.domain.FlatSlabInput
