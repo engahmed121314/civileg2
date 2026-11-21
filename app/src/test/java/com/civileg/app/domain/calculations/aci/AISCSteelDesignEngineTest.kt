@@ -77,11 +77,9 @@ class AISCSteelDesignEngineTest {
     @Test
     fun `verified tension welded gross yielding governs`() {
         // Welded: An = Ag, U = 1.0 -> phiPn_net = 0.75*400*4960/1000 = 1488.0
-        // Engine block-shear placeholder for welded = 0.75*0.6*250*4960/1000
-        //   = 558.0 kN -> GOVERNS. CLAUSE_LOG U-A1 flags this placeholder: a
-        // welded connection has no block-shear limit state in AISC J4.3, so
-        // the engine understates welded tension capacity by ~50%.
-        // Characterized here, not fixed (owner engineering decision).
+        // After the owner-approved fix (CLAUSE_LOG A-06, resolves U-A1):
+        // block shear does not apply to welded connections, so
+        //   design = min(1116.0, 1488.0) = 1116.0 kN -> gross yielding governs.
         val welded = ConnectionType.Welded(
             weldType = com.civileg.app.domain.entities.WeldType.FILLET,
             weldSize = 8.0,
@@ -91,8 +89,9 @@ class AISCSteelDesignEngineTest {
         val result = engine.designTensionMember(iSection, SteelGrade.A36, 400.0, welded)
         assertClose(1116.0, result.grossYielding, "phiPn gross (D2-1)")
         assertClose(1488.0, result.netRupture, "phiPn net (D2-2)")
-        assertClose(558.0, result.blockShear, "welded block-shear placeholder")
-        assertClose(558.0, result.designCapacity, "design capacity (pinned)")
+        assertTrue("block shear N/A for welds", result.blockShear.isInfinite())
+        assertClose(1116.0, result.designCapacity, "design capacity")
+        assertTrue("gross yielding must govern", result.governingCase.contains("D2-1"))
     }
 
     // ---------------------------------------------------------------
@@ -140,14 +139,14 @@ class AISCSteelDesignEngineTest {
     // ---------------------------------------------------------------
 
     @Test
-    fun `characterization compression I-section torsional governs`() {
-        // KL = 4000: flexural E3-3 gives Fcr = 118.47 MPa, but the engine's
-        // E4 torsional path (J = 132,013 mm4, Cw = 1.47e9 mm6, Fe_t = 126.77)
-        // gives Fcr = 109.51 MPa and governs.
-        // Engine simplification: the E3-3/E3-4 branch choice uses the FLEXURAL
-        // slenderness, not the torsional equivalent slenderness, and L is taken
-        // as min(KxLx, KyLy) instead of the torsional effective length Kz*Lz.
-        // Pinned here, recorded as U-A2; conservative direction for this case.
+    fun `verified compression I-section torsional governs`() {
+        // KL = 4000: flexural E3-3 gives Fcr = 118.47 MPa, but the E4
+        // torsional path (J = 132,013 mm4, Cw = 1.47e9 mm6, Fe_t = 126.77)
+        // gives Fcr = 109.51 MPa and governs (Fy/Fe_t = 1.972 <= 2.25, so the
+        // inelastic branch applies; CLAUSE_LOG A-07).
+        // Remaining simplification: L is taken as min(KxLx, KyLy) because the
+        // API has no separate torsional effective-length input; recorded as
+        // U-A2a, conservative direction.
         val result = engine.designCompressionMember(
             section = iSection, grade = SteelGrade.A36, Pu = 400.0,
             Kx = 1.0, Ky = 1.0, Lx = 4000.0, Ly = 4000.0
