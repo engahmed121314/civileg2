@@ -843,14 +843,16 @@ class ACIFooting : FootingDesign {
             spansDir: String,
             stripLines: List<Double>,
             supportLines: List<Double>,
-            tribOf: (Int) -> Double,
+            bandOf: (Int) -> Pair<Double, Double>,
             edgeLow: Double,
             edgeHigh: Double
         ) {
             var dirReactionSum = 0.0
             stripLines.forEachIndexed { rowIdx, rowPos ->
-                val widthMm = tribOf(rowIdx)
-                val qAvg = if (spansDir == "X") qu.q((x0 + x1) / 2.0, rowPos) else qu.q(rowPos, (y0 + y1) / 2.0)
+                val (widthMm, bandCentroid) = bandOf(rowIdx)
+                // average factored pressure over the tributary band, sampled at the band
+                // CENTROID (not the column line) - they differ under eccentric pressure
+                val qAvg = if (spansDir == "X") qu.q((x0 + x1) / 2.0, bandCentroid) else qu.q(bandCentroid, (y0 + y1) / 2.0)
                 val w = qAvg * widthMm / 1000.0          // kN/m
                 val n = supportLines.size
                 val L = supportLines.map { it / 1000.0 }  // m
@@ -903,13 +905,13 @@ class ACIFooting : FootingDesign {
             reactionSums[spansDir] = dirReactionSum
         }
 
-        fun trib(lines: List<Double>, idx: Int, edgeLow: Double, edgeHigh: Double): Double {
+        fun band(lines: List<Double>, idx: Int, edgeLow: Double, edgeHigh: Double): Pair<Double, Double> {
             val lo = if (idx == 0) edgeLow else (lines[idx - 1] + lines[idx]) / 2.0
             val hi = if (idx == lines.size - 1) edgeHigh else (lines[idx] + lines[idx + 1]) / 2.0
-            return hi - lo
+            return (hi - lo) to ((lo + hi) / 2.0)   // width, centroid (mm)
         }
-        analyzeStrips("X", yLines, xLines, { trib(yLines, it, y0, y1) }, x0, x1)  // x-spanning: one strip per y-row
-        analyzeStrips("Y", xLines, yLines, { trib(xLines, it, x0, x1) }, y0, y1)  // y-spanning: one strip per x-line
+        analyzeStrips("X", yLines, xLines, { band(yLines, it, y0, y1) }, x0, x1)  // x-spanning: one strip per y-row
+        analyzeStrips("Y", xLines, yLines, { band(xLines, it, x0, x1) }, y0, y1)  // y-spanning: one strip per x-line
 
         // Punching per actual column (§22.6.4.1 minimum-perimeter rule, Table 22.6.5.2, §22.6.5.3)
         val punching = columns.mapIndexed { idx, col ->
