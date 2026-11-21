@@ -78,6 +78,11 @@ class ColumnSeismicDetailingSectionTest {
 
     @Test
     fun `limited-mode detailing section renders incomplete banner, values and blocked check`() {
+        // LocaleHelper.getLocale defaults to Arabic once an app context exists, so
+        // pin English explicitly or the English row labels never render.
+        val app = RuntimeEnvironment.getApplication()
+        LocaleHelper.initApplicationContext(app)
+        LocaleHelper.setLocale(app, "en")
         rule.setContent {
             MaterialTheme {
                 Card {

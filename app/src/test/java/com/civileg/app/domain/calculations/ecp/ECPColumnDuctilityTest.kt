@@ -36,8 +36,9 @@ class ECPColumnDuctilityTest {
         assertFalse("ductile mode is never a complete design", d.isComplete)
         // frame-context capacity shear stays blocked (fig 6-39, printed 6-93)
         assertEquals(2, d.blockedChecks.size)
-        assertTrue(d.blockedChecks[0].name.contains("Capacity-design shear"))
-        assertTrue(d.blockedChecks[0].reason.contains("frame analysis"))
+        // order-independent: bars-per-face is blocked first, capacity shear second
+        val capShear = d.blockedChecks.single { it.name.contains("Capacity-design shear") }
+        assertTrue(capShear.reason.contains("frame analysis"))
         // >=3 bars/face is NOT derivable from the total bar count alone:
         // arrangement unknown -> not evaluated, never a fabricated pass (printed 6-92/6-95)
         val barsBlocked = d.blockedChecks.single { it.name.contains("bars per face") }
