@@ -32,6 +32,8 @@ data class ColumnUiState(
     val mx: String = "0",
     val my: String = "0",
     val isSeismic: Boolean = false,
+    // ECP 203-2020 §6-8 ductility level for the column (E-SC-1..E-SC-9); ORDINARY = no ductile detailing
+    val ecpDuctilityMode: EcpColumnDuctilityMode = EcpColumnDuctilityMode.ORDINARY,
     val isCircular: Boolean = false,              // FIX: support circular columns
     val connectedSlab: String = "SOLID",          // FIX: slab type for K-factor
     val hasCap: Boolean = false,                  // FIX: column capital
@@ -82,6 +84,7 @@ class ColumnViewModel @Inject constructor(
         mx: String? = null,
         my: String? = null,
         isSeismic: Boolean? = null,
+        ecpDuctilityMode: EcpColumnDuctilityMode? = null,
         isCircular: Boolean? = null,
         connectedSlab: String? = null,
         hasCap: Boolean? = null,
@@ -105,6 +108,7 @@ class ColumnViewModel @Inject constructor(
                 mx = mx ?: state.mx,
                 my = my ?: state.my,
                 isSeismic = isSeismic ?: state.isSeismic,
+                ecpDuctilityMode = ecpDuctilityMode ?: state.ecpDuctilityMode,
                 isCircular = isCircular ?: state.isCircular,
                 connectedSlab = connectedSlab ?: state.connectedSlab,
                 hasCap = hasCap ?: state.hasCap,
@@ -129,6 +133,11 @@ class ColumnViewModel @Inject constructor(
                 manualNumBars = ( (state.result?.reinforcement?.numBars ?: 4) + 2).toString()
             )
         }
+        calculate()
+    }
+
+    fun updateEcpDuctilityMode(mode: EcpColumnDuctilityMode) {
+        _uiState.update { it.copy(ecpDuctilityMode = mode) }
         calculate()
     }
 
@@ -183,7 +192,8 @@ class ColumnViewModel @Inject constructor(
                     hasCap = hasCap,
                     clearHeight = height * 1000.0,
                     preferredDiameter = diameter,
-                    isSeismic = isSeismic
+                    isSeismic = isSeismic,
+                    ecpDuctilityMode = _uiState.value.ecpDuctilityMode
                 )
                 _uiState.update { it.copy(result = res, isLoading = false) }
             } catch (e: Exception) {
@@ -230,7 +240,8 @@ class ColumnViewModel @Inject constructor(
                     autoOptimize = state.autoOptimize,
                     manualNumBars = manualBars,
                     autoIncludeSelfWeight = true,
-                    isSeismic = state.isSeismic
+                    isSeismic = state.isSeismic,
+                    ecpDuctilityMode = state.ecpDuctilityMode
                 )
                 
                 // Validate consistency & Dead Load (Axial logic)

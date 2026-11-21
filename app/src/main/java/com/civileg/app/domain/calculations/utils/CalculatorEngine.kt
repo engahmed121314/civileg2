@@ -20,6 +20,7 @@ import com.civileg.app.domain.FlatSlabInput
 import com.civileg.app.domain.FlatSlabResult
 import com.civileg.app.domain.PileInput
 import com.civileg.app.domain.PileDesignResult
+import com.civileg.app.domain.calculations.ecp.ECPColumn
 import com.civileg.app.domain.calculations.ecp.SteelConnectionDesign
 import com.civileg.app.domain.calculations.ecp.SteelDesignEngine
 import com.civileg.app.domain.calculations.sbc.SBCSteelDesignEngine
@@ -191,6 +192,9 @@ class CalculatorEngine @Inject constructor(
         val utilizationRatio: Double = 0.0,
         val isDuctile: Boolean = true,
         val confinementLength: Double = 0.0,
+        /** ECP 203-2020 §6-8 ductile detailing; non-null only when a ductile mode was
+         *  requested. Never an overall pass — see BlockedSeismicCheck entries. */
+        val seismicDetailing: EcpColumnSeismicDetailing? = null,
         val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
         val warnings: List<String> = emptyList(),
         val codeNotes: List<String> = emptyList()
@@ -901,7 +905,8 @@ class CalculatorEngine @Inject constructor(
         width: Double, depth: Double, pu: Double, mx: Double = 0.0, my: Double = 0.0,
         fcu: Double, fy: Double, code: DesignCode, isCircular: Boolean = false, connectedSlab: String = "SOLID",
         hasCap: Boolean = false, clearHeight: Double = 3000.0, preferredDiameter: Int = 16,
-        autoOptimize: Boolean = true, manualNumBars: Int? = null, autoIncludeSelfWeight: Boolean = true, isSeismic: Boolean = false
+        autoOptimize: Boolean = true, manualNumBars: Int? = null, autoIncludeSelfWeight: Boolean = true, isSeismic: Boolean = false,
+        ecpDuctilityMode: EcpColumnDuctilityMode = EcpColumnDuctilityMode.ORDINARY
     ): ColumnResult {
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
@@ -1015,15 +1020,46 @@ class CalculatorEngine @Inject constructor(
         val steelWeight = mainSteelWeight + tieWeight
         val cost = concreteVolume * 120.0 + steelWeight * 1.5
 
+        // ── ECP 203-2020 §6-8 ductile detailing (clause log E-SC-1..E-SC-9) ──
+        // Ductile modes never yield a clean overall pass: frame-context checks
+        // (capacity shear, strong-column/weak-beam) stay blocked with reasons,
+        // and any failed dimension/confinement check also marks it incomplete.
+        var seismicDetailing: EcpColumnSeismicDetailing? = null
+        var seismicIncomplete = false
+        if (domainCode == DesignCode.ECP && ecpDuctilityMode != EcpColumnDuctilityMode.ORDINARY) {
+            if (!isCircular) {
+                seismicDetailing = (engine as? ECPColumn)?.designSeismicDetailing(
+                    mode = ecpDuctilityMode,
+                    fcu = fcu, fy = fy, width = width, depth = depth,
+                    clearHeightMm = clearHeight,
+                    barDiameter = res.barDiameter,
+                    tieDiameter = res.tiesDiameter,
+                    providedLongitudinalArea = res.astProvided
+                )
+                seismicIncomplete = seismicDetailing == null ||
+                    seismicDetailing.blockedChecks.isNotEmpty() ||
+                    seismicDetailing.checks.any { !it.satisfied }
+            } else {
+                // Fig 7-7 detailing covers rectangular sections; never a silent pass.
+                seismicIncomplete = true
+            }
+        }
+
         val warnings = (res.warnings + buildList {
             if (isSlender) {
                 add("Slender column (λ=${"%.1f".format(slenderness)} > ${"%.0f".format(slendernessLimit)}): moments magnified by δ=${"%.2f".format(momentMagnifier)}")
             }
             if (!momentSafe) add("Biaxial moment demand exceeds the section capacity — increase the section or reinforcement")
             if (!ratioSafe) add("Reinforcement ratio ${"%.2f".format(reinforcementPercent)}% is outside the code limits")
+            if (seismicIncomplete && domainCode == DesignCode.ECP && ecpDuctilityMode != EcpColumnDuctilityMode.ORDINARY) {
+                add("ECP seismic ductility mode (${ecpDuctilityMode.displayNameEn}): design INCOMPLETE — frame-context checks (capacity shear, strong-column/weak-beam) are blocked; not a ductile design pass / وضع الممطولية: التصميم غير مكتمل — فحوصات إطارية معلقة وليست اعتماداً نهائياً")
+            }
+            if (isCircular && domainCode == DesignCode.ECP && ecpDuctilityMode != EcpColumnDuctilityMode.ORDINARY) {
+                add("Ductile detailing is implemented for rectangular sections only (ECP figs 7-7أ/ب); circular section is not covered")
+            }
         }).distinct()
 
-        val isSafe = res.isSafe && axialSafe && momentSafe && ratioSafe
+        val isSafe = res.isSafe && axialSafe && momentSafe && ratioSafe && !seismicIncomplete
 
         return ColumnResult(
             width = width, depth = depth, pu = puDesign, mx = designMx, my = designMy,
@@ -1042,7 +1078,19 @@ class CalculatorEngine @Inject constructor(
                 DesignSafetyCheck("Reinforcement Ratio", reinforcementPercent,
                     engine.getMaxReinforcementRatio() * 100.0, "%", ratioSafe),
                 DesignSafetyCheck("Slenderness", slenderness, slendernessLimit, "", !isSlender)
-            ),
+            ) + buildList {
+                seismicDetailing?.let { d ->
+                    d.checks.forEach { c ->
+                        add(DesignSafetyCheck("Ductile: ${c.name}", if (c.satisfied) 1.0 else 0.0, 1.0, "", c.satisfied))
+                    }
+                    d.blockedChecks.forEach { b ->
+                        add(DesignSafetyCheck("BLOCKED (incomplete): ${b.name}", 0.0, 1.0, "", false))
+                    }
+                }
+                if (isCircular && domainCode == DesignCode.ECP && ecpDuctilityMode != EcpColumnDuctilityMode.ORDINARY) {
+                    add(DesignSafetyCheck("BLOCKED (incomplete): ductile detailing for circular section", 0.0, 1.0, "", false))
+                }
+            },
             isSafe = isSafe,
             concreteVolume = concreteVolume,
             steelWeight = steelWeight,
@@ -1066,9 +1114,12 @@ class CalculatorEngine @Inject constructor(
             momentCapacity = minOf(mxCapacity, myCapacity),
             utilizationRatio = maxOf(biaxialUtilization, if (axialCapacity > 0) puDesign / axialCapacity else 2.0),
             isDuctile = isSafe && ratioSafe,
-            // ACI 18.7.5.5 / SBC 304-21: max(6db, 450mm) in seismic zones.
-            confinementLength = if (isSeismic) max(6.0 * res.barDiameter, 450.0)
-                else max(6.0 * res.barDiameter, 300.0),
+            // ECP ductile modes: critical region Lo per §6-8-1-3(و)+fig 6-35 (printed 6-87..6-88).
+            // Otherwise ACI 18.7.5.5 / SBC 304-21: max(6db, 450mm) in seismic zones.
+            confinementLength = seismicDetailing?.criticalRegionLengthMm
+                ?: (if (isSeismic) max(6.0 * res.barDiameter, 450.0)
+                    else max(6.0 * res.barDiameter, 300.0)),
+            seismicDetailing = seismicDetailing,
             warnings = warnings,
             codeNotes = res.codeNotes,
             calculationSteps = columnSteps(
