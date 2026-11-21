@@ -400,3 +400,43 @@ class ACIBeamTest {
         beam.calculateDoublyReinforcedBeam(DESIGN_MOMENT, WIDTH, TOTAL_DEPTH, FCU, 0.0)
     }
 }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // GOLDEN VECTOR — deflection min-depth (F-06 regression, hand-verified
+    // 2026-11-21 vs ACI 318M-14 Table 9.3.1.1 + §9.3.1.1.1, printed p.211)
+    // span=6.0 m, h=500 mm, simply supported, fy=400, rho=0.01:
+    // actual ratio = 6000/500 = 12; fyFactor = 0.4+400/700 = 0.971429
+    // allowable = 16 × 0.971429 = 15.5429; ratio = 12/15.5429 = 0.7721
+    // F-06: fy must come from the fy parameter, not reinforcementRatio.
+    // ══════════════════════════════════════════════════════════════════════
+
+    @Test
+    fun goldenDeflection_fyFromParameterNotRatio() {
+        val result = beam.checkDeflection(
+            span = 6.0, totalDepth = 500.0, reinforcementRatio = 0.01,
+            supportCondition = SupportCondition.SIMPLY_SUPPORTED, fy = 400.0
+        )
+        assertEquals(0.7721, result.ratio, 0.001)
+        assertTrue(result.isSafe)
+    }
+
+    @Test
+    fun goldenDeflection_lowFyTightensLimit() {
+        val result = beam.checkDeflection(
+            span = 6.0, totalDepth = 500.0, reinforcementRatio = 0.01,
+            supportCondition = SupportCondition.SIMPLY_SUPPORTED, fy = 280.0
+        )
+        // allowable = 16 × (0.4+280/700) = 12.8; ratio = 12/12.8 = 0.9375
+        assertEquals(0.9375, result.ratio, 0.001)
+    }
+
+    @Test
+    fun goldenDeflection_cantileverRatio() {
+        val result = beam.checkDeflection(
+            span = 6.0, totalDepth = 500.0, reinforcementRatio = 0.01,
+            supportCondition = SupportCondition.CANTILEVER, fy = 420.0
+        )
+        // allowable = 8 × 1.0 = 8; ratio = 12/8 = 1.5 → fails min-depth
+        assertEquals(1.5, result.ratio, 0.001)
+        assertTrue(!result.isSafe)
+    }

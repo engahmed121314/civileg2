@@ -353,3 +353,16 @@ All page numbers below are the printed page of the PDF of record.
 
 Golden vectors: ECPBeamShearTest (6 cases: stirrup design, min-only branch,
 4-leg wide beam, fy=600 cap, mild-240 min-ratio floor, q_umax 4.4 cap).
+
+## A-12 — Table 9.3.1.1 + §9.3.1.1.1 — minimum beam depth for deflection (VERIFIED)
+- **Date**: 2026-11-21 (19:46 EET)
+- **Source opened**: ACI 318M-14 PDF part 2, PDF page 20, printed page **211** — rendered as image; table and clauses read directly.
+- **Code says**: Table 9.3.1.1 min h = ℓ/16 (simply supported), ℓ/18.5 (one end continuous), ℓ/21 (both ends continuous), ℓ/8 (cantilever), for normalweight concrete and fy = 420 MPa. §9.3.1.1.1: for other fy, multiply by (0.4 + fy/700). §9.3.1.1.2: lightweight correction. (Chapter 24 of this edition confirms via R24.2: minimum thickness is governed by 7.3.1/9.3.1; its Table 24.2.2 limits CALCULATED deflections, printed pp.626-627.)
+- **Engine**: ratios 16/21/8 match; one-end-continuous (18.5) unrepresentable in the SupportCondition enum — CONTINUOUS conservatively uses 21. fy factor formula matches.
+
+## F-06 — ACIBeam.checkDeflection read fy from the wrong parameter (RESOLVED)
+- **Date**: 2026-11-21 (19:47 EET)
+- **Found while verifying A-12**: `checkDeflection` ignored its `fy` parameter and read the fy-correction from `reinforcementRatio`. The production caller (CalculatorEngine.kt:1360) passes an actual steel ratio (~0.005-0.02), so fyFactor collapsed to 0.40+0.01/700 ≈ 0.4000 — allowable span/depth cut to ~41% of the code value, failing nearly every beam's deflection check (safe direction, but wrong results and false failure flags).
+- **Also**: code comment cited a nonexistent "Table 24.2.2 / ACI 318-25 footnote"; correct citation is Table 9.3.1.1 + §9.3.1.1.1 (verified printed p.211).
+- **Fix**: use the `fy` parameter (fallback DEFAULT_FY when ≤ 0); comments corrected. Golden vectors added (fy=400 → ratio 0.7721; fy=280 → 0.9375; cantilever fy=420 → 1.5 fail).
+- **Resolution**: branch fix/aci-beam-deflection-fy.

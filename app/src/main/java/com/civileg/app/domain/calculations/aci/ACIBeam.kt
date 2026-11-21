@@ -242,18 +242,21 @@ class ACIBeam : BeamDesign {
         // parity but does not change the ACI span/depth ratios.
         InputGuard.positive("span", span)
         InputGuard.positive("totalDepth", totalDepth)
-        // Simplified ratio method per ACI Table 24.2.2
+        // Simplified ratio method per ACI 318M-14 Table 9.3.1.1 (printed p.211)
+        // Note: one-end-continuous (l/18.5) has no SupportCondition value;
+        // CONTINUOUS conservatively uses the both-ends l/21 limit.
         val basicRatio = when (supportCondition) {
             SupportCondition.SIMPLY_SUPPORTED -> 16.0
             SupportCondition.CONTINUOUS -> 21.0
             SupportCondition.CANTILEVER -> 8.0
         }
 
-        // [FIX] ACI 318-25 Table 24.2.2 footnote: multiply by (0.4 + fy/700)
-        // when fy ≠ 420 MPa. reinforcementRatio carries fy when caller passes it
-        // as fy-value directly; fall back to DEFAULT_FY when ≤ 0.
-        // Bug was: fyFactor = 0.4 + DEFAULT_FY/DEFAULT_FY = 1.4, then min(1.0, 1.4) = 1.0 always.
-        val fyForFactor = if (reinforcementRatio > 0) reinforcementRatio else DEFAULT_FY
+        // ACI 318M-14 §9.3.1.1.1 (printed p.211): for fy other than 420 MPa,
+        // multiply the Table 9.3.1.1 limits by (0.4 + fy/700). Uses the fy
+        // parameter; reinforcementRatio is a true steel ratio and must NOT
+        // be read as fy (F-06: production caller passes rho ~ 0.01, which
+        // collapsed fyFactor to 0.40 and failed nearly every beam).
+        val fyForFactor = if (fy > 0) fy else DEFAULT_FY
         val fyFactor = 0.4 + fyForFactor / 700.0
         
         val actualRatio = (span * 1000) / totalDepth
