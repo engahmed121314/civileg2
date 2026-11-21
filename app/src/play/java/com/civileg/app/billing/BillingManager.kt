@@ -187,8 +187,7 @@ class BillingManager @Inject constructor(
             QueryPurchasesParams.newBuilder()
                 .setProductType(BillingClient.ProductType.SUBS)
                 .build()
-        ) { billingResult, purchasesResult ->
-            val purchases = purchasesResult.purchasesList
+        ) { billingResult, purchases ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                 val hasActiveSub = purchases.any {
                     it.purchaseState == Purchase.PurchaseState.PURCHASED &&
