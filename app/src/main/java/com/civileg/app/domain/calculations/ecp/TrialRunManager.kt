@@ -2,7 +2,7 @@ package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.LoadCombination
-import com.civileg.app.utils.ComprehensiveCostManager
+import com.civileg.app.domain.calculations.utils.ComprehensiveCostManager
 import com.civileg.app.utils.TimelineManager
 import com.civileg.app.utils.RatioManager
 

@@ -141,7 +141,7 @@ class ConcreteMixViewModel @Inject constructor(
         val res = _mixResult.value ?: return
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
-                val drawingBitmap = com.civileg.app.utils.PdfDrawingGenerator.generateConcreteMixDrawing(
+                val drawingBitmap = com.civileg.app.shared.reporting.PdfDrawingGenerator.generateConcreteMixDrawing(
                     targetFc = res.targetStrength,
                     cement = res.cementContent,
                     water = res.waterContent,

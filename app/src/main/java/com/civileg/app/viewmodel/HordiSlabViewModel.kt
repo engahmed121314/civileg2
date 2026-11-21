@@ -178,8 +178,8 @@ class HordiSlabViewModel @Inject constructor(
                 val safetyChecks = emptyList<GenericSafetyCheck>()
 
                 val drawingBitmap = pendingDrawingBitmap ?: runCatching {
-                    com.civileg.app.utils.PdfDrawingGenerator.generateSlabDrawingByType(
-                        slabType = com.civileg.app.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
+                    com.civileg.app.shared.reporting.PdfDrawingGenerator.generateSlabDrawingByType(
+                        slabType = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
                         spanX = params.span, spanY = params.span, thickness = params.totalThickness,
                         mainDia = res.barDiameter, mainSpacing = res.barSpacing,
                         distDia = res.barDiameter, distSpacing = res.barSpacing,
@@ -189,7 +189,7 @@ class HordiSlabViewModel @Inject constructor(
                 pendingDrawingBitmap = null  // consume after use
 
                 val bbsEntries = runCatching {
-                    com.civileg.app.utils.BbsGenerator.generateHordiSlabBbs(
+                    com.civileg.app.domain.calculations.utils.BbsGenerator.generateHordiSlabBbs(
                         "H1", res, params.span, params.ribSpacing
                     )
                 }.getOrDefault(emptyList())
@@ -206,7 +206,7 @@ class HordiSlabViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     bbsEntries = bbsEntries,
-                    boqRows = com.civileg.app.utils.BoqEstimator.hordiSlabRows(
+                    boqRows = com.civileg.app.domain.calculations.utils.BoqEstimator.hordiSlabRows(
                         params.span / 1000.0, params.totalThickness / 1000.0, steelWeightKg, "H1"
                     ),
                     drawingBitmap = drawingBitmap,
@@ -252,8 +252,8 @@ class HordiSlabViewModel @Inject constructor(
                 (thicknessEff / 1000.0) * (inputParams.span / 1000.0) * (inputParams.span / 1000.0)
             } else 0.0
             val estimatedSteel = res.providedReinforcement * 7850.0 / 1e6  // As (mm²) × density / 1e6 → kg/m approx
-            repository.saveSlabDesign(projectId, name, com.civileg.app.utils.CalculatorEngine.SlabResult(
-                type = com.civileg.app.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
+            repository.saveSlabDesign(projectId, name, com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabResult(
+                type = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
                 thickness = res.minThickness,
                 isSafe = res.isSafe,
                 concreteVolume = estimatedVolume,

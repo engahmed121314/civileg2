@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.StirrupZone
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt

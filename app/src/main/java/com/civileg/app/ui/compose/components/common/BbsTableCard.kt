@@ -26,12 +26,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.civileg.app.utils.BbsEntry
+import com.civileg.app.domain.calculations.utils.BbsEntry
 import java.util.Locale
 
 /**
  * On-screen Bar Bending Schedule shared by the element screens. Entries come straight from
- * [com.civileg.app.utils.BbsGenerator], so the table and the exported BBS use one source.
+ * [com.civileg.app.domain.calculations.utils.BbsGenerator], so the table and the exported BBS use one source.
  */
 @Composable
 fun BbsTableCard(

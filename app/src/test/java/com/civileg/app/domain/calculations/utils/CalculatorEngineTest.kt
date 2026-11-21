@@ -1,6 +1,7 @@
-package com.civileg.app.utils
+package com.civileg.app.domain.calculations.utils
 
 import com.civileg.app.domain.entities.*
+import com.civileg.app.utils.SteelTables
 import org.junit.Assert.*
 import org.junit.Test
 import kotlin.math.PI

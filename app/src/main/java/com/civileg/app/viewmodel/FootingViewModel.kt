@@ -9,11 +9,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.civileg.app.R
 import com.civileg.app.db.DesignRepository
-import com.civileg.app.utils.BoqEstimator
-import com.civileg.app.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.BoqEstimator
+import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
-import com.civileg.app.utils.PdfDrawingGenerator
-import com.civileg.app.utils.CalculationValidator
+import com.civileg.app.shared.reporting.PdfDrawingGenerator
+import com.civileg.app.domain.calculations.utils.CalculationValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -238,7 +238,7 @@ class FootingViewModel @Inject constructor(
                     isSafe = res.isSafe,
                     calculationSteps = res.calculationSteps,
                     bbsEntries = runCatching {
-                        com.civileg.app.utils.BbsGenerator.generateFootingBbs("F1", res)
+                        com.civileg.app.domain.calculations.utils.BbsGenerator.generateFootingBbs("F1", res)
                     }.getOrDefault(emptyList()),
                     boqRows = BoqEstimator.footingRows(res, "F1", excavationDepthM, workingSpaceM, blindingThicknessM),
                     drawingBitmap = drawingBitmap,
