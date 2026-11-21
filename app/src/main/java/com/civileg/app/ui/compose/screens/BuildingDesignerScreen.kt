@@ -89,12 +89,11 @@ fun BuildingDesignerScreen(
                     }
                 },
                 actions = {
+                    val livePricesUnavailable = stringResource(com.civileg.app.R.string.live_prices_unavailable)
                     IconButton(onClick = {
                         scope.launch {
                             LivePriceFetcher.fetchLivePrices(context)
-                            snackbarHostState.showSnackbar(
-                                context.getString(com.civileg.app.R.string.live_prices_unavailable)
-                            )
+                            snackbarHostState.showSnackbar(livePricesUnavailable)
                         }
                     }) {
                         Icon(Icons.Default.CloudSync, contentDescription = "تحديث الأسعار")
