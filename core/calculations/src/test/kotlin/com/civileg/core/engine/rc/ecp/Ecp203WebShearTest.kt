@@ -74,7 +74,7 @@ class Ecp203WebShearTest {
     }
 
     @Test fun `maximum stress also has absolute four-point-four cap`() {
-        assertEquals(4.4, e.assess(s.copy(fcuMpa = 100.0), 1.0, links).maximumShearStressMpa, 0.0)
+        assertEquals(4.4, e.assess(s.copy(fcuMpa = 60.0), 1.0, links).maximumShearStressMpa, 0.0)
     }
 
     @Test fun `minimum link diameter and200 spacing checked separately from strength`() {
@@ -105,4 +105,9 @@ class Ecp203WebShearTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun `zero effective depth rejected`() { e.assess(s.copy(effectiveDepthMm = 0.0), 1.0, links) }
+    @Test(expected = IllegalArgumentException::class)
+    fun `shear component also rejects out of range concrete`() {
+        e.assess(s.copy(fcuMpa = 100.0), 1.0, links)
+    }
+
 }

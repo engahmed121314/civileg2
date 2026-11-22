@@ -434,3 +434,14 @@ Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
   anchorage are still open. Advanced/shared/waffle paths remain unconverted.
 - Other-code section methods have no new equations. An ECP-only context is
   rejected by them. No stored record rewrite or database migration is included.
+
+**E-RC-MATERIAL (2026-11-22) - normal reinforced-concrete strength range.**
+
+- Directly inspected ECP203-2020 printed2-21, clause2-3-2-1/Table2-13:
+  characteristic strength is the28day150mm cube strength; reinforced concrete
+  requires fcu>=20MPa and design strength must not exceed60MPa. The source-section
+  flexure and shear components enforce both bounds. Prestressed/plain concrete
+  have different minimums and are not what these components design.
+- Existing fcu16 minimum-ratio and fcu100 shear-cap fixtures were out of this
+  application range. They changed to20 and60 respectively; the same controlling
+  equations and numerical expectations still pass. New range guards are tested.

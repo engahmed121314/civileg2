@@ -100,3 +100,18 @@ their previous explicit method holds. The legacy no-context preview remains only
 for those unconverted callers. ACI/SBC numerical methods are unchanged and reject
 an ECP-only context instead of silently applying it. Existing saved data is not
 rewritten and no database schema change is included.
+
+## Material application range
+
+Printed2-21, clause2-3-2-1 and Table2-13, defines the characteristic strength from
+150mm cubes at28days, requires reinforced-concrete fcu>=20MPa and limits design
+fcu to60MPa. Both standalone flexure and web-shear components now enforce20..60.
+The minimum-ratio test previously used fcu16; it now uses20 and still tests the
+same controlling1.1/fy expression and exact103.125mm2 result. The4.4MPa shear-cap
+fixture now uses60, where the cap still governs, rather than the invalid100MPa.
+Boundary acceptance and rejection tests cover20,60,19.999,60.001 and100MPa.
+
+The printed4-1/4-2 preference for fcu>=30 when fy500 is used is not a universal
+mandatory prohibition. It is not converted into one. Specific grade/exposure
+restrictions, including B500-DWR in exposureIII/IV (printed4-73), still require
+full material and environmental classification before member approval.

@@ -32,7 +32,7 @@ class Ecp203RectangularFlexureTest {
 
     @Test fun `minimum ratio includes square root term and one point one over fy`() {
         assertEquals(115.53522697374598, engine.minimumSteelMm2(section), 1e-9)
-        val weak = section.copy(fcuMpa = 16.0)
+        val weak = section.copy(fcuMpa = 20.0)
         assertEquals(103.125, engine.minimumSteelMm2(weak), 1e-9)
     }
 
@@ -119,4 +119,17 @@ class Ecp203RectangularFlexureTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun `nonfinite input rejected`() { engine.assess(section.copy(fcuMpa = Double.NaN), 1.0) }
+    @Test fun `reinforced concrete source range includes both endpoints`() {
+        assertTrue(engine.assess(section.copy(fcuMpa = 20.0), 1.0).withinSinglyReinforcedDomain)
+        assertTrue(engine.assess(section.copy(fcuMpa = 60.0), 1.0).withinSinglyReinforcedDomain)
+    }
+    @Test(expected = IllegalArgumentException::class)
+    fun `reinforced concrete below source minimum is rejected`() {
+        engine.assess(section.copy(fcuMpa = 19.999), 1.0)
+    }
+    @Test(expected = IllegalArgumentException::class)
+    fun `reinforced concrete above source maximum is rejected`() {
+        engine.assess(section.copy(fcuMpa = 60.001), 1.0)
+    }
+
 }

@@ -41,6 +41,8 @@ object Ecp203WebShear {
         val s = section
         require(listOf(s.fcuMpa, s.webWidthMm, s.effectiveDepthMm, s.totalDepthMm, s.flangeThicknessMm)
             .all { it.isFinite() && it > 0.0 }) { "Web geometry and strength must be finite and positive." }
+        // Printed2-21, clause2-3-2-1, normal reinforced-concrete design range.
+        require(s.fcuMpa in 20.0..60.0) { "Reinforced-concrete strength is outside the verified ECP203-2020 range20..60 MPa." }
         require(s.effectiveDepthMm < s.totalDepthMm && s.flangeThicknessMm < s.totalDepthMm)
         require(designShearKn.isFinite() && designShearKn >= 0.0)
         val bd = s.webWidthMm * s.effectiveDepthMm
