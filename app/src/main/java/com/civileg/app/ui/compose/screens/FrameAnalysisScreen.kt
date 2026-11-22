@@ -467,7 +467,7 @@ private fun FrameSaveDesignDialog(
 }
 
 @Composable
-private fun FrameOpenDesignDialog(
+internal fun FrameOpenDesignDialog(
     designs: List<Design>,
     projects: List<Project>,
     onDismiss: () -> Unit,
