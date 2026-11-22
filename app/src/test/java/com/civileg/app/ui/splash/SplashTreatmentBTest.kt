@@ -10,6 +10,7 @@ import android.os.SystemClock
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.civileg.app.R
 import org.junit.Assert.assertEquals
@@ -196,6 +197,93 @@ class SplashTreatmentBTest {
     private fun recordWitnessManifest(scene: Scene, label: String) {
         val dm = scene.activity.resources.displayMetrics
         val dir = File("build/reports/tests/splash-shots").apply { mkdirs() }
+        // Diagnostics only, read by NO assertion: actual attached-window
+        // insets, artwork clear-strip thresholds in view coordinates, and
+        // per-group measured bounds/ink extents/line counts/chosen mode, so
+        // a mode decision can be reviewed from retained evidence instead of
+        // inferred from the failing expectation.
+        val rootInsets = ViewCompat.getRootWindowInsets(scene.root)
+        val sysBars = rootInsets?.getInsets(WindowInsetsCompat.Type.systemBars())
+        val cutout = rootInsets?.getInsets(WindowInsetsCompat.Type.displayCutout())
+        val combined = rootInsets?.getInsets(
+            WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+        val w = scene.root.width
+        val h = scene.root.height
+        // Test-side recompute of the exact strip/content math onLayout uses
+        // (diagnostics only, read by no assertion): artwork clear-strip
+        // thresholds 130/1350 are the approved-geometry constants already
+        // mirrored in assertStripContainment; the 52/110/1460/1523 anchors
+        // mirror the overlay's private approved-geometry constants so a
+        // declined/accepted anchoredFits predicate can be reviewed from its
+        // complete operands without opening production internals.
+        val contentLeft = scene.overlay.paddingLeft.toFloat()
+        val contentTop = scene.overlay.paddingTop.toFloat()
+        val contentRight = (w - scene.overlay.paddingRight).toFloat()
+        val contentBottom = (h - scene.overlay.paddingBottom).toFloat()
+        val topStripTop = maxOf(maxOf(scene.overlay.artworkToViewY(0f, w, h), 0f), contentTop)
+        val topStripBottom = minOf(minOf(scene.overlay.artworkToViewY(130f, w, h), h.toFloat()), contentBottom)
+        val bottomStripTop = maxOf(maxOf(scene.overlay.artworkToViewY(1350f, w, h), 0f), contentTop)
+        val bottomStripBottom = minOf(minOf(scene.overlay.artworkToViewY(1672f, w, h), h.toFloat()), contentBottom)
+        fun group(tag: String, v: View): String {
+            val ink = inkTopBottom(v)
+            val sb = StringBuilder()
+            sb.append(tag).append(" bounds=[").append(v.left).append(",").append(v.top).append(",")
+                .append(v.right).append(",").append(v.bottom).append("]")
+                .append(" laidOut=").append(v.width).append("x").append(v.height)
+                .append(" measured=").append(v.measuredWidth).append("x").append(v.measuredHeight)
+                .append(" inkTopView=").append(v.top + ink[0])
+                .append(" inkBottomView=").append(v.top + ink[1])
+                .append(" mode=").append(scene.overlay.placementModes[v.id])
+            if (v is TextView) {
+                val l = v.layout
+                sb.append(" textType=").append(v.text.javaClass.simpleName)
+                    .append(" isSpanned=").append(v.text is android.text.Spanned)
+                    .append(" transformation=").append(v.transformationMethod?.javaClass?.simpleName ?: "null")
+                    .append(" layoutTextEqualsText=").append(l?.text?.toString() == v.text.toString())
+                    .append(" ellipsized=").append(if (l != null && l.lineCount > 0) l.getEllipsisCount(0) else -1)
+                    .append(" compoundPaddingTop=").append(v.compoundPaddingTop)
+                    .append(" extendedPaddingTop=").append(v.extendedPaddingTop)
+                    .append(" totalPaddingTop=").append(v.totalPaddingTop)
+                    .append(" gravity=").append(v.gravity)
+                    .append(" textSize=").append(v.textSize)
+                    .append(" typefaceStyle=").append(v.typeface?.style ?: -1)
+                    .append(" shadowRadius=").append(v.shadowRadius)
+                    .append(" shadowDx=").append(v.shadowDx)
+                    .append(" shadowDy=").append(v.shadowDy)
+                    .append(" lineCount=").append(l?.lineCount ?: -1)
+                if (l != null) {
+                    val rawBounds = Rect()
+                    v.paint.getTextBounds(v.text.toString(), 0, v.text.length, rawBounds)
+                    sb.append(" rawPaintBounds=[").append(rawBounds.left).append(",").append(rawBounds.top)
+                        .append(",").append(rawBounds.right).append(",").append(rawBounds.bottom).append("]")
+                    for (i in 0 until l.lineCount) {
+                        sb.append(" line").append(i).append("=[l=").append(l.getLineLeft(i))
+                            .append(",r=").append(l.getLineRight(i))
+                            .append(",baseline=").append(l.getLineBaseline(i)).append("]")
+                    }
+                }
+            }
+            return sb.toString()
+        }
+        fun pairOperands(tag: String, upper: View, lower: View, upperAnchorArt: Float,
+                         lowerAnchorArt: Float, stripTop: Float, stripBottom: Float): String {
+            val upperAnchorY = scene.overlay.artworkToViewY(upperAnchorArt, w, h)
+            val lowerAnchorY = scene.overlay.artworkToViewY(lowerAnchorArt, w, h)
+            val upperInk = inkTopBottom(upper)
+            val lowerInk = inkTopBottom(lower)
+            val upperTop = upperAnchorY - (upperInk[0] + upperInk[1]) / 2f
+            val lowerTop = lowerAnchorY - (lowerInk[0] + lowerInk[1]) / 2f
+            val tol = 1f
+            val containmentTop = upperTop + upperInk[0] >= stripTop - tol
+            val containmentBottom = lowerTop + lowerInk[1] <= stripBottom + tol
+            val order = upperTop + upperInk[1] <= lowerTop + lowerInk[0] + tol
+            return tag + "Recomputed upperAnchorY=" + upperAnchorY + " lowerAnchorY=" + lowerAnchorY +
+                " upperAnchoredTop=" + upperTop + " lowerAnchoredTop=" + lowerTop +
+                " upperInkTopView=" + (upperTop + upperInk[0]) + " lowerInkBottomView=" + (lowerTop + lowerInk[1]) +
+                " stripTop=" + stripTop + " stripBottom=" + stripBottom +
+                " containmentTop=" + containmentTop + " containmentBottom=" + containmentBottom +
+                " order=" + order + " anchoredFits=" + (containmentTop && containmentBottom && order)
+        }
         File(dir, "splash-B-$label-manifest.txt").writeText(
             "label=$label\n" +
                 "density=${dm.density}\n" +
@@ -205,7 +293,20 @@ class SplashTreatmentBTest {
                 "heightPx=${scene.root.height}\n" +
                 "attachFramesServiced=${scene.attachFramesServiced}\n" +
                 "attachElapsedMs=${scene.attachElapsedMs}\n" +
-                "postFrameCallbackDelayMs=16\n"
+                "postFrameCallbackDelayMs=16\n" +
+                "systemBarsInsets=$sysBars\n" +
+                "displayCutoutInsets=$cutout\n" +
+                "combinedInsets=$combined\n" +
+                "overlayPadding=[" + scene.overlay.paddingLeft + "," + scene.overlay.paddingTop + "," + scene.overlay.paddingRight + "," + scene.overlay.paddingBottom + "]\n" +
+                "contentRect=[$contentLeft,$contentTop,$contentRight,$contentBottom]\n" +
+                "topStrip=[$topStripTop,$topStripBottom]\n" +
+                "bottomStrip=[$bottomStripTop,$bottomStripBottom]\n" +
+                group("name", scene.name) + "\n" +
+                group("prayer", scene.prayer) + "\n" +
+                group("caption", scene.caption) + "\n" +
+                group("loadingBar", scene.bar) + "\n" +
+                pairOperands("topPair", scene.name, scene.prayer, 52f, 110f, topStripTop, topStripBottom) + "\n" +
+                pairOperands("bottomPair", scene.caption, scene.bar, 1460f, 1523f, bottomStripTop, bottomStripBottom) + "\n"
         )
     }
 
