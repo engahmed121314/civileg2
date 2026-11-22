@@ -2428,4 +2428,8 @@
     <string name="ecp_ribbed_entered_depth">السمك الكلي المدخل</string>
     <string name="ecp_ribbed_section_trace">خطوات حساب القطاع وحدود الفحص</string>
     <string name="ecp_ribbed_cover_links">الغطاء حتى السطح الخارجي للكانات (مم)</string>
+    <string name="ecp_ribbed_immediate_udl">حساب الترخيم اللحظي لبحر بسيط الارتكاز وحمل جاذبية منتظم</string>
+    <string name="ecp_ribbed_immediate_scope">الأحمال المميزة منفصلة عن القوى المصعدة. أدخل كامل الوزن الذاتي ضمن الحمل الميت. يشترط النموذج جناحًا علويًا مضغوطًا وبحر تحليل يساوي L2. الترخيم طويل المدى وتوقيت التشطيبات وعرض الشروخ واعتماد حدود التشغيل ما زالت فحوصًا منفصلة.</string>
+    <string name="ecp_ribbed_service_dead">الحمل الميت المميز شاملًا الوزن الذاتي (كيلونيوتن/م²)</string>
+    <string name="ecp_ribbed_analysis_span">بحر التحليل بسيط الارتكاز (مم)، يجب أن يساوي L2</string>
 </resources>

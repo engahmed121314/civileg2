@@ -2425,6 +2425,10 @@
     <string name="ecp_ribbed_entered_depth">Entered total depth</string>
     <string name="ecp_ribbed_section_trace">Section calculation trace and limits</string>
     <string name="ecp_ribbed_cover_links">Cover to outside links (mm)</string>
+    <string name="ecp_ribbed_immediate_udl">Calculate immediate deflection for simply supported uniform gravity load</string>
+    <string name="ecp_ribbed_immediate_scope">Characteristic loads are separate from factored forces. Include all self weight in dead load. This model requires top-flange compression and analysis span equal to L2. Long-term deformation, finish timing, crack width and full serviceability approval remain separate.</string>
+    <string name="ecp_ribbed_service_dead">Characteristic dead load including self weight (kN/m²)</string>
+    <string name="ecp_ribbed_analysis_span">Simply supported analysis span (mm), must equal L2</string>
 </resources>
 
 

@@ -1,6 +1,6 @@
 # ECP 203-2020 flexure, web shear and rib geometry components
 
-These components implement bounded section and geometry calculations. They are not acceptance of a complete Hordi or Waffle member and are not yet connected to those member calculations.
+These components implement bounded section and geometry calculations. The dedicated ECP Hordi path consumes an explicit actual-layout context. This is not acceptance of a complete Hordi or Waffle member; shared/Advanced callers remain unconverted.
 
 ## Source map
 
@@ -71,7 +71,7 @@ cover outside links, aggregate size, steel surface, vertical links and moment
 region. Positive flange compression uses the explicit L2 effective width capped
 by interior rib spacing. Flange tension uses the web rectangle. The same actual
 bar centroid feeds flexure and shear. Input forces are already factored per rib;
-the load-combination selector does not multiply those forces again.
+the irrelevant second-factor selector is omitted from the source ECP input path. Other-code input paths retain their existing selector.
 
 The dedicated Hordi screen/ViewModel/wrapper forwards this context to the ECP
 engine. Actual bar and link inputs are visible; the L2 field starts empty rather
@@ -148,3 +148,59 @@ aggregate, seven layers of one12mm bar give c55.9167340mm and innermost stress
 by the retained conservative0.95d ceiling. The single-layer coupled golden vector
 above is unchanged. Tests cover both independent vectors, the previously false
 pass, required area, source stress law, domain boundaries and the actual wrapper.
+
+## Immediate simply supported UDL deflection
+
+`Ecp203ShortTermDeflection` implements a separate characteristic-load elastic
+calculation, not a reuse of the factored section moment/shear. The dedicated rib
+context optionally supplies a simply supported analysis span and characteristic
+dead area load including all self weight. The existing characteristic live area
+load is used independently of the supplied ULS force. Multiplying each area load
+by the actual rib-center spacing gives its characteristic line load.
+
+This bounded gravity model requires top-flange compression and analysis span
+identical to the explicitly supplied zero-moment distance L2. Continuous spans,
+cantilevers, uplift, variable stiffness and loading patterns are not substituted.
+
+- Printed2-23 Eq2-1: `Ec=4400*sqrt(fcu)` MPa; printed4-2: Es200000MPa.
+- Gross T-section centroid and Ig use the web and flange geometry, ignoring steel
+  as required for Ig. Flange-at-tension-face geometry has its own extreme-fiber
+  distance, not the compression-flange cracking moment.
+- Cracked transformed-section equilibrium excludes tensile concrete. Each actual
+  steel layer is retained; compression steel replaces concrete with factor n-1.
+  Rectangular strips are integrated through the neutral axis. Icr used for
+  deflection is capped at Ig, per the printed4-60 definition.
+- Printed4-60 Eq4-71: `fctr=0.6*sqrt(fcu)`, `Mcr=fctr*Ig/yt`.
+- Printed4-59 Eq4-70: `Ie=(Mcr/Ma)^3*Ig+[1-(Mcr/Ma)^3]*Icr<=Ig`.
+  Uncracked cases use Ig directly, including zero moment.
+- Immediate midspan deflection uses the elastic simply supported UDL solution
+  `5*q*L^4/(384*Ec*Ie)`, with q in N/mm, numerically equal to kN/m.
+- Printed4-62 Eq4-77: live-load increment is `delta(D+L)-delta(D)`, using each
+  load case's own moment and stiffness. Using one stiffness for both is wrong.
+- A fully cracked elastic tension-steel stress bound is exposed. The coupled rib
+  path rejects cracked cases above characteristic steel yield rather than
+  presenting an elastic result as valid after steel yielding.
+
+Independent high-precision T vector: fcu30, bw200, B600, tf60, h350, two20mm
+bars at307mm from the compression face. Ec24099.7925302MPa, n8.2988266289,
+gross centroid137.9787234mm, Ig1097549290.7801mm4, cracked neutral axis
+64.9848905mm, Icr360278972.7326mm4 and Mcr17.0120428kNm. At span5000mm,
+qD4 and qL8kN/m, deltaD1.23066954mm and deltaD+L9.44311333mm give the
+correct live increment8.21244379mm. At the same gross section with the flange
+at the tension face, Mcr26.1410958kNm and live increment5.96096472mm differ.
+The latter is a component geometry test, not permission to model a negative
+support region as a simply supported gravity rib.
+
+The actual coupled rib vector with dead area load6kN/m2 and live8kN/m2 at
+600mm centers uses line loads3.6 and4.8kN/m: deltaD1.10760259mm,
+deltaD+L5.05652550mm and live increment3.94892292mm. The ULS62kNm supplied
+section force and required area611.1777816mm2 are unchanged by this service
+calculation. The EN/AR flow verifies explicit service inputs, rejects a
+mismatched analysis span and invalidates results when service loads change.
+
+This is immediate deflection only. Long-term creep/shrinkage, load age, finish
+installation, deflection-sensitive attachments, crack width and full limits
+remain unapproved. There is no new whole-serviceability or member SAFE result.
+The trace records the actual equations, separate load cases, stiffness and
+limits. Failed section geometry/flexure/shear also carries source-specific
+remedial actions, not an instruction to add bars or links without code limits.

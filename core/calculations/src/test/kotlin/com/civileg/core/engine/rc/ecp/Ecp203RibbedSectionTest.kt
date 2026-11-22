@@ -26,7 +26,43 @@ class Ecp203RibbedSectionTest {
         assertEquals(600.0, a.effectiveFlangeWidthMm, 1e-9)
         assertEquals(63.73881721178874, a.momentResistanceKnM, 1e-8)
         assertEquals(611.1777815875193, a.requiredSteelMm2!!, 1e-8)
+        assertNull(assess().immediateDeflection)
         assertTrue(a.sectionChecksPass)
+    }
+
+    @Test fun `actual rib characteristic area loads become line loads without ULS reuse`() {
+        val c = context().copy(characteristicLiveLoadKnM2 = 8.0,
+            immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(5000.0, 6.0))
+        val a = assess(c)
+        val sls = a.immediateDeflection!!
+        assertEquals(3.6, sls.dead.characteristicLineLoadKnPerM, 1e-12)
+        assertEquals(8.4, sls.deadPlusLive.characteristicLineLoadKnPerM, 1e-12)
+        assertEquals(11.25, sls.dead.maximumMomentKnM, 1e-12)
+        assertEquals(26.25, sls.deadPlusLive.maximumMomentKnM, 1e-12)
+        assertEquals(1.1076025853004998, sls.dead.immediateDeflectionMm, 1e-10)
+        assertEquals(5.056525503294484, sls.deadPlusLive.immediateDeflectionMm, 1e-10)
+        assertEquals(3.9489229179939844, sls.immediateLiveDeflectionMm, 1e-10)
+        assertEquals(assess().momentResistanceKnM, a.momentResistanceKnM, 0.0)
+        assertEquals(sls.immediateLiveDeflectionMm,
+            assess(c, moment = 1.0).immediateDeflection!!.immediateLiveDeflectionMm, 0.0)
+    }
+    @Test(expected = IllegalArgumentException::class)
+    fun `simple service model cannot silently assess a negative support region`() {
+        assess(context().copy(region = Ecp203RibbedSection.Region.FLANGE_IN_TENSION,
+            immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(5000.0, 6.0)))
+    }
+    @Test(expected = IllegalArgumentException::class)
+    fun `simple service model cannot silently use a different zero-moment distance`() {
+        assess(context().copy(immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(4900.0, 6.0)))
+    }
+    @Test(expected = IllegalArgumentException::class)
+    fun `yielding cracked service steel cannot receive an elastic deflection result`() {
+        assess(context().copy(characteristicLiveLoadKnM2 = 1000.0,
+            immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(5000.0, 6.0)))
+    }
+    @Test(expected = IllegalArgumentException::class)
+    fun `negative dead load is rejected not normalized to zero`() {
+        assess(context().copy(immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(5000.0, -1.0)))
     }
 
     @Test fun `negative region uses web only not compression flange capacity`() {

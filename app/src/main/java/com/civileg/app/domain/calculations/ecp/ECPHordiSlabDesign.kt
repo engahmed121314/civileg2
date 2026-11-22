@@ -112,7 +112,7 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         val a = com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.assess(fcu, fy,
             ribWidth, ribSpacing, totalThickness, toppingThickness, span, designMoment, designShear, context)
         val required = requireNotNull(a.requiredSteelMm2) {
-            "Moment exceeds the verified singly reinforced section domain. Increase section size or use a separately verified doubly reinforced design."
+            "Moment exceeds the verified singly reinforced section domain. Increase section size or use a separately verified doubly reinforced design (ECP203-2020 printed4-5/6, Table4-1)."
         }
         require(a.momentResistanceKnM > 0.0 && a.shear.shearResistanceKn > 0.0) {
             "Actual reinforcement is outside the supported positive-resistance section domain."
@@ -133,10 +133,24 @@ class ECPHordiSlabDesign : HordiSlabDesign {
             utilizationRatio = utilization,
             safetyAssessmentBlocked = true,
             warnings = buildList {
-                add("Section forces, actual bar layout, flexure and web shear assessed. Whole-member serviceability, durability, topping reinforcement, cross-rib provision and anchorage are not yet assessed; execution exports remain blocked.")
-                if (!a.geometry.geometryChecksPass) add("Rib/topping geometry does not meet ECP ribbed-slab dimensional limits.")
-                if (!a.flexureChecksPass) add("Selected actual bars fail the section flexure or minimum/maximum steel check.")
-                if (!a.shear.shearChecksPass) add("Section shear strength or link detailing check fails.")
+                add("Section forces, actual bar layout, flexure and web shear assessed. Whole-member serviceability approval, durability, topping reinforcement, cross-rib provision and anchorage are incomplete; execution exports remain blocked.")
+                if (!a.geometry.geometryChecksPass) {
+                    add("Rib/topping geometry does not meet ECP ribbed-slab dimensional limits.")
+                    add("Source-based action: satisfy clear rib gap <=700 mm, rib width >=${a.geometry.minimumRibWidthMm} mm and topping >=${a.geometry.minimumToppingMm} mm, then recalculate all checks (ECP203-2020 printed6-15/16, Fig6-4).")
+                }
+                if (!a.flexureChecksPass) {
+                    add("Selected actual bars fail the section flexure or minimum/maximum steel check.")
+                    add("Source-based action: redesign the section or actual fitting bar layout to meet equilibrium, minimum steel and the singly reinforced maximum. Adding bars beyond the Table4-1 limit is not a remedy (ECP203-2020 printed4-1..4-9, Eqs4-1/2/9 and Table4-1).")
+                }
+                if (!a.shear.shearChecksPass) {
+                    add("Section shear strength or link detailing check fails.")
+                    when {
+                        a.shear.concreteOnlyRequired -> add("Source-based action: resize the concrete section for concrete-only shear where h<=${a.shear.concreteOnlyDepthLimitMm} mm; additional links cannot increase this permitted resistance (ECP203-2020 printed4-22, clause4-2-2-1-6(d)(2)).")
+                        !a.shear.withinConcreteMaximum -> add("Source-based action: revise the concrete section to meet q<=qmax before selecting links; extra links cannot exceed the concrete maximum (ECP203-2020 printed4-17, Eq4-27).")
+                        else -> add("Source-based action: redesign the actual vertical links for the required steel ratio and detailing, including diameter>=8 mm, spacing<=200 mm and applicable transverse-leg requirements (ECP203-2020 printed4-20..4-22, Eq4-33 and clause4-2-2-1-6).")
+                    }
+                }
+                if (a.immediateDeflection != null) add("Immediate simply supported UDL deflection is calculated separately. Long-term deformation, loading/finish timing, crack width and full serviceability limits are not yet approved.")
             },
             codeNotes = listOf(
                 "ECP203-2020 bounded section method: printed4-1..4-9,4-17..4-22,6-15/16,6-42,7-6/7-7.",
@@ -146,8 +160,17 @@ class ECPHordiSlabDesign : HordiSlabDesign {
                 "Cover to outside links=${context.coverToOutsideLinksMm} mm; aggregate=${context.nominalMaximumAggregateMm} mm; clear bar gap=${a.layout.minimumClearGapMm} mm. Exposure/fire cover not approved.",
                 "Vertical links=${context.links.legs} legs x ${context.links.diameterMm} mm @ ${context.links.spacingMm} mm, fy=${context.links.fyMpa} MPa. Concrete-only clause applies=${a.shear.concreteOnlyRequired}.",
                 "Required one-way cross ribs=${a.requiredCrossRibs}; provision/detailing not checked. Characteristic live load=${context.characteristicLiveLoadKnM2} kN/m2.",
-                "Input moment and shear are already factored section forces. Entered total thickness is not a verified minimum-depth or serviceability result."
-            )
+                "Input moment and shear are already factored section forces. Entered total thickness is not a verified minimum-depth or serviceability result.",
+                "Applied flexure equations: fcd=0.67*fcu/1.50; fyd=fy/1.15; a=0.8*c; sigma_i=min(fyd,Es*0.003*(di-c)/c); sum(As_i*sigma_i)=C(c). MRd uses force/first-moment equilibrium with the0.95d arm and verified singly reinforced ceilings (printed4-1..4-9)."
+            ) + (a.immediateDeflection?.let { sls ->
+                fun f(value: Double) = String.format(java.util.Locale.US, "%.6g", value)
+                listOf(
+                    "Immediate deflection only, simply supported uniform characteristic loads: L=${f(context.immediateDeflectionInput!!.analysisSpanMm)} mm; qD=${f(sls.dead.characteristicLineLoadKnPerM)} kN/m/rib; qD+L=${f(sls.deadPlusLive.characteristicLineLoadKnPerM)} kN/m/rib. Dead load includes self weight. No ULS force or load factor is reused.",
+                    "Ec=4400*sqrt(fcu)=${f(sls.stiffness.elasticModulusMpa)} MPa (Eq2-1, printed2-23); n=Es/Ec=${f(sls.stiffness.modularRatio)}. Gross T-section Ig=${f(sls.stiffness.grossInertiaMm4)} mm4; transformed cracked Icr=${f(sls.stiffness.crackedInertiaMm4)} mm4; cracked neutral axis=${f(sls.stiffness.crackedNeutralAxisMm)} mm. Fully cracked elastic tension-steel stress bound=${f(sls.deadPlusLive.fullyCrackedElasticTensionSteelStressMpa)} MPa; no cracked steel yielding is admitted by this elastic model.",
+                    "Mcr=0.6*sqrt(fcu)*Ig/yt=${f(sls.stiffness.crackingMomentKnM)} kN.m (Eq4-71, printed4-60). Ie=(Mcr/Ma)^3*Ig+[1-(Mcr/Ma)^3]*Icr<=Ig (Eq4-70, printed4-59). IeD=${f(sls.dead.effectiveInertiaMm4)}; IeD+L=${f(sls.deadPlusLive.effectiveInertiaMm4)} mm4.",
+                    "Elastic simply supported UDL: delta=5*q*L^4/(384*Ec*Ie). deltaD=${f(sls.dead.immediateDeflectionMm)} mm; deltaD+L=${f(sls.deadPlusLive.immediateDeflectionMm)} mm. deltaLive=deltaD+L-deltaD=${f(sls.immediateLiveDeflectionMm)} mm, using separate load-case stiffness (Eq4-77, printed4-62). Not a whole-serviceability pass."
+                )
+            } ?: emptyList())
         )
     }
 

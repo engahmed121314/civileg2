@@ -459,3 +459,20 @@ Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
 - Regression: seven1x8mm layers at d313..85mm, fcu30/fy400/bw200/h350,
   actual MRd21.4812192kNm fails21.5kNm; centroid-yield21.5602757 would pass.
 - This does not approve member serviceability, detailing or execution outputs.
+
+### ECP rib immediate elastic deflection
+
+- Printed2-23 Eq2-1, printed4-59 Eq4-70, printed4-60 Eq4-71 and printed4-62
+  Eq4-77 now feed an optional simply supported prismatic UDL calculation.
+- Actual T geometry and actual reinforcement layers determine gross and cracked
+  stiffness. Dead-only and dead-plus-live each use their own Ie. The live
+  increment is their deflection difference, not a one-stiffness approximation.
+- Area loads become per-rib line loads using actual center spacing. Supplied
+  factored section forces are not reused as service loads. The simple rib model
+  requires a compression flange and analysis span equal to its explicit L2.
+- The result remains an immediate elastic calculation. Long-term/timing, crack
+  width, full limits and whole-member detailing/approval remain open. Cracked
+  cases with elastic steel stress above characteristic yield are rejected.
+- Source-specific failed-section advice respects minimum/maximum steel,
+  concrete-only shear, qmax and link-detailing restrictions. It does not approve
+  a redesign or fabricate reinforcement details.

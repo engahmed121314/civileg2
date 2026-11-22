@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -101,6 +102,9 @@ fun HordiSlabScreen(
     var contraflexureDistance by remember { mutableStateOf("") }
     var flangeInCompression by remember { mutableStateOf(true) }
     var mainBarsDeformed by remember { mutableStateOf(true) }
+    var immediateDeflection by remember { mutableStateOf(false) }
+    var serviceDeadLoad by remember { mutableStateOf("") }
+    var serviceAnalysisSpan by remember { mutableStateOf("") }
     val ecpSection = designCode == "ECP"
     val sectionInputsValid = !ecpSection || (
         listOf(fcu, fy, ribWidth, ribSpacing, totalThickness, toppingThickness, span,
@@ -110,13 +114,21 @@ fun HordiSlabScreen(
             it.toDoubleOrNull()?.let { value -> value.isFinite() && value >= 0.0 } == true
         } && barsPerLayer.toIntOrNull() in 1..100 && layerCount.toIntOrNull() in 1..20 &&
         linksLegs.toIntOrNull() in 2..20 && (!flangeInCompression ||
-        contraflexureDistance.toDoubleOrNull()?.let { it.isFinite() && it > 0.0 } == true))
+        contraflexureDistance.toDoubleOrNull()?.let { it.isFinite() && it > 0.0 } == true) &&
+        (!immediateDeflection || (flangeInCompression &&
+            serviceDeadLoad.toDoubleOrNull()?.let { it.isFinite() && it >= 0.0 } == true &&
+            serviceAnalysisSpan.toDoubleOrNull()?.let { analysis ->
+                analysis.isFinite() && analysis > 0.0 && contraflexureDistance.toDoubleOrNull()?.let {
+                    kotlin.math.abs(analysis - it) <= 1e-6
+                } == true
+            } == true)))
     // Results belong to an immutable calculation input snapshot, not edited form fields.
     LaunchedEffect(listOf(designCode, fcu, fy, ribWidth, ribSpacing, totalThickness,
         toppingThickness, span, designMoment, designShear, loadCombination, cover,
         aggregate, mainDiameter, barsPerLayer, layerCount, linksDiameter, linksSpacing,
         linksFy, linksLegs, characteristicLiveLoad, contraflexureDistance,
-        flangeInCompression, mainBarsDeformed)) { viewModel.clearResult() }
+        flangeInCompression, mainBarsDeformed, immediateDeflection, serviceDeadLoad,
+        serviceAnalysisSpan)) { viewModel.clearResult() }
 
 
     // Drawing view mode: 0=All, 1=Plan, 2=Section, 3=Detail
@@ -289,13 +301,26 @@ fun HordiSlabScreen(
                     if (flangeInCompression) {
                         item { PremiumInputField(contraflexureDistance, stringResource(R.string.ecp_ribbed_contraflexure), { contraflexureDistance = it }, modifier = Modifier.fillMaxWidth()) }
                     }
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = immediateDeflection,
+                                onCheckedChange = { immediateDeflection = it },
+                                modifier = Modifier.testTag("ecp-immediate-deflection-toggle"))
+                            AppText(stringResource(R.string.ecp_ribbed_immediate_udl), modifier = Modifier.weight(1f))
+                        }
+                    }
+                    if (immediateDeflection) {
+                        item { AppText(stringResource(R.string.ecp_ribbed_immediate_scope), style = MaterialTheme.typography.bodySmall) }
+                        item { PremiumInputField(serviceDeadLoad, stringResource(R.string.ecp_ribbed_service_dead), { serviceDeadLoad = it }, modifier = Modifier.fillMaxWidth()) }
+                        item { PremiumInputField(serviceAnalysisSpan, stringResource(R.string.ecp_ribbed_analysis_span), { serviceAnalysisSpan = it }, modifier = Modifier.fillMaxWidth()) }
+                    }
                     if (!sectionInputsValid) item {
                         AppText(stringResource(R.string.ecp_ribbed_invalid_inputs), color = MaterialTheme.colorScheme.error)
                     }
                 }
 
-                // Load Combination Dropdown
-                item {
+                // Source ECP forces are already factored, so a second-factor selector is misleading.
+                if (!ecpSection) item {
                     ExposedDropdownMenuBox(
                         expanded = loadCombinationExpanded,
                         onExpandedChange = { loadCombinationExpanded = !loadCombinationExpanded }
@@ -356,7 +381,9 @@ fun HordiSlabScreen(
                                     characteristicLiveLoad.toDouble(),
                                     Ecp203WebShear.VerticalLinks(linksFy.toDouble(),
                                         if (linksFy.toDouble() == 240.0) Ecp203RectangularFlexure.SteelSurface.SMOOTH_MILD else Ecp203RectangularFlexure.SteelSurface.HIGH_YIELD_DEFORMED,
-                                        linksDiameter.toDouble(), linksLegs.toInt(), linksSpacing.toDouble())
+                                        linksDiameter.toDouble(), linksLegs.toInt(), linksSpacing.toDouble()),
+                                    if (!immediateDeflection) null else Ecp203RibbedSection.ImmediateDeflectionInput(
+                                        serviceAnalysisSpan.toDouble(), serviceDeadLoad.toDouble())
                                 )
                             )
                         },
