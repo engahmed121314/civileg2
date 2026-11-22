@@ -37,13 +37,14 @@ class RoomMigration14To15Test {
         val file: File = context.getDatabasePath(name)
         val raw = android.database.sqlite.SQLiteDatabase.openDatabase(file.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE)
         raw.execSQL("INSERT INTO projects (id,name,location,clientName,description,status,code,createdAt,updatedAt) VALUES (1,'p','','','','ACTIVE','ECP',0,0)")
-        // The test SQLite has no ALTER ... DROP COLUMN: rebuild designs exactly as it was at v14.
+        // The test SQLite has no ALTER ... DROP COLUMN: rebuild designs as a fresh v14 install has it
+        // (createdAt NOT NULL, as Room's entity expects).
         raw.execSQL(
             "CREATE TABLE designs_v14 (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, projectId INTEGER NOT NULL, " +
                 "type TEXT NOT NULL, name TEXT NOT NULL, inputData TEXT NOT NULL, results TEXT NOT NULL, " +
                 "isSafe INTEGER NOT NULL, utilizationRatio REAL NOT NULL DEFAULT 0.0, codeUsed TEXT NOT NULL, " +
                 "concreteVolume REAL NOT NULL DEFAULT 0.0, steelWeight REAL NOT NULL DEFAULT 0.0, " +
-                "totalCost REAL NOT NULL DEFAULT 0.0, createdAt INTEGER, " +
+                "totalCost REAL NOT NULL DEFAULT 0.0, createdAt INTEGER NOT NULL, " +
                 "FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE)"
         )
         raw.execSQL("DROP TABLE designs")
