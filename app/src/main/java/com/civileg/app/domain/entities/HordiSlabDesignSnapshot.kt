@@ -19,7 +19,9 @@ data class HordiSlabInputs(
     val designCode: String,
     val sectionContext: Ecp203RibbedSection.Context?,
     val actionBasis: String = if (designCode == "ECP" && sectionContext != null)
-        "SUPPLIED_FACTORED_SECTION_ACTIONS_NO_REFACTOR" else "LEGACY_UNVERIFIED_INPUT_CONVENTION"
+        "SUPPLIED_FACTORED_SECTION_ACTIONS_NO_REFACTOR" else "LEGACY_UNVERIFIED_INPUT_CONVENTION",
+    /** Null for historical/unrelated layouts. Explicit economy is never inferred. */
+    val fourBarArrangementPolicy: com.civileg.core.engine.rc.ecp.Ecp203FourBarArrangement.Policy? = null
 )
 
 /**

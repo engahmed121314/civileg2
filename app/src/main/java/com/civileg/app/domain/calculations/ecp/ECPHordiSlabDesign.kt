@@ -133,6 +133,7 @@ class ECPHordiSlabDesign : HordiSlabDesign {
             isSafe = false,
             utilizationRatio = utilization,
             safetyAssessmentBlocked = true,
+            boundedSectionChecksPass = a.sectionChecksPass,
             warnings = buildList {
                 add("Section forces, actual bar layout, flexure and web shear assessed. Whole-member serviceability approval, durability, topping reinforcement, cross-rib provision and anchorage are incomplete; execution exports remain blocked.")
                 if (!a.geometry.geometryChecksPass) {

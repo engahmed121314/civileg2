@@ -45,6 +45,7 @@ class HordiSnapshotSerializationContractTest {
             Ecp203RibbedSection.ImmediateDeflectionInput::class.java,
             Ecp203RibbedSection.Region::class.java,
             Ecp203BarLayout.Layer::class.java,
+            Ecp203FourBarArrangement.Policy::class.java,
             Ecp203RectangularFlexure.SteelSurface::class.java,
             Ecp203WebShear.VerticalLinks::class.java,
             Ecp203LongTermDeflection.Input::class.java,
