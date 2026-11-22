@@ -347,55 +347,13 @@ fun HordiSlabScreen(
                     }
 
                     // Safety Status Gauge
-                    item {
-                        val util = res.utilizationRatio
-                        if (util != null) {
-                            SafetyStatusCard(
-                                utilizationRatio = util,
-                                isSafe = res.isSafe,
-                                title = stringResource(R.string.hordi_slab_safety_title, designCode)
-                            )
-                        } else {
-                            // Blocked check: no gauge, explicit incomplete status
-                            ResultDataCard(
-                                stringResource(R.string.hordi_slab_safety_title, designCode),
-                                listOf("Status" to HordiResultPresentation.statusText(res.isSafe, false, isArabic)),
-                                icon = Icons.Default.Shield,
-                                accentColor = Color(0xFFE53935)
-                            )
-                        }
-                    }
+                    item { HordiSafetyStatusSection(res, designCode, isArabic) }
 
                     // Reinforcement Result
-                    item {
-                        ResultDataCard(
-                            stringResource(R.string.hordi_slab_reinforcement),
-                            listOf(
-                                stringResource(R.string.hordi_slab_required_as) to String.format("%.1f mm²", res.requiredReinforcement),
-                                stringResource(R.string.hordi_slab_provided_as) to String.format("%.1f mm²", res.providedReinforcement),
-                                "Bar Diameter" to String.format("φ%.0f mm", res.barDiameter),
-                                "Bar Spacing" to String.format("@%.0f mm", res.barSpacing),
-                                "Bar String" to String.format("φ%.0f @%.0f mm", res.barDiameter, res.barSpacing)
-                            ),
-                            icon = Icons.Default.Build,
-                            accentColor = Color(0xFF1565C0)
-                        )
-                    }
+                    item { HordiReinforcementCard(res) }
 
                     // Shear Check
-                    item {
-                        ResultDataCard(
-                            stringResource(R.string.hordi_slab_shear_check),
-                            listOf(
-                                "Shear Capacity" to HordiResultPresentation.shearCapacityText(res.shearCapacity, isArabic),
-                                "Min Thickness" to String.format("%.0f mm", res.minThickness),
-                                "Utilization" to HordiResultPresentation.utilizationText(res.utilizationRatio, isArabic),
-                                "Status" to HordiResultPresentation.statusText(res.isSafe, res.utilizationRatio != null, isArabic)
-                            ),
-                            icon = Icons.Default.Shield,
-                            accentColor = if (res.isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)
-                        )
-                    }
+                    item { HordiShearCheckCard(res, isArabic) }
 
                     // Warnings
                     if (res.warnings.isNotEmpty()) {
@@ -559,4 +517,56 @@ fun HordiSlabScreen(
             }
         }
     }
+}
+
+/** Production safety section: gauge when utilization exists, explicit blocked status otherwise. */
+@Composable
+internal fun HordiSafetyStatusSection(res: SlabDesignResult, designCode: String, isArabic: Boolean) {
+    val util = res.utilizationRatio
+    if (util != null) {
+        SafetyStatusCard(
+            utilizationRatio = util,
+            isSafe = res.isSafe,
+            title = stringResource(R.string.hordi_slab_safety_title, designCode)
+        )
+    } else {
+        ResultDataCard(
+            stringResource(R.string.hordi_slab_safety_title, designCode),
+            listOf(stringResource(R.string.status) to HordiResultPresentation.statusText(res.isSafe, false, isArabic)),
+            icon = Icons.Default.Shield,
+            accentColor = Color(0xFFE53935)
+        )
+    }
+}
+
+/** Production reinforcement card: per-rib main bars and rib spacing (never a misleading bar-within-rib spacing). */
+@Composable
+internal fun HordiReinforcementCard(res: SlabDesignResult) {
+    ResultDataCard(
+        stringResource(R.string.hordi_slab_reinforcement),
+        listOf(
+            stringResource(R.string.hordi_slab_required_as) to String.format("%.1f mm²", res.requiredReinforcement),
+            stringResource(R.string.hordi_slab_provided_as) to String.format("%.1f mm²", res.providedReinforcement),
+            stringResource(R.string.hordi_slab_bars_per_rib) to res.rebarText,
+            stringResource(R.string.hordi_slab_rib_spacing_result) to String.format("@%.0f mm", res.barSpacing)
+        ),
+        icon = Icons.Default.Build,
+        accentColor = Color(0xFF1565C0)
+    )
+}
+
+/** Production shear card: blocked shear carries its not-evaluated reason, never a substitute value. */
+@Composable
+internal fun HordiShearCheckCard(res: SlabDesignResult, isArabic: Boolean) {
+    ResultDataCard(
+        stringResource(R.string.hordi_slab_shear_check),
+        listOf(
+            stringResource(R.string.hordi_slab_shear_capacity) to HordiResultPresentation.shearCapacityText(res.shearCapacity, isArabic),
+            stringResource(R.string.hordi_slab_adopted_thickness) to String.format("%.0f mm", res.minThickness),
+            stringResource(R.string.hordi_slab_utilization) to HordiResultPresentation.utilizationText(res.utilizationRatio, isArabic),
+            stringResource(R.string.status) to HordiResultPresentation.statusText(res.isSafe, res.utilizationRatio != null, isArabic)
+        ),
+        icon = Icons.Default.Shield,
+        accentColor = if (res.isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)
+    )
 }

@@ -60,8 +60,8 @@ object HordiResultPresentation {
         "Required As" to "${"%.2f".format(requiredReinforcement)} mm²",
         "Provided As" to "${"%.2f".format(providedReinforcement)} mm²",
         "Bar Diameter" to "$barDiameter mm",
-        "Bar Spacing" to "$barSpacing mm",
-        "Min Thickness" to "$minThickness mm",
+        "Rib Spacing" to "$barSpacing mm",
+        "Adopted Total Thickness" to "$minThickness mm",
         "Shear Capacity" to exportShearCapacity(shearCapacity),
         "Utilization" to exportUtilization(utilizationRatio),
         "Is Safe" to if (isSafe) "YES" else "NO"

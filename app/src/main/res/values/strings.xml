@@ -1888,6 +1888,11 @@
     <string name="hordi_slab_safety_title">Hordi Slab — %s</string>
     <string name="hordi_slab_reinforcement">Reinforcement</string>
     <string name="hordi_slab_shear_check">Shear Check</string>
+    <string name="hordi_slab_shear_capacity">Shear Capacity</string>
+    <string name="hordi_slab_utilization">Utilization</string>
+    <string name="hordi_slab_bars_per_rib">Main Bars per Rib</string>
+    <string name="hordi_slab_rib_spacing_result">Rib Spacing</string>
+    <string name="hordi_slab_adopted_thickness">Adopted Total Thickness</string>
     <string name="hordi_slab_required_as">Required As</string>
     <string name="hordi_slab_provided_as">Provided As</string>
     <string name="hordi_slab_warnings">Warnings</string>
