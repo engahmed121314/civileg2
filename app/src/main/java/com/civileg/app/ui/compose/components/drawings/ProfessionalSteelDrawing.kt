@@ -80,8 +80,8 @@ private fun buildSectionPath(
     val bottom = top + height
     val cx = left + width / 2f
     val cy = top + height / 2f
-    val tf = flangeThickness.coerceIn(1f, height * 0.35f)
-    val tw = webThickness.coerceIn(1f, width * 0.35f)
+    val tf = flangeThickness.coerceInMin(1f, height * 0.35f)
+    val tw = webThickness.coerceInMin(1f, width * 0.35f)
 
     return Path().apply {
         when (shape) {
@@ -223,6 +223,8 @@ fun ProfessionalSteelDrawing(
             .fillMaxWidth()
             .fillMaxSize()
     ) {
+        // Too small to draw truthfully: omit rather than distort geometry.
+        if (isDegenerateForDrawing()) return@Canvas
         val cw = size.width
         val ch = size.height
 
@@ -408,8 +410,8 @@ private fun DrawScope.drawCrossSectionView(
     )
     val sW = safeWidth.toFloat() * scale
     val sH = safeDepth.toFloat() * scale
-    val sTf = (flangeThickness * scale).toFloat().coerceIn(1f, sH * 0.35f)
-    val sTw = (webThickness * scale).toFloat().coerceIn(1f, sW * 0.35f)
+    val sTf = (flangeThickness * scale).toFloat().coerceInMin(1f, sH * 0.35f)
+    val sTw = (webThickness * scale).toFloat().coerceInMin(1f, sW * 0.35f)
 
     val scx = cx - sW / 2f
     val scy = cy - sH / 2f
@@ -747,7 +749,7 @@ private fun DrawScope.drawMomentShearDiagrams(
             for (pt in shearData) {
                 val px = left + 30f + (pt.first / memberLength).toFloat() * (w - 60f)
                 val py = sfdCenterY - pt.second.toFloat() * scale
-                lineTo(px, py.coerceIn(sfdTop + 10f, sfdBottom - 10f))
+                lineTo(px, py.coerceInMin(sfdTop + 10f, sfdBottom - 10f))
             }
             lineTo(right - 30f, sfdCenterY)
             close()
@@ -760,7 +762,7 @@ private fun DrawScope.drawMomentShearDiagrams(
             for (pt in shearData) {
                 val px = left + 30f + (pt.first / memberLength).toFloat() * (w - 60f)
                 val py = sfdCenterY - pt.second.toFloat() * scale
-                lineTo(px, py.coerceIn(sfdTop + 10f, sfdBottom - 10f))
+                lineTo(px, py.coerceInMin(sfdTop + 10f, sfdBottom - 10f))
             }
             lineTo(right - 30f, sfdCenterY)
             close()
@@ -772,8 +774,8 @@ private fun DrawScope.drawMomentShearDiagrams(
         for ((i, pt) in shearData.withIndex()) {
             val px = left + 30f + (pt.first / memberLength).toFloat() * (w - 60f)
             val py = sfdCenterY - pt.second.toFloat() * scale
-            if (i == 0) sfdPath.moveTo(px, py.coerceIn(sfdTop + 10f, sfdBottom - 10f))
-            else sfdPath.lineTo(px, py.coerceIn(sfdTop + 10f, sfdBottom - 10f))
+            if (i == 0) sfdPath.moveTo(px, py.coerceInMin(sfdTop + 10f, sfdBottom - 10f))
+            else sfdPath.lineTo(px, py.coerceInMin(sfdTop + 10f, sfdBottom - 10f))
         }
         drawPath(sfdPath, Color(0xFFE74C3C), style = Stroke(2f))
 

@@ -74,6 +74,8 @@ fun ProfessionalStrapFootingDrawing(
             .fillMaxWidth()
             .fillMaxSize()
     ) {
+        // Too small to draw truthfully: omit rather than distort geometry.
+        if (isDegenerateForDrawing()) return@Canvas
         val w = size.width
         val h = size.height
 
@@ -303,7 +305,7 @@ fun ProfessionalStrapFootingDrawing(
 
             val maxThick = max(safeF1T, max(safeF2T, safeStrapT))
             val thickPx = (maxThick * secScale).toFloat().coerceIn(25f, 80f)
-            val strapThickPx = (safeStrapT * secScale).toFloat().coerceIn(20f, thickPx * 0.9f)
+            val strapThickPx = (safeStrapT * secScale).toFloat().coerceInMin(20f, thickPx * 0.9f)
 
             val sLeft = secLeft + 40f
             val sRight = sLeft + maxSecW
@@ -338,8 +340,8 @@ fun ProfessionalStrapFootingDrawing(
 
             // Columns
             val colH = 40f
-            val c1Wpx = (safeC1W * secScale).toFloat().coerceIn(12f, f1LenPx * 0.4f)
-            val c2Wpx = (safeC2W * secScale).toFloat().coerceIn(12f, f2LenPx * 0.4f)
+            val c1Wpx = (safeC1W * secScale).toFloat().coerceInMin(12f, f1LenPx * 0.4f)
+            val c2Wpx = (safeC2W * secScale).toFloat().coerceInMin(12f, f2LenPx * 0.4f)
 
             // Column 1
             val c1LeftX = sLeft + f1LenPx / 2f - c1Wpx / 2f

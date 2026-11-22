@@ -79,6 +79,8 @@ fun ProfessionalWaffleSlabDrawing(
     val cfg = drawingDimensionsConfig()
 
     Canvas(modifier = modifier.fillMaxWidth().fillMaxSize()) {
+        // Too small to draw truthfully: omit rather than distort geometry.
+        if (isDegenerateForDrawing()) return@Canvas
         val W = size.width
         val H = size.height
 
@@ -89,8 +91,8 @@ fun ProfessionalWaffleSlabDrawing(
         val safeRibWidth = ribWidth.coerceAtLeast(80.0)
         val safeRibHeight = ribHeight.coerceAtLeast(150.0)
         val safeTopping = toppingThickness.coerceAtLeast(40.0)
-        val safeSolidHead = solidHeadSize.coerceIn(400.0, min(safeLx, safeLy) * 0.45)
-        val safeColW = columnWidth.coerceIn(200.0, safeSolidHead * 0.7)
+        val safeSolidHead = solidHeadSize.coerceInMin(400.0, min(safeLx, safeLy) * 0.45)
+        val safeColW = columnWidth.coerceInMin(200.0, safeSolidHead * 0.7)
         val totalDepth = safeRibHeight + safeTopping
 
         // ── Color Palette ──────────────────────────────────────────────────
@@ -330,8 +332,8 @@ private fun DrawScope.drawWafflePlanView(
     }
 
     // ── Solid Heads around Columns (Corners + Center) ─────────────────────
-    val headSizePx = (safeSolidHead * scale).toFloat().coerceIn(24f, drawLx * 0.38f)
-    val colWPx = (safeColW * scale).toFloat().coerceIn(12f, headSizePx * 0.55f)
+    val headSizePx = (safeSolidHead * scale).toFloat().coerceInMin(24f, drawLx * 0.38f)
+    val colWPx = (safeColW * scale).toFloat().coerceInMin(12f, headSizePx * 0.55f)
 
     val headPositions = listOf(
         Offset(pX, pY),                                                 // Top-Left
@@ -393,7 +395,7 @@ private fun DrawScope.drawWaffleSectionAA(
     val ribSpacingPx = (avW / numT.toFloat()).coerceIn(60f, 130f)
     val scale = (ribSpacingPx / ribSpacingMm.toFloat())
 
-    val ribWPx = (ribWidthMm * scale).toFloat().coerceIn(16f, ribSpacingPx * 0.40f)
+    val ribWPx = (ribWidthMm * scale).toFloat().coerceInMin(16f, ribSpacingPx * 0.40f)
     val toppingPx = (toppingThickMm * scale).toFloat().coerceIn(14f, 32f)
     val ribHPx = (ribHeightMm * scale).toFloat().coerceIn(28f, 75f)
     val totalHPx = toppingPx + ribHPx
@@ -495,7 +497,7 @@ private fun DrawScope.drawWaffleSolidHeadDetail(
     val avH = height - 2 * pad
 
     val headSizePx = min(avW, avH) * 0.70f
-    val colWPx = (headSizePx * (safeColW / safeSolidHead).toFloat()).coerceIn(20f, headSizePx * 0.60f)
+    val colWPx = (headSizePx * (safeColW / safeSolidHead).toFloat()).coerceInMin(20f, headSizePx * 0.60f)
 
     val hLeft = left + pad + (avW - headSizePx) / 2f
     val hTop = top + pad + (avH - headSizePx) / 2f

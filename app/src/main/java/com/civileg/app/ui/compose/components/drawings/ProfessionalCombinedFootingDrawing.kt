@@ -70,6 +70,8 @@ fun ProfessionalCombinedFootingDrawing(
             .fillMaxWidth()
             .fillMaxSize()
     ) {
+        // Too small to draw truthfully: omit rather than distort geometry.
+        if (isDegenerateForDrawing()) return@Canvas
         val w = size.width
         val h = size.height
 
@@ -272,8 +274,8 @@ fun ProfessionalCombinedFootingDrawing(
             val c1xNorm = if (lenMm > 0) (col1X / lenMm).toFloat().coerceIn(0.05f, 0.95f) else 0.2f
             val c2xNorm = if (lenMm > 0) (col2X / lenMm).toFloat().coerceIn(0.05f, 0.95f) else 0.8f
 
-            val c1Wpx = (safeC1W * secScale).toFloat().coerceIn(15f, secSpanPx * 0.15f)
-            val c2Wpx = (safeC2W * secScale).toFloat().coerceIn(15f, secSpanPx * 0.15f)
+            val c1Wpx = (safeC1W * secScale).toFloat().coerceInMin(15f, secSpanPx * 0.15f)
+            val c2Wpx = (safeC2W * secScale).toFloat().coerceInMin(15f, secSpanPx * 0.15f)
             val colHpx = 45f
 
             // Column 1
