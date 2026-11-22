@@ -29,10 +29,12 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.civileg.app.R
 import com.civileg.app.domain.editor.EditorTool
 import com.civileg.app.domain.editor.UndoManager
 import com.civileg.app.domain.entities.FrameNode
@@ -81,14 +83,14 @@ fun EditorToolbar(
                 enabled = undoManager.canUndo,
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.Undo, contentDescription = "تراجع")
+                Icon(Icons.Default.Undo, contentDescription = stringResource(R.string.ed_undo))
             }
             IconButton(
                 onClick = { undoManager.redo() },
                 enabled = undoManager.canRedo,
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.Redo, contentDescription = "إعادة")
+                Icon(Icons.Default.Redo, contentDescription = stringResource(R.string.ed_redo))
             }
 
             Divider(
@@ -105,7 +107,7 @@ fun EditorToolbar(
             ) {
                 Icon(
                     imageVector = if (editorState.gridSnapEnabled) Icons.Default.GridOn else Icons.Default.GridOff,
-                    contentDescription = "التقاط الشبكة",
+                    contentDescription = stringResource(R.string.ed_snap_grid),
                     tint = if (editorState.gridSnapEnabled) MaterialTheme.colorScheme.primary else Color.Gray
                 )
             }
@@ -115,7 +117,7 @@ fun EditorToolbar(
                 onClick = { cameraState.fitAll(nodes, pixelsPerMeter, canvasW, canvasH) },
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.FitScreen, contentDescription = "تحديد الكل")
+                Icon(Icons.Default.FitScreen, contentDescription = stringResource(R.string.ed_fit_screen))
             }
         }
     }

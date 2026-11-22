@@ -10,6 +10,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import com.civileg.app.R
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
@@ -18,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -39,7 +41,7 @@ fun NodalLoadDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            AppText("حمولة على العقدة $nodeId", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            AppText(stringResource(R.string.ed_load_on_node, nodeId), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -77,7 +79,7 @@ fun NodalLoadDialog(
         },
         confirmButton = {
             AppButton(
-                label = "إضافة",
+                label = stringResource(R.string.ed_add),
                 style = AppButtonStyle.Text,
                 fillMaxWidth = false,
                 onClick = {
@@ -89,7 +91,7 @@ fun NodalLoadDialog(
             )
         },
         dismissButton = {
-            AppButton(label = "إلغاء", style = AppButtonStyle.Text, fillMaxWidth = false, onClick = onDismiss)
+            AppButton(label = stringResource(R.string.cancel), style = AppButtonStyle.Text, fillMaxWidth = false, onClick = onDismiss)
         }
     )
 }
@@ -108,7 +110,7 @@ fun MemberLoadDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            AppText("حمولة على العضو $memberId", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            AppText(stringResource(R.string.ed_load_on_member, memberId), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -124,7 +126,7 @@ fun MemberLoadDialog(
                 OutlinedTextField(
                     value = valStr,
                     onValueChange = { valStr = it },
-                    label = { AppText("القيمة (kN/m أو kN)") },
+                    label = { AppText(stringResource(R.string.ed_load_value_hint)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -136,8 +138,8 @@ fun MemberLoadDialog(
                         label = {
                             AppText(
                                 if (selectedType == MemberLoadType.Trapezoidal)
-                                    "طول الارتفاع من كل طرف a (m)"
-                                else "الموقع من البداية (m)"
+                                    stringResource(R.string.ed_load_trapezoid_a)
+                                else stringResource(R.string.ed_load_position)
                             )
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -157,7 +159,7 @@ fun MemberLoadDialog(
         },
         confirmButton = {
             AppButton(
-                label = "إضافة",
+                label = stringResource(R.string.ed_add),
                 style = AppButtonStyle.Text,
                 fillMaxWidth = false,
                 onClick = {
@@ -168,7 +170,7 @@ fun MemberLoadDialog(
             )
         },
         dismissButton = {
-            AppButton(label = "إلغاء", style = AppButtonStyle.Text, fillMaxWidth = false, onClick = onDismiss)
+            AppButton(label = stringResource(R.string.cancel), style = AppButtonStyle.Text, fillMaxWidth = false, onClick = onDismiss)
         }
     )
 }

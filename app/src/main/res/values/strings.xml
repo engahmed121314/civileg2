@@ -2405,6 +2405,25 @@
     <string name="settings_support_title">Support the app</string>
     <string name="settings_support_message">Civil Engineer Pro is free and ad-free. Voluntary donations fund new design codes, tests and drawings.</string>
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
+    <string name="ed_undo">Undo</string>
+    <string name="ed_redo">Redo</string>
+    <string name="ed_snap_grid">Grid Snap</string>
+    <string name="ed_fit_screen">Fit to Screen</string>
+    <string name="ed_load_on_node">Load on node %1$s</string>
+    <string name="ed_load_on_member">Load on member %1$s</string>
+    <string name="ed_add">Add</string>
+    <string name="ed_load_value_hint">Value (kN/m or kN)</string>
+    <string name="ed_load_trapezoid_a">Rise length from each end a (m)</string>
+    <string name="ed_load_position">Position from start (m)</string>
+    <string name="ed_node_properties">Node %1$s Properties</string>
+    <string name="ed_member_properties">Member %1$s Properties</string>
+    <string name="ed_support_type_colon">Support type:</string>
+    <string name="ed_delete_node">Delete Node</string>
+    <string name="ed_member_nodes">Nodes: %1$s -> %2$s</string>
+    <string name="ed_member_length">Length: %1$s m</string>
+    <string name="ed_member_material">Material: %1$s</string>
+    <string name="ed_delete_member">Delete Member</string>
+    <string name="ed_support_type_for_node">Support type for node %1$s</string>
 </resources>
 
 
