@@ -4,6 +4,7 @@ import android.animation.ValueAnimator
 import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Rect
 import android.os.Build
 import android.view.View
 import android.widget.ImageView
@@ -21,10 +22,13 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadow.api.Shadow
+import org.robolectric.shadows.ShadowChoreographer
 import org.robolectric.shadows.ShadowLooper
+import org.robolectric.shadows.ShadowValueAnimator
 import java.io.File
 import java.io.FileOutputStream
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 import kotlin.math.abs
 
 /**
@@ -72,12 +76,15 @@ class SplashTreatmentBTest {
      * visible(), content view set on the attached window, attachment asserted
      * BEFORE any animation advancement. The controller is closed in finally.
      */
-    private fun withAttachedScene(block: (Scene) -> Unit) {
+    private fun withAttachedScene(fontScale: Float = 1.0f, block: (Scene) -> Unit) {
         // Pin the font scale BEFORE any activity/view construction so measured
         // text bounds are produced under the recorded environment; restore the
-        // prior scale afterward.
+        // prior scale afterward. Configure the 16ms choreographer post-frame
+        // callback delay (canonical tagged-4.14.1 pattern) BEFORE creation and
+        // attachment too, so no uncontrolled initial frame callbacks run.
         val priorFontScale = RuntimeEnvironment.getFontScale()
-        RuntimeEnvironment.setFontScale(1.0f)
+        RuntimeEnvironment.setFontScale(fontScale)
+        ShadowChoreographer.setPostFrameCallbackDelay(16)
         val controller: ActivityController<Activity> =
             Robolectric.buildActivity(Activity::class.java)
                 .create().start().resume().visible()
@@ -188,10 +195,16 @@ class SplashTreatmentBTest {
                 "(l=${v.left} t=${v.top} r=${v.right} b=${v.bottom} vs $safeLeft,$safeTop,$safeRight,$safeBottom)",
                 v.left >= safeLeft && v.top >= safeTop && v.right <= safeRight && v.bottom <= safeBottom)
         }
-        assertTrue("$label: name above prayer (full rects ${scene.name.bottom} <= ${scene.prayer.top})",
-            scene.name.bottom <= scene.prayer.top)
-        assertTrue("$label: caption above bar (full rects ${scene.caption.bottom} <= ${scene.bar.top})",
-            scene.caption.bottom <= scene.bar.top)
+        // Order by INK rectangles: line-metric view rectangles are far taller
+        // than the visible ink and may overlap without any visual collision.
+        val tol = 1f
+        val nameInk = inkTopBottom(scene.name)
+        val prayerInk = inkTopBottom(scene.prayer)
+        val captionInk = inkTopBottom(scene.caption)
+        assertTrue("$label: name ink above prayer ink (inkBottom=${scene.name.top + nameInk[1]} <= inkTop=${scene.prayer.top + prayerInk[0]})",
+            scene.name.top + nameInk[1] <= scene.prayer.top + prayerInk[0] + tol)
+        assertTrue("$label: caption ink above bar (inkBottom=${scene.caption.top + captionInk[1]} <= barTop=${scene.bar.top})",
+            scene.caption.top + captionInk[1] <= scene.bar.top + tol)
 
         // Bar is 50% of the content width (integer-difference check).
         val contentW = scene.overlay.width - scene.overlay.paddingLeft - scene.overlay.paddingRight
@@ -202,20 +215,115 @@ class SplashTreatmentBTest {
     private fun Scene.resourcesName(v: View): String =
         try { activity.resources.getResourceEntryName(v.id) } catch (t: Throwable) { "view#${v.id}" }
 
-    /** Full-rectangle containment inside the visible clear strip (not centers). */
+    /**
+     * Visual ink bounds [topInView, bottomInView] relative to the view's own
+     * top: actual glyph extents around the baseline for text, the full height
+     * for non-text views (the bar). The approved artwork coordinates denote
+     * ink positions; line-metric view rectangles are far taller than ink.
+     */
+    /**
+     * Independent test-side copy of the layout's narrow measurement contract:
+     * tight glyph bounds ONLY for a verified single plain non-transformed
+     * non-ellipsized line whose realized Layout text matches the view text
+     * (origin-adjusted, shadow-extended); the FULL view rectangle otherwise.
+     */
+    private fun inkTopBottom(v: View): FloatArray {
+        if (v is TextView) {
+            val text = v.text
+            val layout = v.layout
+            if (layout != null && layout.lineCount == 1 &&
+                text !is android.text.Spanned &&
+                v.transformationMethod == null &&
+                layout.getEllipsisCount(0) == 0 &&
+                layout.text.toString() == text.toString()
+            ) {
+                val str = text.toString()
+                if (str.isNotEmpty()) {
+                    val bounds = Rect()
+                    v.paint.getTextBounds(str, 0, str.length, bounds)
+                    if (bounds.height() > 0) {
+                        val baseline = v.compoundPaddingTop + layout.getLineBaseline(0).toFloat()
+                        val shadowTop = v.shadowRadius - minOf(0f, v.shadowDy)
+                        val shadowBottom = v.shadowRadius + maxOf(0f, v.shadowDy)
+                        return floatArrayOf(baseline + bounds.top - shadowTop, baseline + bounds.bottom + shadowBottom)
+                    }
+                }
+            }
+        }
+        return floatArrayOf(0f, v.height.toFloat())
+    }
+
+    /** Ink-rectangle containment inside the visible clear strip (not centers). */
     private fun assertStripContainment(scene: Scene, label: String) {
         val w = scene.root.width
         val h = scene.root.height
         val topStripBottom = scene.overlay.artworkToViewY(130f, w, h)
         val bottomStripTop = scene.overlay.artworkToViewY(1350f, w, h)
-        assertTrue("$label: name fully within top clear strip (b=${scene.name.bottom} <= $topStripBottom)",
-            scene.name.top >= 0 && scene.name.bottom <= topStripBottom)
-        assertTrue("$label: prayer fully within top clear strip (b=${scene.prayer.bottom} <= $topStripBottom)",
-            scene.prayer.top >= 0 && scene.prayer.bottom <= topStripBottom)
-        assertTrue("$label: caption fully within bottom clear strip (t=${scene.caption.top} >= $bottomStripTop)",
-            scene.caption.top >= bottomStripTop && scene.caption.bottom <= h)
+        val tol = 1f
+        val nameInk = inkTopBottom(scene.name)
+        val prayerInk = inkTopBottom(scene.prayer)
+        val captionInk = inkTopBottom(scene.caption)
+        assertTrue("$label: name ink fully within top clear strip (inkBottom=${scene.name.top + nameInk[1]} <= $topStripBottom)",
+            scene.name.top + nameInk[0] >= 0 - tol && scene.name.top + nameInk[1] <= topStripBottom + tol)
+        assertTrue("$label: prayer ink fully within top clear strip (inkBottom=${scene.prayer.top + prayerInk[1]} <= $topStripBottom)",
+            scene.prayer.top + prayerInk[0] >= 0 - tol && scene.prayer.top + prayerInk[1] <= topStripBottom + tol)
+        assertTrue("$label: caption ink fully within bottom clear strip (inkTop=${scene.caption.top + captionInk[0]} >= $bottomStripTop)",
+            scene.caption.top + captionInk[0] >= bottomStripTop - tol && scene.caption.top + captionInk[1] <= h + tol)
         assertTrue("$label: bar fully within bottom clear strip (t=${scene.bar.top} >= $bottomStripTop)",
-            scene.bar.top >= bottomStripTop && scene.bar.bottom <= h)
+            scene.bar.top >= bottomStripTop - tol && scene.bar.bottom <= h + tol)
+    }
+
+    private val isPrayerPixel = { r: Int, g: Int, b: Int -> r > 225 && g > 225 && b > 225 }
+    private val isCaptionPixel = { r: Int, g: Int, b: Int -> r in 120..200 && g > 195 && b > 205 }
+    private val isNamePixel = { r: Int, g: Int, b: Int -> r > 190 && g in 150..200 && b in 80..140 }
+
+    private fun countInRegion(frame: Bitmap, left: Int, top: Int, right: Int, bottom: Int, matches: (Int, Int, Int) -> Boolean): Int {
+        var count = 0
+        for (x in left.coerceAtLeast(0) until right.coerceAtMost(frame.width)) {
+            for (y in top.coerceAtLeast(0) until bottom.coerceAtMost(frame.height)) {
+                val c = frame.getPixel(x, y)
+                if (matches(c shr 16 and 0xFF, c shr 8 and 0xFF, c and 0xFF)) count++
+            }
+        }
+        return count
+    }
+
+    private fun saveCrop(frame: Bitmap, name: String, top: Int, bottom: Int) {
+        val t = top.coerceIn(0, frame.height - 1)
+        val b = bottom.coerceIn(t + 1, frame.height)
+        val crop = Bitmap.createBitmap(frame, 0, t, frame.width, b - t)
+        val dir = File("build/reports/tests/splash-shots").apply { mkdirs() }
+        FileOutputStream(File(dir, "$name.png")).use {
+            crop.compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
+    }
+
+    /**
+     * Pixel-level strip-fit proof for anchored groups, on the captured first
+     * frame: text color present inside the strip; prayer color absent from a
+     * 20px guard band below the top strip edge (band validated against the
+     * bundled artwork, which has zero near-white there). Retains strip crops
+     * as witnesses either way.
+     */
+    private fun assertAnchoredStripPixels(scene: Scene, label: String, frame: Bitmap) {
+        val w = scene.root.width
+        val h = scene.root.height
+        val topStripBottom = scene.overlay.artworkToViewY(130f, w, h).toInt()
+        val bottomStripTop = scene.overlay.artworkToViewY(1350f, w, h).toInt()
+        saveCrop(frame, "splash-B-$label-top-strip", 0, topStripBottom + 24)
+        saveCrop(frame, "splash-B-$label-bottom-strip", (bottomStripTop - 24).coerceAtLeast(0), h)
+        if (scene.overlay.placementModes[R.id.tvPrayer] == SplashOverlayLayout.PlacementMode.CLEAR_ANCHORED) {
+            val present = countInRegion(frame, 0, 0, w, topStripBottom, isPrayerPixel)
+            assertTrue("$label: prayer text pixels present inside the top clear strip (count=$present)", present > 0)
+            val escaped = countInRegion(frame, 0, topStripBottom + 1, w, topStripBottom + 21, isPrayerPixel)
+            assertTrue("$label: no prayer pixels in the 20px guard band below the top strip (count=$escaped)", escaped == 0)
+            val namePresent = countInRegion(frame, 0, 0, w, topStripBottom, isNamePixel)
+            assertTrue("$label: name text pixels present inside the top clear strip (count=$namePresent)", namePresent > 0)
+        }
+        if (scene.overlay.placementModes[R.id.tvCaption] == SplashOverlayLayout.PlacementMode.CLEAR_ANCHORED) {
+            val present = countInRegion(frame, 0, bottomStripTop, w, h, isCaptionPixel)
+            assertTrue("$label: caption text pixels present inside the bottom clear strip (count=$present)", present > 0)
+        }
     }
 
     /**
@@ -230,8 +338,30 @@ class SplashTreatmentBTest {
         // Witness 1: honest first frame (phase 0 = track only), as-is.
         val first = capture(scene.root, "splash-B-$label-first-frame")
 
-        // Hierarchy is attached (asserted in withAttachedScene); now advance.
-        ShadowLooper.idleMainLooper(700, TimeUnit.MILLISECONDS)
+        // Layout/mode/strip checks run and report on the deterministic first
+        // frame, INDEPENDENTLY of the animation outcome below: a stalled or
+        // broken animator can never void geometry evidence again.
+        assertSceneGeometry(scene, label)
+        extra(scene)
+
+        // Corroborating native pixel evidence, independent of the rect math
+        // (NOT a universal ink proof): for any group that anchored, its text
+        // color must be PRESENT inside the verified clear strip and (prayer)
+        // ABSENT from the 20px guard band below the strip edge. The band is
+        // valid only because the bundled artwork carries zero near-white in
+        // artwork y=130..210 (checked against drawable-nodpi/
+        // splash_background.png); the between-strips artwork does contain
+        // near-white, so no wider absence claim is made.
+        assertAnchoredStripPixels(scene, label, first)
+
+        // Hierarchy is attached (asserted in withAttachedScene); now advance
+        // animation time with the canonical tagged-4.14.1 upstream pattern
+        // (ShadowValueAnimatorTest): per-frame main-looper idling with the
+        // 16ms choreographer post-frame callback delay (configured before
+        // attachment in withAttachedScene), so real vsync-driven frames
+        // actually run. No phase setter anywhere: the sweep stays a genuinely
+        // animator-driven frame.
+        repeat(44) { ShadowLooper.shadowMainLooper().idleFor(Duration.ofMillis(16)) }
         scene.root.measure(
             View.MeasureSpec.makeMeasureSpec(scene.root.width, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(scene.root.height, View.MeasureSpec.EXACTLY)
@@ -240,8 +370,6 @@ class SplashTreatmentBTest {
 
         // Witness 2: time-advanced sweep.
         val sweep = capture(scene.root, "splash-B-$label-sweep")
-
-        assertSceneGeometry(scene, label)
 
         val region = barRegionInRoot(scene)
         val firstFill = countInBarRegion(first, region, isFillPixel)
@@ -254,8 +382,6 @@ class SplashTreatmentBTest {
         assertTrue("$label: gold tip appears in the bar region after advancing time " +
             "(first=$firstTip sweep=$sweepTip, verified separately from fill)",
             sweepTip > firstTip)
-
-        extra(scene)
     }
 
     @Test
@@ -350,11 +476,55 @@ class SplashTreatmentBTest {
         val animatorField = SplashLoadingBar::class.java.getDeclaredField("animator")
         animatorField.isAccessible = true
         val animator = animatorField.get(scene.bar) as ValueAnimator
-        assertEquals(ValueAnimator.INFINITE, animator.repeatCount)
+        // Robolectric 4.14.1 ShadowValueAnimator.setRepeatCount(INFINITE)
+        // forwards 1 to the real object; the requested count is retained only
+        // on the shadow. Read the shadow accessor, not animator.repeatCount.
+        val shadowAnimator = Shadow.extract<ShadowValueAnimator>(animator)
+        assertEquals(ValueAnimator.INFINITE.toLong(), shadowAnimator.actualRepeatCount.toLong())
         assertTrue("attached animator is started", animator.isStarted)
         assertTrue(SplashLoadingBar::class.java.declaredMethods
             .none { it.name.startsWith("setProgress") })
     }
+
+    @Test
+    @Config(qualifiers = "w411dp-h731dp-mdpi")
+    fun `large font scale overflows the top strip and falls back honestly`() = withAttachedScene(fontScale = 2.0f) { scene ->
+        // At 2x font scale the title-group visible ink cannot fit the
+        // reference top strip with its order preserved: the layout must
+        // decline anchoring (whole group, in order, inside the safe area)
+        // rather than overflow into artwork ink. Witness retained BEFORE
+        // any assertion.
+        capture(scene.root, "splash-B-large-font")
+        recordWitnessManifest(scene, "large-font")
+        assertEquals(SplashOverlayLayout.PlacementMode.FALLBACK_SAFE_AREA,
+            scene.overlay.placementModes[R.id.tvAppName])
+        assertEquals(SplashOverlayLayout.PlacementMode.FALLBACK_SAFE_AREA,
+            scene.overlay.placementModes[R.id.tvPrayer])
+        assertSceneGeometry(scene, "large-font")
+    }
+
+    @Test
+    @Config(qualifiers = "w180dp-h731dp-mdpi")
+    fun `forced wrapped labels take the conservative full-rectangle path and fall back`() =
+        withAttachedScene(fontScale = 2.0f) { scene ->
+            // 180dp width at 2x font scale genuinely wraps the fixed labels
+            // to multiple lines; the narrow measurement contract no longer
+            // holds, so inkExtents must return the full measured rectangle
+            // and BOTH groups must decline anchoring. Witness BEFORE asserts.
+            capture(scene.root, "splash-B-forced-wrap")
+            recordWitnessManifest(scene, "forced-wrap")
+            assertTrue("prayer actually wraps under 180dp at 2x scale",
+                scene.prayer.layout != null && scene.prayer.layout.lineCount > 1)
+            assertEquals(SplashOverlayLayout.PlacementMode.FALLBACK_SAFE_AREA,
+                scene.overlay.placementModes[R.id.tvAppName])
+            assertEquals(SplashOverlayLayout.PlacementMode.FALLBACK_SAFE_AREA,
+                scene.overlay.placementModes[R.id.tvPrayer])
+            assertEquals(SplashOverlayLayout.PlacementMode.FALLBACK_SAFE_AREA,
+                scene.overlay.placementModes[R.id.tvCaption])
+            assertEquals(SplashOverlayLayout.PlacementMode.FALLBACK_SAFE_AREA,
+                scene.overlay.placementModes[R.id.loadingBar])
+            assertSceneGeometry(scene, "forced-wrap")
+        }
 
     @Test
     fun `bundled Plex fonts load for the splash overlay`() = withAttachedScene { scene ->

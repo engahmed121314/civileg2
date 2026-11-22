@@ -1,9 +1,11 @@
 package com.civileg.app.ui.splash
 
 import android.content.Context
+import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.civileg.app.R
@@ -23,14 +25,22 @@ import kotlin.math.min
  * holds name(y=52)/prayer(y=110); bottom y=1350..1672 holds caption(y=1460)
  * and the bar(y=1523).
  *
- * Overlays are placed as ORDERED GROUPS, validated by FULL MEASURED BOUNDS
- * (never centers): the title group (name above prayer) anchors only when both
- * full rectangles fit inside the visible, inset-safe portion of the top clear
- * strip and keep their order; the caption group (caption above bar) anchors
- * only when both full rectangles fit inside the visible bottom strip. If any
+ * Overlays are placed as ORDERED GROUPS, validated by INK BOUNDS (never
+ * centers): the approved artwork coordinates denote VISUAL ink positions, but
+ * a TextView's measured rectangle includes font line metrics far taller than
+ * the visible ink, so full-view-rectangle containment wrongly forces the reference
+ * aspect into fallback and collides with artwork ink. Text children therefore
+ * anchor and fit by the visible bounds from [inkExtents] (tight glyph
+ * measurement only under its narrow verified contract, the full measured
+ * rectangle otherwise); non-text children (the bar) use their full
+ * rectangle. The title group (name above prayer) anchors only
+ * when both ink rectangles fit inside the visible, inset-safe portion of the
+ * top clear strip and keep their order; the caption group (caption above
+ * bar) anchors only when both fit inside the visible bottom strip. If any
  * member of a group cannot anchor, the WHOLE group falls back together,
- * stacked in the same order just inside the inset-safe edge, so a sibling can
- * never be left anchored outside the safe area while its partner falls back.
+ * stacked in the same order just inside the inset-safe edge, so a sibling
+ * can never be left anchored outside the safe area while its partner falls
+ * back.
  *
  * Insets: applies systemBars AND displayCutout padding to itself, so text
  * never sits under a status bar, nav bar or side cutout; the background
@@ -142,11 +152,54 @@ class SplashOverlayLayout @JvmOverloads constructor(
     }
 
     /**
+     * Visible bounds [topInView, bottomInView] of a child relative to its own
+     * top. Tight glyph measurement is applied ONLY under a narrow verified
+     * contract, matching these fixed splash labels: the realized Layout has
+     * exactly ONE line, the view text is a plain (non-Spanned) string with no
+     * TransformationMethod, the line is not ellipsized, and the Layout's own
+     * text equals the view text. Under that contract the glyph extents
+     * (Paint.getTextBounds) are taken around the line's baseline, offset by
+     * the layout's in-view origin (compoundPaddingTop), and extended by the
+     * text shadow (blur radius plus vertical offset), so these are VISIBLE
+     * bounds, not bare glyph bounds. ANY deviation - wrapped lines, spans,
+     * transformation, ellipsizing, mismatched or unrealized Layout - falls
+     * back to the FULL measured rectangle, which can only decline anchoring,
+     * never overclaim a fit. No general rich-text measurement is attempted.
+     * Non-text children (the bar) always use their full measured rectangle.
+     */
+    private fun inkExtents(v: View): FloatArray {
+        if (v is TextView) {
+            val text = v.text
+            val layout = v.layout
+            if (layout != null && layout.lineCount == 1 &&
+                text !is android.text.Spanned &&
+                v.transformationMethod == null &&
+                layout.getEllipsisCount(0) == 0 &&
+                layout.text.toString() == text.toString()
+            ) {
+                val str = text.toString()
+                if (str.isNotEmpty()) {
+                    val bounds = Rect()
+                    v.paint.getTextBounds(str, 0, str.length, bounds)
+                    if (bounds.height() > 0) {
+                        val baseline = v.compoundPaddingTop + layout.getLineBaseline(0).toFloat()
+                        val shadowTop = v.shadowRadius - min(0f, v.shadowDy)
+                        val shadowBottom = v.shadowRadius + max(0f, v.shadowDy)
+                        return floatArrayOf(baseline + bounds.top - shadowTop, baseline + bounds.bottom + shadowBottom)
+                    }
+                }
+            }
+        }
+        return floatArrayOf(0f, v.measuredHeight.toFloat())
+    }
+
+    /**
      * Lays out an ordered overlay pair (upper above lower) as ONE group.
-     * Both anchor at their artwork positions only when BOTH full measured
-     * rectangles fit inside the visible strip (full bounds, not centers) with
-     * their order preserved; otherwise BOTH fall back together, stacked in the
-     * same order just inside the inset-safe edge.
+     * Both anchor their INK at their artwork positions only when BOTH ink
+     * rectangles fit inside the visible strip (ink bounds, not centers or
+     * line-metric rectangles) with their order preserved; otherwise BOTH fall
+     * back together, stacked in the same order just inside the inset-safe
+     * edge. A 1px tolerance absorbs integer font-metric rounding only.
      */
     private fun layoutOrderedGroup(
         upper: View,
@@ -164,14 +217,17 @@ class SplashOverlayLayout @JvmOverloads constructor(
     ) {
         val upperAnchorY = artworkToViewY(upperAnchorArt, w, h)
         val lowerAnchorY = artworkToViewY(lowerAnchorArt, w, h)
-        val upperTop = upperAnchorY - upper.measuredHeight / 2f
-        val lowerTop = lowerAnchorY - lower.measuredHeight / 2f
+        val upperInk = inkExtents(upper)
+        val lowerInk = inkExtents(lower)
+        val upperTop = upperAnchorY - (upperInk[0] + upperInk[1]) / 2f
+        val lowerTop = lowerAnchorY - (lowerInk[0] + lowerInk[1]) / 2f
 
-        // Full-rectangle containment + order, never center-only checks.
+        // Ink-rectangle containment + order, never center-only checks.
+        val tol = 1f
         val anchoredFits =
-            upperTop >= stripTop &&
-            lowerTop + lower.measuredHeight <= stripBottom &&
-            upperTop + upper.measuredHeight <= lowerTop
+            upperTop + upperInk[0] >= stripTop - tol &&
+            lowerTop + lowerInk[1] <= stripBottom + tol &&
+            upperTop + upperInk[1] <= lowerTop + lowerInk[0] + tol
 
         if (anchoredFits) {
             placementModes[upper.id] = PlacementMode.CLEAR_ANCHORED
