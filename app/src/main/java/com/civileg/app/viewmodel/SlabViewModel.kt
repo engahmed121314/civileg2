@@ -143,6 +143,15 @@ class SlabViewModel @Inject constructor(
         )
     }
 
+    fun clearResult() {
+        _result.value = null
+        pendingDrawingBitmap = null
+        lastInputs = null
+        _error.value = null
+        _errorMessage.value = null
+        _validationReport.value = null
+    }
+
     fun saveSlab(projectId: Long, name: String, result: CalculatorEngine.SlabResult) {
         viewModelScope.launch {
             val inputs = lastInputs

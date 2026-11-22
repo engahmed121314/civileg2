@@ -172,6 +172,7 @@ fun SlabScreen(
                                 DropdownMenuItem(
                                     text = { AppText(type.displayName) },
                                     onClick = {
+                                        viewModel.clearResult()
                                         selectedType = type
                                         expandedType = false
                                     }
@@ -199,6 +200,7 @@ fun SlabScreen(
                                 DropdownMenuItem(
                                     text = { AppText(code.displayName) },
                                     onClick = {
+                                        viewModel.clearResult()
                                         selectedCode = code
                                         expandedCode = false
                                     }

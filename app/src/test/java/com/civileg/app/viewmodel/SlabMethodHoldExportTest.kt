@@ -73,4 +73,13 @@ class SlabMethodHoldExportTest {
         assertNull(com.civileg.app.utils.ExcelExporter.exportDesignToCsv(RuntimeEnvironment.getApplication(), old))
     }
 
+    @Test fun `selection invalidation removes prior result before code or type relabel`() {
+        val vm = heldViewModel()
+        assertNotNull(vm.result.value)
+        vm.clearResult()
+        assertNull(vm.result.value)
+        assertNull(vm.pendingDrawingBitmap)
+        assertNull(vm.buildDxfDrawing())
+    }
+
 }
