@@ -59,4 +59,46 @@ class ECPHordiSafetyContainmentTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun `engine rejects nonpositive effective depth`() { design(depth = 30.0) }
+
+    private fun advancedHordi() = ECPAdvancedSlab().designSlab(
+        slabType = com.civileg.app.domain.entities.SlabType.Hordi(
+            totalThickness = 300.0, ribWidth = 150.0, ribSpacing = 600.0,
+            blockWidth = 450.0, blockHeight = 240.0, span = 5.0,
+            supportConditions = com.civileg.app.domain.entities.SlabSupportConditions(
+                edgeA = com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED,
+                edgeB = com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED,
+                edgeC = com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED,
+                edgeD = com.civileg.app.domain.entities.EdgeCondition.SIMPLY_SUPPORTED
+            )
+        ),
+        fcu = 25.0, fy = 400.0, deadLoad = 0.1, liveLoad = 0.1,
+        inventory = null, loadCombination = LoadCombination.DEAD_LIVE
+    )
+
+    @Test fun `alternate advanced Hordi cannot bypass the method hold at low load`() {
+        val result = advancedHordi()
+        assertTrue(result.flexureResult.utilizationRatio < 1.0)
+        assertTrue(result.flexureResult.safetyAssessmentBlocked)
+        assertFalse(result.flexureResult.isSafe)
+        assertFalse(result.shearCheck.isSafe)
+        assertFalse(result.deflectionCheck.isSafe)
+        assertTrue(result.warnings.any { it.contains("verification is incomplete") })
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `blocked advanced Hordi cannot generate an execution drawing package`() {
+        com.civileg.app.domain.calculations.slab.SlabDrawingPackageBuilder.buildPackage(advancedHordi())
+    }
+
+    @Test fun `shared hollow block result retains the hold warning and cannot be safe`() {
+        val result = com.civileg.app.domain.calculations.utils.CalculatorEngine(io.mockk.mockk(relaxed = true)).designSlab(
+            lx = 4.0, ly = 5.0, deadLoad = 0.1, liveLoad = 0.1,
+            fcu = 25.0, fy = 360.0, ts = 300.0, preferredDiameter = 12,
+            code = com.civileg.app.domain.entities.DesignCode.ECP,
+            type = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
+            ribWidth = 150.0, ribSpacing = 600.0
+        )
+        assertFalse(result.isSafe)
+        assertTrue(result.suggestions.any { it.contains("verification is incomplete") })
+    }
 }

@@ -1542,6 +1542,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
     }
     item { CalculateButton(onCalculate) }
     result?.let { r ->
+        if (r.flexureResult.safetyAssessmentBlocked) {
+            item { HordiSafetyAssessment(r.flexureResult, form.slabCode.name) }
+        } else {
         item { StatusBanner(isSafe = r.flexureResult.isSafe) }
         item {
             ResultCard("Flexure / الانحناء") {
@@ -1583,6 +1586,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
                 ResultRow("Concrete", "%.2f m³".format(r.concreteVolume))
                 ResultRow("Formwork", "%.1f m²".format(r.formworkArea))
             }
+        }
         }
         item { NotesCard(r.warnings, r.codeNotes) }
     }
