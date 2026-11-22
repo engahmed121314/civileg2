@@ -56,7 +56,7 @@ class SlabMethodHoldExportTest {
     }
     @Test fun `old result with no flag also stops shared exports`() {
         val vm = heldViewModel(legacy = true)
-        val context = RuntimeEnvironment.getApplication<android.app.Application>()
+        val context = RuntimeEnvironment.getApplication()
         assertNull(vm.buildDxfDrawing())
         var callbacks = 0
         vm.exportToPdf(context) { file -> callbacks++; assertNull(file) }
