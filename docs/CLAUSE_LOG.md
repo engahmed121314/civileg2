@@ -417,3 +417,75 @@ Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
   with unresolved code provenance are held non-destructively on read; explicit
   other-code records are unchanged. Method rebuilding, geometry/applicability,
   cover, loading, section behavior and detailing remain separate open work.
+
+
+**E-RIB-SECTION (2026-11-22) - coupled one-way ECP rib section, not member approval.**
+
+- ECP203-2020 supplied primary scan: printed3-5 material factors;4-1..4-9 flexure;
+  4-17..4-22 web shear;6-15/16 rib geometry;6-42 flange width;7-6/7-7 individual-bar
+  spacing. Direct source inspections and component scope are recorded in
+  `docs/engineering/ECP_203_RECTANGULAR_FLEXURE.md`.
+- Dedicated Hordi context now propagates actual cover, aggregate, bar layers,
+  link geometry/material and flange region/L2 to the coupled section components.
+  Positive and negative regions use different concrete compression geometry.
+  Factored per-rib forces are not factored a second time.
+- Required cross-rib count is reported, not accepted as proof of provision.
+  Serviceability, cover durability/fire, topping/transverse detailing and
+  anchorage are still open. Advanced/shared/waffle paths remain unconverted.
+- Other-code section methods have no new equations. An ECP-only context is
+  rejected by them. No stored record rewrite or database migration is included.
+
+**E-RC-MATERIAL (2026-11-22) - normal reinforced-concrete strength range.**
+
+- Directly inspected ECP203-2020 printed2-21, clause2-3-2-1/Table2-13:
+  characteristic strength is the28day150mm cube strength; reinforced concrete
+  requires fcu>=20MPa and design strength must not exceed60MPa. The source-section
+  flexure and shear components enforce both bounds. Prestressed/plain concrete
+  have different minimums and are not what these components design.
+- Existing fcu16 minimum-ratio and fcu100 shear-cap fixtures were out of this
+  application range. They changed to20 and60 respectively; the same controlling
+  equations and numerical expectations still pass. New range guards are tested.
+
+
+### ECP rib section: actual layer strain compatibility
+
+- Printed4-1 to4-3: plane-section compatibility, Es200000MPa,
+  design steel plateau fy/1.15 and epsilon_cu0.003 now feed every actual
+  tension layer in the dedicated source-section path.
+- Neutral-axis equilibrium and required area use actual fixed layer positions.
+  Physically fitting bars are not automatically all at design yield.
+- Conservative printed-table/steel and0.95d limits remain. Mixed compression/
+  tension reinforcement is an explicit unsupported domain, not a fabricated pass.
+- Regression: seven1x8mm layers at d313..85mm, fcu30/fy400/bw200/h350,
+  actual MRd21.4812192kNm fails21.5kNm; centroid-yield21.5602757 would pass.
+- This does not approve member serviceability, detailing or execution outputs.
+
+### ECP rib immediate elastic deflection
+
+- Printed2-23 Eq2-1, printed4-59 Eq4-70, printed4-60 Eq4-71 and printed4-62
+  Eq4-77 now feed an optional simply supported prismatic UDL calculation.
+- Actual T geometry and actual reinforcement layers determine gross and cracked
+  stiffness. Dead-only and dead-plus-live each use their own Ie. The live
+  increment is their deflection difference, not a one-stiffness approximation.
+- Area loads become per-rib line loads using actual center spacing. Supplied
+  factored section forces are not reused as service loads. The simple rib model
+  requires a compression flange and analysis span equal to its explicit L2.
+- The result remains an immediate elastic calculation. Long-term/timing, crack
+  width, full limits and whole-member detailing/approval remain open. Cracked
+  cases with elastic steel stress above characteristic yield are rejected.
+- Source-specific failed-section advice respects minimum/maximum steel,
+  concrete-only shear, qmax and link-detailing restrictions. It does not approve
+  a redesign or fabricate reinforcement details.
+
+**E-RC-RIB-LONGTERM (2026-11-22) - explicit common-age sustained-load model.**
+
+- Direct ECP203-2020 printed4-61/62/63 recheck: Eq4-73 alpha=xi/(1+50muPrime),
+  source duration anchors3/6/12months and>=5years; Eq4-80 separates post-finish
+  creep/shrinkage and the non-sustained live increment. No compression-steel
+  reduction credit, arbitrary-age interpolation or staged-load approximation.
+- Sustained D+psiL uses its own cracked stiffness. Thermal total/post-installation
+  inputs are separately nullable; missing evidence does not become a zero or a
+  limit PASS. Source250/360/480/240 limits use explicit actual clear span and
+  actual attachment classification.
+- This bounded optional calculation does not clear crack-width, material,
+  durability, transverse-steel, cross-rib, anchorage or whole-member holds.

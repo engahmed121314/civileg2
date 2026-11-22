@@ -11,6 +11,8 @@ import com.civileg.app.domain.calculations.CalculationFactory
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.domain.entities.SlabDesignResult
+import com.civileg.app.domain.entities.HordiSlabDesignSnapshot
+import com.civileg.app.domain.entities.HordiSlabInputs
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.domain.entities.LoadCombination
@@ -37,8 +39,12 @@ class HordiSlabViewModel @Inject constructor(
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
-    // Store last input for PDF export
-    private var lastInputParams: HordiSlabInputParams? = null
+    // Inputs are retained only with their successfully completed result.
+    private var lastInputParams: HordiSlabInputs? = null
+    private var completedSnapshot: HordiSlabDesignSnapshot? = null
+
+    /** Immutable frozen data for persistence/report consumers, never the edited form. */
+    fun currentDesignSnapshot(): HordiSlabDesignSnapshot? = completedSnapshot
 
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
@@ -61,8 +67,10 @@ class HordiSlabViewModel @Inject constructor(
         designMoment: Double,     // kN.m/rib
         designShear: Double,      // kN/rib
         loadCombination: LoadCombination,
-        designCode: String = "ECP"
+        designCode: String = "ECP",
+        sectionContext: com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.Context? = null
     ) {
+        clearResult()
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("ribWidth", ribWidth)
@@ -78,11 +86,11 @@ class HordiSlabViewModel @Inject constructor(
             _error.value = null
             try {
                 val code = DesignCode.valueOf(designCode)
-                lastInputParams = HordiSlabInputParams(
+                val inputs = HordiSlabInputs(
                     fcu = fcu, fy = fy, ribWidth = ribWidth, ribSpacing = ribSpacing,
                     totalThickness = totalThickness, toppingThickness = toppingThickness,
                     span = span, designMoment = designMoment, designShear = designShear,
-                    loadCombination = loadCombination, designCode = designCode
+                    loadCombination = loadCombination, designCode = designCode, sectionContext = sectionContext
                 )
 
                 val designer: HordiSlabDesign = CalculationFactory.getHordiSlabDesign(code)
@@ -96,9 +104,13 @@ class HordiSlabViewModel @Inject constructor(
                     span = span,
                     designMoment = designMoment,
                     designShear = designShear,
-                    loadCombination = loadCombination
+                    loadCombination = loadCombination,
+                    sectionContext = sectionContext
                 )
-                _result.value = result
+                val snapshot = HordiSlabDesignSnapshot.capture(inputs, result)
+                lastInputParams = snapshot.input()
+                completedSnapshot = snapshot
+                _result.value = snapshot.result()
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
             } finally {
@@ -119,7 +131,7 @@ class HordiSlabViewModel @Inject constructor(
             title = "HORDI SLAB",
             spanMm = params.span,
             thicknessMm = params.totalThickness,
-            coverMm = 25.0,
+            coverMm = params.sectionContext?.coverToOutsideLinksMm ?: 25.0,
             mainBarDiaMm = res.barDiameter.toDouble(),
             mainSpacingMm = res.barSpacing.toDouble()
         )
@@ -194,7 +206,7 @@ class HordiSlabViewModel @Inject constructor(
                         spanX = params.span, spanY = params.span, thickness = params.totalThickness,
                         mainDia = res.barDiameter, mainSpacing = res.barSpacing,
                         distDia = res.barDiameter, distSpacing = res.barSpacing,
-                        cover = 25.0, ribWidth = params.ribWidth, ribSpacing = params.ribSpacing
+                        cover = params.sectionContext?.coverToOutsideLinksMm ?: 25.0, ribWidth = params.ribWidth, ribSpacing = params.ribSpacing
                     )
                 }.getOrNull()
                 pendingDrawingBitmap = null  // consume after use
@@ -245,6 +257,7 @@ class HordiSlabViewModel @Inject constructor(
         _result.value = null
         pendingDrawingBitmap = null
         lastInputParams = null
+        completedSnapshot = null
         _error.value = null
     }
 
@@ -279,20 +292,4 @@ class HordiSlabViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Helper data class to store input parameters for PDF export.
-     */
-    private data class HordiSlabInputParams(
-        val fcu: Double,
-        val fy: Double,
-        val ribWidth: Double,
-        val ribSpacing: Double,
-        val totalThickness: Double,
-        val toppingThickness: Double,
-        val span: Double,
-        val designMoment: Double,
-        val designShear: Double,
-        val loadCombination: LoadCombination,
-        val designCode: String
-    )
 }

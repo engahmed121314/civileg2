@@ -16,6 +16,7 @@ interface HordiSlabDesign {
         span: Double,               // mm
         designMoment: Double,       // kN.m/rib
         designShear: Double,        // kN/rib
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        sectionContext: com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.Context? = null
     ): SlabDesignResult
 }

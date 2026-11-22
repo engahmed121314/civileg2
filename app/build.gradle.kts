@@ -196,6 +196,10 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            all {
+                // Same Maven Central artifacts; avoid repo1 runtime-download throttling.
+                it.systemProperty("robolectric.dependency.repo.url", "https://repo.maven.apache.org/maven2")
+            }
         }
     }
 
