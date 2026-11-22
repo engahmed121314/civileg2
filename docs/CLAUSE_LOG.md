@@ -476,3 +476,16 @@ Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
 - Source-specific failed-section advice respects minimum/maximum steel,
   concrete-only shear, qmax and link-detailing restrictions. It does not approve
   a redesign or fabricate reinforcement details.
+
+**E-RC-RIB-LONGTERM (2026-11-22) - explicit common-age sustained-load model.**
+
+- Direct ECP203-2020 printed4-61/62/63 recheck: Eq4-73 alpha=xi/(1+50muPrime),
+  source duration anchors3/6/12months and>=5years; Eq4-80 separates post-finish
+  creep/shrinkage and the non-sustained live increment. No compression-steel
+  reduction credit, arbitrary-age interpolation or staged-load approximation.
+- Sustained D+psiL uses its own cracked stiffness. Thermal total/post-installation
+  inputs are separately nullable; missing evidence does not become a zero or a
+  limit PASS. Source250/360/480/240 limits use explicit actual clear span and
+  actual attachment classification.
+- This bounded optional calculation does not clear crack-width, material,
+  durability, transverse-steel, cross-rib, anchorage or whole-member holds.

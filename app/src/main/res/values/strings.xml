@@ -2429,6 +2429,21 @@
     <string name="ecp_ribbed_immediate_scope">Characteristic loads are separate from factored forces. Include all self weight in dead load. This model requires top-flange compression and analysis span equal to L2. Long-term deformation, finish timing, crack width and full serviceability approval remain separate.</string>
     <string name="ecp_ribbed_service_dead">Characteristic dead load including self weight (kN/m²)</string>
     <string name="ecp_ribbed_analysis_span">Simply supported analysis span (mm), must equal L2</string>
+    <string name="ecp_ribbed_long_term">Calculate common-age long-term deflection</string>
+    <string name="ecp_ribbed_long_term_scope">Simply supported UDL only. All sustained loads must share one application age. No compression-steel reduction credit or invented curve interpolation. Staged loading, crack width and member detailing require separate checks.</string>
+    <string name="ecp_ribbed_clear_span">Actual clear span for limits (mm)</string>
+    <string name="ecp_ribbed_sustained_fraction">Sustained live-load fraction (0..1)</string>
+    <string name="ecp_ribbed_end_months">Time since loading: 3/6/12 or 60+ months</string>
+    <string name="ecp_ribbed_install_months">Installation after loading: 0/3/6/12 or 60+ months</string>
+    <string name="ecp_ribbed_attachment">Attached nonstructural elements</string>
+    <string name="ecp_ribbed_attachment_none">No attached nonstructural elements</string>
+    <string name="ecp_ribbed_attachment_insensitive">Attached, deflection-insensitive</string>
+    <string name="ecp_ribbed_attachment_sensitive">Attached, deflection-sensitive</string>
+    <string name="ecp_ribbed_install_zero_scope">Installation age zero means just after the initial instantaneous sustained-load response, not before loading.</string>
+    <string name="ecp_ribbed_common_age">All sustained loads share the stated application age</string>
+    <string name="ecp_ribbed_thermal_scope">Adverse thermal contributions must come from a separate analysis. Blank leaves thermal-inclusive limits unverified. Enter zero only when that analysis supports it. No camber credit is taken.</string>
+    <string name="ecp_ribbed_thermal_total">Adverse thermal total (mm), optional</string>
+    <string name="ecp_ribbed_thermal_after">Adverse thermal after installation (mm), optional</string>
 </resources>
 
 

@@ -40,6 +40,23 @@ class HordiSlabDesignSnapshotTest {
         assertFalse(restored.resultJson.contains("steelWeight"))
     }
 
+    @Test fun `long term timing and thermal state remain replayable in the same frozen pair`() {
+        val original = inputs()
+        val lt = Ecp203LongTermDeflection.Input(4800.0, 0.7,
+            Ecp203LongTermDeflection.Duration.ofMonths(60),
+            Ecp203LongTermDeflection.Attachment.DEFLECTION_SENSITIVE,
+            Ecp203LongTermDeflection.Duration.ofMonths(6), true, 1.5, null)
+        val input = original.copy(sectionContext = original.sectionContext!!.copy(
+            immediateDeflectionInput = original.sectionContext.immediateDeflectionInput!!.copy(longTermInput = lt)))
+        val snapshot = HordiSlabDesignSnapshot.capture(input, result(input))
+        val restored = snapshot.input().sectionContext!!.immediateDeflectionInput!!.longTermInput!!
+        assertEquals(lt, restored)
+        assertEquals(2.0, restored.endDuration.xi, 0.0)
+        assertNull(restored.thermalAfterInstallationMm)
+        assertTrue(snapshot.result().codeNotes.any { it.contains("Eq4-80") })
+        assertTrue(snapshot.hasValidFingerprint())
+    }
+
     @Test fun `identity is stable for identical pairs and changes with either side`() {
         val input = inputs()
         val calculated = result(input)

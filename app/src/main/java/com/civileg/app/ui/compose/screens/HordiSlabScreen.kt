@@ -5,6 +5,7 @@ import com.civileg.core.engine.rc.ecp.Ecp203BarLayout
 import com.civileg.core.engine.rc.ecp.Ecp203RectangularFlexure
 import com.civileg.core.engine.rc.ecp.Ecp203RibbedSection
 import com.civileg.core.engine.rc.ecp.Ecp203WebShear
+import com.civileg.core.engine.rc.ecp.Ecp203LongTermDeflection
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -106,6 +107,29 @@ fun HordiSlabScreen(
     var immediateDeflection by remember { mutableStateOf(false) }
     var serviceDeadLoad by remember { mutableStateOf("") }
     var serviceAnalysisSpan by remember { mutableStateOf("") }
+    var longTermDeflection by remember { mutableStateOf(false) }
+    var serviceClearSpan by remember { mutableStateOf("") }
+    var sustainedLiveFraction by remember { mutableStateOf("") }
+    var endMonths by remember { mutableStateOf("") }
+    var installationMonths by remember { mutableStateOf("") }
+    var attachment by remember { mutableStateOf<Ecp203LongTermDeflection.Attachment?>(null) }
+    var commonSustainedAge by remember { mutableStateOf(false) }
+    var thermalTotal by remember { mutableStateOf("") }
+    var thermalAfterInstallation by remember { mutableStateOf("") }
+    fun supportedMonths(text: String, allowZero: Boolean): Boolean = text.toIntOrNull()?.let {
+        it in listOf(3, 6, 12) || it >= 60 || allowZero && it == 0
+    } == true
+    fun optionalAdverseThermal(text: String) = text.isBlank() ||
+        text.toDoubleOrNull()?.let { it.isFinite() && it >= 0.0 } == true
+    val longTermInputsValid = !longTermDeflection || (
+        commonSustainedAge && attachment != null &&
+        serviceClearSpan.toDoubleOrNull()?.let { clear -> clear.isFinite() && clear > 0.0 &&
+            serviceAnalysisSpan.toDoubleOrNull()?.let { clear <= it + 1e-6 } == true } == true &&
+        sustainedLiveFraction.toDoubleOrNull()?.let { it.isFinite() && it in 0.0..1.0 } == true &&
+        supportedMonths(endMonths, false) && optionalAdverseThermal(thermalTotal) &&
+        (attachment == Ecp203LongTermDeflection.Attachment.NONE ||
+            supportedMonths(installationMonths, true) && installationMonths.toInt() <= endMonths.toInt() &&
+                optionalAdverseThermal(thermalAfterInstallation)))
     val ecpSection = designCode == "ECP"
     val sectionInputsValid = !ecpSection || (
         listOf(fcu, fy, ribWidth, ribSpacing, totalThickness, toppingThickness, span,
@@ -122,14 +146,16 @@ fun HordiSlabScreen(
                 analysis.isFinite() && analysis > 0.0 && contraflexureDistance.toDoubleOrNull()?.let {
                     kotlin.math.abs(analysis - it) <= 1e-6
                 } == true
-            } == true)))
+            } == true && longTermInputsValid)))
     // Results belong to an immutable calculation input snapshot, not edited form fields.
     LaunchedEffect(listOf(designCode, fcu, fy, ribWidth, ribSpacing, totalThickness,
         toppingThickness, span, designMoment, designShear, loadCombination, cover,
         aggregate, mainDiameter, barsPerLayer, layerCount, linksDiameter, linksSpacing,
         linksFy, linksLegs, characteristicLiveLoad, contraflexureDistance,
         flangeInCompression, mainBarsDeformed, immediateDeflection, serviceDeadLoad,
-        serviceAnalysisSpan)) { viewModel.clearResult() }
+        serviceAnalysisSpan, longTermDeflection, serviceClearSpan, sustainedLiveFraction,
+        endMonths, installationMonths, attachment, commonSustainedAge, thermalTotal,
+        thermalAfterInstallation)) { viewModel.clearResult() }
 
 
     // Drawing view mode: 0=All, 1=Plan, 2=Section, 3=Detail
@@ -305,7 +331,7 @@ fun HordiSlabScreen(
                     item {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(checked = immediateDeflection,
-                                onCheckedChange = { immediateDeflection = it },
+                                onCheckedChange = { immediateDeflection = it; if (!it) longTermDeflection = false },
                                 modifier = Modifier.testTag("ecp-immediate-deflection-toggle"))
                             AppText(stringResource(R.string.ecp_ribbed_immediate_udl), modifier = Modifier.weight(1f))
                         }
@@ -314,6 +340,50 @@ fun HordiSlabScreen(
                         item { AppText(stringResource(R.string.ecp_ribbed_immediate_scope), style = MaterialTheme.typography.bodySmall) }
                         item { PremiumInputField(serviceDeadLoad, stringResource(R.string.ecp_ribbed_service_dead), { serviceDeadLoad = it }, modifier = Modifier.fillMaxWidth()) }
                         item { PremiumInputField(serviceAnalysisSpan, stringResource(R.string.ecp_ribbed_analysis_span), { serviceAnalysisSpan = it }, modifier = Modifier.fillMaxWidth()) }
+                        item {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(longTermDeflection, { longTermDeflection = it },
+                                    modifier = Modifier.testTag("ecp-long-term-toggle"))
+                                AppText(stringResource(R.string.ecp_ribbed_long_term), modifier = Modifier.weight(1f))
+                            }
+                        }
+                        if (longTermDeflection) {
+                            item { AppText(stringResource(R.string.ecp_ribbed_long_term_scope), style = MaterialTheme.typography.bodySmall) }
+                            item { PremiumInputField(serviceClearSpan, stringResource(R.string.ecp_ribbed_clear_span), { serviceClearSpan = it }, modifier = Modifier.fillMaxWidth()) }
+                            item { PremiumInputField(sustainedLiveFraction, stringResource(R.string.ecp_ribbed_sustained_fraction), { sustainedLiveFraction = it }, modifier = Modifier.fillMaxWidth()) }
+                            item { PremiumInputField(endMonths, stringResource(R.string.ecp_ribbed_end_months), { endMonths = it }, modifier = Modifier.fillMaxWidth()) }
+                            item { AppText(stringResource(R.string.ecp_ribbed_attachment), fontWeight = FontWeight.Bold) }
+                            Ecp203LongTermDeflection.Attachment.entries.forEach { kind ->
+                                item {
+                                    Row(verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth().clickable { attachment = kind }) {
+                                        RadioButton(attachment == kind, { attachment = kind },
+                                            modifier = Modifier.testTag("ecp-attachment-${kind.name}"))
+                                        AppText(stringResource(when (kind) {
+                                            Ecp203LongTermDeflection.Attachment.NONE -> R.string.ecp_ribbed_attachment_none
+                                            Ecp203LongTermDeflection.Attachment.DEFLECTION_INSENSITIVE -> R.string.ecp_ribbed_attachment_insensitive
+                                            Ecp203LongTermDeflection.Attachment.DEFLECTION_SENSITIVE -> R.string.ecp_ribbed_attachment_sensitive
+                                        }), modifier = Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                            if (attachment != null && attachment != Ecp203LongTermDeflection.Attachment.NONE) {
+                                item { PremiumInputField(installationMonths, stringResource(R.string.ecp_ribbed_install_months), { installationMonths = it }, modifier = Modifier.fillMaxWidth()) }
+                                item { AppText(stringResource(R.string.ecp_ribbed_install_zero_scope), style = MaterialTheme.typography.bodySmall) }
+                            }
+                            item {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(commonSustainedAge, { commonSustainedAge = it },
+                                        modifier = Modifier.testTag("ecp-common-sustained-age"))
+                                    AppText(stringResource(R.string.ecp_ribbed_common_age), modifier = Modifier.weight(1f))
+                                }
+                            }
+                            item { AppText(stringResource(R.string.ecp_ribbed_thermal_scope), style = MaterialTheme.typography.bodySmall) }
+                            item { PremiumInputField(thermalTotal, stringResource(R.string.ecp_ribbed_thermal_total), { thermalTotal = it }, modifier = Modifier.fillMaxWidth()) }
+                            if (attachment != null && attachment != Ecp203LongTermDeflection.Attachment.NONE) {
+                                item { PremiumInputField(thermalAfterInstallation, stringResource(R.string.ecp_ribbed_thermal_after), { thermalAfterInstallation = it }, modifier = Modifier.fillMaxWidth()) }
+                            }
+                        }
                     }
                     if (!sectionInputsValid) item {
                         AppText(stringResource(R.string.ecp_ribbed_invalid_inputs), color = MaterialTheme.colorScheme.error)
@@ -384,7 +454,16 @@ fun HordiSlabScreen(
                                         if (linksFy.toDouble() == 240.0) Ecp203RectangularFlexure.SteelSurface.SMOOTH_MILD else Ecp203RectangularFlexure.SteelSurface.HIGH_YIELD_DEFORMED,
                                         linksDiameter.toDouble(), linksLegs.toInt(), linksSpacing.toDouble()),
                                     if (!immediateDeflection) null else Ecp203RibbedSection.ImmediateDeflectionInput(
-                                        serviceAnalysisSpan.toDouble(), serviceDeadLoad.toDouble())
+                                        serviceAnalysisSpan.toDouble(), serviceDeadLoad.toDouble(),
+                                        if (!longTermDeflection) null else Ecp203LongTermDeflection.Input(
+                                            serviceClearSpan.toDouble(), sustainedLiveFraction.toDouble(),
+                                            Ecp203LongTermDeflection.Duration.ofMonths(endMonths.toInt()), attachment!!,
+                                            if (attachment == Ecp203LongTermDeflection.Attachment.NONE) null
+                                            else Ecp203LongTermDeflection.Duration.ofMonths(installationMonths.toInt()),
+                                            commonSustainedAge,
+                                            thermalTotal.takeIf { it.isNotBlank() }?.toDouble(),
+                                            if (attachment == Ecp203LongTermDeflection.Attachment.NONE) null
+                                            else thermalAfterInstallation.takeIf { it.isNotBlank() }?.toDouble()))
                                 )
                             )
                         },

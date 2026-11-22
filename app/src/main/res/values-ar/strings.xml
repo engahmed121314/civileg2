@@ -2432,4 +2432,19 @@
     <string name="ecp_ribbed_immediate_scope">الأحمال المميزة منفصلة عن القوى المصعدة. أدخل كامل الوزن الذاتي ضمن الحمل الميت. يشترط النموذج جناحًا علويًا مضغوطًا وبحر تحليل يساوي L2. الترخيم طويل المدى وتوقيت التشطيبات وعرض الشروخ واعتماد حدود التشغيل ما زالت فحوصًا منفصلة.</string>
     <string name="ecp_ribbed_service_dead">الحمل الميت المميز شاملًا الوزن الذاتي (كيلونيوتن/م²)</string>
     <string name="ecp_ribbed_analysis_span">بحر التحليل بسيط الارتكاز (مم)، يجب أن يساوي L2</string>
+    <string name="ecp_ribbed_long_term">حساب الترخيم طويل الأمد لأحمال ذات عمر موحد</string>
+    <string name="ecp_ribbed_long_term_scope">لبحر بسيط الارتكاز وحمل منتظم فقط. يلزم عمر تطبيق واحد لجميع الأحمال المستمرة. لا يؤخذ تخفيض لتسليح الضغط ولا استيفاء تخميني لمنحنى الزمن. مراحل التحميل وعرض الشروخ وتفاصيل العنصر تحتاج مراجعة منفصلة.</string>
+    <string name="ecp_ribbed_clear_span">البحر الصافي الفعلي لحدود الترخيم (مم)</string>
+    <string name="ecp_ribbed_sustained_fraction">نسبة الجزء المستمر من الحمل الحي (0..1)</string>
+    <string name="ecp_ribbed_end_months">المدة من التحميل للتقييم (شهر): 3/6/12/60+</string>
+    <string name="ecp_ribbed_install_months">زمن التركيب بعد التحميل (شهر): 0/3/6/12/60+</string>
+    <string name="ecp_ribbed_attachment">العناصر غير الإنشائية المتصلة</string>
+    <string name="ecp_ribbed_attachment_none">لا توجد عناصر غير إنشائية متصلة</string>
+    <string name="ecp_ribbed_attachment_insensitive">عناصر متصلة غير حساسة للترخيم</string>
+    <string name="ecp_ribbed_attachment_sensitive">عناصر متصلة حساسة للترخيم</string>
+    <string name="ecp_ribbed_install_zero_scope">العمر صفر يعني التركيب بعد حدوث الترخيم اللحظي الأول للأحمال المستمرة مباشرة، وليس قبل التحميل.</string>
+    <string name="ecp_ribbed_common_age">جميع الأحمال المستمرة لها عمر التطبيق الموحد المحدد</string>
+    <string name="ecp_ribbed_thermal_scope">تؤخذ آثار الحرارة المعاكسة من تحليل منفصل. الفراغ يترك الحدود الشاملة للحرارة غير متحققة. لا تدخل صفرا إلا بدليل من ذلك التحليل. لا يؤخذ تخفيض من التحديب المسبق.</string>
+    <string name="ecp_ribbed_thermal_total">أثر الحرارة المعاكس الكلي (مم)، اختياري</string>
+    <string name="ecp_ribbed_thermal_after">أثر الحرارة المعاكس بعد التركيب (مم)، اختياري</string>
 </resources>

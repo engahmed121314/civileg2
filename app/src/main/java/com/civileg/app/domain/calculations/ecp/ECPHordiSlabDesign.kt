@@ -4,6 +4,7 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.SlabDesignResult
+import com.civileg.core.engine.rc.ecp.Ecp203LongTermDeflection
 import kotlin.math.*
 
 /**
@@ -150,7 +151,21 @@ class ECPHordiSlabDesign : HordiSlabDesign {
                         else -> add("Source-based action: redesign the actual vertical links for the required steel ratio and detailing, including diameter>=8 mm, spacing<=200 mm and applicable transverse-leg requirements (ECP203-2020 printed4-20..4-22, Eq4-33 and clause4-2-2-1-6).")
                     }
                 }
-                if (a.immediateDeflection != null) add("Immediate simply supported UDL deflection is calculated separately. Long-term deformation, loading/finish timing, crack width and full serviceability limits are not yet approved.")
+                if (a.immediateDeflection != null && a.longTermDeflection == null) add("Immediate simply supported UDL deflection is calculated separately. Long-term deformation, loading/finish timing, crack width and full serviceability limits are not yet approved.")
+                a.longTermDeflection?.let { lt ->
+                    add("Common-age long-term UDL deflection is calculated with no compression-steel reduction credit. Staged loading, crack width, detailing and whole-member approval remain outside this assessment.")
+                    if (lt.total.status == Ecp203LongTermDeflection.Status.NOT_EVALUATED ||
+                        lt.afterInstallation.status == Ecp203LongTermDeflection.Status.NOT_EVALUATED)
+                        add("Thermal-inclusive deflection limits remain NOT VERIFIED where a separate adverse thermal contribution was not supplied. Blank thermal input is not zero (printed4-62/63).")
+                    if (lt.total.status == Ecp203LongTermDeflection.Status.FAIL)
+                        add("Source-based action: revise actual section stiffness or loading to meet total deflection <=clear span/250, including creep, shrinkage and thermal effects (ECP203-2020 printed4-61/62, Eqs4-73/74).")
+                    if (lt.liveOnly.status == Ecp203LongTermDeflection.Status.FAIL)
+                        add("Source-based action: revise actual stiffness/loading so the separate live-load increment meets clear span/360 for attached deflection-insensitive elements (printed4-62, Eqs4-76/77).")
+                    if (lt.afterInstallation.status == Ecp203LongTermDeflection.Status.FAIL)
+                        add("Source-based action: revise actual stiffness, loading and verified construction timing so post-installation deflection meets the applicable clear span/480 sensitive or /240 insensitive limit (printed4-62/63, Eqs4-78..80). Do not change recorded timing just to obtain a pass.")
+                    if (lt.highStrengthOrServiceStressReviewRequired)
+                        add("High-strength/high-stress review flag is open. Printed4-61 cautions on steel above420 MPa, especially service stress above200 MPa. This bounded model also flags cracked stress above200 MPa conservatively at lower grades; numeric limit passes alone do not complete that review.")
+                }
             },
             codeNotes = listOf(
                 "ECP203-2020 bounded section method: printed4-1..4-9,4-17..4-22,6-15/16,6-42,7-6/7-7.",
@@ -169,6 +184,17 @@ class ECPHordiSlabDesign : HordiSlabDesign {
                     "Ec=4400*sqrt(fcu)=${f(sls.stiffness.elasticModulusMpa)} MPa (Eq2-1, printed2-23); n=Es/Ec=${f(sls.stiffness.modularRatio)}. Gross T-section Ig=${f(sls.stiffness.grossInertiaMm4)} mm4; transformed cracked Icr=${f(sls.stiffness.crackedInertiaMm4)} mm4; cracked neutral axis=${f(sls.stiffness.crackedNeutralAxisMm)} mm. Fully cracked elastic tension-steel stress bound=${f(sls.deadPlusLive.fullyCrackedElasticTensionSteelStressMpa)} MPa; no cracked steel yielding is admitted by this elastic model.",
                     "Mcr=0.6*sqrt(fcu)*Ig/yt=${f(sls.stiffness.crackingMomentKnM)} kN.m (Eq4-71, printed4-60). Ie=(Mcr/Ma)^3*Ig+[1-(Mcr/Ma)^3]*Icr<=Ig (Eq4-70, printed4-59). IeD=${f(sls.dead.effectiveInertiaMm4)}; IeD+L=${f(sls.deadPlusLive.effectiveInertiaMm4)} mm4.",
                     "Elastic simply supported UDL: delta=5*q*L^4/(384*Ec*Ie). deltaD=${f(sls.dead.immediateDeflectionMm)} mm; deltaD+L=${f(sls.deadPlusLive.immediateDeflectionMm)} mm. deltaLive=deltaD+L-deltaD=${f(sls.immediateLiveDeflectionMm)} mm, using separate load-case stiffness (Eq4-77, printed4-62). Not a whole-serviceability pass."
+                )
+            } ?: emptyList()) + (a.longTermDeflection?.let { lt ->
+                fun f(value: Double?) = value?.let { String.format(java.util.Locale.US, "%.6g", it) } ?: "unverified/not applicable"
+                val input = context.immediateDeflectionInput!!.longTermInput!!
+                listOf(
+                    "Long-term common-age UDL: clear span=${f(input.clearSpanMm)} mm; sustained live fraction=${f(input.sustainedLiveFraction)}; end age=${input.endDuration.months} months; installation age=${input.installationDuration?.months ?: "not applicable"} months. No staged-load-age approximation or beneficial compression-steel credit.",
+                    "ECP203-2020 Eq4-73, printed4-61: alpha=xi/(1+50*muPrime), muPrime credit=0. alphaEnd=${f(lt.alphaEnd)}; alphaInstall=${f(lt.alphaAtInstallation)}. Source durations0/3/6/12 or >=60 months only; no curve interpolation.",
+                    "Sustained D+psiL uses its own stiffness: qS=${f(lt.sustained.characteristicLineLoadKnPerM)} kN/m/rib; IeS=${f(lt.sustained.effectiveInertiaMm4)} mm4; deltaS=${f(lt.sustained.immediateDeflectionMm)} mm. Additional creep/shrinkage=alphaEnd*deltaS=${f(lt.additionalCreepShrinkageMm)} mm. Mechanical total=deltaD+L+alphaEnd*deltaS=${f(lt.mechanicalTotalMm)} mm.",
+                    "Eq4-80, printed4-63: mechanical post-installation=deltaS*(alphaEnd-alphaInstall)+deltaD+L-deltaS=${f(lt.mechanicalAfterInstallationMm)} mm. Thermal total=${f(input.thermalTotalMm)} mm; thermal after installation=${f(input.thermalAfterInstallationMm)} mm. Thermal values require a separate analysis; blank is not zero.",
+                    "Thermal-inclusive total=${f(lt.total.actualMm)} mm; limit=${f(lt.total.limitMm)} mm, status=${lt.total.status} (Eq4-74). Live-only=${f(lt.liveOnly.actualMm)} mm; limit=${f(lt.liveOnly.limitMm)} mm, status=${lt.liveOnly.status} (Eq4-76/77).",
+                    "Thermal-inclusive post-installation=${f(lt.afterInstallation.actualMm)} mm; limit=${f(lt.afterInstallation.limitMm)} mm, status=${lt.afterInstallation.status} (Eq${lt.afterInstallation.sourceEquation}). Numeric deflection limits pass=${lt.deflectionLimitChecksPass}; material/stress review required=${lt.highStrengthOrServiceStressReviewRequired}. Not whole-serviceability or member approval."
                 )
             } ?: emptyList())
         )

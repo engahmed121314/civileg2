@@ -5,14 +5,16 @@ package com.civileg.core.engine.rc.ecp
  * Uses the same supplied factored section forces for every component. No load
  * analysis, redistribution, axial force, torsion or anchorage. Optional immediate
  * simply-supported UDL deflection is separate from the supplied factored forces.
- * Long-term serviceability and whole-member approval remain outside this method.
+ * Optional common-age long-term deflection is explicit. Crack-width, detailing
+ * and whole-member approval remain outside this method.
  */
 object Ecp203RibbedSection {
     enum class Region { FLANGE_IN_COMPRESSION, FLANGE_IN_TENSION }
 
     data class ImmediateDeflectionInput(
         val analysisSpanMm: Double,
-        val characteristicDeadLoadKnM2: Double
+        val characteristicDeadLoadKnM2: Double,
+        val longTermInput: Ecp203LongTermDeflection.Input? = null
     )
 
     data class Context(
@@ -38,7 +40,8 @@ object Ecp203RibbedSection {
         val requiredCrossRibs: Ecp203RibbedGeometry.CrossRibs,
         val flexure: Ecp203LayeredFlexure.Assessment,
         val immediateDeflection: Ecp203ShortTermDeflection.Assessment?,
-        val sectionChecksPass: Boolean
+        val sectionChecksPass: Boolean,
+        val longTermDeflection: Ecp203LongTermDeflection.Assessment? = null
     )
 
     fun assess(fcuMpa: Double, fyMpa: Double, webWidthMm: Double, centerSpacingMm: Double,
@@ -68,6 +71,7 @@ object Ecp203RibbedSection {
             totalDepthMm, toppingMm), shearKn, context.links)
         val crossRibs = Ecp203RibbedGeometry.requiredOneWayCrossRibs(spanMm,
             context.characteristicLiveLoadKnM2)
+        var longTerm: Ecp203LongTermDeflection.Assessment? = null
         val immediate = context.immediateDeflectionInput?.let { input ->
             require(context.region == Region.FLANGE_IN_COMPRESSION) {
                 "The simply supported gravity UDL model requires the top flange in compression."
@@ -90,10 +94,15 @@ object Ecp203RibbedSection {
                         service.deadPlusLive.fullyCrackedElasticTensionSteelStressMpa <= fyMpa) {
                         "Cracked service-load steel stress exceeds characteristic yield; the elastic deflection model is outside its verified domain. Redesign the section or use a separately verified nonlinear analysis."
                     }
+                    longTerm = input.longTermInput?.let {
+                        Ecp203LongTermDeflection.assess(serviceSection, fyMpa, input.analysisSpanMm,
+                            input.characteristicDeadLoadKnM2 * centerSpacingMm / 1000.0,
+                            context.characteristicLiveLoadKnM2 * centerSpacingMm / 1000.0, it)
+                    }
                 }
         }
         return Assessment(layout, geometry, flangeWidth, flexure.requiredSteelMm2,
             flexure.momentResistanceKnM, flexure.flexureChecksPass, shear, crossRibs, flexure, immediate,
-            geometry.geometryChecksPass && flexure.flexureChecksPass && shear.shearChecksPass)
+            geometry.geometryChecksPass && flexure.flexureChecksPass && shear.shearChecksPass, longTerm)
     }
 }

@@ -61,6 +61,34 @@ class ECPHordiSourceSectionTest {
         assertFalse(result.isSafe)
         assertTrue(result.warnings.any { it.contains("Long-term deformation") })
     }
+    @Test fun `long term equations and independent limits reach wrapper without member approval`() {
+        val lt = Ecp203LongTermDeflection.Input(4800.0, 0.7,
+            Ecp203LongTermDeflection.Duration.ofMonths(60),
+            Ecp203LongTermDeflection.Attachment.DEFLECTION_SENSITIVE,
+            Ecp203LongTermDeflection.Duration.ofMonths(6), true, 1.5, 0.5)
+        val c = context().copy(characteristicLiveLoadKnM2 = 8.0,
+            immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(5000.0, 6.0, lt))
+        val result = design(c)
+        assertTrue(result.codeNotes.any { it.contains("Mechanical total=deltaD+L+alphaEnd*deltaS=11.6484 mm") })
+        assertTrue(result.codeNotes.any { it.contains("Eq4-80") && it.contains("=4.39733 mm") })
+        assertTrue(result.codeNotes.any { it.contains("post-installation=4.89733 mm") && it.contains("status=PASS") })
+        assertTrue(result.safetyAssessmentBlocked)
+        assertFalse(result.isSafe)
+        assertEquals(design().requiredReinforcement, result.requiredReinforcement, 0.0)
+    }
+    @Test fun `missing thermal data remains unknown while actual failed limits receive cited advice`() {
+        val lt = Ecp203LongTermDeflection.Input(4800.0, 0.7,
+            Ecp203LongTermDeflection.Duration.ofMonths(60), Ecp203LongTermDeflection.Attachment.NONE, null, true)
+        fun c(input: Ecp203LongTermDeflection.Input) = context().copy(characteristicLiveLoadKnM2 = 8.0,
+            immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(5000.0, 6.0, input))
+        val unknown = design(c(lt))
+        assertTrue(unknown.codeNotes.any { it.contains("status=NOT_EVALUATED (Eq4-74)") })
+        assertTrue(unknown.warnings.any { it.contains("Blank thermal input is not zero") })
+        assertFalse(unknown.warnings.any { it.contains("revise actual section stiffness or loading") })
+        val failed = design(c(lt.copy(thermalTotalMm = 25.0)))
+        assertTrue(failed.warnings.any { it.contains("clear span/250") && it.contains("Eqs4-73/74") })
+    }
+
     @Test fun `failed shear recommends section revision rather than extra links above concrete maximum`() {
         val result = design(shear = 1000.0)
         assertTrue(result.warnings.any { it.contains("extra links cannot exceed the concrete maximum") && it.contains("Eq4-27") })

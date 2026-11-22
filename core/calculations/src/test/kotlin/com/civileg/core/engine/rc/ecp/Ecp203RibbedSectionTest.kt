@@ -65,6 +65,31 @@ class Ecp203RibbedSectionTest {
         assess(context().copy(immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(5000.0, -1.0)))
     }
 
+    @Test fun `long term coupling uses actual characteristic rib loads not strength utilization`() {
+        val lt = Ecp203LongTermDeflection.Input(4800.0, 0.7,
+            Ecp203LongTermDeflection.Duration.ofMonths(60),
+            Ecp203LongTermDeflection.Attachment.DEFLECTION_SENSITIVE,
+            Ecp203LongTermDeflection.Duration.ofMonths(6), true, 1.5, 0.5)
+        val c = context().copy(characteristicLiveLoadKnM2 = 8.0,
+            immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(5000.0, 6.0, lt))
+        val a = assess(c)
+        assertEquals(11.648448887758, a.longTermDeflection!!.mechanicalTotalMm, 1e-10)
+        assertEquals(4.397333164848, a.longTermDeflection.mechanicalAfterInstallationMm!!, 1e-10)
+        assertTrue(a.longTermDeflection.deflectionLimitChecksPass)
+        assertEquals(assess().momentResistanceKnM, a.momentResistanceKnM, 0.0)
+        assertEquals(a.longTermDeflection.mechanicalTotalMm,
+            assess(c, moment = 1.0).longTermDeflection!!.mechanicalTotalMm, 0.0)
+    }
+    @Test fun `missing thermal data stays unverified in coupled long term path`() {
+        val lt = Ecp203LongTermDeflection.Input(4800.0, 0.7,
+            Ecp203LongTermDeflection.Duration.ofMonths(60),
+            Ecp203LongTermDeflection.Attachment.NONE, null, true)
+        val a = assess(context().copy(characteristicLiveLoadKnM2 = 8.0,
+            immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(5000.0, 6.0, lt)))
+        assertEquals(Ecp203LongTermDeflection.Status.NOT_EVALUATED, a.longTermDeflection!!.total.status)
+        assertFalse(a.longTermDeflection.deflectionLimitChecksPass)
+    }
+
     @Test fun `negative region uses web only not compression flange capacity`() {
         val positive = assess()
         val negative = assess(context().copy(region = Ecp203RibbedSection.Region.FLANGE_IN_TENSION,

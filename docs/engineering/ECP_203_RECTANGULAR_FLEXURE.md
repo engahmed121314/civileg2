@@ -224,3 +224,43 @@ Source equations now use individually reachable list items rather than one
 oversized item and a second duplicated formula dump. EN/AR flow tests require the
 actual immediate-deflection equation to be displayed before saving its image.
 Current-head Android execution and actual pixel inspection remain required.
+
+## Common-age long-term simply supported UDL deflection
+
+ECP203-2020 printed4-61..4-63, Eqs4-73..4-80, now has an explicit optional
+calculation coupled to the same actual rib section and characteristic loads.
+The sustained case D+psiL receives its own moment and effective inertia.
+It is not a fraction of the full-load deflection across the cracking transition.
+With explicitly no beneficial compression-steel credit, alpha=xi. This is not a
+claim that actual compression reinforcement is absent. Source duration anchors
+are0/3/6/12 months, or the actual integer month>=60 where xi=2. No curve
+interpolation is invented. The end age cannot precede the installation age,
+including when both are above60 months. Installation zero means just after the
+initial instantaneous sustained-load response, not before loading.
+
+For this declared common-application-age model:
+
+- deltaS=delta(D+psiL), using IeS.
+- Additional creep/shrinkage=alphaEnd*deltaS.
+- Mechanical total=delta(D+L)+alphaEnd*deltaS.
+- Eq4-80 post-installation=deltaS*(alphaEnd-alphaInstall)+delta(D+L)-deltaS.
+
+Clear span, not the analysis span, sets the applicable250/360/480/240 divisors.
+The360 live-only check applies to attached deflection-insensitive elements;
+post-installation uses480 for sensitive and240 for insensitive elements. No
+attachment is a distinct explicit selection, not an assumed input default.
+The total and post-installation checks require separately supplied adverse
+thermal contributions. Blank is NOT_EVALUATED, not zero. Explicit zero is
+accepted as an engineering input from a separate thermal analysis. There is no
+thermal model or camber credit here. Staggered sustained-load ages are rejected,
+not silently approximated by one age. Cracked steel beyond yield remains outside
+the elastic model. High-strength/high-stress review is separate from numeric
+limit status, and no crack-width, detailing or whole-member approval follows.
+
+Independent T-rib vector: fcu30,bw200,B600,tf60,h350,2phi20 atd307,analysis5000,
+clear4800,D6/L8kPa,centres600,psi0.7,end60months,installation6months:
+deltaS3.295961692232mm,additional6.591923384464mm,mechanical total11.648448887758mm,
+mechanical post-installation4.397333164848mm. Thermal inputs1.5/0.5mm produce
+13.148448887758/4.897333164848mm for their respective checks. Original ultimate
+strength results remain unchanged. These numbers are method vectors, not a
+completed member design.
