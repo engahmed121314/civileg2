@@ -534,13 +534,15 @@ class PTDesignEngine(private val params: PTCodeParams) {
         notes.add("εt = ${"%.4f".format(epsT)}, φ = ${"%.2f".format(phiFlexure)}")
         notes.add("φMn = ${"%.1f".format(muCap)} kN.m vs Mu = ${"%.1f".format(muReq)} kN.m")
         notes.add("Vc = ${"%.1f".format(vc)} kN, Vs req = ${"%.1f".format(vsReq)} kN")
-        if (params.code != DesignCode.ECP && epsT < 0.005) {
+        val isTensionControlled = params.code == DesignCode.ECP || epsT >= 0.005
+        if (!isTensionControlled) {
             notes.add("Section is not tension-controlled — increase depth or reduce reinforcement")
         }
         if (flexUtil > 1.0) notes.add("Flexural capacity insufficient — increase Aps or depth")
         if (shearUtil > 1.0) notes.add("Shear capacity insufficient — increase section or stirrups")
 
         return UltimateStrengthResult(
+            isTensionControlled = isTensionControlled,
             flexuralCapacity = muCap,
             requiredMoment = muReq,
             shearCapacity = shearCap,
@@ -727,32 +729,54 @@ class PTDesignEngine(private val params: PTCodeParams) {
         val quantity = quantities(designInput, losses)
 
         val warnings = mutableListOf<String>()
+        val warningCodes = mutableListOf<PtWarning>()
         val codeNotes = mutableListOf<String>()
+        val codeNoteKeys = mutableListOf<PtWarning>()
 
         if (!converged) warnings.add("Tendon count did not converge within 6 iterations")
+        if (!converged) warningCodes.add(PtWarning("not_converged"))
         if (!prestress.isAdequate) warnings.add("Provided prestress is less than required")
+        if (!prestress.isAdequate) warningCodes.add(PtWarning("prestress_less"))
         if (losses.totalPercent > 25.0) warnings.add("Prestress losses (${"%.1f".format(losses.totalPercent)}%) exceed 25%")
+        if (losses.totalPercent > 25.0) warningCodes.add(PtWarning("losses_25", listOf("%.1f".format(losses.totalPercent))))
         if (input.cover < input.exposureClass.minCover) {
             warnings.add(
                 "Provided cover ${"%.0f".format(input.cover)} mm is below the ${input.exposureClass.displayName} exposure minimum of ${"%.0f".format(input.exposureClass.minCover)} mm"
+            )
+            warningCodes.add(
+                PtWarning("cover_below", listOf("%.0f".format(input.cover), input.exposureClass.displayName, "%.0f".format(input.exposureClass.minCover)))
             )
         }
         if (input.fcu < input.exposureClass.minFcu) {
             warnings.add(
                 "Concrete strength ${"%.1f".format(input.fcu)} MPa is below the ${input.exposureClass.displayName} exposure minimum of ${"%.1f".format(input.exposureClass.minFcu)} MPa"
             )
+            warningCodes.add(
+                PtWarning("fcu_below", listOf("%.1f".format(input.fcu), input.exposureClass.displayName, "%.1f".format(input.exposureClass.minFcu)))
+            )
         }
         warnings.addAll(stressCheck.notes.filter { it.contains("exceed") || it.contains("insufficient") })
         warnings.addAll(ultimate.notes.filter { it.contains("insufficient") || it.contains("not tension-controlled") })
         warnings.addAll(deflection.notes.filter { it.contains("exceeds") })
         warnings.addAll(anchorage.notes.filter { it.contains("insufficient") })
+        if (!stressCheck.isTransferSafe) warningCodes.add(PtWarning("transfer_stress"))
+        if (!stressCheck.isServiceSafe) warningCodes.add(PtWarning("service_stress"))
+        if (!ultimate.isTensionControlled) warningCodes.add(PtWarning("not_tension_controlled"))
+        if (!ultimate.isFlexureSafe) warningCodes.add(PtWarning("flexure_insufficient"))
+        if (!ultimate.isShearSafe) warningCodes.add(PtWarning("shear_insufficient"))
+        if (!deflection.isSafe) warningCodes.add(PtWarning("deflection_exceeds"))
+        if (!anchorage.isAdequate) warningCodes.add(PtWarning("anchorage_insufficient"))
 
         val strengthName = if (params.code == DesignCode.ECP) "fcu" else "f'c"
         val transferName = if (params.code == DesignCode.ECP) "fci" else "f'ci"
         codeNotes.add("${params.code.version}: Post-tensioned design")
+        codeNoteKeys.add(PtWarning("version", listOf(params.code.version)))
         codeNotes.add("Jacking stress ≤ min(${params.jackingFpkRatio} fpk, ${params.jackingFp01kRatio} fp01k)")
+        codeNoteKeys.add(PtWarning("jacking", listOf("${params.jackingFpkRatio}", "${params.jackingFp01kRatio}")))
         codeNotes.add("Transfer limits: fc ≤ ${params.transferCompRatio} $transferName, ft ≤ ${params.transferTensionFactor}√$transferName")
+        codeNoteKeys.add(PtWarning("transfer", listOf("${params.transferCompRatio}", transferName, "${params.transferTensionFactor}")))
         codeNotes.add("Service limits: fc ≤ ${params.serviceCompRatio} $strengthName, ft ≤ ${params.serviceTensionFactor}√$strengthName")
+        codeNoteKeys.add(PtWarning("service", listOf("${params.serviceCompRatio}", strengthName, "${params.serviceTensionFactor}")))
 
         InputGuard.finite("effectiveForce", losses.effectiveForce)
         InputGuard.finite("flexuralCapacity", ultimate.flexuralCapacity)
@@ -771,7 +795,9 @@ class PTDesignEngine(private val params: PTCodeParams) {
             deflection = deflection,
             isSafe = isSafe,
             warnings = warnings.distinct(),
+            warningCodes = warningCodes.distinct(),
             codeNotes = codeNotes,
+            codeNoteKeys = codeNoteKeys,
             quantity = quantity
         )
     }

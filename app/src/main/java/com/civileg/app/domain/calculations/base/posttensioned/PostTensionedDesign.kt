@@ -238,6 +238,11 @@ enum class TendonProfile(val displayName: String) {
 /**
  * نتائج فحص الإجهادات عند النقل والخدمة.
  */
+data class PtWarning(
+    val code: String,
+    val args: List<String> = emptyList()
+)
+
 data class StressCheckResult(
     val transferTopCompression: Double = 0.0,
     val transferBottomCompression: Double = 0.0,
@@ -272,6 +277,7 @@ data class UltimateStrengthResult(
     val flexuralUtilization: Double = 0.0,
     val shearUtilization: Double = 0.0,
     val torsionUtilization: Double = 0.0,
+    val isTensionControlled: Boolean = true,
     val isFlexureSafe: Boolean = false,
     val isShearSafe: Boolean = false,
     val isTorsionSafe: Boolean = true,
@@ -339,7 +345,9 @@ data class PostTensionedResult(
     val deflection: PTDeflectionResult,
     val isSafe: Boolean,
     val warnings: List<String> = emptyList(),
+    val warningCodes: List<PtWarning> = emptyList(),
     val codeNotes: List<String> = emptyList(),
+    val codeNoteKeys: List<PtWarning> = emptyList(),
     val quantity: PTQuantityEstimate = PTQuantityEstimate()
 )
 

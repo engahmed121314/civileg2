@@ -2519,4 +2519,20 @@
     <string name="pt_exposure_severe">شديد</string>
     <string name="pt_exposure_very_severe">شديد جداً</string>
     <string name="pt_exposure_extreme">قاسٍ</string>
+    <string name="pt_w_not_converged">لم يتقارب عدد الكابلات خلال 6 تكرارات</string>
+    <string name="pt_w_prestress_less">الإجهاد المسبق المتاح أقل من المطلوب</string>
+    <string name="pt_w_losses_25">الفقد في الإجهاد المسبق (%1$s%%) يتجاوز 25%%</string>
+    <string name="pt_w_cover_below">الغطاء الخرساني المتاح %1$s مم أقل من الحد الأدنى %3$s مم لفئة التعرض %2$s</string>
+    <string name="pt_w_fcu_below">مقاومة الخرسانة %1$s ميجاباسكال أقل من الحد الأدنى %3$s ميجاباسكال لفئة التعرض %2$s</string>
+    <string name="pt_w_transfer_stress">إجهادات النقل تتجاوز الحدود - زد fci أو قلل اللامركزية</string>
+    <string name="pt_w_service_stress">إجهادات التشغيل تتجاوز الحدود - زد الإجهاد المسبق أو أبعاد القطاع</string>
+    <string name="pt_w_not_tension_controlled">القطاع غير متحكم به في الشد - زد العمق أو قلل التسليح</string>
+    <string name="pt_w_flexure_insufficient">مقاومة الانحناء غير كافية - زد Aps أو العمق</string>
+    <string name="pt_w_shear_insufficient">مقاومة القص غير كافية - زد القطاع أو الكانات</string>
+    <string name="pt_w_deflection_exceeds">الترخيم يتجاوز L/250 - زد العمق أو الإجهاد المسبق</string>
+    <string name="pt_w_anchorage_insufficient">تسليح منطقة التثبيت غير كاف - قلل التباعد</string>
+    <string name="pt_n_version">%1$s: تصميم لاحق الإجهاد</string>
+    <string name="pt_n_jacking">إجهاد الشد ≤ min(%1$s fpk, %2$s fp01k)</string>
+    <string name="pt_n_transfer">حدود النقل: fc ≤ %1$s %2$s, ft ≤ %3$s√%2$s</string>
+    <string name="pt_n_service">حدود التشغيل: fc ≤ %1$s %2$s, ft ≤ %3$s√%2$s</string>
 </resources>

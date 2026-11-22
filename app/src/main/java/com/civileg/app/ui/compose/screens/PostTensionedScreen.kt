@@ -427,22 +427,38 @@ private fun PostTensionedResultContent(
             ResultRow(stringResource(R.string.pt_r_grout), "${fmt(result.quantity.groutVolume)} m³")
         }
 
-        if (result.warnings.isNotEmpty()) {
+        if (result.warningCodes.isNotEmpty() || result.warnings.isNotEmpty()) {
             ResultCard(stringResource(R.string.pt_warnings)) {
-                result.warnings.forEach { w ->
-                    AppText(
-                        "• $w",
-                        color = Color(0xFFE65100),
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    )
+                if (result.warningCodes.isNotEmpty()) {
+                    result.warningCodes.forEach { w ->
+                        AppText(
+                            "• ${ptWarningText(w)}",
+                            color = Color(0xFFE65100),
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                } else {
+                    result.warnings.forEach { w ->
+                        AppText(
+                            "• $w",
+                            color = Color(0xFFE65100),
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
                 }
             }
         }
 
-        if (result.codeNotes.isNotEmpty()) {
+        if (result.codeNoteKeys.isNotEmpty() || result.codeNotes.isNotEmpty()) {
             ResultCard(stringResource(R.string.pt_code_notes)) {
-                result.codeNotes.forEach { n ->
+                val noteTexts = if (result.codeNoteKeys.isNotEmpty()) {
+                    result.codeNoteKeys.map { ptCodeNoteText(it) }
+                } else {
+                    result.codeNotes
+                }
+                noteTexts.forEach { n ->
                     AppText(
                         "• $n",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -649,5 +665,37 @@ private fun stressText(compression: Double, tension: Double): String {
         "C ${fmt(compression)} MPa"
     } else {
         "T ${fmt(tension)} MPa"
+    }
+}
+
+@Composable
+internal fun ptWarningText(w: com.civileg.app.domain.calculations.base.posttensioned.PtWarning): String {
+    val a = w.args
+    return when (w.code) {
+        "not_converged" -> stringResource(R.string.pt_w_not_converged)
+        "prestress_less" -> stringResource(R.string.pt_w_prestress_less)
+        "losses_25" -> stringResource(R.string.pt_w_losses_25, a.getOrElse(0) { "" })
+        "cover_below" -> stringResource(R.string.pt_w_cover_below, a.getOrElse(0) { "" }, a.getOrElse(1) { "" }, a.getOrElse(2) { "" })
+        "fcu_below" -> stringResource(R.string.pt_w_fcu_below, a.getOrElse(0) { "" }, a.getOrElse(1) { "" }, a.getOrElse(2) { "" })
+        "transfer_stress" -> stringResource(R.string.pt_w_transfer_stress)
+        "service_stress" -> stringResource(R.string.pt_w_service_stress)
+        "not_tension_controlled" -> stringResource(R.string.pt_w_not_tension_controlled)
+        "flexure_insufficient" -> stringResource(R.string.pt_w_flexure_insufficient)
+        "shear_insufficient" -> stringResource(R.string.pt_w_shear_insufficient)
+        "deflection_exceeds" -> stringResource(R.string.pt_w_deflection_exceeds)
+        "anchorage_insufficient" -> stringResource(R.string.pt_w_anchorage_insufficient)
+        else -> w.code
+    }
+}
+
+@Composable
+internal fun ptCodeNoteText(n: com.civileg.app.domain.calculations.base.posttensioned.PtWarning): String {
+    val a = n.args
+    return when (n.code) {
+        "version" -> stringResource(R.string.pt_n_version, a.getOrElse(0) { "" })
+        "jacking" -> stringResource(R.string.pt_n_jacking, a.getOrElse(0) { "" }, a.getOrElse(1) { "" })
+        "transfer" -> stringResource(R.string.pt_n_transfer, a.getOrElse(0) { "" }, a.getOrElse(1) { "" }, a.getOrElse(2) { "" })
+        "service" -> stringResource(R.string.pt_n_service, a.getOrElse(0) { "" }, a.getOrElse(1) { "" }, a.getOrElse(2) { "" })
+        else -> n.code
     }
 }

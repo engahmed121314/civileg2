@@ -2516,4 +2516,20 @@
     <string name="pt_exposure_severe">Severe</string>
     <string name="pt_exposure_very_severe">Very Severe</string>
     <string name="pt_exposure_extreme">Extreme</string>
+    <string name="pt_w_not_converged">Tendon count did not converge within 6 iterations</string>
+    <string name="pt_w_prestress_less">Provided prestress is less than required</string>
+    <string name="pt_w_losses_25">Prestress losses (%1$s%%) exceed 25%%</string>
+    <string name="pt_w_cover_below">Provided cover %1$s mm is below the %2$s exposure minimum of %3$s mm</string>
+    <string name="pt_w_fcu_below">Concrete strength %1$s MPa is below the %2$s exposure minimum of %3$s MPa</string>
+    <string name="pt_w_transfer_stress">Transfer stresses exceed limits - increase fci or reduce eccentricity</string>
+    <string name="pt_w_service_stress">Service stresses exceed limits - increase prestress or section</string>
+    <string name="pt_w_not_tension_controlled">Section is not tension-controlled - increase depth or reduce reinforcement</string>
+    <string name="pt_w_flexure_insufficient">Flexural capacity insufficient - increase Aps or depth</string>
+    <string name="pt_w_shear_insufficient">Shear capacity insufficient - increase section or stirrups</string>
+    <string name="pt_w_deflection_exceeds">Deflection exceeds L/250 - increase depth or prestress</string>
+    <string name="pt_w_anchorage_insufficient">Anchorage reinforcement insufficient - reduce spacing</string>
+    <string name="pt_n_version">%1$s: Post-tensioned design</string>
+    <string name="pt_n_jacking">Jacking stress ≤ min(%1$s fpk, %2$s fp01k)</string>
+    <string name="pt_n_transfer">Transfer limits: fc ≤ %1$s %2$s, ft ≤ %3$s√%2$s</string>
+    <string name="pt_n_service">Service limits: fc ≤ %1$s %2$s, ft ≤ %3$s√%2$s</string>
 </resources>
