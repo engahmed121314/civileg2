@@ -2408,7 +2408,6 @@
     <string name="settings_support_title">دعم التطبيق</string>
     <string name="settings_support_message">Civil Engineer Pro مجاني وبدون إعلانات. التبرعات الطوعية تموّل أكواد تصميم واختبارات ورسومات جديدة.</string>
     <string name="settings_support_button">تبرع عبر GitHub Sponsors</string>
-    <string name="soil_vm_all">الكل</string>
     <string name="soil_vm_elevation">المنظور</string>
     <string name="soil_vm_plan_kern">المسقط والنواة</string>
     <string name="soil_vm_stress_bulb">بصمة الإجهاد</string>
