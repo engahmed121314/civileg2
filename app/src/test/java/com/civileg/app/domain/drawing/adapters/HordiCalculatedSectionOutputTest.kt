@@ -18,6 +18,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.LayoutDirection
 import com.civileg.app.ui.compose.components.drawings.HordiCalculatedSectionOutput
+import com.civileg.app.ui.compose.components.drawings.HordiSectionPreviewStrings
 import com.civileg.app.utils.EnglishFontProvider
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -42,6 +43,7 @@ class HordiCalculatedSectionOutputTest {
     private fun capture(name: String, arabic: Boolean) {
         val fixture = HordiCalculatedSectionAdapterTest().fixture(name)
         val output = fixture.handoff()
+        val policyNote = HordiCalculatedSectionAdapter.build(output, "H-REVIEW").arrangementPolicyNote
         val directory = File("build/reports/tests/hordi-section-shots").apply { mkdirs() }
         File(directory, "$name-${if (arabic) "ar" else "en"}-review.pdf")
             .writeBytes(HordiCalculatedSectionAdapter.renderReviewPdfBytes(output, "H-REVIEW"))
@@ -58,14 +60,26 @@ class HordiCalculatedSectionOutputTest {
         }
         compose.waitForIdle()
         compose.onNodeWithText(fixture.revisionId, substring = true).assertExists()
-        fixture.incompleteChecks.forEach { compose.onNodeWithText(it).assertExists() }
-        compose.onNodeWithText(if (arabic) "التنفيذ والتصدير التنفيذي محجوبان. قيود الحساب الأصلية:" else
+        fixture.incompleteChecks.forEach {
+            compose.onNodeWithText(HordiSectionPreviewStrings.warning(it, arabic)).assertExists()
+            if (arabic) compose.onNodeWithText(it).assertDoesNotExist()
+        }
+        if (arabic) compose.onNodeWithText("Required As", substring = true).assertDoesNotExist()
+        policyNote?.let {
+            compose.onNodeWithText(HordiSectionPreviewStrings.policyNote(it, arabic)).assertExists()
+            if (arabic) compose.onNodeWithText(it).assertDoesNotExist()
+        }
+        compose.onNodeWithText(if (arabic) "التنفيذ والتصدير التنفيذي محجوبان. قيود الحساب والتنفيذ:" else
             "Execution and execution exports are blocked. Original calculation limitations:").assertExists()
         val bounds = compose.onNodeWithTag("section-output").fetchSemanticsNode().boundsInRoot
         (fixture.incompleteChecks + fixture.section.incompleteGeometry).distinct().forEach { warning ->
-            val warningNode = compose.onNodeWithText(warning).fetchSemanticsNode()
+            val warningNode = compose.onNodeWithText(HordiSectionPreviewStrings.warning(warning, arabic)).fetchSemanticsNode()
             assertTrue("Source hold is clipped below the component", warningNode.positionInRoot.y + warningNode.size.height <= bounds.bottom)
             assertTrue("Source hold is clipped horizontally", warningNode.positionInRoot.x >= bounds.left && warningNode.positionInRoot.x + warningNode.size.width <= bounds.right)
+        }
+        policyNote?.let {
+            val node = compose.onNodeWithText(HordiSectionPreviewStrings.policyNote(it, arabic)).fetchSemanticsNode()
+            assertTrue("Selected policy disclosure is clipped", node.positionInRoot.y + node.size.height <= bounds.bottom)
         }
         val bitmap = compose.runOnIdle {
             assertTrue("Component exceeds the captured viewport; do not hide warnings", bounds.bottom <= view.height)
@@ -81,4 +95,9 @@ class HordiCalculatedSectionOutputTest {
     @Test fun `bottom bars English preview preserves frozen section and all holds`() = capture("bottom-two-bars", false)
     @Test fun `top bars Arabic preview retains physical pitch and blocked execution status`() = capture("top-two-bars", true)
     @Test fun `multiple layers English preview retains all adopted bar levels`() = capture("bottom-two-layers", false)
+    @Test fun `bottom bars Arabic preview localizes captions and every source hold`() = capture("bottom-two-bars", true)
+    @Test fun `top bars English preview retains the English presentation`() = capture("top-two-bars", false)
+    @Test fun `multiple layers Arabic preview localizes captions and every source hold`() = capture("bottom-two-layers", true)
+    @Test fun `corrected paired upper five bars English preview uses adopted source revision`() = capture("bottom-three-plus-two-corrected", false)
+    @Test fun `corrected paired upper five bars Arabic preview preserves policy and holds`() = capture("bottom-three-plus-two-corrected", true)
 }

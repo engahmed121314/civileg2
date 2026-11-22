@@ -29,6 +29,7 @@ class HordiSectionDrawing internal constructor(
     val requiredSteelMm2: Double,
     val providedSteelMm2: Double,
     val placementBasis: String,
+    val arrangementPolicyNote: String?,
     incompleteChecks: List<String>,
     val view: DesignDrawingView
 ) {
@@ -120,8 +121,15 @@ object HordiCalculatedSectionAdapter {
                 pitch + 230.0, pitchDimensionTextY + 2.0 * annotationGap + 40.0), primitives
         )
         val warnings = (output.incompleteChecks + section.incompleteGeometry).distinct()
+        // The source producer records the selected policy in this explicit marker.
+        // Never infer a policy for old records or choose an economic arrangement here.
+        val policy = section.placementBasis.substringAfter("__FOUR_BAR_", "")
+        val policyNote = if (policy in setOf("STANDARD_PAIRED_UPPER", "EXPLICIT_ECONOMY_FOUR_BARS")) {
+            val rows = bars.groupingBy { it.layerIndex }.eachCount().toSortedMap().values.joinToString("+")
+            "Four-bar arrangement policy: $policy; actual adopted rows=$rows. Project detailing choice, not a code-mandated bar-count parity rule. All execution holds remain."
+        } else null
         return HordiSectionDrawing(output.revisionId, memberMark, output.methodReference,
-            output.requiredSteelMm2, output.providedSteelMm2, section.placementBasis,
+            output.requiredSteelMm2, output.providedSteelMm2, section.placementBasis, policyNote,
             warnings, DesignDrawingView("rib-section", DrawingViewKind.SECTION, scene))
     }
 
@@ -145,6 +153,7 @@ object HordiCalculatedSectionAdapter {
                 val graphic = Cell().setPadding(5f).add(Image(PdfRenderer.createForm(drawing.view.scene, pdf, 700f, 580f)))
                 val notes = Cell().setPadding(8f)
                 notes.add(note("METHOD / MEMBER STATUS: UNVERIFIED FOR EXECUTION. Execution exports remain blocked.").setBold())
+                drawing.arrangementPolicyNote?.let { notes.add(note(it)) }
                 notes.add(note("SUPPLIED LINKS: ${output.section.linkLegs} legs, diameter ${number(output.section.linkDiameterMm)} mm, spacing ${number(output.section.linkSpacingMm)} mm. Closure, bends and first-link offset are not supplied."))
                 notes.add(note("Adopted bar centres: x from web left, y from physical bottom (mm). These are coordinates, not a bar bending schedule.").setBold())
                 requireNotNull(output.section.bars).forEach { bar ->

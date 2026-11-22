@@ -48,34 +48,53 @@ fun HordiCalculatedSectionOutput(
                         "Section coordinates are unavailable or inconsistent. No substitute reinforcement was drawn.",
                         color = MaterialTheme.colorScheme.error)
                 } else {
-                    TechnicalSectionText("$memberMark | Revision: ${drawing.revisionId}")
-                    // Technical coordinates remain x-right/y-up in both app languages.
+                    if (isArabic) {
+                        Text("معرّف المراجعة للعنصر $memberMark:", style = MaterialTheme.typography.bodySmall)
+                        TechnicalSectionText(drawing.revisionId)
+                    } else TechnicalSectionText("$memberMark | Revision: ${drawing.revisionId}")
+                    val previewScene = remember(drawing.view.scene, isArabic) {
+                        HordiSectionPreviewStrings.scene(drawing.view.scene, isArabic)
+                    }
+                    // Language changes captions only. Coordinates remain x-right/y-up.
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                        ComposeRenderer.render(drawing.view.scene, Modifier.fillMaxWidth().aspectRatio(1.18f))
+                        ComposeRenderer.render(previewScene, Modifier.fillMaxWidth().aspectRatio(1.18f))
                     }
                     Text(if (isArabic) "مرجع الحساب وترتيب الأسياخ" else "Calculation and adopted arrangement", style = MaterialTheme.typography.titleSmall)
-                    TechnicalSectionText(drawing.methodReference)
+                    if (isArabic) Text(HordiSectionPreviewStrings.methodReference(drawing.methodReference, true), style = MaterialTheme.typography.bodySmall)
+                    else TechnicalSectionText(drawing.methodReference)
                     TechnicalSectionText(drawing.placementBasis)
+                    drawing.arrangementPolicyNote?.let { policyNote ->
+                        if (isArabic) Text(HordiSectionPreviewStrings.policyNote(policyNote, true),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), style = MaterialTheme.typography.bodySmall)
+                        else TechnicalSectionText(policyNote)
+                    }
                     Text(String.format(Locale.US, if (isArabic)
                         "عرض التكرار الفعلي %.3f مم؛ العرض التحليلي b_eff = %.3f مم ليس حدًا فعليًا أو عرض اللوحة الكاملة." else
                         "Entered physical pitch %.3f mm; analytical b_eff %.3f mm is not a physical edge or full-panel width.",
                         output.section.enteredRibPitchMm, output.section.analyticalFlangeWidthMm), style = MaterialTheme.typography.bodySmall)
-                    TechnicalSectionText(String.format(Locale.US, "Required As %.3f mm² | Provided As %.3f mm²", drawing.requiredSteelMm2, drawing.providedSteelMm2))
+                    if (isArabic) Text(String.format(Locale.US, "مساحة الحديد المطلوبة %.3f مم²؛ المقدمة %.3f مم²",
+                        drawing.requiredSteelMm2, drawing.providedSteelMm2), style = MaterialTheme.typography.bodySmall)
+                    else TechnicalSectionText(String.format(Locale.US, "Required As %.3f mm² | Provided As %.3f mm²", drawing.requiredSteelMm2, drawing.providedSteelMm2))
                     Text(String.format(Locale.US, if (isArabic)
                         "بيانات الكانة: %d أفرع، قطر %.3f مم كل %.3f مم. مسار الغلق والخطافات وإزاحة أول كانة غير متاح." else
                         "Supplied links: %d legs, dia %.3f mm @ %.3f mm. No closure, hooks or first-link offset supplied.",
                         output.section.linkLegs, output.section.linkDiameterMm, output.section.linkSpacingMm), style = MaterialTheme.typography.bodySmall)
-                    Text(if (isArabic) "مراكز الأسياخ المعتمدة: x من يسار العصب، وy من أسفل القطاع الفعلي (مم). إحداثيات وليست جدول تفريد." else
+                    Text(if (isArabic) "مراكز الأسياخ المعتمدة: x من يسار العصب، وy من أسفل القطاع الفعلي (مم). L للطبقة وB للسيخ. إحداثيات وليست جدول تفريد." else
                         "Adopted bar centres: x from web left, y from physical bottom (mm). Coordinates, not a bar bending schedule.", style = MaterialTheme.typography.bodySmall)
                     output.section.bars.orEmpty().forEach { bar ->
-                        TechnicalSectionText(String.format(Locale.US, "L%d/B%d: x %.3f, y %.3f, dia %.3f mm",
+                        TechnicalSectionText(String.format(Locale.US, if (isArabic) "L%d/B%d: x %.3f, y %.3f, φ %.3f مم" else
+                            "L%d/B%d: x %.3f, y %.3f, dia %.3f mm",
                             bar.layerIndex + 1, bar.indexInLayer + 1, bar.xFromWebLeftMm, bar.yFromBottomMm, bar.diameterMm))
                     }
                     Spacer(Modifier.height(8.dp))
-                    Text(if (isArabic) "التنفيذ والتصدير التنفيذي محجوبان. قيود الحساب الأصلية:" else
+                    Text(if (isArabic) "التنفيذ والتصدير التنفيذي محجوبان. قيود الحساب والتنفيذ:" else
                         "Execution and execution exports are blocked. Original calculation limitations:",
                         color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall)
-                    drawing.incompleteChecks.forEach { TechnicalSectionText(it) }
+                    drawing.incompleteChecks.forEach {
+                        if (isArabic) Text(HordiSectionPreviewStrings.warning(it, true),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), style = MaterialTheme.typography.bodySmall)
+                        else TechnicalSectionText(it)
+                    }
                 }
             }
         }
