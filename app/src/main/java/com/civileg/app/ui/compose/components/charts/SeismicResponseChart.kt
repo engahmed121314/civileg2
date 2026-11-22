@@ -9,7 +9,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.civileg.app.R
 import com.civileg.app.domain.calculations.base.SpectrumValue
 import com.civileg.app.ui.theme.ThemeColors
 import com.civileg.app.ui.components.AppButton
@@ -27,6 +29,8 @@ fun SeismicResponseChart(
     modifier: Modifier = Modifier
 ) {
     val chartColors = ThemeColors.chartColors()
+    val axisPeriodLabel = stringResource(R.string.chart_axis_period)
+    val axisSpectralLabel = stringResource(R.string.chart_axis_spectral)
     
     Card(
         modifier = modifier,
@@ -36,7 +40,7 @@ fun SeismicResponseChart(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             AppText(
-                "Response Spectrum Analysis", 
+                stringResource(R.string.chart_response_spectrum_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -142,11 +146,22 @@ fun SeismicResponseChart(
                         textAlign = android.graphics.Paint.Align.CENTER
                     }
                     
-                    drawText("Time Period T (sec)", canvasWidth / 2, canvasHeight - 10f, textPaint)
-                    
+                    // Axis labels must fit their canvas: the rotated y label is
+                    // bounded by chart height, the x label by chart width; scale
+                    // down instead of clipping (readability gate).
+                    val xMax = canvasWidth - 16f
+                    val xMeasured = textPaint.measureText(axisPeriodLabel)
+                    val yMax = canvasHeight - 24f
+                    val yMeasured = textPaint.measureText(axisSpectralLabel)
+                    val fit = minOf(1f, xMax / maxOf(xMeasured, 1f), yMax / maxOf(yMeasured, 1f))
+                    if (fit < 1f) {
+                        textPaint.textSize = (textPaint.textSize * fit).coerceAtLeast(14f)
+                    }
+                    drawText(axisPeriodLabel, canvasWidth / 2, canvasHeight - 10f, textPaint)
+
                     save()
                     rotate(-90f, 20f, canvasHeight / 2)
-                    drawText("Spectral Accel. Sa/g", 20f, canvasHeight / 2, textPaint)
+                    drawText(axisSpectralLabel, 20f, canvasHeight / 2, textPaint)
                     restore()
                 }
             }
@@ -157,8 +172,8 @@ fun SeismicResponseChart(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                InfoBox(label = "Design Period", value = "${"%.2f".format(designPeriod)} s")
-                InfoBox(label = "Design Sa/g", value = "${"%.3f".format(spectrumValues.minByOrNull { abs(it.period - designPeriod) }?.spectralAcceleration ?: 0.0)}")
+                InfoBox(label = stringResource(R.string.chart_design_period), value = "${"%.2f".format(designPeriod)} s")
+                InfoBox(label = stringResource(R.string.chart_design_sag), value = "${"%.3f".format(spectrumValues.minByOrNull { abs(it.period - designPeriod) }?.spectralAcceleration ?: 0.0)}")
             }
         }
     }

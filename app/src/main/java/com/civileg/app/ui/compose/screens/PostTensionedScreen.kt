@@ -136,7 +136,7 @@ fun PostTensionedScreen(
             ) {
             item {
                 AppText(
-                    "Post-Tensioned Element / عنصر مسبق الإجهاد",
+                    stringResource(R.string.pt_element_header),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -144,23 +144,23 @@ fun PostTensionedScreen(
 
             item {
                 EnumDropdown(
-                    label = "Element Type / نوع العنصر",
+                    label = stringResource(R.string.pt_element_type),
                     options = PostTensionedElementType.entries,
                     selected = elementType,
-                    display = { it.displayName },
+                    display = { it.localizedName() },
                     onSelected = { elementType = it }
                 )
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberField("Span (m) / البحر", span, Modifier.weight(1f)) { span = it }
-                    NumberField("Width (mm) / العرض", width, Modifier.weight(1f)) { width = it }
+                    NumberField(stringResource(R.string.pt_span), span, Modifier.weight(1f)) { span = it }
+                    NumberField(stringResource(R.string.pt_width), width, Modifier.weight(1f)) { width = it }
                 }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberField("Depth (mm) / العمق", depth, Modifier.weight(1f)) { depth = it }
-                    NumberField("Cover (mm) / الغطاء", cover, Modifier.weight(1f)) { cover = it }
+                    NumberField(stringResource(R.string.pt_depth), depth, Modifier.weight(1f)) { depth = it }
+                    NumberField(stringResource(R.string.pt_cover), cover, Modifier.weight(1f)) { cover = it }
                 }
             }
             item {
@@ -177,40 +177,40 @@ fun PostTensionedScreen(
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberField("Tendons / عدد الكابلات", numTendons, Modifier.weight(1f)) { numTendons = it }
-                    NumberField("Dead (kN/m)", deadLoad, Modifier.weight(1f)) { deadLoad = it }
+                    NumberField(stringResource(R.string.pt_tendons), numTendons, Modifier.weight(1f)) { numTendons = it }
+                    NumberField(stringResource(R.string.pt_dead_load), deadLoad, Modifier.weight(1f)) { deadLoad = it }
                 }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberField("Live (kN/m)", liveLoad, Modifier.weight(1f)) { liveLoad = it }
+                    NumberField(stringResource(R.string.pt_live_load), liveLoad, Modifier.weight(1f)) { liveLoad = it }
                     Spacer(Modifier.weight(1f))
                 }
             }
             item {
                 EnumDropdown(
-                    label = "Tendon Type / نوع الكابل",
+                    label = stringResource(R.string.pt_tendon_type),
                     options = PTTendonType.entries,
                     selected = tendonType,
-                    display = { it.description },
+                    display = { it.localizedName() },
                     onSelected = { tendonType = it }
                 )
             }
             item {
                 EnumDropdown(
-                    label = "Support / الاستناد",
+                    label = stringResource(R.string.pt_support),
                     options = PTSupportType.entries,
                     selected = supportType,
-                    display = { it.displayName },
+                    display = { it.localizedName() },
                     onSelected = { supportType = it }
                 )
             }
             item {
                 EnumDropdown(
-                    label = "Exposure Class / فئة التعرض",
+                    label = stringResource(R.string.pt_exposure_class),
                     options = PTExposureClass.entries,
                     selected = exposureClass,
-                    display = { it.displayName },
+                    display = { it.localizedName() },
                     onSelected = { exposureClass = it }
                 )
             }
@@ -222,7 +222,7 @@ fun PostTensionedScreen(
             }
             item {
                 AppButton(
-                    label = "Calculate / احسب",
+                    label = stringResource(R.string.pt_calculate),
                     onClick = {
                         val input = PostTensionedInput(
                             elementType = elementType,
@@ -360,75 +360,75 @@ private fun PostTensionedResultContent(
         PostTensionedSectionDrawing(input = result.input, result = result)
         PostTensionedElevationDrawing(input = result.input, result = result)
 
-        ResultCard("Prestress Design / تصميم الإجهاد المسبق") {
-            ResultRow("Required force", "${fmt(result.prestressDesign.requiredForce)} kN")
-            ResultRow("Jacking force", "${fmt(result.prestressDesign.jackingForce)} kN")
-            ResultRow("Initial stress", "${fmt(result.prestressDesign.initialStress)} MPa")
-            ResultRow("Effective stress", "${fmt(result.prestressDesign.effectiveStress)} MPa")
-            ResultRow("Eccentricity", "${fmt(result.prestressDesign.providedEccentricity)} mm")
-            ResultRow("Tendons", "${result.prestressDesign.numTendons} × ${result.input.tendonType.description}")
+        ResultCard(stringResource(R.string.pt_prestress_design)) {
+            ResultRow(stringResource(R.string.pt_r_required_force), "${fmt(result.prestressDesign.requiredForce)} kN")
+            ResultRow(stringResource(R.string.pt_r_jacking_force), "${fmt(result.prestressDesign.jackingForce)} kN")
+            ResultRow(stringResource(R.string.pt_r_initial_stress), "${fmt(result.prestressDesign.initialStress)} MPa")
+            ResultRow(stringResource(R.string.pt_r_effective_stress), "${fmt(result.prestressDesign.effectiveStress)} MPa")
+            ResultRow(stringResource(R.string.pt_r_eccentricity), "${fmt(result.prestressDesign.providedEccentricity)} mm")
+            ResultRow(stringResource(R.string.pt_r_tendons), "${result.prestressDesign.numTendons} × ${result.input.tendonType.description}")
         }
 
-        ResultCard("Prestress Losses / فقد الإجهاد") {
-            ResultRow("Elastic shortening", "${fmt(result.losses.elasticShortening)} MPa")
-            ResultRow("Creep", "${fmt(result.losses.creep)} MPa")
-            ResultRow("Shrinkage", "${fmt(result.losses.shrinkage)} MPa")
-            ResultRow("Relaxation", "${fmt(result.losses.steelRelaxation)} MPa")
-            ResultRow("Friction", "${fmt(result.losses.friction)} MPa")
-            ResultRow("Anchorage slip", "${fmt(result.losses.anchorageSlip)} MPa")
+        ResultCard(stringResource(R.string.pt_losses)) {
+            ResultRow(stringResource(R.string.pt_r_elastic_shortening), "${fmt(result.losses.elasticShortening)} MPa")
+            ResultRow(stringResource(R.string.pt_r_creep), "${fmt(result.losses.creep)} MPa")
+            ResultRow(stringResource(R.string.pt_r_shrinkage), "${fmt(result.losses.shrinkage)} MPa")
+            ResultRow(stringResource(R.string.pt_r_relaxation), "${fmt(result.losses.steelRelaxation)} MPa")
+            ResultRow(stringResource(R.string.pt_r_friction), "${fmt(result.losses.friction)} MPa")
+            ResultRow(stringResource(R.string.pt_r_anchorage_slip), "${fmt(result.losses.anchorageSlip)} MPa")
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            ResultRow("Total losses", "${fmt(result.losses.total)} MPa (${fmt(result.losses.totalPercent)}%)", bold = true)
+            ResultRow(stringResource(R.string.pt_r_total_losses), "${fmt(result.losses.total)} MPa (${fmt(result.losses.totalPercent)}%)", bold = true)
         }
 
-        ResultCard("Stress Check / فحص الإجهادات") {
-            ResultRow("Transfer top", stressText(result.stressCheck.transferTopCompression, result.stressCheck.transferTopTension))
-            ResultRow("Transfer bottom", stressText(result.stressCheck.transferBottomCompression, result.stressCheck.transferBottomTension))
-            ResultRow("Service top", stressText(result.stressCheck.serviceTopCompression, result.stressCheck.serviceTopTension))
-            ResultRow("Service bottom", stressText(result.stressCheck.serviceBottomCompression, result.stressCheck.serviceBottomTension))
+        ResultCard(stringResource(R.string.pt_stress_check)) {
+            ResultRow(stringResource(R.string.pt_r_transfer_top), stressText(result.stressCheck.transferTopCompression, result.stressCheck.transferTopTension))
+            ResultRow(stringResource(R.string.pt_r_transfer_bottom), stressText(result.stressCheck.transferBottomCompression, result.stressCheck.transferBottomTension))
+            ResultRow(stringResource(R.string.pt_r_service_top), stressText(result.stressCheck.serviceTopCompression, result.stressCheck.serviceTopTension))
+            ResultRow(stringResource(R.string.pt_r_service_bottom), stressText(result.stressCheck.serviceBottomCompression, result.stressCheck.serviceBottomTension))
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            ResultRow("Transfer safe", yesNo(result.stressCheck.isTransferSafe))
-            ResultRow("Service safe", yesNo(result.stressCheck.isServiceSafe))
+            ResultRow(stringResource(R.string.pt_r_transfer_safe), yesNo(result.stressCheck.isTransferSafe))
+            ResultRow(stringResource(R.string.pt_r_service_safe), yesNo(result.stressCheck.isServiceSafe))
         }
 
-        ResultCard("Ultimate Strength / المقاومة القصوى") {
+        ResultCard(stringResource(R.string.pt_ultimate_strength)) {
             ResultRow("φMn", "${fmt(result.ultimateStrength.flexuralCapacity)} kN.m")
-            ResultRow("Mu required", "${fmt(result.ultimateStrength.requiredMoment)} kN.m")
-            ResultRow("Flexure utilization", "${fmt(result.ultimateStrength.flexuralUtilization * 100)}%")
-            ResultRow("Shear capacity", "${fmt(result.ultimateStrength.shearCapacity)} kN")
-            ResultRow("Shear required", "${fmt(result.ultimateStrength.requiredShear)} kN")
+            ResultRow(stringResource(R.string.pt_r_mu_required), "${fmt(result.ultimateStrength.requiredMoment)} kN.m")
+            ResultRow(stringResource(R.string.pt_r_flexure_util), "${fmt(result.ultimateStrength.flexuralUtilization * 100)}%")
+            ResultRow(stringResource(R.string.pt_r_shear_capacity), "${fmt(result.ultimateStrength.shearCapacity)} kN")
+            ResultRow(stringResource(R.string.pt_r_shear_required), "${fmt(result.ultimateStrength.requiredShear)} kN")
             result.ultimateStrength.requiredStirrups?.let { s ->
-                ResultRow("Stirrups", "${s.legs}Ø${s.diameter.toInt()} @ ${fmt(s.spacing)} mm")
+                ResultRow(stringResource(R.string.pt_r_stirrups), "${s.legs}Ø${s.diameter.toInt()} @ ${fmt(s.spacing)} mm")
             }
         }
 
-        ResultCard("Anchorage Zone / منطقة التثبيت") {
-            ResultRow("Bursting force", "${fmt(result.anchorageZone.burstingForce)} kN")
-            ResultRow("Spalling force", "${fmt(result.anchorageZone.spallingForce)} kN")
-            ResultRow("Bursting steel", "${fmt(result.anchorageZone.burstingReinforcement)} mm²")
-            ResultRow("Provide", "${result.anchorageZone.stirrupLegs}Ø${result.anchorageZone.stirrupDiameter.toInt()} @ ${fmt(result.anchorageZone.stirrupSpacing)} mm")
+        ResultCard(stringResource(R.string.pt_anchorage_zone)) {
+            ResultRow(stringResource(R.string.pt_r_bursting_force), "${fmt(result.anchorageZone.burstingForce)} kN")
+            ResultRow(stringResource(R.string.pt_r_spalling_force), "${fmt(result.anchorageZone.spallingForce)} kN")
+            ResultRow(stringResource(R.string.pt_r_bursting_steel), "${fmt(result.anchorageZone.burstingReinforcement)} mm²")
+            ResultRow(stringResource(R.string.pt_r_provide), "${result.anchorageZone.stirrupLegs}Ø${result.anchorageZone.stirrupDiameter.toInt()} @ ${fmt(result.anchorageZone.stirrupSpacing)} mm")
         }
 
-        ResultCard("Deflection / الترخيم") {
-            ResultRow("Dead load", "${fmt(result.deflection.deadLoadDeflection)} mm")
-            ResultRow("Live load", "${fmt(result.deflection.liveLoadDeflection)} mm")
-            ResultRow("Prestress (upward)", "${fmt(result.deflection.prestressDeflection)} mm")
-            ResultRow("Long-term", "${fmt(result.deflection.longTermDeflection)} mm")
-            ResultRow("Total", "${fmt(result.deflection.totalDeflection)} mm", bold = true)
-            ResultRow("Allowable", "${fmt(result.deflection.allowableDeflection)} mm")
-            ResultRow("Safe", yesNo(result.deflection.isSafe))
+        ResultCard(stringResource(R.string.pt_deflection)) {
+            ResultRow(stringResource(R.string.pt_r_dead_load), "${fmt(result.deflection.deadLoadDeflection)} mm")
+            ResultRow(stringResource(R.string.pt_r_live_load), "${fmt(result.deflection.liveLoadDeflection)} mm")
+            ResultRow(stringResource(R.string.pt_r_prestress_up), "${fmt(result.deflection.prestressDeflection)} mm")
+            ResultRow(stringResource(R.string.pt_r_long_term), "${fmt(result.deflection.longTermDeflection)} mm")
+            ResultRow(stringResource(R.string.pt_r_total), "${fmt(result.deflection.totalDeflection)} mm", bold = true)
+            ResultRow(stringResource(R.string.pt_r_allowable), "${fmt(result.deflection.allowableDeflection)} mm")
+            ResultRow(stringResource(R.string.pt_r_safe), yesNo(result.deflection.isSafe))
         }
 
-        ResultCard("Quantities / الكميات") {
-            ResultRow("Concrete", "${fmt(result.quantity.concreteVolume)} m³")
-            ResultRow("Mild steel", "${fmt(result.quantity.rebarWeight)} kg")
-            ResultRow("PT tendons", "${fmt(result.quantity.ptTendonWeight)} kg")
-            ResultRow("Ducts", "${fmt(result.quantity.ductWeight)} kg")
-            ResultRow("Anchorages", "${fmt(result.quantity.anchorageWeight)} kg")
-            ResultRow("Grout", "${fmt(result.quantity.groutVolume)} m³")
+        ResultCard(stringResource(R.string.pt_quantities)) {
+            ResultRow(stringResource(R.string.pt_r_concrete), "${fmt(result.quantity.concreteVolume)} m³")
+            ResultRow(stringResource(R.string.pt_r_mild_steel), "${fmt(result.quantity.rebarWeight)} kg")
+            ResultRow(stringResource(R.string.pt_r_pt_tendons), "${fmt(result.quantity.ptTendonWeight)} kg")
+            ResultRow(stringResource(R.string.pt_r_ducts), "${fmt(result.quantity.ductWeight)} kg")
+            ResultRow(stringResource(R.string.pt_r_anchorages), "${fmt(result.quantity.anchorageWeight)} kg")
+            ResultRow(stringResource(R.string.pt_r_grout), "${fmt(result.quantity.groutVolume)} m³")
         }
 
         if (result.warnings.isNotEmpty()) {
-            ResultCard("Warnings / تحذيرات") {
+            ResultCard(stringResource(R.string.pt_warnings)) {
                 result.warnings.forEach { w ->
                     AppText(
                         "• $w",
@@ -441,7 +441,7 @@ private fun PostTensionedResultContent(
         }
 
         if (result.codeNotes.isNotEmpty()) {
-            ResultCard("Code Notes / ملاحظات الكود") {
+            ResultCard(stringResource(R.string.pt_code_notes)) {
                 result.codeNotes.forEach { n ->
                     AppText(
                         "• $n",
@@ -494,7 +494,7 @@ private fun StatusBanner(isSafe: Boolean) {
                 tint = color
             )
             AppText(
-                if (isSafe) "Design is SAFE / التصميم آمن" else "Design is UNSAFE / التصميم غير آمن",
+                stringResource(if (isSafe) R.string.pt_design_safe else R.string.pt_design_unsafe),
                 color = color,
                 fontWeight = FontWeight.Bold
             )
@@ -555,13 +555,58 @@ private fun NumberField(
     )
 }
 
+/** Display labels localize; the enum value itself stays the selection model. */
+@Composable
+private fun PostTensionedElementType.localizedName(): String = stringResource(when (this) {
+    PostTensionedElementType.Beam -> R.string.pt_elem_beam
+    PostTensionedElementType.Slab -> R.string.pt_elem_slab_one_way
+    PostTensionedElementType.SlabTwoWay -> R.string.pt_elem_slab_two_way
+    PostTensionedElementType.BandBeam -> R.string.pt_elem_band_beam
+    PostTensionedElementType.TransferBeam -> R.string.pt_elem_transfer_beam
+    PostTensionedElementType.Girder -> R.string.pt_elem_girder
+    PostTensionedElementType.BridgeGirder -> R.string.pt_elem_bridge_girder
+    PostTensionedElementType.TankWall -> R.string.pt_elem_tank_wall
+    PostTensionedElementType.SiloWall -> R.string.pt_elem_silo_wall
+})
+
+@Composable
+private fun PTTendonType.localizedName(): String = stringResource(when (this) {
+    PTTendonType.Strand_7Wire_9_5mm -> R.string.pt_tendon_9_5
+    PTTendonType.Strand_7Wire_11_1mm -> R.string.pt_tendon_11_1
+    PTTendonType.Strand_7Wire_12_7mm -> R.string.pt_tendon_12_7
+    PTTendonType.Strand_7Wire_15_2mm -> R.string.pt_tendon_15_2
+    PTTendonType.Strand_7Wire_18_0mm -> R.string.pt_tendon_18_0
+    PTTendonType.Wire_5mm -> R.string.pt_tendon_wire5
+    PTTendonType.Wire_7mm -> R.string.pt_tendon_wire7
+    PTTendonType.Bar_25mm -> R.string.pt_tendon_bar25
+    PTTendonType.Bar_32mm -> R.string.pt_tendon_bar32
+})
+
+@Composable
+private fun PTSupportType.localizedName(): String = stringResource(when (this) {
+    PTSupportType.SimplySupported -> R.string.pt_support_simply
+    PTSupportType.FixedFixed -> R.string.pt_support_fixed_fixed
+    PTSupportType.FixedHinged -> R.string.pt_support_fixed_hinged
+    PTSupportType.Cantilever -> R.string.pt_support_cantilever
+    PTSupportType.Continuous -> R.string.pt_support_continuous
+})
+
+@Composable
+private fun PTExposureClass.localizedName(): String = stringResource(when (this) {
+    PTExposureClass.Mild -> R.string.pt_exposure_mild
+    PTExposureClass.Moderate -> R.string.pt_exposure_moderate
+    PTExposureClass.Severe -> R.string.pt_exposure_severe
+    PTExposureClass.VerySevere -> R.string.pt_exposure_very_severe
+    PTExposureClass.Extreme -> R.string.pt_exposure_extreme
+})
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun <T> EnumDropdown(
     label: String,
     options: List<T>,
     selected: T,
-    display: (T) -> String,
+    display: @Composable (T) -> String,
     onSelected: (T) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -596,7 +641,8 @@ private fun <T> EnumDropdown(
 
 private fun fmt(value: Double): String = "%.2f".format(value)
 
-private fun yesNo(value: Boolean): String = if (value) "Yes / نعم" else "No / لا"
+@Composable
+private fun yesNo(value: Boolean): String = stringResource(if (value) R.string.yes else R.string.no)
 
 private fun stressText(compression: Double, tension: Double): String {
     return if (compression > 0.0) {
