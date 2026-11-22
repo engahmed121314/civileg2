@@ -38,6 +38,9 @@ class CivilEGApplication : Application() {
         // can query the current language without needing a Context parameter.
         LocaleHelper.initApplicationContext(this)
 
+        // Embedded Unicode font for English PDF reports (Greek/math coverage)
+        com.civileg.app.utils.EnglishFontProvider.init(this)
+
         // AdMob (UMP consent + SDK init) is started from SplashActivity via AdManager.
 
         // Initialize security checks

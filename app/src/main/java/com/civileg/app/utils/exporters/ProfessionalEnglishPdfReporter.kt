@@ -6,17 +6,18 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.civileg.app.domain.entities.GenericSafetyCheck
-import com.itextpdf.io.font.constants.StandardFonts
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.kernel.colors.DeviceRgb
 import com.itextpdf.kernel.font.PdfFont
-import com.itextpdf.kernel.font.PdfFontFactory
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.kernel.pdf.canvas.draw.SolidLine
+import com.civileg.app.utils.EnglishFontProvider
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.*
 import com.itextpdf.layout.properties.HorizontalAlignment
+import com.itextpdf.layout.properties.OverflowWrapPropertyValue
+import com.itextpdf.layout.properties.Property
 import com.itextpdf.layout.properties.TextAlignment
 import com.itextpdf.layout.properties.UnitValue
 import java.io.ByteArrayOutputStream
@@ -110,17 +111,12 @@ object ProfessionalEnglishPdfReporter {
 
     // ==================== Font Helpers (English Only) ====================
 
-    /** Get a FRESH Helvetica regular font. Never cache across PdfDocuments. */
-    private fun getFont(bold: Boolean = false): PdfFont {
-        return try {
-            if (bold) PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD)
-            else PdfFontFactory.createFont(StandardFonts.HELVETICA)
-        } catch (e: Exception) {
-            Log.e(TAG, "Font creation failed: ${e.message}")
-            try { PdfFontFactory.createFont(StandardFonts.HELVETICA) }
-            catch (_: Exception) { throw RuntimeException("No font available") }
-        }
-    }
+    /**
+     * Get a FRESH font. Never cache across PdfDocuments.
+     * Uses the embedded Unicode font (Greek/math/symbol coverage) when
+     * EnglishFontProvider is initialized; base-14 Helvetica otherwise.
+     */
+    private fun getFont(bold: Boolean = false): PdfFont = EnglishFontProvider.getFont(bold)
 
     // ==================== Element Helpers ====================
 
@@ -144,6 +140,14 @@ object ProfessionalEnglishPdfReporter {
         return t
     }
 
+    /**
+     * Long unbroken tokens (formula strings, marks, ids) wrap mid-token
+     * instead of overflowing the cell and spilling off the page edge.
+     */
+    private fun Paragraph.breakAnywhere(): Paragraph = apply {
+        setProperty(Property.OVERFLOW_WRAP, OverflowWrapPropertyValue.ANYWHERE)
+    }
+
     private fun paragraph(text: String, fontSize: Float = 10f, bold: Boolean = false,
                           color: DeviceRgb? = null, alignment: TextAlignment? = null): Paragraph {
         val font = if (bold) createBoldFont() else createPdfFont()
@@ -160,14 +164,14 @@ object ProfessionalEnglishPdfReporter {
             .setPadding(6f)
             .setBackgroundColor(HEADER_BG)
             .setTextAlignment(TextAlignment.CENTER)
-            .add(Paragraph().add(text(text, font, 9f, DeviceRgb(255, 255, 255))).setTextAlignment(TextAlignment.CENTER))
+            .add(Paragraph().add(text(text, font, 9f, DeviceRgb(255, 255, 255))).setTextAlignment(TextAlignment.CENTER).breakAnywhere())
     }
 
     private fun dataCell(text: String, fontSize: Float = 9f, bold: Boolean = false,
                          bg: DeviceRgb? = null, align: TextAlignment = TextAlignment.CENTER): Cell {
         val font = if (bold) createBoldFont() else createPdfFont()
         val cell = Cell().setPadding(4f).setTextAlignment(align)
-        cell.add(Paragraph().add(text(text, font, fontSize)).setTextAlignment(align))
+        cell.add(Paragraph().add(text(text, font, fontSize)).setTextAlignment(align).breakAnywhere())
         bg?.let { cell.setBackgroundColor(it) }
         return cell
     }
@@ -262,10 +266,15 @@ object ProfessionalEnglishPdfReporter {
 
     private fun addCalculationMethodology(document: Document, designCode: String,
                                           reportType: ReportType,
-                                          steps: List<CalculationStep>) {
+                                          steps: List<CalculationStep>,
+                                          inputKeys: Set<String> = emptySet()) {
         document.add(sectionTitle("2. Calculation Methodology & Verification"))
         document.add(separator())
-        document.add(Paragraph().add(text("Applicable design basis: $designCode", createPdfFont(), 10f, SECONDARY)))
+        // Printed only when the caller actually supplied a code: a report whose
+        // engine/code choice is unknown must not claim a basis it never used.
+        if (designCode.isNotBlank()) {
+            document.add(Paragraph().add(text("Applicable design basis: $designCode", createPdfFont(), 10f, SECONDARY)))
+        }
         document.add(emptyLine())
 
         if (steps.isNotEmpty()) {
@@ -274,8 +283,11 @@ object ProfessionalEnglishPdfReporter {
                 addCalculationStep(document, step)
             }
         } else {
-            // Generate default calculation steps based on report type
+            // Generate default calculation steps based on report type.
+            // Skip a default step whose title the inputs table already carries
+            // (e.g. "Load Combination"), otherwise the same text prints twice.
             val defaultSteps = getDefaultCalculationSteps(reportType, designCode)
+                .filter { step -> inputKeys.none { it.equals(step.description, ignoreCase = true) } }
             for (step in defaultSteps) {
                 addCalculationStep(document, step)
             }
@@ -288,11 +300,15 @@ object ProfessionalEnglishPdfReporter {
         val boldFont = createBoldFont()
         val stepTable = Table(UnitValue.createPercentArray(floatArrayOf(100f))).useAllAvailableWidth()
         stepTable.setBackgroundColor(CALC_BG)
+        // Keep a step's heading with its body: an orphaned "Step N" header at a
+        // page bottom with the equation on the next page reads as a defect.
+        stepTable.setKeepTogether(true)
 
         // Step number and description
         val descPara = Paragraph()
             .add(text("Step ${step.stepNumber}: ", boldFont, 10f, PRIMARY))
             .add(text(step.description, boldFont, 10f, SECONDARY))
+            .breakAnywhere()
         stepTable.addCell(Cell().setPadding(6f).add(descPara))
 
         // Equation
@@ -301,6 +317,7 @@ object ProfessionalEnglishPdfReporter {
                 .add(text("  ", font, 9f))
                 .add(text(step.equation, font, 10f, EQUATION_COLOR))
                 .add(text("  ", font, 9f))
+                .breakAnywhere()
             stepTable.addCell(Cell().setPadding(4f).add(eqPara))
         }
 
@@ -309,6 +326,7 @@ object ProfessionalEnglishPdfReporter {
             val refPara = Paragraph()
                 .add(text("  Ref: ", boldFont, 8f, DeviceRgb(150, 150, 150)))
                 .add(text(step.reference, font, 8f, DeviceRgb(150, 150, 150)))
+                .breakAnywhere()
             stepTable.addCell(Cell().setPadding(4f).add(refPara))
         }
 
@@ -317,6 +335,7 @@ object ProfessionalEnglishPdfReporter {
             val resPara = Paragraph()
                 .add(text("  Result: ", boldFont, 9f, SUCCESS))
                 .add(text(step.result, font, 9f, SUCCESS))
+                .breakAnywhere()
             stepTable.addCell(Cell().setPadding(4f).add(resPara))
         }
 
@@ -843,7 +862,7 @@ object ProfessionalEnglishPdfReporter {
      * @param reportType Type of structural element being designed
      * @param title Report title (e.g., "Reinforced Concrete Beam Design Report")
      * @param subtitle Subtitle line
-     * @param designCode Design code name (e.g., "ACI 318-19")
+     * @param designCode Design code name (e.g., "ACI 318M-14")
      * @param inputs Map of design input parameters
      * @param results Map of design result values
      * @param safetyChecks List of safety verification checks
@@ -885,7 +904,7 @@ object ProfessionalEnglishPdfReporter {
             addDesignParameters(document, inputs)
 
             // 3. Calculation Methodology
-            addCalculationMethodology(document, designCode, reportType, calculationSteps)
+            addCalculationMethodology(document, designCode, reportType, calculationSteps, inputs.keys)
 
             // 4. Results
             addResultsSection(document, results)
@@ -968,10 +987,9 @@ object ProfessionalEnglishPdfReporter {
             else -> ReportType.GENERIC
         }
 
-        // Extract design code from inputs if available
-        val defaultCode = if (reportType == ReportType.STEEL) "AISC 360-16 / ECP 205-2007" else "ACI 318-19 / ECP 203-2025"
-        val codeStr = inputs["Design Code"]
-            ?: defaultCode
+        // Basis comes from the caller's engine/code choice ("Design Code"
+        // input). When unknown, print no basis rather than a global claim.
+        val codeStr = inputs["Design Code"] ?: ""
 
         return generateReport(
             reportType = reportType,
@@ -994,7 +1012,7 @@ object ProfessionalEnglishPdfReporter {
 
     private fun addPageNumbers(pdfDoc: PdfDocument) {
         val font = try {
-            PdfFontFactory.createFont(StandardFonts.HELVETICA)
+            EnglishFontProvider.getFont()
         } catch (_: Exception) {
             return
         }
@@ -1009,7 +1027,10 @@ object ProfessionalEnglishPdfReporter {
                     page.resources,
                     docEvent.document
                 )
-                val pageNumber = docEvent.document.numberOfPages
+                // END_PAGE fires after the NEXT page may already exist, so
+                // document.numberOfPages is off by one and duplicates the last
+                // number. Use the event page's own index instead.
+                val pageNumber = docEvent.document.getPageNumber(page)
                 canvas.beginText()
                     .setFontAndSize(font, 8f)
                     .setColor(footerColor, true)
