@@ -161,8 +161,11 @@ fun ProfessionalSoilStructureDrawing(
             4 -> {
                 // Stability & Check Table View
                 drawZoneLabel(margin, headerH + 6f, "GEOTECHNICAL STABILITY SCHEDULE", cfg)
+                // Start below the zone-label chip so it does not cover the
+                // column-header row (unlike the drawing views, the table has
+                // no top padding of its own).
                 drawSoilStructureTable(
-                    margin, headerH + 16f, W - 2 * margin, H - headerH - margin * 2.5f,
+                    margin, headerH + 34f, W - 2 * margin, H - headerH - margin * 2.5f - 18f,
                     maxPressureKpa, minPressureKpa, averagePressureKpa, soilBearingCapacityKpa,
                     settlementMm, overturningFS, slidingFS, bearingFS,
                     eccentricityMm, kernLimitMm, isFullCompression,
@@ -258,15 +261,27 @@ private fun DrawScope.drawSoilStructureHeader(
 ) {
     val hBg = Color(0xFF263238)
     drawRect(color = hBg, topLeft = Offset(0f, 0f), size = Size(W, cfg.headerHeight))
+    // The fixed header text size overflows narrow canvases and clips on both
+    // sides; measure and scale down to fit the available width instead.
+    val title = "SOIL-STRUCTURE INTERACTION & BEARING CAPACITY  |  $codeLabel"
+    val subtitle = "ECP 202/203 §10 | ACI 318-19 §13 | ASCE 7-16 §12 | SBC 303/304"
+    val maxW = W - 2f * cfg.margin
+    val probe = android.graphics.Paint().apply { isAntiAlias = true }
+    fun fitSize(text: String, base: Float, bold: Boolean): Float {
+        probe.textSize = base
+        probe.typeface = if (bold) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT
+        val measured = probe.measureText(text)
+        return if (measured > maxW && measured > 0f) (base * maxW / measured).coerceAtLeast(8f) else base
+    }
     drawTextAnnotated(
-        "SOIL-STRUCTURE INTERACTION & BEARING CAPACITY  |  $codeLabel",
+        title,
         W / 2f, cfg.headerHeight * 0.65f,
-        textColor, cfg.headerTextSize, center = true, bold = true
+        textColor, fitSize(title, cfg.headerTextSize, true), center = true, bold = true
     )
     drawTextAnnotated(
-        "ECP 202/203 §10 | ACI 318-19 §13 | ASCE 7-16 §12 | SBC 303/304",
+        subtitle,
         W / 2f, cfg.headerHeight * 0.90f,
-        textColor.copy(alpha = 0.6f), cfg.annotationTextSmall * 0.85f, center = true
+        textColor.copy(alpha = 0.6f), fitSize(subtitle, cfg.annotationTextSmall * 0.85f, false), center = true
     )
 }
 
