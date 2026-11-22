@@ -200,7 +200,7 @@ class HordiSlabViewModel @Inject constructor(
                 }.getOrDefault(emptyList())
                 val steelWeightKg = bbsEntries.sumOf { it.totalWeightKg }
 
-                val codeName = params.designCode
+                val codeName = if (params.designCode == "SBC") "SBC 304-CR-2018" else params.designCode
                 val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "????? ????? ????? ?????",
                     titleEn = "Hordi Slab Design Report",
@@ -215,6 +215,7 @@ class HordiSlabViewModel @Inject constructor(
                         params.span / 1000.0, params.totalThickness / 1000.0, steelWeightKg, "H1"
                     ),
                     drawingBitmap = drawingBitmap,
+                    calculationSteps = res.calculationSteps,
                     drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
                 ).pdfFile

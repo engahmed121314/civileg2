@@ -28,7 +28,6 @@ import com.civileg.app.domain.entities.SlabDesignResult
 import com.civileg.app.ui.compose.components.PremiumInputField
 import com.civileg.app.ui.compose.components.ResultDataCard
 import com.civileg.app.utils.LocaleHelper
-import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -186,9 +185,23 @@ class HordiBlockedVisualTest {
             isSafe = res.isSafe
         )
         assertEquals("24.0 MPa", inputs["f'c (cylinder)"])
+        assertEquals("SBC 304-CR-2018", inputs["Design Code"])
         assertEquals("NOT EVALUATED (shear blocked)", results["Shear Capacity"])
         assertEquals("N/E", results["Utilization"])
         assertEquals("NO", results["Is Safe"])
+
+        // Methodology is the engine's own per-rib path, never the generic slab
+        // template: the blocked shear step carries its source reason, no equation.
+        assertEquals(9, res.calculationSteps.size)
+        val shearStep = res.calculationSteps.single { it.title == "One-Way Shear" }
+        assertTrue(shearStep.formulaWithValues.contains("22.5.5.1"))
+        assertTrue(shearStep.result.contains("NOT EVALUATED"))
+        res.calculationSteps.forEach { step ->
+            assertFalse("no substitute shear equation", step.formula.contains("0.17"))
+            assertFalse("no substitute shear equation", step.formulaWithValues.contains("0.17"))
+            assertFalse("joist design is per-rib, never per-meter", step.formula.contains("per meter"))
+            assertFalse("joist design is per-rib, never per-meter", step.formulaWithValues.contains("per meter"))
+        }
 
         // Legacy project without a cylinder value: explicit MISSING, no conversion.
         val legacyInputs = HordiResultPresentation.exportInputsMap(
@@ -200,21 +213,39 @@ class HordiBlockedVisualTest {
         )
         assertEquals("MISSING MPa", legacyInputs["f'c (cylinder)"])
 
+        // Production export path: same ExportManager call the ViewModel makes.
         val dir = File("build/reports/tests/export-shots").apply { mkdirs() }
         val out = File(dir, "hordi-sbc-blocked-export.pdf")
-        val generated = ProfessionalEnglishPdfReporter.generateReportLegacy(
-            titleAr = "", titleEn = "Hordi Slab Design Report",
-            subtitle = "Code: SBC  Span=6.0m",
-            designType = "Hordi Slab",
-            inputs = inputs,
-            results = results,
-            safetyChecks = emptyList(),
-            isSafe = res.isSafe,
-            drawingBitmap = null,
-            outputPath = out.absolutePath
-        )
+        val generated = com.civileg.app.utils.ExportManager(RuntimeEnvironment.getApplication())
+            .exportReportAndDxf(
+                titleAr = "", titleEn = "Hordi Slab Design Report",
+                subtitle = "Code: SBC 304-CR-2018  Span=6.0m",
+                designType = "Hordi Slab",
+                inputs = inputs,
+                results = results,
+                safetyChecks = emptyList(),
+                isSafe = res.isSafe,
+                drawingBitmap = null,
+                calculationSteps = res.calculationSteps,
+                outputPath = out.absolutePath
+            ).pdfFile
         assertNotNull("PDF export generated", generated)
         assertTrue("PDF non-trivial", out.isFile && out.length() > 5_000)
+
+        // Rendered-report verification: edition on cover, blocked methodology,
+        // no generic slab template equations anywhere in the document.
+        val pdfText = com.itextpdf.kernel.pdf.PdfDocument(
+            com.itextpdf.kernel.pdf.PdfReader(out)
+        ).use { doc ->
+            (1..doc.numberOfPages).joinToString("\n") {
+                com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor.getTextFromPage(doc.getPage(it))
+            }
+        }
+        assertTrue("edition named on report", pdfText.contains("SBC 304-CR-2018"))
+        assertTrue("blocked shear in methodology", pdfText.contains("NOT EVALUATED (shear blocked)"))
+        assertTrue("blocked reason printed", pdfText.contains("22.5.5.1"))
+        assertFalse("no generic shear equation", pdfText.contains("0.17*sqrt"))
+        assertFalse("no per-meter slab wording", pdfText.contains("per meter width"))
     }
 
     /** Best-effort PNG capture of the compose root for post-CI pixel inspection. */

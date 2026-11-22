@@ -46,7 +46,9 @@ object HordiResultPresentation {
             "${if (designCode == "SBC") cylinderStrength?.toString() ?: "MISSING" else fcu.toString()} MPa",
         "fy" to "$fy MPa",
         "Load Combination" to loadCombinationDescription,
-        "Design Code" to designCode
+        // Full edition label: cover/design basis must name the implemented edition,
+        // never a bare "SBC" (2018 copy is the implemented basis; no 2024 claim).
+        "Design Code" to if (designCode == "SBC") "SBC 304-CR-2018" else designCode
     )
 
     /** English export result rows; not-evaluated fields stay explicit, never 0 or a fake pass. */

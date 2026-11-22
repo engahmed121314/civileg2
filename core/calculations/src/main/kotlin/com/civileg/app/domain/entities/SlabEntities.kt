@@ -126,7 +126,10 @@ data class SlabDesignResult(
     /** Null when not evaluated (blocked); finite otherwise. */
     val utilizationRatio: Double?,
     val warnings: List<String> = emptyList(),
-    val codeNotes: List<String> = emptyList()
+    val codeNotes: List<String> = emptyList(),
+    /** Engine-authored methodology steps for exports (English, ADR-005/009);
+     *  empty for engines not yet migrated to step output. */
+    val calculationSteps: List<CalculationStep> = emptyList()
 ) : Parcelable
 
 @Parcelize

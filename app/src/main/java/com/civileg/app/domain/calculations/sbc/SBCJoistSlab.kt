@@ -3,6 +3,7 @@ package com.civileg.app.domain.calculations.sbc
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.domain.entities.*
+import java.util.Locale
 import kotlin.math.*
 
 /**
@@ -214,7 +215,88 @@ class SBCJoistSlab : HordiSlabDesign {
         codeNotes.add(1, String.format("fc′=%.1f MPa (cylinder, user-entered), fy=%.0f MPa, φ=%.2f, β1=%.3f", fcPrime, fy, PHI_FLEXURE, beta1))
         codeNotes.add(2, String.format("beff=%.0f mm (Table 6.3.2.1), d=%.0f mm, As,req=%.0f mm², As,min=%.0f mm², As,prov=%.0f mm² (%dΦ%.0f)", beff, d, asReq, asMin, asProvided, nBars, barDia))
 
+        // ── Export methodology steps (English, ADR-005/009): the actual engine
+        // path, per-rib — never the generic one-way-slab template. The blocked
+        // shear step carries its real unresolved-source reason with NO substitute
+        // equation (SJ-7). ──
+        val steps = mutableListOf<CalculationStep>()
+        steps += CalculationStep(
+            stepNumber = 1,
+            title = "Design Basis",
+            formula = "One-way joist (ribbed) slab per SBC 304-CR-2018 §9.8; strength input f'c (cylinder), no cube conversion",
+            formulaWithValues = String.format(Locale.US, "f'c = %.1f MPa (cylinder), fy = %.0f MPa, phi = %.2f, beta1 = %.3f", fcPrime, fy, PHI_FLEXURE, beta1),
+            result = "Per-rib design",
+            codeReference = "SBC 304-CR-2018 §9.8"
+        )
+        steps += CalculationStep(
+            stepNumber = 2,
+            title = "Effective Flange Width",
+            formula = "overhang = min(8*hf, clear/2, ln/8); beff = min(s, bw + 2*overhang)",
+            formulaWithValues = String.format(Locale.US, "overhang = min(%.0f, %.0f, %.0f) = %.0f mm -> beff = %.0f mm", 8.0 * hf, clearSpacing / 2.0, ln / 8.0, overhang, beff),
+            result = String.format(Locale.US, "beff = %.0f mm", beff),
+            codeReference = "SBC 304-CR-2018 Table 6.3.2.1"
+        )
+        steps += CalculationStep(
+            stepNumber = 3,
+            title = "Effective Depth",
+            formula = "d = h - cover - db/2 (cover 20 mm assumed, §20.6.1 not yet verified)",
+            formulaWithValues = String.format(Locale.US, "d = %.0f - %.0f - %.0f = %.0f mm", totalThickness, MIN_COVER, HALF_BAR_DIA, d),
+            result = String.format(Locale.US, "d = %.0f mm", d),
+            codeReference = "SBC 304-CR-2018 §9.8 (cover assumption UNVERIFIED)"
+        )
+        steps += CalculationStep(
+            stepNumber = 4,
+            title = "Flexural Reinforcement (per rib)",
+            formula = "phi*Mn >= Mu; As,req from stress block (T-beam flange/web case)",
+            formulaWithValues = String.format(Locale.US, "Mu = %.2f kN.m/rib; et = %.4f (%s); As,req = %.0f mm2/rib", designMoment, epsT, if (tensionControlled) "tension-controlled" else "NOT tension-controlled", asReq),
+            result = String.format(Locale.US, "As,req = %.0f mm2/rib", asReq),
+            codeReference = "SBC 304-CR-2018 Ch 22, Table 21.2.2"
+        )
+        steps += CalculationStep(
+            stepNumber = 5,
+            title = "Minimum Steel & Bar Selection",
+            formula = "As,min = max(0.25*sqrt(f'c)/fy, 1.4/fy)*bw*d (§9.6.1.3 exemption applied)",
+            formulaWithValues = String.format(Locale.US, "As,min = %.0f mm2; As,design = %.0f mm2 -> %d x D%.0f per rib (As,prov = %.0f mm2)", asMin, asDesign, nBars, barDia, asProvided),
+            result = String.format(Locale.US, "%d x D%.0f / rib", nBars, barDia),
+            codeReference = "SBC 304-CR-2018 §9.6.1.2-9.6.1.3"
+        )
+        steps += CalculationStep(
+            stepNumber = 6,
+            title = "Joist Dimensional Limits",
+            formula = "bw >= 100 mm; rib depth <= 3.5*bw; clear spacing <= 750 mm",
+            formulaWithValues = String.format(Locale.US, "bw = %.0f mm (%s); rib depth = %.0f mm (%s); clear = %.0f mm (%s)", ribWidth, if (ribWidthOk) "ok" else "FAIL", totalThickness - toppingThickness, if (ribDepthOk) "ok" else "FAIL", clearSpacing, if (spacingOk) "ok" else "FAIL"),
+            result = if (ribWidthOk && ribDepthOk && spacingOk) "Within limits" else "OUTSIDE §9.8.1.1-9.8.1.4 — design as slabs and beams (§9.8.1.8)",
+            codeReference = "SBC 304-CR-2018 §9.8.1.2-9.8.1.4"
+        )
+        steps += CalculationStep(
+            stepNumber = 7,
+            title = "Topping Thickness",
+            formula = "t >= max(clear/12, 50 mm) — other forms",
+            formulaWithValues = String.format(Locale.US, "t = %.0f mm vs required %.1f mm (%s)", toppingThickness, toppingRequired, if (toppingOk) "ok" else "FAIL"),
+            result = if (toppingOk) "OK" else "FAIL",
+            codeReference = "SBC 304-CR-2018 §9.8.3.1"
+        )
+        steps += CalculationStep(
+            stepNumber = 8,
+            title = "One-Way Shear",
+            formula = "NOT EVALUATED — no equation applied",
+            formulaWithValues = "BLOCKED (SJ-7): printed Eq (22.5.5.1) (p. 174) duplicates the Eq (22.5.1.2) cap and is circular as a definition of Vc; the §9.8.1.5 joist 1.1xVc factor is therefore not applied. No substitute equation is printed here; design on hold pending official source resolution.",
+            result = "NOT EVALUATED (shear blocked)",
+            codeReference = "SBC 304-CR-2018 §22.5.5.1 discrepancy (CLAUSE_LOG SJ-7)",
+            status = StepStatus.WARNING
+        )
+        steps += CalculationStep(
+            stepNumber = 9,
+            title = "Overall Status",
+            formula = "No overall pass while shear is blocked",
+            formulaWithValues = String.format(Locale.US, "geometry=%s, flexure=%s, shear=BLOCKED(SJ-7)", if (geometrySafe) "ok" else "FAIL", if (flexureSafe) "ok" else "FAIL"),
+            result = "INCOMPLETE — not a design pass",
+            codeReference = "SBC 304-CR-2018 §9.8",
+            status = StepStatus.WARNING
+        )
+
         return SlabDesignResult(
+            calculationSteps = steps,
             requiredReinforcement = asReq,
             providedReinforcement = asProvided,
             barDiameter = barDia,
