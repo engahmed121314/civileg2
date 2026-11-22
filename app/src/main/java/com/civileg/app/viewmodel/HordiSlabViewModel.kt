@@ -69,8 +69,7 @@ class HordiSlabViewModel @Inject constructor(
         loadCombination: LoadCombination,
         designCode: String = "ECP",
         sectionContext: com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.Context? = null,
-        fourBarPolicy: com.civileg.core.engine.rc.ecp.Ecp203FourBarArrangement.Policy =
-            com.civileg.core.engine.rc.ecp.Ecp203FourBarArrangement.Policy.STANDARD_PAIRED_UPPER
+        fourBarPolicy: com.civileg.core.engine.rc.ecp.Ecp203FourBarArrangement.Policy? = null
     ) {
         clearResult()
         InputGuard.positive("fcu", fcu)

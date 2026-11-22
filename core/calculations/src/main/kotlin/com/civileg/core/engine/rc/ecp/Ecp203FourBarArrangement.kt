@@ -9,7 +9,7 @@ object Ecp203FourBarArrangement {
 
     fun arrange(widthMm: Double, totalDepthMm: Double, coverToOutsideLinksMm: Double,
         linkDiameterMm: Double, nominalMaximumAggregateMm: Double,
-        barDiameterMm: Double, policy: Policy = Policy.STANDARD_PAIRED_UPPER
+        barDiameterMm: Double, policy: Policy
     ): List<Ecp203BarLayout.Layer> {
         fun rows(vararg counts: Int) = counts.map { Ecp203BarLayout.Layer(it, barDiameterMm) }
         fun fits(layers: List<Ecp203BarLayout.Layer>) = Ecp203BarLayout.assess(widthMm,

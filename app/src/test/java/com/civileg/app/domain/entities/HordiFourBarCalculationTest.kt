@@ -16,7 +16,7 @@ class HordiFourBarCalculationTest {
     private fun calculate(i: HordiSlabInputs = input(), policy: Ecp203FourBarArrangement.Policy =
         Ecp203FourBarArrangement.Policy.STANDARD_PAIRED_UPPER) = HordiFourBarCalculation.calculate(i, ECPHordiSlabWrapper(), policy)
 
-    @Test fun `actual input result coordinates area and identity all adopt five bars`() {
+    @Test fun `explicit sample candidate freezes recalculated five-bar input result and identity`() {
         val snapshot = calculate()
         assertTrue(snapshot.hasValidFingerprint())
         assertEquals(listOf(3, 2), snapshot.input().sectionContext!!.tensionLayers.map { it.count })
@@ -82,5 +82,32 @@ class HordiFourBarCalculationTest {
         calculate(input().copy(designMoment = 120.0), Ecp203FourBarArrangement.Policy.EXPLICIT_ECONOMY_FOUR_BARS)
     }
     @Test(expected = IllegalArgumentException::class)
-    fun `default cannot choose economy silently in a narrower rib`() { calculate(input().copy(ribWidth = 150.0)) }
+    fun `explicit paired candidate cannot choose economy in a narrower rib`() { calculate(input().copy(ribWidth = 150.0)) }
+    @Test fun `default preserves entered three plus one without adopting a policy`() {
+        val entered = input()
+        val frozen = HordiFourBarCalculation.calculate(entered, ECPHordiSlabWrapper())
+        assertEquals(entered, frozen.input())
+        assertNull(frozen.input().fourBarArrangementPolicy)
+        assertEquals(listOf(3, 1), frozen.input().sectionContext!!.tensionLayers.map { it.count })
+        assertTrue(frozen.hasValidFingerprint())
+        assertTrue(frozen.result().safetyAssessmentBlocked)
+        assertFalse(frozen.result().isSafe)
+    }
+    @Test fun `default rejects a non-fitting four-bar row without adopting a different layout`() {
+        val entered = input().let { it.copy(sectionContext = it.sectionContext!!.copy(
+            tensionLayers = listOf(Ecp203BarLayout.Layer(4, 20.0)))) }
+        assertEquals(entered, HordiFourBarCalculation.prepare(entered, null))
+        try {
+            HordiFourBarCalculation.calculate(entered, ECPHordiSlabWrapper())
+            fail("A non-fitting supplied row must not be silently replaced")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message.orEmpty().contains("do not fit"))
+        }
+    }
+    @Test fun `default preserves a validated recorded sample without rewriting identity`() {
+        val selected = calculate()
+        val repeated = HordiFourBarCalculation.calculate(selected.input(), ECPHordiSlabWrapper())
+        assertEquals(selected.revisionSha256, repeated.revisionSha256)
+    }
+
 }

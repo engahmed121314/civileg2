@@ -489,3 +489,11 @@ Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
   actual attachment classification.
 - This bounded optional calculation does not clear crack-width, material,
   durability, transverse-steel, cross-rib, anchorage or whole-member holds.
+
+
+## 2026-11-22: remove implicit project bar-count adoption
+
+- New Hordi calculations preserve the supplied layers unless a narrowly supported project candidate is explicitly selected. No code-wide odd/even count or three-plus-two rule is introduced.
+- A non-fitting supplied layout is rejected by the existing geometry check, never silently replaced.
+- Historical serialized candidate names and validated frozen records remain unchanged. Explicit candidates still require coupled section recalculation.
+- This repairs selection provenance only. It does not complete load-to-member design, additional steel, links zoning, anchorage or overall member acceptance.

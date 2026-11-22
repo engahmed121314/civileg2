@@ -5,13 +5,14 @@ import com.civileg.app.domain.entities.HordiSlabDesignSnapshot
 import com.civileg.app.domain.entities.HordiSlabInputs
 import com.civileg.core.engine.rc.ecp.Ecp203FourBarArrangement
 
-/** Normalizes the selected design before ONE engine call and one frozen capture.
+/** Assesses supplied layers unchanged unless a project candidate is explicitly selected.
+ * An explicit candidate is recalculated before one frozen capture.
  * Does not rewrite saved results, choose bar diameters, infer bar lengths/weights,
  * or expose an unrequested economy option through an unrelated UI control.
  */
 object HordiFourBarCalculation {
     fun calculate(entered: HordiSlabInputs, designer: HordiSlabDesign,
-        policy: Ecp203FourBarArrangement.Policy = Ecp203FourBarArrangement.Policy.STANDARD_PAIRED_UPPER
+        policy: Ecp203FourBarArrangement.Policy? = null
     ): HordiSlabDesignSnapshot {
         val input = prepare(entered, policy)
         val result = with(input) {
@@ -32,7 +33,7 @@ object HordiFourBarCalculation {
             codeNotes = result.codeNotes + note))
     }
 
-    internal fun prepare(input: HordiSlabInputs, policy: Ecp203FourBarArrangement.Policy): HordiSlabInputs {
+    internal fun prepare(input: HordiSlabInputs, policy: Ecp203FourBarArrangement.Policy?): HordiSlabInputs {
         val context = input.sectionContext
         val layers = context?.tensionLayers.orEmpty()
         // The selected policy covers the supplied bottom-tension case only.
@@ -51,6 +52,9 @@ object HordiFourBarCalculation {
                 context.nominalMaximumAggregateMm, layers.first().diameterMm, recorded)
             require(layers == recordedRows) { "Recorded four-bar policy does not match the actual adopted rows." }
         }
+        // A new calculation must never silently adopt a different bar count.
+        // Existing recorded policy/layout pairs were validated above and remain intact.
+        if (policy == null) return input
         if (input.designCode != "ECP" || context == null || !bottomTension || !targetFour || !equalDiameter) {
             require(policy != Ecp203FourBarArrangement.Policy.EXPLICIT_ECONOMY_FOUR_BARS ||
                 input.fourBarArrangementPolicy == policy) {
