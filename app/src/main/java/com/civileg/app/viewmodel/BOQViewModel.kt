@@ -99,7 +99,8 @@ class BOQViewModel @Inject constructor(
                 description = "${design.name} — Reinforcement Steel",
                 category = BoqCategory.REINFORCEMENT,
                 unit = "ton",
-                quantity = design.steelWeight,
+                // Design.steelWeight is stored in kg; the unit and steelPerTon price are per tonne.
+                quantity = design.steelWeight / 1000.0,
                 unitPrice = prices.steelPerTon
             )
         }
