@@ -204,3 +204,23 @@ remain unapproved. There is no new whole-serviceability or member SAFE result.
 The trace records the actual equations, separate load cases, stiffness and
 limits. Failed section geometry/flexure/shear also carries source-specific
 remedial actions, not an instruction to add bars or links without code limits.
+
+## Completed-source snapshot and accessible calculation trace
+
+`HordiSlabDesignSnapshot` freezes the actual completed inputs and result, including
+all supplied layers, links, section forces and optional characteristic service
+loads. A shared `FrozenDesignRecord` identifies the exact JSON pair by SHA256 and
+schema version. It is a data identity/check, not a digital signature or method
+approval. Fresh decoding prevents a later form/list edit from mutating the pair.
+The ViewModel clears the result and snapshot together, including before a failed
+new calculation, and publishes a new pair only after successful calculation.
+
+The source input records that section actions are already factored and are not
+refactored by the retained legacy selector. No panel width, bar length or member
+quantity is inferred. This producer is not completion of the legacy Save writer;
+its quantity-basis/repository consumer requires a separate coordinated repair.
+
+Source equations now use individually reachable list items rather than one
+oversized item and a second duplicated formula dump. EN/AR flow tests require the
+actual immediate-deflection equation to be displayed before saving its image.
+Current-head Android execution and actual pixel inspection remain required.

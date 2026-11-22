@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -475,15 +476,17 @@ fun HordiSlabScreen(
                         )
                     }
 
-                    if (res.codeNotes.isNotEmpty()) item {
-                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                AppText(stringResource(R.string.ecp_ribbed_section_trace), fontWeight = FontWeight.Bold)
-                                res.codeNotes.forEach {
-                                    AppText(it, modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Left,
-                                        style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr))
-                                }
+                    if (ecpSection && res.codeNotes.isNotEmpty()) {
+                        item {
+                            AppText(stringResource(R.string.ecp_ribbed_section_trace), fontWeight = FontWeight.Bold)
+                        }
+                        // Each equation is independently reachable, even when the full trace
+                        // is taller than the viewport. Keep technical equations LTR in both locales.
+                        items(res.codeNotes) { note ->
+                            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                                AppText(note, modifier = Modifier.fillMaxWidth().padding(14.dp),
+                                    textAlign = TextAlign.Left,
+                                    style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr))
                             }
                         }
                     }
@@ -580,8 +583,8 @@ fun HordiSlabScreen(
                         }
                     }
 
-                    // Code Notes
-                    if (res.codeNotes.isNotEmpty()) {
+                    // Code notes for legacy paths. The source trace is already shown above.
+                    if (!ecpSection && res.codeNotes.isNotEmpty()) {
                         item { FormulaCard(res.codeNotes, title = stringResource(R.string.hordi_slab_design_calculations)) }
                     }
 

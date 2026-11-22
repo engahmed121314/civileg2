@@ -97,22 +97,32 @@ class HordiSourceSectionUiTest {
         assertEquals(611.1777815875193,vm.result.value!!.requiredReinforcement,1e-8)
         assertTrue(vm.result.value!!.safetyAssessmentBlocked)
         assertFalse(vm.result.value!!.isSafe)
+        val frozen = requireNotNull(vm.currentDesignSnapshot())
+        assertTrue(frozen.hasValidFingerprint())
+        assertEquals(vm.result.value, frozen.result())
+        assertEquals(6.0, frozen.input().sectionContext!!.immediateDeflectionInput!!.characteristicDeadLoadKnM2, 0.0)
         scroll(app.getString(R.string.ecp_ribbed_section_trace))
         screenshot("hordi-source-result-$lang")
         assertTrue(vm.result.value!!.codeNotes.any { it.contains("deltaLive=deltaD+L-deltaD=3.94892 mm") })
         val serviceTrace = vm.result.value!!.codeNotes.first { it.startsWith("Elastic simply supported UDL:") }
         scroll(serviceTrace)
+        rule.onNodeWithText(serviceTrace).assertIsDisplayed()
+        assertTrue(serviceTrace.contains("deltaLive=deltaD+L-deltaD=3.94892 mm"))
         screenshot("hordi-source-sls-result-$lang")
         fill(app.getString(R.string.ecp_ribbed_service_dead), "7")
         rule.waitForIdle()
         assertNull("Editing service loads must invalidate the old result", vm.result.value)
+        assertNull(vm.currentDesignSnapshot())
+        assertEquals(6.0, frozen.input().sectionContext!!.immediateDeflectionInput!!.characteristicDeadLoadKnM2, 0.0)
         scroll(calculate)
         rule.onNodeWithText(calculate).assertIsEnabled().performClick()
         rule.waitUntil(15000) { vm.result.value != null || vm.error.value != null }
         assertNotNull(vm.result.value)
+        assertNotEquals(frozen.revisionSha256, vm.currentDesignSnapshot()!!.revisionSha256)
         fill("Rib Width (mm)","220")
         rule.waitForIdle()
         assertNull("Editing section inputs must invalidate the old result",vm.result.value)
+        assertNull(vm.currentDesignSnapshot())
     }
     @Test fun sourceSectionEnglish() { verify("en") }
     @Test fun sourceSectionArabic() { verify("ar") }
