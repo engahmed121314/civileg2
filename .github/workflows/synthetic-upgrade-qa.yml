@@ -142,7 +142,15 @@ jobs:
             run_check device-after ls -l /dev/kvm || exit "$?"
             run_check readable test -r /dev/kvm || exit "$?"
             run_check writable test -w /dev/kvm || exit "$?"
+            # The emulator action installs this package later; preflight cannot
+            # assume it is already present on the runner. Install the same stable
+            # package explicitly, without auto-accepting new license prompts.
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            echo "SDK manager in use: $SDKMANAGER"
+            run_check sdkmanager-present test -x "$SDKMANAGER" || exit "$?"
+            run_check emulator-install "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --install emulator --channel=0 < /dev/null || exit "$?"
             run_check emulator-present test -x "$ANDROID_HOME/emulator/emulator" || exit "$?"
+            run_check emulator-version "$ANDROID_HOME/emulator/emulator" -version || exit "$?"
             run_check acceleration "$ANDROID_HOME/emulator/emulator" -accel-check || exit "$?"
           } 2>&1 | tee qa-evidence-kvm-preflight.txt
 
