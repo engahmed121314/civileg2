@@ -14,16 +14,16 @@ buildscript {
     }
     dependencies {
         constraints {
-            classpath("org.bouncycastle:bcprov-jdk18on:1.85") {
+            classpath("org.bouncycastle:bcprov-jdk18on:1.87") {
                 because("GHSA-9pwp-9qqc-pr26, GHSA-qp49-qgx5-5m26, GHSA-574f-3g2m-x479, GHSA-p93r-85wp-75v3, GHSA-c3fc-8qff-9hwx")
             }
-            classpath("org.bouncycastle:bcpkix-jdk18on:1.85") {
+            classpath("org.bouncycastle:bcpkix-jdk18on:1.87") {
                 because("GHSA-wg6q-6289-32hp")
             }
-            classpath("org.bouncycastle:bcpg-jdk18on:1.85") {
+            classpath("org.bouncycastle:bcpg-jdk18on:1.87") {
                 because("GHSA-cj8j-37rh-8475")
             }
-            classpath("org.bitbucket.b_c:jose4j:0.9.6") {
+            classpath("org.bitbucket.b_c:jose4j:0.9.7") {
                 because("GHSA-3677-xxcr-wjqv")
             }
             classpath("org.jdom:jdom2:2.0.6.1") {
@@ -32,13 +32,13 @@ buildscript {
             classpath("org.apache.httpcomponents:httpclient:4.5.14") {
                 because("GHSA-7r82-7xv7-xcpj")
             }
-            classpath("org.apache.commons:commons-lang3:3.18.0") {
+            classpath("org.apache.commons:commons-lang3:3.22.0") {
                 because("GHSA-j288-q9x7-2f5v")
             }
             classpath("com.google.guava:guava:33.8.0-jre") {
                 because("GHSA-xxph-c9ww-hj94")
             }
-            classpath("io.opentelemetry:opentelemetry-api:1.67.0") {
+            classpath("io.opentelemetry:opentelemetry-api:1.68.0") {
                 because("GHSA-ccrj-gw8r-854m, GHSA-rcgg-9c38-7xpx")
             }
         }
