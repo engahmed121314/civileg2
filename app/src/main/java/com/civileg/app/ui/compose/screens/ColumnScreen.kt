@@ -24,6 +24,15 @@ import androidx.compose.ui.platform.LocalContext
 import com.civileg.app.db.Project
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.layer.GraphicsLayer
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.IntSize
+import java.util.concurrent.atomic.AtomicReference
+import com.civileg.app.domain.entities.ColumnDesignSnapshot
+import com.civileg.app.viewmodel.ColumnDrawingCapture
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -87,6 +96,8 @@ fun ColumnScreen(
     val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
     var showSaveDialog by remember { mutableStateOf(false) }
+    var saveSnapshot by remember { mutableStateOf<ColumnDesignSnapshot?>(null) }
+    val renderedDrawingRevision = remember { AtomicReference<String?>(null) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
     val columnDefaultName = stringResource(R.string.column_default_name)
     var designName by remember { mutableStateOf(columnDefaultName) }
@@ -111,7 +122,7 @@ fun ColumnScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
-            modifier = Modifier
+            modifier = Modifier.testTag("column-content")
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
@@ -237,18 +248,92 @@ fun ColumnScreen(
                 AppButton(
                     label = stringResource(R.string.column_design_now),
                     onClick = { viewModel.calculateManual() },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("column-calculate"),
                     fontWeight = FontWeight.Bold,
                     icon = Icons.Default.Calculate
                 )
             }
 
-            uiState.result?.let { result ->
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        AppButton(
+                            label = stringResource(R.string.column_economy_option),
+                            onClick = { viewModel.applyEconomicalDesign() },
+                            modifier = Modifier.weight(1f),
+                            fontSize = 12.sp
+                        )
+                        AppButton(
+                            label = stringResource(R.string.column_safest_option),
+                            onClick = { viewModel.applySafetyDesign() },
+                            modifier = Modifier.weight(1f),
+                            style = AppButtonStyle.Secondary,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                                AppText(stringResource(R.string.column_custom_rebar), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = uiState.autoOptimize,
+                                    onCheckedChange = { viewModel.updateAutoOptimize(it) },
+                                    thumbContent = { if (uiState.autoOptimize) Icon(Icons.Default.Check, null, modifier = Modifier.size(12.dp)) }
+                                )
+                            }
+                            AppText(stringResource(R.string.column_candidate_request_limit), style = MaterialTheme.typography.bodySmall)
+                            Spacer(Modifier.height(12.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                ColumnInputField(
+                                    value = if (uiState.autoOptimize && uiState.manualNumBars.isEmpty()) (uiState.result?.reinforcement?.numBars?.toString() ?: "") else uiState.manualNumBars,
+                                    label = stringResource(R.string.column_num_bars_label),
+                                    onValueChange = { viewModel.updateInputs(manualNumBars = it) },
+                                    modifier = Modifier.weight(1f).testTag("column-candidate-count"),
+                                    enabled = true
+                                )
+                                ColumnInputField(
+                                    value = uiState.preferredDiameter,
+                                    label = stringResource(R.string.column_bar_diameter_label),
+                                    onValueChange = { viewModel.updateInputs(preferredDiameter = it) },
+                                    modifier = Modifier.weight(1f).testTag("column-candidate-diameter"),
+                                    enabled = true
+                                )
+                            }
+                            if (!uiState.autoOptimize) {
+                                Spacer(Modifier.height(8.dp))
+                                AppButton(
+                                    label = stringResource(R.string.column_update_rebar),
+                                    onClick = { viewModel.calculateManual() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    style = AppButtonStyle.Secondary
+                                )
+                            }
+                        }
+                    }
+                }
+
+
+            uiState.completedDesign?.let { completed ->
+                val result = completed.result()
+                val calculationInput = completed.input()
                 item { SectionHeader(stringResource(R.string.column_results_economy), R.drawable.ic_calculator) }
+                item {
+                    AppText(stringResource(R.string.column_completed_revision, completed.revisionSha256), modifier = Modifier.testTag("column-completed-revision"), style = MaterialTheme.typography.bodySmall)
+                    AppText(stringResource(R.string.column_completed_output_limit), style = MaterialTheme.typography.bodySmall)
+                }
                 
                 item {
                     val ecoColor = when {
-                        result.utilizationRatio > 1.0 -> MaterialTheme.colorScheme.error
+                        !result.isSafe || result.utilizationRatio > 1.0 -> MaterialTheme.colorScheme.error
                         result.utilizationRatio > 0.9 -> MaterialTheme.colorScheme.tertiary
                         result.utilizationRatio > 0.4 -> MaterialTheme.colorScheme.primary
                         else -> MaterialTheme.colorScheme.secondary
@@ -267,14 +352,14 @@ fun ColumnScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            if (result.utilizationRatio <= 1.0) Icons.Default.Verified 
+                                            if (result.isSafe && result.utilizationRatio <= 1.0) Icons.Default.Verified
                                             else Icons.Default.Dangerous, 
                                             contentDescription = null, 
                                             tint = ecoColor
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         AppText(
-                                            if (result.utilizationRatio > 1.0) stringResource(R.string.column_section_unsafe)
+                                            if (!result.isSafe || result.utilizationRatio > 1.0) stringResource(R.string.column_section_unsafe)
                                             else if (result.utilizationRatio > 0.9) stringResource(R.string.design_caution)
                                             else if (result.utilizationRatio > 0.4) stringResource(R.string.column_section_ideal)
                                             else stringResource(R.string.column_section_large),
@@ -315,14 +400,14 @@ fun ColumnScreen(
                 item { ColumnResultCard(result) }
 
                 val bbsEntries = runCatching {
-                    BbsGenerator.generateColumnBbs("C1", result)
+                    BbsGenerator.generateColumnBbs("C1", result, calculationInput.heightM * 1000.0)
                 }.getOrDefault(emptyList())
                 if (bbsEntries.isNotEmpty()) {
                     item { BbsTableCard(bbsEntries, title = "Column Bar Bending Schedule") }
                 }
 
                 val boqRows = runCatching {
-                    BoqEstimator.columnRows(result, uiState.height.toDoubleOrNull() ?: 3.0, "C1")
+                    BoqEstimator.columnRows(result, calculationInput.heightM, "C1")
                 }.getOrDefault(emptyList())
                 if (boqRows.isNotEmpty()) {
                     item { BoqTableCard(boqRows, title = "Column Bill of Quantities") }
@@ -343,82 +428,19 @@ fun ColumnScreen(
                 }
 
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        AppButton(
-                            label = stringResource(R.string.column_economy_option),
-                            onClick = { viewModel.applyEconomicalDesign() },
-                            modifier = Modifier.weight(1f),
-                            fontSize = 12.sp
-                        )
-                        AppButton(
-                            label = stringResource(R.string.column_safest_option),
-                            onClick = { viewModel.applySafetyDesign() },
-                            modifier = Modifier.weight(1f),
-                            style = AppButtonStyle.Secondary,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                                AppText(stringResource(R.string.column_custom_rebar), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                Switch(
-                                    checked = uiState.autoOptimize,
-                                    onCheckedChange = { viewModel.updateAutoOptimize(it) },
-                                    thumbContent = { if (uiState.autoOptimize) Icon(Icons.Default.Check, null, modifier = Modifier.size(12.dp)) }
-                                )
-                            }
-                            Spacer(Modifier.height(12.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                ColumnInputField(
-                                    value = if (uiState.autoOptimize && uiState.manualNumBars.isEmpty()) (result.reinforcement.numBars.toString()) else uiState.manualNumBars,
-                                    label = stringResource(R.string.column_num_bars_label),
-                                    onValueChange = { viewModel.updateInputs(manualNumBars = it) },
-                                    modifier = Modifier.weight(1f),
-                                    enabled = true
-                                )
-                                ColumnInputField(
-                                    value = uiState.preferredDiameter,
-                                    label = stringResource(R.string.column_bar_diameter_label),
-                                    onValueChange = { viewModel.updateInputs(preferredDiameter = it) },
-                                    modifier = Modifier.weight(1f),
-                                    enabled = true
-                                )
-                            }
-                            if (!uiState.autoOptimize) {
-                                Spacer(Modifier.height(8.dp))
-                                AppButton(
-                                    label = stringResource(R.string.column_update_rebar),
-                                    onClick = { viewModel.calculateManual() },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    style = AppButtonStyle.Secondary
-                                )
-                            }
-                        }
-                    }
-                }
-
-                item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AppButton(
                             label = stringResource(R.string.pdf_report),
                             onClick = {
                                 scope.launch {
+                                    val renderedBefore = renderedDrawingRevision.get()
                                     val captureBitmap = try {
                                         pdfCaptureLayer.captureToAndroidBitmap()
                                     } catch (_: Exception) { null }
-                                    viewModel.pendingDrawingBitmap = captureBitmap
-                                    viewModel.exportToPdf(context) { /* Handle completion */ }
+                                    val capture = if (captureBitmap != null && renderedBefore == completed.revisionSha256 &&
+                                        renderedDrawingRevision.get() == completed.revisionSha256)
+                                        runCatching { ColumnDrawingCapture(completed.revisionSha256, captureBitmap) }.getOrNull() else null
+                                    viewModel.exportToPdf(context, completed, capture) { /* Handle completion */ }
                                 }
                             },
                             modifier = Modifier.weight(1f),
@@ -429,8 +451,8 @@ fun ColumnScreen(
 
                         AppButton(
                             label = stringResource(R.string.save),
-                            onClick = { showSaveDialog = true },
-                            modifier = Modifier.weight(1f),
+                            onClick = { saveSnapshot = completed; showSaveDialog = true },
+                            modifier = Modifier.weight(1f).testTag("column-save"),
                             icon = Icons.Default.Save,
                             containerOverride = MaterialTheme.colorScheme.secondary,
                             contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
@@ -440,7 +462,7 @@ fun ColumnScreen(
 
                 item {
                     AppText(stringResource(R.string.column_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    EngineeringFormulasCard(uiState.designCode)
+                    EngineeringFormulasCard(calculationInput.code)
                 }
 
                 item {
@@ -466,22 +488,23 @@ fun ColumnScreen(
                             ProfessionalColumnDrawing(
                                 columnWidth = result.width.toDouble(),
                                 columnDepth = result.depth.toDouble(),
-                                columnHeight = (uiState.height.toDoubleOrNull() ?: 3.0) * 1000.0,
+                                columnHeight = calculationInput.heightM * 1000.0,
                                 longitudinalBars = generateBarPositions(
                                     result.width.toDouble(), result.depth.toDouble(),
-                                    uiState.manualNumBars.toIntOrNull() ?: result.reinforcement.numBars,
-                                    (uiState.preferredDiameter.toIntOrNull() ?: result.reinforcement.diameter).toDouble(),
+                                    result.reinforcement.numBars,
+                                    result.reinforcement.diameter.toDouble(),
                                     result.columnType.contains("CIRCULAR", ignoreCase = true)
                                 ),
                                 tieDia = result.stirrups.diameter.toDouble(),
                                 tieSpacing = result.stirrups.spacing.toDouble(),
                                 cover = 40.0,
                                 isSpiral = false,
+                                designCode = calculationInput.code,
                                 sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
                                 zones = result.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
                                 viewMode = selectedViewMode,
                                 resultSummary = columnDrawingSummary(result),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth().testTag("column-visible-drawing")
                             )
                         }
                     )
@@ -489,32 +512,37 @@ fun ColumnScreen(
             }
         }
         // PDF drawing capture area (invisible, renders at viewMode=0)
-        uiState.result?.let { result ->
-            ComposeDrawingCaptureUtil.DrawingCaptureArea(
+        uiState.completedDesign?.let { completed ->
+                val result = completed.result()
+                val calculationInput = completed.input()
+            CompletedColumnCaptureArea(
                 captureLayer = pdfCaptureLayer,
                 widthPx = screenWidthPx,
-                heightPx = screenHeightPx
+                heightPx = screenHeightPx,
+                revision = completed.revisionSha256,
+                recordedRevision = renderedDrawingRevision
             ) {
                 Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
                     ProfessionalColumnDrawing(
                         columnWidth = result.width.toDouble(),
                         columnDepth = result.depth.toDouble(),
-                        columnHeight = (uiState.height.toDoubleOrNull() ?: 3.0) * 1000.0,
+                        columnHeight = calculationInput.heightM * 1000.0,
                         longitudinalBars = generateBarPositions(
                             result.width.toDouble(), result.depth.toDouble(),
-                            uiState.manualNumBars.toIntOrNull() ?: result.reinforcement.numBars,
-                            (uiState.preferredDiameter.toIntOrNull() ?: result.reinforcement.diameter).toDouble(),
+                            result.reinforcement.numBars,
+                            result.reinforcement.diameter.toDouble(),
                             result.columnType.contains("CIRCULAR", ignoreCase = true)
                         ),
                         tieDia = result.stirrups.diameter.toDouble(),
                         tieSpacing = result.stirrups.spacing.toDouble(),
                         cover = 40.0,
                         isSpiral = false,
+                        designCode = calculationInput.code,
                         sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
                         zones = result.stirrups.zones.map { StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
                         viewMode = 0,
                         resultSummary = columnDrawingSummary(result),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("column-pdf-drawing")
                     )
                 }
             }
@@ -553,12 +581,13 @@ fun ColumnScreen(
 
     if (showSaveDialog) {
         AlertDialog(
-            onDismissRequest = { showSaveDialog = false },
+            onDismissRequest = { if (!uiState.isSaving) showSaveDialog = false },
             title = { AppText(stringResource(R.string.save_design_in_project)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = designName,
+                        enabled = !uiState.isSaving,
                         onValueChange = { designName = it },
                         label = { AppText(stringResource(R.string.column_name_hint)) },
                         modifier = Modifier.fillMaxWidth()
@@ -577,6 +606,7 @@ fun ColumnScreen(
                             ) {
                                 RadioButton(
                                     selected = selectedProjectId == project.id,
+                                    enabled = !uiState.isSaving,
                                     onClick = { selectedProjectId = project.id }
                                 )
                                 AppText(project.name, modifier = Modifier.padding(start = 8.dp))
@@ -589,16 +619,25 @@ fun ColumnScreen(
                 AppButton(
                     label = stringResource(R.string.save),
                     fillMaxWidth = false,
+                    modifier = Modifier.testTag("column-save-confirm"),
+                    enabled = designName.isNotBlank() && projects.any { it.id == selectedProjectId } &&
+                        saveSnapshot?.let { viewModel.isCurrent(it) } == true && !uiState.isSaving,
+                    loading = uiState.isSaving,
                     onClick = {
-                        val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
-                        uiState.result?.let { viewModel.saveColumn(pId, designName, it) }
-                        showSaveDialog = false
+                        saveSnapshot?.let { snapshot ->
+                            if (projects.any { it.id == selectedProjectId }) {
+                                viewModel.saveColumn(selectedProjectId, designName, snapshot) { saved ->
+                                    if (saved) { showSaveDialog = false; saveSnapshot = null }
+                                }
+                            }
+                        }
                     }
                 )
             },
             dismissButton = {
                 AppButton(
                     label = stringResource(R.string.cancel),
+                    enabled = !uiState.isSaving,
                     onClick = { showSaveDialog = false },
                     style = AppButtonStyle.Text,
                     fillMaxWidth = false
@@ -606,6 +645,32 @@ fun ColumnScreen(
             }
         )
     }
+}
+
+/** Marks the revision only after the parent layer record succeeds, not merely after a child draw. */
+@Composable
+private fun CompletedColumnCaptureArea(
+    captureLayer: GraphicsLayer,
+    widthPx: Int,
+    heightPx: Int,
+    revision: String,
+    recordedRevision: AtomicReference<String?>,
+    content: @Composable () -> Unit
+) {
+    val width = widthPx.coerceAtLeast(1)
+    val height = heightPx.coerceAtLeast(1)
+    Box(Modifier.layout { measurable, _ ->
+        val placeable = measurable.measure(Constraints.fixed(width, height))
+        layout(0, 0) { placeable.place(0, 0) }
+    }.drawWithContent {
+        recordedRevision.set(null)
+        try {
+            captureLayer.record(size = IntSize(width, height)) { this@drawWithContent.drawContent() }
+            recordedRevision.set(revision)
+        } catch (_: Throwable) {
+            recordedRevision.set(null)
+        }
+    }) { content() }
 }
 
 @Composable

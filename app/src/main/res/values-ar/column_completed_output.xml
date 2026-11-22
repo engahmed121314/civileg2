@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="column_completed_revision">مراجعة الحساب المكتملة: %1$s</string>
+    <string name="column_completed_output_limit">ناتج الحساب المسجل فقط. هذا الإصلاح لا يثبت صحة طريقة تصميم العنصر. التسليح والرسم التخطيطي ليسا اعتمادًا للتنفيذ.</string>
+    <string name="column_candidate_request_limit">هذه الحقول لطلب بديل، وليست التسليح الذي تم فحصه. تعديلها يلغي صلاحية الناتج المكتمل؛ وتُرفض الطلبات غير المدعومة.</string>
+</resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="column_completed_revision">Completed revision: %1$s</string>
+    <string name="column_completed_output_limit">Recorded calculation output only. This repair does not verify the member-design method. Reinforcement and schematic drawing are not execution approval.</string>
+    <string name="column_candidate_request_limit">These fields request a candidate, not checked reinforcement. Editing invalidates the completed output; unsupported requests are rejected.</string>
+</resources>

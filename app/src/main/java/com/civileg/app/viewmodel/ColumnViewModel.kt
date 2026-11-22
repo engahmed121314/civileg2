@@ -22,6 +22,18 @@ import android.graphics.Bitmap
 import javax.inject.Inject
 import com.civileg.app.domain.calculations.InputGuard
 
+/** Owns a frozen pixel copy for the exact completed revision rendered by the capture area.
+ * Callers can edit/recycle their bitmap or a returned copy without changing this capture.
+ */
+class ColumnDrawingCapture(val revisionSha256: String, bitmap: Bitmap) {
+    private val frozenBitmap = requireNotNull(bitmap.copy(Bitmap.Config.ARGB_8888, false)) {
+        "Unable to freeze completed Column drawing"
+    }
+    val bitmap: Bitmap get() = requireNotNull(frozenBitmap.copy(Bitmap.Config.ARGB_8888, false)) {
+        "Unable to read frozen completed Column drawing"
+    }
+}
+
 data class ColumnUiState(
     val width: String = "300",
     val depth: String = "300",
@@ -40,12 +52,15 @@ data class ColumnUiState(
     val preferredDiameter: String = "16",
     val manualNumBars: String = "",
     val autoOptimize: Boolean = true,
-    val result: CalculatorEngine.ColumnResult? = null,
+    val completedDesign: ColumnDesignSnapshot? = null,
+    val isSaving: Boolean = false,
     val isLoading: Boolean = false,
     val isExporting: Boolean = false,
     val errors: List<String> = emptyList(),
     val validationReport: CalculationValidator.ValidationReport? = null
-)
+) {
+    val result: CalculatorEngine.ColumnResult? get() = completedDesign?.result()
+}
 
 @HiltViewModel
 class ColumnViewModel @Inject constructor(
@@ -65,9 +80,15 @@ class ColumnViewModel @Inject constructor(
         _uiState.update { it.copy(designCode = settingsManager.defaultDesignCode) }
     }
 
-    /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
-    @Volatile
-    var pendingDrawingBitmap: Bitmap? = null
+    private var calculationGeneration = 0L
+
+    private fun invalidateOutput() {
+        calculationGeneration++
+        _uiState.update { it.copy(completedDesign = null, isLoading = false, validationReport = null) }
+    }
+
+    fun isCurrent(snapshot: ColumnDesignSnapshot): Boolean = snapshot.hasValidFingerprint() &&
+        !_uiState.value.isLoading && _uiState.value.completedDesign?.revisionSha256 == snapshot.revisionSha256
 
     val uiStateLiveData: LiveData<ColumnUiState> = _uiState.asLiveData()
     val result: LiveData<CalculatorEngine.ColumnResult?> = _uiState.map { it.result }.asLiveData()
@@ -88,12 +109,13 @@ class ColumnViewModel @Inject constructor(
         preferredDiameter: String? = null,
         manualNumBars: String? = null
     ) {
+        invalidateOutput()
         _uiState.update { state ->
             val newManualNumBars = manualNumBars ?: state.manualNumBars
             val newPreferredDiameter = preferredDiameter ?: state.preferredDiameter
             
             // If user manually edits number of bars or diameter, disable auto-optimization
-            val shouldDisableAuto = manualNumBars != null || (preferredDiameter != null && !state.autoOptimize)
+            val shouldDisableAuto = manualNumBars != null || preferredDiameter != null
 
             state.copy(
                 width = width ?: state.width,
@@ -116,23 +138,27 @@ class ColumnViewModel @Inject constructor(
     }
 
     fun applyEconomicalDesign() {
-        _uiState.update { it.copy(autoOptimize = true) }
+        invalidateOutput()
+        _uiState.update { it.copy(autoOptimize = true, manualNumBars = "") }
         calculate()
     }
 
     fun applySafetyDesign() {
+        val previousCount = _uiState.value.result?.reinforcement?.numBars ?: 4
+        invalidateOutput()
         _uiState.update { state ->
             val currentDia = state.preferredDiameter.toIntOrNull() ?: 16
             state.copy(
                 autoOptimize = false,
                 preferredDiameter = (currentDia + 2).toString(), // Suggest larger bar
-                manualNumBars = ( (state.result?.reinforcement?.numBars ?: 4) + 2).toString()
+                manualNumBars = (previousCount + 2).toString()
             )
         }
         calculate()
     }
 
     fun updateDesignCode(code: DesignCode) {
+        invalidateOutput()
         _uiState.update {
             val validCombos = LoadCombination.getByCode(code)
             val combo = if (it.loadCombination in validCombos) it.loadCombination else validCombos.first()
@@ -142,12 +168,14 @@ class ColumnViewModel @Inject constructor(
     }
 
     fun updateLoadCombination(combination: LoadCombination) {
+        invalidateOutput()
         _uiState.update { it.copy(loadCombination = combination) }
         calculate()
     }
 
     fun updateAutoOptimize(optimize: Boolean) {
-        _uiState.update { it.copy(autoOptimize = optimize) }
+        invalidateOutput()
+        _uiState.update { it.copy(autoOptimize = optimize, manualNumBars = if (optimize) "" else it.manualNumBars) }
         calculate()
     }
 
@@ -158,97 +186,89 @@ class ColumnViewModel @Inject constructor(
         isCircular: Boolean = false, connectedSlab: String = "SOLID", hasCap: Boolean = false,
         isSeismic: Boolean = false
     ) {
-        InputGuard.positive("width", width)
-        InputGuard.positive("depth", depth)
-        InputGuard.positive("height", height)
-        InputGuard.positive("fcu", fcu)
-        InputGuard.positive("fy", fy)
-        InputGuard.positive("diameter", diameter)
-        InputGuard.nonNegative("load", load)
+        startCalculation(ColumnCalculationInputs(
+            width, depth, height, fcu, fy, load, load, mx, my, code, null,
+            "CALLER_SUPPLIED_SECTION_ACTIONS_UNVERIFIED", 1.0, isCircular,
+            connectedSlab, hasCap, diameter, true, null, isSeismic, true,
+            reinforcementIntent = ColumnReinforcementIntent.REQUESTED_LAYOUT
+        ))
+    }
 
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            try {
-                val res = calculatorEngine.designColumn(
-                    width = width,
-                    depth = depth,
-                    pu = load,
-                    mx = mx,
-                    my = my,
-                    fcu = fcu,
-                    fy = fy,
-                    code = code,
-                    isCircular = isCircular,
-                    connectedSlab = connectedSlab,
-                    hasCap = hasCap,
-                    clearHeight = height * 1000.0,
-                    preferredDiameter = diameter,
-                    isSeismic = isSeismic
-                )
-                _uiState.update { it.copy(result = res, isLoading = false) }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(isLoading = false, errors = listOf(e.message ?: "Error")) }
-                _errorMessage.value = "Column calculation error / خطأ في حساب العمود: ${e.message}"
-            }
+    fun calculateManual() = calculate()
+
+    private fun calculate() {
+        val state = _uiState.value
+        try {
+            fun number(label: String, value: String): Double = requireNotNull(value.toDoubleOrNull()) {
+                "$label must be numeric"
+            }.also { require(it.isFinite()) { "$label must be finite" } }
+            val enteredLoad = number("Axial load", state.axialLoad)
+            val multiplier = state.loadCombination.getFactorForCode(state.designCode)
+            val diameter = requireNotNull(state.preferredDiameter.toIntOrNull()) { "Bar diameter must be an integer" }
+            val manual = if (state.manualNumBars.isBlank()) null else
+                requireNotNull(state.manualNumBars.toIntOrNull()) { "Bar count must be an integer" }
+            startCalculation(ColumnCalculationInputs(
+                number("Width", state.width), number("Depth", state.depth), number("Height", state.height),
+                number("Concrete strength", state.fcu), number("Steel strength", state.fy),
+                enteredLoad, enteredLoad * multiplier, number("Moment X", state.mx), number("Moment Y", state.my),
+                state.designCode, state.loadCombination, "LEGACY_UI_AGGREGATE_AXIAL_MULTIPLIER_UNVERIFIED",
+                multiplier, state.isCircular, state.connectedSlab, state.hasCap,
+                diameter, state.autoOptimize, manual, state.isSeismic, true
+            ))
+        } catch (e: Exception) {
+            invalidateOutput()
+            _uiState.update { it.copy(errors = listOf(e.message ?: "Invalid column inputs")) }
+            _errorMessage.value = e.message ?: "Invalid column inputs"
         }
     }
 
-    fun calculateManual() {
-        calculate()
-    }
-
-    private fun calculate() {
-        pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
-        val state = _uiState.value
-        val w = state.width.toDoubleOrNull() ?: return
-        val d = state.depth.toDoubleOrNull() ?: return
-        val h = state.height.toDoubleOrNull() ?: 3.0
-        val fcuVal = state.fcu.toDoubleOrNull() ?: 25.0
-        val fyVal = state.fy.toDoubleOrNull() ?: 400.0
-        val load = state.axialLoad.toDoubleOrNull() ?: 0.0
-        val mxVal = state.mx.toDoubleOrNull() ?: 0.0
-        val myVal = state.my.toDoubleOrNull() ?: 0.0
-        val dia = state.preferredDiameter.toIntOrNull() ?: 16
-        val manualBars = state.manualNumBars.toIntOrNull()
-
+    private fun startCalculation(input: ColumnCalculationInputs) {
+        invalidateOutput()
+        val generation = calculationGeneration
+        _uiState.update { it.copy(isLoading = true, errors = emptyList()) }
         viewModelScope.launch {
             try {
+                InputGuard.positive("width", input.widthMm)
+                InputGuard.positive("depth", input.depthMm)
+                InputGuard.positive("height", input.heightM)
+                InputGuard.positive("fcu", input.fcuMpa)
+                InputGuard.positive("fy", input.fyMpa)
+                InputGuard.positive("diameter", input.preferredDiameterMm)
+                InputGuard.nonNegative("load", input.axialLoadPassedToEngineKn)
                 val res = calculatorEngine.designColumn(
-                    width = w,
-                    depth = d,
-                    pu = load * state.loadCombination.getFactorForCode(state.designCode),
-                    mx = mxVal,
-                    my = myVal,
-                    fcu = fcuVal,
-                    fy = fyVal,
-                    code = mapDesignCode(state.designCode),
-                    isCircular = state.isCircular,
-                    connectedSlab = state.connectedSlab,
-                    hasCap = state.hasCap,
-                    clearHeight = h * 1000.0,
-                    preferredDiameter = dia,
-                    autoOptimize = state.autoOptimize,
-                    manualNumBars = manualBars,
-                    autoIncludeSelfWeight = true,
-                    isSeismic = state.isSeismic
+                    width = input.widthMm, depth = input.depthMm, clearHeight = input.heightM * 1000.0,
+                    pu = input.axialLoadPassedToEngineKn, mx = input.momentXKnM, my = input.momentYKnM,
+                    fcu = input.fcuMpa, fy = input.fyMpa, code = input.code,
+                    isCircular = input.isCircular, connectedSlab = input.connectedSlab, hasCap = input.hasCap,
+                    preferredDiameter = input.preferredDiameterMm, autoOptimize = input.autoOptimize,
+                    manualNumBars = input.manualBarCount, autoIncludeSelfWeight = input.autoIncludeSelfWeight,
+                    isSeismic = input.isSeismic, reinforcementIntent = input.reinforcementIntent
                 )
-                
-                // Validate consistency & Dead Load (Axial logic)
                 val report = CalculationValidator.validateColumn(res)
-                val dlReport = CalculationValidator.inspectDeadLoadConsistency("COLUMN", mapOf("width" to w, "depth" to d, "height" to h), load)
-                
-                val combinedWarnings = report.warnings + dlReport.warnings
-                _uiState.update { it.copy(result = res, validationReport = report.copy(warnings = combinedWarnings), errors = emptyList()) }
+                val dl = CalculationValidator.inspectDeadLoadConsistency("COLUMN", mapOf(
+                    "width" to input.widthMm, "depth" to input.depthMm, "height" to input.heightM
+                ), input.enteredAxialLoadKn)
+                val completed = ColumnDesignSnapshot.capture(input, res)
+                if (generation == calculationGeneration) {
+                    _uiState.update { it.copy(completedDesign = completed, isLoading = false,
+                        validationReport = report.copy(warnings = report.warnings + dl.warnings), errors = emptyList()) }
+                }
             } catch (e: Exception) {
-                _uiState.update { it.copy(errors = listOf(e.message ?: "Error")) }
-                _errorMessage.value = "Column calculation error / خطأ في حساب العمود: ${e.message}"
+                if (generation == calculationGeneration) {
+                    _uiState.update { it.copy(completedDesign = null, isLoading = false,
+                        errors = listOf(e.message ?: "Column calculation failed"), validationReport = null) }
+                    _errorMessage.value = e.message ?: "Column calculation failed"
+                }
             }
         }
     }
 
     /** Standalone DXF sheet for the current column design (null when no result). */
-    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
-        val res = _uiState.value.result ?: return null
+    fun buildDxfDrawing(snapshot: ColumnDesignSnapshot): com.civileg.app.utils.DxfDrawable? {
+        require(snapshot.hasValidFingerprint())
+        val res = snapshot.result()
+        // This legacy builder draws rectangles only. Do not label one as a circular result.
+        if (snapshot.input().isCircular || res.columnType.contains("CIRCULAR", ignoreCase = true)) return null
         return com.civileg.app.utils.ElementDxfDrawings.columnSection(
             title = "COLUMN ${res.columnType}",
             widthMm = res.width.toDouble(),
@@ -263,18 +283,22 @@ class ColumnViewModel @Inject constructor(
 
     /** Export just the CAD drawing (no PDF) for the current design. */
     fun exportToDxf(context: Context, onComplete: (File?) -> Unit = {}) {
+        val snapshot = _uiState.value.completedDesign ?: return
+        if (!isCurrent(snapshot)) return
         com.civileg.app.utils.DxfQuickExport.export(
             context = context,
-            drawing = buildDxfDrawing(),
+            drawing = buildDxfDrawing(snapshot),
             baseName = "Column",
             scope = viewModelScope,
             onComplete = onComplete
         )
     }
 
-    fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
-        val state = _uiState.value
-        val res = state.result ?: return
+    fun exportToPdf(context: Context, snapshot: ColumnDesignSnapshot, capture: ColumnDrawingCapture? = null,
+        onComplete: (File?) -> Unit) {
+        if (!isCurrent(snapshot) || _uiState.value.isExporting) { onComplete(null); return }
+        val input = snapshot.input()
+        val res = snapshot.result()
         _uiState.update { it.copy(isExporting = true) }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
@@ -285,14 +309,14 @@ class ColumnViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = File(directory, fileName)
 
-                val h = state.height.toDoubleOrNull() ?: 3.0
-                val fcuVal = state.fcu.toDoubleOrNull() ?: 25.0
-                val fyVal = state.fy.toDoubleOrNull() ?: 400.0
+                val h = input.heightM
+                val fcuVal = input.fcuMpa
+                val fyVal = input.fyMpa
 
                 // Generate drawing for PDF
                 // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
                 val isSpiralTies = res.stirrups.description.contains("SPIRAL", ignoreCase = true)
-                val drawingBitmap = pendingDrawingBitmap ?: try {
+                val drawingBitmap = capture?.takeIf { it.revisionSha256 == snapshot.revisionSha256 }?.bitmap ?: try {
                     PdfDrawingGenerator.generateColumnDrawing(
                         columnWidth = res.width,
                         columnDepth = res.depth,
@@ -304,30 +328,38 @@ class ColumnViewModel @Inject constructor(
                         cover = 40.0,
                         isSpiral = isSpiralTies,
                         spiralPitch = if (isSpiralTies) res.stirrups.spacing else 0.0,
-                        sectionType = if (state.isCircular) "Circular" else "Rectangular"
+                        sectionType = if (input.isCircular) "Circular" else "Rectangular"
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
-                pendingDrawingBitmap = null  // consume after use
 
-                val codeName = when(state.designCode) {
+                val codeName = when(input.code) {
                     com.civileg.app.domain.entities.DesignCode.ACI -> "ACI 318"
                     com.civileg.app.domain.entities.DesignCode.SBC -> "SBC 304"
                     else -> "ECP 203"
                 }
 
                 val inputsMap = mutableMapOf(
+                    "Completed Revision" to snapshot.revisionSha256,
+                    "Output Scope" to "Recorded engine output and schematic only; this repair does not verify the member-design method or grant execution approval.",
+                    "Reinforcement Selection Intent" to input.reinforcementIntent.name,
+                    "Preferred Diameter Request (not adopted layout)" to "${input.preferredDiameterMm} mm",
+                    "Action Basis (unverified convention)" to input.actionBasis,
+                    "Entered Axial Load" to "${input.enteredAxialLoadKn} kN",
+                    "Engine Axial Argument" to "${input.axialLoadPassedToEngineKn} kN",
+                    "Aggregate Axial Multiplier" to input.appliedAggregateLoadMultiplier.toString(),
+                    "Engine Includes Self Weight" to input.autoIncludeSelfWeight.toString(),
                     "Column Type" to res.columnType,
-                    "Shape" to if (state.isCircular) "Circular" else "Rectangular",
+                    "Shape" to if (input.isCircular) "Circular" else "Rectangular",
                     "Width" to "${res.width} mm",
                     "Depth" to "${res.depth} mm",
                     "Height" to "${h} m",
                     "Axial Load Pu" to "${String.format("%.1f", res.pu)} kN",
                     "f'cu" to "${fcuVal} MPa",
                     "fy" to "${fyVal} MPa",
-                    "Connected Slab" to state.connectedSlab,
-                    "Has Capital" to if (state.hasCap) "Yes" else "No",
+                    "Connected Slab" to input.connectedSlab,
+                    "Has Capital" to if (input.hasCap) "Yes" else "No",
                     "Design Code" to codeName,
-                    "Load Combination" to state.loadCombination.name
+                    "Load Combination" to (input.loadCombination?.name ?: "Caller supplied")
                 )
                 val resultsMap = mutableMapOf(
                     "Axial Capacity" to "${String.format("%.1f", res.axialCapacity)} kN",
@@ -354,9 +386,9 @@ class ColumnViewModel @Inject constructor(
 
                 // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
-                    titleAr = "????? ????? ????? - ${res.columnType}",
+                    titleAr = "تقرير تصميم العمود - ${res.columnType}",
                     titleEn = "Column Design Report - ${res.columnType}",
-                    subtitle = "Code: $codeName    ${res.width}x${res.depth}mm, H=${h}m",
+                    subtitle = "Code: $codeName | ${res.width}x${res.depth}mm, H=${h}m",
                     designType = "Column (${res.columnType})",
                     inputs = inputsMap,
                     results = resultsMap,
@@ -368,7 +400,7 @@ class ColumnViewModel @Inject constructor(
                     }.getOrDefault(emptyList()),
                     boqRows = BoqEstimator.columnRows(res, h, "C1"),
                     drawingBitmap = drawingBitmap,
-                    drawing = buildDxfDrawing(),
+                    drawing = buildDxfDrawing(snapshot),
                     outputPath = file.absolutePath
                 ).pdfFile
 
@@ -387,14 +419,21 @@ class ColumnViewModel @Inject constructor(
         }
     }
 
-    fun saveColumn(projectId: Long, name: String, result: CalculatorEngine.ColumnResult) {
+    fun saveColumn(projectId: Long, name: String, snapshot: ColumnDesignSnapshot, onComplete: (Boolean) -> Unit = {}) {
+        if (projectId <= 0 || name.isBlank() || !isCurrent(snapshot) || _uiState.value.isSaving) {
+            onComplete(false)
+            return
+        }
+        _uiState.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             try {
-                val fcuVal = _uiState.value.fcu.toDoubleOrNull() ?: 25.0
-                val fyVal = _uiState.value.fy.toDoubleOrNull() ?: 400.0
-                repository.saveColumnDesign(projectId, name, result, fcuVal, fyVal)
+                repository.saveColumnDesignSnapshot(projectId, name.trim(), snapshot)
+                onComplete(true)
             } catch (e: Exception) {
-                _errorMessage.value = "Save failed / فشل الحفظ: ${e.message}"
+                _errorMessage.value = "Save failed: ${e.message}"
+                onComplete(false)
+            } finally {
+                _uiState.update { it.copy(isSaving = false) }
             }
         }
     }
@@ -406,6 +445,7 @@ class ColumnViewModel @Inject constructor(
     }
 
     fun reset() {
-        _uiState.value = ColumnUiState()
+        invalidateOutput()
+        _uiState.value = ColumnUiState(isSaving = _uiState.value.isSaving, isExporting = _uiState.value.isExporting)
     }
 }

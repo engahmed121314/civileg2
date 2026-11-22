@@ -1,5 +1,6 @@
 package com.civileg.app.db
 
+import androidx.room.withTransaction
 import com.civileg.app.domain.entities.DesignCode
 
 import com.civileg.app.domain.entities.SteelMemberResult
@@ -25,7 +26,8 @@ class DesignRepository @Inject constructor(
     private val stairDao: StairDao,
     private val retainingWallDao: RetainingWallDao,
     private val tankDao: TankDao,
-    private val inventoryDao: InventoryDao
+    private val inventoryDao: InventoryDao,
+    private val database: AppDatabase
 ) {
     private val gson = Gson()
 
@@ -84,6 +86,55 @@ class DesignRepository @Inject constructor(
             utilizationRatio = result.utilizationRatio
         )
         columnDao.insertColumn(column)
+    }
+
+    /** Persists the exact completed revision while retaining legacy flat input keys.
+     * The specialized row is a legacy projection. Both writes and the selected
+     * project's existence check share the injected Room database transaction.
+     */
+    suspend fun saveColumnDesignSnapshot(
+        projectId: Long, name: String,
+        snapshot: com.civileg.app.domain.entities.ColumnDesignSnapshot
+    ) {
+        require(projectId > 0L) { "Select an actual project before saving the column" }
+        require(name.isNotBlank()) { "A column design name is required" }
+        require(snapshot.hasValidFingerprint()) { "Invalid completed column revision" }
+        val input = snapshot.input()
+        val result = snapshot.result()
+        val inputData = JSONObject().apply {
+            put("fcu", input.fcuMpa)
+            put("fy", input.fyMpa)
+            put("load", result.pu)
+            put("width", result.width)
+            put("depth", result.depth)
+            put("height", input.heightM)
+            put("heightMm", input.heightM * 1000.0)
+            put("completedColumnRevision", JSONObject().apply {
+                put("schemaVersion", snapshot.schemaVersion)
+                put("revisionSha256", snapshot.revisionSha256)
+                put("inputJson", snapshot.inputJson)
+                put("resultJson", snapshot.resultJson)
+            })
+        }.toString()
+        database.withTransaction {
+            requireNotNull(database.projectDao().getProjectById(projectId)) {
+                "The selected project no longer exists"
+            }
+            database.designDao().insertDesign(Design(
+                projectId = projectId, type = DesignType.COLUMN, name = name,
+                inputData = inputData, results = snapshot.resultJson,
+                isSafe = result.isSafe, utilizationRatio = result.utilizationRatio,
+                codeUsed = result.code.displayName, concreteVolume = result.concreteVolume,
+                steelWeight = result.steelWeight, totalCost = result.cost
+            ))
+            database.columnDao().insertColumn(ColumnEntity(
+                projectId = projectId, load = result.pu, fcu = input.fcuMpa, fy = input.fyMpa,
+                width = result.width, depth = result.depth,
+                reinforcement = result.reinforcement.barString, ties = result.stirrups.description,
+                concreteVolume = result.concreteVolume, steelWeight = result.steelWeight,
+                cost = result.cost, utilizationRatio = result.utilizationRatio
+            ))
+        }
     }
 
     suspend fun saveBeamDesign(

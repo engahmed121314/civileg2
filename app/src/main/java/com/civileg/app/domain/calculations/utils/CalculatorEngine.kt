@@ -901,7 +901,9 @@ class CalculatorEngine @Inject constructor(
         width: Double, depth: Double, pu: Double, mx: Double = 0.0, my: Double = 0.0,
         fcu: Double, fy: Double, code: DesignCode, isCircular: Boolean = false, connectedSlab: String = "SOLID",
         hasCap: Boolean = false, clearHeight: Double = 3000.0, preferredDiameter: Int = 16,
-        autoOptimize: Boolean = true, manualNumBars: Int? = null, autoIncludeSelfWeight: Boolean = true, isSeismic: Boolean = false
+        autoOptimize: Boolean = true, manualNumBars: Int? = null, autoIncludeSelfWeight: Boolean = true, isSeismic: Boolean = false,
+        reinforcementIntent: ColumnReinforcementIntent = if (autoOptimize && manualNumBars == null)
+            ColumnReinforcementIntent.AUTOMATIC_ENGINE_LAYOUT else ColumnReinforcementIntent.REQUESTED_LAYOUT
     ): ColumnResult {
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
@@ -911,6 +913,10 @@ class CalculatorEngine @Inject constructor(
         InputGuard.nonNegative("mx", mx)
         InputGuard.nonNegative("my", my)
         InputGuard.positive("clearHeight", clearHeight)
+        InputGuard.positive("preferredDiameter", preferredDiameter)
+        require(reinforcementIntent == ColumnReinforcementIntent.AUTOMATIC_ENGINE_LAYOUT && autoOptimize && manualNumBars == null) {
+            "Requested column replacement has not been evaluated. This route cannot approve a manual diameter/count alternative until its provided-layout checks are verified."
+        }
 
         val domainCode = code
         val engine = CalculationFactory.getColumnDesign(domainCode)

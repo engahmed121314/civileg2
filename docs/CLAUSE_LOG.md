@@ -398,3 +398,8 @@ Golden guard: ACIFootingTest `designIsolatedFooting_goldenVector_squareNoMoment`
 (P = 1500 kN, 400×400 column, qa = 200, h = 600: B = L = 2450 mm, q = 178.50
 kPa, Mu = 321.62 kN·m, As = 1200 mm²/m at the Table 7.6.1.1 minimum,
 Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
+
+
+## 2026-11-22: column replacement request binding containment
+
+The normal column bridge accepted manual diameter/count and optimization flags without reading them. Explicit manual replacement requests are now rejected until a source-verified provided-layout evaluator is available, rather than inheriting the automatic result. This is a request/result provenance guard, not a new code method or completed alternatives feature. Automatic selection remains subject to its existing method-verification limits. The explicit selection-intent contract also rejects Pro diameter requests even when their old automatic-sizing flag is true. Completed inputs include self-weight/action provenance, material strengths, dimensions, and selection intent; a fingerprint identifies one immutable recorded input/result revision across UI, exports and persistence. This is consistency evidence, not a method-verification certificate. A captured drawing owns an isolated pixel copy. New snapshot persistence checks the chosen project and writes the exact general record plus the legacy specialized projection in one Room transaction, with no schema migration or change to the old save API. Circular DXF is withheld because its existing builder only draws rectangles. UI and PDF state the limited output scope. Existing automatic member-method, schematic geometry, BBS detailing and quantity assumptions still require separate engineering verification.
