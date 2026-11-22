@@ -450,7 +450,11 @@ object Migrations {
         database.query("SELECT seq FROM sqlite_sequence WHERE name = 'designs'").use { c ->
             if (c.moveToFirst()) seq = c.getLong(0)
         }
-        database.execSQL("CREATE TEMP TABLE IF NOT EXISTS design_links_backup AS SELECT id AS inspectionId, designId FROM site_inspections WHERE designId IS NOT NULL")
+        var hasInspections = false
+        database.query("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'site_inspections'").use { hasInspections = it.moveToFirst() }
+        if (hasInspections) {
+            database.execSQL("CREATE TEMP TABLE IF NOT EXISTS design_links_backup AS SELECT id AS inspectionId, designId FROM site_inspections WHERE designId IS NOT NULL")
+        }
         database.execSQL("""
             CREATE TABLE designs_repaired (
                 id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -481,11 +485,13 @@ object Migrations {
         database.execSQL("DROP TABLE designs")
         database.execSQL("ALTER TABLE designs_repaired RENAME TO designs")
         database.execSQL("CREATE INDEX IF NOT EXISTS index_designs_projectId ON designs(projectId)")
-        database.execSQL("""
-            UPDATE site_inspections SET designId = (SELECT b.designId FROM design_links_backup b WHERE b.inspectionId = site_inspections.id)
-            WHERE designId IS NULL AND id IN (SELECT inspectionId FROM design_links_backup)
-        """)
-        database.execSQL("DROP TABLE design_links_backup")
+        if (hasInspections) {
+            database.execSQL("""
+                UPDATE site_inspections SET designId = (SELECT b.designId FROM design_links_backup b WHERE b.inspectionId = site_inspections.id)
+                WHERE designId IS NULL AND id IN (SELECT inspectionId FROM design_links_backup)
+            """)
+            database.execSQL("DROP TABLE design_links_backup")
+        }
         seq?.let { database.execSQL("UPDATE sqlite_sequence SET seq = MAX(seq, $it) WHERE name = 'designs'") }
     }
 

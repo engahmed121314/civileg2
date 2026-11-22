@@ -106,8 +106,8 @@ class RoomMigration14To15Test {
         raw.execSQL("INSERT INTO designs (id,projectId,type,name,inputData,results,isSafe,utilizationRatio,codeUsed,concreteVolume,steelWeight,totalCost,createdAt) VALUES (2,1,'BEAM','undated','{}','{}',0,0.0,'ECP',1.0,2.0,3.0,NULL)")
         raw.execSQL("INSERT INTO designs (id,projectId,type,name,inputData,results,isSafe,codeUsed) VALUES (3,1,'COLUMN','gone','{}','{}',0,'ECP')")
         raw.execSQL("DELETE FROM designs WHERE id = 3")
-        raw.execSQL("INSERT INTO site_inspections (id,projectId,designId,inspectorName,date,comments) VALUES (10,1,2,'insp',NULL,'c')")
-        raw.execSQL("INSERT INTO site_inspections (id,projectId,designId,inspectorName,date,comments) VALUES (11,1,NULL,'insp2',NULL,'c2')")
+        raw.execSQL("INSERT INTO site_inspections (id,projectId,designId,inspectorName,date,comments) VALUES (10,1,2,'insp',0,'c')")
+        raw.execSQL("INSERT INTO site_inspections (id,projectId,designId,inspectorName,date,comments) VALUES (11,1,NULL,'insp2',0,'c2')")
         raw.version = 14
         raw.close()
 
