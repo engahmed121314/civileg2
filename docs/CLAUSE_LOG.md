@@ -73,19 +73,19 @@ Engineering fixes applied in this batch (documented, with golden vectors):
    diameter is accepted only when provided ≥ required.
 
 No other production formula was added or changed. Group-efficiency and the
-alpha-curve shape remain as-is pending owner engineering decisions (U-P1, U-P2).
+alpha-curve shape remain as-is pending engineering decisions (U-P1, U-P2).
 
-## Owner-decision batch — pile alpha curve + group efficiency (accessed 2026-11-21)
+## Decision batch — pile alpha curve + group efficiency (accessed 2026-11-21)
 
-The owner reviewed U-P1/U-P2 (from the ACIPileFoundation batch) and directed:
-"apply the correct and most accurate engineering option" for both.
+Decision on U-P1/U-P2 (from the ACIPileFoundation batch):
+apply the correct and most accurate engineering option for both.
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
 |---|---|---|---|
 | P-06 | API RP 2A-WSD §6.4.2 alpha method as a continuous curve: `α = 0.5·ψ^-0.5` (ψ ≤ 1), `α = 0.5·ψ^-0.25` (ψ > 1), `α ≤ 1.0`, ψ = cu/p'0; applied with the engine's implicit p'0 = 100 kPa. Replaces the banded curve that jumped 0.75 → 0.5 at cu = 50 kPa (U-P1, RESOLVED). Continuous at cu = 25 (α = 1.0) and cu = 100 (α = 0.5). | OpenBrIM API RP 2A-WSD alpha method page (opened earlier today, this session) | Verified (secondary) |
 | P-07 | Standard Converse-Labarre group efficiency: `η = 1 − θ·[(m−1)·nc + (nc−1)·m] / (90·m·nc)`, θ = atan(d/s) in degrees. Replaces the engine variant (atan(s/d), single term; U-P2, RESOLVED). 3×3 @ s=3d: η = 0.7269 (was 0.6466). | [FireCAD — Pile Group Efficiency (Converse–Labarre)](https://calc.firecad.com/civil/foundations/pile-group-efficiency); [Converse-Labarre calculator reference](https://calculatgeek.com/pile-group-efficiency-calculator-converse-labarre/) | Verified (secondary; textbook-standard form) |
 
-Behavior changes (intended, owner-approved):
+Behavior changes (intended):
 - Clay shaft capacity for 25 < cu ≤ 100 kPa increases (e.g. cu = 50: α 0.5 →
   0.707); for cu > 100 kPa it also increases slightly (ψ^-0.25 form).
 - Group efficiency increases to the standard values (3×3 @ 3d: 0.727; 2×2 @
@@ -103,7 +103,7 @@ Behavior changes (intended, owner-approved):
 | A-03 | AISC 360-16 E3-2/E3-3/E3-4: `Fe = π²E/(KL/r)²`; inelastic `Fcr = 0.658^(Fy/Fe)·Fy` for KL/r ≤ 4.71√(E/Fy), elastic `Fcr = 0.877·Fe` otherwise; φc = 0.90 | [ideCAD — Flexural Buckling per AISC 360-16](https://help.idecad.com/ideCAD/flexural-buckling) | Verified (secondary) |
 | A-04 | AISC 360-16 J4.3 block shear `Rn = min(0.6·Fy·Agv + Ubs·Fu·Ant, 0.6·Fu·Anv + Ubs·Fu·Ant)`, φ = 0.75 | Standard AISC form; engine geometry (gauge/edge/pitch estimates) is an engine simplification | Formula verified; engine geometry CHARACTERIZED |
 | A-05 | Section properties: box `Ix = (b·h³−(b−2t)(h−2t)³)/12`, I-shape open-form Ix/Iy | Standard strength-of-materials formulas | Verified |
-| U-A1 | Welded tension: engine returns a block-shear "placeholder" `0.75·0.6·Fy·Ag` that GOVERNS the design (cuts welded tension capacity ~50%). AISC J4.3 has no block-shear limit state for full welded connections | Engine inspection | **FLAGGED, not fixed** — conservative direction; owner engineering decision |
+| U-A1 | Welded tension: engine returns a block-shear "placeholder" `0.75·0.6·Fy·Ag` that GOVERNS the design (cuts welded tension capacity ~50%). AISC J4.3 has no block-shear limit state for full welded connections | Engine inspection | **FLAGGED, not fixed** — conservative direction; deferred engineering decision |
 | U-A2 | Torsional buckling (E4) branch selection uses the FLEXURAL slenderness for the E3-3/E3-4 choice and `min(KxLx, KyLy)` as the torsional length instead of Kz·Lz | Engine inspection | **FLAGGED, not fixed** — pinned by characterization test |
 | U-A3 | Plastic modulus `Zx = 1.12·Sx` (shape-factor approximation) for I-sections | Engine constant | Approximation, characterized; within typical rolled-shape range |
 
@@ -112,10 +112,10 @@ Golden vectors: A-01/A-02 (tension bolted, net rupture governs), A-03
 path and welded placeholder pinned as characterization (U-A1/U-A2).
 No production formula was added or changed in this batch.
 
-## Owner-decision batch — AISC steel corrections (accessed 2026-11-21)
+## Decision batch — AISC steel corrections (accessed 2026-11-21)
 
-The owner directed the engineering-correct fix for all three AISC findings
-from the member-design batch (his standing rule: fix correctly, document,
+Applied the engineering-correct fix for all three AISC findings
+from the member-design batch (standing rule: fix correctly, document,
 separate PR, nothing merges without his OK).
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
@@ -124,7 +124,7 @@ separate PR, nothing merges without his OK).
 | A-07 | AISC 360-16 E4: Fcr for torsional/flexural-torsional buckling comes from the E3 equations applied to the TORSIONAL elastic stress Fe, with the inelastic/elastic branch at Fy/Fe = 2.25. The branch no longer keys on the flexural slenderness. U-A2 RESOLVED. Remaining simplification: L = min(KxLx, KyLy) pending a Kz·Lz input (U-A2a, conservative). | [ideCAD — Flexural Buckling per AISC 360-16](https://help.idecad.com/ideCAD/flexural-buckling) | Verified (secondary) |
 | A-08 | Exact plastic section modulus replaces the 1.12·Sx approximation: I-shape `Zx = bf·tf·(h−tf) + tw·(h−2tf)²/4`; CHS/Pipe `(D³−(D−2t)³)/6`; RHS `(w·h²−(w−2t)(h−2t)²)/4`. Singly symmetric shapes (C/L/T/PG) keep shape factors pending plastic-NA work. U-A3 RESOLVED for I/CHS/RHS/Pipe. | Standard strength-of-materials exact forms (Zx of I 300x150x10x7 = 572,200 mm³, shape factor 1.131 vs the old flat 1.12) | Verified (textbook) |
 
-Behavior changes (intended, owner-approved): welded/pressed tension capacity
+Behavior changes (intended): welded/pressed tension capacity
 increases to the correct D2 values; torsional branch selection corrected;
 flexural capacities via Zx shift slightly (I-shapes up to ~1%, more accurate).
 Golden vectors updated on this branch (welded tension governs D2-1;
@@ -181,17 +181,17 @@ Golden guard: ECPBeamDeflectionFyTest pins MF behavior at fy = 240/360/400
 (span 6 m, depth 500 mm, ρ = 1.0%): ratio 0.240 / 0.320 / 0.344 respectively.
 ---
 
-## Owner-decision batch - ECPSlab two-way bending coefficients (accessed 2026-11-21)
+## Decision batch - ECPSlab two-way bending coefficients (accessed 2026-11-21)
 
 Replacement of the legacy simplified two-way slab moment table (BS 8110 / IS 456
 family values mislabeled as ECP) with the verified ECP 203-2020 method. Source:
-the owner's own copy of the official Arabic ECP 203-2020 PDF, sent via WhatsApp
+the official Arabic ECP 203-2020 PDF
 on 2026-11-21. Every row below was read directly from that PDF and is VERIFIED
 (primary source, first-party code text).
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
 |---|---|---|---|
-| TW-01 | ECP 203-2020 §6-1-2-6-3 (simplified method, two-way solid slabs, uniform loads): `M_a = alpha·w·a²/d`, `M_b = beta·w·b²/d`; d = 8 span simply supported both ends, d = 10 continuous one end, d = 12 continuous both ends [Eq. 6-7a/b/c] | Owner-provided ECP 203-2020 PDF, printed page 6-9 (PDF p. 242) | Verified (primary) |
+| TW-01 | ECP 203-2020 §6-1-2-6-3 (simplified method, two-way solid slabs, uniform loads): `M_a = alpha·w·a²/d`, `M_b = beta·w·b²/d`; d = 8 span simply supported both ends, d = 10 continuous one end, d = 12 continuous both ends [Eq. 6-7a/b/c] | ECP 203-2020 PDF, printed page 6-9 (PDF p. 242) | Verified (primary) |
 | TW-02 | Table 6-1 (slabs cast monolithically with beams, LL ≤ 5 kN/m²): alpha = 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85 and beta = 0.35, 0.29, 0.25, 0.21, 0.18, 0.16, 0.14, 0.12, 0.11, 0.09, 0.08 for r = 1.0..2.0; closed form Eq. 6-8: `alpha = 0.5r − 0.15`, `beta = 0.35/r²` | Same PDF, printed page 6-9 | Verified (primary) |
 | TW-03 | Method scope (§6-1-2-6-3 + §6-2-1-6-1): rectangular panels supported on four sides, cast monolithically with beams, rectangularity ratio r ≤ 2 (r > 2 → design one-way); LL > 5 kN/m² uses Table 6-3 (not yet implemented) | Same PDF, printed pages 6-8/6-9 | Verified (primary) |
 | TW-04 | Wall-supported variant: Table 6-1(2a) alpha 0.396..0.849, beta 0.396..0.053 (not yet implemented; engine assumes monolithic-with-beams) | Same PDF, printed page 6-10 (PDF p. 243) | Verified (primary), implementation deferred |
@@ -200,15 +200,15 @@ on 2026-11-21. Every row below was read directly from that PDF and is VERIFIED
 Removed provenance: the previous table ("جداول مبسطة من الكود المصري (قريبة من قيم
 ماركوس)") and the advanced-quality-fixes branch's 8-case table labeled "ECP 203
 جدول 6-1" are BS 8110 Table 3.13 / IS 456 Table 26 family values (interior-panel
-0.031/0.024 at r = 1.0 fingerprint), not ECP 203. Owner decision 2026-11-21:
+0.031/0.024 at r = 1.0 fingerprint), not ECP 203. Decision 2026-11-21:
 forget the Indian code and remove everything related to it; ECP 203-2020 and
 SBC PDFs are the references of record, ACI PDF to follow.
 
 ## ACI 318M-14 primary verification batch — ACIPileFoundation structural clauses (accessed 2026-11-21)
 
-Source of record: the owner's ACI 318M-14 Arabic/English edition (4 PDF parts,
-801 pages, forwarded by the owner 2026-11-21). Printed page numbers below are the
-code's own page footers; the PDF part/page locators point into the owner's files.
+Source of record: the ACI 318M-14 Arabic/English edition (4 PDF parts,
+801 pages, accessed 2026-11-21). Printed page numbers below are the
+code's own page footers; the PDF part/page locators point into the PDF parts.
 This batch upgrades P-04/P-05 from secondary-source to primary-source status.
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
@@ -234,14 +234,14 @@ No production formula was added or changed in this batch.
 
 ### ACI combined footing audit — `ACIFooting.designCombinedFooting` (same batch)
 
-Shared checks verified against the owner PDF (entries A-01..A-06 apply here too):
+Shared checks verified against the ACI 318M-14 PDF (entries A-01..A-06 apply here too):
 punching uses b0 = 2(c1+c2)+4d (perimeter at d/2, §22.6.4.1), vc = min of the
 three Table 22.6.5.2 cases with αs = 40, one-way Vc = 0.17·√f'c·b·d
 (§22.5.5.1), φshear = 0.75 / φflex = 0.90 (Table 21.2.1).
 
 | ID | Finding | Evidence | Status |
 |---|---|---|---|
-| CF-01 | Longitudinal bending uses the simply-supported simplification M = qu·B·L²/8. ACI 318M-14 §13.2.6.2 permits any procedure satisfying equilibrium and geometric compatibility; this form overstates mid-span sagging (≈ wL²/8 vs wL²/8 − P·S/2 for symmetric loads) but never designs top (hogging) reinforcement at the columns, and computes no transverse reinforcement under each column (beam-strip action). | Engine code; ACI 318M-14 §13.2.6.2, printed p. 307 (part 2, PDF p. 116) | **FLAGGED, not fixed** — needs an owner engineering decision (invert-beam shear/moment diagram + transverse strips is the recommended correct method) |
+| CF-01 | Longitudinal bending uses the simply-supported simplification M = qu·B·L²/8. ACI 318M-14 §13.2.6.2 permits any procedure satisfying equilibrium and geometric compatibility; this form overstates mid-span sagging (≈ wL²/8 vs wL²/8 − P·S/2 for symmetric loads) but never designs top (hogging) reinforcement at the columns, and computes no transverse reinforcement under each column (beam-strip action). | Engine code; ACI 318M-14 §13.2.6.2, printed p. 307 (part 2, PDF p. 116) | **FLAGGED, not fixed** — needs an engineering decision (invert-beam shear/moment diagram + transverse strips is the recommended correct method) |
 | CF-02 | One-way shear check omits the xResultant offset in the shear span (overestimates Vu — conservative direction) and never checks the inner face of column 2. | Engine code (Step 9) | **FLAGGED, not fixed** — bundle with CF-01 |
 | CF-03 | The eccentricity/trapezoid block is dead code: the footing centroid is placed at the load resultant by construction, so e ≡ 0 and maxSoilPressure always equals soilPressure. Reported max/min pressures are misleading. | Engine code (Steps 2–4) | **FLAGGED, not fixed** — cosmetic/reporting |
 
@@ -258,12 +258,12 @@ footing flexure helper's minimum-steel formula matched no ACI provision.
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
 |---|---|---|---|
-| F-01 | ACI 318M-14 Table 7.6.1.1: As,min for nonprestressed one-way slabs and footings on the GROSS area Ag = b·h: deformed bars fy < 420 MPa → 0.0020·Ag; fy ≥ 420 → greater of 0.0018·420/fy·Ag and 0.0014·Ag. The helper's previous `rhoMin = max(0.0018, 1.33·√f'c/fy)` matches no ACI provision (likely a garbled reading of the 4/3 relaxation in §9.6.1.3) and produced a 1.63% "minimum" at f'c = 24, fy = 400 — about 8× the code value, inflating steel in every ACI footing result. Fixed to the table values on b·h; internal design flows now pass the real footing depth (the interface path keeps h = d). | Owner's ACI 318M-14, Table 7.6.1.1, printed p. 143 (part 1, PDF p. 152) | **Verified (primary), RESOLVED** |
-| F-02 | `SBCFooting` carries the same `max(0.0018, 1.33·√f'c/fy)` formula (line ~274). Not fixed here: SBC 304's own min-steel clause must be verified against the SBC PDF first, and the SBC batch awaits an owner decision (U-S1..U-S5). | Engine inspection | **FLAGGED, not fixed** |
+| F-01 | ACI 318M-14 Table 7.6.1.1: As,min for nonprestressed one-way slabs and footings on the GROSS area Ag = b·h: deformed bars fy < 420 MPa → 0.0020·Ag; fy ≥ 420 → greater of 0.0018·420/fy·Ag and 0.0014·Ag. The helper's previous `rhoMin = max(0.0018, 1.33·√f'c/fy)` matches no ACI provision (likely a garbled reading of the 4/3 relaxation in §9.6.1.3) and produced a 1.63% "minimum" at f'c = 24, fy = 400 — about 8× the code value, inflating steel in every ACI footing result. Fixed to the table values on b·h; internal design flows now pass the real footing depth (the interface path keeps h = d). | ACI 318M-14, Table 7.6.1.1, printed p. 143 (part 1, PDF p. 152) | **Verified (primary), RESOLVED** |
+| F-02 | `SBCFooting` carries the same `max(0.0018, 1.33·√f'c/fy)` formula (line ~274). Not fixed here: SBC 304's own min-steel clause must be verified against the SBC PDF first, and the SBC batch awaits a decision (U-S1..U-S5). | Engine inspection | **FLAGGED, not fixed** |
 
 ## ACI combined footing rebuild (accessed 2026-11-21)
 
-Owner decision 2026-11-21 ("fix them"): rebuild
+Decision 2026-11-21: rebuild
 `ACIFooting.designCombinedFooting` with the inverted-beam method, transverse
 beam strips, full one-way shear checks, and removal of the dead eccentricity
 block. The shared min-steel fix it depends on is F-01 (previous commit).
@@ -286,23 +286,23 @@ L = 5665.5 covers column 2 — CF-05 — M− = −549.7 kN·m hogging at column
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
 |---|---|---|---|
-| A-07 | §13.3.3 two-way isolated footings: square → uniform both directions; rectangular → long-direction uniform, short-direction portion γs = 2/(β+1) of As in the central band of width = short side, remainder outside (β = L/B). | Owner's ACI 318M-14 §13.3.3.2–13.3.3.3, printed pp. 310–311 (part 2, PDF pp. ~119–120) | **Verified (primary)** |
-| F-03 | `designIsolatedFooting` evaluates one-way shear at d/2 from the column face (comment cites §22.5) instead of d (§13.2.7.2 → §7.4.3.1/§22.5). The checked demand is LARGER than the code's, so the deviation is conservative. Characterized; relaxation to d needs an owner decision. | Engine inspection vs verified §13.2.7.2 (A-05) | **FLAGGED (conservative), not fixed** |
-| F-04 | `designIsolatedFooting` adds "distribution steel = 20% of main" citing "ACI 318-13.3.4". No such rule exists: §13.3.4 covers combined/mat foundations, and the real distribution rule is the §13.3.3.3(b) band rule (A-07). Affects reporting only (codeNotes); main reinforcement and safety checks are unaffected. | Engine inspection vs verified §13.3.3/§13.3.4 | **FLAGGED, not fixed — replace with the band rule (needs owner OK)** |
-| F-05 | `designRaftFoundation` is a crude placeholder: max column load estimated as 15% of total, design moment = q·(√A/3)²/10 (no clause basis), punching checked for a guessed 600×600 column. §13.3.4.3 requires pressure distribution consistent with factored loads; a real raft needs a grid/strip method. | Engine inspection; ACI 318M-14 §13.3.4.1–13.3.4.3, printed p. 311 | **FLAGGED, not fixed — raft needs a proper method decision from the owner** |
+| A-07 | §13.3.3 two-way isolated footings: square → uniform both directions; rectangular → long-direction uniform, short-direction portion γs = 2/(β+1) of As in the central band of width = short side, remainder outside (β = L/B). | ACI 318M-14 §13.3.3.2–13.3.3.3, printed pp. 310–311 (part 2, PDF pp. ~119–120) | **Verified (primary)** |
+| F-03 | `designIsolatedFooting` evaluates one-way shear at d/2 from the column face (comment cites §22.5) instead of d (§13.2.7.2 → §7.4.3.1/§22.5). The checked demand is LARGER than the code's, so the deviation is conservative. Characterized; relaxation to d needs a decision. | Engine inspection vs verified §13.2.7.2 (A-05) | **FLAGGED (conservative), not fixed** |
+| F-04 | `designIsolatedFooting` adds "distribution steel = 20% of main" citing "ACI 318-13.3.4". No such rule exists: §13.3.4 covers combined/mat foundations, and the real distribution rule is the §13.3.3.3(b) band rule (A-07). Affects reporting only (codeNotes); main reinforcement and safety checks are unaffected. | Engine inspection vs verified §13.3.3/§13.3.4 | **FLAGGED, not fixed — replace with the band rule (deferred)** |
+| F-05 | `designRaftFoundation` is a crude placeholder: max column load estimated as 15% of total, design moment = q·(√A/3)²/10 (no clause basis), punching checked for a guessed 600×600 column. §13.3.4.3 requires pressure distribution consistent with factored loads; a real raft needs a grid/strip method. | Engine inspection; ACI 318M-14 §13.3.4.1–13.3.4.3, printed p. 311 | **FLAGGED, not fixed — raft needs a proper method decision** |
 
 Golden guard: ACIFootingTest `designIsolatedFooting_goldenVector_squareNoMoment`
 (P = 1500 kN, 400×400 column, qa = 200, h = 600: B = L = 2450 mm, q = 178.50
 kPa, Mu = 321.62 kN·m, As = 1200 mm²/m at the Table 7.6.1.1 minimum,
 Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
 ## F-03 — Isolated footing one-way shear checked at d/2 instead of d (RESOLVED)
-- **Date**: 2026-11-21 (19:53 EET) — owner approved the relaxation (WhatsApp reply "١ ايوه" to findings list item 1, relayed via main agent).
+- **Date**: 2026-11-21 (19:53 EET) — relaxation approved.
 - **Clause**: ACI 318M-14 §13.2.7.1 + Table 13.2.7.1 (VERIFIED printed p.307, part 2 PDF p.116, A-02): one-way shear critical section for footings at distance d from the column face. Engine used d/2 (more demanding, safe direction, but rejects valid designs).
 - **Fix**: critical section moved to d in both directions.
 - **Golden vector**: fcu=30, fy=400, col 400x900, P=2000 kN factored, SBC=200, h=500 → B=2300, L=3400, d=415: Vu_y@d = 491.2 ≤ φVc = 596.2 (passes); at the old d/2 section Vu_y = 613.2 would have failed. Test locks the relaxed result.
 
 ## F-04 — "20% distribution steel" cited nonexistent ACI rule (RESOLVED)
-- **Date**: 2026-11-21 (19:53 EET) — owner approved replacement (WhatsApp reply "٢ استبدل" to findings list item 2).
+- **Date**: 2026-11-21 (19:53 EET) — replacement approved.
 - **Old code**: comment cited "ACI 318-13.3.4: no less than 20% of main reinforcement" — §13.3.4 contains no such rule (verified); added 20% of main steel as extra "distribution" bars.
 - **Real rule**: ACI 318M-14 §13.3.3.3 (VERIFIED printed pp.310-311, A-07): (a) long-direction reinforcement uniform across full width; (b) short-direction reinforcement: γs = 2/(β+1) of the total concentrated in a central band whose width equals the short side; remainder (1−γs) uniform outside the band.
 - **Fix**: 20% block removed; band-rule distribution computed and detailed (band bars, spacing, outside-band area in codeNotes).
@@ -313,7 +313,7 @@ Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
 **Finding:** `ACIFooting.designRaftFoundation` assumes uniform pressure
 (total/area, no eccentricity), checks punching against a fabricated 600×600
 column carrying 15% of the total load, and sizes bending from
-q·(√A/3)²/10 with no code or mechanics basis. The owner approved the rebuild
+q·(√A/3)²/10 with no code or mechanics basis. Rebuild approved
 with a column-layout overload (2026-11-21).
 
 **Method decision (engineering choice, authorized by §13.2.6.2):** rigid-raft
@@ -373,11 +373,11 @@ the pressure field resultants must reproduce P, Mx, My.
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
 |---|---|---|---|
-| A-20a | §13.3.1.1 base area from UNFACTORED forces/moments and permissible bearing pressure; §13.3.1.2 effective depth of bottom reinforcement ≥ 150 mm | ACI 318M-14, printed p. 309 (part 2, PDF p. 118), text-extracted | Verified (owner PDF) |
-| A-20b | §13.3.4.1 mat foundations per §13.3.4 + applicable Chapter 8 provisions (ACI 336.2R noted in commentary, not opened); §13.3.4.2 the DIRECT DESIGN METHOD of §8.10 shall NOT be used for mats — the chosen strip method is an elastic (three-moment) analysis, not DDM, so it is compliant; §13.3.4.3 bearing-pressure distribution consistent with soil properties and established soil/rock mechanics principles (rigid uniform/linear field is the limiting simple case; R8.10.2.5 notes a frame analysis should be performed even with uniform reaction — the elastic strip analysis satisfies this) | ACI 318M-14, printed pp. 311 and 195 (part 2, PDF pp. 120 and 4), text-extracted | Verified (owner PDF) |
-| A-20c | §13.3.4.4: minimum reinforcement in nonprestressed MAT foundations per §8.6.1.1 — NOT the beam minimum §9.6.1.2 used elsewhere in the engine; §8.6.1.1: As,min near the tension face per Table 8.6.1.1 | ACI 318M-14, printed p. 312 (part 2, PDF p. 121), text-extracted; §8.6.1.1 printed p. 172 (part 1, PDF p. 181), text-extracted | Verified (owner PDF) |
-| A-20d | Table 8.6.1.1: fy < 420 → As,min = 0.0020·Ag; fy ≥ 420 → greater of (0.0018×420/fy)·Ag and 0.0014·Ag | ACI 318M-14, printed p. 173 (part 1, PDF p. 182), RENDERED (image-only table) | Verified (owner PDF, printed page) |
-| A-20e | R13.3.4.4 (commentary): consider continuous reinforcement in each direction near BOTH faces of mat foundations | ACI 318M-14, printed p. 312 (part 2, PDF p. 121), text-extracted | Verified (owner PDF commentary) |
+| A-20a | §13.3.1.1 base area from UNFACTORED forces/moments and permissible bearing pressure; §13.3.1.2 effective depth of bottom reinforcement ≥ 150 mm | ACI 318M-14, printed p. 309 (part 2, PDF p. 118), text-extracted | Verified (PDF) |
+| A-20b | §13.3.4.1 mat foundations per §13.3.4 + applicable Chapter 8 provisions (ACI 336.2R noted in commentary, not opened); §13.3.4.2 the DIRECT DESIGN METHOD of §8.10 shall NOT be used for mats — the chosen strip method is an elastic (three-moment) analysis, not DDM, so it is compliant; §13.3.4.3 bearing-pressure distribution consistent with soil properties and established soil/rock mechanics principles (rigid uniform/linear field is the limiting simple case; R8.10.2.5 notes a frame analysis should be performed even with uniform reaction — the elastic strip analysis satisfies this) | ACI 318M-14, printed pp. 311 and 195 (part 2, PDF pp. 120 and 4), text-extracted | Verified (PDF) |
+| A-20c | §13.3.4.4: minimum reinforcement in nonprestressed MAT foundations per §8.6.1.1 — NOT the beam minimum §9.6.1.2 used elsewhere in the engine; §8.6.1.1: As,min near the tension face per Table 8.6.1.1 | ACI 318M-14, printed p. 312 (part 2, PDF p. 121), text-extracted; §8.6.1.1 printed p. 172 (part 1, PDF p. 181), text-extracted | Verified (PDF) |
+| A-20d | Table 8.6.1.1: fy < 420 → As,min = 0.0020·Ag; fy ≥ 420 → greater of (0.0018×420/fy)·Ag and 0.0014·Ag | ACI 318M-14, printed p. 173 (part 1, PDF p. 182), RENDERED (image-only table) | Verified (PDF, printed page) |
+| A-20e | R13.3.4.4 (commentary): consider continuous reinforcement in each direction near BOTH faces of mat foundations | ACI 318M-14, printed p. 312 (part 2, PDF p. 121), text-extracted | Verified (PDF commentary) |
 
 **F-05 vectors (hand-derived before implementation):** V1 — 2×2 symmetric grid
 (400×400 columns at (0,0)/(6000,0)/(0,6000)/(6000,6000), service 1200 kN,
