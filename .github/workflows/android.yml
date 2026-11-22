@@ -132,6 +132,35 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # Pin the one Robolectric runtime artifact (android-all-instrumented for
+      # SDK 34, the only SDK the unit tests configure) into a local directory
+      # and point Robolectric's offline resolver at it via ROBOLECTRIC_DEPS_DIR
+      # (consumed in app/build.gradle.kts testOptions). This removes the
+      # per-test-JVM Maven Central fetch that intermittently fails CI with
+      # MavenArtifactFetcher IOExceptions. The sha1 is verified so a truncated
+      # or poisoned download fails loudly instead of corrupting the test run.
+      - name: Provision Robolectric android-all jar
+        run: |
+          set -euo pipefail
+          V=14-robolectric-10818077-i7
+          SHA1=dd5e1d356107e9d99ebf58beb5329debe2849140
+          DIR="$GITHUB_WORKSPACE/.robolectric-deps"
+          mkdir -p "$DIR"
+          JAR="$DIR/android-all-instrumented-$V.jar"
+          URL="https://repo1.maven.org/maven2/org/robolectric/android-all-instrumented/$V/android-all-instrumented-$V.jar"
+          for attempt in 1 2 3; do
+            if curl -fsSL --retry 3 --connect-timeout 30 -o "$JAR" "$URL"; then
+              break
+            fi
+            if [ "$attempt" = 3 ]; then
+              echo "::error::failed to download Robolectric android-all jar after 3 attempts"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "$SHA1  $JAR" | sha1sum -c -
+          echo "ROBOLECTRIC_DEPS_DIR=$DIR" >> "$GITHUB_ENV"
+
       - name: Run unit tests
         run: ./gradlew testFreeDebugUnitTest testPlayDebugUnitTest --no-daemon
 

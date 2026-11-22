@@ -196,6 +196,18 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            // CI pins the Robolectric android-all runtime jar into a local
+            // directory so test JVMs never fetch it from Maven Central at
+            // runtime (a recurring flake). Inert locally: this only activates
+            // when ROBOLECTRIC_DEPS_DIR is set, which the CI workflow does
+            // after downloading and sha1-verifying the jar into that dir.
+            val roboDepsDir = System.getenv("ROBOLECTRIC_DEPS_DIR")
+            if (!roboDepsDir.isNullOrBlank()) {
+                all {
+                    systemProperty("robolectric.dependency.dir", roboDepsDir)
+                    systemProperty("robolectric.offline", "true")
+                }
+            }
         }
     }
 
