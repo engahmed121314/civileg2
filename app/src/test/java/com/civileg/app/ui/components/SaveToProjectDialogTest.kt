@@ -104,4 +104,35 @@ class SaveToProjectDialogTest {
         assertEquals(9L, effectiveSaveProjectId(9L, projects.value))
         assertEquals(5L, effectiveSaveProjectId(77L, projects.value))
     }
+
+    private fun arString(id: Int) = rule.activity.getString(id)
+
+    @Test @Config(qualifiers = "ar")
+    fun arabicPreselectedChangedAndStaleSelection() {
+        show()
+        val save = arString(com.civileg.app.R.string.save)
+        val cancel = arString(com.civileg.app.R.string.cancel)
+        assertTrue(save != "Save" && cancel != "Cancel")
+        rule.onNodeWithText(arString(com.civileg.app.R.string.select_project)).assertExists()
+        rule.onAllNodes(isSelectable())[0].assertIsSelected()
+        shot("save-dialog-preselected-ar")
+        rule.onAllNodes(isSelectable())[1].performClick()
+        rule.onAllNodes(isSelectable())[1].assertIsSelected()
+        shot("save-dialog-changed-ar")
+        projects.value = listOf(p(5, "Alpha"), p(12, "Gamma"))
+        rule.waitForIdle()
+        rule.onAllNodes(isSelectable())[0].assertIsSelected()
+        rule.onAllNodes(isSelectable())[1].assertIsNotSelected()
+        shot("save-dialog-stale-fallback-ar")
+        rule.onNodeWithText(save).assertIsEnabled().performClick()
+        assertEquals(listOf(5L), confirmed)
+    }
+
+    @Test @Config(qualifiers = "ar")
+    fun arabicNoProjectDisablesSave() {
+        projects.value = emptyList()
+        show()
+        rule.onNodeWithText(arString(com.civileg.app.R.string.save)).assertIsNotEnabled()
+        shot("save-dialog-no-project-ar")
+    }
 }
