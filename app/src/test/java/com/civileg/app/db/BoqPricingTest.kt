@@ -58,7 +58,7 @@ class BoqPricingTest {
         assertFalse(r.items.last().isPriced)
     }
 
-    @Test fun `report steel is passed in kg so one tonne prints as 1 ton, not 0.001`() {
+    @Test fun `report steel is passed in kg so one tonne prints as one ton not a thousandth`() {
         val kg = BoqPricing.steelKgForReport(items)
         assertEquals(1000.0, kg, 1e-9)
         assertEquals(1.0, kg / 1000.0, 1e-9) // what the PDF prints as Tons
