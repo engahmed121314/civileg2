@@ -243,6 +243,8 @@ class HordiSlabViewModel @Inject constructor(
 
     fun clearResult() {
         _result.value = null
+        pendingDrawingBitmap = null
+        lastInputParams = null
         _error.value = null
     }
 

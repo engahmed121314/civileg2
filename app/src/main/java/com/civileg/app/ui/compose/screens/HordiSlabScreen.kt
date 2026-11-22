@@ -140,6 +140,7 @@ fun HordiSlabScreen(
                         selectedCode = designCode,
                         codes = listOf("ECP" to "ECP 203", "ACI" to "ACI 318", "SBC" to "SBC 304"),
                         onCodeSelected = { newCode ->
+                            viewModel.clearResult()
                             designCode = newCode
                             val combos = LoadCombination.getByCode(
                                 runCatching { DesignCode.valueOf(newCode) }.getOrDefault(DesignCode.ECP)
