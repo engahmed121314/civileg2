@@ -45,6 +45,8 @@ fun InteractionDiagramChart(
 ) {
     var selectedPoint by remember { mutableStateOf<ChartInteractionPoint?>(null) }
     
+    val axisMomentLabel = stringResource(R.string.chart_axis_moment)
+    val axisAxialLabel = stringResource(R.string.chart_axis_axial)
     val chartColors = ThemeColors.chartColors()
     val safeColor = ThemeColors.safeColor()
     val unsafeColor = ThemeColors.unsafeColor()
@@ -57,7 +59,7 @@ fun InteractionDiagramChart(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             AppText(
-                "P-M Interaction Diagram",
+                stringResource(R.string.chart_pm_interaction_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -118,11 +120,11 @@ fun InteractionDiagramChart(
                         textAlign = android.graphics.Paint.Align.CENTER
                     }
                     
-                    drawText("Moment (kN.m)", canvasWidth / 2, canvasHeight - 10f, textPaint)
+                    drawText(axisMomentLabel, canvasWidth / 2, canvasHeight - 10f, textPaint)
                     
                     save()
                     rotate(-90f, 20f, canvasHeight / 2)
-                    drawText("Axial Load (kN)", 20f, canvasHeight / 2, textPaint)
+                    drawText(axisAxialLabel, 20f, canvasHeight / 2, textPaint)
                     restore()
                 }
                 
@@ -251,16 +253,16 @@ private fun InteractionPointDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { AppText("تفاصيل نقطة التحميل") },
+        title = { AppText(stringResource(R.string.chart_load_point_details)) },
         text = {
             Column {
-                AppText("الحمل المحوري: ${"%.1f".format(point.axialLoad)} kN")
-                AppText("العزم: ${"%.1f".format(point.moment)} kN.m")
-                AppText("الحالة: ${if (point.isSafe) "آمن" else "غير آمن"}")
+                AppText(stringResource(R.string.chart_axial_load_fmt, point.axialLoad))
+                AppText(stringResource(R.string.chart_moment_fmt, point.moment))
+                AppText(stringResource(R.string.chart_state_fmt, stringResource(if (point.isSafe) R.string.safe else R.string.unsafe)))
             }
         },
         confirmButton = {
-            AppButton(label = "Close", style = AppButtonStyle.Text, fillMaxWidth = false, onClick = onDismiss)
+            AppButton(label = stringResource(R.string.close), style = AppButtonStyle.Text, fillMaxWidth = false, onClick = onDismiss)
         }
     )
 }

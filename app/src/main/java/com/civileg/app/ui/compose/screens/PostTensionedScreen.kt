@@ -136,7 +136,7 @@ fun PostTensionedScreen(
             ) {
             item {
                 AppText(
-                    "Post-Tensioned Element / عنصر مسبق الإجهاد",
+                    stringResource(R.string.pt_element_header),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -144,7 +144,7 @@ fun PostTensionedScreen(
 
             item {
                 EnumDropdown(
-                    label = "Element Type / نوع العنصر",
+                    label = stringResource(R.string.pt_element_type),
                     options = PostTensionedElementType.entries,
                     selected = elementType,
                     display = { it.displayName },
@@ -153,14 +153,14 @@ fun PostTensionedScreen(
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberField("Span (m) / البحر", span, Modifier.weight(1f)) { span = it }
-                    NumberField("Width (mm) / العرض", width, Modifier.weight(1f)) { width = it }
+                    NumberField(stringResource(R.string.pt_span), span, Modifier.weight(1f)) { span = it }
+                    NumberField(stringResource(R.string.pt_width), width, Modifier.weight(1f)) { width = it }
                 }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberField("Depth (mm) / العمق", depth, Modifier.weight(1f)) { depth = it }
-                    NumberField("Cover (mm) / الغطاء", cover, Modifier.weight(1f)) { cover = it }
+                    NumberField(stringResource(R.string.pt_depth), depth, Modifier.weight(1f)) { depth = it }
+                    NumberField(stringResource(R.string.pt_cover), cover, Modifier.weight(1f)) { cover = it }
                 }
             }
             item {
@@ -177,7 +177,7 @@ fun PostTensionedScreen(
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberField("Tendons / عدد الكابلات", numTendons, Modifier.weight(1f)) { numTendons = it }
+                    NumberField(stringResource(R.string.pt_tendons), numTendons, Modifier.weight(1f)) { numTendons = it }
                     NumberField("Dead (kN/m)", deadLoad, Modifier.weight(1f)) { deadLoad = it }
                 }
             }
@@ -189,7 +189,7 @@ fun PostTensionedScreen(
             }
             item {
                 EnumDropdown(
-                    label = "Tendon Type / نوع الكابل",
+                    label = stringResource(R.string.pt_tendon_type),
                     options = PTTendonType.entries,
                     selected = tendonType,
                     display = { it.description },
@@ -198,7 +198,7 @@ fun PostTensionedScreen(
             }
             item {
                 EnumDropdown(
-                    label = "Support / الاستناد",
+                    label = stringResource(R.string.pt_support),
                     options = PTSupportType.entries,
                     selected = supportType,
                     display = { it.displayName },
@@ -207,7 +207,7 @@ fun PostTensionedScreen(
             }
             item {
                 EnumDropdown(
-                    label = "Exposure Class / فئة التعرض",
+                    label = stringResource(R.string.pt_exposure_class),
                     options = PTExposureClass.entries,
                     selected = exposureClass,
                     display = { it.displayName },
@@ -222,7 +222,7 @@ fun PostTensionedScreen(
             }
             item {
                 AppButton(
-                    label = "Calculate / احسب",
+                    label = stringResource(R.string.pt_calculate),
                     onClick = {
                         val input = PostTensionedInput(
                             elementType = elementType,
@@ -360,7 +360,7 @@ private fun PostTensionedResultContent(
         PostTensionedSectionDrawing(input = result.input, result = result)
         PostTensionedElevationDrawing(input = result.input, result = result)
 
-        ResultCard("Prestress Design / تصميم الإجهاد المسبق") {
+        ResultCard(stringResource(R.string.pt_prestress_design)) {
             ResultRow("Required force", "${fmt(result.prestressDesign.requiredForce)} kN")
             ResultRow("Jacking force", "${fmt(result.prestressDesign.jackingForce)} kN")
             ResultRow("Initial stress", "${fmt(result.prestressDesign.initialStress)} MPa")
@@ -369,7 +369,7 @@ private fun PostTensionedResultContent(
             ResultRow("Tendons", "${result.prestressDesign.numTendons} × ${result.input.tendonType.description}")
         }
 
-        ResultCard("Prestress Losses / فقد الإجهاد") {
+        ResultCard(stringResource(R.string.pt_losses)) {
             ResultRow("Elastic shortening", "${fmt(result.losses.elasticShortening)} MPa")
             ResultRow("Creep", "${fmt(result.losses.creep)} MPa")
             ResultRow("Shrinkage", "${fmt(result.losses.shrinkage)} MPa")
@@ -380,7 +380,7 @@ private fun PostTensionedResultContent(
             ResultRow("Total losses", "${fmt(result.losses.total)} MPa (${fmt(result.losses.totalPercent)}%)", bold = true)
         }
 
-        ResultCard("Stress Check / فحص الإجهادات") {
+        ResultCard(stringResource(R.string.pt_stress_check)) {
             ResultRow("Transfer top", stressText(result.stressCheck.transferTopCompression, result.stressCheck.transferTopTension))
             ResultRow("Transfer bottom", stressText(result.stressCheck.transferBottomCompression, result.stressCheck.transferBottomTension))
             ResultRow("Service top", stressText(result.stressCheck.serviceTopCompression, result.stressCheck.serviceTopTension))
@@ -390,7 +390,7 @@ private fun PostTensionedResultContent(
             ResultRow("Service safe", yesNo(result.stressCheck.isServiceSafe))
         }
 
-        ResultCard("Ultimate Strength / المقاومة القصوى") {
+        ResultCard(stringResource(R.string.pt_ultimate_strength)) {
             ResultRow("φMn", "${fmt(result.ultimateStrength.flexuralCapacity)} kN.m")
             ResultRow("Mu required", "${fmt(result.ultimateStrength.requiredMoment)} kN.m")
             ResultRow("Flexure utilization", "${fmt(result.ultimateStrength.flexuralUtilization * 100)}%")
@@ -401,14 +401,14 @@ private fun PostTensionedResultContent(
             }
         }
 
-        ResultCard("Anchorage Zone / منطقة التثبيت") {
+        ResultCard(stringResource(R.string.pt_anchorage_zone)) {
             ResultRow("Bursting force", "${fmt(result.anchorageZone.burstingForce)} kN")
             ResultRow("Spalling force", "${fmt(result.anchorageZone.spallingForce)} kN")
             ResultRow("Bursting steel", "${fmt(result.anchorageZone.burstingReinforcement)} mm²")
             ResultRow("Provide", "${result.anchorageZone.stirrupLegs}Ø${result.anchorageZone.stirrupDiameter.toInt()} @ ${fmt(result.anchorageZone.stirrupSpacing)} mm")
         }
 
-        ResultCard("Deflection / الترخيم") {
+        ResultCard(stringResource(R.string.pt_deflection)) {
             ResultRow("Dead load", "${fmt(result.deflection.deadLoadDeflection)} mm")
             ResultRow("Live load", "${fmt(result.deflection.liveLoadDeflection)} mm")
             ResultRow("Prestress (upward)", "${fmt(result.deflection.prestressDeflection)} mm")
@@ -418,7 +418,7 @@ private fun PostTensionedResultContent(
             ResultRow("Safe", yesNo(result.deflection.isSafe))
         }
 
-        ResultCard("Quantities / الكميات") {
+        ResultCard(stringResource(R.string.pt_quantities)) {
             ResultRow("Concrete", "${fmt(result.quantity.concreteVolume)} m³")
             ResultRow("Mild steel", "${fmt(result.quantity.rebarWeight)} kg")
             ResultRow("PT tendons", "${fmt(result.quantity.ptTendonWeight)} kg")
@@ -428,7 +428,7 @@ private fun PostTensionedResultContent(
         }
 
         if (result.warnings.isNotEmpty()) {
-            ResultCard("Warnings / تحذيرات") {
+            ResultCard(stringResource(R.string.pt_warnings)) {
                 result.warnings.forEach { w ->
                     AppText(
                         "• $w",
@@ -441,7 +441,7 @@ private fun PostTensionedResultContent(
         }
 
         if (result.codeNotes.isNotEmpty()) {
-            ResultCard("Code Notes / ملاحظات الكود") {
+            ResultCard(stringResource(R.string.pt_code_notes)) {
                 result.codeNotes.forEach { n ->
                     AppText(
                         "• $n",
@@ -494,7 +494,7 @@ private fun StatusBanner(isSafe: Boolean) {
                 tint = color
             )
             AppText(
-                if (isSafe) "Design is SAFE / التصميم آمن" else "Design is UNSAFE / التصميم غير آمن",
+                stringResource(if (isSafe) R.string.pt_design_safe else R.string.pt_design_unsafe),
                 color = color,
                 fontWeight = FontWeight.Bold
             )
@@ -596,7 +596,8 @@ private fun <T> EnumDropdown(
 
 private fun fmt(value: Double): String = "%.2f".format(value)
 
-private fun yesNo(value: Boolean): String = if (value) "Yes / نعم" else "No / لا"
+@Composable
+private fun yesNo(value: Boolean): String = stringResource(if (value) R.string.yes else R.string.no)
 
 private fun stressText(compression: Double, tension: Double): String {
     return if (compression > 0.0) {

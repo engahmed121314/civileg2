@@ -2405,6 +2405,39 @@
     <string name="settings_support_title">Support the app</string>
     <string name="settings_support_message">Civil Engineer Pro is free and ad-free. Voluntary donations fund new design codes, tests and drawings.</string>
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
+    <!-- Charts + Post-Tensioned i18n -->
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="chart_pm_interaction_title">P-M Interaction Diagram</string>
+    <string name="chart_axis_moment">Moment (kN.m)</string>
+    <string name="chart_axis_axial">Axial Load (kN)</string>
+    <string name="chart_load_point_details">Load Point Details</string>
+    <string name="chart_axial_load_fmt">Axial Load: %1$.1f kN</string>
+    <string name="chart_moment_fmt">Moment: %1$.1f kN.m</string>
+    <string name="chart_state_fmt">State: %1$s</string>
+    <string name="chart_response_spectrum_title">Response Spectrum Analysis</string>
+    <string name="chart_axis_period">Time Period T (sec)</string>
+    <string name="chart_axis_spectral">Spectral Accel. Sa/g</string>
+    <string name="pt_element_header">Post-Tensioned Element</string>
+    <string name="pt_element_type">Element Type</string>
+    <string name="pt_span">Span (m)</string>
+    <string name="pt_width">Width (mm)</string>
+    <string name="pt_depth">Depth (mm)</string>
+    <string name="pt_cover">Cover (mm)</string>
+    <string name="pt_tendons">Tendons</string>
+    <string name="pt_tendon_type">Tendon Type</string>
+    <string name="pt_support">Support</string>
+    <string name="pt_exposure_class">Exposure Class</string>
+    <string name="pt_calculate">Calculate</string>
+    <string name="pt_prestress_design">Prestress Design</string>
+    <string name="pt_losses">Prestress Losses</string>
+    <string name="pt_stress_check">Stress Check</string>
+    <string name="pt_ultimate_strength">Ultimate Strength</string>
+    <string name="pt_anchorage_zone">Anchorage Zone</string>
+    <string name="pt_deflection">Deflection</string>
+    <string name="pt_quantities">Quantities</string>
+    <string name="pt_warnings">Warnings</string>
+    <string name="pt_code_notes">Code Notes</string>
+    <string name="pt_design_safe">Design is SAFE</string>
+    <string name="pt_design_unsafe">Design is UNSAFE</string>
 </resources>
-
-
