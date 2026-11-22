@@ -60,7 +60,14 @@ class SoilDrawingSectionTest {
     private fun setThemedContent(arabic: Boolean, content: @Composable () -> Unit) {
         rule.setContent {
             val themed: @Composable () -> Unit = {
-                CivilEngineerPremiumTheme(darkTheme = false, content = content)
+                // Surface backdrop: without it the capture keeps transparent
+                // pixels that preview as black and read as a contrast defect.
+                CivilEngineerPremiumTheme(darkTheme = false) {
+                    androidx.compose.material3.Surface(
+                        modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.background
+                    ) { content() }
+                }
             }
             if (arabic) {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { themed() }

@@ -26,8 +26,6 @@ import com.civileg.app.viewmodel.SoilStructureViewModel
 import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.R
 import com.civileg.app.ui.components.AppText
@@ -284,17 +282,18 @@ internal fun SoilDrawingSection(
         stringResource(R.string.soil_vm_stress_bulb),
         stringResource(R.string.soil_vm_table)
     )
+    // Four chips share the width so every mode is visible without scrolling;
+    // a horizontally scrolling row read as a clipped last chip.
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         soilViewModeLabels.forEachIndexed { index, label ->
             FilterChip(
                 selected = soilViewMode == index + 1,
                 onClick = { soilViewMode = index + 1 },
-                label = { AppText(label, fontSize = 12.sp) }
+                label = { AppText(label, fontSize = 11.sp, maxLines = 1, softWrap = false) },
+                modifier = Modifier.weight(1f)
             )
         }
     }
