@@ -64,6 +64,9 @@ object ProfessionalEnglishPdfReporter {
         BEAM, COLUMN, SLAB, FOOTING, TANK, RETAINING_WALL, STAIR, STEEL, FRAME_ANALYSIS, SEISMIC, GENERIC
     }
 
+    /** Explicit opt-in for a recorded Column result whose method/detailing is not verified. */
+    enum class ReportPresentation { DEFAULT, COLUMN_RECORDED_REVIEW }
+
     data class SafetyCheck(
         val name: String,
         val calculated: Double,
@@ -201,7 +204,8 @@ object ProfessionalEnglishPdfReporter {
     // ==================== Document Sections ====================
 
     private fun addCoverPage(document: Document, config: ReportConfig,
-                             reportTitle: String, subtitle: String, designCode: String) {
+                             reportTitle: String, subtitle: String, designCode: String,
+                             recordedReview: Boolean = false) {
         val font = createPdfFont()
         val boldFont = createBoldFont()
 
@@ -221,8 +225,12 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
 
         // Design Code Badge
-        document.add(Paragraph().add(text("Design Code: $designCode", boldFont, 11f, PRIMARY))
+        val basisLabel = if (recordedReview) "Requested code, edition/method NOT VERIFIED" else "Design Code"
+        document.add(Paragraph().add(text("$basisLabel: $designCode", boldFont, 11f, PRIMARY))
             .setTextAlignment(TextAlignment.CENTER))
+        if (recordedReview) document.add(paragraph(
+            "RECORDED COLUMN REVIEW ONLY. Not code-compliance certification, checked detailing, fabrication instructions or construction approval.",
+            10f, true, WARNING, TextAlignment.CENTER))
 
         // Line separator
         document.add(LineSeparator(SolidLine(2f)).setMarginTop(20f).setMarginBottom(20f))
@@ -262,7 +270,19 @@ object ProfessionalEnglishPdfReporter {
 
     private fun addCalculationMethodology(document: Document, designCode: String,
                                           reportType: ReportType,
-                                          steps: List<CalculationStep>) {
+                                          steps: List<CalculationStep>, recordedReview: Boolean = false) {
+        if (recordedReview) {
+            document.add(sectionTitle("2. Recorded Calculation Trace (Unverified)"))
+            document.add(separator())
+            document.add(paragraph("Requested code: $designCode. Method, edition, references and applicability are NOT VERIFIED.", 9f, color = WARNING))
+            if (steps.isEmpty()) {
+                document.add(paragraph("No calculation trace was supplied. No default methodology has been substituted.", 9f))
+            } else {
+                steps.forEach { addCalculationStep(document, it, recordedReview = true) }
+            }
+            document.add(emptyLine())
+            return
+        }
         document.add(sectionTitle("2. Calculation Methodology & Verification"))
         document.add(separator())
         document.add(Paragraph().add(text("Applicable design basis: $designCode", createPdfFont(), 10f, SECONDARY)))
@@ -283,7 +303,7 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
-    private fun addCalculationStep(document: Document, step: CalculationStep) {
+    private fun addCalculationStep(document: Document, step: CalculationStep, recordedReview: Boolean = false) {
         val font = createPdfFont()
         val boldFont = createBoldFont()
         val stepTable = Table(UnitValue.createPercentArray(floatArrayOf(100f))).useAllAvailableWidth()
@@ -307,7 +327,7 @@ object ProfessionalEnglishPdfReporter {
         // Reference
         if (step.reference != null && step.reference.isNotEmpty()) {
             val refPara = Paragraph()
-                .add(text("  Ref: ", boldFont, 8f, DeviceRgb(150, 150, 150)))
+                .add(text(if (recordedReview) "  Recorded unverified ref: " else "  Ref: ", boldFont, 8f, DeviceRgb(150, 150, 150)))
                 .add(text(step.reference, font, 8f, DeviceRgb(150, 150, 150)))
             stepTable.addCell(Cell().setPadding(4f).add(refPara))
         }
@@ -315,8 +335,8 @@ object ProfessionalEnglishPdfReporter {
         // Result
         if (step.result != null && step.result.isNotEmpty()) {
             val resPara = Paragraph()
-                .add(text("  Result: ", boldFont, 9f, SUCCESS))
-                .add(text(step.result, font, 9f, SUCCESS))
+                .add(text("  Result: ", boldFont, 9f, if (recordedReview) SECONDARY else SUCCESS))
+                .add(text(step.result, font, 9f, if (recordedReview) SECONDARY else SUCCESS))
             stepTable.addCell(Cell().setPadding(4f).add(resPara))
         }
 
@@ -619,8 +639,9 @@ object ProfessionalEnglishPdfReporter {
         }
     }
 
-    private fun addResultsSection(document: Document, results: Map<String, String>) {
-        document.add(sectionTitle("3. Design Results"))
+    private fun addResultsSection(document: Document, results: Map<String, String>, recordedReview: Boolean = false) {
+        document.add(sectionTitle(if (recordedReview) "3. Recorded Engine Results (Unverified)" else "3. Design Results"))
+        if (recordedReview) document.add(paragraph("Values and labels below are preserved engine output, not verified design conclusions.", 9f, color = WARNING))
         document.add(separator())
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
@@ -635,13 +656,15 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
-    private fun addSafetyChecks(document: Document, safetyChecks: List<SafetyCheck>, isSafe: Boolean) {
-        document.add(sectionTitle("4. Safety Verification"))
+    private fun addSafetyChecks(document: Document, safetyChecks: List<SafetyCheck>, isSafe: Boolean,
+                                recordedReview: Boolean = false) {
+        document.add(sectionTitle(if (recordedReview) "4. Recorded Engine Checks (Unverified)" else "4. Safety Verification"))
         document.add(separator())
 
         // Status Banner
-        val statusText = if (isSafe) "STATUS: SAFE - Design Complies with Code" else "STATUS: UNSAFE - Design Review Required"
-        val statusColor = if (isSafe) SUCCESS else ERROR
+        val statusText = if (recordedReview) "REVIEW HOLD - Raw engine isSafe=$isSafe; NOT VERIFIED"
+            else if (isSafe) "STATUS: SAFE - Design Complies with Code" else "STATUS: UNSAFE - Design Review Required"
+        val statusColor = if (recordedReview) WARNING else if (isSafe) SUCCESS else ERROR
         val banner = Paragraph().add(text(statusText, createBoldFont(), 11f, statusColor))
             .setTextAlignment(TextAlignment.CENTER)
             .setPadding(8f)
@@ -679,26 +702,29 @@ object ProfessionalEnglishPdfReporter {
 
                 table.addCell(dataCell(check.unit, 8f, false, bg))
 
-                val statusStr = if (check.passed) "PASS" else "FAIL"
-                val statusClr = if (check.passed) SUCCESS else ERROR
-                table.addCell(dataCell(statusStr, 9f, true, bg).also {
-                    // Color the cell text
-                    it.add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr)).setTextAlignment(TextAlignment.CENTER))
-                })
+                val statusStr = if (recordedReview) "Recorded ${check.passed}" else if (check.passed) "PASS" else "FAIL"
+                val statusClr = if (recordedReview) SECONDARY else if (check.passed) SUCCESS else ERROR
+                val statusCell = if (recordedReview) dataCell(statusStr, 9f, true, bg)
+                    else dataCell(statusStr, 9f, true, bg).also {
+                        it.add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr)).setTextAlignment(TextAlignment.CENTER))
+                    }
+                table.addCell(statusCell)
             }
             document.add(table)
         }
         document.add(emptyLine())
     }
 
-    private fun addBbsSection(document: Document, rows: List<BbsRow>) {
+    private fun addBbsSection(document: Document, rows: List<BbsRow>, recordedReview: Boolean = false) {
         if (rows.isEmpty()) return
         document.add(AreaBreak())
-        document.add(sectionTitle("6. Bar Bending Schedule"))
+        document.add(sectionTitle(if (recordedReview) "6. Recorded BBS Estimates (UNVERIFIED)" else "6. Bar Bending Schedule"))
         document.add(separator())
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(12f, 12f, 9f, 9f, 9f, 20f, 14f, 15f)))
             .useAllAvailableWidth()
+        if (recordedReview) table.addHeaderCell(Cell(1, 8).add(paragraph(
+            "UNVERIFIED legacy BBS estimates. Not a fabrication schedule. Lengths, laps, hooks, ties and totals are not checked or coordinated with BOQ.", 8f, true, WARNING)))
         table.addHeaderCell(headerCell("Member"))
         table.addHeaderCell(headerCell("Bar"))
         table.addHeaderCell(headerCell("Dia (mm)"))
@@ -724,17 +750,19 @@ object ProfessionalEnglishPdfReporter {
         }
         document.add(table)
         document.add(Paragraph().add(
-            text(String.format(Locale.US, "Total steel: %.2f kg", totalWeight), createBoldFont(), 9f, PRIMARY)
+            text(String.format(Locale.US, if (recordedReview) "Recorded BBS estimate total: %.2f kg (UNVERIFIED)" else "Total steel: %.2f kg", totalWeight), createBoldFont(), 9f, PRIMARY)
         ).setTextAlignment(TextAlignment.RIGHT))
         document.add(emptyLine())
     }
 
-    private fun addBoqSection(document: Document, rows: List<BoqRow>) {
+    private fun addBoqSection(document: Document, rows: List<BoqRow>, recordedReview: Boolean = false) {
         if (rows.isEmpty()) return
-        document.add(sectionTitle("7. Bill of Quantities"))
+        document.add(sectionTitle(if (recordedReview) "7. Recorded BOQ Estimates (UNVERIFIED)" else "7. Bill of Quantities"))
         document.add(separator())
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(10f, 55f, 15f, 20f))).useAllAvailableWidth()
+        if (recordedReview) table.addHeaderCell(Cell(1, 4).add(paragraph(
+            "UNVERIFIED legacy BOQ estimates. Not a checked takeoff, purchasing quantity or coordinated fabrication contract. BBS and BOQ retain their different raw bases.", 8f, true, WARNING)))
         table.addHeaderCell(headerCell("Item"))
         table.addHeaderCell(headerCell("Description"))
         table.addHeaderCell(headerCell("Unit"))
@@ -751,13 +779,14 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
-    private fun addDrawingSection(document: Document, bitmap: Bitmap?, title: String) {
-        document.add(sectionTitle("5. Engineering Drawing"))
+    private fun addDrawingSection(document: Document, bitmap: Bitmap?, title: String, recordedReview: Boolean = false) {
+        document.add(sectionTitle(if (recordedReview) "5. Column Schematic (Dimensions Only)" else "5. Engineering Drawing"))
         document.add(separator())
 
         if (bitmap == null) {
             document.add(Paragraph().add(text(
-                "No drawing image was supplied for this report. Export from the element screen to include the generated detail drawing.",
+                if (recordedReview) "UNAVAILABLE: no matching completed schematic was supplied. No reinforcement geometry is synthesized."
+                else "No drawing image was supplied for this report. Export from the element screen to include the generated detail drawing.",
                 createPdfFont(), 9f, SECONDARY
             )).setTextAlignment(TextAlignment.CENTER))
             document.add(emptyLine())
@@ -869,47 +898,52 @@ object ProfessionalEnglishPdfReporter {
         bbsRows: List<BbsRow> = emptyList(),
         boqRows: List<BoqRow> = emptyList(),
         config: ReportConfig = ReportConfig(),
-        outputPath: String
+        outputPath: String,
+        presentation: ReportPresentation = ReportPresentation.DEFAULT
     ): File? {
         return try {
+            val recordedReview = presentation == ReportPresentation.COLUMN_RECORDED_REVIEW
+            require(!recordedReview || reportType == ReportType.COLUMN) { "Recorded Column review is Column-only" }
             val (pdfDoc, document, _) = createDocument(outputPath)
 
             // Add page numbers
-            addPageNumbers(pdfDoc)
+            addPageNumbers(pdfDoc, recordedReview)
 
             // 1. Cover Page (page 1)
-            addCoverPage(document, config, title, subtitle, designCode)
+            addCoverPage(document, config, title, subtitle, designCode, recordedReview)
             document.add(AreaBreak())  // New page
 
             // 2. Design Parameters (page 2)
             addDesignParameters(document, inputs)
 
             // 3. Calculation Methodology
-            addCalculationMethodology(document, designCode, reportType, calculationSteps)
+            addCalculationMethodology(document, designCode, reportType, calculationSteps, recordedReview)
 
             // 4. Results
-            addResultsSection(document, results)
+            addResultsSection(document, results, recordedReview)
 
             // 5. Safety Checks
-            addSafetyChecks(document, safetyChecks, isSafe)
+            addSafetyChecks(document, safetyChecks, isSafe, recordedReview)
 
             // 6. Engineering Drawing
             if (drawingBitmap != null) {
                 document.add(AreaBreak())
             }
-            addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
+            addDrawingSection(document, drawingBitmap,
+                if (recordedReview) "$title - Captured schematic only; no checked bar coordinates/detailing"
+                else "$title - Engineering Detail", recordedReview)
 
             // 6. Bar Bending Schedule
-            addBbsSection(document, bbsRows)
+            addBbsSection(document, bbsRows, recordedReview)
 
             // 7. Bill of Quantities
-            addBoqSection(document, boqRows)
+            addBoqSection(document, boqRows, recordedReview)
 
             // 8. Site Photographs (optional)
             addPhotoGallery(document, photos)
 
             // 9. Approval & Signature (optional)
-            if (config.showSignature) {
+            if (config.showSignature && !recordedReview) {
                 addSignatureBlock(document, config)
             }
 
@@ -947,7 +981,8 @@ object ProfessionalEnglishPdfReporter {
         outputPath: String,
         calculationSteps: List<CalculationStep> = emptyList(),
         bbsRows: List<BbsRow> = emptyList(),
-        boqRows: List<BoqRow> = emptyList()
+        boqRows: List<BoqRow> = emptyList(),
+        presentation: ReportPresentation = ReportPresentation.DEFAULT
     ): File? {
         val convertedChecks = safetyChecks.map {
             SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference)
@@ -971,7 +1006,7 @@ object ProfessionalEnglishPdfReporter {
         // Extract design code from inputs if available
         val defaultCode = if (reportType == ReportType.STEEL) "AISC 360-16 / ECP 205-2007" else "ACI 318-19 / ECP 203-2025"
         val codeStr = inputs["Design Code"]
-            ?: defaultCode
+            ?: if (presentation == ReportPresentation.COLUMN_RECORDED_REVIEW) "Requested code not recorded" else defaultCode
 
         return generateReport(
             reportType = reportType,
@@ -986,13 +1021,14 @@ object ProfessionalEnglishPdfReporter {
             calculationSteps = calculationSteps,
             bbsRows = bbsRows,
             boqRows = boqRows,
-            outputPath = outputPath
+            outputPath = outputPath,
+            presentation = presentation
         )
     }
 
     // ==================== Page Number Handler ====================
 
-    private fun addPageNumbers(pdfDoc: PdfDocument) {
+    private fun addPageNumbers(pdfDoc: PdfDocument, recordedReview: Boolean = false) {
         val font = try {
             PdfFontFactory.createFont(StandardFonts.HELVETICA)
         } catch (_: Exception) {
@@ -1009,7 +1045,8 @@ object ProfessionalEnglishPdfReporter {
                     page.resources,
                     docEvent.document
                 )
-                val pageNumber = docEvent.document.numberOfPages
+                val pageNumber = if (recordedReview) docEvent.document.getPageNumber(page)
+                    else docEvent.document.numberOfPages
                 canvas.beginText()
                     .setFontAndSize(font, 8f)
                     .setColor(footerColor, true)
@@ -1021,6 +1058,12 @@ object ProfessionalEnglishPdfReporter {
                     .setColor(footerColor, true)
                     .moveText((pageSize.width / 2f - 60f).toDouble(), 20.0)
                     .showText("CivilEG - Structural Design")
+                    .endText()
+                if (recordedReview) canvas.beginText()
+                    .setFontAndSize(font, 7f)
+                    .setColor(WARNING, true)
+                    .moveText(50.0, 34.0)
+                    .showText("RECORDED COLUMN ONLY - UNVERIFIED - NOT FOR CONSTRUCTION")
                     .endText()
                 canvas.release()
             } catch (_: Exception) {

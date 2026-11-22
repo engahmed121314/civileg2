@@ -56,8 +56,8 @@ import com.civileg.app.ui.compose.components.common.BoqTableCard
 import com.civileg.app.domain.calculations.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.drawings.columnDrawingSummary
 import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
-import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.BarInfo
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
@@ -443,7 +443,7 @@ fun ColumnScreen(
                                     viewModel.exportToPdf(context, completed, capture) { /* Handle completion */ }
                                 }
                             },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).testTag("column-pdf-export"),
                             enabled = !uiState.isExporting,
                             loading = uiState.isExporting,
                             icon = Icons.Default.PictureAsPdf
@@ -466,6 +466,13 @@ fun ColumnScreen(
                 }
 
                 item {
+                    AppText(stringResource(R.string.column_adopted_coordinates_unavailable),
+                        modifier = Modifier.testTag("column-adopted-layout-hold"),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                }
+
+                item {
                     var selectedViewMode by remember { mutableStateOf(0) }
                     val configuration = LocalConfiguration.current
                     val screenW = configuration.screenWidthDp.dp
@@ -477,7 +484,7 @@ fun ColumnScreen(
                         else -> (700 * wRatio).toInt().coerceIn(450, 1000)
                     }
                     InteractiveDrawingScreen(
-                        onExportDxf = { viewModel.exportToDxf(context) },
+                        onExportDxf = null, // Reinforcement coordinates/detailing are not verified.
                         title = stringResource(R.string.column_drawing_title),
                         subtitle = stringResource(R.string.column_drawing_subtitle),
                         drawingHeightDp = drawingHeight,
@@ -489,12 +496,7 @@ fun ColumnScreen(
                                 columnWidth = result.width.toDouble(),
                                 columnDepth = result.depth.toDouble(),
                                 columnHeight = calculationInput.heightM * 1000.0,
-                                longitudinalBars = generateBarPositions(
-                                    result.width.toDouble(), result.depth.toDouble(),
-                                    result.reinforcement.numBars,
-                                    result.reinforcement.diameter.toDouble(),
-                                    result.columnType.contains("CIRCULAR", ignoreCase = true)
-                                ),
+                                longitudinalBars = columnCheckedCoordinateInputs(completed),
                                 tieDia = result.stirrups.diameter.toDouble(),
                                 tieSpacing = result.stirrups.spacing.toDouble(),
                                 cover = 40.0,
@@ -527,12 +529,7 @@ fun ColumnScreen(
                         columnWidth = result.width.toDouble(),
                         columnDepth = result.depth.toDouble(),
                         columnHeight = calculationInput.heightM * 1000.0,
-                        longitudinalBars = generateBarPositions(
-                            result.width.toDouble(), result.depth.toDouble(),
-                            result.reinforcement.numBars,
-                            result.reinforcement.diameter.toDouble(),
-                            result.columnType.contains("CIRCULAR", ignoreCase = true)
-                        ),
+                        longitudinalBars = columnCheckedCoordinateInputs(completed),
                         tieDia = result.stirrups.diameter.toDouble(),
                         tieSpacing = result.stirrups.spacing.toDouble(),
                         cover = 40.0,
@@ -915,62 +912,10 @@ private fun LoadCombinationSelector(selected: LoadCombination, code: com.civileg
     }
 }
 
-private fun generateBarPositions(width: Double, depth: Double, numBars: Int, diameter: Double, isCircular: Boolean = false): List<BarInfo> {
-    val cover = 40.0
-    val totalBars = maxOf(4, numBars)
-    val positions = mutableListOf<BarInfo>()
-
-    if (isCircular) {
-        val radius = (minOf(width, depth) - 2 * cover) / 2.0
-        val cx = width / 2.0
-        val cy = depth / 2.0
-        for (i in 0 until totalBars) {
-            val angle = 2.0 * Math.PI * i / totalBars
-            val x = cx + radius * cos(angle)
-            val y = cy + radius * sin(angle)
-            positions.add(BarInfo(x, y, diameter, isCorner = true))
-        }
-        return positions
-    }
-
-    val xMin = cover
-    val xMax = width - cover
-    val yMin = cover
-    val yMax = depth - cover
-    val effW = width - 2 * cover
-    val effD = depth - 2 * cover
-
-    positions.add(BarInfo(xMin, yMin, diameter, isCorner = true))
-    positions.add(BarInfo(xMax, yMin, diameter, isCorner = true))
-    positions.add(BarInfo(xMax, yMax, diameter, isCorner = true))
-    positions.add(BarInfo(xMin, yMax, diameter, isCorner = true))
-
-    val remaining = totalBars - 4
-    if (remaining <= 0) return positions
-
-    val aspect = effW / effD
-    val barsY = maxOf(0, round((remaining / (2.0 * (aspect + 1.0)))).toInt())
-    val barsX = maxOf(0, (remaining - 2 * barsY) / 2)
-    var leftover = remaining - 2 * (barsX + barsY)
-
-    for (i in 1..barsX + (if (leftover > 0) 1 else 0)) {
-        if (leftover > 0 && i == barsX + 1) leftover--
-        val t = i.toDouble() / (barsX + 1 + (if (leftover > 0) 1 else 0))
-        positions.add(BarInfo(xMin + t * effW, yMin, diameter))
-    }
-    for (i in 1..barsX + (if (leftover > 0) 1 else 0)) {
-        if (leftover > 0 && i == barsX + 1) leftover--
-        val t = i.toDouble() / (barsX + 1 + (if (leftover > 0) 1 else 0))
-        positions.add(BarInfo(xMin + t * effW, yMax, diameter))
-    }
-    for (i in 1..barsY) {
-        val t = i.toDouble() / (barsY + 1)
-        positions.add(BarInfo(xMin, yMin + t * effD, diameter))
-    }
-    for (i in 1..barsY) {
-        val t = i.toDouble() / (barsY + 1)
-        positions.add(BarInfo(xMax, yMin + t * effD, diameter))
-    }
-
-    return positions
+/** A recorded count/diameter is not an engine-adopted coordinate/detailing contract.
+ * Keep that absence explicit rather than arranging bars solely for a plausible picture.
+ */
+internal fun columnCheckedCoordinateInputs(snapshot: ColumnDesignSnapshot): List<BarInfo> {
+    require(snapshot.hasValidFingerprint())
+    return emptyList()
 }
