@@ -153,6 +153,8 @@ class ColumnCompletedScreenTest {
                     captureDialog("failed-save-dialog-${host.height}")
                 }
             }.onFailure { println("COLUMN_DIALOG_DIAGNOSTIC_FAILED ${it.javaClass.name}") }
+            retainColumnUiTimeout(File("build/reports/tests/column-completed-shots"), null,
+                emptySet(), "save-dialog-${host.height}", vm.uiState.value, "save-not-requested", failure)
             throw failure
         } finally {
             runCatching {

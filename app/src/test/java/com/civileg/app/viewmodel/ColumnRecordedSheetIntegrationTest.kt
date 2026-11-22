@@ -193,7 +193,16 @@ class ColumnRecordedSheetIntegrationTest {
         val before = documents().listFiles().orEmpty().map { it.name }.toSet()
         scrollTo("column-pdf-export");
         button("column-pdf-export").performClick()
-        compose.waitUntil(30000) { !vm.uiState.value.isExporting && newReport(before) != null }
+        try {
+            compose.waitUntil(30000) { !vm.uiState.value.isExporting && newReport(before) != null }
+        } catch (failure: Throwable) {
+            retainColumnUiTimeout(output, documents(), before, "actual-button", vm.uiState.value,
+                "captureCalls=${observedCaptures.size}", failure)
+            runCatching {
+                observedCaptures.singleOrNull()?.bitmap?.let { retainBitmap("timeout-actual-button-capture.png", it) }
+            }.onFailure { println("COLUMN_EXPORT_CAPTURE_DIAGNOSTIC_FAILED ${it.javaClass.name}") }
+            throw failure
+        }
         assertEquals("The real UI must supply one completed capture", 1, observedCaptures.size)
         val observed = requireNotNull(observedCaptures.single()) { "Real UI did not capture its completed sheet" }
         assertEquals(requireNotNull(vm.uiState.value.completedDesign).revisionSha256, observed.revisionSha256)
@@ -216,8 +225,15 @@ class ColumnRecordedSheetIntegrationTest {
         assertNotEquals(previous.revisionSha256, current.revisionSha256)
         var callback = false
         var generated: File? = null
+        val before = documents().listFiles().orEmpty().map { it.name }.toSet()
         compose.runOnIdle { vm.exportToPdf(host.context, current, stale) { generated = it; callback = true } }
-        compose.waitUntil(30000) { callback }
+        try {
+            compose.waitUntil(30000) { callback }
+        } catch (failure: Throwable) {
+            retainColumnUiTimeout(output, documents(), before, "stale-capture", vm.uiState.value,
+                "entered=$callback generated=${generated?.name}", failure)
+            throw failure
+        }
         inspectReport(requireNotNull(generated), "UNAVAILABLE", "actual-wrong-revision-full-report.pdf")
     }
 
@@ -226,10 +242,17 @@ class ColumnRecordedSheetIntegrationTest {
         val snapshot = requireNotNull(vm.uiState.value.completedDesign)
         var callback = false
         var generated: File? = null
+        val before = documents().listFiles().orEmpty().map { it.name }.toSet()
         compose.runOnIdle {
             vm.exportToPdf(host.context, snapshot, null) { generated = it; callback = true }
         }
-        compose.waitUntil(30000) { callback }
+        try {
+            compose.waitUntil(30000) { callback }
+        } catch (failure: Throwable) {
+            retainColumnUiTimeout(output, documents(), before, "missing-capture", vm.uiState.value,
+                "entered=$callback generated=${generated?.name}", failure)
+            throw failure
+        }
         inspectReport(requireNotNull(generated), "UNAVAILABLE", "actual-no-capture-full-report.pdf")
     }
 }
