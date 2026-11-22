@@ -292,7 +292,7 @@ internal fun SoilDrawingSection(
             FilterChip(
                 selected = soilViewMode == index + 1,
                 onClick = { soilViewMode = index + 1 },
-                label = { AppText(label, fontSize = 11.sp, maxLines = 1, softWrap = false) },
+                label = { AppText(label, fontSize = 11.sp, maxLines = 2, softWrap = true) },
                 modifier = Modifier.weight(1f)
             )
         }
