@@ -269,11 +269,8 @@ fun DesignsBOQContent(
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
     var selectedDesignId by remember { mutableLongStateOf(-1L) }
-    val elementBoqItems by boqViewModel.elementBoqItems.observeAsState(emptyList())
-    val elementBoqTotal by boqViewModel.elementBoqTotal.observeAsState(0.0)
-    val unpricedCount by boqViewModel.elementBoqUnpricedCount.observeAsState(0)
-    val unrecordedCurrency by boqViewModel.elementBoqUnrecordedCurrency.observeAsState(0)
-    val boqCurrency by boqViewModel.activeCurrency.observeAsState("EGP")
+    // One frozen result: items, totals and the priced currency, published atomically by the latest request only.
+    val boqResult by boqViewModel.boqResult.observeAsState(null)
     val isLoading by boqViewModel.isLoading.observeAsState(false)
 
     LaunchedEffect(projects) { if (selectedProjectId == -1L && projects.isNotEmpty()) selectedProjectId = projects.first().id }
@@ -308,11 +305,12 @@ fun DesignsBOQContent(
                         containerOverride = MaterialTheme.colorScheme.secondary,
                         contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
                     )
-                    if (elementBoqItems.isNotEmpty()) {
+                    val exportResult = boqResult
+                    if (exportResult != null && selectedDesign != null && !isLoading && exportResult.items.isNotEmpty() && exportResult.designId == selectedDesign?.id) {
                         AppButton(
                             label = "Export BOQ",
                             onClick = {
-                                val file = buildDesignBoqPdf(context, selectedDesign?.name ?: "Design", elementBoqItems, unpricedCount, boqCurrency)
+                                val file = buildDesignBoqPdf(context, selectedDesign?.name ?: "Design", exportResult.items, exportResult.unpricedCount, exportResult.currency ?: "")
                                 sharePdf(context, file)
                             },
                             modifier = Modifier.weight(1f),
@@ -360,14 +358,15 @@ fun DesignsBOQContent(
             }
             // Show detailed BOQ items when a design is selected
             if (selectedDesignId > 0) {
+                val detail = boqResult
                 if (isLoading) {
                     item { Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
-                } else if (elementBoqItems.isNotEmpty()) {
+                } else if (detail != null && detail.designId == selectedDesignId && detail.items.isNotEmpty()) {
                     item {
                         AppText("${selectedDesign?.name ?: "Design"} — Detailed BOQ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
                     }
                     item {
-                        BoqDetailCard(elementBoqItems, elementBoqTotal, unpricedCount, unrecordedCurrency, boqCurrency)
+                        BoqDetailCard(detail.items, detail.total, detail.unpricedCount, detail.unknownCurrencyCount, detail.currency ?: "")
                     }
                 }
             }

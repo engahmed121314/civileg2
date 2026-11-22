@@ -78,14 +78,17 @@ class PreferencesManager(private val context: Context) {
         .map { it[COMPANY_NAME] ?: "Civil EG" }
     
     suspend fun setConcretePrice(price: Double) {
+        if (!com.civileg.app.domain.entities.PriceValidation.isValid(price)) return
         context.dataStore.edit { it[CONCRETE_PRICE] = price; it[CONCRETE_PRICE_CCY] = it[CURRENCY] ?: "EGP" }
     }
     
     suspend fun setSteelPrice(price: Double) {
+        if (!com.civileg.app.domain.entities.PriceValidation.isValid(price)) return
         context.dataStore.edit { it[STEEL_PRICE] = price; it[STEEL_PRICE_CCY] = it[CURRENCY] ?: "EGP" }
     }
     
     suspend fun setFormworkPrice(price: Double) {
+        if (!com.civileg.app.domain.entities.PriceValidation.isValid(price)) return
         context.dataStore.edit { it[FORMWORK_PRICE] = price; it[FORMWORK_PRICE_CCY] = it[CURRENCY] ?: "EGP" }
     }
     

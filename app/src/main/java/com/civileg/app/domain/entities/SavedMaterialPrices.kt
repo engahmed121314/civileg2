@@ -22,6 +22,11 @@ data class PricedBoq(
     val isComplete: Boolean get() = unpricedCount == 0 && items.isNotEmpty()
 }
 
+/** A typed price is usable only when finite and above zero (rejects NaN, Infinity, zero and negatives). */
+object PriceValidation {
+    fun isValid(value: Double): Boolean = value.isFinite() && value > 0.0
+}
+
 object BoqPricing {
     /**
      * Only concrete, reinforcement and formwork have a user price. Any other category (excavation,
@@ -31,6 +36,7 @@ object BoqPricing {
      */
     fun apply(items: List<BoqItem>, saved: SavedMaterialPrices, activeCurrency: String): PricedBoq {
         var unknownCcy = 0
+        var running = 0.0
         val out = items.map { item ->
             val p = when (item.category) {
                 BoqCategory.CONCRETE -> saved.concrete
@@ -38,15 +44,19 @@ object BoqPricing {
                 BoqCategory.FORMWORK -> saved.formwork
                 else -> null
             }
-            val usable = p != null && p.value > 0.0 && p.currency == activeCurrency
+            val line = if (p != null && PriceValidation.isValid(p.value) && item.quantity >= 0.0 && p.currency == activeCurrency)
+                item.quantity * p.value else Double.NaN
+            // A line is priced only when its own total AND the running total stay finite (no overflow to Infinity).
+            val usable = line.isFinite() && (running + line).isFinite()
             if (usable) {
-                item.copy(unitPrice = p.value, total = item.quantity * p.value, isPriced = true)
+                running += line
+                item.copy(unitPrice = p!!.value, total = line, isPriced = true)
             } else {
-                if (p != null && p.value > 0.0 && p.currency == null) unknownCcy++
+                if (p != null && PriceValidation.isValid(p.value) && p.currency == null) unknownCcy++
                 item.copy(unitPrice = 0.0, total = 0.0, isPriced = false)
             }
         }
-        return PricedBoq(out, out.filter { it.isPriced }.sumOf { it.total }, out.count { !it.isPriced }, unknownCcy)
+        return PricedBoq(out, running, out.count { !it.isPriced }, unknownCcy)
     }
 
     /** BOQ steel quantities are in tons; the BOQ PDF report takes kilograms (it prints kg / 1000 as tons). */

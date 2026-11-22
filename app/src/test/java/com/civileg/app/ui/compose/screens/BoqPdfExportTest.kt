@@ -15,8 +15,15 @@ import com.civileg.app.shared.reporting.PdfGenerator
 import com.civileg.app.testutils.saveGeneratedPdfForInspection
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfReader
+import com.itextpdf.kernel.pdf.canvas.parser.EventType
+import com.itextpdf.kernel.pdf.canvas.parser.PdfCanvasProcessor
 import com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor
+import com.itextpdf.kernel.pdf.canvas.parser.data.IEventData
+import com.itextpdf.kernel.pdf.canvas.parser.data.TextRenderInfo
+import com.itextpdf.kernel.pdf.canvas.parser.listener.IEventListener
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,6 +40,35 @@ class BoqPdfExportTest {
     private fun text(f: File): String = PdfDocument(PdfReader(f)).use { d ->
         (1..d.numberOfPages).joinToString("\n") { PdfTextExtractor.getTextFromPage(d.getPage(it)) }
     }.replace(Regex("\\s+"), " ")
+
+    /**
+     * Text of the value cell directly below [label] in the summary table, found by position
+     * (same column, lower on the page), not by text adjacency: the extractor interleaves the
+     * summary labels and values, so a joined string cannot associate a heading with its value.
+     */
+    private fun summaryValueBelow(f: File, label: String): String {
+        data class Chunk(val text: String, val x: Float, val y: Float)
+        val chunks = mutableListOf<Chunk>()
+        PdfDocument(PdfReader(f)).use { d ->
+            val listener = object : IEventListener {
+                override fun eventOccurred(data: IEventData, type: EventType) {
+                    if (data is TextRenderInfo) {
+                        val p = data.baseline.startPoint
+                        chunks.add(Chunk(data.text, p.get(0), p.get(1)))
+                    }
+                }
+                // Restrict to actual text renders: a null set admits begin/end-text events whose data is null.
+                override fun getSupportedEvents(): Set<EventType> = setOf(EventType.RENDER_TEXT)
+            }
+            PdfCanvasProcessor(listener).processPageContent(d.getPage(1))
+        }
+        val anchor = chunks.firstOrNull { it.text.contains(label) } ?: return ""
+        // PDF y grows upward: the value sits directly under its label in the same cell.
+        return chunks
+            .filter { it !== anchor && it.x >= anchor.x - 5f && it.x <= anchor.x + 30f && it.y < anchor.y - 4f && it.y > anchor.y - 40f }
+            .sortedBy { it.x }
+            .joinToString(" ") { it.text }
+    }
 
     /** Any code point whose Unicode script is Arabic (letters and presentation forms). Digits are Common, not Arabic. */
     private fun hasArabicScript(s: String): Boolean =
@@ -86,7 +122,18 @@ class BoqPdfExportTest {
         assertTrue(t, t.contains("1 design(s) have unknown quantities"))
         assertFalse(t, t.contains("95,000"))
         // no summed cost headline: stored costs may be in different currencies
-        assertTrue(t, t.contains("Total Estimated Budget Not available"))
+        assertTrue(t, t.contains("Total Estimated Budget"))
+        // the budget cell value must be exactly the honest "Not available", located under its own heading;
+        // whitespace is stripped so an arbitrary text-chunk split cannot break the comparison,
+        // and any extra or replaced text in the cell fails the equality (a numeric budget never passes)
+        val budgetValue = summaryValueBelow(file, "Total Estimated Budget").filter { it != ' ' }
+        assertEquals("Notavailable", budgetValue)
+        // negative fixture: a numeric budget must not satisfy the association
+        val wrongItems = BoqPricing.apply(listOf(line(BoqCategory.CONCRETE, 2.0, "m3")), SavedMaterialPrices(concrete = SavedPrice(47500.0, "EGP")), "EGP")
+        val wrong = buildDesignBoqPdf(ctx, "Wrong", wrongItems.items, 0, "EGP")
+        val wrongValue = summaryValueBelow(wrong, "Total Estimated Budget").filter { it != ' ' }
+        assertNotEquals("Notavailable", wrongValue)
+        assertTrue(wrongValue, wrongValue.contains("95,000.00EGP"))
         assertFalse(t, t.contains("5,000.00"))
         assertTrue(t, t.contains("Cost (currency not recorded)"))
         assertTrue(t, t.contains("5,000"))

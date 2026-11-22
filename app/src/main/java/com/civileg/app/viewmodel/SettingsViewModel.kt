@@ -64,8 +64,8 @@ class SettingsViewModel @Inject constructor(
                 val theme = args[4] as String
                 val reportLang = args[5] as String
                 fun shown(p: com.civileg.app.domain.entities.SavedPrice?) =
-                    p?.takeIf { it.currency == currency }?.value
-                fun legacy(p: com.civileg.app.domain.entities.SavedPrice?) = p?.takeIf { it.currency == null }?.value
+                    p?.takeIf { it.currency == currency && com.civileg.app.domain.entities.PriceValidation.isValid(it.value) }?.value
+                fun legacy(p: com.civileg.app.domain.entities.SavedPrice?) = p?.takeIf { it.currency == null && com.civileg.app.domain.entities.PriceValidation.isValid(it.value) }?.value
 
                 val parsed = try { DesignCode.valueOf(code) } catch (e: Exception) { DesignCode.ECP }
                 // Keep synchronous store in sync with DataStore (covers upgrades and external writes)
@@ -118,18 +118,21 @@ class SettingsViewModel @Inject constructor(
     }
     
     fun setConcretePrice(price: Double) {
+        if (!com.civileg.app.domain.entities.PriceValidation.isValid(price)) return
         viewModelScope.launch {
             repository.updatePrices(concrete = price, steel = null, formwork = null)
         }
     }
     
     fun setSteelPrice(price: Double) {
+        if (!com.civileg.app.domain.entities.PriceValidation.isValid(price)) return
         viewModelScope.launch {
             repository.updatePrices(concrete = null, steel = price, formwork = null)
         }
     }
     
     fun setFormworkPrice(price: Double) {
+        if (!com.civileg.app.domain.entities.PriceValidation.isValid(price)) return
         viewModelScope.launch {
             repository.updatePrices(concrete = null, steel = null, formwork = price)
         }
