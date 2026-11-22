@@ -2444,6 +2444,39 @@
     <string name="ecp_ribbed_thermal_scope">Adverse thermal contributions must come from a separate analysis. Blank leaves thermal-inclusive limits unverified. Enter zero only when that analysis supports it. No camber credit is taken.</string>
     <string name="ecp_ribbed_thermal_total">Adverse thermal total (mm), optional</string>
     <string name="ecp_ribbed_thermal_after">Adverse thermal after installation (mm), optional</string>
+
+    <!-- Hordi calculation stages: headings localize, source mathematics stays LTR. -->
+    <string name="ecp_stage_numbered_heading">Stage %1$d. %2$s</string>
+    <string name="ecp_stage_equation">Equation</string>
+    <string name="ecp_stage_substitution">Numeric substitution / solver inputs</string>
+    <string name="ecp_stage_result">Result and units</string>
+    <string name="ecp_stage_show_notes">Show source notes and assumptions</string>
+    <string name="ecp_stage_hide_notes">Hide source notes and assumptions</string>
+    <string name="ecp_stage_steel_area">Actual tension reinforcement</string>
+    <string name="ecp_stage_effective_depth">Effective depth of actual layers</string>
+    <string name="ecp_stage_material_strength">Design material strengths</string>
+    <string name="ecp_stage_flexure">Layer compatibility and flexure</string>
+    <string name="ecp_stage_shear">Web shear demand</string>
+    <string name="ecp_stage_service_loads">Characteristic service loads</string>
+    <string name="ecp_stage_elastic_modulus">Elastic modulus and modular ratio</string>
+    <string name="ecp_stage_section_stiffness">Gross and cracked section stiffness</string>
+    <string name="ecp_stage_cracking_moment">Cracking moment</string>
+    <string name="ecp_stage_stiffness_dead">Effective stiffness under dead load</string>
+    <string name="ecp_stage_stiffness_total">Effective stiffness under dead + live load</string>
+    <string name="ecp_stage_immediate_dead">Immediate dead-load deflection</string>
+    <string name="ecp_stage_immediate_total">Immediate dead + live deflection</string>
+    <string name="ecp_stage_immediate_live">Separate live-load increment</string>
+    <string name="ecp_stage_sustained_load">Sustained characteristic load</string>
+    <string name="ecp_stage_stiffness_sustained">Effective stiffness under sustained load</string>
+    <string name="ecp_stage_immediate_sustained">Immediate sustained-load deflection</string>
+    <string name="ecp_stage_creep_factor">Duration factors</string>
+    <string name="ecp_stage_creep_increment">Additional creep and shrinkage</string>
+    <string name="ecp_stage_mechanical_total">Mechanical total deflection</string>
+    <string name="ecp_stage_post_installation">Mechanical deflection after installation</string>
+    <string name="ecp_stage_limit_total">Thermal-inclusive total limit</string>
+    <string name="ecp_stage_limit_live">Live-load increment limit</string>
+    <string name="ecp_stage_limit_after">Thermal-inclusive installation limit</string>
+    <string name="ecp_stage_precision_note">Substitutions are rounded for display. Calculations use full precision. Scope and warnings are listed separately below.</string>
 </resources>
 
 

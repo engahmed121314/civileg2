@@ -89,6 +89,61 @@ class ECPHordiSourceSectionTest {
         assertTrue(failed.warnings.any { it.contains("clear span/250") && it.contains("Eqs4-73/74") })
     }
 
+    @Test fun `typed stages retain actual substitutions results and citations in order`() {
+        val result = design(context().copy(characteristicLiveLoadKnM2 = 8.0,
+            immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(5000.0, 6.0)))
+        val stages = requireNotNull(result.calculationStages)
+        assertEquals(14, stages.size)
+        assertEquals(stages.size, stages.map { it.key }.distinct().size)
+        assertTrue(stages.all { it.heading.isNotBlank() && it.equation.isNotBlank() &&
+            it.substitution.isNotBlank() && it.result.isNotBlank() && it.citation.isNotBlank() })
+        assertEquals("deltaLive = 3.94892 mm", stages.last().result)
+        assertEquals("5.05653 - 1.10760", stages.last().substitution)
+        assertTrue(stages.last().citation.contains("Eq4-77"))
+        assertEquals("Ec = 24099.8 MPa\nn = 8.29883", stages.first { it.key == "elastic_modulus" }.result)
+        assertTrue(result.safetyAssessmentBlocked)
+        assertFalse(result.isSafe)
+    }
+
+    @Test fun `long term stages keep separate sustained stiffness and actual installation arithmetic`() {
+        val lt = Ecp203LongTermDeflection.Input(4800.0, 0.7,
+            Ecp203LongTermDeflection.Duration.ofMonths(60),
+            Ecp203LongTermDeflection.Attachment.DEFLECTION_SENSITIVE,
+            Ecp203LongTermDeflection.Duration.ofMonths(6), true, 1.5, 0.5)
+        val result = design(context().copy(characteristicLiveLoadKnM2 = 8.0,
+            immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(5000.0, 6.0, lt)))
+        val stages = requireNotNull(result.calculationStages)
+        assertEquals(24, stages.size)
+        assertEquals("post_installation", stages[20].key)
+        assertEquals("deltaAfter = 4.39733 mm", stages[20].result)
+        assertEquals("3.29596*(2.00000-1.20000)\n+ 5.05653 - 3.29596", stages[20].substitution)
+        assertTrue(stages[20].citation.contains("Eq4-80"))
+        assertEquals("deltaS = 3.29596 mm", stages.first { it.key == "immediate_sustained" }.result)
+        assertTrue(stages.first { it.key == "limit_after" }.result.contains("4.89733 mm"))
+        assertTrue(stages.first { it.key == "limit_total" }.substitution.contains("Thermal = 1.50000 mm"))
+    }
+
+    @Test fun `stages distinguish unknown thermal from no applicable attachment`() {
+        val lt = Ecp203LongTermDeflection.Input(4800.0, 0.7,
+            Ecp203LongTermDeflection.Duration.ofMonths(60), Ecp203LongTermDeflection.Attachment.NONE, null, true)
+        val result = design(context().copy(characteristicLiveLoadKnM2 = 8.0,
+            immediateDeflectionInput = Ecp203RibbedSection.ImmediateDeflectionInput(5000.0, 6.0, lt)))
+        val stages = requireNotNull(result.calculationStages)
+        val total = stages.first { it.key == "limit_total" }
+        assertTrue(total.substitution.contains("Thermal = NOT VERIFIED (blank is not zero)"))
+        assertTrue(total.result.contains("Status = NOT_EVALUATED"))
+        val after = stages.first { it.key == "limit_after" }
+        assertTrue(after.substitution.contains("Thermal = NOT APPLICABLE"))
+        assertTrue(after.result.contains("Status = NOT_APPLICABLE"))
+        assertFalse(stages.any { it.key == "post_installation" })
+    }
+
+    @Test fun `typed stages do not claim optional service calculations when none supplied`() {
+        val stages = requireNotNull(design().calculationStages)
+        assertEquals(5, stages.size)
+        assertFalse(stages.any { it.key.contains("immediate") || it.key.contains("limit_") })
+    }
+
     @Test fun `failed shear recommends section revision rather than extra links above concrete maximum`() {
         val result = design(shear = 1000.0)
         assertTrue(result.warnings.any { it.contains("extra links cannot exceed the concrete maximum") && it.contains("Eq4-27") })

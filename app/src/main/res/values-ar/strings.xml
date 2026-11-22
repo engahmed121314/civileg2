@@ -2447,4 +2447,37 @@
     <string name="ecp_ribbed_thermal_scope">تؤخذ آثار الحرارة المعاكسة من تحليل منفصل. الفراغ يترك الحدود الشاملة للحرارة غير متحققة. لا تدخل صفرا إلا بدليل من ذلك التحليل. لا يؤخذ تخفيض من التحديب المسبق.</string>
     <string name="ecp_ribbed_thermal_total">أثر الحرارة المعاكس الكلي (مم)، اختياري</string>
     <string name="ecp_ribbed_thermal_after">أثر الحرارة المعاكس بعد التركيب (مم)، اختياري</string>
+
+    <!-- Hordi calculation stages: headings localize, source mathematics stays LTR. -->
+    <string name="ecp_stage_numbered_heading">المرحلة %1$d. %2$s</string>
+    <string name="ecp_stage_equation">المعادلة</string>
+    <string name="ecp_stage_substitution">التعويض العددي / مدخلات الحل</string>
+    <string name="ecp_stage_result">النتيجة والوحدات</string>
+    <string name="ecp_stage_show_notes">عرض ملاحظات المرجع والافتراضات</string>
+    <string name="ecp_stage_hide_notes">إخفاء ملاحظات المرجع والافتراضات</string>
+    <string name="ecp_stage_steel_area">مساحة تسليح الشد الفعلي</string>
+    <string name="ecp_stage_effective_depth">العمق الفعال لطبقات التسليح</string>
+    <string name="ecp_stage_material_strength">مقاومات المواد التصميمية</string>
+    <string name="ecp_stage_flexure">توافق انفعالات الطبقات ومقاومة الانحناء</string>
+    <string name="ecp_stage_shear">إجهاد القص في العصب</string>
+    <string name="ecp_stage_service_loads">أحمال التشغيل المميزة</string>
+    <string name="ecp_stage_elastic_modulus">معامل المرونة ونسبة المعاملات</string>
+    <string name="ecp_stage_section_stiffness">جساءة القطاع الكامل والمتشرخ</string>
+    <string name="ecp_stage_cracking_moment">عزم بدء التشرخ</string>
+    <string name="ecp_stage_stiffness_dead">الجساءة الفعالة للحمل الميت</string>
+    <string name="ecp_stage_stiffness_total">الجساءة الفعالة للحمل الميت والحي</string>
+    <string name="ecp_stage_immediate_dead">الترخيم اللحظي للحمل الميت</string>
+    <string name="ecp_stage_immediate_total">الترخيم اللحظي للحمل الميت والحي</string>
+    <string name="ecp_stage_immediate_live">الزيادة المنفصلة بسبب الحمل الحي</string>
+    <string name="ecp_stage_sustained_load">الحمل المميز المستمر</string>
+    <string name="ecp_stage_stiffness_sustained">الجساءة الفعالة للحمل المستمر</string>
+    <string name="ecp_stage_immediate_sustained">الترخيم اللحظي للحمل المستمر</string>
+    <string name="ecp_stage_creep_factor">معاملات الزمن</string>
+    <string name="ecp_stage_creep_increment">الزيادة بسبب الزحف والانكماش</string>
+    <string name="ecp_stage_mechanical_total">الترخيم الميكانيكي الكلي</string>
+    <string name="ecp_stage_post_installation">الترخيم الميكانيكي بعد التركيب</string>
+    <string name="ecp_stage_limit_total">فحص الحد الكلي شاملًا الحرارة</string>
+    <string name="ecp_stage_limit_live">فحص حد الزيادة للحمل الحي</string>
+    <string name="ecp_stage_limit_after">فحص حد ما بعد التركيب شاملًا الحرارة</string>
+    <string name="ecp_stage_precision_note">قيم التعويض مقربة للعرض فقط؛ الحسابات بالدقة الكاملة. حدود الفحص والتنبيهات منفصلة أسفل الخطوات.</string>
 </resources>

@@ -104,10 +104,14 @@ class HordiSourceSectionUiTest {
         scroll(app.getString(R.string.ecp_ribbed_section_trace))
         screenshot("hordi-source-result-$lang")
         assertTrue(vm.result.value!!.codeNotes.any { it.contains("deltaLive=deltaD+L-deltaD=3.94892 mm") })
-        val serviceTrace = vm.result.value!!.codeNotes.first { it.startsWith("Elastic simply supported UDL:") }
-        scroll(serviceTrace)
-        rule.onNodeWithText(serviceTrace).assertIsDisplayed()
-        assertTrue(serviceTrace.contains("deltaLive=deltaD+L-deltaD=3.94892 mm"))
+        val serviceStage = vm.result.value!!.calculationStages!!.first { it.key == "immediate_live" }
+        rule.onAllNodes(hasScrollAction())[0].performScrollToNode(hasTestTag("ecp-stage-immediate_live"))
+        rule.onNodeWithTag("ecp-stage-result-immediate_live").assertIsDisplayed()
+            .assertTextEquals("deltaLive = 3.94892 mm")
+        rule.onNodeWithText(serviceStage.equation).assertIsDisplayed()
+        rule.onNodeWithText(serviceStage.substitution).assertIsDisplayed()
+        rule.onNodeWithText(app.getString(R.string.ecp_stage_numbered_heading, 14,
+            app.getString(R.string.ecp_stage_immediate_live))).assertIsDisplayed()
         screenshot("hordi-source-sls-result-$lang")
         scroll(app.getString(R.string.ecp_ribbed_long_term))
         rule.onNodeWithTag("ecp-long-term-toggle").performClick()
@@ -133,10 +137,15 @@ class HordiSourceSectionUiTest {
         rule.onNodeWithText(calculate).assertIsEnabled().performClick()
         rule.waitUntil(15000) { vm.result.value != null || vm.error.value != null }
         assertNull(vm.error.value)
-        val longTermTrace = vm.result.value!!.codeNotes.first { it.startsWith("Eq4-80, printed4-63:") }
-        assertTrue(longTermTrace.contains("=4.39733 mm"))
-        scroll(longTermTrace)
-        rule.onNodeWithText(longTermTrace).assertIsDisplayed()
+        val longTermStage = vm.result.value!!.calculationStages!!.first { it.key == "post_installation" }
+        assertEquals("deltaAfter = 4.39733 mm", longTermStage.result)
+        rule.onAllNodes(hasScrollAction())[0].performScrollToNode(hasTestTag("ecp-stage-post_installation"))
+        rule.onNodeWithTag("ecp-stage-result-post_installation").assertIsDisplayed()
+            .assertTextEquals(longTermStage.result)
+        rule.onNodeWithText(longTermStage.equation).assertIsDisplayed()
+        rule.onNodeWithText(longTermStage.substitution).assertIsDisplayed()
+        rule.onNodeWithText(app.getString(R.string.ecp_stage_numbered_heading, 21,
+            app.getString(R.string.ecp_stage_post_installation))).assertIsDisplayed()
         screenshot("hordi-source-long-term-result-$lang")
         assertTrue(vm.result.value!!.safetyAssessmentBlocked)
         assertFalse(vm.result.value!!.isSafe)

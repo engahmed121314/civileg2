@@ -264,3 +264,11 @@ mechanical post-installation4.397333164848mm. Thermal inputs1.5/0.5mm produce
 13.148448887758/4.897333164848mm for their respective checks. Original ultimate
 strength results remain unchanged. These numbers are method vectors, not a
 completed member design.
+
+## Typed calculation stages
+
+The explicit-context Hordi adapter now creates `SlabCalculationStage` values from the same completed assessment as the numeric result. Each stage contains a stable key, English heading, equation, numeric substitution or actual iterative-solver inputs, result with units, and source citation. The UI numbers the stages, localizes headings and field labels, and keeps engineering mathematics LTR in both locales. Display substitutions are rounded; the calculation uses full precision.
+
+Immediate dead-load, total-load and live-only deflections are separate stages. Sustained-load stiffness and deflection, duration factors, creep/shrinkage, mechanical total, installation increment, and thermal-inclusive limits remain separate stages. Unknown thermal values are never shown as zero. Non-applicable attachment checks remain distinct from unknown checks. Warnings and complete source assumptions are separate from the calculation steps.
+
+The optional nullable result field preserves older snapshots that contain no typed stages. New frozen records include the exact stage values in their existing input/result fingerprint. Decoding an older record does not rebuild stages, change its stored numbers, or rewrite its fingerprint. This presentation change neither changes the section calculations nor closes any member, output or detailing hold.

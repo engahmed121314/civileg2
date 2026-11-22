@@ -163,6 +163,7 @@ fun HordiSlabScreen(
     val viewModeLabels = listOf("All", "Plan", "Section", "Detail")
 
     val result by viewModel.result.observeAsState()
+    var showSourceNotes by remember(result) { mutableStateOf(false) }
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val errorMsg by viewModel.error.observeAsState()
@@ -557,11 +558,26 @@ fun HordiSlabScreen(
 
                     if (ecpSection && res.codeNotes.isNotEmpty()) {
                         item {
-                            AppText(stringResource(R.string.ecp_ribbed_section_trace), fontWeight = FontWeight.Bold)
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                AppText(stringResource(R.string.ecp_ribbed_section_trace), fontWeight = FontWeight.Bold)
+                                AppText(stringResource(R.string.ecp_stage_precision_note),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
-                        // Each equation is independently reachable, even when the full trace
-                        // is taller than the viewport. Keep technical equations LTR in both locales.
-                        items(res.codeNotes) { note ->
+                        // Each stage is a separate lazy item, not a paragraph dump.
+                        // Nullable stages preserve decoding of earlier frozen results.
+                        val stages = res.calculationStages.orEmpty()
+                        items(stages.size) { index ->
+                            HordiCalculationStageCard(stages[index], index + 1)
+                        }
+                        if (stages.isNotEmpty()) item {
+                            TextButton(onClick = { showSourceNotes = !showSourceNotes }) {
+                                AppText(stringResource(if (showSourceNotes) R.string.ecp_stage_hide_notes
+                                    else R.string.ecp_stage_show_notes))
+                            }
+                        }
+                        if (stages.isEmpty() || showSourceNotes) items(res.codeNotes) { note ->
                             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                                 AppText(note, modifier = Modifier.fillMaxWidth().padding(14.dp),
                                     textAlign = TextAlign.Left,

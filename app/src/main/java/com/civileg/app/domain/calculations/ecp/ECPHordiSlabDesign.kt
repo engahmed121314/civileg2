@@ -167,6 +167,8 @@ class ECPHordiSlabDesign : HordiSlabDesign {
                         add("High-strength/high-stress review flag is open. Printed4-61 cautions on steel above420 MPa, especially service stress above200 MPa. This bounded model also flags cracked stress above200 MPa conservatively at lower grades; numeric limit passes alone do not complete that review.")
                 }
             },
+            calculationStages = EcpHordiCalculationStages.build(fcu, fy, ribWidth, ribSpacing,
+                totalThickness, toppingThickness, designMoment, designShear, context, a),
             codeNotes = listOf(
                 "ECP203-2020 bounded section method: printed4-1..4-9,4-17..4-22,6-15/16,6-42,7-6/7-7.",
                 "Section checks pass=${a.sectionChecksPass}; region=${context.region}; effective flange width=${a.effectiveFlangeWidthMm} mm; centroid effective depth=${a.layout.effectiveDepthMm} mm.",

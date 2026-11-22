@@ -88,6 +88,35 @@ class HordiSlabDesignSnapshotTest {
         assertTrue(snapshot.hasValidFingerprint())
     }
 
+    @Test fun `typed stages are frozen with result identity and decoded independently`() {
+        val input = inputs()
+        val original = result(input)
+        val snapshot = HordiSlabDesignSnapshot.capture(input, original)
+        assertEquals(original.calculationStages, snapshot.result().calculationStages)
+        assertEquals("deltaLive = 3.94892 mm", snapshot.result().calculationStages!!.last().result)
+        (snapshot.result().calculationStages as MutableList).clear()
+        assertEquals(14, snapshot.result().calculationStages!!.size)
+        val changed = original.copy(calculationStages = original.calculationStages!!.mapIndexed { i, stage ->
+            if (i == 0) stage.copy(result = "Different presentation value") else stage
+        })
+        assertNotEquals(snapshot.revisionSha256, HordiSlabDesignSnapshot.capture(input, changed).revisionSha256)
+        assertTrue(snapshot.hasValidFingerprint())
+    }
+
+    @Test fun `earlier snapshot without typed stages retains its numbers and fingerprint`() {
+        val input = inputs()
+        val original = result(input)
+        val oldResult = JsonParser.parseString(Gson().toJson(original)).asJsonObject
+        oldResult.remove("calculationStages")
+        val record = FrozenDesignRecord.capture(Gson().toJson(input), oldResult.toString())
+        val wrapper = com.google.gson.JsonObject().apply { add("record", Gson().toJsonTree(record)) }
+        val restored = Gson().fromJson(wrapper, HordiSlabDesignSnapshot::class.java)
+        assertTrue(restored.hasValidFingerprint())
+        assertNull(restored.result().calculationStages)
+        assertEquals(original.copy(calculationStages = null), restored.result())
+        assertEquals(record.revisionSha256, restored.revisionSha256)
+    }
+
     @Test fun `modified serialized inputs or unsupported schema fail fingerprint validation`() {
         val input = inputs()
         val snapshot = HordiSlabDesignSnapshot.capture(input, result(input))

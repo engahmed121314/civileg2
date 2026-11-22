@@ -125,7 +125,20 @@ data class SlabDesignResult(
     val warnings: List<String> = emptyList(),
     val codeNotes: List<String> = emptyList(),
     /** True when a method/applicability hold prevents any overall safety approval. */
-    val safetyAssessmentBlocked: Boolean = false
+    val safetyAssessmentBlocked: Boolean = false,
+    /** Null in older snapshots and engines without a typed calculation trace. */
+    val calculationStages: List<SlabCalculationStage>? = null
+) : Parcelable
+
+/** Frozen presentation values produced alongside the actual calculation result. */
+@Parcelize
+data class SlabCalculationStage(
+    val key: String,
+    val heading: String,
+    val equation: String,
+    val substitution: String,
+    val result: String,
+    val citation: String
 ) : Parcelable
 
 @Parcelize
