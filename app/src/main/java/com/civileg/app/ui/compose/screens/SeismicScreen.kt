@@ -115,7 +115,6 @@ fun SeismicScreen(
     var isCalculating by remember { mutableStateOf(false) }
     var isExporting by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
-    var selectedProjectId by remember { mutableLongStateOf(-1L) }
     val seismicDefaultName = stringResource(R.string.seismic_default_name)
     var designName by remember { mutableStateOf(seismicDefaultName) }
     var showSuccessMsg by remember { mutableStateOf(false) }
@@ -872,42 +871,14 @@ fun SeismicScreen(
 
     // ── Save Dialog ─────────────────────────────────────────────────────────
     if (showSaveDialog) {
-        AlertDialog(
-            onDismissRequest = { showSaveDialog = false },
-            title = { AppText(stringResource(R.string.seismic_save_dialog_title)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = designName,
-                        onValueChange = { designName = it },
-                        label = { AppText(stringResource(R.string.seismic_design_name_hint)) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    AppText(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
-                    if (projects.isEmpty()) {
-                        AppText(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
-                    } else {
-                        projects.forEach { project ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = selectedProjectId == project.id,
-                                    onClick = { selectedProjectId = project.id }
-                                )
-                                AppText(project.name, modifier = Modifier.padding(start = 8.dp))
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                AppButton(
-                    label = stringResource(R.string.save),
-                    fillMaxWidth = false,
-                    onClick = {
+        com.civileg.app.ui.components.SaveToProjectDialog(
+            title = stringResource(R.string.seismic_save_dialog_title),
+            nameLabel = stringResource(R.string.seismic_design_name_hint),
+            noProjectsText = stringResource(R.string.no_projects_available),
+            designName = designName,
+            onDesignNameChange = { designName = it },
+            projects = projects,
+            onConfirm = { projectId ->
                         result?.let { res ->
                             val engineResult = CalculatorEngine.SeismicResult(
                                 baseShear = res.baseShearResult.baseShear,
@@ -926,22 +897,13 @@ fun SeismicScreen(
                                 totalWeight = totalWeight.toDoubleOrNull() ?: 5000.0,
                                 height = totalHeight
                             )
-                            val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
-                            projectViewModel.saveSeismic(pId, designName, engineResult)
+                            projectViewModel.saveSeismic(projectId, designName, engineResult)
                             showSuccessMsg = true
                         }
-                        showSaveDialog = false
-                    }
-                )
+                    
+                showSaveDialog = false
             },
-            dismissButton = {
-                AppButton(
-                    label = stringResource(R.string.cancel),
-                    onClick = { showSaveDialog = false },
-                    style = AppButtonStyle.Text,
-                    fillMaxWidth = false
-                )
-            }
+            onDismiss = { showSaveDialog = false }
         )
     }
 }
