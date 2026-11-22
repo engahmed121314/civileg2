@@ -129,6 +129,17 @@ jobs:
             echo "KVM preflight END: $label status=$status"
             return "$status"
           }
+          linked_libraries() {
+            local output status
+            if output=$(env LC_ALL=C LD_LIBRARY_PATH="$ANDROID_HOME/emulator/lib64:$ANDROID_HOME/emulator/lib64/qt/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ldd "$1" 2>&1); then
+              printf '%s\n' "$output"
+              if grep -Fq 'not found' <<< "$output"; then return 1; fi
+            else
+              status=$?
+              printf '%s\n' "$output"
+              return "$status"
+            fi
+          }
           {
             run_check identity-before id || exit "$?"
             run_check device-before ls -l /dev/kvm || echo "KVM device metadata unavailable before validation"
@@ -150,6 +161,14 @@ jobs:
             run_check sdkmanager-present test -x "$SDKMANAGER" || exit "$?"
             run_check emulator-install "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --install emulator --channel=0 < /dev/null || exit "$?"
             run_check emulator-present test -x "$ANDROID_HOME/emulator/emulator" || exit "$?"
+            # This runner image lacks the evidenced libpulse.so.0 dependency.
+            # Install only its client library, not a sound server or speculative bundle.
+            run_check host-package-index sudo apt-get update -o APT::Update::Error-Mode=any || exit "$?"
+            run_check host-library-install sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libpulse0 || exit "$?"
+            run_check host-library-package dpkg-query -W -f='${binary:Package} ${Version}\n' libpulse0 || exit "$?"
+            run_check host-library-cache bash -o pipefail -c 'ldconfig -p | grep -F libpulse.so.0' || exit "$?"
+            run_check emulator-linked-libraries linked_libraries "$ANDROID_HOME/emulator/emulator" || exit "$?"
+            run_check qemu-linked-libraries linked_libraries "$ANDROID_HOME/emulator/qemu/linux-x86_64/qemu-system-x86_64" || exit "$?"
             run_check emulator-version "$ANDROID_HOME/emulator/emulator" -version || exit "$?"
             run_check acceleration "$ANDROID_HOME/emulator/emulator" -accel-check || exit "$?"
           } 2>&1 | tee qa-evidence-kvm-preflight.txt
