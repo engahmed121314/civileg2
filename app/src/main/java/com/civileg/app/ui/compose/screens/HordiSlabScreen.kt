@@ -1,6 +1,10 @@
 package com.civileg.app.ui.compose.screens
 
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.core.engine.rc.ecp.Ecp203BarLayout
+import com.civileg.core.engine.rc.ecp.Ecp203RectangularFlexure
+import com.civileg.core.engine.rc.ecp.Ecp203RibbedSection
+import com.civileg.core.engine.rc.ecp.Ecp203WebShear
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -84,6 +88,35 @@ fun HordiSlabScreen(
     var loadCombination by remember { mutableStateOf(LoadCombination.DEAD_LIVE) }
     var loadCombinationExpanded by remember { mutableStateOf(false) }
     var cover by remember { mutableStateOf("25") }
+    var aggregate by remember { mutableStateOf("20") }
+    var mainDiameter by remember { mutableStateOf("16") }
+    var barsPerLayer by remember { mutableStateOf("2") }
+    var layerCount by remember { mutableStateOf("1") }
+    var linksDiameter by remember { mutableStateOf("8") }
+    var linksSpacing by remember { mutableStateOf("200") }
+    var linksFy by remember { mutableStateOf("240") }
+    var linksLegs by remember { mutableStateOf("2") }
+    var characteristicLiveLoad by remember { mutableStateOf("3") }
+    var contraflexureDistance by remember { mutableStateOf("") }
+    var flangeInCompression by remember { mutableStateOf(true) }
+    var mainBarsDeformed by remember { mutableStateOf(true) }
+    val ecpSection = designCode == "ECP"
+    val sectionInputsValid = !ecpSection || (
+        listOf(fcu, fy, ribWidth, ribSpacing, totalThickness, toppingThickness, span,
+            aggregate, mainDiameter, linksDiameter, linksSpacing, linksFy).all {
+            it.toDoubleOrNull()?.let { value -> value.isFinite() && value > 0.0 } == true
+        } && listOf(designMoment, designShear, cover, characteristicLiveLoad).all {
+            it.toDoubleOrNull()?.let { value -> value.isFinite() && value >= 0.0 } == true
+        } && barsPerLayer.toIntOrNull() in 1..100 && layerCount.toIntOrNull() in 1..20 &&
+        linksLegs.toIntOrNull() in 2..20 && (!flangeInCompression ||
+        contraflexureDistance.toDoubleOrNull()?.let { it.isFinite() && it > 0.0 } == true))
+    // Results belong to an immutable calculation input snapshot, not edited form fields.
+    LaunchedEffect(listOf(designCode, fcu, fy, ribWidth, ribSpacing, totalThickness,
+        toppingThickness, span, designMoment, designShear, loadCombination, cover,
+        aggregate, mainDiameter, barsPerLayer, layerCount, linksDiameter, linksSpacing,
+        linksFy, linksLegs, characteristicLiveLoad, contraflexureDistance,
+        flangeInCompression, mainBarsDeformed)) { viewModel.clearResult() }
+
 
     // Drawing view mode: 0=All, 1=Plan, 2=Section, 3=Detail
     var viewMode by remember { mutableStateOf(0) }
@@ -221,9 +254,43 @@ fun HordiSlabScreen(
 
                 item {
                     PremiumInputField(
-                        cover, "Clear Cover (mm)", { cover = it },
+                        cover, if (ecpSection) stringResource(R.string.ecp_ribbed_cover_links) else "Clear Cover (mm)", { cover = it },
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+
+                if (ecpSection) {
+                    item {
+                        AppText(stringResource(R.string.ecp_ribbed_section_scope),
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    item { PremiumInputField(aggregate, stringResource(R.string.ecp_ribbed_aggregate), { aggregate = it }, modifier = Modifier.fillMaxWidth()) }
+                    item { PremiumInputField(mainDiameter, stringResource(R.string.ecp_ribbed_main_diameter), { mainDiameter = it }, modifier = Modifier.fillMaxWidth()) }
+                    item { PremiumInputField(barsPerLayer, stringResource(R.string.ecp_ribbed_bars_per_layer), { barsPerLayer = it }, modifier = Modifier.fillMaxWidth()) }
+                    item { PremiumInputField(layerCount, stringResource(R.string.ecp_ribbed_layers), { layerCount = it }, modifier = Modifier.fillMaxWidth()) }
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = mainBarsDeformed, onCheckedChange = { mainBarsDeformed = it })
+                            AppText(stringResource(R.string.ecp_ribbed_deformed), modifier = Modifier.weight(1f))
+                        }
+                    }
+                    item { PremiumInputField(linksDiameter, stringResource(R.string.ecp_ribbed_links_diameter), { linksDiameter = it }, modifier = Modifier.fillMaxWidth()) }
+                    item { PremiumInputField(linksSpacing, stringResource(R.string.ecp_ribbed_links_spacing), { linksSpacing = it }, modifier = Modifier.fillMaxWidth()) }
+                    item { PremiumInputField(linksFy, stringResource(R.string.ecp_ribbed_links_fy), { linksFy = it }, modifier = Modifier.fillMaxWidth()) }
+                    item { PremiumInputField(linksLegs, stringResource(R.string.ecp_ribbed_links_legs), { linksLegs = it }, modifier = Modifier.fillMaxWidth()) }
+                    item { PremiumInputField(characteristicLiveLoad, stringResource(R.string.ecp_ribbed_live_load), { characteristicLiveLoad = it }, modifier = Modifier.fillMaxWidth()) }
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = flangeInCompression, onCheckedChange = { flangeInCompression = it })
+                            AppText(stringResource(R.string.ecp_ribbed_compression_flange), modifier = Modifier.weight(1f))
+                        }
+                    }
+                    if (flangeInCompression) {
+                        item { PremiumInputField(contraflexureDistance, stringResource(R.string.ecp_ribbed_contraflexure), { contraflexureDistance = it }, modifier = Modifier.fillMaxWidth()) }
+                    }
+                    if (!sectionInputsValid) item {
+                        AppText(stringResource(R.string.ecp_ribbed_invalid_inputs), color = MaterialTheme.colorScheme.error)
+                    }
                 }
 
                 // Load Combination Dropdown
@@ -278,11 +345,22 @@ fun HordiSlabScreen(
                                 designMoment = designMoment.toDoubleOrNull() ?: 80.0,
                                 designShear = designShear.toDoubleOrNull() ?: 30.0,
                                 loadCombination = loadCombination,
-                                designCode = designCode
+                                designCode = designCode,
+                                sectionContext = if (!ecpSection) null else Ecp203RibbedSection.Context(
+                                    cover.toDouble(), aggregate.toDouble(),
+                                    List(layerCount.toInt()) { Ecp203BarLayout.Layer(barsPerLayer.toInt(), mainDiameter.toDouble()) },
+                                    if (mainBarsDeformed) Ecp203RectangularFlexure.SteelSurface.HIGH_YIELD_DEFORMED else Ecp203RectangularFlexure.SteelSurface.SMOOTH_MILD,
+                                    if (flangeInCompression) Ecp203RibbedSection.Region.FLANGE_IN_COMPRESSION else Ecp203RibbedSection.Region.FLANGE_IN_TENSION,
+                                    if (flangeInCompression) contraflexureDistance.toDouble() else null,
+                                    characteristicLiveLoad.toDouble(),
+                                    Ecp203WebShear.VerticalLinks(linksFy.toDouble(),
+                                        if (linksFy.toDouble() == 240.0) Ecp203RectangularFlexure.SteelSurface.SMOOTH_MILD else Ecp203RectangularFlexure.SteelSurface.HIGH_YIELD_DEFORMED,
+                                        linksDiameter.toDouble(), linksLegs.toInt(), linksSpacing.toDouble())
+                                )
                             )
                         },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
-                        enabled = !isLoading,
+                        enabled = !isLoading && sectionInputsValid,
                         loading = isLoading,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
@@ -346,8 +424,7 @@ fun HordiSlabScreen(
                                 stringResource(R.string.hordi_slab_required_as) to String.format("%.1f mm²", res.requiredReinforcement),
                                 stringResource(R.string.hordi_slab_provided_as) to String.format("%.1f mm²", res.providedReinforcement),
                                 "Bar Diameter" to String.format("φ%.0f mm", res.barDiameter),
-                                "Bar Spacing" to String.format("@%.0f mm", res.barSpacing),
-                                "Bar String" to String.format("φ%.0f @%.0f mm", res.barDiameter, res.barSpacing)
+                                stringResource(R.string.ecp_ribbed_center_spacing) to String.format("%.0f mm", res.barSpacing)
                             ),
                             icon = Icons.Default.Build,
                             accentColor = Color(0xFF1565C0)
@@ -360,7 +437,7 @@ fun HordiSlabScreen(
                             stringResource(R.string.hordi_slab_shear_check),
                             listOf(
                                 "Shear Capacity" to String.format("%.1f kN", res.shearCapacity),
-                                "Min Thickness" to String.format("%.0f mm", res.minThickness),
+                                stringResource(R.string.ecp_ribbed_entered_depth) to String.format("%.0f mm", res.minThickness),
                                 "Utilization" to String.format("%.1f%%", res.utilizationRatio * 100),
                                 "Status" to if (res.safetyAssessmentBlocked) stringResource(R.string.design_status_not_verified)
                                     else if (res.isSafe) "PASS ✓" else "FAIL ✗"
@@ -368,6 +445,15 @@ fun HordiSlabScreen(
                             icon = Icons.Default.Shield,
                             accentColor = if (res.isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)
                         )
+                    }
+
+                    if (res.codeNotes.isNotEmpty()) item {
+                        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                AppText(stringResource(R.string.ecp_ribbed_section_trace), fontWeight = FontWeight.Bold)
+                                res.codeNotes.forEach { AppText(it, style = MaterialTheme.typography.bodySmall) }
+                            }
+                        }
                     }
 
                     // Warnings
@@ -392,8 +478,8 @@ fun HordiSlabScreen(
                         }
                     }
 
-                    // ── Drawing Section ────────────────────────────────
-                    item {
+                    // The legacy renderer cannot represent source-section layers/regions yet.
+                    if (!res.safetyAssessmentBlocked) item {
                         val drawingHeight = if (config.smallestScreenWidthDp >= 600) 580 else 480
                         InteractiveDrawingScreen(
                             onExportDxf = { viewModel.exportToDxf(context) },

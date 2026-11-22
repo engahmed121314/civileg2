@@ -64,6 +64,39 @@ The cross-rib count uses characteristic live load, not total or factored load. A
 
 This is not approval of the chosen cover: exposure, durability and fire requirements still need separate verification. It does not check anchorage, bends, crack width or maximum longitudinal spacing. Bundles are excluded because their source spacing rule is different. Tests cover two-layer and unequal-layer centroids, diameter/aggregate gap control, horizontal and vertical fit, cover propagation and invalid inputs.
 
-## Remaining integration scope
+## Coupled dedicated Hordi section path
 
-A ribbed-member implementation still needs correct force/tributary-width mapping, explicit cover/layout input propagation, positive/negative region and support classification, these section components wired to actual member inputs, transverse reinforcement, anchorage and serviceability. Existing member-level safety holds are unchanged by these isolated components. Existing saved input is unchanged.
+`Ecp203RibbedSection` composes the source components using actual tension layers,
+cover outside links, aggregate size, steel surface, vertical links and moment
+region. Positive flange compression uses the explicit L2 effective width capped
+by interior rib spacing. Flange tension uses the web rectangle. The same actual
+bar centroid feeds flexure and shear. Input forces are already factored per rib;
+the load-combination selector does not multiply those forces again.
+
+The dedicated Hordi screen/ViewModel/wrapper forwards this context to the ECP
+engine. Actual bar and link inputs are visible; the L2 field starts empty rather
+than quietly equating it to the span. Impossible layout or out-of-domain demand
+has an explicit error, not a four-bar cap, h-minus-30 depth or square-root clamp.
+The result includes actual layout, d, effective flange width, moment resistance,
+link route, dimensional failures and required cross-rib count in its trace.
+The entered thickness and rib spacing are labelled as such, not as a computed
+minimum depth or longitudinal bar spacing. Input changes invalidate the prior
+result. The legacy renderer is not used to invent a bottom-only drawing for a
+top-tension or multilayer source assessment.
+
+An independent coupled vector is fcu30, fy400, bw200, center spacing600, h350,
+tf60, cover25, links8, aggregate20 and two20mm tension bars: d307mm,
+As628.3185307mm2, B600mm, MRd63.7388172kNm/rib, Asreq611.1777816mm2 at62kNm.
+Increasing cover to45mm lowers d to287mm and fails that moment with the same bars.
+Moving the flange into tension also fails that demand. These changes are tested.
+
+## Remaining member integration scope
+
+This is a section assessment, not a completed member design. Whole-member safety
+and execution exports stay unapproved until serviceability, durability/fire cover,
+topping/transverse steel, cross-rib provision/detailing and anchorage are checked.
+Advanced/shared Hordi and waffle paths do not yet consume this context and retain
+their previous explicit method holds. The legacy no-context preview remains only
+for those unconverted callers. ACI/SBC numerical methods are unchanged and reject
+an ECP-only context instead of silently applying it. Existing saved data is not
+rewritten and no database schema change is included.

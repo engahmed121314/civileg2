@@ -2407,6 +2407,24 @@
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
     <string name="hordi_method_hold">ECP ribbed-slab method not verified. Numerical results are legacy previews, not a safety approval. Execution reports and bar schedules are blocked until verification is complete.</string>
     <string name="stored_slab_method_hold">Stored ribbed-slab code or method is not verified. Recalculate with a verified method before execution reports or quantities. Saved data is preserved.</string>
+    <string name="ecp_ribbed_section_scope">ECP section check: enter the actual tension bars, cover to outside links, link steel and region. This does not yet approve whole-member detailing or serviceability.</string>
+    <string name="ecp_ribbed_aggregate">Nominal maximum aggregate (mm)</string>
+    <string name="ecp_ribbed_main_diameter">Actual tension bar diameter (mm)</string>
+    <string name="ecp_ribbed_bars_per_layer">Actual bars in each layer</string>
+    <string name="ecp_ribbed_layers">Number of equal tension layers</string>
+    <string name="ecp_ribbed_deformed">Deformed main bars (unchecked: smooth grade 240)</string>
+    <string name="ecp_ribbed_links_diameter">Actual vertical link diameter (mm)</string>
+    <string name="ecp_ribbed_links_spacing">Actual link spacing (mm)</string>
+    <string name="ecp_ribbed_links_fy">Link steel yield strength (MPa)</string>
+    <string name="ecp_ribbed_links_legs">Number of vertical link legs</string>
+    <string name="ecp_ribbed_live_load">Characteristic live load only (kN/m²)</string>
+    <string name="ecp_ribbed_compression_flange">Top flange in compression (unchecked: top flange in tension)</string>
+    <string name="ecp_ribbed_contraflexure">L2: distance between contraflexure points (mm), not automatically the span</string>
+    <string name="ecp_ribbed_invalid_inputs">Enter valid finite section inputs. Use 1-100 bars/layer, 1-20 layers and 2-20 link legs.</string>
+    <string name="ecp_ribbed_center_spacing">Rib center spacing</string>
+    <string name="ecp_ribbed_entered_depth">Entered total depth</string>
+    <string name="ecp_ribbed_section_trace">Section calculation trace and limits</string>
+    <string name="ecp_ribbed_cover_links">Cover to outside links (mm)</string>
 </resources>
 
 

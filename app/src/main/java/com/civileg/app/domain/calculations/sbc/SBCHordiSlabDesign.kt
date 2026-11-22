@@ -57,8 +57,10 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        sectionContext: com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.Context?
     ): SlabDesignResult {
+        require(sectionContext == null) { "ECP source-section context is not supported by this code engine." }
         // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)

@@ -61,7 +61,8 @@ class HordiSlabViewModel @Inject constructor(
         designMoment: Double,     // kN.m/rib
         designShear: Double,      // kN/rib
         loadCombination: LoadCombination,
-        designCode: String = "ECP"
+        designCode: String = "ECP",
+        sectionContext: com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.Context? = null
     ) {
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
@@ -82,7 +83,7 @@ class HordiSlabViewModel @Inject constructor(
                     fcu = fcu, fy = fy, ribWidth = ribWidth, ribSpacing = ribSpacing,
                     totalThickness = totalThickness, toppingThickness = toppingThickness,
                     span = span, designMoment = designMoment, designShear = designShear,
-                    loadCombination = loadCombination, designCode = designCode
+                    loadCombination = loadCombination, designCode = designCode, sectionContext = sectionContext
                 )
 
                 val designer: HordiSlabDesign = CalculationFactory.getHordiSlabDesign(code)
@@ -96,7 +97,8 @@ class HordiSlabViewModel @Inject constructor(
                     span = span,
                     designMoment = designMoment,
                     designShear = designShear,
-                    loadCombination = loadCombination
+                    loadCombination = loadCombination,
+                    sectionContext = sectionContext
                 )
                 _result.value = result
             } catch (e: Exception) {
@@ -119,7 +121,7 @@ class HordiSlabViewModel @Inject constructor(
             title = "HORDI SLAB",
             spanMm = params.span,
             thicknessMm = params.totalThickness,
-            coverMm = 25.0,
+            coverMm = params.sectionContext?.coverToOutsideLinksMm ?: 25.0,
             mainBarDiaMm = res.barDiameter.toDouble(),
             mainSpacingMm = res.barSpacing.toDouble()
         )
@@ -194,7 +196,7 @@ class HordiSlabViewModel @Inject constructor(
                         spanX = params.span, spanY = params.span, thickness = params.totalThickness,
                         mainDia = res.barDiameter, mainSpacing = res.barSpacing,
                         distDia = res.barDiameter, distSpacing = res.barSpacing,
-                        cover = 25.0, ribWidth = params.ribWidth, ribSpacing = params.ribSpacing
+                        cover = params.sectionContext?.coverToOutsideLinksMm ?: 25.0, ribWidth = params.ribWidth, ribSpacing = params.ribSpacing
                     )
                 }.getOrNull()
                 pendingDrawingBitmap = null  // consume after use
@@ -293,6 +295,7 @@ class HordiSlabViewModel @Inject constructor(
         val designMoment: Double,
         val designShear: Double,
         val loadCombination: LoadCombination,
-        val designCode: String
+        val designCode: String,
+        val sectionContext: com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.Context?
     )
 }

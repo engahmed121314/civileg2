@@ -7,9 +7,9 @@ import com.civileg.app.domain.entities.SlabDesignResult
 import kotlin.math.*
 
 /**
- * Legacy ECP Hordi numeric preview pending source-method replacement.
- * This implementation does not establish a verified ECP edition or method.
- * Overall safety assessment and execution outputs remain blocked.
+ * Explicit-context calls assess the source-based ECP203-2020 rib section.
+ * No-context calls retain a held legacy preview for unconverted callers.
+ * Neither path establishes whole-member safety or permits execution outputs.
  */
 class ECPHordiSlabDesign : HordiSlabDesign {
 
@@ -30,8 +30,11 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        sectionContext: com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.Context?
     ): SlabDesignResult {
+        if (sectionContext != null) return assessSourceSection(fcu, fy, ribWidth, ribSpacing,
+            totalThickness, toppingThickness, span, designMoment, designShear, sectionContext)
         // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
@@ -100,4 +103,51 @@ class ECPHordiSlabDesign : HordiSlabDesign {
             safetyAssessmentBlocked = true
         )
     }
+
+    /** Factored forces are already per rib. No load-combination multiplier is applied again. */
+    private fun assessSourceSection(fcu: Double, fy: Double, ribWidth: Double, ribSpacing: Double,
+        totalThickness: Double, toppingThickness: Double, span: Double, designMoment: Double,
+        designShear: Double, context: com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.Context
+    ): SlabDesignResult {
+        val a = com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.assess(fcu, fy,
+            ribWidth, ribSpacing, totalThickness, toppingThickness, span, designMoment, designShear, context)
+        val required = requireNotNull(a.requiredSteelMm2) {
+            "Moment exceeds the verified singly reinforced section domain. Increase section size or use a separately verified doubly reinforced design."
+        }
+        require(a.momentResistanceKnM > 0.0 && a.shear.shearResistanceKn > 0.0) {
+            "Actual reinforcement is outside the supported positive-resistance section domain."
+        }
+        // Numeric strength ratios stay numeric. Geometry/detailing failures are
+        // separate explicit checks, never an invented utilization of 200 percent.
+        val utilization = maxOf(required / a.layout.providedSteelMm2,
+            designMoment / a.momentResistanceKnM, designShear / a.shear.shearResistanceKn)
+        val bars = context.tensionLayers.joinToString(" + ") { "${it.count} x ${it.diameterMm} mm" }
+        return SlabDesignResult(
+            requiredReinforcement = required,
+            providedReinforcement = a.layout.providedSteelMm2,
+            barDiameter = context.tensionLayers.first().diameterMm,
+            barSpacing = ribSpacing,
+            minThickness = totalThickness,
+            shearCapacity = a.shear.shearResistanceKn,
+            isSafe = false,
+            utilizationRatio = utilization,
+            safetyAssessmentBlocked = true,
+            warnings = buildList {
+                add("Section forces, actual bar layout, flexure and web shear assessed. Whole-member serviceability, durability, topping reinforcement, cross-rib provision and anchorage are not yet assessed; execution exports remain blocked.")
+                if (!a.geometry.geometryChecksPass) add("Rib/topping geometry does not meet ECP ribbed-slab dimensional limits.")
+                if (!a.flexureChecksPass) add("Selected actual bars fail the section flexure or minimum/maximum steel check.")
+                if (!a.shear.shearChecksPass) add("Section shear strength or link detailing check fails.")
+            },
+            codeNotes = listOf(
+                "ECP203-2020 bounded section method: printed4-1..4-9,4-17..4-22,6-15/16,6-42,7-6/7-7.",
+                "Section checks pass=${a.sectionChecksPass}; region=${context.region}; effective flange width=${a.effectiveFlangeWidthMm} mm; centroid effective depth=${a.layout.effectiveDepthMm} mm.",
+                "Actual tension layers, from tension face inward: $bars. As=${a.layout.providedSteelMm2} mm2; MRd=${a.momentResistanceKnM} kN.m/rib.",
+                "Cover to outside links=${context.coverToOutsideLinksMm} mm; aggregate=${context.nominalMaximumAggregateMm} mm; clear bar gap=${a.layout.minimumClearGapMm} mm. Exposure/fire cover not approved.",
+                "Vertical links=${context.links.legs} legs x ${context.links.diameterMm} mm @ ${context.links.spacingMm} mm, fy=${context.links.fyMpa} MPa. Concrete-only clause applies=${a.shear.concreteOnlyRequired}.",
+                "Required one-way cross ribs=${a.requiredCrossRibs}; provision/detailing not checked. Characteristic live load=${context.characteristicLiveLoadKnM2} kN/m2.",
+                "Input moment and shear are already factored section forces. Entered total thickness is not a verified minimum-depth or serviceability result."
+            )
+        )
+    }
+
 }

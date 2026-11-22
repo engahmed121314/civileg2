@@ -417,3 +417,20 @@ Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
   with unresolved code provenance are held non-destructively on read; explicit
   other-code records are unchanged. Method rebuilding, geometry/applicability,
   cover, loading, section behavior and detailing remain separate open work.
+
+
+**E-RIB-SECTION (2026-11-22) - coupled one-way ECP rib section, not member approval.**
+
+- ECP203-2020 supplied primary scan: printed3-5 material factors;4-1..4-9 flexure;
+  4-17..4-22 web shear;6-15/16 rib geometry;6-42 flange width;7-6/7-7 individual-bar
+  spacing. Direct source inspections and component scope are recorded in
+  `docs/engineering/ECP_203_RECTANGULAR_FLEXURE.md`.
+- Dedicated Hordi context now propagates actual cover, aggregate, bar layers,
+  link geometry/material and flange region/L2 to the coupled section components.
+  Positive and negative regions use different concrete compression geometry.
+  Factored per-rib forces are not factored a second time.
+- Required cross-rib count is reported, not accepted as proof of provision.
+  Serviceability, cover durability/fire, topping/transverse detailing and
+  anchorage are still open. Advanced/shared/waffle paths remain unconverted.
+- Other-code section methods have no new equations. An ECP-only context is
+  rejected by them. No stored record rewrite or database migration is included.

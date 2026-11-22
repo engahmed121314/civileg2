@@ -70,8 +70,10 @@ class SBCJoistSlab : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        sectionContext: com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.Context?
     ): SlabDesignResult {
+        require(sectionContext == null) { "ECP source-section context is not supported by this code engine." }
         // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)

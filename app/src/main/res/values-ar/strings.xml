@@ -2410,4 +2410,22 @@
     <string name="settings_support_button">تبرع عبر GitHub Sponsors</string>
     <string name="hordi_method_hold">طريقة حساب الهوردي المصري غير متحقق منها. الأرقام معاينة للحسابات القديمة وليست اعتماد أمان. تقارير التنفيذ وجداول التسليح موقوفة لحين اكتمال التحقق.</string>
     <string name="stored_slab_method_hold">لم يتم التحقق من الكود أو طريقة التصميم للبلاطة المفرغة المحفوظة. أعد الحساب بطريقة موثقة قبل تقارير التنفيذ أو الكميات. البيانات المحفوظة لم تتغير.</string>
+    <string name="ecp_ribbed_section_scope">فحص قطاع طبقاً للكود المصري: أدخل التسليح الفعلي عند وجه الشد والغطاء حتى خارج الكانة وتسليح الكانات ومنطقة العزم. الفحص لا يعتمد تفاصيل العنصر أو صلاحيته للخدمة بعد.</string>
+    <string name="ecp_ribbed_aggregate">المقاس الاسمي الأكبر للركام (مم)</string>
+    <string name="ecp_ribbed_main_diameter">قطر أسياخ الشد الفعلية (مم)</string>
+    <string name="ecp_ribbed_bars_per_layer">عدد الأسياخ الفعلية في كل طبقة</string>
+    <string name="ecp_ribbed_layers">عدد طبقات تسليح الشد المتساوية</string>
+    <string name="ecp_ribbed_deformed">أسياخ رئيسية ذات نتوءات (عند الإلغاء: ملساء بإجهاد خضوع ٢٤٠)</string>
+    <string name="ecp_ribbed_links_diameter">قطر الكانات الرأسية الفعلي (مم)</string>
+    <string name="ecp_ribbed_links_spacing">المسافة الفعلية بين الكانات (مم)</string>
+    <string name="ecp_ribbed_links_fy">إجهاد خضوع حديد الكانات (ميجاباسكال)</string>
+    <string name="ecp_ribbed_links_legs">عدد أفرع الكانة الرأسية</string>
+    <string name="ecp_ribbed_live_load">الحمل الحي المميز فقط (كيلونيوتن/م²)</string>
+    <string name="ecp_ribbed_compression_flange">الجناح العلوي مضغوط (عند الإلغاء: الجناح العلوي مشدود)</string>
+    <string name="ecp_ribbed_contraflexure">L2: المسافة بين نقطتي انقلاب العزم (مم)، وليست البحر تلقائياً</string>
+    <string name="ecp_ribbed_invalid_inputs">أدخل بيانات قطاع صحيحة ومحدودة: ١ إلى ١٠٠ سيخ لكل طبقة، و١ إلى ٢٠ طبقة، و٢ إلى ٢٠ فرع كانة.</string>
+    <string name="ecp_ribbed_center_spacing">المسافة بين محاور الأعصاب</string>
+    <string name="ecp_ribbed_entered_depth">السمك الكلي المدخل</string>
+    <string name="ecp_ribbed_section_trace">خطوات حساب القطاع وحدود الفحص</string>
+    <string name="ecp_ribbed_cover_links">الغطاء حتى السطح الخارجي للكانات (مم)</string>
 </resources>
