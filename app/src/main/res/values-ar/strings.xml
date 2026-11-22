@@ -2422,4 +2422,7 @@
     <string name="boq_pdf_unknown_excluded">%1$d تصميم كمياته غير معروفة ومستبعد من الإجماليات.</string>
     <string name="boq_pdf_quantity_unknown">الكمية غير معروفة</string>
     <string name="settings_price_legacy_unknown_currency">القيمة المحفوظة سابقًا %1$s عملتها غير مسجلة فلا تُستخدم. أدخل السعر بالعملة المختارة لتأكيده.</string>
+    <string name="boq_stored_cost_currency_unknown">تكاليف التصميمات المحفوظة عملتها غير مسجلة.</string>
+    <string name="boq_total_not_available">غير متاح</string>
+    <string name="boq_cost_currency_not_recorded_short">العملة غير مسجلة</string>
 </resources>

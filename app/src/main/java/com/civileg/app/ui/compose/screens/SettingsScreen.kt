@@ -379,7 +379,7 @@ private fun SettingsRadioRow(
 }
 
 @Composable
-private fun SettingsPriceInput(
+internal fun SettingsPriceInput(
     label: String,
     value: String,
     currency: String,
@@ -390,10 +390,15 @@ private fun SettingsPriceInput(
         value = value,
         onValueChange = onValueChange,
         label = { AppText(label, fontSize = 13.sp) },
-        placeholder = { AppText(stringResource(R.string.settings_price_not_set), fontSize = 13.sp) },
         suffix = { AppText(currency, fontWeight = FontWeight.Bold, fontSize = 13.sp) },
-        supportingText = if (legacyValue != null && value.isEmpty()) {
-            { AppText(stringResource(R.string.settings_price_legacy_unknown_currency, legacyValue.toString()), fontSize = 11.sp) }
+        supportingText = if (value.isEmpty()) {
+            {
+                if (legacyValue != null) {
+                    AppText(stringResource(R.string.settings_price_legacy_unknown_currency, legacyValue.toString()), fontSize = 11.sp)
+                } else {
+                    AppText(stringResource(R.string.settings_price_not_set), fontSize = 11.sp)
+                }
+            }
         } else null,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         singleLine = true,

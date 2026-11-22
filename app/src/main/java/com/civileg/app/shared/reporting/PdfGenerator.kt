@@ -589,7 +589,10 @@ object PdfGenerator {
         concreteVol: Double,
         steelWeight: Double,
         items: kotlin.collections.List<Pair<String, Double>>,
-        currency: String = "EGP",
+        /** null = the amounts have no recorded currency: printed bare, never labelled. */
+        currency: String? = "EGP",
+        /** When set, printed instead of [totalBudget] (e.g. no honest total exists). */
+        totalBudgetLabel: String? = null,
         /** Printed under the summary, e.g. that the total is partial or excludes unverified rows. */
         notes: kotlin.collections.List<String> = emptyList(),
         /** Cost cell text per item name index; null entries print the number. */
@@ -611,13 +614,13 @@ object PdfGenerator {
         addArabicCell(infoTable, "Project Name", arabicFont, fontSize = 10f)
         addArabicCell(infoTable, projectName, arabicFont, isBold = true, fontSize = 10f)
         addArabicCell(infoTable, "Report Date", arabicFont, fontSize = 10f)
-        addArabicCell(infoTable, SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date()), arabicFont, isBold = true, fontSize = 10f)
+        addArabicCell(infoTable, SimpleDateFormat("dd/MM/yyyy", Locale.US).format(Date()), arabicFont, isBold = true, fontSize = 10f)
         document.add(infoTable)
         document.add(Paragraph("\n"))
 
         document.add(createStyledParagraph("PROJECT SUMMARY", arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
         val summaryTable = Table(UnitValue.createPercentArray(floatArrayOf(34f, 33f, 33f))).useAllAvailableWidth()
-        summaryTable.addCell(createSummaryCell("Total Estimated Budget", String.format(Locale.US, "%,.2f %s", totalBudget, currency), arabicFont))
+        summaryTable.addCell(createSummaryCell("Total Estimated Budget", totalBudgetLabel ?: (String.format(Locale.US, "%,.2f", totalBudget) + (currency?.let { " $it" } ?: "")), arabicFont))
         summaryTable.addCell(createSummaryCell("Total Concrete Volume", String.format(Locale.US, "%.2f m\u00B3", concreteVol), arabicFont))
         summaryTable.addCell(createSummaryCell("Total Steel Weight", String.format(Locale.US, "%.2f Tons", steelWeight / 1000.0), arabicFont))
         document.add(summaryTable)
@@ -627,7 +630,7 @@ object PdfGenerator {
         document.add(createStyledParagraph("DETAILED COST BREAKDOWN", arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
         val itemTable = Table(UnitValue.createPercentArray(floatArrayOf(70f, 30f))).useAllAvailableWidth()
         itemTable.addHeaderCell(createHeaderCell("Item / Design Name", arabicFont))
-        itemTable.addHeaderCell(createHeaderCell("Cost ($currency)", arabicFont))
+        itemTable.addHeaderCell(createHeaderCell(if (currency == null) "Cost (currency not recorded)" else "Cost ($currency)", arabicFont))
         items.forEachIndexed { idx, (name, price) ->
             addArabicCell(itemTable, name, arabicFont, fontSize = 9f)
             itemTable.addCell(Cell().add(Paragraph(itemCostLabels.getOrNull(idx) ?: String.format(Locale.US, "%,.0f", price)).setFontSize(9f).setTextAlignment(TextAlignment.RIGHT)))

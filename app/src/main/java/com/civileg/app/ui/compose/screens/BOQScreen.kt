@@ -312,17 +312,7 @@ fun DesignsBOQContent(
                         AppButton(
                             label = "Export BOQ",
                             onClick = {
-                                val items = elementBoqItems
-                                val file = PdfGenerator.generateBOQReport(
-                                    context, "${selectedDesign?.name ?: "Design"} BOQ", elementBoqTotal,
-                                    items.filter { it.category == BoqCategory.CONCRETE }.sumOf { it.quantity },
-                                    // steel BOQ quantity is in tons; the report takes kg
-                                    com.civileg.app.domain.entities.BoqPricing.steelKgForReport(items),
-                                    items.map { it.description to it.total },
-                                    currency = boqCurrency,
-                                    notes = if (unpricedCount > 0) listOf(context.getString(R.string.boq_total_priced_only, unpricedCount)) else emptyList(),
-                                    itemCostLabels = items.map { if (it.isPriced) null else context.getString(R.string.boq_price_not_set) }
-                                )
+                                val file = buildDesignBoqPdf(context, selectedDesign?.name ?: "Design", elementBoqItems, unpricedCount, boqCurrency)
                                 sharePdf(context, file)
                             },
                             modifier = Modifier.weight(1f),
@@ -377,38 +367,7 @@ fun DesignsBOQContent(
                         AppText("${selectedDesign?.name ?: "Design"} — Detailed BOQ", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
                     }
                     item {
-                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                elementBoqItems.forEach { item ->
-                                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            AppText(item.description, style = MaterialTheme.typography.bodySmall)
-                                            if (item.isPriced) {
-                                                AppText("${"%.3f".format(item.quantity)} ${item.unit} × ${"%,.0f".format(item.unitPrice)}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                                            } else {
-                                                AppText("${"%.3f".format(item.quantity)} ${item.unit}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                                            }
-                                        }
-                                        if (item.isPriced) {
-                                            AppText(String.format(Locale.US, "%,.0f %s", item.total, boqCurrency), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
-                                        } else {
-                                            AppText(stringResource(R.string.boq_price_not_set), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                                        }
-                                    }
-                                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
-                                }
-                                Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    AppText(if (unpricedCount == 0) stringResource(R.string.boq_total_complete) else stringResource(R.string.boq_total_priced_only, unpricedCount), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                    AppText(String.format(Locale.US, "%,.0f %s", elementBoqTotal, boqCurrency), fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
-                                }
-                                if (unpricedCount > 0) {
-                                    AppText(stringResource(R.string.boq_price_not_set_hint), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
-                                }
-                                if (unrecordedCurrency > 0) {
-                                    AppText(stringResource(R.string.boq_currency_not_recorded, unrecordedCurrency), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                                }
-                            }
-                        }
+                        BoqDetailCard(elementBoqItems, elementBoqTotal, unpricedCount, unrecordedCurrency, boqCurrency)
                     }
                 }
             }
@@ -431,20 +390,7 @@ private fun exportProjectBOQPdf(context: Context, name: String, designs: List<co
         return
     }
     try {
-        val sum = com.civileg.app.db.QuantityLedger.summarize(designs)
-        val notes = buildList {
-            add(context.getString(R.string.boq_pdf_measured_only))
-            if (sum.nominalCount + sum.legacyCount > 0) add(context.getString(R.string.boq_pdf_unverified_excluded, sum.nominalCount + sum.legacyCount))
-            if (sum.unknownQuantityCount > 0) add(context.getString(R.string.boq_pdf_unknown_excluded, sum.unknownQuantityCount))
-        }
-        val labels = designs.map {
-            when (it.quantityBasis) {
-                com.civileg.app.db.QuantityBasis.UNKNOWN -> context.getString(R.string.boq_pdf_quantity_unknown)
-                com.civileg.app.db.QuantityBasis.MEASURED -> null
-                else -> String.format(Locale.US, "%,.0f *", it.totalCost)
-            }
-        }
-        val file = PdfGenerator.generateBOQReport(context, name, sum.totalCost, sum.totalConcrete, sum.totalSteel, designs.map { it.name to it.totalCost }, notes = notes, itemCostLabels = labels)
+        val file = buildProjectBoqPdf(context, name, designs)
         sharePdf(context, file)
     } catch (e: Exception) { Toast.makeText(context, context.getString(R.string.boq_export_failed_title), Toast.LENGTH_SHORT).show() }
 }
@@ -565,7 +511,11 @@ fun DesignBOQCard(design: com.civileg.app.db.Design, isSelected: Boolean = false
                     AppText(stringResource(R.string.design_status_not_verified), style = MaterialTheme.typography.labelSmall)
                 }
             }
-            AppText(String.format(Locale.US, "%,.0f EGP", design.totalCost), fontWeight = FontWeight.Black)
+            Column(horizontalAlignment = Alignment.End) {
+                AppText(String.format(Locale.US, "%,.0f", design.totalCost), fontWeight = FontWeight.Black)
+                // The stored cost has no recorded currency: say so next to the number.
+                AppText(stringResource(R.string.boq_cost_currency_not_recorded_short), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            }
         }
     }
 }
@@ -575,7 +525,9 @@ fun TotalCostCard(cost: Double) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(24.dp)) {
             AppText(stringResource(R.string.boq_total_saved_cost), color = Color.White.copy(alpha = 0.8f))
-            AppText(String.format(Locale.US, "%,.0f EGP", cost), color = Color.White, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
+            // Stored costs have no recorded currency and may differ per design: no summed headline.
+            AppText(stringResource(R.string.boq_total_not_available), color = Color.White, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
+            AppText(stringResource(R.string.boq_stored_cost_currency_unknown), color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -588,4 +540,124 @@ fun EmptyStateView() {
             AppText(stringResource(R.string.boq_no_projects_found), color = Color.Gray); AppText(stringResource(R.string.boq_add_first_project), fontSize = 12.sp, color = Color.Gray)
         }
     }
+}
+
+/** Detailed BOQ card: priced lines, unpriced lines ("Price not set"), partial-total label and the unknown-currency note. */
+@Composable
+internal fun BoqDetailCard(
+    items: List<com.civileg.app.domain.entities.BoqItem>,
+    total: Double,
+    unpricedCount: Int,
+    unknownCurrencyCount: Int,
+    currency: String
+) {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                items.forEach { item ->
+                                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            AppText(item.description, style = MaterialTheme.typography.bodySmall)
+                                            if (item.isPriced) {
+                                                AppText("${"%.3f".format(item.quantity)} ${item.unit} × ${"%,.0f".format(item.unitPrice)}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                            } else {
+                                                AppText("${"%.3f".format(item.quantity)} ${item.unit}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                            }
+                                        }
+                                        if (item.isPriced) {
+                                            AppText(String.format(Locale.US, "%,.0f %s", item.total, currency), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                                        } else {
+                                            AppText(stringResource(R.string.boq_price_not_set), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                        }
+                                    }
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                                }
+                                Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    AppText(if (unpricedCount == 0) stringResource(R.string.boq_total_complete) else stringResource(R.string.boq_total_priced_only, unpricedCount), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                    AppText(String.format(Locale.US, "%,.0f %s", total, currency), fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+                                }
+                                if (unpricedCount > 0) {
+                                    AppText(stringResource(R.string.boq_price_not_set_hint), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                                }
+                                if (unknownCurrencyCount > 0) {
+                                    AppText(stringResource(R.string.boq_currency_not_recorded, unknownCurrencyCount), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                }
+                            }
+                        }
+}
+
+/** The PDF report is English-only, so its text never follows the app UI language. */
+internal fun reportContext(context: Context): Context {
+    val cfg = android.content.res.Configuration(context.resources.configuration)
+    cfg.setLocale(Locale.ENGLISH)
+    return context.createConfigurationContext(cfg)
+}
+
+internal data class DesignBoqExport(
+    val title: String, val total: Double, val concrete: Double, val steelKg: Double,
+    val items: List<Pair<String, Double>>, val currency: String, val notes: List<String>, val labels: List<String?>
+)
+
+/** Design BOQ export: priced with the user's saved prices in [currency]; unpriced lines say so. */
+internal fun designBoqExport(
+    context: Context, designName: String, items: List<com.civileg.app.domain.entities.BoqItem>,
+    unpricedCount: Int, currency: String
+): DesignBoqExport {
+    val rc = reportContext(context)
+    return DesignBoqExport(
+        title = "$designName BOQ",
+        total = items.filter { it.isPriced }.sumOf { it.total },
+        concrete = items.filter { it.category == BoqCategory.CONCRETE }.sumOf { it.quantity },
+        steelKg = com.civileg.app.domain.entities.BoqPricing.steelKgForReport(items),
+        items = items.map { it.description to it.total },
+        currency = currency,
+        notes = if (unpricedCount > 0) listOf(rc.getString(R.string.boq_total_priced_only, unpricedCount)) else emptyList(),
+        labels = items.map { if (it.isPriced) null else rc.getString(R.string.boq_price_not_set) }
+    )
+}
+
+internal data class ProjectBoqExport(
+    val total: Double, val concrete: Double, val steelKg: Double,
+    val items: List<Pair<String, Double>>, val notes: List<String>, val labels: List<String?>,
+    /** Always null: stored design costs carry no currency identity. */
+    val currency: String? = null,
+    /** Stored costs may be in different currencies, so no summed cost headline is printed. */
+    val totalLabel: String? = null
+)
+
+/** Basis-aware project export: totals are measured designs only; nominal/legacy rows are starred, unknown rows say so. */
+internal fun projectBoqExport(uiContext: Context, designs: List<com.civileg.app.db.Design>): ProjectBoqExport {
+    val context = reportContext(uiContext)
+    val sum = com.civileg.app.db.QuantityLedger.summarize(designs)
+    val notes = buildList {
+        add(context.getString(R.string.boq_pdf_measured_only))
+        add(context.getString(R.string.boq_stored_cost_currency_unknown))
+        if (sum.nominalCount + sum.legacyCount > 0) add(context.getString(R.string.boq_pdf_unverified_excluded, sum.nominalCount + sum.legacyCount))
+        if (sum.unknownQuantityCount > 0) add(context.getString(R.string.boq_pdf_unknown_excluded, sum.unknownQuantityCount))
+    }
+    val labels = designs.map {
+        when (it.quantityBasis) {
+            com.civileg.app.db.QuantityBasis.UNKNOWN -> context.getString(R.string.boq_pdf_quantity_unknown)
+            com.civileg.app.db.QuantityBasis.MEASURED -> null
+            else -> String.format(Locale.US, "%,.0f *", it.totalCost)
+        }
+    }
+    return ProjectBoqExport(sum.totalCost, sum.totalConcrete, sum.totalSteel, designs.map { it.name to it.totalCost }, notes, labels,
+        totalLabel = context.getString(R.string.boq_total_not_available))
+}
+
+/** The exact PDF the "Export BOQ" button produces. */
+internal fun buildDesignBoqPdf(
+    context: Context, designName: String, items: List<com.civileg.app.domain.entities.BoqItem>,
+    unpricedCount: Int, currency: String
+): File {
+    val m = designBoqExport(context, designName, items, unpricedCount, currency)
+    return PdfGenerator.generateBOQReport(reportContext(context), m.title, m.total, m.concrete, m.steelKg, m.items,
+        currency = m.currency, notes = m.notes, itemCostLabels = m.labels)
+}
+
+/** The exact PDF the project "Export PDF" button produces. */
+internal fun buildProjectBoqPdf(context: Context, name: String, designs: List<com.civileg.app.db.Design>): File {
+    val m = projectBoqExport(context, designs)
+    return PdfGenerator.generateBOQReport(reportContext(context), name, m.total, m.concrete, m.steelKg, m.items,
+        currency = m.currency, totalBudgetLabel = m.totalLabel, notes = m.notes, itemCostLabels = m.labels)
 }

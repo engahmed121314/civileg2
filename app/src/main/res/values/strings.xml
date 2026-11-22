@@ -2419,6 +2419,9 @@
     <string name="boq_pdf_unknown_excluded">%1$d design(s) have unknown quantities and are excluded from totals.</string>
     <string name="boq_pdf_quantity_unknown">Quantity unknown</string>
     <string name="settings_price_legacy_unknown_currency">Earlier saved value %1$s has no recorded currency, so it is not used. Enter the price in the selected currency to confirm.</string>
+    <string name="boq_stored_cost_currency_unknown">Saved design costs have no recorded currency.</string>
+    <string name="boq_total_not_available">Not available</string>
+    <string name="boq_cost_currency_not_recorded_short">Currency not recorded</string>
 </resources>
 
 
