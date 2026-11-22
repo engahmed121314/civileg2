@@ -96,7 +96,9 @@ class EditorPopupsI18nTest {
         pinLocale("en")
         setThemedContent(arabic = false) { NodalLoadDialog(nodeId = 3, onConfirm = {}, onDismiss = {}) }
         assertTextPresent("Load on node 3")
-        assertTextPresent("Value (kN/m or kN)")
+        assertTextPresent("Fx (kN)")
+        assertTextPresent("Fy (kN)")
+        assertTextPresent("Mz (kN.m)")
         assertTextPresent("Add")
         assertTextPresent("Cancel")
         assertTextAbsent("حمولة على العقدة")
@@ -108,7 +110,9 @@ class EditorPopupsI18nTest {
         pinLocale("ar")
         setThemedContent(arabic = true) { NodalLoadDialog(nodeId = 3, onConfirm = {}, onDismiss = {}) }
         assertTextPresent("حمولة على العقدة 3")
-        assertTextPresent("القيمة (kN/m أو kN)")
+        assertTextPresent("Fx (kN)")
+        assertTextPresent("Fy (kN)")
+        assertTextPresent("Mz (kN.m)")
         assertTextPresent("إضافة")
         assertTextPresent("إلغاء")
         assertTextAbsent("Load on node")
