@@ -424,7 +424,69 @@ object Migrations {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL("ALTER TABLE designs ADD COLUMN quantityBasis TEXT NOT NULL DEFAULT 'LEGACY_UNVERIFIED'")
             database.execSQL("ALTER TABLE designs ADD COLUMN snapshotRevision TEXT")
+            repairNullableDesignCreatedAt(database)
         }
+    }
+
+    /**
+     * MIGRATION_8_9 rebuilt designs with createdAt nullable, but the entity declares it NOT NULL, so
+     * Room's schema validation rejects such a file. When (and only when) the real table has a nullable
+     * createdAt, rebuild designs in the entity shape. Every row keeps its id, every column value and
+     * the id counter; site_inspections.designId links are saved and restored because dropping the
+     * parent table fires ON DELETE SET NULL when foreign keys are enforced. A missing createdAt (no
+     * true date exists) becomes 0 (1970-01-01), an obvious "date unknown" value, never an invented date.
+     */
+    internal fun repairNullableDesignCreatedAt(database: SupportSQLiteDatabase) {
+        var nullable = false
+        database.query("PRAGMA table_info(designs)").use { c ->
+            val nameIdx = c.getColumnIndexOrThrow("name")
+            val notNullIdx = c.getColumnIndexOrThrow("notnull")
+            while (c.moveToNext()) {
+                if (c.getString(nameIdx) == "createdAt" && c.getInt(notNullIdx) == 0) nullable = true
+            }
+        }
+        if (!nullable) return
+        var seq: Long? = null
+        database.query("SELECT seq FROM sqlite_sequence WHERE name = 'designs'").use { c ->
+            if (c.moveToFirst()) seq = c.getLong(0)
+        }
+        database.execSQL("CREATE TEMP TABLE IF NOT EXISTS design_links_backup AS SELECT id AS inspectionId, designId FROM site_inspections WHERE designId IS NOT NULL")
+        database.execSQL("""
+            CREATE TABLE designs_repaired (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                projectId INTEGER NOT NULL,
+                type TEXT NOT NULL,
+                name TEXT NOT NULL,
+                inputData TEXT NOT NULL,
+                results TEXT NOT NULL,
+                isSafe INTEGER NOT NULL,
+                utilizationRatio REAL NOT NULL DEFAULT 0.0,
+                codeUsed TEXT NOT NULL,
+                concreteVolume REAL NOT NULL DEFAULT 0.0,
+                steelWeight REAL NOT NULL DEFAULT 0.0,
+                totalCost REAL NOT NULL DEFAULT 0.0,
+                createdAt INTEGER NOT NULL,
+                quantityBasis TEXT NOT NULL DEFAULT 'LEGACY_UNVERIFIED',
+                snapshotRevision TEXT,
+                FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+            )
+        """)
+        database.execSQL("""
+            INSERT INTO designs_repaired (id, projectId, type, name, inputData, results, isSafe, utilizationRatio,
+                codeUsed, concreteVolume, steelWeight, totalCost, createdAt, quantityBasis, snapshotRevision)
+            SELECT id, projectId, type, name, inputData, results, isSafe, utilizationRatio,
+                codeUsed, concreteVolume, steelWeight, totalCost, COALESCE(createdAt, 0), quantityBasis, snapshotRevision
+            FROM designs
+        """)
+        database.execSQL("DROP TABLE designs")
+        database.execSQL("ALTER TABLE designs_repaired RENAME TO designs")
+        database.execSQL("CREATE INDEX IF NOT EXISTS index_designs_projectId ON designs(projectId)")
+        database.execSQL("""
+            UPDATE site_inspections SET designId = (SELECT b.designId FROM design_links_backup b WHERE b.inspectionId = site_inspections.id)
+            WHERE designId IS NULL AND id IN (SELECT inspectionId FROM design_links_backup)
+        """)
+        database.execSQL("DROP TABLE design_links_backup")
+        seq?.let { database.execSQL("UPDATE sqlite_sequence SET seq = MAX(seq, $it) WHERE name = 'designs'") }
     }
 
     /**
