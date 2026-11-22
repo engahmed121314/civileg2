@@ -169,7 +169,7 @@ class ECPAdvancedSlab {
         fy: Double,
         totalLoad: Double
     ): SlabDesignResult {
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf("ECP two-way ribbed-slab method verification is incomplete. No safety approval or execution package is available.")
         val codeNotes = mutableListOf<String>()
         val ribSpacing = slab.ribSpacing / 1000.0
         val loadPerRib = totalLoad * ribSpacing
@@ -209,7 +209,8 @@ class ECPAdvancedSlab {
             barSpacing = ribSpacing * 1000.0,
             minThickness = slab.totalThickness,
             shearCapacity = 0.0,
-            isSafe = K <= K_bal,
+            isSafe = false,
+            safetyAssessmentBlocked = true,
             utilizationRatio = K / K_bal,
             warnings = warnings,
             codeNotes = codeNotes

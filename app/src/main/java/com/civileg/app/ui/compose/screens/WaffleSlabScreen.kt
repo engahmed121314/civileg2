@@ -1,6 +1,7 @@
 package com.civileg.app.ui.compose.screens
 
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.calculations.base.WaffleSlabDesign
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -139,7 +140,7 @@ fun WaffleSlabScreen(
                     CodeSelectorChips(
                         selectedCode = designCode,
                         codes = listOf("ECP" to "ECP 203", "ACI" to "ACI 318", "SBC" to "SBC 304"),
-                        onCodeSelected = { designCode = it }
+                        onCodeSelected = { viewModel.clearResult(); designCode = it }
                     )
                 }
 
@@ -293,6 +294,9 @@ fun WaffleSlabScreen(
 
                 // ── Results ───────────────────────────────────────────
                 result?.let { res ->
+                    if (res.safetyAssessmentBlocked) {
+                        item { WaffleSafetyAssessment(res, designCode) }
+                    } else {
                     val bbsEntries = runCatching {
                         BbsGenerator.generateWaffleSlabBbs(
                             mark = "WS1",
@@ -424,6 +428,8 @@ fun WaffleSlabScreen(
                         }
                     }
 
+                    }
+
                     // Warnings
                     if (res.warnings.isNotEmpty()) {
                         item {
@@ -531,7 +537,7 @@ fun WaffleSlabScreen(
                     }
 
                     // Code Notes
-                    if (res.codeNotes.isNotEmpty()) {
+                    if (!res.safetyAssessmentBlocked && res.codeNotes.isNotEmpty()) {
                         item { FormulaCard(res.codeNotes, title = stringResource(R.string.waffle_slab_design_calculations)) }
                     }
 
@@ -600,4 +606,14 @@ fun WaffleSlabScreen(
             }
         }
     }
+}
+
+@Composable
+internal fun WaffleSafetyAssessment(result: WaffleSlabDesign.WaffleSlabResult, designCode: String) {
+    if (result.safetyAssessmentBlocked) HordiMethodHoldNotice()
+    else SafetyStatusCard(
+        utilizationRatio = result.utilizationRatio,
+        isSafe = result.isSafe,
+        title = stringResource(R.string.waffle_slab_safety_title, designCode)
+    )
 }

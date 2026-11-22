@@ -62,12 +62,12 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         InputGuard.nonNegative("deadLoad", input.deadLoad)
         InputGuard.nonNegative("liveLoad", input.liveLoad)
 
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf("ECP two-way ribbed-slab method verification is incomplete. Safety approval and execution outputs are blocked.")
         val codeNotes = mutableListOf<String>()
         val safetyChecks = mutableListOf<SafetyCheckItem>()
 
         codeNotes.add(CodeReference.ECP.SLAB_TWO_WAY)
-        codeNotes.add("ECP 203-2025 §6-4: Waffle Slab Design")
+        codeNotes.add("Legacy two-way ribbed-slab numeric preview. ECP method verification incomplete.")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S, φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")
 
         // ── 1. Input validation ─────────────────────────────────────
@@ -145,12 +145,13 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         val providedSteel = ribDesign.flexureReinforcement.providedArea
         val steelWeight = ((numRibsX * providedSteel * (input.ly / 1000.0) / 1e6) + (numRibsY * providedSteel * (input.lx / 1000.0) / 1e6)) * 7850.0
 
-        val isSafe = ribDesign.isSafe && solidHeadDesign.isSafe && punchingShearCheck.isSafe && deflectionCheck.isSafe
+        // Legacy placeholders and unverified formulas cannot establish approval.
+        val isSafe = false
         val punchUtil = if (punchingShearCheck.vc > 0) punchingShearCheck.vu / punchingShearCheck.vc else 0.0
         val deflUtil = if (deflectionCheck.allowable > 0) deflectionCheck.longTerm / deflectionCheck.allowable else 0.0
         val utilizationRatio = maxOf(ribDesign.utilizationRatio, punchUtil, deflUtil)
 
-        if (!isSafe) warnings.add("⚠ Waffle slab failed one or more ECP 203 checks")
+        // The hold is not a claim that every low-demand design physically fails.
         if (utilizationRatio > 1.0) warnings.add("⚠ Utilization ratio = ${String.format("%.2f", utilizationRatio)} > 1.0")
 
         val solidHeadUtil = if (solidHeadDesign.punchingShear.vc > 0)
@@ -162,6 +163,7 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
 
         return WaffleSlabResult(
             isSafe = isSafe,
+            safetyAssessmentBlocked = true,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
             codeNotes = codeNotes,
@@ -199,7 +201,7 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         InputGuard.positive("clearSpan", clearSpan)
         InputGuard.notNull("loadCombination", loadCombination)
 
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf("ECP two-way ribbed-slab method verification is incomplete. Safety approval and execution outputs are blocked.")
         val codeNotes = mutableListOf<String>()
 
         val fc = fcu / GAMMA_C  // cylinder strength
@@ -246,16 +248,17 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
             concreteShearCapacity = vc,
             requiredShearReinforcement = 0.0,
             providedShearReinforcement = 0.0,
-            isSafe = true,
+            isSafe = false,
             utilizationRatio = 0.5,
-            warnings = emptyList(),
+            warnings = warnings,
             codeNotes = emptyList()
         )
 
         return WaffleSlabDesign.RibDesignResult(
             flexureReinforcement = flexure,
             shearReinforcement = shear,
-            isSafe = true,
+            isSafe = false,
+            safetyAssessmentBlocked = true,
             utilizationRatio = 0.7
         )
     }
@@ -280,7 +283,7 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         InputGuard.positive("columnSize", columnSize)
         InputGuard.nonNegative("axialLoad", axialLoad)
 
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf("ECP two-way ribbed-slab method verification is incomplete. Safety approval and execution outputs are blocked.")
         val codeNotes = mutableListOf<String>()
 
         val d = 200.0 - COVER - 10.0
@@ -296,7 +299,7 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         )
 
         val punching = PunchingShearCheck(
-            vu = 100.0, vc = 200.0, isSafe = true, utilizationRatio = 0.5
+            vu = 100.0, vc = 200.0, isSafe = false, utilizationRatio = 0.5
         )
 
         return WaffleSlabDesign.SolidHeadDesignResult(
@@ -309,9 +312,10 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
                 ratio = 0.008
             ),
             punchingShear = PunchingShearCheck(
-                vu = 100.0, vc = 200.0, isSafe = true, utilizationRatio = 0.5
+                vu = 100.0, vc = 200.0, isSafe = false, utilizationRatio = 0.5
             ),
-            isSafe = true
+            isSafe = false,
+            safetyAssessmentBlocked = true
         )
     }
 
@@ -333,7 +337,7 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         InputGuard.positive("columnSize", columnSize)
         InputGuard.nonNegative("axialLoad", axialLoad)
 
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf("ECP two-way ribbed-slab method verification is incomplete. Safety approval and execution outputs are blocked.")
         val codeNotes = mutableListOf<String>()
 
         val fc = fcu / GAMMA_C
@@ -347,7 +351,7 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         val vc = minOf(vc1, vc2, vc3) * PHI_SHEAR
 
         val vu = 100.0
-        val isSafe = vu <= vc
+        val isSafe = false // Method verification is incomplete.
 
         return PunchingShearCheck(
             vu = vu, vc = vc, isSafe = isSafe,
@@ -388,7 +392,7 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         val longTerm = immediate * 2.0
         val allowable = span / 250.0
         val ratio = longTerm / allowable
-        val isSafe = longTerm <= allowable
+        val isSafe = false // Method verification is incomplete.
 
         return FlatSlabDesign.DeflectionResult(
             immediate = immediate,

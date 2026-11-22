@@ -695,6 +695,7 @@ object BbsGenerator {
         solidHeadSizeMm: Double,
         coverMm: Double = 25.0
     ): List<BbsEntry> {
+        require(!result.safetyAssessmentBlocked) { "Slab method not verified; execution bar schedules are blocked." }
         InputGuard.notBlank("memberMark", mark)
         InputGuard.positive("lx", lxMm)
         InputGuard.positive("ly", lyMm)

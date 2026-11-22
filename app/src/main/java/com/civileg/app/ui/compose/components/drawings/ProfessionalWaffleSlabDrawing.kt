@@ -75,6 +75,11 @@ fun ProfessionalWaffleSlabDrawing(
     InputGuard.positive("columnWidth", columnWidth)
     InputGuard.positive("cover", cover)
 
+    if (resultSummary?.safetyAssessmentBlocked == true) {
+        MethodHeldSlabDrawing(modifier)
+        return
+    }
+
     val codeLabel = designCode.version
     val cfg = drawingDimensionsConfig()
 
