@@ -282,19 +282,24 @@ internal fun SoilDrawingSection(
         stringResource(R.string.soil_vm_stress_bulb),
         stringResource(R.string.soil_vm_table)
     )
-    // Four chips share the width so every mode is visible without scrolling;
-    // a horizontally scrolling row read as a clipped last chip.
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        soilViewModeLabels.forEachIndexed { index, label ->
-            FilterChip(
-                selected = soilViewMode == index + 1,
-                onClick = { soilViewMode = index + 1 },
-                label = { AppText(label, fontSize = 11.sp, maxLines = 2, softWrap = true) },
-                modifier = Modifier.weight(1f)
-            )
+    // Two rows preserve whole labels at narrow phone widths without scrolling
+    // or splitting a single word such as Elevation across two lines.
+    Column {
+        soilViewModeLabels.chunked(2).forEachIndexed { rowIndex, labels ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                labels.forEachIndexed { index, label ->
+                    val mode = rowIndex * 2 + index + 1
+                    FilterChip(
+                        selected = soilViewMode == mode,
+                        onClick = { soilViewMode = mode },
+                        label = { AppText(label, fontSize = 11.sp, maxLines = 1, softWrap = false) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
         }
     }
 

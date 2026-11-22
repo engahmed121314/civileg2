@@ -230,12 +230,17 @@ fun ProfessionalSoilStructureDrawing(
         }
 
         // ── Responsive Title Block & Scale Bar ─────────────────────────────
-        drawSheetAnnotations(
-            x = W - cfg.titleBlockWidth - margin * 0.3f,
-            y = H - cfg.titleBlockHeight - margin * 0.3f,
-            cfg = cfg,
-            summary = resultSummary
-        )
+        // An elevation/pressure section has no meaningful north bearing;
+        // do not place a decorative north arrow over its legend. The plan's
+        // orientation is likewise unspecified by the input model.
+        if (resultSummary != null) {
+            drawResultSummaryStrip(
+                summary = resultSummary,
+                x = W - cfg.titleBlockWidth - margin * 0.3f,
+                y = H - cfg.titleBlockHeight - margin * 0.3f - cfg.annotationTextSmall * 2.7f,
+                width = cfg.titleBlockWidth, cfg = cfg
+            )
+        }
         drawResponsiveTitleBlock(
             x = W - cfg.titleBlockWidth - margin * 0.3f,
             y = H - cfg.titleBlockHeight - margin * 0.3f,
@@ -593,9 +598,9 @@ private fun DrawScope.drawFoundationPlanKern(
 
     // Status label
     val compStatus = if (isFullCompression) "100% Bearing Area in Compression (Safe)" else "Partial Tension / Uplift (e > L/6)"
-    // The length dimension uses +4 (line) and +14 (offset), with text
-    // below that. Keep the status on its own baseline, not on that text.
-    drawSoilLegendLine(compStatus, left, planY + drawW + 54f,
+    // Put the status between the zone heading and plan, not between the
+    // length dimension and title block where there is no free baseline.
+    drawSoilLegendLine(compStatus, left, top + 20f,
         width, ptColor, cfg.annotationTextSmall)
 
     // ── Dimensions ────────────────────────────────────────────────────────
