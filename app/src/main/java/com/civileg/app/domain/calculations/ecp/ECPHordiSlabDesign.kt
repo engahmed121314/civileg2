@@ -43,14 +43,19 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         InputGuard.positive("totalThickness", totalThickness)
         InputGuard.positive("span", span)
         InputGuard.notNull("loadCombination", loadCombination)
+        InputGuard.nonNegative("designMoment", designMoment)
+        InputGuard.nonNegative("designShear", designShear)
         val fc = fcu / GAMMA_C
         val d = totalThickness - 20.0 - 10.0 // cover + half bar diameter
+
+        InputGuard.positive("effectiveDepth", d)
 
         // Required area of steel per rib
         val Mu = designMoment * 1e6 // N.mm
         val Rn = Mu / (PHI_FLEXURE * ribWidth * d * d)
         val m = fy / (0.85 * fc)
-        val rho = (1.0 - sqrt(max(0.0, 1.0 - 2.0 * m * Rn / fy))) / m
+        val discriminant = 1.0 - 2.0 * m * Rn / fy
+        val rho = (1.0 - sqrt(max(0.0, discriminant))) / m
         val AsReq = rho * ribWidth * d
 
         // Min steel
@@ -66,8 +71,24 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         // Shear capacity
         val Vc = 0.24 * sqrt(fc) * ribWidth * d / 1000.0 * PHI_SHEAR
 
-        val utilizationRatio = if (Vc > 0) designShear / Vc else 2.0
-        val isSafe = designShear <= Vc
+        // Safety must include the steel actually selected, not just shear.
+        // The four-bar cap can leave flexure under-provided at low shear.
+        // This consistency guard does not validate the legacy design method.
+        val flexureWithinModel = discriminant.isFinite() && discriminant >= 0.0
+        val steelUtilization = AsProv / AsProvActual
+        val shearUtilization = if (Vc > 0) designShear / Vc else 2.0
+        val utilizationRatio = maxOf(
+            steelUtilization, shearUtilization,
+            if (flexureWithinModel) 0.0 else 2.0
+        )
+        // Full ECP method verification is still open. Legacy numeric previews
+        // must never become an overall safety approval, even at low demand.
+        val isSafe = false
+        val warnings = buildList {
+            add("ECP ribbed-slab method verification is incomplete. Safety assessment and execution exports are blocked.")
+            if (!flexureWithinModel) add("Moment exceeds the implemented flexural model range.")
+            if (AsProvActual < AsProv) add("Selected rib bars do not provide the required flexural reinforcement.")
+        }
 
         return SlabDesignResult(
             requiredReinforcement = AsReq,
@@ -77,7 +98,9 @@ class ECPHordiSlabDesign : HordiSlabDesign {
             minThickness = totalThickness,
             shearCapacity = Vc,
             isSafe = isSafe,
-            utilizationRatio = utilizationRatio
+            utilizationRatio = utilizationRatio,
+            warnings = warnings,
+            safetyAssessmentBlocked = true
         )
     }
 }

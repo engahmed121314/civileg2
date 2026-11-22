@@ -1552,6 +1552,7 @@ class CalculatorEngine @Inject constructor(
                     type = type, thickness = ts, isSafe = res.isSafe, code = code,
                     reinforcementMain = ReinforcementBar(spacing = res.barSpacing, diameter = res.barDiameter.toInt()),
                     momentX = muRib, utilizationRatio = res.utilizationRatio,
+                    suggestions = res.warnings + res.codeNotes,
                     concreteVolume = concreteVol, steelWeight = steelW, cost = costVal,
                     safetyChecks = listOf(DesignSafetyCheck("Flexure", res.requiredReinforcement, res.providedReinforcement, "mm²", res.isSafe))
                 )

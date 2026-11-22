@@ -2405,6 +2405,7 @@
     <string name="settings_support_title">Support the app</string>
     <string name="settings_support_message">Civil Engineer Pro is free and ad-free. Voluntary donations fund new design codes, tests and drawings.</string>
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
+    <string name="hordi_method_hold">ECP ribbed-slab method not verified. Numerical results are legacy previews, not a safety approval. Execution reports and bar schedules are blocked until verification is complete.</string>
 </resources>
 
 

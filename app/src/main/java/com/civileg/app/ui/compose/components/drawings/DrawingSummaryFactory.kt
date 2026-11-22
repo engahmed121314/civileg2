@@ -150,6 +150,7 @@ fun hordiSlabDrawingSummary(
 ): DrawingResultSummary =
     DrawingResultSummary(
         isSafe = result.isSafe,
+        safetyAssessmentBlocked = result.safetyAssessmentBlocked,
         utilizationRatio = result.utilizationRatio,
         codeNotes = result.warnings + result.codeNotes
     )

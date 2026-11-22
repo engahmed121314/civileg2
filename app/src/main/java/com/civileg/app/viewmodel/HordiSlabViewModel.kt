@@ -113,6 +113,7 @@ class HordiSlabViewModel @Inject constructor(
     /** Standalone DXF sheet for the current hordi slab design (null when no result). */
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val res = _result.value ?: return null
+        if (res.safetyAssessmentBlocked) return null
         val params = lastInputParams ?: return null
         return com.civileg.app.utils.ElementDxfDrawings.slabSection(
             title = "HORDI SLAB",
@@ -126,6 +127,11 @@ class HordiSlabViewModel @Inject constructor(
 
     /** Export just the CAD drawing (no PDF) for the current design. */
     fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        if (_result.value?.safetyAssessmentBlocked == true) {
+            _error.value = context.getString(com.civileg.app.R.string.hordi_method_hold)
+            onComplete(null)
+            return
+        }
         com.civileg.app.utils.DxfQuickExport.export(
             context = context,
             drawing = buildDxfDrawing(),
@@ -140,6 +146,11 @@ class HordiSlabViewModel @Inject constructor(
         onComplete: (File?) -> Unit
     ) {
         val res = _result.value ?: return
+        if (res.safetyAssessmentBlocked) {
+            _error.value = context.getString(com.civileg.app.R.string.hordi_method_hold)
+            onComplete(null)
+            return
+        }
         val params = lastInputParams ?: return
         viewModelScope.launch(Dispatchers.IO) {
             kotlinx.coroutines.withContext(Dispatchers.Main) { _isExporting.value = true }
@@ -259,7 +270,8 @@ class HordiSlabViewModel @Inject constructor(
                 concreteVolume = estimatedVolume,
                 steelWeight = estimatedSteel,
                 code = engineCode,
-                utilizationRatio = res.utilizationRatio
+                utilizationRatio = res.utilizationRatio,
+                suggestions = res.warnings + res.codeNotes
             ))
         }
     }
