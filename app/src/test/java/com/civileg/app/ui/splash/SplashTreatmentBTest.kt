@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Rect
 import android.os.Build
+import android.os.SystemClock
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
@@ -32,16 +33,24 @@ import java.time.Duration
 import kotlin.math.abs
 
 /**
- * Native first-frame and sweep proof for the approved full-bleed splash
+ * Native attached-first frame and sweep proof for the approved full-bleed splash
  * Treatment B. Runs with REAL native graphics (GraphicsMode NATIVE) against a
  * GENUINELY ATTACHED view hierarchy: the host activity is driven through its
- * full lifecycle (create/start/resume/visible) before the layout is set, and
- * attachment is asserted before any animation time is advanced. Controllers
- * are always closed afterward.
+ * ordinary lifecycle sequence (create/start/postCreate, real layout install,
+ * resume/visible/top-resumed, mirroring tagged-4.14.1 ActivityController
+ * .setup()), and attachment is asserted from FROZEN diagnostics after a
+ * bounded number of real 16ms frames, before any sweep advancement.
+ * Controllers are always closed afterward.
  *
- * Two retained witnesses per case, always written BEFORE any assertion:
- *  - *-first-frame.png: the honest first frame (bar phase 0 = track only).
- *  - *-sweep.png: the same screen after advancing animation time.
+ * Retained witnesses per case, always written BEFORE any assertion:
+ *  - *-attached-first.png: the first ATTACHED frame with elapsed-clock
+ *    evidence (attachment servicing may have advanced the animator; no
+ *    absolute phase is claimed for it).
+ *  - *-sweep-mid.png / *-sweep-late.png: independent attached frames after
+ *    advancing animation time; fill/tip deltas are proven ACROSS the three
+ *    independent frames, never against a presumed empty baseline.
+ *  - *-preattachment.png only when attachment fails (labelled failure
+ *    witness; its throwaway measure/layout exists solely to render it).
  * Pixel checks are scoped to the BAR REGION ONLY, in captured-root
  * coordinates, and compare the SAME region between first frame and sweep, so
  * artwork showing through the translucent track in fallback placement cannot
@@ -61,6 +70,8 @@ import kotlin.math.abs
 class SplashTreatmentBTest {
 
     private data class Scene(
+        val attachFramesServiced: Int,
+        val attachElapsedMs: Long,
         val root: View,
         val overlay: SplashOverlayLayout,
         val name: TextView,
@@ -76,7 +87,11 @@ class SplashTreatmentBTest {
      * visible(), content view set on the attached window, attachment asserted
      * BEFORE any animation advancement. The controller is closed in finally.
      */
-    private fun withAttachedScene(fontScale: Float = 1.0f, block: (Scene) -> Unit) {
+    private fun withAttachedScene(
+        fontScale: Float = 1.0f,
+        label: String = "scene",
+        block: (Scene) -> Unit
+    ) {
         // Pin the font scale BEFORE any activity/view construction so measured
         // text bounds are produced under the recorded environment; restore the
         // prior scale afterward. Configure the 16ms choreographer post-frame
@@ -85,32 +100,78 @@ class SplashTreatmentBTest {
         val priorFontScale = RuntimeEnvironment.getFontScale()
         RuntimeEnvironment.setFontScale(fontScale)
         ShadowChoreographer.setPostFrameCallbackDelay(16)
+        // Lifecycle ordering mirrors tagged-4.14.1 ActivityController.setup()
+        // (verified: create().start().postCreate(null).resume().visible()
+        // .topActivityResumed(true)), with the real layout installed after
+        // postCreate and BEFORE visibility so the window attach traversal is
+        // queued by the ordinary lifecycle itself, including the ordinary
+        // postCreate and top-resumed transitions. Attachment is never
+        // dispatched manually.
         val controller: ActivityController<Activity> =
             Robolectric.buildActivity(Activity::class.java)
-                .create().start().resume().visible()
+                .create().start().postCreate(null)
         try {
             val activity = controller.get()
             val root = activity.layoutInflater.inflate(R.layout.activity_splash, null, false)
             activity.setContentView(root)
-            val w = activity.resources.displayMetrics.widthPixels
-            val h = activity.resources.displayMetrics.heightPixels
-            root.measure(
-                View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
-                View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY)
-            )
-            root.layout(0, 0, w, h)
+            controller.resume().visible().topActivityResumed(true)
+            val bar = root.findViewById<SplashLoadingBar>(R.id.loadingBar)
+            // Service a small bounded number of actual 16ms frames so the
+            // queued attach/layout traversal runs for real. These frames can
+            // legitimately advance the sweep animator, so the first captured
+            // frame afterward is an attached frame with elapsed-clock
+            // evidence, never a claimed phase 0.
+            val attachStartMs = SystemClock.elapsedRealtime()
+            var frames = 0
+            fun liveReady() = root.isAttachedToWindow && bar.isAttachedToWindow &&
+                root.width > 0 && root.height > 0
+            while (!liveReady() && frames < 8) {
+                ShadowLooper.shadowMainLooper().idleFor(Duration.ofMillis(16))
+                frames++
+            }
+            val elapsedMs = SystemClock.elapsedRealtime() - attachStartMs
+            // FREEZE the readiness outcome and every diagnostic BEFORE any
+            // failure-witness work: the throwaway layout below exists only to
+            // render the preattachment snapshot and must never be able to
+            // flip the assertion.
+            val frozenAttached = root.isAttachedToWindow && bar.isAttachedToWindow
+            val frozenWidth = root.width
+            val frozenHeight = root.height
+            val frozenRootToken = root.windowToken != null
+            val frozenBarToken = bar.windowToken != null
+            val frozenReady = frozenAttached && frozenWidth > 0 && frozenHeight > 0
+            if (!frozenReady) {
+                // LABELLED preattachment witness: the throwaway measure/layout
+                // below exists ONLY to make this failure snapshot renderable;
+                // it is not the measured state under test and no assertion
+                // reads it.
+                val w = activity.resources.displayMetrics.widthPixels
+                val h = activity.resources.displayMetrics.heightPixels
+                root.measure(
+                    View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(h, View.MeasureSpec.EXACTLY)
+                )
+                root.layout(0, 0, w, h)
+                capture(root, "splash-B-" + label + "-preattachment")
+            }
             assertTrue(
-                "hierarchy must be attached to a window before animation advancement",
-                root.isAttachedToWindow && root.findViewById<View>(R.id.loadingBar).isAttachedToWindow
+                "hierarchy must attach to a window within 8 serviced 16ms frames " +
+                    "(serviced=" + frames + " elapsedVirtualMs=" + elapsedMs + " frameDelayMs=16 " +
+                    "rootAndBarAttached=" + frozenAttached + " " +
+                    "rootWindowToken=" + frozenRootToken + " barWindowToken=" + frozenBarToken + " " +
+                    "frozenRootSize=" + frozenWidth + "x" + frozenHeight + "; diagnostics frozen before witness layout)",
+                frozenReady
             )
             block(
                 Scene(
+                    attachFramesServiced = frames,
+                    attachElapsedMs = elapsedMs,
                     root = root,
                     overlay = root.findViewById(R.id.splashOverlay),
                     name = root.findViewById(R.id.tvAppName),
                     prayer = root.findViewById(R.id.tvPrayer),
                     caption = root.findViewById(R.id.tvCaption),
-                    bar = root.findViewById(R.id.loadingBar),
+                    bar = bar,
                     background = root.findViewById(R.id.splashBackground),
                     activity = activity
                 )
@@ -141,7 +202,10 @@ class SplashTreatmentBTest {
                 "densityDpi=${dm.densityDpi}\n" +
                 "fontScale=${RuntimeEnvironment.getFontScale()}\n" +
                 "widthPx=${scene.root.width}\n" +
-                "heightPx=${scene.root.height}\n"
+                "heightPx=${scene.root.height}\n" +
+                "attachFramesServiced=${scene.attachFramesServiced}\n" +
+                "attachElapsedMs=${scene.attachElapsedMs}\n" +
+                "postFrameCallbackDelayMs=16\n"
         )
     }
 
@@ -165,6 +229,41 @@ class SplashTreatmentBTest {
             }
         }
         return count
+    }
+
+    /** Spatial mask statistics in the stable bar region: pixel count plus the
+     *  mask centroid in captured-root coordinates (centroid = -1 when empty). */
+    private fun maskStats(frame: Bitmap, region: IntArray, matches: (Int, Int, Int) -> Boolean): Triple<Int, Double, Double> {
+        var count = 0
+        var sumX = 0L
+        var sumY = 0L
+        for (x in region[0] until region[2]) {
+            for (y in region[1] until region[3]) {
+                val c = frame.getPixel(x, y)
+                if (matches(c shr 16 and 0xFF, c shr 8 and 0xFF, c and 0xFF)) {
+                    count++
+                    sumX += x
+                    sumY += y
+                }
+            }
+        }
+        if (count == 0) return Triple(0, -1.0, -1.0)
+        return Triple(count, sumX.toDouble() / count, sumY.toDouble() / count)
+    }
+
+    /** Largest pairwise centroid distance (px) among frames whose mask is
+     *  non-empty; 0 when fewer than two non-empty masks. */
+    private fun maxCentroidTravel(stats: List<Triple<Int, Double, Double>>): Double {
+        val present = stats.filter { it.first > 0 }
+        var best = 0.0
+        for (i in present.indices) {
+            for (j in i + 1 until present.size) {
+                val dx = present[i].second - present[j].second
+                val dy = present[i].third - present[j].third
+                best = maxOf(best, kotlin.math.hypot(dx, dy))
+            }
+        }
+        return best
     }
 
     /** Fill gradient #5BC2DC -> #7FD4E8: high green/blue. */
@@ -327,18 +426,22 @@ class SplashTreatmentBTest {
     }
 
     /**
-     * Runs the first-frame/sweep witness pair and the animation proof for one
+     * Runs the attached-first/sweep witness set and the animation proof for one
      * aspect. Fill and gold tip are checked as SAME-REGION DELTAS between the
      * first frame and the sweep, so static artwork behind the translucent
      * track is never counted as animated fill.
      */
-    private fun runAspect(label: String, extra: (Scene) -> Unit = {}) = withAttachedScene { scene ->
+    private fun runAspect(label: String, extra: (Scene) -> Unit = {}) =
+        withAttachedScene(label = label) { scene ->
         recordWitnessManifest(scene, label)
 
-        // Witness 1: honest first frame (phase 0 = track only), as-is.
-        val first = capture(scene.root, "splash-B-$label-first-frame")
+        // Witness 1: first ATTACHED frame with elapsed-clock evidence (the
+        // manifest carries attachFramesServiced/attachElapsedMs). Attachment
+        // servicing may already have advanced the sweep animator, so this is
+        // NOT a claimed phase-0 frame.
+        val first = capture(scene.root, "splash-B-" + label + "-attached-first")
 
-        // Layout/mode/strip checks run and report on the deterministic first
+        // Layout/mode/strip checks run and report on the attached first
         // frame, INDEPENDENTLY of the animation outcome below: a stalled or
         // broken animator can never void geometry evidence again.
         assertSceneGeometry(scene, label)
@@ -354,34 +457,36 @@ class SplashTreatmentBTest {
         // near-white, so no wider absence claim is made.
         assertAnchoredStripPixels(scene, label, first)
 
-        // Hierarchy is attached (asserted in withAttachedScene); now advance
-        // animation time with the canonical tagged-4.14.1 upstream pattern
-        // (ShadowValueAnimatorTest): per-frame main-looper idling with the
-        // 16ms choreographer post-frame callback delay (configured before
-        // attachment in withAttachedScene), so real vsync-driven frames
-        // actually run. No phase setter anywhere: the sweep stays a genuinely
-        // animator-driven frame.
-        repeat(44) { ShadowLooper.shadowMainLooper().idleFor(Duration.ofMillis(16)) }
-        scene.root.measure(
-            View.MeasureSpec.makeMeasureSpec(scene.root.width, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(scene.root.height, View.MeasureSpec.EXACTLY)
-        )
-        scene.root.layout(0, 0, scene.root.width, scene.root.height)
+        // Advance animation time with the canonical tagged-4.14.1 upstream
+        // pattern (ShadowValueAnimatorTest): per-frame main-looper idling
+        // with the 16ms choreographer post-frame callback delay (configured
+        // before attachment in withAttachedScene), so real vsync-driven
+        // frames actually run. No phase setter anywhere: the sweep stays
+        // genuinely animator-driven.
+        repeat(22) { ShadowLooper.shadowMainLooper().idleFor(Duration.ofMillis(16)) }
+        val mid = capture(scene.root, "splash-B-" + label + "-sweep-mid")
+        repeat(22) { ShadowLooper.shadowMainLooper().idleFor(Duration.ofMillis(16)) }
+        val late = capture(scene.root, "splash-B-" + label + "-sweep-late")
 
-        // Witness 2: time-advanced sweep.
-        val sweep = capture(scene.root, "splash-B-$label-sweep")
-
+        // Movement proof is SPATIAL: the fill mask's centroid must actually
+        // travel inside the stable bar region across the three independent
+        // attached frames (a moving constant-size dot passes; a stalled
+        // animator produces identical masks, zero travel, and is rejected).
+        // Real non-zero fill/tip masks are still required; no absolute phase
+        // is claimed for any frame.
         val region = barRegionInRoot(scene)
-        val firstFill = countInBarRegion(first, region, isFillPixel)
-        val sweepFill = countInBarRegion(sweep, region, isFillPixel)
-        assertTrue("$label: animated fill appears in the bar region after advancing time " +
-            "(first=$firstFill sweep=$sweepFill, same-region delta required)",
-            sweepFill > firstFill + 20)
-        val firstTip = countInBarRegion(first, region, isTipPixel)
-        val sweepTip = countInBarRegion(sweep, region, isTipPixel)
-        assertTrue("$label: gold tip appears in the bar region after advancing time " +
-            "(first=$firstTip sweep=$sweepTip, verified separately from fill)",
-            sweepTip > firstTip)
+        val fills = listOf(first, mid, late).map { maskStats(it, region, isFillPixel) }
+        val tips = listOf(first, mid, late).map { maskStats(it, region, isTipPixel) }
+        val fillTravel = maxCentroidTravel(fills)
+        val tipTravel = maxCentroidTravel(tips)
+        assertTrue(label + ": animated fill mask moves across independent attached frames " +
+            "(fillCounts=" + fills.map { it.first } + " centroidTravelPx=" + fillTravel +
+            ", nonzero fill and >2px mask travel required, no absolute phase claimed)",
+            fills.maxOf { it.first } > 0 && fillTravel > 2.0)
+        assertTrue(label + ": gold tip mask moves across independent attached frames " +
+            "(tipCounts=" + tips.map { it.first } + " centroidTravelPx=" + tipTravel +
+            ", verified separately from fill)",
+            tips.maxOf { it.first } > 0 && tipTravel > 2.0)
     }
 
     @Test
@@ -440,7 +545,7 @@ class SplashTreatmentBTest {
 
     @Test
     @Config(qualifiers = "w411dp-h731dp-mdpi")
-    fun `synthetic system bars and side cutout pad overlay only`() = withAttachedScene { scene ->
+    fun `synthetic system bars and side cutout pad overlay only`() = withAttachedScene(label = "insets") { scene ->
         val top = 48
         val bottom = 96
         val leftCut = 24
@@ -456,7 +561,7 @@ class SplashTreatmentBTest {
             View.MeasureSpec.makeMeasureSpec(scene.root.height, View.MeasureSpec.EXACTLY)
         )
         scene.root.layout(0, 0, scene.root.width, scene.root.height)
-        capture(scene.root, "splash-B-insets-first-frame")
+        capture(scene.root, "splash-B-insets-attached-first")
         recordWitnessManifest(scene, "insets")
 
         assertEquals(top, scene.overlay.paddingTop)
@@ -472,7 +577,7 @@ class SplashTreatmentBTest {
 
     @Test
     @Config(qualifiers = "w411dp-h731dp-mdpi")
-    fun `loading bar is genuinely indeterminate never a fixed percentage`() = withAttachedScene { scene ->
+    fun `loading bar is genuinely indeterminate never a fixed percentage`() = withAttachedScene(label = "animator") { scene ->
         val animatorField = SplashLoadingBar::class.java.getDeclaredField("animator")
         animatorField.isAccessible = true
         val animator = animatorField.get(scene.bar) as ValueAnimator
@@ -488,7 +593,7 @@ class SplashTreatmentBTest {
 
     @Test
     @Config(qualifiers = "w411dp-h731dp-mdpi")
-    fun `large font scale overflows the top strip and falls back honestly`() = withAttachedScene(fontScale = 2.0f) { scene ->
+    fun `large font scale overflows the top strip and falls back honestly`() = withAttachedScene(fontScale = 2.0f, label = "large-font") { scene ->
         // At 2x font scale the title-group visible ink cannot fit the
         // reference top strip with its order preserved: the layout must
         // decline anchoring (whole group, in order, inside the safe area)
@@ -506,7 +611,7 @@ class SplashTreatmentBTest {
     @Test
     @Config(qualifiers = "w180dp-h731dp-mdpi")
     fun `forced wrapped labels take the conservative full-rectangle path and fall back`() =
-        withAttachedScene(fontScale = 2.0f) { scene ->
+        withAttachedScene(fontScale = 2.0f, label = "forced-wrap") { scene ->
             // 180dp width at 2x font scale genuinely wraps the fixed labels
             // to multiple lines; the narrow measurement contract no longer
             // holds, so inkExtents must return the full measured rectangle
@@ -527,7 +632,7 @@ class SplashTreatmentBTest {
         }
 
     @Test
-    fun `bundled Plex fonts load for the splash overlay`() = withAttachedScene { scene ->
+    fun `bundled Plex fonts load for the splash overlay`() = withAttachedScene(label = "fonts") { scene ->
         assertNotNull(scene.activity.resources.getFont(R.font.ibm_plex_sans_arabic_bold))
         assertNotNull(scene.activity.resources.getFont(R.font.ibm_plex_sans_arabic_regular))
     }
