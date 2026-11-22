@@ -120,8 +120,19 @@ fun InteractionDiagramChart(
                         textAlign = android.graphics.Paint.Align.CENTER
                     }
                     
+                    // Axis labels must fit their canvas: the rotated y label is
+                    // bounded by chart height, the x label by chart width; scale
+                    // down instead of clipping (readability gate).
+                    val xMax = canvasWidth - 16f
+                    val xMeasured = textPaint.measureText(axisMomentLabel)
+                    val yMax = canvasHeight - 24f
+                    val yMeasured = textPaint.measureText(axisAxialLabel)
+                    val fit = minOf(1f, xMax / maxOf(xMeasured, 1f), yMax / maxOf(yMeasured, 1f))
+                    if (fit < 1f) {
+                        textPaint.textSize = (textPaint.textSize * fit).coerceAtLeast(14f)
+                    }
                     drawText(axisMomentLabel, canvasWidth / 2, canvasHeight - 10f, textPaint)
-                    
+
                     save()
                     rotate(-90f, 20f, canvasHeight / 2)
                     drawText(axisAxialLabel, 20f, canvasHeight / 2, textPaint)
