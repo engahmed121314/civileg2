@@ -1,5 +1,6 @@
 package com.civileg.app.utils
 
+import com.civileg.app.domain.drawing.DesignDrawingDocument
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
@@ -246,7 +247,10 @@ class ExportManager(private val context: Context) {
         bbsEntries: List<BbsEntry> = emptyList(),
         boqRows: List<ProfessionalEnglishPdfReporter.BoqRow> = emptyList(),
         outputPath: String,
-        openPdfOnComplete: Boolean = false
+        openPdfOnComplete: Boolean = false,
+        drawingDocument: DesignDrawingDocument? = null,
+        recommendations: List<ProfessionalEnglishPdfReporter.UnsafeDesignRecommendation> = emptyList(),
+        methodEvidenceState: ProfessionalEnglishPdfReporter.MethodEvidenceState = ProfessionalEnglishPdfReporter.MethodEvidenceState.UNVERIFIED
     ): ExportBundle {
         val pdfFile = try {
             ProfessionalEnglishPdfReporter.generateReportLegacy(
@@ -260,6 +264,9 @@ class ExportManager(private val context: Context) {
                 isSafe = isSafe,
                 drawingBitmap = drawingBitmap,
                 outputPath = outputPath,
+                drawingDocument = drawingDocument,
+                recommendations = recommendations,
+                methodEvidenceState = methodEvidenceState,
                 boqRows = boqRows,
                 bbsRows = bbsEntries.map { entry ->
                     ProfessionalEnglishPdfReporter.BbsRow(

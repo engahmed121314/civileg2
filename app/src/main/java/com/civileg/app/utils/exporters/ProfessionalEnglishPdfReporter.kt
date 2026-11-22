@@ -1,8 +1,8 @@
 package com.civileg.app.utils.exporters
 
-import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.drawing.DesignDrawingDocument
+import com.civileg.app.domain.drawing.PdfRenderer
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.civileg.app.domain.entities.GenericSafetyCheck
@@ -30,8 +30,8 @@ import java.util.*
  * Professional English PDF Report Generator
  *
  * Generates comprehensive, professional structural design reports in English only.
- * Uses Helvetica font exclusively — no Arabic fonts, no RTL, no shaping needed.
- * This completely eliminates Arabic encoding issues that caused garbled text.
+ * Uses the shared embedded English technical font when initialized.
+ * Missing methodology is reported explicitly, never replaced with generic equations.
  *
  * Reports include:
  * - Professional cover page with project info
@@ -63,6 +63,11 @@ object ProfessionalEnglishPdfReporter {
 
     enum class ReportType {
         BEAM, COLUMN, SLAB, FOOTING, TANK, RETAINING_WALL, STAIR, STEEL, FRAME_ANALYSIS, SEISMIC, GENERIC
+    }
+
+    /** Evidence supplied by the producer, never a certification by this renderer. */
+    enum class MethodEvidenceState(val label: String) {
+        UNVERIFIED("Unverified"), PARTIAL("Partial"), SUPPLIED_FOR_REVIEW("Supplied for review")
     }
 
     data class SafetyCheck(
@@ -98,6 +103,18 @@ object ProfessionalEnglishPdfReporter {
         val reference: String? = null,
         val result: String? = null
     )
+
+    data class UnsafeDesignRecommendation(
+        val failedCheck: String,
+        val action: String,
+        val reference: String
+    ) {
+        init {
+            require(failedCheck.isNotBlank() && action.isNotBlank() && reference.isNotBlank()) {
+                "Recommendations require a failed-check name, an action and a source reference"
+            }
+        }
+    }
 
     data class ReportConfig(
         val projectName: String = "Civil EG Project",
@@ -153,7 +170,7 @@ object ProfessionalEnglishPdfReporter {
         val font = if (bold) createBoldFont() else createPdfFont()
         val p = Paragraph().add(text(text, font, fontSize, color))
         alignment?.let { p.setTextAlignment(it) } ?: p.setTextAlignment(TextAlignment.LEFT)
-        return p
+        return p.breakAnywhere()
     }
 
     private fun emptyLine(): Paragraph = Paragraph(" ")
@@ -265,9 +282,7 @@ object ProfessionalEnglishPdfReporter {
     }
 
     private fun addCalculationMethodology(document: Document, designCode: String,
-                                          reportType: ReportType,
-                                          steps: List<CalculationStep>,
-                                          inputKeys: Set<String> = emptySet()) {
+                                          steps: List<CalculationStep>) {
         document.add(sectionTitle("2. Calculation Methodology & Verification"))
         document.add(separator())
         // Printed only when the caller actually supplied a code: a report whose
@@ -283,14 +298,10 @@ object ProfessionalEnglishPdfReporter {
                 addCalculationStep(document, step)
             }
         } else {
-            // Generate default calculation steps based on report type.
-            // Skip a default step whose title the inputs table already carries
-            // (e.g. "Load Combination"), otherwise the same text prints twice.
-            val defaultSteps = getDefaultCalculationSteps(reportType, designCode)
-                .filter { step -> inputKeys.none { it.equals(step.description, ignoreCase = true) } }
-            for (step in defaultSteps) {
-                addCalculationStep(document, step)
-            }
+            document.add(paragraph(
+                "Calculation trace not supplied. Equations, substitutions and code clauses used by the calculation cannot be verified from this report.",
+                color = WARNING
+            ))
         }
         document.add(emptyLine())
     }
@@ -343,301 +354,6 @@ object ProfessionalEnglishPdfReporter {
         document.add(Paragraph(" "))  // spacing
     }
 
-    private fun getDefaultCalculationSteps(reportType: ReportType, designCode: String): List<CalculationStep> {
-        return when (reportType) {
-            ReportType.BEAM -> listOf(
-                CalculationStep(1, "Load Combination",
-                    "Wu = 1.4*DL + 1.6*LL", "$designCode Load Factors",
-                    "Factored load per unit length"),
-                CalculationStep(2, "Design Moment",
-                    "Mu = wu * L^2 / 8 (simply supported)", "$designCode Flexure Design",
-                    "Maximum design moment at midspan"),
-                CalculationStep(3, "Effective Depth",
-                    "d = h - cover - stirrup - db/2", "$designCode Section Properties",
-                    "Effective depth for flexure"),
-                CalculationStep(4, "Required Reinforcement",
-                    "As = Mu / (phi * fy * (d - a/2))", "$designCode Eq. for Tension Reinforcement",
-                    "phi = 0.9 for flexure"),
-                CalculationStep(5, "Min. Reinforcement Check",
-                    "As_min = 0.25 * sqrt(f'c) / fy * b * d >= As_req",
-                    "$designCode Min. Steel Requirement",
-                    "Minimum steel ratio check"),
-                CalculationStep(6, "Shear Design",
-                    "Vc = 0.17 * sqrt(f'c) * b * d", "$designCode Shear Provision",
-                    "Concrete shear capacity"),
-                CalculationStep(7, "Shear Reinforcement",
-                    "Vs = Vu - phi*Vc ; Av/s = Vs / (phi * fy * d)",
-                    "$designCode Shear Reinforcement",
-                    "Required stirrup area per spacing"),
-                CalculationStep(8, "Deflection Check",
-                    "delta_L = 5 * w * L^4 / (384 * E * I)", "$designCode Serviceability",
-                    "Immediate deflection under service loads")
-            )
-            ReportType.COLUMN -> listOf(
-                CalculationStep(1, "Effective Length Factor (K)",
-                    "K = f(end conditions) -- from alignment charts or code table",
-                    "$designCode Slenderness Criteria",
-                    "K depends on end restraint conditions"),
-                CalculationStep(2, "Slenderness Ratio",
-                    "lambda = K * Lu / r ; r = sqrt(I / Ag)",
-                    "$designCode Slenderness Limit",
-                    "Short column if lambda < limit"),
-                CalculationStep(3, "Eccentricity",
-                    "e = M / P ; e_min = max(0.6h + 0.03D, 20mm)",
-                    "$designCode Minimum Eccentricity",
-                    "Minimum eccentricity requirement"),
-                CalculationStep(4, "Axial Load Capacity",
-                    "Pn = 0.85 * f'c * Ag + As * (fy - 0.85*f'c)",
-                    "$designCode Axial Strength",
-                    "phi = 0.65 for tied columns"),
-                CalculationStep(5, "Interaction Diagram",
-                    "Plot Pn vs. Mn for combined axial + flexure",
-                    "$designCode Biaxial Bending",
-                    "Check design point within interaction surface"),
-                CalculationStep(6, "Reinforcement Ratio",
-                    "rho = As / Ag ; rho_min = 0.01 ; rho_max = 0.08",
-                    "$designCode Reinforcement Limits",
-                    "Code limits on steel ratio"),
-                CalculationStep(7, "Tie/Stirrup Design",
-                    "s = min(16db, 48dtie, b) ; spacing requirements",
-                    "$designCode Lateral Ties",
-                    "Tie spacing and diameter requirements")
-            )
-            ReportType.SLAB -> listOf(
-                CalculationStep(1, "Load Combination",
-                    "Wu = 1.4*DL + 1.6*LL (kN/m^2)", "$designCode Load Factors",
-                    "Factored load per unit area"),
-                CalculationStep(2, "Span Ratio & Direction",
-                    "Lx/Ly = ratio ; One-Way if < 0.5, Two-Way otherwise",
-                    "$designCode Slab Classification",
-                    "Determine bending direction"),
-                CalculationStep(3, "Moment Coefficients",
-                    "Mx = alpha_x * wu * Lx^2 ; My = alpha_y * wu * Ly^2",
-                    "$designCode Moment Coefficients",
-                    "Coefficients depend on edge conditions"),
-                CalculationStep(4, "Effective Depth",
-                    "d = t - cover - db/2", "$designCode Effective Depth",
-                    "Effective depth for flexure"),
-                CalculationStep(5, "Required Reinforcement",
-                    "As = M / (phi * fy * (d - a/2)) per meter width",
-                    "$designCode Flexural Reinforcement",
-                    "Reinforcement per unit width"),
-                CalculationStep(6, "Min. Steel & Spacing",
-                    "As_min = 0.0018 * b * d (for fy=420 MPa); s_max = min(3h, 450mm)",
-                    "$designCode Shrinkage & Temperature",
-                    "Minimum reinforcement for shrinkage"),
-                CalculationStep(7, "Shear Check",
-                    "Vu = wu * Ly / 2 (one-way) ; Vc = 0.17*sqrt(f'c)*b*d",
-                    "$designCode One-Way Shear",
-                    "Concrete shear capacity check"),
-                CalculationStep(8, "Deflection Check",
-                    "delta = L / (20 to 30) typical limits",
-                    "$designCode Deflection Limits",
-                    "Span-to-depth ratio check")
-            )
-            ReportType.FOOTING -> listOf(
-                CalculationStep(1, "Bearing Pressure Check",
-                    "q = P / A <= q_all (allowable soil pressure)",
-                    "$designCode Bearing Capacity",
-                    "Soil pressure verification"),
-                CalculationStep(2, "Footing Dimensions",
-                    "A_required = P / q_all ; B x L dimensions",
-                    "$designCode Dimensioning",
-                    "Required plan area"),
-                CalculationStep(3, "Net Upward Pressure",
-                    "qu = (P/A) - gamma_c * tf (net soil pressure)",
-                    "$designCode Net Pressure",
-                    "Net pressure for bending calculation"),
-                CalculationStep(4, "Cantilever Moment",
-                    "Mu = qu * (L_col/2)^2 * B (one-way bending)",
-                    "$designCode Bending in Footing",
-                    "Critical section at column face"),
-                CalculationStep(5, "Footing Reinforcement",
-                    "As = Mu / (phi * fy * (df - a/2))",
-                    "$designCode Footing Flexure",
-                    "phi = 0.9 for footing flexure"),
-                CalculationStep(6, "Shear Check (One-Way)",
-                    "Vu = qu * B * (L - L_col) ; Vc = 0.17*sqrt(f'c)*B*d",
-                    "$designCode Footing Shear",
-                    "Critical at distance d from column face"),
-                CalculationStep(7, "Punching Shear Check",
-                    "Vu = Pu - qu * (b_col+2d)^2 ; Vc = 0.33*sqrt(f'c)*bo*d",
-                    "$designCode Two-Way Shear",
-                    "Critical perimeter at d/2 from column"),
-                CalculationStep(8, "Development Length",
-                    "Ld = (0.02 * db * fy) / sqrt(f'c) per code",
-                    "$designCode Development",
-                    "Bar development in footing")
-            )
-            ReportType.TANK -> listOf(
-                CalculationStep(1, "Hydrostatic Pressure",
-                    "p = gamma_w * H (at base of wall)", "$designCode Liquid Pressure",
-                    "Maximum water pressure at base"),
-                CalculationStep(2, "Wall Moment",
-                    "M = (1/6) * gamma_w * H^3 (cantilever wall)",
-                    "$designCode Wall Bending",
-                    "Design moment at wall base"),
-                CalculationStep(3, "Wall Reinforcement",
-                    "As = M / (phi * fy * (d - a/2)) per meter",
-                    "$designCode Wall Flexure",
-                    "Vertical reinforcement for bending"),
-                CalculationStep(4, "Crack Width Control",
-                    "wk = 3 * epsilon_s * (d - c) / (1 + 2*(d-c)/(h-d))",
-                    "$designCode Serviceability",
-                    "Max crack width = 0.2mm (water-retaining)"),
-                CalculationStep(5, "Base Slab Design",
-                    "M_base = wu * L^2 / 8 or cantilever moment",
-                    "$designCode Base Design",
-                    "Base slab bending from soil/water pressure"),
-                CalculationStep(6, "Waterproofing Requirements",
-                    "Min. cover = 40mm ; wk <= 0.2mm",
-                    "$designCode Durability",
-                    "Enhanced durability for water-retaining")
-            )
-            ReportType.RETAINING_WALL -> listOf(
-                CalculationStep(1, "Active Earth Pressure Coefficient",
-                    "Ka = (1 - sin(phi)) / (1 + sin(phi)) (Rankine)",
-                    "$designCode Lateral Earth Pressure",
-                    "Active pressure coefficient"),
-                CalculationStep(2, "Total Active Force",
-                    "Pa = 0.5 * Ka * gamma * H^2 + Ka * q * H",
-                    "$designCode Earth Force",
-                    "Total lateral force including surcharge"),
-                CalculationStep(3, "Overturning Stability",
-                    "FS_OT = Sum(Mresist) / Sum(Moverturn) >= 2.0",
-                    "$designCode Stability Requirements",
-                    "Factor of safety against overturning"),
-                CalculationStep(4, "Sliding Stability",
-                    "FS_SL = (mu * W) / Pa >= 1.5",
-                    "$designCode Sliding Resistance",
-                    "Factor of safety against sliding"),
-                CalculationStep(5, "Bearing Pressure",
-                    "q_max = (W/B)(1 + 6e/B) <= q_all",
-                    "$designCode Bearing Check",
-                    "Maximum soil pressure under toe"),
-                CalculationStep(6, "Stem Design",
-                    "M_stem = Pa * H/3 at base ; As = M / (phi*fy*d)",
-                    "$designCode Stem Reinforcement",
-                    "Main vertical reinforcement in stem"),
-                CalculationStep(7, "Heel & Toe Design",
-                    "M_heel = w_net * L_heel^2 / 2",
-                    "$designCode Base Design",
-                    "Heel slab as cantilever"),
-                CalculationStep(8, "Shear Key Design",
-                    "V_key = Pa_passive - V_active",
-                    "$designCode Shear Key",
-                    "Passive resistance from shear key")
-            )
-            ReportType.STAIR -> listOf(
-                CalculationStep(1, "Geometric Design",
-                    "N = H_total / R ; T = L / N ; 2R + T = 550-700mm",
-                    "$designCode Stair Geometry",
-                    "Rise, tread, and comfort check"),
-                CalculationStep(2, "Factored Load",
-                    "wu = 1.4*DL + 1.6*LL (typical LL = 2-4 kN/m^2)",
-                    "$designCode Load Factors",
-                    "Factored load on stair slab"),
-                CalculationStep(3, "Design Moment",
-                    "Mu = wu * L^2 / 10 (fixed ends) or L^2/8 (simply supported)",
-                    "$designCode Bending",
-                    "Based on end conditions"),
-                CalculationStep(4, "Effective Depth",
-                    "d = t - cover - db/2",
-                    "$designCode Effective Depth",
-                    "Average depth of waist slab"),
-                CalculationStep(5, "Reinforcement",
-                    "As_main = Mu / (phi * fy * d) ; As_dist = 0.12% * b * d",
-                    "$designCode Reinforcement",
-                    "Main + distribution steel"),
-                CalculationStep(6, "Deflection",
-                    "L/d >= 20 (simply supported) or 26 (continuous)",
-                    "$designCode Span-Depth Ratio",
-                    "Serviceability check")
-            )
-            ReportType.STEEL -> listOf(
-                CalculationStep(1, "Section Classification",
-                    "Check flange/web slenderness (compact/noncompact/slender)",
-                    "AISC 360-16 Table B4.1b",
-                    "Section classification for local buckling"),
-                CalculationStep(2, "Flexural Strength",
-                    "Mn = Mp (compact) ; Mn = Fy*Zx (plastic)",
-                    "AISC 360-16 Ch. F",
-                    "phi = 0.9 for flexure"),
-                CalculationStep(3, "Shear Strength",
-                    "Vn = 0.6*Fy*Aw*Cv (web shear)",
-                    "AISC 360-16 Ch. G",
-                    "phi = 1.0 for shear"),
-                CalculationStep(4, "Compression Strength",
-                    "Pn = Fcr * Ag ; Fcr = min(Fy, Fe) based on KL/r",
-                    "AISC 360-16 Ch. E",
-                    "phi = 0.9 for compression"),
-                CalculationStep(5, "Combined Forces",
-                    "Pu/(phi*Pn) + Mu/(phi*Mn) <= 1.0",
-                    "AISC 360-16 H1-1",
-                    "Interaction equation for combined loading"),
-                CalculationStep(6, "Lateral-Torsional Buckling",
-                    "Lp < Lb < Lr (inelastic LTB region)",
-                    "AISC 360-16 F2",
-                    "Unbraced length check for beams"),
-                CalculationStep(7, "Connection Design",
-                    "Based on bolt/weld capacity and eccentricity",
-                    "AISC 360-16 Ch. J",
-                    "Connection verification")
-            )
-            ReportType.FRAME_ANALYSIS -> listOf(
-                CalculationStep(1, "Assembly of Global Stiffness Matrix",
-                    "[K] = sum of [Ke] for each member in global coordinates",
-                    "Matrix Stiffness Method",
-                    "Global stiffness matrix assembly"),
-                CalculationStep(2, "Load Vector Assembly",
-                    "{F} = [T]^T * {fe} (transform member loads to global)",
-                    "Equivalent Nodal Loads",
-                    "Fixed-end forces + direct nodal loads"),
-                CalculationStep(3, "Solution of Equations",
-                    "{U} = [K]^-1 * {F}", "Gauss Elimination / LU Decomposition",
-                    "Displacement at all nodes"),
-                CalculationStep(4, "Member End Forces",
-                    "{fe} = [ke]*{ue} + {fe_fixed} (member forces in local coords)",
-                    "Element Force Recovery",
-                    "Axial, shear, moment at each end"),
-                CalculationStep(5, "Bending Moment Diagram",
-                    "M(x) = M_end + V*x - w*x^2/2",
-                    "Equilibrium Equations",
-                    "Moment distribution along each member"),
-                CalculationStep(6, "Shear Force Diagram",
-                    "V(x) = V_end - w*x",
-                    "Equilibrium Equations",
-                    "Shear distribution along each member")
-            )
-            ReportType.SEISMIC -> listOf(
-                CalculationStep(1, "Design Spectral Acceleration",
-                    "SDS = (2/3) * Sa (design spectral acceleration)",
-                    "Building Code Seismic Provisions",
-                    "Site-adjusted spectral acceleration"),
-                CalculationStep(2, "Seismic Response Coefficient",
-                    "Cs = SDS / (R/I)", "Equivalent Lateral Force Procedure",
-                    "R = Response modification factor"),
-                CalculationStep(3, "Base Shear",
-                    "V = Cs * W", "ELF Method",
-                    "Total design base shear force"),
-                CalculationStep(4, "Vertical Distribution",
-                    "Fx = V * (wi * hi^k) / sum(wj * hj^k)",
-                    "Force Distribution",
-                    "Lateral force at each floor level"),
-                CalculationStep(5, "Story Drift Check",
-                    "delta <= 2.0% * hs (for occupancy category II)",
-                    "Drift Limitation",
-                    "Inter-story drift verification")
-            )
-            else -> listOf(
-                CalculationStep(1, "Design Parameters",
-                    "Verify all input parameters per code requirements",
-                    designCode,
-                    "Parameter verification")
-            )
-        }
-    }
-
     private fun addResultsSection(document: Document, results: Map<String, String>) {
         document.add(sectionTitle("3. Design Results"))
         document.add(separator())
@@ -659,8 +375,20 @@ object ProfessionalEnglishPdfReporter {
         document.add(separator())
 
         // Status Banner
-        val statusText = if (isSafe) "STATUS: SAFE - Design Complies with Code" else "STATUS: UNSAFE - Design Review Required"
-        val statusColor = if (isSafe) SUCCESS else ERROR
+        val hasFiniteEvidence = safetyChecks.isNotEmpty() && safetyChecks.all {
+            it.calculated.isFinite() && it.limit.isFinite()
+        }
+        val failed = safetyChecks.any { !it.passed }
+        val statusText = when {
+            failed || !isSafe -> "REVIEW REQUIRED - Calculation reports an unsafe result or a failed check"
+            !hasFiniteEvidence -> "CHECK EVIDENCE INCOMPLETE - No overall compliance conclusion"
+            else -> "SUPPLIED CHECKS PASS - Limited to the checks listed below"
+        }
+        val statusColor = when {
+            failed || !isSafe -> ERROR
+            !hasFiniteEvidence -> WARNING
+            else -> SUCCESS
+        }
         val banner = Paragraph().add(text(statusText, createBoldFont(), 11f, statusColor))
             .setTextAlignment(TextAlignment.CENTER)
             .setPadding(8f)
@@ -700,8 +428,8 @@ object ProfessionalEnglishPdfReporter {
 
                 val statusStr = if (check.passed) "PASS" else "FAIL"
                 val statusClr = if (check.passed) SUCCESS else ERROR
-                table.addCell(dataCell(statusStr, 9f, true, bg).also {
-                    // Color the cell text
+                table.addCell(Cell().setPadding(4f).also {
+                    bg?.let { color -> it.setBackgroundColor(color) }
                     it.add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr)).setTextAlignment(TextAlignment.CENTER))
                 })
             }
@@ -770,8 +498,50 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
+    private fun addSuppliedRecommendations(
+        document: Document,
+        recommendations: List<UnsafeDesignRecommendation>,
+        isSafe: Boolean
+    ) {
+        if (recommendations.isEmpty()) {
+            if (!isSafe) document.add(paragraph(
+                "Source-based corrective actions were not supplied. No automatic redesign recommendation has been inferred.",
+                9f, color = WARNING
+            ))
+            return
+        }
+        document.add(subTitle("Source-based corrective actions"))
+        recommendations.forEach {
+            document.add(paragraph("${it.failedCheck}: ${it.action}"))
+            document.add(paragraph("Reference: ${it.reference}", 8f, color = SECONDARY))
+        }
+    }
+
+    private fun addDrawingDocument(document: Document, pdf: PdfDocument, drawings: DesignDrawingDocument) {
+        document.add(sectionTitle("5. Drawing evidence"))
+        document.add(paragraph("Member: ${drawings.memberMark} | Revision: ${drawings.revisionId}", 9f))
+        document.add(paragraph("Method: ${drawings.methodReference}", 9f))
+        drawings.incompleteChecks.forEach { document.add(paragraph("OPEN CHECK: $it", 9f, color = WARNING)) }
+        drawings.orderedViews().forEach { document.add(paragraph("${it.id}: ${it.scene.title}", 8f, color = SECONDARY)) }
+        drawings.orderedViews().forEach { view ->
+            document.add(AreaBreak())
+            document.add(sectionTitle("${view.kind.title} - ${drawings.memberMark}"))
+            document.add(paragraph("Revision: ${drawings.revisionId} | Units: mm | View: ${view.id}", 8f, color = SECONDARY))
+            document.add(paragraph("Method and open checks: see drawing evidence. Open checks: ${drawings.incompleteChecks.size}", 8f, color = SECONDARY))
+            // Reserve one full page per view, independent of the number of extra sections.
+            val form = PdfRenderer.createForm(view.scene, pdf, 480f, 540f)
+            document.add(Image(form).setHorizontalAlignment(HorizontalAlignment.CENTER))
+            if (drawings.incompleteChecks.isNotEmpty()) {
+                document.add(paragraph("OPEN CHECKS: ${drawings.incompleteChecks.size}. See the full drawing evidence record.", 8f, color = WARNING))
+            }
+        }
+        // Following report tables or footer must not share the final drawing page.
+        document.add(AreaBreak())
+    }
+
     private fun addDrawingSection(document: Document, bitmap: Bitmap?, title: String) {
         document.add(sectionTitle("5. Engineering Drawing"))
+        document.add(paragraph("Legacy single-image drawing. Separate Plan, Side, Elevation and member sections have not been supplied.", 9f, color = WARNING))
         document.add(separator())
 
         if (bitmap == null) {
@@ -868,7 +638,7 @@ object ProfessionalEnglishPdfReporter {
      * @param safetyChecks List of safety verification checks
      * @param isSafe Overall design safety status
      * @param drawingBitmap Optional engineering drawing bitmap
-     * @param calculationSteps Optional detailed calculation steps (if empty, defaults are used)
+     * @param calculationSteps Actual calculation trace; an empty list is explicitly marked as missing
      * @param config Report configuration (project name, date, etc.)
      * @param outputPath Absolute path for output PDF file
      * @return Generated File or null on failure
@@ -888,7 +658,10 @@ object ProfessionalEnglishPdfReporter {
         bbsRows: List<BbsRow> = emptyList(),
         boqRows: List<BoqRow> = emptyList(),
         config: ReportConfig = ReportConfig(),
-        outputPath: String
+        outputPath: String,
+        drawingDocument: DesignDrawingDocument? = null,
+        recommendations: List<UnsafeDesignRecommendation> = emptyList(),
+        methodEvidenceState: MethodEvidenceState = MethodEvidenceState.UNVERIFIED
     ): File? {
         return try {
             val (pdfDoc, document, _) = createDocument(outputPath)
@@ -904,7 +677,8 @@ object ProfessionalEnglishPdfReporter {
             addDesignParameters(document, inputs)
 
             // 3. Calculation Methodology
-            addCalculationMethodology(document, designCode, reportType, calculationSteps, inputs.keys)
+            document.add(paragraph("METHOD EVIDENCE: ${methodEvidenceState.label}. Supplied data is not independent code-compliance certification.", 9f, color = WARNING))
+            addCalculationMethodology(document, designCode, calculationSteps)
 
             // 4. Results
             addResultsSection(document, results)
@@ -912,11 +686,15 @@ object ProfessionalEnglishPdfReporter {
             // 5. Safety Checks
             addSafetyChecks(document, safetyChecks, isSafe)
 
-            // 6. Engineering Drawing
-            if (drawingBitmap != null) {
-                document.add(AreaBreak())
+            addSuppliedRecommendations(document, recommendations, isSafe && safetyChecks.none { !it.passed })
+
+            // A drawing document takes precedence over the old single screenshot.
+            if (drawingDocument != null) {
+                addDrawingDocument(document, pdfDoc, drawingDocument)
+            } else {
+                if (drawingBitmap != null) document.add(AreaBreak())
+                addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
             }
-            addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
 
             // 6. Bar Bending Schedule
             addBbsSection(document, bbsRows)
@@ -966,7 +744,10 @@ object ProfessionalEnglishPdfReporter {
         outputPath: String,
         calculationSteps: List<CalculationStep> = emptyList(),
         bbsRows: List<BbsRow> = emptyList(),
-        boqRows: List<BoqRow> = emptyList()
+        boqRows: List<BoqRow> = emptyList(),
+        drawingDocument: DesignDrawingDocument? = null,
+        recommendations: List<UnsafeDesignRecommendation> = emptyList(),
+        methodEvidenceState: MethodEvidenceState = MethodEvidenceState.UNVERIFIED
     ): File? {
         val convertedChecks = safetyChecks.map {
             SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference)
@@ -987,9 +768,8 @@ object ProfessionalEnglishPdfReporter {
             else -> ReportType.GENERIC
         }
 
-        // Basis comes from the caller's engine/code choice ("Design Code"
-        // input). When unknown, print no basis rather than a global claim.
-        val codeStr = inputs["Design Code"] ?: ""
+        // Extract design code from inputs if available
+        val codeStr = inputs["Design Code"]?.takeIf { it.isNotBlank() } ?: "Not supplied"
 
         return generateReport(
             reportType = reportType,
@@ -1004,6 +784,9 @@ object ProfessionalEnglishPdfReporter {
             calculationSteps = calculationSteps,
             bbsRows = bbsRows,
             boqRows = boqRows,
+            drawingDocument = drawingDocument,
+            recommendations = recommendations,
+            methodEvidenceState = methodEvidenceState,
             outputPath = outputPath
         )
     }
