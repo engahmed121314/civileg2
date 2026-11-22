@@ -86,46 +86,67 @@ class I18nChartsPtVisualTest {
     }
 
     @Composable
-    private fun charts() {
-        Column {
-            InteractionDiagramChart(
-                axialCapacities = listOf(500.0, 1500.0, 2500.0),
-                momentCapacities = listOf(120.0, 200.0, 150.0),
-                currentLoad = 1200.0 to 160.0
-            )
-            SeismicResponseChart(
-                spectrumValues = listOf(
-                    SpectrumValue(0.25, 0.1, 0.05, "a"),
-                    SpectrumValue(0.5, 0.4, 0.05, "b"),
-                    SpectrumValue(0.35, 1.0, 0.05, "c")
-                ),
-                designPeriod = 0.6
-            )
-        }
+    @Composable
+    private fun interactionChart() {
+        InteractionDiagramChart(
+            axialCapacities = listOf(500.0, 1500.0, 2500.0),
+            momentCapacities = listOf(120.0, 200.0, 150.0),
+            currentLoad = 1200.0 to 160.0
+        )
     }
 
+    @Composable
+    private fun seismicChart() {
+        SeismicResponseChart(
+            spectrumValues = listOf(
+                SpectrumValue(0.25, 0.1, 0.05, "a"),
+                SpectrumValue(0.5, 0.4, 0.05, "b"),
+                SpectrumValue(0.35, 1.0, 0.05, "c")
+            ),
+            designPeriod = 0.6
+        )
+    }
+
+    // One chart per test: two 250.dp canvases overflow the 470px capture
+    // window, which clipped the second chart's axis labels and made the
+    // captures misleading for readability audits.
+
     @Test
-    fun `charts render English strings under English locale`() {
+    fun `interaction chart renders English strings under English locale`() {
         pinLocale("en")
-        setThemedContent(arabic = false) { charts() }
+        setThemedContent(arabic = false) { Column { interactionChart() } }
         assertTextPresent("P-M Interaction Diagram")
-        assertTextPresent("Response Spectrum Analysis")
         assertTextPresent("Current Load")
         assertTextAbsent("مخطط التفاعل")
-        assertTextAbsent("تحليل طيف الاستجابة")
-        capture("i18n-charts-en")
+        capture("i18n-interaction-en")
     }
 
     @Test
-    fun `charts render Arabic strings under Arabic locale`() {
+    fun `interaction chart renders Arabic strings under Arabic locale`() {
         pinLocale("ar")
-        setThemedContent(arabic = true) { charts() }
+        setThemedContent(arabic = true) { Column { interactionChart() } }
         assertTextPresent("مخطط التفاعل")
-        assertTextPresent("تحليل طيف الاستجابة")
         assertTextPresent("الحمل الحالي")
         assertTextAbsent("P-M Interaction Diagram")
+        capture("i18n-interaction-ar")
+    }
+
+    @Test
+    fun `seismic chart renders English strings under English locale`() {
+        pinLocale("en")
+        setThemedContent(arabic = false) { Column { seismicChart() } }
+        assertTextPresent("Response Spectrum Analysis")
+        assertTextAbsent("تحليل طيف الاستجابة")
+        capture("i18n-seismic-en")
+    }
+
+    @Test
+    fun `seismic chart renders Arabic strings under Arabic locale`() {
+        pinLocale("ar")
+        setThemedContent(arabic = true) { Column { seismicChart() } }
+        assertTextPresent("تحليل طيف الاستجابة")
         assertTextAbsent("Response Spectrum Analysis")
-        capture("i18n-charts-ar")
+        capture("i18n-seismic-ar")
     }
 
     @Test
