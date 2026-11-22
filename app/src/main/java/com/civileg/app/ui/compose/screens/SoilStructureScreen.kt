@@ -272,7 +272,7 @@ internal fun SoilDrawingSection(
     columnLoadKN: String,
     momentKNm: String,
     soilBearingCapacityKpa: String,
-    selectedCode: String
+    selectedCode: DesignCode
 ) {
     var soilViewMode by remember { mutableIntStateOf(1) }
 

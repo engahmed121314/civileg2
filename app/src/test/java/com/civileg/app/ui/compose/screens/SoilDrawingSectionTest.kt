@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.view.drawToBitmap
 import com.civileg.app.domain.calculations.base.SoilStructureInteraction
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.ui.theme.CivilEngineerPremiumTheme
 import com.civileg.app.utils.LocaleHelper
 import org.junit.Assert.assertTrue
@@ -95,7 +96,7 @@ class SoilDrawingSectionTest {
                 columnLoadKN = "1200",
                 momentKNm = "50",
                 soilBearingCapacityKpa = "150",
-                selectedCode = "ECP"
+                selectedCode = DesignCode.ECP
             )
         }
     }
