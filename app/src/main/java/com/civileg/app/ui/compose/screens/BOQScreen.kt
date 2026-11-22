@@ -294,7 +294,7 @@ fun DesignsBOQContent(
                     projects.forEach { project -> Tab(selected = project.id == selectedProjectId, onClick = { selectedProjectId = project.id; selectedDesignId = -1L; boqViewModel.clearResult() }, text = { AppText(project.name) }) }
                 }
             }
-            item { TotalCostCard(projectDesigns.sumOf { it.totalCost }) }
+            item { TotalCostCard(com.civileg.app.db.QuantityLedger.summarize(projectDesigns).totalCost) }
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AppButton(
