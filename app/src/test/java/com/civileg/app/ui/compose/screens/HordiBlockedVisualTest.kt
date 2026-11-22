@@ -12,6 +12,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.assertIsDisplayed
@@ -129,7 +132,9 @@ class HordiBlockedVisualTest {
         val res = blockedSbcResult()
 
         rule.setContent {
-            CivilEngineerPremiumTheme(darkTheme = false) { ProductionResultCards(res, ar = true) }
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                CivilEngineerPremiumTheme(darkTheme = false) { ProductionResultCards(res, ar = true) }
+            }
         }
 
         // Production Arabic labels, not mirrored constants.
@@ -174,17 +179,19 @@ class HordiBlockedVisualTest {
     fun `SBC cylinder input field renders its label in Arabic`() {
         pinLocale("ar")
         rule.setContent {
-            CivilEngineerPremiumTheme(darkTheme = false) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.background)
-                        .padding(16.dp)
-                ) {
-                    PremiumInputField(
-                        "", stringResource(R.string.hordi_slab_fc_cylinder), {},
-                        modifier = Modifier.fillMaxWidth()
-                    )
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                CivilEngineerPremiumTheme(darkTheme = false) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.background)
+                            .padding(16.dp)
+                    ) {
+                        PremiumInputField(
+                            "", stringResource(R.string.hordi_slab_fc_cylinder), {},
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
