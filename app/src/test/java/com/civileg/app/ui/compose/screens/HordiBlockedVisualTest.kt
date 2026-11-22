@@ -224,21 +224,17 @@ class HordiBlockedVisualTest {
     private fun captureRootOrNote(name: String) {
         val dir = File("build/reports/tests/compose-shots").apply { mkdirs() }
         val out = File(dir, "$name.png")
-        // Semantics capture re-renders in software (deterministic under Robolectric);
-        // window drawToBitmap is the flaky fallback (NPE bm=null on some runs).
+        // NATIVE graphics mode makes the window capture real; semantics
+        // captureToImage times out under Robolectric (verified on CI).
+        rule.waitForIdle()
         try {
-            val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
+            val content = rule.activity.findViewById<android.view.ViewGroup>(android.R.id.content)
+            val bitmap = content.drawToBitmap()
             FileOutputStream(out).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         } catch (e: Exception) {
-            try {
-                val content = rule.activity.findViewById<android.view.ViewGroup>(android.R.id.content)
-                val bitmap = content.drawToBitmap()
-                FileOutputStream(out).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-            } catch (e2: Exception) {
-                File(dir, "$name-capture-failed.txt").writeText(
-                    "capture unavailable: ${e2.javaClass.simpleName}: ${e2.message?.take(120)}"
-                )
-            }
+            File(dir, "$name-capture-failed.txt").writeText(
+                "window capture unavailable: ${e.javaClass.simpleName}: ${e.message?.take(120)}"
+            )
         }
     }
 }
