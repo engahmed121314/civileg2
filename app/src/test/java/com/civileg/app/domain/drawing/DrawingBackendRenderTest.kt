@@ -79,5 +79,12 @@ class DrawingBackendRenderTest {
             if (android.graphics.Color.red(color) < 200 && android.graphics.Color.green(color) < 200 && android.graphics.Color.blue(color) < 200) inkPixels++
         }
         assertTrue("Shared drawing unexpectedly blank", inkPixels > 100)
+        val annotationRows = (0 until (bitmap.height * 0.30).toInt()).count { y ->
+            (0 until bitmap.width).any { x ->
+                val color = bitmap.getPixel(x, y)
+                android.graphics.Color.red(color) < 200 && android.graphics.Color.green(color) < 200 && android.graphics.Color.blue(color) < 200
+            }
+        }
+        assertTrue("320px technical annotation shrank below readable type", annotationRows >= 9)
     }
 }

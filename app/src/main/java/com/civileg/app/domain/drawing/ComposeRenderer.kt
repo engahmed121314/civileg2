@@ -8,6 +8,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.unit.sp
 
 /** All geometry and labels come from the same immutable scene consumed by PdfRenderer. */
 object ComposeRenderer {
@@ -19,6 +20,7 @@ object ComposeRenderer {
             val viewport = DrawingGeometry.fit(scene.bounds, size.width.toDouble(), size.height.toDouble(), 6.0)
             fun mapped(p: Point2D): Point2D = viewport.map(p).let { Point2D(it.x, size.height - it.y) }
             val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            val minimumAnnotationPx = 12.sp.toPx()
             fun line(a: Point2D, b: Point2D) {
                 val p1 = mapped(a); val p2 = mapped(b)
                 canvas.drawLine(p1.x.toFloat(), p1.y.toFloat(), p2.x.toFloat(), p2.y.toFloat(), paint)
@@ -38,7 +40,9 @@ object ComposeRenderer {
                 val textPaint = Paint(paint).apply {
                     style = Paint.Style.FILL
                     pathEffect = null
-                    textSize = (height * viewport.scale).toFloat()
+                    // Model fit must not shrink annotations below readable UI type.
+                    // Geometry stays at the shared uniform scale; font scale is respected.
+                    textSize = DrawingGeometry.annotationSize(height, viewport.scale, minimumAnnotationPx.toDouble()).toFloat()
                     typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
                 }
                 canvas.save()

@@ -8,6 +8,11 @@ data class DrawingViewport(val scale: Double, val offsetX: Double, val offsetY: 
 }
 
 object DrawingGeometry {
+    /** Accessibility floor changes annotation size only, never geometry or dimensions. */
+    fun annotationSize(modelHeight: Double, scale: Double, minimumPixels: Double): Double {
+        require(listOf(modelHeight, scale, minimumPixels).all { it.isFinite() && it > 0 })
+        return max(modelHeight * scale, minimumPixels)
+    }
     fun fit(bounds: Rect2D, width: Double, height: Double, padding: Double = 0.0): DrawingViewport {
         require(listOf(bounds.minX, bounds.minY, bounds.maxX, bounds.maxY, width, height, padding).all { it.isFinite() })
         require(bounds.width > 0 && bounds.height > 0 && padding >= 0)

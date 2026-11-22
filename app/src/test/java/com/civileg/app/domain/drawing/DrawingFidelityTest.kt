@@ -15,6 +15,11 @@ class DrawingFidelityTest {
     private fun primary() = listOf(DrawingViewKind.PLAN, DrawingViewKind.SIDE, DrawingViewKind.ELEVATION)
         .map { DesignDrawingView(it.name, it, scene()) }
 
+    @Test fun `annotation sizes respect minimum readable pixels without changing viewport scale`() {
+        assertEquals(12.0, DrawingGeometry.annotationSize(4.0, 2.2, 12.0), 0.0)
+        assertEquals(24.0, DrawingGeometry.annotationSize(8.0, 3.0, 12.0), 0.0)
+    }
+
     @Test fun `offset bounds fit uniformly without stretching`() {
         val viewport = DrawingGeometry.fit(Rect2D(-50.0, 20.0, 150.0, 120.0), 400.0, 400.0)
         assertEquals(Point2D(0.0, 100.0), viewport.map(Point2D(-50.0, 20.0)))
