@@ -30,7 +30,7 @@ import androidx.room.TypeConverters
         BuildingLayoutEntity::class,
         ExportEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

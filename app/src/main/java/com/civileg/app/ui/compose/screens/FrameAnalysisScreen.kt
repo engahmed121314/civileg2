@@ -53,6 +53,7 @@ import com.civileg.app.viewmodel.ProjectViewModel
 import com.civileg.app.utils.FrameAnalysisPdfExporter
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
+import com.civileg.app.db.createdAtLabel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -466,7 +467,7 @@ private fun FrameSaveDesignDialog(
 }
 
 @Composable
-private fun FrameOpenDesignDialog(
+internal fun FrameOpenDesignDialog(
     designs: List<Design>,
     projects: List<Project>,
     onDismiss: () -> Unit,
@@ -490,7 +491,7 @@ private fun FrameOpenDesignDialog(
                             supportingContent = {
                                 AppText(
                                     buildString {
-                                        append(dateFormat.format(design.createdAt))
+                                        append(design.createdAtLabel(dateFormat, stringResource(R.string.design_date_unknown)))
                                         if (!projectName.isNullOrBlank()) append(" • $projectName")
                                         append(" • ${design.codeUsed}")
                                     },

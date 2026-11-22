@@ -49,8 +49,29 @@ data class Design(
     val concreteVolume: Double = 0.0,
     val steelWeight: Double = 0.0,
     val totalCost: Double = 0.0,
-    val createdAt: Date = Date()
+    val createdAt: Date = Date(),
+    /** What concreteVolume/steelWeight/totalCost mean. Old rows read as LEGACY_UNVERIFIED. */
+    @androidx.room.ColumnInfo(defaultValue = "'LEGACY_UNVERIFIED'")
+    val quantityBasis: QuantityBasis = QuantityBasis.LEGACY_UNVERIFIED,
+    /** SHA-256 of the frozen input/result pair this row was saved from, when it has one. */
+    val snapshotRevision: String? = null
 )
+
+/**
+ * Meaning of the stored quantity columns of a [Design].
+ * Numbers are never promoted between bases; unknown quantities are stored as 0 only
+ * as a placeholder and must be excluded from every total.
+ */
+enum class QuantityBasis {
+    /** Stored before basis tracking, or by a writer whose quantity method is not verified. */
+    LEGACY_UNVERIFIED,
+    /** Quantities were not determined (e.g. no panel width or bar schedule). Columns hold 0 as a placeholder only. */
+    UNKNOWN,
+    /** Gross geometry and straight-bar estimate; not a cut-length bar schedule. */
+    NOMINAL_ESTIMATE,
+    /** Quantities derived from actual full geometry and detailing. No producer qualifies yet. */
+    MEASURED
+}
 
 enum class DesignType {
     BEAM, COLUMN, FOOTING, SLAB, STAIRCASE, RETAINING_WALL, WATER_TANK, PILE, SEISMIC, STEEL_MEMBER, STEEL_WAREHOUSE, FRAME_ANALYSIS, PILE_FOUNDATION, FLAT_SLAB, SHEAR_WALL, CONCRETE_MIX, SOIL_BEARING, WIND_LOAD, WAFFLE_SLAB, HORDI_SLAB, COMBINED_FOOTING
