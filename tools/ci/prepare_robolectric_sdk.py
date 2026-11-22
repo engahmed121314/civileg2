@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prefetch the unchanged Robolectric SDK once, verify it, and fail without retries."""
+"""Prefetch both unchanged Robolectric SDKs once, verify each, and fail without retries."""
 import argparse
 import hashlib
 from pathlib import Path
@@ -25,6 +25,27 @@ DOWNLOAD_URL = (
 )
 
 
+APP_RESOURCES_ARTIFACT = "android-all-instrumented-15-robolectric-12650502-i7.jar"
+# Robolectric 4.14.1 loads this additional existing SDK for application resources,
+# even when each test's execution SDK is explicitly 34. It is not a test-SDK change.
+APP_RESOURCES_CHECKSUM_URL = (
+    "https://repo1.maven.org/maven2/org/robolectric/android-all-instrumented/"
+    "15-robolectric-12650502-i7/" + APP_RESOURCES_ARTIFACT + ".sha512"
+)
+APP_RESOURCES_SHA512 = (
+    "87bdd0341838f5f630e1ff412ab29cb2f06e0f8cb7751f14679d11b4ee6084873"
+    "001f8f6a8581ae6e139fa7c9a654b632412827430f984ebecc3c2588674f7e7"
+)
+APP_RESOURCES_DOWNLOAD_URL = (
+    "https://maven-central.storage-download.googleapis.com/maven2/org/robolectric/"
+    "android-all-instrumented/15-robolectric-12650502-i7/" + APP_RESOURCES_ARTIFACT
+)
+SDK_ARTIFACTS = (
+    (ARTIFACT, SHA512, DOWNLOAD_URL),
+    (APP_RESOURCES_ARTIFACT, APP_RESOURCES_SHA512, APP_RESOURCES_DOWNLOAD_URL),
+)
+
+
 def sha512(path):
     digest = hashlib.sha512()
     with path.open("rb") as source:
@@ -33,28 +54,30 @@ def sha512(path):
     return digest.hexdigest()
 
 
-def prepare_sdk(directory, opener=urllib.request.urlopen):
+def prepare_sdk(directory, opener=urllib.request.urlopen, *, artifact=ARTIFACT,
+                expected_sha512=None, download_url=DOWNLOAD_URL):
+    expected_sha512 = SHA512 if expected_sha512 is None else expected_sha512
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
-    destination = directory / ARTIFACT
+    destination = directory / artifact
     if destination.exists():
-        if sha512(destination) != SHA512:
+        if sha512(destination) != expected_sha512:
             raise RuntimeError("Cached Robolectric SDK checksum mismatch; refusing to run tests")
-        print("Verified cached Robolectric SDK: " + ARTIFACT)
+        print("Verified cached Robolectric SDK: " + artifact)
         return destination
 
     pending = None
     try:
         # Exactly one request. In particular, never retry or switch hosts on HTTP429.
-        with opener(DOWNLOAD_URL, timeout=120) as response:
+        with opener(download_url, timeout=120) as response:
             with tempfile.NamedTemporaryFile(dir=directory, suffix=".partial", delete=False) as target:
                 pending = Path(target.name)
                 for chunk in iter(lambda: response.read(1024 * 1024), b""):
                     target.write(chunk)
-        if sha512(pending) != SHA512:
+        if sha512(pending) != expected_sha512:
             raise RuntimeError("Downloaded Robolectric SDK checksum mismatch; refusing to run tests")
         pending.replace(destination)
-        print("Verified downloaded Robolectric SDK: " + ARTIFACT)
+        print("Verified downloaded Robolectric SDK: " + artifact)
         return destination
     except urllib.error.HTTPError as error:
         retry_after = error.headers.get("Retry-After", "not supplied")
@@ -71,7 +94,9 @@ def main():
     parser.add_argument("--directory", required=True)
     args = parser.parse_args()
     try:
-        prepare_sdk(args.directory)
+        for artifact, expected_sha512, download_url in SDK_ARTIFACTS:
+            prepare_sdk(args.directory, artifact=artifact, expected_sha512=expected_sha512,
+                        download_url=download_url)
     except (OSError, RuntimeError) as error:
         print(str(error), file=sys.stderr)
         return 1
