@@ -168,5 +168,18 @@ data class ProjectSummary(
     val designCount: Int = 0,
     val costEfficiencyIndex: Double = 1.0,
     val costBreakdown: Map<String, Double> = emptyMap(),
-    val methodBlockedDesignCount: Int = 0
+    val methodBlockedDesignCount: Int = 0,
+    /** totalConcrete/totalSteel/totalCost count MEASURED rows only; false means they are not a measurement. */
+    val hasMeasuredQuantities: Boolean = false,
+    val nominalConcrete: Double = 0.0,
+    val nominalSteel: Double = 0.0,
+    val nominalCost: Double = 0.0,
+    val legacyConcrete: Double = 0.0,
+    val legacySteel: Double = 0.0,
+    val legacyCost: Double = 0.0,
+    val measuredCount: Int = 0,
+    val nominalCount: Int = 0,
+    val legacyCount: Int = 0,
+    /** Designs whose quantities are not determined. They add nothing to any figure above. */
+    val unknownQuantityCount: Int = 0
 ) : Parcelable

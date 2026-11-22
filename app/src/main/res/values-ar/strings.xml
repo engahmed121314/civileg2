@@ -2480,4 +2480,5 @@
     <string name="ecp_stage_limit_live">فحص حد الزيادة للحمل الحي</string>
     <string name="ecp_stage_limit_after">فحص حد ما بعد التركيب شاملًا الحرارة</string>
     <string name="ecp_stage_precision_note">قيم التعويض مقربة للعرض فقط؛ الحسابات بالدقة الكاملة. حدود الفحص والتنبيهات منفصلة أسفل الخطوات.</string>
+    <string name="design_date_unknown">التاريخ غير معروف</string>
 </resources>

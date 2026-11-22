@@ -75,6 +75,9 @@ class BOQViewModel @Inject constructor(
         require(!com.civileg.app.db.StoredDesignSafety.isBlocked(design)) {
             "Slab method not verified; execution quantities are blocked."
         }
+        require(design.quantityBasis != com.civileg.app.db.QuantityBasis.UNKNOWN) {
+            "Quantities for this design are not determined (no panel width or bar schedule); no BOQ is produced."
+        }
 
         // إذا توفرت بيانات تفصيلية، استخدم CalculateElementBoq
         if (inputJson != null && inputJson.length() > 2) {
@@ -99,7 +102,8 @@ class BOQViewModel @Inject constructor(
                 description = "${design.name} — Reinforcement Steel",
                 category = BoqCategory.REINFORCEMENT,
                 unit = "ton",
-                quantity = design.steelWeight,
+                // Design.steelWeight is stored in kg; the unit and steelPerTon price are per tonne.
+                quantity = design.steelWeight / 1000.0,
                 unitPrice = prices.steelPerTon
             )
         }
