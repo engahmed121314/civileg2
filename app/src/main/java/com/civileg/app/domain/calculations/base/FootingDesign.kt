@@ -120,7 +120,10 @@ data class FootingDesignResult(
     val punchingShearCheck: ShearCheckResult,
     val isSafe: Boolean,
     val warnings: List<String> = emptyList(),
-    val codeNotes: List<String> = emptyList()
+    val codeNotes: List<String> = emptyList(),
+    // Combined footings: hogging (top) steel at columns and per-column transverse strips
+    val topReinforcement: ReinforcementResult? = null,
+    val transverseReinforcement: List<ReinforcementResult> = emptyList()
 )
 
 enum class FootingDirection { SHORT, LONG }
