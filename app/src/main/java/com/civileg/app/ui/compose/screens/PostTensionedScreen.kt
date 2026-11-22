@@ -606,7 +606,7 @@ private fun <T> EnumDropdown(
     label: String,
     options: List<T>,
     selected: T,
-    display: (T) -> String,
+    display: @Composable (T) -> String,
     onSelected: (T) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
