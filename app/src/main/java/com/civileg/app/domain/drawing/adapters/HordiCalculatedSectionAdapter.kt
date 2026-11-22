@@ -104,13 +104,20 @@ object HordiCalculatedSectionAdapter {
             Point2D(webLeft, -23.0), "Web ${number(section.ribWidthMm)} mm")
         primitives += Primitive.Dimension(Point2D(pitch + 45.0, 0.0), Point2D(pitch + 45.0, depth),
             Point2D(pitch + 60.0, depth * 0.50), "h ${number(depth)} mm")
-        text("t = ${number(section.toppingThicknessMm)} mm", 0.0, depth + 90.0)
-        text("Analytical b_eff = ${number(section.analyticalFlangeWidthMm)} mm", 0.0, depth + 115.0)
-        text("Repeating-cell cuts, not free edges.", 0.0, -75.0)
-        text("Tension ${section.tensionFace}; ${bars.size} adopted bars.", 0.0, -100.0)
+        // Reserve baseline spacing for the renderer's readable 12sp floor at a
+        // 320dp phone width (288dp after card padding). This changes annotation
+        // placement only, never the supplied section dimensions or coordinates.
+        val annotationGap = max(50.0, max((pitch + 255.0) / 16.0, (depth + 150.0) / 8.0))
+        val webDimensionTextY = -23.0
+        val pitchDimensionTextY = depth + 45.0
+        text("t = ${number(section.toppingThicknessMm)} mm", 0.0, pitchDimensionTextY + annotationGap)
+        text("Analytical b_eff = ${number(section.analyticalFlangeWidthMm)} mm", 0.0, pitchDimensionTextY + 2.0 * annotationGap)
+        text("Repeating-cell cuts, not free edges.", 0.0, webDimensionTextY - annotationGap)
+        text("Tension ${section.tensionFace}; ${bars.size} adopted bars.", 0.0, webDimensionTextY - 2.0 * annotationGap)
         val scene = DrawingScene(
             "Calculated one-pitch rib section, adopted bar centres, not as-built",
-            Rect2D(-25.0, -125.0, pitch + 230.0, depth + 145.0), primitives
+            Rect2D(-25.0, webDimensionTextY - 2.0 * annotationGap - 40.0,
+                pitch + 230.0, pitchDimensionTextY + 2.0 * annotationGap + 40.0), primitives
         )
         val warnings = (output.incompleteChecks + section.incompleteGeometry).distinct()
         return HordiSectionDrawing(output.revisionId, memberMark, output.methodReference,
@@ -135,7 +142,7 @@ object HordiCalculatedSectionAdapter {
                     setProperty(Property.OVERFLOW_WRAP, OverflowWrapPropertyValue.ANYWHERE)
                 }
                 val sheet = Table(UnitValue.createPercentArray(floatArrayOf(64f, 36f))).useAllAvailableWidth()
-                val graphic = Cell().setPadding(5f).add(Image(PdfRenderer.createForm(drawing.view.scene, pdf, 700f, 500f)))
+                val graphic = Cell().setPadding(5f).add(Image(PdfRenderer.createForm(drawing.view.scene, pdf, 700f, 580f)))
                 val notes = Cell().setPadding(8f)
                 notes.add(note("METHOD / MEMBER STATUS: UNVERIFIED FOR EXECUTION. Execution exports remain blocked.").setBold())
                 notes.add(note("SUPPLIED LINKS: ${output.section.linkLegs} legs, diameter ${number(output.section.linkDiameterMm)} mm, spacing ${number(output.section.linkSpacingMm)} mm. Closure, bends and first-link offset are not supplied."))

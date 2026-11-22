@@ -62,6 +62,21 @@ class HordiCalculatedSectionAdapterTest {
         assertEquals(listOf(Point2D(243.0, 43.0), Point2D(300.0, 43.0), Point2D(357.0, 43.0), Point2D(300.0, 93.0)), dots.map { it.center })
     }
 
+    @Test fun `phone annotation halos have separate rows at readable minimum type`() {
+        for (name in listOf("bottom-two-bars", "top-two-bars", "bottom-two-layers")) {
+            val scene = HordiCalculatedSectionAdapter.build(fixture(name).handoff(), "H1").view.scene
+            val viewport = DrawingGeometry.fit(scene.bounds, 288.0, 288.0 / 1.18, 6.0)
+            val rows = scene.primitives.filterIsInstance<Primitive.Text>().map { it.position.y } +
+                scene.primitives.filterIsInstance<Primitive.Dimension>()
+                    .filter { it.p1.y == it.p2.y }.map { it.textPosition.y }
+            // 12sp glyphs have a 1.25x-height halo in the actual Compose renderer.
+            // Keep at least one pixel between those 15px annotation boxes.
+            rows.sorted().zipWithNext().forEach { (a, b) ->
+                assertTrue("320dp annotation rows collide for $name", (b - a) * viewport.scale >= 16.0)
+            }
+        }
+    }
+
     @Test fun `all source holds survive and no closed link or hook path is invented`() {
         val f = fixture("bottom-two-bars")
         val drawing = HordiCalculatedSectionAdapter.build(f.handoff(), "H1")
