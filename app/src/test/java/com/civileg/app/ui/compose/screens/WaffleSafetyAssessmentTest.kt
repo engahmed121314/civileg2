@@ -45,7 +45,7 @@ class WaffleSafetyAssessmentTest {
     }
 
     private fun notice(lang: String) {
-        val app = RuntimeEnvironment.getApplication<android.app.Application>()
+        val app = RuntimeEnvironment.getApplication()
         LocaleHelper.initApplicationContext(app)
         LocaleHelper.setLocale(app, lang)
         rule.setContent {
