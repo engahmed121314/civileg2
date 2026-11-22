@@ -40,6 +40,18 @@
 -keep class com.civileg.app.db.** { *; }
 -keep class com.civileg.app.model.** { *; }
 -keep class com.civileg.app.domain.entities.** { *; }
+# Nested ECP input models are part of the frozen Hordi JSON schema. Keep their
+# field/enum names and reflective construction stable across minified builds.
+# This list is checked against the snapshot's reachable core model types.
+-keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203RibbedSection$Context { *; }
+-keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203RibbedSection$ImmediateDeflectionInput { *; }
+-keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203RibbedSection$Region { *; }
+-keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203BarLayout$Layer { *; }
+-keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203RectangularFlexure$SteelSurface { *; }
+-keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203WebShear$VerticalLinks { *; }
+-keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203LongTermDeflection$Input { *; }
+-keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203LongTermDeflection$Duration { *; }
+-keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203LongTermDeflection$Attachment { *; }
 -keepattributes Signature
 -keepattributes *Annotation*
 -keep class com.google.gson.reflect.TypeToken { *; }
