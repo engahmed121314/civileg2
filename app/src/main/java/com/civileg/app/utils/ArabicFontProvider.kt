@@ -2,6 +2,8 @@ package com.civileg.app.utils
 
 import android.content.Context
 import android.graphics.Typeface
+import androidx.core.content.res.ResourcesCompat
+import com.civileg.app.R
 import android.util.Log
 import com.itextpdf.io.font.FontProgram
 import com.itextpdf.io.font.FontProgramFactory
@@ -202,15 +204,15 @@ object ArabicFontProvider {
         if (!bold && cachedTypeface != null) return cachedTypeface!!
         if (bold && cachedBoldTypeface != null) return cachedBoldTypeface!!
 
-        val fontPath = if (bold) FONT_BOLD else FONT_REGULAR
         val targetCache = if (bold) ::cachedBoldTypeface else ::cachedTypeface
 
-        // Strategy 1: Load from bundled assets
+        // Canvas/UI uses Plex; the PDF FontProgram paths and per-document fonts above stay unchanged.
         try {
-            val typeface = Typeface.createFromAsset(context.assets, fontPath)
+            val resource = if (bold) R.font.ibm_plex_sans_arabic_bold else R.font.ibm_plex_sans_arabic_regular
+            val typeface = ResourcesCompat.getFont(context, resource)
             if (typeface != null) {
                 targetCache.set(typeface)
-                Log.d(TAG, "Arabic Typeface loaded from assets")
+                Log.d(TAG, "Arabic UI Typeface loaded from bundled resource")
                 return typeface
             }
         } catch (e: Exception) {
