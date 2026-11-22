@@ -361,12 +361,12 @@ footing flexure helper's minimum-steel formula matched no ACI provision.
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
 |---|---|---|---|
-| F-01 | ACI 318M-14 Table 7.6.1.1: As,min for nonprestressed one-way slabs and footings on the GROSS area Ag = b·h: deformed bars fy < 420 MPa → 0.0020·Ag; fy ≥ 420 → greater of 0.0018·420/fy·Ag and 0.0014·Ag. The helper's previous `rhoMin = max(0.0018, 1.33·√f'c/fy)` matches no ACI provision (likely a garbled reading of the 4/3 relaxation in §9.6.1.3) and produced a 1.63% "minimum" at f'c = 24, fy = 400 — about 8× the code value, inflating steel in every ACI footing result. Fixed to the table values on b·h; internal design flows now pass the real footing depth (the interface path keeps h = d). | Owner's ACI 318M-14, Table 7.6.1.1, printed p. 143 (part 1, PDF p. 152) | **Verified (primary), RESOLVED** |
-| F-02 | `SBCFooting` carries the same `max(0.0018, 1.33·√f'c/fy)` formula (line ~274). Not fixed here: SBC 304's own min-steel clause must be verified against the SBC PDF first, and the SBC batch awaits an owner decision (U-S1..U-S5). | Engine inspection | **FLAGGED, not fixed** |
+| F-01 | ACI 318M-14 Table 7.6.1.1: As,min for nonprestressed one-way slabs and footings on the GROSS area Ag = b·h: deformed bars fy < 420 MPa → 0.0020·Ag; fy ≥ 420 → greater of 0.0018·420/fy·Ag and 0.0014·Ag. The helper's previous `rhoMin = max(0.0018, 1.33·√f'c/fy)` matches no ACI provision (likely a garbled reading of the 4/3 relaxation in §9.6.1.3) and produced a 1.63% "minimum" at f'c = 24, fy = 400 — about 8× the code value, inflating steel in every ACI footing result. Fixed to the table values on b·h; internal design flows now pass the real footing depth (the interface path keeps h = d). | ACI 318M-14, Table 7.6.1.1, printed p. 143 (part 1, PDF p. 152) | **Verified (primary), RESOLVED** |
+| F-02 | `SBCFooting` carries the same `max(0.0018, 1.33·√f'c/fy)` formula (line ~274). Not fixed here: SBC 304's own min-steel clause must be verified against the SBC PDF first, and the SBC batch awaits a decision (U-S1..U-S5). | Engine inspection | **FLAGGED, not fixed** |
 
 ## ACI combined footing rebuild (accessed 2026-11-21)
 
-Owner decision 2026-11-21 ("fix them"): rebuild
+Decision 2026-11-21: rebuild
 `ACIFooting.designCombinedFooting` with the inverted-beam method, transverse
 beam strips, full one-way shear checks, and removal of the dead eccentricity
 block. The shared min-steel fix it depends on is F-01 (previous commit).
@@ -389,10 +389,10 @@ L = 5665.5 covers column 2 — CF-05 — M− = −549.7 kN·m hogging at column
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
 |---|---|---|---|
-| A-07 | §13.3.3 two-way isolated footings: square → uniform both directions; rectangular → long-direction uniform, short-direction portion γs = 2/(β+1) of As in the central band of width = short side, remainder outside (β = L/B). | Owner's ACI 318M-14 §13.3.3.2–13.3.3.3, printed pp. 310–311 (part 2, PDF pp. ~119–120) | **Verified (primary)** |
-| F-03 | `designIsolatedFooting` evaluates one-way shear at d/2 from the column face (comment cites §22.5) instead of d (§13.2.7.2 → §7.4.3.1/§22.5). The checked demand is LARGER than the code's, so the deviation is conservative. Characterized; relaxation to d needs an owner decision. | Engine inspection vs verified §13.2.7.2 (A-05) | **FLAGGED (conservative), not fixed** |
-| F-04 | `designIsolatedFooting` adds "distribution steel = 20% of main" citing "ACI 318-13.3.4". No such rule exists: §13.3.4 covers combined/mat foundations, and the real distribution rule is the §13.3.3.3(b) band rule (A-07). Affects reporting only (codeNotes); main reinforcement and safety checks are unaffected. | Engine inspection vs verified §13.3.3/§13.3.4 | **FLAGGED, not fixed — replace with the band rule (needs owner OK)** |
-| F-05 | `designRaftFoundation` is a crude placeholder: max column load estimated as 15% of total, design moment = q·(√A/3)²/10 (no clause basis), punching checked for a guessed 600×600 column. §13.3.4.3 requires pressure distribution consistent with factored loads; a real raft needs a grid/strip method. | Engine inspection; ACI 318M-14 §13.3.4.1–13.3.4.3, printed p. 311 | **FLAGGED, not fixed — raft needs a proper method decision from the owner** |
+| A-07 | §13.3.3 two-way isolated footings: square → uniform both directions; rectangular → long-direction uniform, short-direction portion γs = 2/(β+1) of As in the central band of width = short side, remainder outside (β = L/B). | ACI 318M-14 §13.3.3.2–13.3.3.3, printed pp. 310–311 (part 2, PDF pp. ~119–120) | **Verified (primary)** |
+| F-03 | `designIsolatedFooting` evaluates one-way shear at d/2 from the column face (comment cites §22.5) instead of d (§13.2.7.2 → §7.4.3.1/§22.5). The checked demand is LARGER than the code's, so the deviation is conservative. Characterized; relaxation to d needs a decision. | Engine inspection vs verified §13.2.7.2 (A-05) | **FLAGGED (conservative), not fixed** |
+| F-04 | `designIsolatedFooting` adds "distribution steel = 20% of main" citing "ACI 318-13.3.4". No such rule exists: §13.3.4 covers combined/mat foundations, and the real distribution rule is the §13.3.3.3(b) band rule (A-07). Affects reporting only (codeNotes); main reinforcement and safety checks are unaffected. | Engine inspection vs verified §13.3.3/§13.3.4 | **FLAGGED, not fixed — replace with the band rule (deferred)** |
+| F-05 | `designRaftFoundation` is a crude placeholder: max column load estimated as 15% of total, design moment = q·(√A/3)²/10 (no clause basis), punching checked for a guessed 600×600 column. §13.3.4.3 requires pressure distribution consistent with factored loads; a real raft needs a grid/strip method. | Engine inspection; ACI 318M-14 §13.3.4.1–13.3.4.3, printed p. 311 | **FLAGGED, not fixed — raft needs a proper method decision** |
 
 Golden guard: ACIFootingTest `designIsolatedFooting_goldenVector_squareNoMoment`
 (P = 1500 kN, 400×400 column, qa = 200, h = 600: B = L = 2450 mm, q = 178.50
