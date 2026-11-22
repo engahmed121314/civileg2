@@ -13,6 +13,43 @@ object Ecp203BarLayout {
         val layerCentersFromTensionFaceMm: List<Double>, val fitsInsideLinks: Boolean,
         val effectiveDepthMm: Double?)
 
+    data class PlacedBar(val layerIndex: Int, val indexInLayer: Int,
+        val xFromWebLeftMm: Double, val distanceFromTensionFaceMm: Double, val diameterMm: Double)
+
+    /**
+     * Explicit adopted design arrangement, not as-built/user-entered x coordinates.
+     * Each row is symmetric: one bar is centered; multiple bars are spread between
+     * the two covered cage limits. Vertical centres are the SAME assessed layers.
+     * The renderer must consume these positions, never repeat this choice itself.
+     * Null only denotes the coordinate-export budget, not an engineering failure.
+     */
+    fun adoptSymmetricRows(widthMm: Double, coverToOutsideLinksMm: Double,
+        linkDiameterMm: Double, layers: List<Layer>, assessment: Assessment): List<PlacedBar>? {
+        require(assessment.fitsInsideLinks && assessment.effectiveDepthMm != null)
+        require(widthMm.isFinite() && widthMm > 0.0 &&
+            coverToOutsideLinksMm.isFinite() && coverToOutsideLinksMm >= 0.0 &&
+            linkDiameterMm.isFinite() && linkDiameterMm >= 0.0)
+        require(layers.isNotEmpty() && layers.size == assessment.layerCentersFromTensionFaceMm.size)
+        require(layers.all { it.count > 0 && it.diameterMm.isFinite() && it.diameterMm > 0.0 })
+        if (layers.sumOf { it.count.toLong() } > 4096L) return null
+        val inset = coverToOutsideLinksMm + linkDiameterMm
+        require(inset.isFinite())
+        return layers.flatMapIndexed { row, layer ->
+            val left = inset + layer.diameterMm / 2.0
+            val right = widthMm - left
+            require(right >= left)
+            val step = if (layer.count == 1) 0.0 else (right - left) / (layer.count - 1)
+            require(layer.count == 1 || step - layer.diameterMm >= assessment.minimumClearGapMm - 1e-9)
+            val y = assessment.layerCentersFromTensionFaceMm[row]
+            require(y.isFinite() && y > 0.0)
+            (0 until layer.count).map { index ->
+                val x = if (layer.count == 1) widthMm / 2.0 else left + index * step
+                require(x.isFinite())
+                PlacedBar(row, index, x, y, layer.diameterMm)
+            }
+        }.toList()
+    }
+
     fun assess(widthMm: Double, totalDepthMm: Double, coverToOutsideLinksMm: Double,
         linkDiameterMm: Double, nominalMaximumAggregateMm: Double, layers: List<Layer>): Assessment {
         require(listOf(widthMm, totalDepthMm, nominalMaximumAggregateMm).all { it.isFinite() && it > 0.0 })

@@ -169,6 +169,8 @@ class ECPHordiSlabDesign : HordiSlabDesign {
             },
             calculationStages = EcpHordiCalculationStages.build(fcu, fy, ribWidth, ribSpacing,
                 totalThickness, toppingThickness, designMoment, designShear, context, a),
+            calculatedSection = EcpHordiSectionGeometry.build(ribWidth, ribSpacing,
+                totalThickness, toppingThickness, context, a),
             codeNotes = listOf(
                 "ECP203-2020 bounded section method: printed4-1..4-9,4-17..4-22,6-15/16,6-42,7-6/7-7.",
                 "Section checks pass=${a.sectionChecksPass}; region=${context.region}; effective flange width=${a.effectiveFlangeWidthMm} mm; centroid effective depth=${a.layout.effectiveDepthMm} mm.",

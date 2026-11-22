@@ -127,7 +127,9 @@ data class SlabDesignResult(
     /** True when a method/applicability hold prevents any overall safety approval. */
     val safetyAssessmentBlocked: Boolean = false,
     /** Null in older snapshots and engines without a typed calculation trace. */
-    val calculationStages: List<SlabCalculationStage>? = null
+    val calculationStages: List<SlabCalculationStage>? = null,
+    /** Null for older or non-source results. Never reconstruct it from saved defaults. */
+    val calculatedSection: SlabCalculatedSection? = null
 ) : Parcelable
 
 /** Frozen presentation values produced alongside the actual calculation result. */
