@@ -14,11 +14,12 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class WaffleMethodHoldExportTest {
+    @Suppress("UNCHECKED_CAST")
     private fun held() = WaffleSlabViewModel(mockk(relaxed = true)).also { vm ->
         val result = ECPWaffleSlabDesign().design(WaffleSlabDesign.WaffleSlabInput())
         WaffleSlabViewModel::class.java.getDeclaredField("_result").apply {
             isAccessible = true
-            set(vm, MutableLiveData(result))
+            (get(vm) as MutableLiveData<WaffleSlabDesign.WaffleSlabResult?>).value = result
         }
     }
 
