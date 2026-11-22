@@ -144,9 +144,9 @@ class DrawingCoerceGuardTest {
 
     @Composable
     private fun soilHealthyBox(mode: Int) {
-        // Production card is fillMaxWidth x 350dp; audit readability at that
-        // size, not just crash-freedom.
-        Box(Modifier.size(width = 360.dp, height = 350.dp)) {
+        // Production card is fillMaxWidth x 350dp. Use the 320dp test
+        // viewport explicitly so capture width is honest, not clipped from 360dp.
+        Box(Modifier.size(width = 320.dp, height = 350.dp)) {
             ProfessionalSoilStructureDrawing(
                 foundationLengthMm = 3000.0, foundationWidthMm = 2000.0,
                 foundationThicknessMm = 500.0, columnLoadKN = 1200.0,

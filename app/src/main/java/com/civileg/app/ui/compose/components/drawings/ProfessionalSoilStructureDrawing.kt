@@ -230,12 +230,17 @@ fun ProfessionalSoilStructureDrawing(
         }
 
         // ── Responsive Title Block & Scale Bar ─────────────────────────────
-        drawSheetAnnotations(
-            x = W - cfg.titleBlockWidth - margin * 0.3f,
-            y = H - cfg.titleBlockHeight - margin * 0.3f,
-            cfg = cfg,
-            summary = resultSummary
-        )
+        // An elevation/pressure section has no meaningful north bearing;
+        // do not place a decorative north arrow over its legend. The plan's
+        // orientation is likewise unspecified by the input model.
+        if (resultSummary != null) {
+            drawResultSummaryStrip(
+                summary = resultSummary,
+                x = W - cfg.titleBlockWidth - margin * 0.3f,
+                y = H - cfg.titleBlockHeight - margin * 0.3f - cfg.annotationTextSmall * 2.7f,
+                width = cfg.titleBlockWidth, cfg = cfg
+            )
+        }
         drawResponsiveTitleBlock(
             x = W - cfg.titleBlockWidth - margin * 0.3f,
             y = H - cfg.titleBlockHeight - margin * 0.3f,
@@ -342,8 +347,6 @@ private fun DrawScope.drawSoilStructureElevation(
     )
     drawHatchPattern(left, footBotY, width, stratum1Bot - footBotY,
         cfg.hatchSpacing * 1.5f, 45f, soilSandColor.copy(alpha = 0.3f))
-    drawTextAnnotated("Layer 1: Medium to Dense Sand (γ=18 kN/m³)", left + 6f, footBotY + 14f,
-        textColor.copy(alpha = 0.6f), cfg.annotationTextSmall * 0.75f)
 
     // Stratum 2: Stiff Clay / Bedrock
     drawRect(
@@ -353,16 +356,12 @@ private fun DrawScope.drawSoilStructureElevation(
     )
     drawHatchPattern(left, stratum1Bot, width, stratum2Bot - stratum1Bot,
         cfg.hatchSpacing * 1.2f, -45f, soilClayColor.copy(alpha = 0.35f))
-    drawTextAnnotated("Layer 2: Stiff Silty Clay (cu=60 kPa)", left + 6f, stratum1Bot + 14f,
-        textColor.copy(alpha = 0.6f), cfg.annotationTextSmall * 0.75f)
 
     // Water Table line
     val wtY = footBotY + (waterTableDepthM.toFloat() * 1000f * scale * 0.15f).coerceInMin(15f, stratum1Bot - footBotY - 5f)
     val dashWater = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
     drawLine(waterBlue, Offset(left, wtY), Offset(left + width, wtY), 1.8f, pathEffect = dashWater)
     // Water symbols
-    drawTextAnnotated("▼ W.T. (-${String.format("%.1f", waterTableDepthM)}m)",
-        left + width - 90f, wtY - 4f, waterBlue, cfg.annotationTextSmall * 0.85f, bold = true)
 
     // ── Foundation Slab ───────────────────────────────────────────────────
     drawRect(color = concreteFill, topLeft = Offset(footX, footY), size = Size(drawL, drawT))
@@ -484,27 +483,38 @@ private fun DrawScope.drawSoilStructureElevation(
     val dashAll = PathEffect.dashPathEffect(floatArrayOf(8f, 4f), 0f)
     drawLine(allowableColor, Offset(footX - 15f, pDiagY + qAllDrawH), Offset(footX + drawL + 15f, pDiagY + qAllDrawH),
         1.5f, pathEffect = dashAll)
-    drawTextAnnotated("q_all = ${soilBearingCapacityKpa.toInt()} kPa", footX + drawL + 20f, pDiagY + qAllDrawH + 3f,
-        allowableColor, cfg.annotationTextSmall * 0.85f, bold = true)
-
-    // Values of q_max and q_min
-    drawTextAnnotated("q_max = ${maxPressureKpa.toInt()} kPa",
-        footX - 4f, pDiagY + pMaxDrawH + 14f,
-        if (maxPressureKpa <= soilBearingCapacityKpa) allowableColor else unsafeColor,
-        cfg.annotationTextSmall, bold = true)
-
-    if (isFullCompression) {
-        drawTextAnnotated("q_min = ${minPressureKpa.toInt()} kPa",
-            footX + drawL - 10f, pDiagY + pMinDrawH + 14f,
-            pressureColor, cfg.annotationTextSmall * 0.9f)
-    }
-
-    // ── Dimensions ────────────────────────────────────────────────────────
-    // Footing length (bottom)
+    // Keep readouts out of the pressure/strata geometry. A fixed, measured
+    // legend below the dimension avoids clipping at either pressure ordinate.
+    val dimensionY = pDiagY + maxPressureH + 8f
     drawHorizontalDimension(
-        footX, footX + drawL, pDiagY + pMaxDrawH + 24f,
+        footX, footX + drawL, dimensionY,
         "L = ${safeL.toInt()} mm", dimColor, cfg.dimTextSize * 0.85f, 16f, cfg
     )
+    val compactOverview = width < 180f || height < 180f
+    val legendSize = if (compactOverview) cfg.annotationTextSmall * 0.85f else cfg.annotationTextSmall.coerceAtLeast(9f)
+    val legendStep = legendSize * 1.4f
+    val legendY = dimensionY + if (compactOverview) 32f else 36f
+    // Reserve a solid legend band in the readable, dedicated elevation view.
+    // Keep overview geometry unchanged rather than adding an oversized band.
+    if (!compactOverview) drawRoundRect(
+        color = DrawingColorDefaults.ConcreteFill,
+        topLeft = Offset(left - 4f, legendY - legendSize - 3f),
+        size = Size(width + 8f, legendStep * 3f + legendSize + 8f),
+        cornerRadius = CornerRadius(3f)
+    )
+    drawSoilLegendLine(
+        "q_max = ${maxPressureKpa.toInt()} kPa | q_min = ${minPressureKpa.toInt()} kPa",
+        left, legendY, width, pressureColor, legendSize
+    )
+    drawSoilLegendLine(
+        "q_all = ${soilBearingCapacityKpa.toInt()} kPa | W.T. -${String.format(java.util.Locale.US, "%.1f", waterTableDepthM)} m",
+        left, legendY + legendStep, width, allowableColor, legendSize
+    )
+    drawSoilLegendLine("Illustrative sand layer",
+        left, legendY + legendStep * 2f, width, textColor, legendSize)
+    drawSoilLegendLine("Illustrative clay layer",
+        left, legendY + legendStep * 3f, width, textColor, legendSize)
+
     // Footing thickness (left)
     drawVerticalDimension(
         footY, footBotY, footX - 10f,
@@ -596,9 +606,11 @@ private fun DrawScope.drawFoundationPlanKern(
     drawCircle(color = Color.White, radius = 2f, center = Offset(pressurePtX, pressurePtY))
 
     // Status label
-    val compStatus = if (isFullCompression) "100% Bearing Area in Compression (Safe)" else "Partial Tension / Uplift (e > L/6)"
-    drawTextAnnotated(compStatus, centerX, planY + drawW + 28f,
-        ptColor, cfg.annotationTextSmall, center = true, bold = true)
+    val compStatus = if (isFullCompression) "Full compression contact (100%)" else "Partial Tension / Uplift (e > L/6)"
+    // Put the status between the zone heading and plan, not between the
+    // length dimension and title block where there is no free baseline.
+    drawSoilLegendLine(compStatus, left, top + 20f,
+        width, ptColor, cfg.annotationTextSmall)
 
     // ── Dimensions ────────────────────────────────────────────────────────
     drawHorizontalDimension(planX, planX + drawL, planY + drawW + 4f,
@@ -685,7 +697,7 @@ private fun DrawScope.drawBoussinesqStressBulb(
         cornerRadius = CornerRadius(4f)
     )
     drawTextAnnotated(
-        "Estimated Settlement: ${String.format("%.1f", settlementMm)} mm (Allowable ≤ 25 mm ECP/ACI)",
+        "Estimated Settlement: ${String.format(java.util.Locale.US, "%.1f", settlementMm)} mm (Allowable ≤ 25 mm ECP/ACI)",
         left + width / 2f, badgeY + 14f,
         sColor, cfg.annotationTextSmall, center = true, bold = true
     )
@@ -712,12 +724,12 @@ private fun DrawScope.drawSoilStructureTable(
     val headers = listOf("Check", "Demand", "Limit", "F.S.", "Status")
     val rows = listOf(
         listOf("Bearing (q_max)", "${maxPressureKpa.toInt()} kPa", "${soilBearingCapacityKpa.toInt()} kPa",
-            "%.2f".format(bearingFS), if (brPass) "SAFE ✓" else "FAIL ✗"),
+            String.format(java.util.Locale.US, "%.2f", bearingFS), if (brPass) "SAFE ✓" else "FAIL ✗"),
         listOf("Overturning", "M_act", "M_res",
-            "%.2f".format(overturningFS), if (otPass) "SAFE ✓" else "FAIL ✗"),
+            String.format(java.util.Locale.US, "%.2f", overturningFS), if (otPass) "SAFE ✓" else "FAIL ✗"),
         listOf("Sliding", "H_act", "R_fric",
-            "%.2f".format(slidingFS), if (slPass) "SAFE ✓" else "FAIL ✗"),
-        listOf("Settlement", "${String.format("%.1f", settlementMm)}mm", "25 mm",
+            String.format(java.util.Locale.US, "%.2f", slidingFS), if (slPass) "SAFE ✓" else "FAIL ✗"),
+        listOf("Settlement", "${String.format(java.util.Locale.US, "%.1f", settlementMm)}mm", "25 mm",
             "—", if (stPass) "OK ✓" else "HIGH ✗"),
         listOf("Kern (e ≤ L/6)", "${eccentricityMm.toInt()} mm", "${kernLimitMm.toInt()} mm",
             "—", if (isFullCompression) "100% ✓" else "Uplift ⚠")
@@ -736,4 +748,19 @@ private fun DrawScope.drawSoilStructureTable(
         altRowBg = DrawingColorDefaults.TableRowAlt,
         textColor = textColor
     )
+}
+
+/** Measured single-line legend, kept within the drawing zone at narrow widths. */
+private fun DrawScope.drawSoilLegendLine(
+    text: String, left: Float, baseline: Float, width: Float,
+    color: Color, textSize: Float
+) {
+    if (width <= 0f) return
+    val paint = android.graphics.Paint().apply {
+        this.textSize = textSize
+        typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+    }
+    val measured = paint.measureText(text)
+    val fitted = if (measured > width) textSize * width / measured else textSize
+    drawTextAnnotated(text, left + width / 2f, baseline, color, fitted, center = true, bold = true)
 }

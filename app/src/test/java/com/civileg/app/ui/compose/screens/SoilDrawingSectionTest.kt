@@ -36,7 +36,7 @@ import java.io.FileOutputStream
  * (elevation), not the legacy all-in-one composite.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "w320dp-h640dp")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SoilDrawingSectionTest {
 
@@ -95,7 +95,7 @@ class SoilDrawingSectionTest {
 
     @Composable
     private fun section() {
-        Column(Modifier.width(360.dp)) {
+        Column(Modifier.width(320.dp)) {
             SoilDrawingSection(
                 res = result,
                 foundationLengthMm = "3000",
