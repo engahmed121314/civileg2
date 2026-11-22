@@ -445,3 +445,17 @@ Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
 - Existing fcu16 minimum-ratio and fcu100 shear-cap fixtures were out of this
   application range. They changed to20 and60 respectively; the same controlling
   equations and numerical expectations still pass. New range guards are tested.
+
+
+### ECP rib section: actual layer strain compatibility
+
+- Printed4-1 to4-3: plane-section compatibility, Es200000MPa,
+  design steel plateau fy/1.15 and epsilon_cu0.003 now feed every actual
+  tension layer in the dedicated source-section path.
+- Neutral-axis equilibrium and required area use actual fixed layer positions.
+  Physically fitting bars are not automatically all at design yield.
+- Conservative printed-table/steel and0.95d limits remain. Mixed compression/
+  tension reinforcement is an explicit unsupported domain, not a fabricated pass.
+- Regression: seven1x8mm layers at d313..85mm, fcu30/fy400/bw200/h350,
+  actual MRd21.4812192kNm fails21.5kNm; centroid-yield21.5602757 would pass.
+- This does not approve member serviceability, detailing or execution outputs.

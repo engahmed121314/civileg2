@@ -79,4 +79,14 @@ class Ecp203RibbedSectionTest {
     @Test fun `out of domain demand has no fabricated required steel`() {
         assertNull(assess(moment = 10000.0).requiredSteelMm2)
     }
+    @Test fun `coupled section checks actual layer strains not just total area centroid`() {
+        val c = context().copy(tensionLayers = List(7) { Ecp203BarLayout.Layer(1, 8.0) },
+            region = Ecp203RibbedSection.Region.FLANGE_IN_TENSION, contraflexureDistanceMm = null)
+        val a = assess(c, moment = 21.5)
+        assertTrue(a.layout.fitsInsideLinks)
+        assertFalse(a.flexure.allLayersAtDesignYield)
+        assertEquals(21.481219193360015, a.momentResistanceKnM, 1e-8)
+        assertFalse(a.flexureChecksPass)
+        assertFalse(a.sectionChecksPass)
+    }
 }

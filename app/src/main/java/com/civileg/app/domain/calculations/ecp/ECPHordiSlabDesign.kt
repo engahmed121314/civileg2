@@ -142,6 +142,7 @@ class ECPHordiSlabDesign : HordiSlabDesign {
                 "ECP203-2020 bounded section method: printed4-1..4-9,4-17..4-22,6-15/16,6-42,7-6/7-7.",
                 "Section checks pass=${a.sectionChecksPass}; region=${context.region}; effective flange width=${a.effectiveFlangeWidthMm} mm; centroid effective depth=${a.layout.effectiveDepthMm} mm.",
                 "Actual tension layers, from tension face inward: $bars. As=${a.layout.providedSteelMm2} mm2; MRd=${a.momentResistanceKnM} kN.m/rib.",
+                "Layer compatibility: neutral axis=${a.flexure.neutralAxisDepthMm} mm; actual layer design stresses=${a.flexure.layerStressMpa} MPa; all layers at design yield=${a.flexure.allLayersAtDesignYield}. Plane sections, Es=200000 MPa, concrete ultimate strain=0.003.",
                 "Cover to outside links=${context.coverToOutsideLinksMm} mm; aggregate=${context.nominalMaximumAggregateMm} mm; clear bar gap=${a.layout.minimumClearGapMm} mm. Exposure/fire cover not approved.",
                 "Vertical links=${context.links.legs} legs x ${context.links.diameterMm} mm @ ${context.links.spacingMm} mm, fy=${context.links.fyMpa} MPa. Concrete-only clause applies=${a.shear.concreteOnlyRequired}.",
                 "Required one-way cross ribs=${a.requiredCrossRibs}; provision/detailing not checked. Characteristic live load=${context.characteristicLiveLoadKnM2} kN/m2.",

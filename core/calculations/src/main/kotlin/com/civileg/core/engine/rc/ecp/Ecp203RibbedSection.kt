@@ -29,6 +29,7 @@ object Ecp203RibbedSection {
         val flexureChecksPass: Boolean,
         val shear: Ecp203WebShear.Assessment,
         val requiredCrossRibs: Ecp203RibbedGeometry.CrossRibs,
+        val flexure: Ecp203LayeredFlexure.Assessment,
         val sectionChecksPass: Boolean
     )
 
@@ -46,39 +47,21 @@ object Ecp203RibbedSection {
         }
         val section = Ecp203RectangularFlexure.Section(fcuMpa, fyMpa, webWidthMm, d,
             totalDepthMm, context.steelSurface)
-        val required: Double?
-        val capacity: Double
-        val passes: Boolean
-        val flangeWidth: Double
-        when (context.region) {
-            Region.FLANGE_IN_COMPRESSION -> {
-                val l2 = requireNotNull(context.contraflexureDistanceMm) {
+        val flangeWidth = when (context.region) {
+            Region.FLANGE_IN_COMPRESSION -> Ecp203TSectionFlexure.effectiveFlangeWidthMm(webWidthMm,
+                toppingMm, requireNotNull(context.contraflexureDistanceMm) {
                     "Compression-flange assessment needs the actual distance between contraflexure points L2."
-                }
-                flangeWidth = Ecp203TSectionFlexure.effectiveFlangeWidthMm(webWidthMm,
-                    toppingMm, l2, centerSpacingMm)
-                val t = Ecp203TSectionFlexure.Section(section, flangeWidth, toppingMm)
-                val demand = Ecp203TSectionFlexure.assess(t, momentKnM)
-                val provided = Ecp203TSectionFlexure.checkProvided(t, momentKnM, layout.providedSteelMm2)
-                required = demand.requiredSteelMm2
-                capacity = provided.momentResistanceKnM
-                passes = provided.flexureChecksPass
-            }
-            Region.FLANGE_IN_TENSION -> {
-                // The topping cannot supply compression area in this region.
-                flangeWidth = webWidthMm
-                val demand = Ecp203RectangularFlexure.assess(section, momentKnM)
-                val provided = Ecp203RectangularFlexure.checkProvided(section, momentKnM, layout.providedSteelMm2)
-                required = if (demand.withinSinglyReinforcedDomain) demand.requiredSteelMm2 else null
-                capacity = provided.designMomentResistanceKnM
-                passes = provided.flexureChecksPass
-            }
+                }, centerSpacingMm)
+            Region.FLANGE_IN_TENSION -> webWidthMm
         }
+        val flexure = Ecp203LayeredFlexure.assess(section, flangeWidth, toppingMm,
+            context.tensionLayers, layout.layerCentersFromTensionFaceMm, momentKnM)
         val shear = Ecp203WebShear.assess(Ecp203WebShear.Section(fcuMpa, webWidthMm, d,
             totalDepthMm, toppingMm), shearKn, context.links)
         val crossRibs = Ecp203RibbedGeometry.requiredOneWayCrossRibs(spanMm,
             context.characteristicLiveLoadKnM2)
-        return Assessment(layout, geometry, flangeWidth, required, capacity, passes, shear,
-            crossRibs, geometry.geometryChecksPass && passes && shear.shearChecksPass)
+        return Assessment(layout, geometry, flangeWidth, flexure.requiredSteelMm2,
+            flexure.momentResistanceKnM, flexure.flexureChecksPass, shear, crossRibs, flexure,
+            geometry.geometryChecksPass && flexure.flexureChecksPass && shear.shearChecksPass)
     }
 }

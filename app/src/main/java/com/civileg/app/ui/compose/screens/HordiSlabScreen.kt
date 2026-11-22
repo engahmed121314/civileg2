@@ -424,7 +424,7 @@ fun HordiSlabScreen(
                                 stringResource(R.string.hordi_slab_required_as) to String.format("%.1f mm²", res.requiredReinforcement),
                                 stringResource(R.string.hordi_slab_provided_as) to String.format("%.1f mm²", res.providedReinforcement),
                                 "Bar Diameter" to String.format("φ%.0f mm", res.barDiameter),
-                                stringResource(R.string.ecp_ribbed_center_spacing) to String.format("%.0f mm", res.barSpacing)
+                                (if (ecpSection) stringResource(R.string.ecp_ribbed_center_spacing) else "Bar Spacing") to String.format("%.0f mm", res.barSpacing)
                             ),
                             icon = Icons.Default.Build,
                             accentColor = Color(0xFF1565C0)

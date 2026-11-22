@@ -50,4 +50,12 @@ class ECPHordiSourceSectionTest {
     fun `impossible design moment gives explicit unsupported domain not a fabricated numeric result`() {
         design(moment=10000.0)
     }
+    @Test fun `elastic inner layer cannot pass using centroid yield approximation`() {
+        val c = context().copy(tensionLayers = List(7) { Ecp203BarLayout.Layer(1, 8.0) },
+            region = Ecp203RibbedSection.Region.FLANGE_IN_TENSION, contraflexureDistanceMm = null)
+        val result = design(c, moment = 21.5)
+        assertTrue(result.utilizationRatio > 1.0)
+        assertTrue(result.warnings.any { it.contains("fail the section flexure") })
+        assertTrue(result.codeNotes.any { it.contains("all layers at design yield=false") })
+    }
 }

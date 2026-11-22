@@ -2407,7 +2407,7 @@
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
     <string name="hordi_method_hold">ECP ribbed-slab method not verified. Numerical results are legacy previews, not a safety approval. Execution reports and bar schedules are blocked until verification is complete.</string>
     <string name="stored_slab_method_hold">Stored ribbed-slab code or method is not verified. Recalculate with a verified method before execution reports or quantities. Saved data is preserved.</string>
-    <string name="ecp_ribbed_section_scope">ECP section check: enter the actual tension bars, cover to outside links, link steel and region. This does not yet approve whole-member detailing or serviceability.</string>
+    <string name="ecp_ribbed_section_scope">ECP monolithic interior-rib section only: zero axial force or torsion, no moment redistribution. Enter actual tension bars, cover to outside links, links and region. Whole-member detailing and serviceability are not yet approved.</string>
     <string name="ecp_ribbed_aggregate">Nominal maximum aggregate (mm)</string>
     <string name="ecp_ribbed_main_diameter">Actual tension bar diameter (mm)</string>
     <string name="ecp_ribbed_bars_per_layer">Actual bars in each layer</string>

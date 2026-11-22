@@ -115,3 +115,36 @@ The printed4-1/4-2 preference for fcu>=30 when fy500 is used is not a universal
 mandatory prohibition. It is not converted into one. Specific grade/exposure
 restrictions, including B500-DWR in exposureIII/IV (printed4-73), still require
 full material and environmental classification before member approval.
+
+
+## Layer-by-layer strain compatibility
+
+The coupled rib section no longer assumes that every physically fitting bar layer
+reaches design yield. Printed4-1 requires equilibrium and strain compatibility;
+printed4-2 Fig4-1 gives Es=200000MPa and the design stress plateau fy/1.15;
+printed4-3 gives epsilon_cu=0.003. The new layered calculation solves the neutral
+axis using each actual layer depth and its capped elastic design stress. Required
+area is solved for the same relative layer distribution and positions, rather
+than treating it as a bar schedule or silently moving bars.
+
+The previous no-redistribution table envelope is retained, including its
+conservative total-steel ceiling. The design resistance also retains the0.95d
+area-centroid lever-arm ceiling; the uncapped equilibrium moment is separately
+available. This can be conservative when inner layers remain elastic. A selected
+layout requiring reinforcement on the compression side of the neutral axis is
+explicitly outside this singly reinforced component, not assigned a false zero
+or a passing centroid-only result.
+
+Independent rectangular regression: fcu30/fy400, bw200/h350, cover25, links8,
+aggregate20, seven layers of one8mm bar give layer depths313,275,237,199,161,123,85mm.
+As=351.8583772mm2 and centroid d=199mm. The centroid-yield approximation gives
+MRd21.5602757kNm and incorrectly passes21.5kNm. Layer compatibility gives
+c56.1541221mm, innermost-layer stress308.2147150MPa rather than347.8260870MPa,
+and MRd21.4812192kNm, so the supplied layout fails that demand.
+
+Independent T regression: fcu20/fy400, bw200/B600/tf60/h350, same cover/links/
+aggregate, seven layers of one12mm bar give c55.9167340mm and innermost stress
+33.0841859MPa. Equilibrium moment43.4798985kNm is further limited to42.1397454kNm
+by the retained conservative0.95d ceiling. The single-layer coupled golden vector
+above is unchanged. Tests cover both independent vectors, the previously false
+pass, required area, source stress law, domain boundaries and the actual wrapper.
