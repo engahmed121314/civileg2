@@ -12,6 +12,7 @@ import com.itextpdf.kernel.font.PdfFont
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.kernel.pdf.canvas.draw.SolidLine
+import com.civileg.app.utils.EnglishFontProvider
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.*
 import com.itextpdf.layout.properties.HorizontalAlignment
