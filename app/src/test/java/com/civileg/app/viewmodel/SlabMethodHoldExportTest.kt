@@ -13,6 +13,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class SlabMethodHoldExportTest {
+    @Suppress("UNCHECKED_CAST")
     private fun heldViewModel(legacy: Boolean = false): SlabViewModel {
         val vm = SlabViewModel(mockk(relaxed = true), mockk(relaxed = true))
         val result = if (legacy) com.google.gson.Gson().fromJson(
@@ -23,7 +24,7 @@ class SlabMethodHoldExportTest {
         )
         SlabViewModel::class.java.getDeclaredField("_result").apply {
             isAccessible = true
-            set(vm, MutableLiveData(result))
+            (get(vm) as MutableLiveData<CalculatorEngine.SlabResult?>).value = result
         }
         return vm
     }
