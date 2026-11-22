@@ -77,10 +77,25 @@ gradle.beforeProject { p ->
                             }.sort()
                             // Keep the resolved/unresolved graph even if artifact materialization fails.
                             new File(out, name + '.txt').text = lines.join('\n') + '\n'
-                            def artifacts = configuration.resolvedConfiguration.resolvedArtifacts.collect { artifact ->
-                                "${artifact.moduleVersion.id} | ${artifact.file.absolutePath} | bytes=${artifact.file.length()}"
-                            }.sort()
-                            new File(out, name + '.txt').append((['ARTIFACTS'] + artifacts).join('\n') + '\n')
+                            def artifactHeader = 'ARTIFACTS'
+                            def artifacts
+                            if (name == 'freeReleaseRuntimeClasspath') {
+                                // AGP exposes several project artifacts. Select runtime classes explicitly,
+                                // instead of the legacy untyped view that cannot choose a project artifact.
+                                def view = configuration.incoming.artifactView {
+                                    attributes.attribute(org.gradle.api.artifacts.type.ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
+                                        'android-classes-jar')
+                                }
+                                artifactHeader += ' artifactType=android-classes-jar'
+                                artifacts = view.artifacts.artifacts.collect { artifact ->
+                                    "${artifact.id.componentIdentifier} | ${artifact.file.absolutePath} | bytes=${artifact.file.length()}"
+                                }.sort()
+                            } else {
+                                artifacts = configuration.resolvedConfiguration.resolvedArtifacts.collect { artifact ->
+                                    "${artifact.moduleVersion.id} | ${artifact.file.absolutePath} | bytes=${artifact.file.length()}"
+                                }.sort()
+                            }
+                            new File(out, name + '.txt').append(([artifactHeader] + artifacts).join('\n') + '\n')
                         } catch (Throwable e) {
                             failures << name
                             new File(out, name + '.error.txt').text = describeFailure(e)
