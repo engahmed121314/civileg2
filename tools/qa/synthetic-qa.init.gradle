@@ -34,6 +34,61 @@ gradle.beforeProject { p ->
                     println('Synthetic QA: minified/shrunk, non-debuggable, disposable debug signer, release instrumentation, code9')
                 }
             }
+            p.tasks.register('captureSyntheticQaPackagingDiagnostics') {
+                doLast {
+                    def out = p.rootProject.file('qa-packaging/gradle')
+                    out.mkdirs()
+                    def failures = []
+                    def versions = ["Gradle=${p.gradle.gradleVersion}", "Java=${System.getProperty('java.version')}"]
+                    def loader = p.plugins.getPlugin('com.android.application').class.classLoader
+                    [['AGP', 'com.android.Version', 'ANDROID_GRADLE_PLUGIN_VERSION'],
+                     ['R8', 'com.android.tools.r8.Version', null]].each { spec ->
+                        try {
+                            def type = Class.forName(spec[1], false, loader)
+                            def value = spec[2] ? type.getField(spec[2]).get(null) : type.getMethod('getVersionString').invoke(null)
+                            versions << "${spec[0]}=${value}"
+                            versions << "${spec[0]}_code_source=${type.protectionDomain?.codeSource?.location}"
+                        } catch (Throwable e) {
+                            versions << "${spec[0]}_not_visible=${e.class.name}"
+                        }
+                    }
+                    new File(out, 'tool-versions.txt').text = versions.join('\n') + '\n'
+                    ['freeReleaseRuntimeClasspath', 'freeReleaseAndroidTestRuntimeClasspath'].each { name ->
+                        try {
+                            def configuration = p.configurations.getByName(name)
+                            def graph = configuration.incoming.resolutionResult
+                            def lines = graph.allDependencies.collect { dependency ->
+                                if (dependency instanceof org.gradle.api.artifacts.result.ResolvedDependencyResult) {
+                                    return "${dependency.from.id} -> ${dependency.requested} => ${dependency.selected.id}"
+                                }
+                                return "UNRESOLVED ${dependency.requested}"
+                            }.sort()
+                            def artifacts = configuration.resolvedConfiguration.resolvedArtifacts.collect { artifact ->
+                                "${artifact.moduleVersion.id} | ${artifact.file.absolutePath} | bytes=${artifact.file.length()}"
+                            }.sort()
+                            new File(out, name + '.txt').text = (lines + ['ARTIFACTS'] + artifacts).join('\n') + '\n'
+                        } catch (Throwable e) {
+                            failures << name
+                            new File(out, name + '.error.txt').text = e.class.name + ': ' + e.message + '\n'
+                        }
+                    }
+                    ['minifyFreeReleaseWithR8', 'minifyFreeReleaseAndroidTestWithR8'].each { taskName ->
+                        try {
+                            def task = p.tasks.findByName(taskName)
+                            if (task == null) throw new GradleException('Expected minify task absent: ' + taskName)
+                            def files = task.inputs.files.files.collect { file ->
+                                def sensitive = file.name.toLowerCase().matches('.*\\.(keystore|jks|p12|pfx|pem|key)$')
+                                sensitive ? '[signing/secret path excluded]' : "${file.absolutePath} | bytes=${file.isFile() ? file.length() : 'directory'}"
+                            }.sort()
+                            new File(out, task.name + '-inputs.txt').text = "task=${task.path}\ntype=${task.class.name}\n" + files.join('\n') + '\n'
+                        } catch (Throwable e) {
+                            failures << taskName
+                            new File(out, taskName + '.error.txt').text = e.class.name + ': ' + e.message + '\n'
+                        }
+                    }
+                    if (!failures.isEmpty()) throw new GradleException('Packaging diagnostics incomplete: ' + failures.join(', '))
+                }
+            }
             p.tasks.matching { it.name == 'assembleFreeRelease' || it.name == 'assembleFreeReleaseAndroidTest' }.configureEach {
                 dependsOn(p.tasks.named('verifySyntheticQaContract'))
             }

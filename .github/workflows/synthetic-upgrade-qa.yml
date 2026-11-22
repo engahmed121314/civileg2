@@ -91,6 +91,24 @@ jobs:
           "$BT_DIR/apksigner" verify --print-certs "$CANDIDATE" | tee qa-evidence-candidate-certs.txt
           sha256sum "$CANDIDATE" "${TESTS[0]}" | tee qa-evidence-hashes.txt
 
+      - name: Capture synthetic packaging diagnostics before emulator
+        if: always()
+        run: |
+          mkdir -p qa-packaging
+          status=0
+          if ./gradlew -I tools/qa/synthetic-qa.init.gradle \
+            -PcivilegSyntheticQa=true \
+            -Dcivileg.syntheticQa.root="$GITHUB_WORKSPACE" \
+            -PfirebaseCrashlytics.mappingFileUploadEnabled=false \
+            --no-daemon captureSyntheticQaPackagingDiagnostics > qa-packaging/gradle-capture.log 2>&1; then
+            echo "Gradle packaging diagnostics captured"
+          else
+            status=$?
+          fi
+          python3 tools/qa/host/capture_packaging_evidence.py
+          cat qa-packaging/gradle-capture.log
+          exit "$status"
+
       - name: Fetch old v1.8.0 APK over public HTTP and hash-verify
         run: |
           mkdir -p qa-old
@@ -192,5 +210,6 @@ jobs:
           name: qa-upgrade-evidence
           path: |
             qa-out/**
+            qa-packaging/**
             qa-evidence-*.txt
             qa-old/old-resigned-certs.txt
