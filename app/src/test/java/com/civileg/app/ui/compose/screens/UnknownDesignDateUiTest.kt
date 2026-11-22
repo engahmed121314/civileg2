@@ -69,7 +69,7 @@ class UnknownDesignDateUiTest {
         homeCard(design(1700000000000L))
         assertEquals(0, rule.onAllNodesWithText("Date unknown", substring = true).fetchSemanticsNodes().size)
         assertEquals(0, rule.onAllNodesWithText("1970", substring = true).fetchSemanticsNodes().size)
-        rule.onNodeWithText("14/11/2023", substring = true).assertIsDisplayed()
+        rule.onNodeWithText(java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(Date(1700000000000L)), substring = true).assertIsDisplayed()
     }
 
     @Test @Config(qualifiers = "en")
