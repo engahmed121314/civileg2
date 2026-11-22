@@ -1,0 +1,72 @@
+{
+  "revisionId": "ab047eebff0cd4e5ecedcb5e8665725b7399d862d76ea2c47347afd4afa35b78",
+  "requiredSteelMm2": 653.7685677608656,
+  "providedSteelMm2": 1570.7963267948967,
+  "methodReference": "ECP203-2020 bounded rib section; ADOPTED_SYMMETRIC_ROWS_CALCULATED_LAYER_CENTRES_V1__FOUR_BAR_STANDARD_PAIRED_UPPER",
+  "section": {
+    "geometryVersion": 1,
+    "ribWidthMm": 200.0,
+    "enteredRibPitchMm": 600.0,
+    "totalDepthMm": 350.0,
+    "toppingThicknessMm": 60.0,
+    "analyticalFlangeWidthMm": 600.0,
+    "tensionFace": "BOTTOM",
+    "coverToOutsideLinksMm": 25.0,
+    "linkDiameterMm": 8.0,
+    "linkLegs": 2,
+    "linkSpacingMm": 200.0,
+    "placementBasis": "ADOPTED_SYMMETRIC_ROWS_CALCULATED_LAYER_CENTRES_V1__FOUR_BAR_STANDARD_PAIRED_UPPER",
+    "bars": [
+      {
+        "layerIndex": 0,
+        "indexInLayer": 0,
+        "xFromWebLeftMm": 43.0,
+        "yFromBottomMm": 43.0,
+        "diameterMm": 20.0
+      },
+      {
+        "layerIndex": 0,
+        "indexInLayer": 1,
+        "xFromWebLeftMm": 100.0,
+        "yFromBottomMm": 43.0,
+        "diameterMm": 20.0
+      },
+      {
+        "layerIndex": 0,
+        "indexInLayer": 2,
+        "xFromWebLeftMm": 157.0,
+        "yFromBottomMm": 43.0,
+        "diameterMm": 20.0
+      },
+      {
+        "layerIndex": 1,
+        "indexInLayer": 0,
+        "xFromWebLeftMm": 43.0,
+        "yFromBottomMm": 93.0,
+        "diameterMm": 20.0
+      },
+      {
+        "layerIndex": 1,
+        "indexInLayer": 1,
+        "xFromWebLeftMm": 157.0,
+        "yFromBottomMm": 93.0,
+        "diameterMm": 20.0
+      }
+    ],
+    "incompleteGeometry": [
+      "One entered rib-pitch cell only; full-panel width and edge conditions are not supplied.",
+      "Longitudinal bar paths, lengths, support anchorage and curtailment are not supplied.",
+      "Link closure, bends, hooks and first longitudinal offset are not supplied.",
+      "Topping/distribution reinforcement and actual cross-rib provision are not supplied.",
+      "Adopted calculated section arrangement, not as-built or user-entered horizontal coordinates."
+    ]
+  },
+  "incompleteChecks": [
+    "Section forces, actual bar layout, flexure and web shear assessed. Whole-member serviceability approval, durability, topping reinforcement, cross-rib provision and anchorage are incomplete; execution exports remain blocked.",
+    "One entered rib-pitch cell only; full-panel width and edge conditions are not supplied.",
+    "Longitudinal bar paths, lengths, support anchorage and curtailment are not supplied.",
+    "Link closure, bends, hooks and first longitudinal offset are not supplied.",
+    "Topping/distribution reinforcement and actual cross-rib provision are not supplied.",
+    "Adopted calculated section arrangement, not as-built or user-entered horizontal coordinates."
+  ]
+}
