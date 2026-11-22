@@ -118,7 +118,7 @@ private fun DrawScope.drawRebarSection(
     )
 
     val coverPx = (coverMm.toFloat() * scale)
-        .coerceIn(2f, min(drawWidth, drawHeight) * 0.25f)
+        .coerceInMin(2f, min(drawWidth, drawHeight) * 0.25f)
     val tieInset = coverPx
     drawRect(
         RebarSectionColors.Stirrup,

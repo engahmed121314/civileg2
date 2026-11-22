@@ -92,7 +92,7 @@ fun ProfessionalHordiSlabDrawing(
         val safeTopping = toppingThickness.coerceAtLeast(40.0)
         val ribHeight = (safeTotalThick - safeTopping).coerceAtLeast(100.0)
         val blockWidth = (safeRibSpacing - safeRibWidth).coerceAtLeast(200.0)
-        val safeSolidPart = solidPartWidthMm.coerceIn(200.0, safeSpan * 0.25)
+        val safeSolidPart = solidPartWidthMm.coerceInMin(200.0, safeSpan * 0.25)
         val needCrossRib = hasCrossRib || (safeSpan >= 5000.0) // ECP/ACI rule: cross-rib if L >= 5m
 
         // ── Color Palette ──────────────────────────────────────────────────
@@ -303,11 +303,11 @@ private fun DrawScope.drawHordiPlanView(
     val scale = min(scaleX, scaleY) * 0.92f
 
     val drawSpan = (safeSpanMm * scale).toFloat()
-    val drawWidth = (safeWidthMm * scale).toFloat().coerceIn(avH * 0.45f, avH)
+    val drawWidth = (safeWidthMm * scale).toFloat().coerceInMin(avH * 0.45f, avH)
 
     val pX = left + pad + (avW - drawSpan) / 2f
     val pY = top + pad + (avH - drawWidth) / 2f
-    val solidPartPx = (solidPartMm * scale).toFloat().coerceIn(20f, drawSpan * 0.25f)
+    val solidPartPx = (solidPartMm * scale).toFloat().coerceInMin(20f, drawSpan * 0.25f)
 
     // Base slab outline (concrete backing)
     drawRect(color = concreteFill, topLeft = Offset(pX, pY), size = Size(drawSpan, drawWidth))
@@ -420,7 +420,7 @@ private fun DrawScope.drawHordiSectionAA(
     val moduleSpacingPx = (avW / numModules.toFloat()).coerceIn(60f, 140f)
     val scale = (moduleSpacingPx / ribSpacingMm.toFloat())
 
-    val ribWPx = (ribWidthMm * scale).toFloat().coerceIn(16f, moduleSpacingPx * 0.40f)
+    val ribWPx = (ribWidthMm * scale).toFloat().coerceInMin(16f, moduleSpacingPx * 0.40f)
     val toppingPx = (toppingThickMm * scale).toFloat().coerceIn(14f, 35f)
     val ribHPx = (ribHeightMm * scale).toFloat().coerceIn(30f, 85f)
     val totalHPx = toppingPx + ribHPx
@@ -552,7 +552,7 @@ private fun DrawScope.drawHordiSectionBB(
     val secR = secL + drawSpan
     val secBotY = secY + totalHPx
 
-    val solidPartPx = (solidPartMm * scale).toFloat().coerceIn(18f, drawSpan * 0.25f)
+    val solidPartPx = (solidPartMm * scale).toFloat().coerceInMin(18f, drawSpan * 0.25f)
     val supportW = 35f
 
     // ── Supporting Beams at Left & Right ──────────────────────────────────

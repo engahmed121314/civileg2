@@ -284,10 +284,12 @@ private fun DrawScope.drawSoilStructureElevation(
     dimColor: Color, textColor: Color, cfg: DrawingDimensionsConfig,
     designCode: DesignCode
 ) {
+    // Degenerate zone (tiny/negative canvas while scrolling or off-screen): nothing safe to draw.
+    if (width <= 0f || height <= 0f) return
     val scale = min(width / (safeL * 1.35f).toFloat(), height / (safeT * 4.5f).toFloat())
     val drawL = (safeL * scale).toFloat()
     val drawT = (safeT * scale).toFloat()
-    val drawColW = (safeColW * scale).toFloat().coerceIn(20f, drawL * 0.35f)
+    val drawColW = (safeColW * scale).toFloat().coerceInMin(20f, drawL * 0.35f)
     val drawColH = drawT * 0.9f
 
     val footX = left + (width - drawL) / 2f
@@ -338,7 +340,7 @@ private fun DrawScope.drawSoilStructureElevation(
         textColor.copy(alpha = 0.6f), cfg.annotationTextSmall * 0.75f)
 
     // Water Table line
-    val wtY = footBotY + (waterTableDepthM.toFloat() * 1000f * scale * 0.15f).coerceIn(15f, stratum1Bot - footBotY - 5f)
+    val wtY = footBotY + (waterTableDepthM.toFloat() * 1000f * scale * 0.15f).coerceInMin(15f, stratum1Bot - footBotY - 5f)
     val dashWater = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
     drawLine(waterBlue, Offset(left, wtY), Offset(left + width, wtY), 1.8f, pathEffect = dashWater)
     // Water symbols
@@ -504,6 +506,8 @@ private fun DrawScope.drawFoundationPlanKern(
     concreteFill: Color, concreteStroke: Color, kernColor: Color, pressureColor: Color,
     dimColor: Color, textColor: Color, cfg: DrawingDimensionsConfig
 ) {
+    // Degenerate zone (tiny/negative canvas while scrolling or off-screen): nothing safe to draw.
+    if (width <= 0f || height <= 0f) return
     val scale = min((width * 0.85f) / safeL.toFloat(), (height * 0.75f) / safeW.toFloat())
     val drawL = (safeL * scale).toFloat()
     val drawW = (safeW * scale).toFloat()
@@ -596,6 +600,8 @@ private fun DrawScope.drawBoussinesqStressBulb(
     soilBrown: Color, waterBlue: Color, pressureColor: Color,
     dimColor: Color, textColor: Color, cfg: DrawingDimensionsConfig
 ) {
+    // Degenerate zone (tiny/negative canvas while scrolling or off-screen): nothing safe to draw.
+    if (width <= 0f || height <= 0f) return
     val fW = (width * 0.65f).coerceAtLeast(80f)
     val fH = 14f
     val fX = left + (width - fW) / 2f
@@ -676,6 +682,8 @@ private fun DrawScope.drawSoilStructureTable(
     eccentricityMm: Double, kernLimitMm: Double, isFullCompression: Boolean,
     textColor: Color, cfg: DrawingDimensionsConfig
 ) {
+    // Degenerate zone (tiny/negative canvas while scrolling or off-screen): nothing safe to draw.
+    if (width <= 0f || height <= 0f) return
     val otPass = overturningFS >= 1.5
     val slPass = slidingFS >= 1.5
     val brPass = maxPressureKpa <= soilBearingCapacityKpa * 1.05

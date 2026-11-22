@@ -1685,29 +1685,29 @@ private fun DrawScope.drawSectionHatch(
         val x2 = left + offset.toFloat() - height
         val y2 = top + height
         // Clip to rect bounds
-        val cx1 = x1.coerceIn(left, left + width)
+        val cx1 = x1.coerceInMin(left, left + width)
         val cy1 = when {
             x1 < left -> top + (left - x1)
             x1 > left + width -> top
             else -> top
-        }.coerceIn(top, top + height)
-        val cx2 = x2.coerceIn(left, left + width)
+        }.coerceInMin(top, top + height)
+        val cx2 = x2.coerceInMin(left, left + width)
         val cy2 = when {
             x2 < left -> top + (left - x2)
             x2 > left + width -> top + (x2 - (left + width))
             else -> top + height
-        }.coerceIn(top, top + height)
+        }.coerceInMin(top, top + height)
 
         if (cx1 in left..(left + width) || cx2 in left..(left + width)) {
             drawLine(
                 color = hatchColor,
                 start = Offset(
-                    x = x1.coerceIn(left, left + width),
-                    y = y1.coerceIn(top, top + height)
+                    x = x1.coerceInMin(left, left + width),
+                    y = y1.coerceInMin(top, top + height)
                 ),
                 end = Offset(
-                    x = x2.coerceIn(left, left + width),
-                    y = y2.coerceIn(top, top + height)
+                    x = x2.coerceInMin(left, left + width),
+                    y = y2.coerceInMin(top, top + height)
                 ),
                 strokeWidth = 0.4f
             )

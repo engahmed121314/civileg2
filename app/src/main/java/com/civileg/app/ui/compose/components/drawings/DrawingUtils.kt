@@ -22,6 +22,26 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+
+// ============================================================================
+// CRASH-SAFE COERCE
+// ============================================================================
+
+/**
+ * coerceIn whose upper bound is derived from canvas size or scaled geometry.
+ * A computed maximum (panel width, scaled span, zone height, ...) can fall
+ * below the fixed readable minimum on tiny or degenerate canvases, and
+ * coerceIn then throws IllegalArgumentException (empty range), crashing the
+ * whole frame. Prefer the readable minimum over crashing: when max < min the
+ * value is clamped to min.
+ */
+fun Float.coerceInMin(min: Float, max: Float): Float =
+    this.coerceIn(min, maxOf(min, max))
+
+/** Double overload of [coerceInMin]. */
+fun Double.coerceInMin(min: Double, max: Double): Double =
+    this.coerceIn(min, maxOf(min, max))
+
 // ============================================================================
 // RESPONSIVE DRAWING DIMENSIONS CONFIG
 // ============================================================================

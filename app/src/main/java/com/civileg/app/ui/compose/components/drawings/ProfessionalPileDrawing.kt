@@ -379,8 +379,8 @@ fun ProfessionalPileDrawing(
             val groundY = (elevTop + 30f).toFloat()
 
             val capDrawH = (capThickM * elevScale).toFloat().coerceIn(12f, 35f)
-            val capDrawW_elev = (capLenM * elevScale).toFloat().coerceIn(30f, elevW * 0.65f)
-            val colDrawW2 = (colLenM * elevScale).toFloat().coerceIn(12f, capDrawW_elev * 0.6f)
+            val capDrawW_elev = (capLenM * elevScale).toFloat().coerceInMin(30f, elevW * 0.65f)
+            val colDrawW2 = (colLenM * elevScale).toFloat().coerceInMin(12f, capDrawW_elev * 0.6f)
             val pileDrawW = (pileDiaM * elevScale).toFloat().coerceIn(10f, 30f)
 
             val pileTopY = groundY + capDrawH

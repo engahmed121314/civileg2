@@ -300,8 +300,8 @@ private fun DrawScope.drawFlatSlabPlanView(
     val scaleX = panelW / lx.toFloat()
     val scaleY = panelH / ly.toFloat()
 
-    val colWPx = (columnWidth / 1000.0 * scaleX).toFloat().coerceIn(12f, panelW * 0.25f)
-    val colDPx = (columnDepth / 1000.0 * scaleY).toFloat().coerceIn(12f, panelH * 0.25f)
+    val colWPx = (columnWidth / 1000.0 * scaleX).toFloat().coerceInMin(12f, panelW * 0.25f)
+    val colDPx = (columnDepth / 1000.0 * scaleY).toFloat().coerceInMin(12f, panelH * 0.25f)
     val dropXPx = (dropSizeX / 1000.0 * scaleX).toFloat()
     val dropYPx = (dropSizeY / 1000.0 * scaleY).toFloat()
 
@@ -422,7 +422,7 @@ private fun DrawScope.drawFlatSlabSectionAA(
     val secR = secL + spanPx
 
     val colWPx = (columnWidth / 1000.0 * secScale).toFloat().coerceIn(25f, 60f)
-    val dropWPx = if (dropSizeX > 0) (dropSizeX / 1000.0 * secScale).toFloat().coerceIn(colWPx * 1.5f, spanPx * 0.45f) else 0f
+    val dropWPx = if (dropSizeX > 0) (dropSizeX / 1000.0 * secScale).toFloat().coerceInMin(colWPx * 1.5f, spanPx * 0.45f) else 0f
 
     // ── Continuous Slab Body ──────────────────────────────────────────────
     drawRect(color = panelFill, topLeft = Offset(secL, secY), size = Size(spanPx, slabThickPx))

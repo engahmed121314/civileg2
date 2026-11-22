@@ -460,7 +460,7 @@ private fun DrawScope.drawCrossSectionView(
     val hLayout = textMeasurer.measure(hLabel, dimStyle)
     val hLeft = right + 4f
     val hTop = (area.center.y - hLayout.size.height / 2f - area.height * 0.02f)
-        .coerceIn(area.top, area.bottom - hLayout.size.height)
+        .coerceInMin(area.top, area.bottom - hLayout.size.height)
     drawText(
         textMeasurer = textMeasurer,
         text = hLabel,
@@ -526,7 +526,7 @@ private fun DrawScope.drawPlanView(
         )
     } else {
         val lengthPx = area.width * 0.88f
-        val widthPx = (lengthPx * section.width / lengthMm).toFloat().coerceIn(4f, area.height * 0.45f)
+        val widthPx = (lengthPx * section.width / lengthMm).toFloat().coerceInMin(4f, area.height * 0.45f)
         val cx = area.center.x
         val cy = area.center.y - area.height * 0.04f
         val left = cx - lengthPx / 2f

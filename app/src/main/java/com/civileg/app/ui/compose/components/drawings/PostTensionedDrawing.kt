@@ -245,7 +245,7 @@ private fun DrawScope.drawPostTensionedElevation(
     // Parabolic tendon profile
     val eccentricity = result?.prestressDesign?.providedEccentricity
         ?: (input.depth / 2.0 - input.cover - 35.0)
-    val ePx = (eccentricity / input.depth * beamH).toFloat().coerceIn(0f, beamH * 0.42f)
+    val ePx = (eccentricity / input.depth * beamH).toFloat().coerceInMin(0f, beamH * 0.42f)
     val endY = centerY - beamH * 0.22f
     val midY = centerY + ePx
 
