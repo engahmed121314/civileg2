@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -36,7 +37,9 @@ class SaveToProjectDialogTest {
     private fun show() {
         rule.setContent {
             SaveToProjectDialog(
-                title = "Save design", nameLabel = "Name", noProjectsText = "No projects",
+                title = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.save_design_in_project),
+                nameLabel = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.beam_name_hint),
+                noProjectsText = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.no_projects_available),
                 designName = "D1", onDesignNameChange = {}, projects = projects.value,
                 onConfirm = { confirmed += it }, onDismiss = { dismissed++ }
             )
@@ -52,7 +55,7 @@ class SaveToProjectDialogTest {
     @Test fun noProjectDisablesSaveAndShowsMessage() {
         projects.value = emptyList()
         show()
-        rule.onNodeWithText("No projects").assertExists()
+        rule.onNodeWithText(arString(com.civileg.app.R.string.no_projects_available)).assertExists()
         rule.onNodeWithText("Save").assertIsNotEnabled()
         rule.onNodeWithText("Save").performClick()
         assertTrue(confirmed.isEmpty())
@@ -113,6 +116,11 @@ class SaveToProjectDialogTest {
         val cancel = arString(com.civileg.app.R.string.cancel)
         assertTrue(save != "Save" && cancel != "Cancel")
         rule.onNodeWithText(arString(com.civileg.app.R.string.select_project)).assertExists()
+        // title and name label are Arabic too, not the English literals
+        val arTitle = arString(com.civileg.app.R.string.save_design_in_project)
+        assertTrue(arTitle != "Save in Project Vault")
+        rule.onNodeWithText(arTitle).assertExists()
+        rule.onNodeWithText("Save design").assertDoesNotExist()
         rule.onAllNodes(isSelectable())[0].assertIsSelected()
         shot("save-dialog-preselected-ar")
         rule.onAllNodes(isSelectable())[1].performClick()
