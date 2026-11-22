@@ -15,6 +15,10 @@ class PreferencesManager(private val context: Context) {
         val CONCRETE_PRICE = doublePreferencesKey("concrete_price")
         val STEEL_PRICE = doublePreferencesKey("steel_price")
         val FORMWORK_PRICE = doublePreferencesKey("formwork_price")
+        // Currency in force when the user saved each price. Absent for prices saved before this was recorded.
+        val CONCRETE_PRICE_CCY = stringPreferencesKey("concrete_price_currency")
+        val STEEL_PRICE_CCY = stringPreferencesKey("steel_price_currency")
+        val FORMWORK_PRICE_CCY = stringPreferencesKey("formwork_price_currency")
         val CURRENCY = stringPreferencesKey("currency")
         val DEFAULT_CODE = stringPreferencesKey("default_design_code")
         val UNIT_SYSTEM = stringPreferencesKey("unit_system")
@@ -38,6 +42,17 @@ class PreferencesManager(private val context: Context) {
     val formworkPrice: Flow<Double> = context.dataStore.data
         .map { it[FORMWORK_PRICE] ?: 150.0 }
     
+    /** What the user actually saved. A price that was never entered is null, never a default. */
+    val savedPrices: Flow<com.civileg.app.domain.entities.SavedMaterialPrices> = context.dataStore.data.map { p ->
+        fun saved(k: Preferences.Key<Double>, c: Preferences.Key<String>) =
+            p[k]?.let { com.civileg.app.domain.entities.SavedPrice(it, p[c]) }
+        com.civileg.app.domain.entities.SavedMaterialPrices(
+            concrete = saved(CONCRETE_PRICE, CONCRETE_PRICE_CCY),
+            steel = saved(STEEL_PRICE, STEEL_PRICE_CCY),
+            formwork = saved(FORMWORK_PRICE, FORMWORK_PRICE_CCY)
+        )
+    }
+
     val currency: Flow<String> = context.dataStore.data
         .map { it[CURRENCY] ?: "EGP" }
     
@@ -63,15 +78,18 @@ class PreferencesManager(private val context: Context) {
         .map { it[COMPANY_NAME] ?: "Civil EG" }
     
     suspend fun setConcretePrice(price: Double) {
-        context.dataStore.edit { it[CONCRETE_PRICE] = price }
+        if (!com.civileg.app.domain.entities.PriceValidation.isValid(price)) return
+        context.dataStore.edit { it[CONCRETE_PRICE] = price; it[CONCRETE_PRICE_CCY] = it[CURRENCY] ?: "EGP" }
     }
     
     suspend fun setSteelPrice(price: Double) {
-        context.dataStore.edit { it[STEEL_PRICE] = price }
+        if (!com.civileg.app.domain.entities.PriceValidation.isValid(price)) return
+        context.dataStore.edit { it[STEEL_PRICE] = price; it[STEEL_PRICE_CCY] = it[CURRENCY] ?: "EGP" }
     }
     
     suspend fun setFormworkPrice(price: Double) {
-        context.dataStore.edit { it[FORMWORK_PRICE] = price }
+        if (!com.civileg.app.domain.entities.PriceValidation.isValid(price)) return
+        context.dataStore.edit { it[FORMWORK_PRICE] = price; it[FORMWORK_PRICE_CCY] = it[CURRENCY] ?: "EGP" }
     }
     
     suspend fun setCurrency(currency: String) {

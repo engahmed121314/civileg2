@@ -47,7 +47,7 @@ class QuantityLedgerTest {
     }
 
     @Test fun `unknown quantity design produces no BOQ`() {
-        val vm = BOQViewModel(mockk(relaxed = true), mockk<CalculateElementBoq>(relaxed = true))
+        val vm = BOQViewModel(mockk(relaxed = true), mockk<CalculateElementBoq>(relaxed = true), mockk(relaxed = true))
         val method = BOQViewModel::class.java.getDeclaredMethod(
             "generateBoqFromDesign", Design::class.java, MaterialPrices::class.java
         ).apply { isAccessible = true }

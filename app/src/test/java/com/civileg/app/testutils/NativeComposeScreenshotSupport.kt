@@ -31,3 +31,13 @@ internal fun saveNativeComposeScreenshot(
     check(target.isFile && target.length() > 0)
     return target
 }
+
+/** Keeps a generated PDF in the uploaded test-report tree so it can be rendered and inspected. */
+internal fun saveGeneratedPdfForInspection(source: File, name: String): File {
+    require(name.matches(Regex("[a-z0-9-]+")))
+    val directory = File("build/reports/tests/compose-shots").apply { mkdirs() }
+    val target = File(directory, "$name-${BuildConfig.FLAVOR}.pdf")
+    source.copyTo(target, overwrite = true)
+    check(target.isFile && target.length() > 0)
+    return target
+}

@@ -3,7 +3,9 @@ package com.civileg.app.viewmodel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.first
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.CalculateElementBoq
 import com.civileg.app.utils.EstimationEngine
@@ -18,7 +20,8 @@ import com.civileg.app.domain.calculations.InputGuard
 @HiltViewModel
 class BOQViewModel @Inject constructor(
     private val estimationEngine: EstimationEngine,
-    private val calculateElementBoq: CalculateElementBoq
+    private val calculateElementBoq: CalculateElementBoq,
+    private val projectRepository: com.civileg.app.domain.repository.ProjectRepository
 ) : ViewModel() {
 
     private val _estimationResult = MutableLiveData<EstimationEngine.EstimationResult?>()
@@ -31,32 +34,84 @@ class BOQViewModel @Inject constructor(
     val errorMessage: LiveData<String?> = _errorMessage
 
     // ── Element-level BOQ (CalculateElementBoq integration) ──
-    private val _elementBoqItems = MutableLiveData<List<BoqItem>>(emptyList())
-    val elementBoqItems: LiveData<List<BoqItem>> = _elementBoqItems
+    /**
+     * One frozen BOQ result: items, totals and the currency they were priced in, published atomically.
+     * [currency] is null on the explicit-price paths, whose prices carry no recorded currency.
+     * [designId] identifies the design the result belongs to; null only on paths with no design identity.
+     */
+    data class BoqResult(
+        val items: List<BoqItem>,
+        val total: Double,
+        val unpricedCount: Int,
+        val unknownCurrencyCount: Int,
+        val currency: String?,
+        val designId: Long?
+    )
 
-    private val _elementBoqTotal = MutableLiveData<Double>(0.0)
-    val elementBoqTotal: LiveData<Double> = _elementBoqTotal
+    private val _boqResult = MutableLiveData<BoqResult?>(null)
+    val boqResult: LiveData<BoqResult?> = _boqResult
+
+    /** Publication sequence: only the latest request may publish; clearResult() invalidates in-flight work. */
+    private var boqSeq = 0
+
+    /** The Settings currency the BOQ amounts are priced in. */
+    val activeCurrency: LiveData<String> = projectRepository.getCurrency().asLiveData()
 
     /**
      * حساب كميات من كيان التصميم المحفوظ في قاعدة البيانات
      * يستخدم القيم المجمعة المخزنة (concreteVolume, steelWeight) إذا لم يتوفر inputData تفصيلي،
      * أو يحلل inputData JSON لاستخراج المعلمات التفصيلية إذا توفر.
      */
-    fun calculateDesignBoq(design: Design, prices: MaterialPrices = MaterialPrices()) {
+    /**
+     * Quantities for [design], priced only with the user's saved prices (Settings). A price the user
+     * never entered, or entered in another currency, leaves that line's quantity visible and unpriced.
+     */
+    fun calculateDesignBoq(design: Design) {
         InputGuard.notNull("design", design)
-
+        val seq = ++boqSeq
+        // A new request invalidates the previous result immediately: no stale export or stale rows during loading.
+        _boqResult.value = null
         viewModelScope.launch {
-            _isLoading.value = true
+            if (seq == boqSeq) _isLoading.value = true
+            try {
+                val saved = projectRepository.getSavedPrices().first()
+                val currency = projectRepository.getCurrency().first()
+                // The quantity code needs positive rates to run; they are replaced by BoqPricing.apply
+                // and never reach the screen or an export.
+                val quantityOnly = MaterialPrices(1.0, 1.0, 1.0, 1.0, 1.0)
+                val priced = BoqPricing.apply(generateBoqFromDesign(design, quantityOnly), saved, currency)
+                if (seq == boqSeq) {
+                    _boqResult.value = BoqResult(priced.items, priced.pricedTotal, priced.unpricedCount, priced.unknownCurrencyCount, currency, design.id)
+                }
+            } catch (e: Exception) {
+                if (seq == boqSeq) {
+                    _boqResult.value = null
+                    _errorMessage.value = "BOQ calculation error / خطأ حساب الكميات: ${e.message}"
+                }
+            } finally {
+                if (seq == boqSeq) _isLoading.value = false
+            }
+        }
+    }
+
+    /** Explicit-price variant (tests, callers that own their prices). */
+    fun calculateDesignBoq(design: Design, prices: MaterialPrices) {
+        InputGuard.notNull("design", design)
+        val seq = ++boqSeq
+        // A new request invalidates the previous result immediately: no stale export or stale rows during loading.
+        _boqResult.value = null
+        viewModelScope.launch {
+            if (seq == boqSeq) _isLoading.value = true
             try {
                 val items = generateBoqFromDesign(design, prices)
-                _elementBoqItems.value = items
-                _elementBoqTotal.value = items.sumOf { it.total }
+                if (seq == boqSeq) _boqResult.value = BoqResult(items, items.sumOf { it.total }, 0, 0, null, design.id)
             } catch (e: Exception) {
-                _elementBoqItems.value = emptyList()
-                _elementBoqTotal.value = 0.0
-                _errorMessage.value = "BOQ calculation error / خطأ حساب الكميات: ${e.message}"
+                if (seq == boqSeq) {
+                    _boqResult.value = null
+                    _errorMessage.value = "BOQ calculation error / خطأ حساب الكميات: ${e.message}"
+                }
             } finally {
-                _isLoading.value = false
+                if (seq == boqSeq) _isLoading.value = false
             }
         }
     }
@@ -442,20 +497,23 @@ class BOQViewModel @Inject constructor(
         reinforcementResult: ReinforcementResult,
         prices: MaterialPrices = MaterialPrices()
     ) {
+        val seq = ++boqSeq
+        // A new request invalidates the previous result immediately: no stale export or stale rows during loading.
+        _boqResult.value = null
         viewModelScope.launch {
-            _isLoading.value = true
+            if (seq == boqSeq) _isLoading.value = true
             try {
                 val items = calculateElementBoq.calculateColumnBoq(
                     width, depth, height, reinforcementResult, prices
                 )
-                _elementBoqItems.value = items
-                _elementBoqTotal.value = items.sumOf { it.total }
+                if (seq == boqSeq) _boqResult.value = BoqResult(items, items.sumOf { it.total }, 0, 0, null, null)
             } catch (e: Exception) {
-                _elementBoqItems.value = emptyList()
-                _elementBoqTotal.value = 0.0
-                _errorMessage.value = "Column BOQ error / خطأ كميات العمود: ${e.message}"
+                if (seq == boqSeq) {
+                    _boqResult.value = null
+                    _errorMessage.value = "Column BOQ error / خطأ كميات العمود: ${e.message}"
+                }
             } finally {
-                _isLoading.value = false
+                if (seq == boqSeq) _isLoading.value = false
             }
         }
     }
@@ -469,20 +527,23 @@ class BOQViewModel @Inject constructor(
         shearResult: ShearReinforcementResult,
         prices: MaterialPrices = MaterialPrices()
     ) {
+        val seq = ++boqSeq
+        // A new request invalidates the previous result immediately: no stale export or stale rows during loading.
+        _boqResult.value = null
         viewModelScope.launch {
-            _isLoading.value = true
+            if (seq == boqSeq) _isLoading.value = true
             try {
                 val items = calculateElementBoq.calculateBeamBoq(
                     width, depth, span, flexureResult, shearResult, prices
                 )
-                _elementBoqItems.value = items
-                _elementBoqTotal.value = items.sumOf { it.total }
+                if (seq == boqSeq) _boqResult.value = BoqResult(items, items.sumOf { it.total }, 0, 0, null, null)
             } catch (e: Exception) {
-                _elementBoqItems.value = emptyList()
-                _elementBoqTotal.value = 0.0
-                _errorMessage.value = "Beam BOQ error / خطأ كميات الكمرة: ${e.message}"
+                if (seq == boqSeq) {
+                    _boqResult.value = null
+                    _errorMessage.value = "Beam BOQ error / خطأ كميات الكمرة: ${e.message}"
+                }
             } finally {
-                _isLoading.value = false
+                if (seq == boqSeq) _isLoading.value = false
             }
         }
     }
@@ -497,21 +558,24 @@ class BOQViewModel @Inject constructor(
         cover: Double = 25.0,
         prices: MaterialPrices = MaterialPrices()
     ) {
+        val seq = ++boqSeq
+        // A new request invalidates the previous result immediately: no stale export or stale rows during loading.
+        _boqResult.value = null
         viewModelScope.launch {
-            _isLoading.value = true
+            if (seq == boqSeq) _isLoading.value = true
             try {
                 val items = calculateElementBoq.calculateSlabBoq(
                     spanX, spanY, thickness, mainDia, mainSpacing,
                     distDia, distSpacing, cover, prices
                 )
-                _elementBoqItems.value = items
-                _elementBoqTotal.value = items.sumOf { it.total }
+                if (seq == boqSeq) _boqResult.value = BoqResult(items, items.sumOf { it.total }, 0, 0, null, null)
             } catch (e: Exception) {
-                _elementBoqItems.value = emptyList()
-                _elementBoqTotal.value = 0.0
-                _errorMessage.value = "Slab BOQ error / خطأ كميات البلاطة: ${e.message}"
+                if (seq == boqSeq) {
+                    _boqResult.value = null
+                    _errorMessage.value = "Slab BOQ error / خطأ كميات البلاطة: ${e.message}"
+                }
             } finally {
-                _isLoading.value = false
+                if (seq == boqSeq) _isLoading.value = false
             }
         }
     }
@@ -527,22 +591,25 @@ class BOQViewModel @Inject constructor(
         prices: MaterialPrices = MaterialPrices(),
         excavationDepth: Double = 0.0, concreteCover: Double = 75.0
     ) {
+        val seq = ++boqSeq
+        // A new request invalidates the previous result immediately: no stale export or stale rows during loading.
+        _boqResult.value = null
         viewModelScope.launch {
-            _isLoading.value = true
+            if (seq == boqSeq) _isLoading.value = true
             try {
                 val items = calculateElementBoq.calculateFootingBoq(
                     length, width, thickness, concreteGrade,
                     astBottomX, astBottomY, rebarDia, rebarSpacingX, rebarSpacingY,
                     prices, excavationDepth, concreteCover
                 )
-                _elementBoqItems.value = items
-                _elementBoqTotal.value = items.sumOf { it.total }
+                if (seq == boqSeq) _boqResult.value = BoqResult(items, items.sumOf { it.total }, 0, 0, null, null)
             } catch (e: Exception) {
-                _elementBoqItems.value = emptyList()
-                _elementBoqTotal.value = 0.0
-                _errorMessage.value = "Footing BOQ error / خطأ كميات القاعدة: ${e.message}"
+                if (seq == boqSeq) {
+                    _boqResult.value = null
+                    _errorMessage.value = "Footing BOQ error / خطأ كميات القاعدة: ${e.message}"
+                }
             } finally {
-                _isLoading.value = false
+                if (seq == boqSeq) _isLoading.value = false
             }
         }
     }
@@ -558,22 +625,25 @@ class BOQViewModel @Inject constructor(
         stirrupDia: Double = 8.0, stirrupSpacing: Double = 200.0,
         prices: MaterialPrices = MaterialPrices()
     ) {
+        val seq = ++boqSeq
+        // A new request invalidates the previous result immediately: no stale export or stale rows during loading.
+        _boqResult.value = null
         viewModelScope.launch {
-            _isLoading.value = true
+            if (seq == boqSeq) _isLoading.value = true
             try {
                 val items = calculateElementBoq.calculateStairBoq(
                     stairWidth, totalHeight, stairLength, slabThickness, waistThickness,
                     riserHeight, treadWidth, mainRebarArea, mainRebarDia, numMainBars,
                     stirrupDia, stirrupSpacing, prices
                 )
-                _elementBoqItems.value = items
-                _elementBoqTotal.value = items.sumOf { it.total }
+                if (seq == boqSeq) _boqResult.value = BoqResult(items, items.sumOf { it.total }, 0, 0, null, null)
             } catch (e: Exception) {
-                _elementBoqItems.value = emptyList()
-                _elementBoqTotal.value = 0.0
-                _errorMessage.value = "Stair BOQ error / خطأ كميات السلم: ${e.message}"
+                if (seq == boqSeq) {
+                    _boqResult.value = null
+                    _errorMessage.value = "Stair BOQ error / خطأ كميات السلم: ${e.message}"
+                }
             } finally {
-                _isLoading.value = false
+                if (seq == boqSeq) _isLoading.value = false
             }
         }
     }
@@ -589,22 +659,25 @@ class BOQViewModel @Inject constructor(
         prices: MaterialPrices = MaterialPrices(),
         excavationDepth: Double = 0.5
     ) {
+        val seq = ++boqSeq
+        // A new request invalidates the previous result immediately: no stale export or stale rows during loading.
+        _boqResult.value = null
         viewModelScope.launch {
-            _isLoading.value = true
+            if (seq == boqSeq) _isLoading.value = true
             try {
                 val items = calculateElementBoq.calculateTankBoq(
                     tankLength, tankWidth, tankHeight, wallThickness, baseThickness,
                     wallRebarDia, wallRebarSpacingH, wallRebarSpacingV,
                     baseRebarDia, baseRebarSpacing, prices, excavationDepth
                 )
-                _elementBoqItems.value = items
-                _elementBoqTotal.value = items.sumOf { it.total }
+                if (seq == boqSeq) _boqResult.value = BoqResult(items, items.sumOf { it.total }, 0, 0, null, null)
             } catch (e: Exception) {
-                _elementBoqItems.value = emptyList()
-                _elementBoqTotal.value = 0.0
-                _errorMessage.value = "Tank BOQ error / خطأ كميات الخزان: ${e.message}"
+                if (seq == boqSeq) {
+                    _boqResult.value = null
+                    _errorMessage.value = "Tank BOQ error / خطأ كميات الخزان: ${e.message}"
+                }
             } finally {
-                _isLoading.value = false
+                if (seq == boqSeq) _isLoading.value = false
             }
         }
     }
@@ -620,8 +693,11 @@ class BOQViewModel @Inject constructor(
         prices: MaterialPrices = MaterialPrices(),
         excavationDepth: Double = 0.0, backfillLength: Double = 0.0
     ) {
+        val seq = ++boqSeq
+        // A new request invalidates the previous result immediately: no stale export or stale rows during loading.
+        _boqResult.value = null
         viewModelScope.launch {
-            _isLoading.value = true
+            if (seq == boqSeq) _isLoading.value = true
             try {
                 val items = calculateElementBoq.calculateRetainingWallBoq(
                     wallLength, totalHeight, baseWidth, baseThickness,
@@ -630,14 +706,14 @@ class BOQViewModel @Inject constructor(
                     horizontalRebarDia, horizontalRebarSpacing,
                     prices, excavationDepth, backfillLength
                 )
-                _elementBoqItems.value = items
-                _elementBoqTotal.value = items.sumOf { it.total }
+                if (seq == boqSeq) _boqResult.value = BoqResult(items, items.sumOf { it.total }, 0, 0, null, null)
             } catch (e: Exception) {
-                _elementBoqItems.value = emptyList()
-                _elementBoqTotal.value = 0.0
-                _errorMessage.value = "Retaining wall BOQ error / خطأ كميات الحائط الساند: ${e.message}"
+                if (seq == boqSeq) {
+                    _boqResult.value = null
+                    _errorMessage.value = "Retaining wall BOQ error / خطأ كميات الحائط الساند: ${e.message}"
+                }
             } finally {
-                _isLoading.value = false
+                if (seq == boqSeq) _isLoading.value = false
             }
         }
     }
@@ -694,8 +770,10 @@ class BOQViewModel @Inject constructor(
     }
 
     fun clearResult() {
+        // Invalidate in-flight calculations first: a superseded or cleared request never publishes.
+        boqSeq++
         _estimationResult.value = null
-        _elementBoqItems.value = emptyList()
-        _elementBoqTotal.value = 0.0
+        _boqResult.value = null
+        _isLoading.value = false
     }
 }

@@ -2408,6 +2408,20 @@
     <string name="hordi_method_hold">ECP ribbed-slab method not verified. Numerical results are legacy previews, not a safety approval. Execution reports and bar schedules are blocked until verification is complete.</string>
     <string name="stored_slab_method_hold">Stored ribbed-slab code or method is not verified. Recalculate with a verified method before execution reports or quantities. Saved data is preserved.</string>
     <string name="design_date_unknown">Date unknown</string>
+    <string name="boq_price_not_set">Price not set</string>
+    <string name="boq_price_not_set_hint">Set it in Settings, in the currency you selected</string>
+    <string name="boq_total_priced_only">Total of priced items only (%1$d without price)</string>
+    <string name="boq_total_complete">Total</string>
+    <string name="boq_currency_not_recorded">%1$d line(s) not priced: the saved price has no recorded currency. Re-enter it in Settings to confirm its currency.</string>
+    <string name="settings_price_not_set">Not set</string>
+    <string name="boq_pdf_measured_only">Totals include measured designs only.</string>
+    <string name="boq_pdf_unverified_excluded">%1$d design(s) have unverified or nominal quantities. They are marked * and excluded from totals.</string>
+    <string name="boq_pdf_unknown_excluded">%1$d design(s) have unknown quantities and are excluded from totals.</string>
+    <string name="boq_pdf_quantity_unknown">Quantity unknown</string>
+    <string name="settings_price_legacy_unknown_currency">Earlier saved value %1$s has no recorded currency, so it is not used. Enter the price in the selected currency to confirm.</string>
+    <string name="boq_stored_cost_currency_unknown">Saved design costs have no recorded currency.</string>
+    <string name="boq_total_not_available">Not available</string>
+    <string name="boq_cost_currency_not_recorded_short">Currency not recorded</string>
 </resources>
 
 

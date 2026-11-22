@@ -2411,4 +2411,18 @@
     <string name="hordi_method_hold">طريقة حساب الهوردي المصري غير متحقق منها. الأرقام معاينة للحسابات القديمة وليست اعتماد أمان. تقارير التنفيذ وجداول التسليح موقوفة لحين اكتمال التحقق.</string>
     <string name="stored_slab_method_hold">لم يتم التحقق من الكود أو طريقة التصميم للبلاطة المفرغة المحفوظة. أعد الحساب بطريقة موثقة قبل تقارير التنفيذ أو الكميات. البيانات المحفوظة لم تتغير.</string>
     <string name="design_date_unknown">التاريخ غير معروف</string>
+    <string name="boq_price_not_set">السعر غير محدد</string>
+    <string name="boq_price_not_set_hint">حدده من الإعدادات بالعملة اللي اخترتها</string>
+    <string name="boq_total_priced_only">إجمالي البنود المسعّرة فقط (%1$d بدون سعر)</string>
+    <string name="boq_total_complete">الإجمالي</string>
+    <string name="boq_currency_not_recorded">%1$d بند بدون تسعير: السعر المحفوظ عملته غير مسجلة. أعد إدخاله في الإعدادات لتأكيد عملته.</string>
+    <string name="settings_price_not_set">غير محدد</string>
+    <string name="boq_pdf_measured_only">الإجماليات تشمل التصميمات المقاسة فقط.</string>
+    <string name="boq_pdf_unverified_excluded">%1$d تصميم كمياته غير موثقة أو تقديرية. معلّمة بعلامة * ومستبعدة من الإجماليات.</string>
+    <string name="boq_pdf_unknown_excluded">%1$d تصميم كمياته غير معروفة ومستبعد من الإجماليات.</string>
+    <string name="boq_pdf_quantity_unknown">الكمية غير معروفة</string>
+    <string name="settings_price_legacy_unknown_currency">القيمة المحفوظة سابقًا %1$s عملتها غير مسجلة فلا تُستخدم. أدخل السعر بالعملة المختارة لتأكيده.</string>
+    <string name="boq_stored_cost_currency_unknown">تكاليف التصميمات المحفوظة عملتها غير مسجلة.</string>
+    <string name="boq_total_not_available">غير متاح</string>
+    <string name="boq_cost_currency_not_recorded_short">العملة غير مسجلة</string>
 </resources>

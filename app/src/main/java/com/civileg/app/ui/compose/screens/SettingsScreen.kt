@@ -174,7 +174,8 @@ fun SettingsScreen(
             ) {
                 SettingsPriceInput(
                     label = stringResource(R.string.settings_price_concrete),
-                    value = settings.concretePrice.toString(),
+                    value = settings.concretePrice?.toString() ?: "",
+                    legacyValue = settings.legacyConcretePrice,
                     currency = settings.currency,
                     onValueChange = {
                         it.toDoubleOrNull()?.let { v -> viewModel.setConcretePrice(v) }
@@ -182,7 +183,8 @@ fun SettingsScreen(
                 )
                 SettingsPriceInput(
                     label = stringResource(R.string.settings_price_steel),
-                    value = settings.steelPrice.toString(),
+                    value = settings.steelPrice?.toString() ?: "",
+                    legacyValue = settings.legacySteelPrice,
                     currency = settings.currency,
                     onValueChange = {
                         it.toDoubleOrNull()?.let { v -> viewModel.setSteelPrice(v) }
@@ -190,7 +192,8 @@ fun SettingsScreen(
                 )
                 SettingsPriceInput(
                     label = stringResource(R.string.settings_price_formwork),
-                    value = settings.formworkPrice.toString(),
+                    value = settings.formworkPrice?.toString() ?: "",
+                    legacyValue = settings.legacyFormworkPrice,
                     currency = settings.currency,
                     onValueChange = {
                         it.toDoubleOrNull()?.let { v -> viewModel.setFormworkPrice(v) }
@@ -376,10 +379,11 @@ private fun SettingsRadioRow(
 }
 
 @Composable
-private fun SettingsPriceInput(
+internal fun SettingsPriceInput(
     label: String,
     value: String,
     currency: String,
+    legacyValue: Double? = null,
     onValueChange: (String) -> Unit
 ) {
     OutlinedTextField(
@@ -387,6 +391,15 @@ private fun SettingsPriceInput(
         onValueChange = onValueChange,
         label = { AppText(label, fontSize = 13.sp) },
         suffix = { AppText(currency, fontWeight = FontWeight.Bold, fontSize = 13.sp) },
+        supportingText = if (value.isEmpty()) {
+            {
+                if (legacyValue != null) {
+                    AppText(stringResource(R.string.settings_price_legacy_unknown_currency, legacyValue.toString()), fontSize = 11.sp)
+                } else {
+                    AppText(stringResource(R.string.settings_price_not_set), fontSize = 11.sp)
+                }
+            }
+        } else null,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
