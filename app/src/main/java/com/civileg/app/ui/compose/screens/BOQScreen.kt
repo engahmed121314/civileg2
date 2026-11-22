@@ -272,7 +272,7 @@ fun DesignsBOQContent(
     val elementBoqItems by boqViewModel.elementBoqItems.observeAsState(emptyList())
     val elementBoqTotal by boqViewModel.elementBoqTotal.observeAsState(0.0)
     val unpricedCount by boqViewModel.elementBoqUnpricedCount.observeAsState(0)
-    val unrecordedCurrency by boqViewModel.elementBoqUnrecordedCurrency.observeAsState(false)
+    val unrecordedCurrency by boqViewModel.elementBoqUnrecordedCurrency.observeAsState(0)
     val boqCurrency by boqViewModel.activeCurrency.observeAsState("EGP")
     val isLoading by boqViewModel.isLoading.observeAsState(false)
 
@@ -404,8 +404,8 @@ fun DesignsBOQContent(
                                 if (unpricedCount > 0) {
                                     AppText(stringResource(R.string.boq_price_not_set_hint), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
                                 }
-                                if (unrecordedCurrency) {
-                                    AppText(stringResource(R.string.boq_currency_not_recorded), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                if (unrecordedCurrency > 0) {
+                                    AppText(stringResource(R.string.boq_currency_not_recorded, unrecordedCurrency), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                                 }
                             }
                         }

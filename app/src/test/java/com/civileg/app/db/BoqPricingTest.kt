@@ -43,10 +43,12 @@ class BoqPricingTest {
         assertEquals(4, r.unpricedCount)
     }
 
-    @Test fun `legacy price without currency is used but flagged`() {
+    @Test fun `legacy price without currency is kept out of totals and flagged`() {
         val r = BoqPricing.apply(items, SavedMaterialPrices(concrete = SavedPrice(1000.0, null)), "EGP")
-        assertEquals(2000.0, r.pricedTotal, 1e-9)
-        assertTrue(r.usesUnrecordedCurrency)
+        assertEquals(0.0, r.pricedTotal, 0.0)
+        assertEquals(1, r.unknownCurrencyCount)
+        assertFalse(r.items[0].isPriced)
+        assertEquals(2.0, r.items[0].quantity, 0.0)
     }
 
     @Test fun `excavation never gets a price from the three saved keys`() {

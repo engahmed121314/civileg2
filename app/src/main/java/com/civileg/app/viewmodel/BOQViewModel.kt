@@ -44,9 +44,9 @@ class BOQViewModel @Inject constructor(
     private val _elementBoqUnpricedCount = MutableLiveData(0)
     val elementBoqUnpricedCount: LiveData<Int> = _elementBoqUnpricedCount
 
-    /** True when a price used was saved before its currency was recorded. */
-    private val _elementBoqUnrecordedCurrency = MutableLiveData(false)
-    val elementBoqUnrecordedCurrency: LiveData<Boolean> = _elementBoqUnrecordedCurrency
+    /** Lines unpriced because the saved price has no recorded currency. */
+    private val _elementBoqUnrecordedCurrency = MutableLiveData(0)
+    val elementBoqUnrecordedCurrency: LiveData<Int> = _elementBoqUnrecordedCurrency
 
     /** The Settings currency the BOQ amounts are priced in. */
     val activeCurrency: LiveData<String> = projectRepository.getCurrency().asLiveData()
@@ -74,12 +74,12 @@ class BOQViewModel @Inject constructor(
                 _elementBoqItems.value = priced.items
                 _elementBoqTotal.value = priced.pricedTotal
                 _elementBoqUnpricedCount.value = priced.unpricedCount
-                _elementBoqUnrecordedCurrency.value = priced.usesUnrecordedCurrency
+                _elementBoqUnrecordedCurrency.value = priced.unknownCurrencyCount
             } catch (e: Exception) {
                 _elementBoqItems.value = emptyList()
                 _elementBoqTotal.value = 0.0
                 _elementBoqUnpricedCount.value = 0
-                _elementBoqUnrecordedCurrency.value = false
+                _elementBoqUnrecordedCurrency.value = 0
                 _errorMessage.value = "BOQ calculation error / خطأ حساب الكميات: ${e.message}"
             } finally {
                 _isLoading.value = false
@@ -744,6 +744,6 @@ class BOQViewModel @Inject constructor(
         _elementBoqItems.value = emptyList()
         _elementBoqTotal.value = 0.0
         _elementBoqUnpricedCount.value = 0
-        _elementBoqUnrecordedCurrency.value = false
+        _elementBoqUnrecordedCurrency.value = 0
     }
 }

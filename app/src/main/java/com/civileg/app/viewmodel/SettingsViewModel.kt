@@ -24,6 +24,10 @@ data class AppSettings(
     val concretePrice: Double? = null,
     val steelPrice: Double? = null,
     val formworkPrice: Double? = null,
+    /** Old saved values with no recorded currency: kept, not used, until the user re-enters them. */
+    val legacyConcretePrice: Double? = null,
+    val legacySteelPrice: Double? = null,
+    val legacyFormworkPrice: Double? = null,
     val currency: String = "EGP",
     val unitSystem: String = "SI",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -60,7 +64,8 @@ class SettingsViewModel @Inject constructor(
                 val theme = args[4] as String
                 val reportLang = args[5] as String
                 fun shown(p: com.civileg.app.domain.entities.SavedPrice?) =
-                    p?.takeIf { it.currency == null || it.currency == currency }?.value
+                    p?.takeIf { it.currency == currency }?.value
+                fun legacy(p: com.civileg.app.domain.entities.SavedPrice?) = p?.takeIf { it.currency == null }?.value
 
                 val parsed = try { DesignCode.valueOf(code) } catch (e: Exception) { DesignCode.ECP }
                 // Keep synchronous store in sync with DataStore (covers upgrades and external writes)
@@ -70,6 +75,9 @@ class SettingsViewModel @Inject constructor(
                     concretePrice = shown(saved.concrete),
                     steelPrice = shown(saved.steel),
                     formworkPrice = shown(saved.formwork),
+                    legacyConcretePrice = legacy(saved.concrete),
+                    legacySteelPrice = legacy(saved.steel),
+                    legacyFormworkPrice = legacy(saved.formwork),
                     currency = currency,
                     unitSystem = unitSystem,
                     themeMode = try { ThemeMode.valueOf(theme) } catch (e: Exception) { ThemeMode.SYSTEM },
