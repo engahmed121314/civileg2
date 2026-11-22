@@ -25,8 +25,8 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class QuantityBasisPersistenceTest {
     private fun repository(dao: DesignDao, slabs: SlabDao = mockk(relaxed = true)) = DesignRepository(
-        dao, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
-        slabs, mockk(relaxed = true), mockk(relaxed = true),
+        dao, mockk(relaxed = true), mockk(relaxed = true), slabs,
+        mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
         mockk(relaxed = true), mockk(relaxed = true)
     )
 
@@ -162,8 +162,8 @@ class QuantityBasisPersistenceTest {
         val saved = slot<Design>()
         coEvery { dao.insertDesign(capture(saved)) } returns 1L
         val repo = DesignRepository(
-            dao, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
-            beams, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)
+            dao, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
+            beams, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)
         )
         repo.saveBeamDesign(1L, "B", CalculatorEngine.BeamResult(width = 250.0, depth = 600.0, isSafe = true, concreteVolume = 0.9, steelWeight = 70.0))
         assertEquals(QuantityBasis.NOMINAL_ESTIMATE, saved.captured.quantityBasis)
