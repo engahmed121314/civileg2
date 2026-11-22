@@ -284,7 +284,7 @@ val SteelSectionType.ry: Double
 /** معامل المقطع اللدن حول X - mm³ */
 val SteelSectionType.zx: Double
     get() = when (this) {
-        // Exact plastic section moduli (owner decision 2026-11-21,
+        // Exact plastic section moduli (design decision 2026-11-21,
         // CLAUSE_LOG A-08; fixes the arbitrary 1.12*Sx approximation):
         //   I (doubly symmetric): Zx = bf*tf*(h-tf) + tw*(h-2tf)^2/4
         //   CHS / Pipe:           Z  = (D^3 - (D-2t)^3) / 6
