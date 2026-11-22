@@ -186,9 +186,9 @@ fun InteractionDiagramChart(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                LegendItem(color = chartColors.firstOrNull() ?: Color.Blue, label = "Capacity")
-                LegendItem(color = safeColor, label = "Safe Zone")
-                LegendItem(color = Color.Red, label = "Current Load")
+                LegendItem(color = chartColors.firstOrNull() ?: Color.Blue, label = stringResource(R.string.chart_legend_capacity))
+                LegendItem(color = safeColor, label = stringResource(R.string.chart_legend_safe_zone))
+                LegendItem(color = Color.Red, label = stringResource(R.string.chart_legend_current_load))
             }
         }
     }

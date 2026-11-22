@@ -2484,4 +2484,9 @@
     <string name="pt_r_ducts">القنوات</string>
     <string name="pt_r_anchorages">أجهزة التثبيت</string>
     <string name="pt_r_grout">الجراوت</string>
+    <string name="chart_legend_capacity">منحنى المقاومة</string>
+    <string name="chart_legend_safe_zone">المنطقة الآمنة</string>
+    <string name="chart_legend_current_load">الحمل الحالي</string>
+    <string name="chart_design_period">الزمن التصميمي</string>
+    <string name="chart_design_sag">Sa/g التصميمية</string>
 </resources>

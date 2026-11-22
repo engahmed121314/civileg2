@@ -161,8 +161,8 @@ fun SeismicResponseChart(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                InfoBox(label = "Design Period", value = "${"%.2f".format(designPeriod)} s")
-                InfoBox(label = "Design Sa/g", value = "${"%.3f".format(spectrumValues.minByOrNull { abs(it.period - designPeriod) }?.spectralAcceleration ?: 0.0)}")
+                InfoBox(label = stringResource(R.string.chart_design_period), value = "${"%.2f".format(designPeriod)} s")
+                InfoBox(label = stringResource(R.string.chart_design_sag), value = "${"%.3f".format(spectrumValues.minByOrNull { abs(it.period - designPeriod) }?.spectralAcceleration ?: 0.0)}")
             }
         }
     }

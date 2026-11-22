@@ -110,6 +110,7 @@ class I18nChartsPtVisualTest {
         setThemedContent(arabic = false) { charts() }
         assertTextPresent("P-M Interaction Diagram")
         assertTextPresent("Response Spectrum Analysis")
+        assertTextPresent("Current Load")
         assertTextAbsent("مخطط التفاعل")
         assertTextAbsent("تحليل طيف الاستجابة")
         capture("i18n-charts-en")
@@ -121,6 +122,7 @@ class I18nChartsPtVisualTest {
         setThemedContent(arabic = true) { charts() }
         assertTextPresent("مخطط التفاعل")
         assertTextPresent("تحليل طيف الاستجابة")
+        assertTextPresent("الحمل الحالي")
         assertTextAbsent("P-M Interaction Diagram")
         assertTextAbsent("Response Spectrum Analysis")
         capture("i18n-charts-ar")

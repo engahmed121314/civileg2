@@ -2481,4 +2481,9 @@
     <string name="pt_r_ducts">Ducts</string>
     <string name="pt_r_anchorages">Anchorages</string>
     <string name="pt_r_grout">Grout</string>
+    <string name="chart_legend_capacity">Capacity</string>
+    <string name="chart_legend_safe_zone">Safe Zone</string>
+    <string name="chart_legend_current_load">Current Load</string>
+    <string name="chart_design_period">Design Period</string>
+    <string name="chart_design_sag">Design Sa/g</string>
 </resources>
