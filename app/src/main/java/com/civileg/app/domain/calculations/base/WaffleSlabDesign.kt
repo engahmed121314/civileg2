@@ -93,20 +93,23 @@ interface WaffleSlabDesign {
         val deflectionCheck: FlatSlabDesign.DeflectionResult? = null,
         val concreteVolume: Double = 0.0,
         val steelWeight: Double = 0.0,
-        val cost: Double = 0.0
+        val cost: Double = 0.0,
+        val safetyAssessmentBlocked: Boolean = false
     )
 
     data class RibDesignResult(
         val flexureReinforcement: RebarResult,
         val shearReinforcement: ShearReinforcementResult,
         val isSafe: Boolean,
-        val utilizationRatio: Double
+        val utilizationRatio: Double,
+        val safetyAssessmentBlocked: Boolean = false
     )
 
     data class SolidHeadDesignResult(
         val flexureReinforcement: RebarResult,
         val punchingShear: PunchingShearCheck,
-        val isSafe: Boolean
+        val isSafe: Boolean,
+        val safetyAssessmentBlocked: Boolean = false
     )
 
     data class PunchingShearCheck(

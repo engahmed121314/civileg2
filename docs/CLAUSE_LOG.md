@@ -398,3 +398,22 @@ Golden guard: ACIFootingTest `designIsolatedFooting_goldenVector_squareNoMoment`
 (P = 1500 kN, 400×400 column, qa = 200, h = 600: B = L = 2450 mm, q = 178.50
 kPa, Mu = 321.62 kN·m, As = 1200 mm²/m at the Table 7.6.1.1 minimum,
 Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
+
+
+**E-WF-HOLD (2026-11-22) - ECP waffle safety containment, not a method rebuild.**
+
+- `ECPWaffleSlabDesign.designRib` previously emitted constant SAFE and utilization
+  results; `designSolidHead` emitted fixed reinforcement and punching values with
+  SAFE regardless of its load/moment inputs. Those previews are not verified
+  capacities or a basis for execution documents.
+- The separate `ECPAdvancedSlab` waffle path normalizes K by `fcu*b*d^2` but uses
+  a fixed .186 threshold. ECP 203-2020 printed4-5 Eq4-4 defines
+  `M_umax=R_max*fcu*b*d^2/gamma_c`; printed4-6 Table4-1 gives .186 as R_max
+  for grade420, not the corresponding K. Source pages were inspected directly.
+  This finding is not a complete replacement method or a universal K limit.
+- Dedicated, shared and Advanced ECP waffle assessments remain explicitly held.
+  Legacy numbers do not imply SAFE, and execution drawings, inline/central BBS,
+  BOQ and reports are withheld. Historical known ECP waffle records and records
+  with unresolved code provenance are held non-destructively on read; explicit
+  other-code records are unchanged. Method rebuilding, geometry/applicability,
+  cover, loading, section behavior and detailing remain separate open work.

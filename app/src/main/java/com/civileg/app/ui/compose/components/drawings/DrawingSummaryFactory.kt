@@ -137,6 +137,7 @@ fun waffleSlabDrawingSummary(
 ): DrawingResultSummary =
     DrawingResultSummary(
         isSafe = result.isSafe,
+        safetyAssessmentBlocked = result.safetyAssessmentBlocked,
         utilizationRatio = result.utilizationRatio,
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,

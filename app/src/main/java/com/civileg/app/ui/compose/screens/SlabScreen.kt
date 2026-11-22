@@ -565,6 +565,7 @@ fun SlabScreen(
                                         cover = 25.0,
                                         viewMode = selectedViewMode,
                                         designCode = selectedCode,
+                                        resultSummary = slabDrawingSummary(res),
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -646,6 +647,7 @@ fun SlabScreen(
                                 cover = 25.0,
                                 viewMode = 0,
                                 designCode = selectedCode,
+                                resultSummary = slabDrawingSummary(res),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

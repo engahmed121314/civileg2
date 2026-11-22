@@ -205,7 +205,7 @@ object BoqEstimator {
         lxM: Double,
         lyM: Double,
         mark: String = "Waffle slab"
-    ): List<BoqRow> = listOf(
+    ): List<BoqRow> = if (result.safetyAssessmentBlocked) emptyList() else listOf(
         item(1, "Concrete - $mark", "m3", result.concreteVolume),
         item(2, "Reinforcement steel - $mark", "kg", result.steelWeight),
         item(3, "Formwork - $mark (soffit)", "m2", lxM * lyM)

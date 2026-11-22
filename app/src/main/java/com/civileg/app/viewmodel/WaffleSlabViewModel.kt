@@ -121,6 +121,7 @@ class WaffleSlabViewModel @Inject constructor(
     /** Standalone DXF sheet for the current waffle slab design (null when no result). */
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val res = _result.value ?: return null
+        if (res.safetyAssessmentBlocked) return null
         val input = lastInput ?: return null
         return com.civileg.app.utils.ElementDxfDrawings.slabSection(
             title = "WAFFLE SLAB",
@@ -134,6 +135,11 @@ class WaffleSlabViewModel @Inject constructor(
 
     /** Export just the CAD drawing (no PDF) for the current design. */
     fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        if (_result.value?.safetyAssessmentBlocked == true) {
+            _error.value = context.getString(com.civileg.app.R.string.hordi_method_hold)
+            onComplete(null)
+            return
+        }
         com.civileg.app.utils.DxfQuickExport.export(
             context = context,
             drawing = buildDxfDrawing(),
@@ -148,6 +154,11 @@ class WaffleSlabViewModel @Inject constructor(
         onComplete: (File?) -> Unit
     ) {
         val res = _result.value ?: return
+        if (res.safetyAssessmentBlocked) {
+            _error.value = context.getString(com.civileg.app.R.string.hordi_method_hold)
+            onComplete(null)
+            return
+        }
         val input = lastInput ?: return
         viewModelScope.launch(Dispatchers.IO) {
             kotlinx.coroutines.withContext(Dispatchers.Main) { _isExporting.value = true }
@@ -270,6 +281,8 @@ class WaffleSlabViewModel @Inject constructor(
                 type = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.WAFFLE,
                 thickness = totalThickness,
                 isSafe = res.isSafe,
+                safetyAssessmentBlocked = res.safetyAssessmentBlocked,
+                suggestions = res.warnings + res.codeNotes,
                 concreteVolume = res.concreteVolume,
                 steelWeight = res.steelWeight,
                 code = engineCode,

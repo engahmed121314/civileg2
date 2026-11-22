@@ -273,7 +273,7 @@ class CalculatorEngine @Inject constructor(
     ) : Parcelable {
         // Missing/false flags in old JSON do not verify a legacy ECP Hordi method.
         val executionAssessmentBlocked: Boolean
-            get() = safetyAssessmentBlocked || (type == SlabType.HOLLOW_BLOCK && code !in listOf(DesignCode.ACI, DesignCode.SBC))
+            get() = safetyAssessmentBlocked || (type in listOf(SlabType.HOLLOW_BLOCK, SlabType.WAFFLE) && code !in listOf(DesignCode.ACI, DesignCode.SBC))
     }
 
     @Parcelize
@@ -1602,6 +1602,8 @@ class CalculatorEngine @Inject constructor(
                     type = type,
                     thickness = ts,
                     isSafe = waffleResult.isSafe,
+                    safetyAssessmentBlocked = waffleResult.safetyAssessmentBlocked,
+                    suggestions = waffleResult.warnings + waffleResult.codeNotes,
                     code = code,
                     reinforcementMain = ReinforcementBar(
                         spacing = barSpacing,
