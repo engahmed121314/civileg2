@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
@@ -110,7 +111,7 @@ class HordiBlockedVisualTest {
 
         rule.onNodeWithText("NOT EVALUATED", substring = true).assertIsDisplayed()
         rule.onNodeWithText("N/E", substring = true).assertIsDisplayed()
-        rule.onNodeWithText("INCOMPLETE", substring = true).assertIsDisplayed()
+        rule.onAllNodesWithText("INCOMPLETE", substring = true)[0].performScrollTo().assertIsDisplayed()
         assertEquals(0, rule.onAllNodesWithText("PASS", substring = true).fetchSemanticsNodes().size)
         assertEquals(0, rule.onAllNodesWithText("0%", substring = true).fetchSemanticsNodes().size)
         captureRootOrNote("hordi-sbc-blocked-en")
@@ -123,14 +124,14 @@ class HordiBlockedVisualTest {
 
         rule.setContent { MaterialTheme { BlockedResultCards(res, LocaleHelper.isArabic()) } }
 
-        rule.onNodeWithText("غير مقيّمة", substring = true).assertIsDisplayed()
-        rule.onNodeWithText("غير مكتمل", substring = true).assertIsDisplayed()
+        rule.onAllNodesWithText("غير مقيّمة", substring = true)[0].performScrollTo().assertIsDisplayed()
+        rule.onAllNodesWithText("غير مكتمل", substring = true)[0].performScrollTo().assertIsDisplayed()
         assertEquals(0, rule.onAllNodesWithText("آمن ✓", substring = true).fetchSemanticsNodes().size)
         captureRootOrNote("hordi-sbc-blocked-ar")
     }
 
     @Test
-    fun `SBC cylinder input field renders its label in both languages`() {
+    fun `SBC cylinder input field renders its label in English`() {
         pinLocale("en")
         rule.setContent {
             MaterialTheme {
@@ -144,7 +145,10 @@ class HordiBlockedVisualTest {
         }
         rule.onNodeWithText("required for SBC", substring = true).assertIsDisplayed()
         captureRootOrNote("hordi-sbc-cylinder-input-en")
+    }
 
+    @Test
+    fun `SBC cylinder input field renders its label in Arabic`() {
         pinLocale("ar")
         rule.setContent {
             MaterialTheme {
