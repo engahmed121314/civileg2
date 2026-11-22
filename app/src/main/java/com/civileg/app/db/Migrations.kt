@@ -417,6 +417,17 @@ object Migrations {
     }
 
     /**
+     * Adds the quantity basis and frozen snapshot identity to designs.
+     * Additive only: existing rows keep every stored number and read as LEGACY_UNVERIFIED.
+     */
+    val MIGRATION_14_15: Migration = object : Migration(14, 15) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE designs ADD COLUMN quantityBasis TEXT NOT NULL DEFAULT 'LEGACY_UNVERIFIED'")
+            database.execSQL("ALTER TABLE designs ADD COLUMN snapshotRevision TEXT")
+        }
+    }
+
+    /**
      * Helper to create a no-op migration between consecutive versions.
      * Use only when no schema changes occurred between versions.
      */

@@ -1,6 +1,7 @@
 package com.civileg.app.db
 
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.FrozenDesignRecord
 
 import com.civileg.app.domain.entities.SteelMemberResult
 import com.civileg.app.domain.entities.SteelWarehouseAnalysisResult
@@ -113,29 +114,74 @@ class DesignRepository @Inject constructor(
         beamDao.insertBeam(beam)
     }
 
+    /**
+     * Legacy generic slab save. Dimensions and materials are written only when the caller
+     * supplies them; nothing is defaulted into the stored case. Hollow-block (Hordi)
+     * quantities come from formulas that do not describe a whole member, so they are saved
+     * as UNKNOWN (placeholder zeros, excluded from totals) whatever the caller passes.
+     * Use [saveHordiSlabSnapshot] for the actual Hordi input/result.
+     */
     suspend fun saveSlabDesign(
         projectId: Long, name: String, result: CalculatorEngine.SlabResult,
-        spanX: Double = 4.0, spanY: Double = 5.0, fcu: Double = 25.0, fy: Double = 360.0
+        spanX: Double? = null, spanY: Double? = null, fcu: Double? = null, fy: Double? = null
     ) {
+        val unknownQuantities = result.type == CalculatorEngine.SlabType.HOLLOW_BLOCK
+        val dimensionsKnown = spanX != null && spanY != null && fcu != null && fy != null
         val inputData = JSONObject().apply {
-            put("spanX", spanX)
-            put("spanY", spanY)
-            put("fcu", fcu)
-            put("fy", fy)
+            if (dimensionsKnown) {
+                put("spanX", spanX)
+                put("spanY", spanY)
+                put("fcu", fcu)
+                put("fy", fy)
+            }
             put("thickness", result.thickness)
             put("load", result.totalLoad)
             put("type", result.type.toString())
         }.toString()
-        saveGeneralDesign(projectId, DesignType.SLAB, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
-        
-        val slab = Slab(
-            projectId = projectId, type = result.type.toString(), spanX = spanX, spanY = spanY,
-            thickness = result.thickness, load = result.totalLoad, fcu = fcu, fy = fy,
-            reinforcement = result.reinforcementMain.barString,
-            concreteVolume = result.concreteVolume, steelWeight = result.steelWeight, cost = result.cost,
-            utilizationRatio = result.utilizationRatio
+        val concrete = if (unknownQuantities) 0.0 else result.concreteVolume
+        val steel = if (unknownQuantities) 0.0 else result.steelWeight
+        val cost = if (unknownQuantities) 0.0 else result.cost
+        saveGeneralDesign(
+            projectId, DesignType.SLAB, name, result.isSafe, result.utilizationRatio, concrete, steel, cost,
+            result, result.code.displayName, inputData,
+            quantityBasis = if (unknownQuantities) QuantityBasis.UNKNOWN else QuantityBasis.LEGACY_UNVERIFIED
         )
-        slabDao.insertSlab(slab)
+
+        if (dimensionsKnown && !unknownQuantities) {
+            val slab = Slab(
+                projectId = projectId, type = result.type.toString(), spanX = spanX!!, spanY = spanY!!,
+                thickness = result.thickness, load = result.totalLoad, fcu = fcu!!, fy = fy!!,
+                reinforcement = result.reinforcementMain.barString,
+                concreteVolume = result.concreteVolume, steelWeight = result.steelWeight, cost = result.cost,
+                utilizationRatio = result.utilizationRatio
+            )
+            slabDao.insertSlab(slab)
+        }
+    }
+
+    /**
+     * Saves an actual completed Hordi input/result pair exactly as frozen by the producer.
+     * Whole-member quantities are UNKNOWN: no panel width, rib count or bar schedule exists,
+     * so the quantity columns hold placeholder zeros that no total may use. The fingerprint
+     * identifies the pair; it is not an approval. Method holds come from the stored
+     * input/result through [StoredDesignSafety], never from the stored isSafe bit alone.
+     */
+    suspend fun saveHordiSlabSnapshot(projectId: Long, name: String, record: FrozenDesignRecord): Long {
+        require(record.hasValidFingerprint()) { "Frozen design record failed fingerprint validation." }
+        val input = runCatching { JSONObject(record.inputJson) }.getOrNull()
+        val resultJson = runCatching { JSONObject(record.resultJson) }.getOrNull()
+        val safe = resultJson != null && resultJson.optBoolean("isSafe", false) &&
+            !resultJson.optBoolean("safetyAssessmentBlocked", false)
+        return designDao.insertDesign(
+            Design(
+                projectId = projectId, type = DesignType.HORDI_SLAB, name = name,
+                inputData = record.inputJson, results = record.resultJson,
+                isSafe = safe, utilizationRatio = resultJson?.optDouble("utilizationRatio", 0.0) ?: 0.0,
+                codeUsed = input?.optString("designCode").orEmpty().ifBlank { "UNSPECIFIED" },
+                concreteVolume = 0.0, steelWeight = 0.0, totalCost = 0.0,
+                quantityBasis = QuantityBasis.UNKNOWN, snapshotRevision = record.revisionSha256
+            )
+        )
     }
 
     suspend fun saveStairDesign(projectId: Long, name: String, result: CalculatorEngine.StairResult) {
@@ -416,12 +462,14 @@ class DesignRepository @Inject constructor(
     private suspend fun saveGeneralDesign(
         projectId: Long, type: DesignType, name: String, isSafe: Boolean, utilizationRatio: Double,
         concreteVolume: Double, steelWeight: Double, totalCost: Double, result: Any, codeUsed: String,
-        inputData: String = "{}"
+        inputData: String = "{}",
+        quantityBasis: QuantityBasis = QuantityBasis.LEGACY_UNVERIFIED
     ): Long {
         val design = Design(
             projectId = projectId, type = type, name = name, inputData = inputData,
             results = gson.toJson(result), isSafe = isSafe, utilizationRatio = utilizationRatio, codeUsed = codeUsed,
-            concreteVolume = concreteVolume, steelWeight = steelWeight, totalCost = totalCost
+            concreteVolume = concreteVolume, steelWeight = steelWeight, totalCost = totalCost,
+            quantityBasis = quantityBasis
         )
         return designDao.insertDesign(design)
     }
