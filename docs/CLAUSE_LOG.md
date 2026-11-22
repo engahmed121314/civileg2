@@ -353,3 +353,48 @@ All page numbers below are the printed page of the PDF of record.
 
 Golden vectors: ECPBeamShearTest (6 cases: stirrup design, min-only branch,
 4-leg wide beam, fy=600 cap, mild-240 min-ratio floor, q_umax 4.4 cap).
+
+## ACI footing min-steel fix — F-01 (accessed 2026-11-21)
+
+Found while building the combined-footing golden vectors: the shared ACI
+footing flexure helper's minimum-steel formula matched no ACI provision.
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| F-01 | ACI 318M-14 Table 7.6.1.1: As,min for nonprestressed one-way slabs and footings on the GROSS area Ag = b·h: deformed bars fy < 420 MPa → 0.0020·Ag; fy ≥ 420 → greater of 0.0018·420/fy·Ag and 0.0014·Ag. The helper's previous `rhoMin = max(0.0018, 1.33·√f'c/fy)` matches no ACI provision (likely a garbled reading of the 4/3 relaxation in §9.6.1.3) and produced a 1.63% "minimum" at f'c = 24, fy = 400 — about 8× the code value, inflating steel in every ACI footing result. Fixed to the table values on b·h; internal design flows now pass the real footing depth (the interface path keeps h = d). | Owner's ACI 318M-14, Table 7.6.1.1, printed p. 143 (part 1, PDF p. 152) | **Verified (primary), RESOLVED** |
+| F-02 | `SBCFooting` carries the same `max(0.0018, 1.33·√f'c/fy)` formula (line ~274). Not fixed here: SBC 304's own min-steel clause must be verified against the SBC PDF first, and the SBC batch awaits an owner decision (U-S1..U-S5). | Engine inspection | **FLAGGED, not fixed** |
+
+## ACI combined footing rebuild (accessed 2026-11-21)
+
+Owner decision 2026-11-21 ("fix them"): rebuild
+`ACIFooting.designCombinedFooting` with the inverted-beam method, transverse
+beam strips, full one-way shear checks, and removal of the dead eccentricity
+block. The shared min-steel fix it depends on is F-01 (previous commit).
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| CF-01 | RESOLVED: longitudinal bending now uses the inverted-beam model (upward factored pressure, column point loads), with critical sections at column faces per Table 13.2.7.1 and the zero-shear point between columns. Both sagging (bottom) and hogging (top) reinforcement are designed; transverse beam strips under each column (strip width = column length + d, cantilever (B−c)/2) are designed per the classic combined-footing method. Also removes the old total-moment-passed-as-per-meter conversion error. | ACI 318M-14 §13.2.6.2 + Table 13.2.7.1, printed p. 307 (verified primary, A-05); transverse strip method: Das, Principles of Foundation Engineering (secondary, textbook-standard) | **RESOLVED** with golden vectors |
+| CF-02 | RESOLVED: one-way shear now checked at d from each column face on all four sections (two outer cantilevers + both inner faces), Vu vs φVc = 0.75·0.17·√f'c·B·d (§22.5.5.1, verified A-02). | ACI 318M-14 §13.2.7.2, printed p. 307 | **RESOLVED** with golden vectors |
+| CF-03 | RESOLVED: dead eccentricity/trapezoid block removed; pressure is uniform by construction (centroid at resultant) and reported max = average. | Engine code | **RESOLVED** |
+| CF-05 | New finding during the rebuild: the old L = 2·(xR + s1) places column 2 OFF the footing whenever P1 > P2 (xR < S/2). Fixed: L = 2·max(xR + s1, S − xR + s2). | Engine inspection + golden vector B | **RESOLVED** |
+
+Golden guard: ACIFootingTest `designCombinedFooting_goldenVector_symmetric`
+(P1 = P2 = 1400 kN, S = 3 m: L = 3700, B = 2750, q = 196.56 kPa, M+ = 805.0
+kN·m, bottom/top at the 1400 mm²/m Table 7.6.1.1 minimum, transverse strips
+strength-governed at 1604.9 mm²/m, Vu = 518.4 ≤ 1056.4 kN) and
+`designCombinedFooting_goldenVector_unequalLoads` (P1 = 2000, P2 = 900 kN:
+L = 5665.5 covers column 2 — CF-05 — M− = −549.7 kN·m hogging at column 1).
+
+## ACI isolated footing batch (accessed 2026-11-21)
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| A-07 | §13.3.3 two-way isolated footings: square → uniform both directions; rectangular → long-direction uniform, short-direction portion γs = 2/(β+1) of As in the central band of width = short side, remainder outside (β = L/B). | Owner's ACI 318M-14 §13.3.3.2–13.3.3.3, printed pp. 310–311 (part 2, PDF pp. ~119–120) | **Verified (primary)** |
+| F-03 | `designIsolatedFooting` evaluates one-way shear at d/2 from the column face (comment cites §22.5) instead of d (§13.2.7.2 → §7.4.3.1/§22.5). The checked demand is LARGER than the code's, so the deviation is conservative. Characterized; relaxation to d needs an owner decision. | Engine inspection vs verified §13.2.7.2 (A-05) | **FLAGGED (conservative), not fixed** |
+| F-04 | `designIsolatedFooting` adds "distribution steel = 20% of main" citing "ACI 318-13.3.4". No such rule exists: §13.3.4 covers combined/mat foundations, and the real distribution rule is the §13.3.3.3(b) band rule (A-07). Affects reporting only (codeNotes); main reinforcement and safety checks are unaffected. | Engine inspection vs verified §13.3.3/§13.3.4 | **FLAGGED, not fixed — replace with the band rule (needs owner OK)** |
+| F-05 | `designRaftFoundation` is a crude placeholder: max column load estimated as 15% of total, design moment = q·(√A/3)²/10 (no clause basis), punching checked for a guessed 600×600 column. §13.3.4.3 requires pressure distribution consistent with factored loads; a real raft needs a grid/strip method. | Engine inspection; ACI 318M-14 §13.3.4.1–13.3.4.3, printed p. 311 | **FLAGGED, not fixed — raft needs a proper method decision from the owner** |
+
+Golden guard: ACIFootingTest `designIsolatedFooting_goldenVector_squareNoMoment`
+(P = 1500 kN, 400×400 column, qa = 200, h = 600: B = L = 2450 mm, q = 178.50
+kPa, Mu = 321.62 kN·m, As = 1200 mm²/m at the Table 7.6.1.1 minimum,
+Vu = 469.9 ≤ 719.4 kN, punching φVn = 2086.3 kN).
