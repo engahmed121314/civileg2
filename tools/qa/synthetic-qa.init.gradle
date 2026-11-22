@@ -35,10 +35,22 @@ gradle.beforeProject { p ->
                 }
             }
             p.tasks.register('captureSyntheticQaPackagingDiagnostics') {
+                // Provider-backed ASM outputs must belong to this invocation's completed graph.
+                dependsOn('assembleFreeRelease', 'assembleFreeReleaseAndroidTest')
                 doLast {
                     def out = p.rootProject.file('qa-packaging/gradle')
                     out.mkdirs()
                     def failures = []
+                    def describeFailure = { Throwable error ->
+                        def causes = []
+                        def seen = Collections.newSetFromMap(new IdentityHashMap())
+                        def current = error
+                        while (current != null && seen.add(current) && causes.size() < 8) {
+                            causes << current.class.name + ': ' + current.message
+                            current = current.cause
+                        }
+                        causes.join('\ncaused by: ') + '\n'
+                    }
                     def versions = ["Gradle=${p.gradle.gradleVersion}", "Java=${System.getProperty('java.version')}"]
                     def loader = p.plugins.getPlugin('com.android.application').class.classLoader
                     [['AGP', 'com.android.Version', 'ANDROID_GRADLE_PLUGIN_VERSION'],
@@ -63,13 +75,15 @@ gradle.beforeProject { p ->
                                 }
                                 return "UNRESOLVED ${dependency.requested}"
                             }.sort()
+                            // Keep the resolved/unresolved graph even if artifact materialization fails.
+                            new File(out, name + '.txt').text = lines.join('\n') + '\n'
                             def artifacts = configuration.resolvedConfiguration.resolvedArtifacts.collect { artifact ->
                                 "${artifact.moduleVersion.id} | ${artifact.file.absolutePath} | bytes=${artifact.file.length()}"
                             }.sort()
-                            new File(out, name + '.txt').text = (lines + ['ARTIFACTS'] + artifacts).join('\n') + '\n'
+                            new File(out, name + '.txt').append((['ARTIFACTS'] + artifacts).join('\n') + '\n')
                         } catch (Throwable e) {
                             failures << name
-                            new File(out, name + '.error.txt').text = e.class.name + ': ' + e.message + '\n'
+                            new File(out, name + '.error.txt').text = describeFailure(e)
                         }
                     }
                     ['minifyFreeReleaseWithR8', 'minifyFreeReleaseAndroidTestWithR8'].each { taskName ->
@@ -83,7 +97,7 @@ gradle.beforeProject { p ->
                             new File(out, task.name + '-inputs.txt').text = "task=${task.path}\ntype=${task.class.name}\n" + files.join('\n') + '\n'
                         } catch (Throwable e) {
                             failures << taskName
-                            new File(out, taskName + '.error.txt').text = e.class.name + ': ' + e.message + '\n'
+                            new File(out, taskName + '.error.txt').text = describeFailure(e)
                         }
                     }
                     if (!failures.isEmpty()) throw new GradleException('Packaging diagnostics incomplete: ' + failures.join(', '))
