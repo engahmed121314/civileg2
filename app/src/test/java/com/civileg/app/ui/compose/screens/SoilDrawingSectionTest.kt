@@ -3,6 +3,7 @@ package com.civileg.app.ui.compose.screens
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -64,7 +65,7 @@ class SoilDrawingSectionTest {
                 // pixels that preview as black and read as a contrast defect.
                 CivilEngineerPremiumTheme(darkTheme = false) {
                     androidx.compose.material3.Surface(
-                        modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize(),
                         color = androidx.compose.material3.MaterialTheme.colorScheme.background
                     ) { content() }
                 }
