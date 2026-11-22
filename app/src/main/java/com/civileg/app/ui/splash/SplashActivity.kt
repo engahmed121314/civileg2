@@ -1,9 +1,11 @@
 package com.civileg.app.ui.splash
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.civileg.app.MainActivity
 import com.civileg.app.R
@@ -17,6 +19,14 @@ class SplashActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Full-bleed approved Treatment B: artwork extends behind the system
+        // bars. SplashOverlayLayout applies systemBars+displayCutout insets to
+        // itself (never to the background) and anchors overlays to the artwork.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+
         setContentView(R.layout.activity_splash)
 
         // Failsafe timeout: ensure user is never blocked on splash screen (unblock)
