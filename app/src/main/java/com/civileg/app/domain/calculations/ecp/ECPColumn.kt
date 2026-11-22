@@ -566,7 +566,7 @@ class ECPColumn : ColumnDesign {
         // evaluated here (never a fabricated pass) and must be verified on the
         // actual section arrangement.
         blocked += BlockedSeismicCheck(
-            name = "Longitudinal bars per face (>= 3 each face)",
+            name = "Longitudinal bars per face (>= 3 each face)", key = "bars_per_face",
             clause = "ECP 203-2020 §6-8-2-2-3 / §6-8-2-3-2 (printed 6-92 / 6-95)",
             reason = "Per-face bar count cannot be derived from the total bar count without the actual arrangement; verify at least 3 bars on each face on the section drawing."
         )
@@ -575,7 +575,7 @@ class ECPColumn : ColumnDesign {
             clauseRefs += "ECP 203-2020 §6-8-2-2-3 limited-ductility columns (printed 6-92)"
             clauseRefs += "ECP 203-2020 fig 7-7(أ) limited-column ties (printed 7-16)"
             blocked += BlockedSeismicCheck(
-                name = "Capacity-design shear (column)",
+                name = "Capacity-design shear (column)", key = "capacity_shear_limited",
                 clause = "ECP 203-2020 §6-8-2-2-3 + fig 6-39 (printed 6-92..6-93)",
                 reason = "Needs column end moments from a frame analysis at the axial level giving the larger flexural resistance; not derivable from single-column inputs."
             )
@@ -586,7 +586,7 @@ class ECPColumn : ColumnDesign {
 
             val bMin = min(width, depth)
             checks += EcpColumnSeismicCheck(
-                name = "Smallest section dimension",
+                name = "Smallest section dimension", key = "min_dimension",
                 clause = "ECP 203-2020 §6-8-2-3-2(أ) (printed 6-95)",
                 demand = "%.0f mm".format(bMin),
                 limit = "≥ 300 mm",
@@ -594,7 +594,7 @@ class ECPColumn : ColumnDesign {
             )
             val aspect = bMin / max(width, depth)
             checks += EcpColumnSeismicCheck(
-                name = "Section aspect ratio (short/long)",
+                name = "Section aspect ratio (short/long)", key = "aspect_ratio",
                 clause = "ECP 203-2020 §6-8-2-3-2(أ) (printed 6-95)",
                 demand = "%.2f".format(aspect),
                 limit = "≥ 0.40",
@@ -602,7 +602,7 @@ class ECPColumn : ColumnDesign {
             )
             val rho = providedLongitudinalArea / (width * depth)
             checks += EcpColumnSeismicCheck(
-                name = "Longitudinal reinforcement ratio",
+                name = "Longitudinal reinforcement ratio", key = "rho_min",
                 clause = "ECP 203-2020 §6-8-2-3-2 (printed 6-97)",
                 demand = "%.2f%%".format(rho * 100.0),
                 limit = "≥ 1.0%",
@@ -624,7 +624,7 @@ class ECPColumn : ColumnDesign {
             val ashProvided = tieLegs * PI * tieDiameter * tieDiameter / 4.0
             val ashLimit = max(ashReq, astMin)
             checks += EcpColumnSeismicCheck(
-                name = "Critical-region tie area (Eqs 6-63a/b at s = S0)",
+                name = "Critical-region tie area (Eqs 6-63a/b at s = S0)", key = "tie_area",
                 clause = "ECP 203-2020 Eqs [6-63a]/[6-63b] (printed 6-98)",
                 demand = "%.0f mm² provided".format(ashProvided),
                 limit = "≥ %.0f mm² (0.313·s·y1·(fcu/γc)/(fyst/γs)·(Ag/Ak−1) = %.0f; 0.1·s·y1·(fcu/γc)/(fyst/γs) = %.0f)".format(ashLimit, ashReq, astMin),
@@ -632,17 +632,17 @@ class ECPColumn : ColumnDesign {
             )
 
             blocked += BlockedSeismicCheck(
-                name = "Strong-column/weak-beam (ΣMc ≥ 1.2·ΣMg)",
+                name = "Strong-column/weak-beam (ΣMc ≥ 1.2·ΣMg)", key = "strong_column_weak_beam",
                 clause = "ECP 203-2020 §6-8-2-3-2 Eq [6-62] (printed 6-95); required when P > 0.04·Ag·fcu",
                 reason = "Needs the connected beam design moments at each joint from a frame analysis; not derivable from single-column inputs."
             )
             blocked += BlockedSeismicCheck(
-                name = "Capacity-design shear (column)",
+                name = "Capacity-design shear (column)", key = "capacity_shear_adequate",
                 clause = "ECP 203-2020 §6-8-2-3-2 + fig 6-40 (printed 6-96..6-97); Mpr = 1.25× max end moment per §6-8-2-1-3; Vc = 0 when P < 0.05·fcu·Ac",
                 reason = "Needs probable column end moments from a frame analysis; not derivable from single-column inputs."
             )
             blocked += BlockedSeismicCheck(
-                name = "Joint dimension vs beam bars (≥ 20·db through joint)",
+                name = "Joint dimension vs beam bars (≥ 20·db through joint)", key = "joint_beam_bars",
                 clause = "ECP 203-2020 §6-8-2-3-2 (printed 6-95)",
                 reason = "Needs the largest beam bar diameter passing through the joint; not a column-tool input."
             )

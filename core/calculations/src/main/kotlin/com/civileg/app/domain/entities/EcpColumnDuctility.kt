@@ -18,22 +18,32 @@ enum class EcpColumnDuctilityMode(val displayNameAr: String, val displayNameEn: 
     ADEQUATE("ممطولية كافية", "Adequate ductility (ECP 203 §6-8-2-3)")
 }
 
-/** A code check that cannot be closed from single-column inputs alone. */
+/**
+ * A code check that cannot be closed from single-column inputs alone.
+ * [key] is a stable identifier so the UI can show localized name/reason while
+ * the engine data and PDF exports stay English; unknown keys fall back to the
+ * English [name]/[reason].
+ */
 @Parcelize
 data class BlockedSeismicCheck(
     val name: String,
     val clause: String,
-    val reason: String
+    val reason: String,
+    val key: String = ""
 ) : Parcelable
 
-/** One computed ductile-detailing check with its clause citation. */
+/**
+ * One computed ductile-detailing check with its clause citation. [key] serves
+ * the same UI-localization role as in [BlockedSeismicCheck].
+ */
 @Parcelize
 data class EcpColumnSeismicCheck(
     val name: String,
     val clause: String,
     val demand: String,
     val limit: String,
-    val satisfied: Boolean
+    val satisfied: Boolean,
+    val key: String = ""
 ) : Parcelable
 
 /**

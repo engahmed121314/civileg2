@@ -2408,4 +2408,19 @@
     <string name="settings_support_title">دعم التطبيق</string>
     <string name="settings_support_message">Civil Engineer Pro مجاني وبدون إعلانات. التبرعات الطوعية تموّل أكواد تصميم واختبارات ورسومات جديدة.</string>
     <string name="settings_support_button">تبرع عبر GitHub Sponsors</string>
+    <!-- ECP column seismic detailing: blocked/computed check display (R-1) -->
+    <string name="seismic_blocked_prefix">معلّق</string>
+    <string name="seismic_blocked_bars_per_face_name">الأسياخ الطولية لكل وجه (≥ 3 في كل وجه)</string>
+    <string name="seismic_blocked_bars_per_face_reason">لا يمكن استنتاج عدد الأسياخ في كل وجه من العدد الإجمالي دون التوزيع الفعلي؛ تحقق من وجود 3 أسياخ على الأقل في كل وجه على لوحة القطاع.</string>
+    <string name="seismic_blocked_capacity_shear_name">قص التصميم بالسعة (العمود)</string>
+    <string name="seismic_blocked_capacity_shear_limited_reason">يحتاج إلى عزوم نهايات العمود من تحليل إطاري عند مستوى الحمل المحوري الذي يعطي أكبر مقاومة انحناء؛ لا يمكن استنتاجه من مدخلات عمود منفرد.</string>
+    <string name="seismic_blocked_capacity_shear_adequate_reason">يحتاج إلى عزوم النهايات المحتملة للعمود من تحليل إطاري؛ لا يمكن استنتاجها من مدخلات عمود منفرد.</string>
+    <string name="seismic_blocked_scwb_name">عمود قوي / كمرة ضعيفة (ΣMc ≥ 1.2·ΣMg)</string>
+    <string name="seismic_blocked_scwb_reason">يحتاج إلى عزوم تصميم الكمرات المتصلة عند كل عقدة من تحليل إطاري؛ لا يمكن استنتاجها من مدخلات عمود منفرد.</string>
+    <string name="seismic_blocked_joint_beam_bars_name">أبعاد العقدة مقابل أسياخ الكمرة (≥ 20·قطر السيخ خلال العقدة)</string>
+    <string name="seismic_blocked_joint_beam_bars_reason">يحتاج إلى أكبر قطر سيخ كمرة مار خلال العقدة؛ ليس من مدخلات أداة الأعمدة.</string>
+    <string name="seismic_check_min_dimension_name">أصغر بُعد للقطاع</string>
+    <string name="seismic_check_aspect_ratio_name">نسبة أبعاد القطاع (قصير/طويل)</string>
+    <string name="seismic_check_rho_min_name">نسبة التسليح الطولي</string>
+    <string name="seismic_check_tie_area_name">مساحة كانات المنطقة الحرجة (معادلتا 6-63a/b عند s = S0)</string>
 </resources>
