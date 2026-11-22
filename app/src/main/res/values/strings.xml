@@ -2405,6 +2405,9 @@
     <string name="settings_support_title">Support the app</string>
     <string name="settings_support_message">Civil Engineer Pro is free and ad-free. Voluntary donations fund new design codes, tests and drawings.</string>
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
+    <string name="soil_vm_all">All</string>
+    <string name="soil_vm_elevation">Elevation</string>
+    <string name="soil_vm_plan_kern">Plan &amp; Kern</string>
+    <string name="soil_vm_stress_bulb">Stress Bulb</string>
+    <string name="soil_vm_table">Table</string>
 </resources>
-
-

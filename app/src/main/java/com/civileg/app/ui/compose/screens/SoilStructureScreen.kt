@@ -26,6 +26,10 @@ import com.civileg.app.viewmodel.SoilStructureViewModel
 import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.res.stringResource
+import com.civileg.app.R
 import com.civileg.app.ui.components.AppText
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
@@ -40,6 +44,7 @@ fun SoilStructureScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val error by viewModel.error.observeAsState()
 
+    var soilViewMode by remember { mutableIntStateOf(0) }
     var foundationLengthMm by remember { mutableStateOf("3000") }
     var foundationWidthMm by remember { mutableStateOf("2000") }
     var foundationThicknessMm by remember { mutableStateOf("500") }
@@ -187,6 +192,28 @@ fun SoilStructureScreen(
 
                 DesignSectionHeader(title = "الرسم الهندسي لتفاعل المنشأ مع التربة")
 
+                val soilViewModeLabels = listOf(
+                    stringResource(R.string.soil_vm_all),
+                    stringResource(R.string.soil_vm_elevation),
+                    stringResource(R.string.soil_vm_plan_kern),
+                    stringResource(R.string.soil_vm_stress_bulb),
+                    stringResource(R.string.soil_vm_table)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    soilViewModeLabels.forEachIndexed { index, label ->
+                        FilterChip(
+                            selected = soilViewMode == index,
+                            onClick = { soilViewMode = index },
+                            label = { AppText(label, fontSize = 12.sp) }
+                        )
+                    }
+                }
+
                 AppText(
                     text = androidx.compose.ui.res.stringResource(
                         com.civileg.app.R.string.design_status_not_verified
@@ -217,6 +244,7 @@ fun SoilStructureScreen(
                         bearingFS = res.stability.factorOfSafetyBearing,
                         cover = 75.0,
                         designCode = selectedCode,
+                        viewMode = soilViewMode,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

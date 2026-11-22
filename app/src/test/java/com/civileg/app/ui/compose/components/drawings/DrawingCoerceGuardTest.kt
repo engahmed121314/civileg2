@@ -112,20 +112,51 @@ class DrawingCoerceGuardTest {
 
     @Test
     fun `soil drawing renders healthy size for pixel audit`() {
-        setThemed {
-            Box(Modifier.size(360.dp)) {
-                ProfessionalSoilStructureDrawing(
-                    foundationLengthMm = 3000.0, foundationWidthMm = 2000.0,
-                    foundationThicknessMm = 500.0, columnLoadKN = 1200.0,
-                    momentKNm = 50.0, soilBearingCapacityKpa = 150.0,
-                    maxPressureKpa = 133.0, minPressureKpa = 61.0,
-                    averagePressureKpa = 97.0, settlementMm = 12.0,
-                    overturningFS = 4.4, slidingFS = 2.1, bearingFS = 1.13,
-                    cover = 75.0, viewMode = 0, designCode = DesignCode.ECP
-                )
-            }
-        }
+        // One setContent per test, so audit the combined view here; the
+        // per-mode audits are the five tests below.
+        setThemed { soilHealthyBox(0) }
         capture("coerce-guard-soil-healthy")
+    }
+
+    @Test
+    fun `soil drawing mode 1 elevation readable at production size`() {
+        setThemed { soilHealthyBox(1) }
+        capture("coerce-guard-soil-mode1-elevation")
+    }
+
+    @Test
+    fun `soil drawing mode 2 plan and kern readable at production size`() {
+        setThemed { soilHealthyBox(2) }
+        capture("coerce-guard-soil-mode2-plan-kern")
+    }
+
+    @Test
+    fun `soil drawing mode 3 stress bulb readable at production size`() {
+        setThemed { soilHealthyBox(3) }
+        capture("coerce-guard-soil-mode3-stress-bulb")
+    }
+
+    @Test
+    fun `soil drawing mode 4 table readable at production size`() {
+        setThemed { soilHealthyBox(4) }
+        capture("coerce-guard-soil-mode4-table")
+    }
+
+    @Composable
+    private fun soilHealthyBox(mode: Int) {
+        // Production card is fillMaxWidth x 350dp; audit readability at that
+        // size, not just crash-freedom.
+        Box(Modifier.size(width = 360.dp, height = 350.dp)) {
+            ProfessionalSoilStructureDrawing(
+                foundationLengthMm = 3000.0, foundationWidthMm = 2000.0,
+                foundationThicknessMm = 500.0, columnLoadKN = 1200.0,
+                momentKNm = 50.0, soilBearingCapacityKpa = 150.0,
+                maxPressureKpa = 133.0, minPressureKpa = 61.0,
+                averagePressureKpa = 97.0, settlementMm = 12.0,
+                overturningFS = 4.4, slidingFS = 2.1, bearingFS = 1.13,
+                cover = 75.0, viewMode = mode, designCode = DesignCode.ECP
+            )
+        }
     }
 
     @Test
