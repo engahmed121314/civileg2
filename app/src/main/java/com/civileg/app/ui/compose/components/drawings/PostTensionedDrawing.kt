@@ -55,6 +55,8 @@ fun PostTensionedSectionDrawing(
             .padding(10.dp)
     ) {
         Canvas(modifier = Modifier.fillMaxWidth().height(height.dp)) {
+            // Too small to draw truthfully: omit rather than distort geometry.
+            if (isDegenerateForDrawing()) return@Canvas
             drawPostTensionedSection(input, result)
         }
     }
@@ -79,6 +81,8 @@ fun PostTensionedElevationDrawing(
             .padding(10.dp)
     ) {
         Canvas(modifier = Modifier.fillMaxWidth().height(height.dp)) {
+            // Too small to draw truthfully: omit rather than distort geometry.
+            if (isDegenerateForDrawing()) return@Canvas
             drawPostTensionedElevation(input, result)
         }
     }

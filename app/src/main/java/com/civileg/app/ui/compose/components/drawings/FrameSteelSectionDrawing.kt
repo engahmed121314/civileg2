@@ -73,6 +73,8 @@ fun SteelSectionDrawing(
 ) {
     val textMeasurer = rememberTextMeasurer()
     Canvas(modifier = modifier) {
+        // Too small to draw truthfully: omit rather than distort geometry.
+        if (isDegenerateForDrawing()) return@Canvas
         drawSteelSectionViews(
             sectionName = sectionName,
             memberLengthMm = memberLengthMm,

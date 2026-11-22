@@ -74,6 +74,8 @@ fun ProfessionalStrapFootingDrawing(
             .fillMaxWidth()
             .fillMaxSize()
     ) {
+        // Too small to draw truthfully: omit rather than distort geometry.
+        if (isDegenerateForDrawing()) return@Canvas
         val w = size.width
         val h = size.height
 

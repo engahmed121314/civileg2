@@ -223,6 +223,8 @@ fun ProfessionalSteelDrawing(
             .fillMaxWidth()
             .fillMaxSize()
     ) {
+        // Too small to draw truthfully: omit rather than distort geometry.
+        if (isDegenerateForDrawing()) return@Canvas
         val cw = size.width
         val ch = size.height
 

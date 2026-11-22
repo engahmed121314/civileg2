@@ -79,6 +79,8 @@ fun ProfessionalWaffleSlabDrawing(
     val cfg = drawingDimensionsConfig()
 
     Canvas(modifier = modifier.fillMaxWidth().fillMaxSize()) {
+        // Too small to draw truthfully: omit rather than distort geometry.
+        if (isDegenerateForDrawing()) return@Canvas
         val W = size.width
         val H = size.height
 

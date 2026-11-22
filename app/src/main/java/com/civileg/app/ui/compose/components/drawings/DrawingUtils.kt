@@ -38,6 +38,18 @@ import kotlin.math.sqrt
 fun Float.coerceInMin(min: Float, max: Float): Float =
     this.coerceIn(min, maxOf(min, max))
 
+
+/** Px threshold below which a canvas cannot hold a truthful engineering drawing. */
+private const val MIN_DRAWABLE_PX = 96f
+
+/**
+ * True when this canvas is too small for a truthful drawing: below the
+ * threshold a drawing would have to distort engineering geometry to fit,
+ * so callers omit the drawing entirely instead of rendering a false image.
+ */
+fun DrawScope.isDegenerateForDrawing(): Boolean =
+    size.width < MIN_DRAWABLE_PX || size.height < MIN_DRAWABLE_PX
+
 /** Double overload of [coerceInMin]. */
 fun Double.coerceInMin(min: Double, max: Double): Double =
     this.coerceIn(min, maxOf(min, max))
