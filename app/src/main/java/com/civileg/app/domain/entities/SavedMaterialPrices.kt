@@ -48,4 +48,8 @@ object BoqPricing {
         }
         return PricedBoq(out, out.filter { it.isPriced }.sumOf { it.total }, out.count { !it.isPriced }, unknownCcy)
     }
+
+    /** BOQ steel quantities are in tons; the BOQ PDF report takes kilograms (it prints kg / 1000 as tons). */
+    fun steelKgForReport(items: List<BoqItem>): Double =
+        items.filter { it.category == BoqCategory.REINFORCEMENT }.sumOf { it.quantity } * 1000.0
 }

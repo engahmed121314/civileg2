@@ -317,7 +317,7 @@ fun DesignsBOQContent(
                                     context, "${selectedDesign?.name ?: "Design"} BOQ", elementBoqTotal,
                                     items.filter { it.category == BoqCategory.CONCRETE }.sumOf { it.quantity },
                                     // steel BOQ quantity is in tons; the report takes kg
-                                    items.filter { it.category == BoqCategory.REINFORCEMENT }.sumOf { it.quantity } * 1000.0,
+                                    com.civileg.app.domain.entities.BoqPricing.steelKgForReport(items),
                                     items.map { it.description to it.total },
                                     currency = boqCurrency,
                                     notes = if (unpricedCount > 0) listOf(context.getString(R.string.boq_total_priced_only, unpricedCount)) else emptyList(),
