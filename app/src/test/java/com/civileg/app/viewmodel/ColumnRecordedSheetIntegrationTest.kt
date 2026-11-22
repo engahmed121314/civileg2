@@ -194,7 +194,7 @@ class ColumnRecordedSheetIntegrationTest {
         scrollTo("column-pdf-export");
         button("column-pdf-export").performClick()
         try {
-            compose.waitUntil(30000) { !vm.uiState.value.isExporting && newReport(before) != null }
+            awaitMainPumped(30000) { !vm.uiState.value.isExporting && newReport(before) != null }
         } catch (failure: Throwable) {
             retainColumnUiTimeout(output, documents(), before, "actual-button", vm.uiState.value,
                 "captureCalls=${observedCaptures.size}", failure)
@@ -228,7 +228,7 @@ class ColumnRecordedSheetIntegrationTest {
         val before = documents().listFiles().orEmpty().map { it.name }.toSet()
         compose.runOnIdle { vm.exportToPdf(host.context, current, stale) { generated = it; callback = true } }
         try {
-            compose.waitUntil(30000) { callback }
+            awaitMainPumped(30000) { callback }
         } catch (failure: Throwable) {
             retainColumnUiTimeout(output, documents(), before, "stale-capture", vm.uiState.value,
                 "entered=$callback generated=${generated?.name}", failure)
@@ -247,7 +247,7 @@ class ColumnRecordedSheetIntegrationTest {
             vm.exportToPdf(host.context, snapshot, null) { generated = it; callback = true }
         }
         try {
-            compose.waitUntil(30000) { callback }
+            awaitMainPumped(30000) { callback }
         } catch (failure: Throwable) {
             retainColumnUiTimeout(output, documents(), before, "missing-capture", vm.uiState.value,
                 "entered=$callback generated=${generated?.name}", failure)
