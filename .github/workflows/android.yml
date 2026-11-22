@@ -132,6 +132,20 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Restore checksum-pinned Robolectric SDK
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/robolectric-sdk
+          key: ${{ runner.os }}-robolectric-14-10818077-i7-7cdc0b1306e7865f1acd25a363073149654caee5b8e278c5ae37ff4724185724eff39f0b0111800b521e640bb28698d9d2e655134a801569a0f07470e7b5f455
+
+      - name: Verify SDK preflight behavior
+        run: python3 -m unittest discover -s tools/ci -p 'test_prepare_robolectric_sdk.py'
+
+      - name: Prefetch and verify Robolectric SDK once
+        run: |
+          python3 tools/ci/prepare_robolectric_sdk.py --directory "$RUNNER_TEMP/robolectric-sdk"
+          echo "ROBOLECTRIC_DEPENDENCY_DIR=$RUNNER_TEMP/robolectric-sdk" >> "$GITHUB_ENV"
+
       - name: Run unit tests
         run: ./gradlew :core:calculations:testDebugUnitTest testFreeDebugUnitTest testPlayDebugUnitTest --no-daemon
 
