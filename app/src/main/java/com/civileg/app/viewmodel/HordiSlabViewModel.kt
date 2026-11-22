@@ -68,7 +68,9 @@ class HordiSlabViewModel @Inject constructor(
         designShear: Double,      // kN/rib
         loadCombination: LoadCombination,
         designCode: String = "ECP",
-        sectionContext: com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.Context? = null
+        sectionContext: com.civileg.core.engine.rc.ecp.Ecp203RibbedSection.Context? = null,
+        fourBarPolicy: com.civileg.core.engine.rc.ecp.Ecp203FourBarArrangement.Policy =
+            com.civileg.core.engine.rc.ecp.Ecp203FourBarArrangement.Policy.STANDARD_PAIRED_UPPER
     ) {
         clearResult()
         InputGuard.positive("fcu", fcu)
@@ -94,20 +96,8 @@ class HordiSlabViewModel @Inject constructor(
                 )
 
                 val designer: HordiSlabDesign = CalculationFactory.getHordiSlabDesign(code)
-                val result = designer.designHordiSlab(
-                    fcu = fcu,
-                    fy = fy,
-                    ribWidth = ribWidth,
-                    ribSpacing = ribSpacing,
-                    totalThickness = totalThickness,
-                    toppingThickness = toppingThickness,
-                    span = span,
-                    designMoment = designMoment,
-                    designShear = designShear,
-                    loadCombination = loadCombination,
-                    sectionContext = sectionContext
-                )
-                val snapshot = HordiSlabDesignSnapshot.capture(inputs, result)
+                val snapshot = com.civileg.app.domain.calculations.ecp.HordiFourBarCalculation.calculate(
+                    inputs, designer, fourBarPolicy)
                 lastInputParams = snapshot.input()
                 completedSnapshot = snapshot
                 _result.value = snapshot.result()
