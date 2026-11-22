@@ -47,6 +47,7 @@
 -keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203RibbedSection$ImmediateDeflectionInput { *; }
 -keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203RibbedSection$Region { *; }
 -keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203BarLayout$Layer { *; }
+-keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203FourBarArrangement$Policy { *; }
 -keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203RectangularFlexure$SteelSurface { *; }
 -keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203WebShear$VerticalLinks { *; }
 -keep,allowoptimization class com.civileg.core.engine.rc.ecp.Ecp203LongTermDeflection$Input { *; }
