@@ -74,8 +74,9 @@ class ProfessionalEnglishPdfReporterTest {
             )
         )
         assertNotNull(file)
-        stage(file!!, "glyphs.pdf")
-        val all = pageTexts(file).joinToString("\n")
+        val f = file!!
+        stage(f, "glyphs.pdf")
+        val all = pageTexts(f).joinToString("\n")
         assertTrue("rho text lost", all.contains("rho"))
         assertTrue("delta text lost", all.contains("delta"))
         assertTrue("kl-u-r text lost", all.contains("kl-u-r"))
@@ -104,8 +105,9 @@ class ProfessionalEnglishPdfReporterTest {
             calculationSteps = steps
         )
         assertNotNull(file)
-        stage(file!!, "paging.pdf")
-        val pages = pageTexts(file)
+        val f = file!!
+        stage(f, "paging.pdf")
+        val pages = pageTexts(f)
         assertTrue("expected at least 3 pages, got ${pages.size}", pages.size >= 3)
         pages.forEachIndexed { i, text ->
             val n = i + 1
@@ -129,8 +131,9 @@ class ProfessionalEnglishPdfReporterTest {
             results = mapOf("As" to "1000 mm2")
         )
         assertNotNull(file)
-        stage(file!!, "dedupe.pdf")
-        val all = pageTexts(file).joinToString("\n")
+        val f = file!!
+        stage(f, "dedupe.pdf")
+        val all = pageTexts(f).joinToString("\n")
         assertTrue("inputs row lost", all.contains("1.4DL + 1.6LL (actual)"))
         assertFalse(
             "default step duplicated the load-combination text",
@@ -172,8 +175,9 @@ class ProfessionalEnglishPdfReporterTest {
             outputPath = out.absolutePath
         )
         assertNotNull(bundle.pdfFile)
-        stage(bundle.pdfFile!!, "units.pdf")
-        val all = pageTexts(bundle.pdfFile).joinToString("\n")
+        val f = bundle.pdfFile!!
+        stage(f, "units.pdf")
+        val all = pageTexts(f).joinToString("\n")
         assertTrue("result text lost", all.contains("Ho = 0mm"))
         assertFalse("unit duplicated as '0mm mm'", all.contains("0mm mm"))
         assertFalse("unit duplicated as 'kN kN'", all.contains("kN kN"))
