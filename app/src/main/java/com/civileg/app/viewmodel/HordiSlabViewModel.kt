@@ -267,6 +267,7 @@ class HordiSlabViewModel @Inject constructor(
                 type = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
                 thickness = res.minThickness,
                 isSafe = res.isSafe,
+                safetyAssessmentBlocked = res.safetyAssessmentBlocked,
                 concreteVolume = estimatedVolume,
                 steelWeight = estimatedSteel,
                 code = engineCode,

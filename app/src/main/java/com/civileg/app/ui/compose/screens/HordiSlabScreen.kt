@@ -538,18 +538,24 @@ fun HordiSlabScreen(
 @Composable
 internal fun HordiSafetyAssessment(result: SlabDesignResult, designCode: String) {
     if (result.safetyAssessmentBlocked) {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-            AppText(
-                stringResource(R.string.hordi_method_hold),
-                modifier = Modifier.padding(16.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        HordiMethodHoldNotice()
     } else {
         SafetyStatusCard(
             utilizationRatio = result.utilizationRatio,
             isSafe = result.isSafe,
             title = stringResource(R.string.hordi_slab_safety_title, designCode)
+        )
+    }
+}
+
+/** Shared by dedicated and generic slab entry points while the ECP method is held. */
+@Composable
+internal fun HordiMethodHoldNotice() {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        AppText(
+            stringResource(R.string.hordi_method_hold),
+            modifier = Modifier.padding(16.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

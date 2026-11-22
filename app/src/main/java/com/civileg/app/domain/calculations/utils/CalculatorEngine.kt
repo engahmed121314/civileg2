@@ -268,7 +268,8 @@ class CalculatorEngine @Inject constructor(
         val dropPanelWidth: Double = 0.0,
         val dropPanelThick: Double = 0.0,
         val punchingStressAtDrop: Double = 0.0,
-        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
+        val safetyAssessmentBlocked: Boolean = false
     ) : Parcelable
 
     @Parcelize
@@ -1550,6 +1551,7 @@ class CalculatorEngine @Inject constructor(
 
                 return SlabResult(
                     type = type, thickness = ts, isSafe = res.isSafe, code = code,
+                    safetyAssessmentBlocked = res.safetyAssessmentBlocked,
                     reinforcementMain = ReinforcementBar(spacing = res.barSpacing, diameter = res.barDiameter.toInt()),
                     momentX = muRib, utilizationRatio = res.utilizationRatio,
                     suggestions = res.warnings + res.codeNotes,

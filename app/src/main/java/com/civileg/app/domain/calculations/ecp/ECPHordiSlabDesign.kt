@@ -7,12 +7,9 @@ import com.civileg.app.domain.entities.SlabDesignResult
 import kotlin.math.*
 
 /**
- * ECP 203-2025 Hordi/Ribbed/Joist Slab Design Implementation
- *
- * References:
- *  - ECP 203-2025 §6-3: Ribbed slabs (horidi slabs)
- *  - ECP 203-2025 §4-2: Flexural design
- *  - ECP 203-2025 §4-3: Shear design
+ * Legacy ECP Hordi numeric preview pending source-method replacement.
+ * This implementation does not establish a verified ECP edition or method.
+ * Overall safety assessment and execution outputs remain blocked.
  */
 class ECPHordiSlabDesign : HordiSlabDesign {
 

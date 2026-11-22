@@ -91,14 +91,36 @@ class ECPHordiSafetyContainmentTest {
     }
 
     @Test fun `shared hollow block result retains the hold warning and cannot be safe`() {
-        val result = com.civileg.app.domain.calculations.utils.CalculatorEngine(io.mockk.mockk(relaxed = true)).designSlab(
+        val result = sharedResult()
+        assertTrue(result.safetyAssessmentBlocked)
+        assertFalse(result.isSafe)
+        assertTrue(result.suggestions.any { it.contains("verification is incomplete") })
+    }
+    private fun sharedResult() = com.civileg.app.domain.calculations.utils.CalculatorEngine(io.mockk.mockk(relaxed = true)).designSlab(
             lx = 4.0, ly = 5.0, deadLoad = 0.1, liveLoad = 0.1,
             fcu = 25.0, fy = 360.0, ts = 300.0, preferredDiameter = 12,
             code = com.civileg.app.domain.entities.DesignCode.ECP,
             type = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
             ribWidth = 150.0, ribSpacing = 600.0
         )
-        assertFalse(result.isSafe)
-        assertTrue(result.suggestions.any { it.contains("verification is incomplete") })
+
+    @Test fun `shared method hold survives JSON storage and drawing summary`() {
+        val gson = com.google.gson.Gson()
+        val result = sharedResult()
+        val restored = gson.fromJson(gson.toJson(result), result.javaClass)
+        assertTrue(restored.safetyAssessmentBlocked)
+        assertEquals("NOT VERIFIED", com.civileg.app.ui.compose.components.drawings.slabDrawingSummary(restored).safetyLabel)
+        assertTrue(com.civileg.app.domain.calculations.utils.BoqEstimator.slabRows(restored, 4.0, 5.0).isEmpty())
     }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `shared method hold rejects central bar schedule generator`() {
+        com.civileg.app.domain.calculations.utils.BbsGenerator.generateSlabBbs("S1", sharedResult(), 4000.0, 5000.0)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `dedicated method hold rejects central bar schedule generator`() {
+        com.civileg.app.domain.calculations.utils.BbsGenerator.generateHordiSlabBbs("H1", design(), 5000.0, 600.0)
+    }
+
 }

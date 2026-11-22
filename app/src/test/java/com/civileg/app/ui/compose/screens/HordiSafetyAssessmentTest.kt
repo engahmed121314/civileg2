@@ -40,7 +40,7 @@ class HordiSafetyAssessmentTest {
         10.0, 1.0, LoadCombination.DEAD_LIVE
     )
 
-    private fun verify(lang: String) {
+    private fun verify(lang: String, shared: Boolean = false) {
         val app = RuntimeEnvironment.getApplication()
         LocaleHelper.initApplicationContext(app)
         LocaleHelper.setLocale(app, lang)
@@ -50,7 +50,10 @@ class HordiSafetyAssessmentTest {
                 CivilEngineerPremiumTheme(darkTheme = false) {
                     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                         androidx.compose.foundation.layout.Column {
-                            HordiSafetyAssessment(result, "ECP")
+                            if (shared) SlabResultCard(com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabResult(
+                                type = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
+                                safetyAssessmentBlocked = true
+                            )) else HordiSafetyAssessment(result, "ECP")
                         }
                     }
                 }
@@ -63,7 +66,7 @@ class HordiSafetyAssessmentTest {
         assertEquals("NOT VERIFIED", hordiSlabDrawingSummary(result).safetyLabel)
         val dir = File("build/reports/tests/compose-shots").apply { mkdirs() }
         val content = rule.activity.findViewById<android.view.ViewGroup>(android.R.id.content)
-        FileOutputStream(File(dir, "hordi-method-hold-$lang.png")).use {
+        FileOutputStream(File(dir, "hordi-method-hold-${if (shared) "shared-" else ""}$lang.png")).use {
             content.drawToBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
         }
     }
@@ -93,4 +96,7 @@ class HordiSafetyAssessmentTest {
             content.drawToBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
         }
     }
+    @Test fun shared_slab_result_shows_method_hold_en() = verify("en", shared = true)
+    @Test fun shared_slab_result_shows_method_hold_ar() = verify("ar", shared = true)
+
 }

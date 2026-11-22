@@ -201,6 +201,7 @@ object BbsGenerator {
         lyMm: Double,
         coverMm: Double = 25.0
     ): List<BbsEntry> {
+        require(!result.safetyAssessmentBlocked) { "Slab method not verified; execution bar schedules are blocked." }
         InputGuard.notBlank("memberMark", mark)
         InputGuard.positive("panelLength", lxMm)
         InputGuard.positive("panelWidth", lyMm)
@@ -775,6 +776,7 @@ object BbsGenerator {
         ribSpacingMm: Double,
         coverMm: Double = 25.0
     ): List<BbsEntry> {
+        require(!result.safetyAssessmentBlocked) { "Slab method not verified; execution bar schedules are blocked." }
         InputGuard.notBlank("memberMark", mark)
         InputGuard.positive("span", spanMm)
         InputGuard.positive("ribSpacing", ribSpacingMm)
