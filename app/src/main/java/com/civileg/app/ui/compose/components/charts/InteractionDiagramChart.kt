@@ -50,6 +50,7 @@ fun InteractionDiagramChart(
     val chartColors = ThemeColors.chartColors()
     val safeColor = ThemeColors.safeColor()
     val unsafeColor = ThemeColors.unsafeColor()
+    val currentColor = if (currentLoad.first <= (axialCapacities.maxOrNull() ?: 0.0)) safeColor else unsafeColor
     
     Card(
         modifier = modifier,
@@ -177,7 +178,7 @@ fun InteractionDiagramChart(
                 // التأكد من أن النقطة داخل حدود الكانفاس
                 if (currentX in 0f..canvasWidth && currentY in 0f..canvasHeight) {
                     drawCircle(
-                        color = if (currentLoad.first <= (axialCapacities.maxOrNull() ?: 0.0)) safeColor else unsafeColor,
+                        color = currentColor,
                         radius = 10f,
                         center = Offset(currentX, currentY)
                     )
@@ -199,7 +200,10 @@ fun InteractionDiagramChart(
             ) {
                 LegendItem(color = chartColors.firstOrNull() ?: Color.Blue, label = stringResource(R.string.chart_legend_capacity))
                 LegendItem(color = safeColor, label = stringResource(R.string.chart_legend_safe_zone))
-                LegendItem(color = Color.Red, label = stringResource(R.string.chart_legend_current_load))
+                // Swatch matches the marker's actual state color (green when the
+                // load is inside capacity, red when it is not); a fixed red swatch
+                // misread as "current load is failing" against a green marker.
+                LegendItem(color = currentColor, label = stringResource(R.string.chart_legend_current_load))
             }
         }
     }

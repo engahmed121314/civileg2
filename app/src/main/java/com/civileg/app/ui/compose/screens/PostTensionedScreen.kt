@@ -147,7 +147,7 @@ fun PostTensionedScreen(
                     label = stringResource(R.string.pt_element_type),
                     options = PostTensionedElementType.entries,
                     selected = elementType,
-                    display = { it.displayName },
+                    display = { it.localizedName() },
                     onSelected = { elementType = it }
                 )
             }
@@ -178,12 +178,12 @@ fun PostTensionedScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     NumberField(stringResource(R.string.pt_tendons), numTendons, Modifier.weight(1f)) { numTendons = it }
-                    NumberField("Dead (kN/m)", deadLoad, Modifier.weight(1f)) { deadLoad = it }
+                    NumberField(stringResource(R.string.pt_dead_load), deadLoad, Modifier.weight(1f)) { deadLoad = it }
                 }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    NumberField("Live (kN/m)", liveLoad, Modifier.weight(1f)) { liveLoad = it }
+                    NumberField(stringResource(R.string.pt_live_load), liveLoad, Modifier.weight(1f)) { liveLoad = it }
                     Spacer(Modifier.weight(1f))
                 }
             }
@@ -192,7 +192,7 @@ fun PostTensionedScreen(
                     label = stringResource(R.string.pt_tendon_type),
                     options = PTTendonType.entries,
                     selected = tendonType,
-                    display = { it.description },
+                    display = { it.localizedName() },
                     onSelected = { tendonType = it }
                 )
             }
@@ -201,7 +201,7 @@ fun PostTensionedScreen(
                     label = stringResource(R.string.pt_support),
                     options = PTSupportType.entries,
                     selected = supportType,
-                    display = { it.displayName },
+                    display = { it.localizedName() },
                     onSelected = { supportType = it }
                 )
             }
@@ -210,7 +210,7 @@ fun PostTensionedScreen(
                     label = stringResource(R.string.pt_exposure_class),
                     options = PTExposureClass.entries,
                     selected = exposureClass,
-                    display = { it.displayName },
+                    display = { it.localizedName() },
                     onSelected = { exposureClass = it }
                 )
             }
@@ -554,6 +554,51 @@ private fun NumberField(
         modifier = modifier.fillMaxWidth()
     )
 }
+
+/** Display labels localize; the enum value itself stays the selection model. */
+@Composable
+private fun PostTensionedElementType.localizedName(): String = stringResource(when (this) {
+    PostTensionedElementType.Beam -> R.string.pt_elem_beam
+    PostTensionedElementType.Slab -> R.string.pt_elem_slab_one_way
+    PostTensionedElementType.SlabTwoWay -> R.string.pt_elem_slab_two_way
+    PostTensionedElementType.BandBeam -> R.string.pt_elem_band_beam
+    PostTensionedElementType.TransferBeam -> R.string.pt_elem_transfer_beam
+    PostTensionedElementType.Girder -> R.string.pt_elem_girder
+    PostTensionedElementType.BridgeGirder -> R.string.pt_elem_bridge_girder
+    PostTensionedElementType.TankWall -> R.string.pt_elem_tank_wall
+    PostTensionedElementType.SiloWall -> R.string.pt_elem_silo_wall
+})
+
+@Composable
+private fun PTTendonType.localizedName(): String = stringResource(when (this) {
+    PTTendonType.Strand_7Wire_9_5mm -> R.string.pt_tendon_9_5
+    PTTendonType.Strand_7Wire_11_1mm -> R.string.pt_tendon_11_1
+    PTTendonType.Strand_7Wire_12_7mm -> R.string.pt_tendon_12_7
+    PTTendonType.Strand_7Wire_15_2mm -> R.string.pt_tendon_15_2
+    PTTendonType.Strand_7Wire_18_0mm -> R.string.pt_tendon_18_0
+    PTTendonType.Wire_5mm -> R.string.pt_tendon_wire5
+    PTTendonType.Wire_7mm -> R.string.pt_tendon_wire7
+    PTTendonType.Bar_25mm -> R.string.pt_tendon_bar25
+    PTTendonType.Bar_32mm -> R.string.pt_tendon_bar32
+})
+
+@Composable
+private fun PTSupportType.localizedName(): String = stringResource(when (this) {
+    PTSupportType.SimplySupported -> R.string.pt_support_simply
+    PTSupportType.FixedFixed -> R.string.pt_support_fixed_fixed
+    PTSupportType.FixedHinged -> R.string.pt_support_fixed_hinged
+    PTSupportType.Cantilever -> R.string.pt_support_cantilever
+    PTSupportType.Continuous -> R.string.pt_support_continuous
+})
+
+@Composable
+private fun PTExposureClass.localizedName(): String = stringResource(when (this) {
+    PTExposureClass.Mild -> R.string.pt_exposure_mild
+    PTExposureClass.Moderate -> R.string.pt_exposure_moderate
+    PTExposureClass.Severe -> R.string.pt_exposure_severe
+    PTExposureClass.VerySevere -> R.string.pt_exposure_very_severe
+    PTExposureClass.Extreme -> R.string.pt_exposure_extreme
+})
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
