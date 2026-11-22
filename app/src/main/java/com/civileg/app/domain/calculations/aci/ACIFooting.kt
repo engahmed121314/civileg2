@@ -268,7 +268,7 @@ class ACIFooting : FootingDesign {
      * ACI 318M-14 flexure per meter width: Rn–ρ strength plus the minimum of
      * Table 7.6.1.1 on the GROSS area (As,min = 0.0020·b·h for fy < 420 MPa;
      * max(0.0018·420/fy, 0.0014)·b·h for fy ≥ 420). Table verified against the
-     * owner's ACI 318M-14, printed p.143 — CLAUSE_LOG F-01.
+     * ACI 318M-14, printed p.143 — CLAUSE_LOG F-01.
      */
     internal fun flexurePerMeter(
         fcu: Double,
