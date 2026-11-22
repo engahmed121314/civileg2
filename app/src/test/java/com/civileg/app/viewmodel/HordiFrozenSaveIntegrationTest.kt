@@ -121,4 +121,45 @@ class HordiFrozenSaveIntegrationTest {
         assertTrue(vm.error.value.orEmpty().contains("synthetic storage failure"))
         assertSame(expected, vm.currentDesignSnapshot())
     }
+
+    @Test fun `dialog-open snapshot survives a later completed calculation before confirm`() = runTest {
+        val vm = HordiSlabViewModel(repository)
+        calculate(vm)
+        runCurrent()
+        val dialogSnapshot = requireNotNull(vm.currentDesignSnapshot())
+        vm.clearResult()
+        calculate(vm, 50.0)
+        runCurrent()
+        val laterSnapshot = requireNotNull(vm.currentDesignSnapshot())
+        var confirmedId: Long? = null
+        vm.saveDesign(8L, "Explicit destination", dialogSnapshot) { confirmedId = it }
+        assertNull(confirmedId)
+        assertTrue(vm.isSaving.value == true)
+        runCurrent()
+        assertSame(dialogSnapshot.record, saved.single())
+        assertSame(laterSnapshot, vm.currentDesignSnapshot())
+        assertEquals(17L, confirmedId)
+        assertFalse(vm.isSaving.value == true)
+        coVerify(exactly = 1) {
+            repository.saveHordiSlabSnapshot(8L, "Explicit destination", dialogSnapshot.record)
+        }
+    }
+
+    @Test fun `dialog-open snapshot can save after clear and duplicate confirm cannot insert twice`() = runTest {
+        val vm = HordiSlabViewModel(repository)
+        calculate(vm)
+        runCurrent()
+        val dialogSnapshot = requireNotNull(vm.currentDesignSnapshot())
+        vm.clearResult()
+        assertNull(vm.currentDesignSnapshot())
+        vm.saveDesign(9L, "Chosen snapshot", dialogSnapshot)
+        vm.saveDesign(9L, "Chosen snapshot", dialogSnapshot)
+        runCurrent()
+        assertEquals(1, saved.size)
+        assertSame(dialogSnapshot.record, saved.single())
+        assertFalse(vm.isSaving.value == true)
+        coVerify(exactly = 1) {
+            repository.saveHordiSlabSnapshot(9L, "Chosen snapshot", dialogSnapshot.record)
+        }
+    }
 }

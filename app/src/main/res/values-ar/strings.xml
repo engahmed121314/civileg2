@@ -2481,4 +2481,8 @@
     <string name="ecp_stage_limit_after">فحص حد ما بعد التركيب شاملًا الحرارة</string>
     <string name="ecp_stage_precision_note">قيم التعويض مقربة للعرض فقط؛ الحسابات بالدقة الكاملة. حدود الفحص والتنبيهات منفصلة أسفل الخطوات.</string>
     <string name="design_date_unknown">التاريخ غير معروف</string>
+    <string name="hordi_save_calculation_title">حفظ الحساب المكتمل</string>
+    <string name="hordi_save_calculation_note">هذا حفظ للحساب المكتمل وليس اعتمادا للتنفيذ. كميات العنصر الكامل غير محددة.</string>
+    <string name="hordi_save_revision">نسخة الحساب: %1$s</string>
+    <string name="hordi_save_name">اسم الحساب</string>
 </resources>

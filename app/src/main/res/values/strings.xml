@@ -2478,6 +2478,10 @@
     <string name="ecp_stage_limit_after">Thermal-inclusive installation limit</string>
     <string name="ecp_stage_precision_note">Substitutions are rounded for display. Calculations use full precision. Scope and warnings are listed separately below.</string>
     <string name="design_date_unknown">Date unknown</string>
+    <string name="hordi_save_calculation_title">Save completed calculation</string>
+    <string name="hordi_save_calculation_note">This stores the completed calculation, not a construction approval. Whole-member quantities are not determined.</string>
+    <string name="hordi_save_revision">Completed revision: %1$s</string>
+    <string name="hordi_save_name">Calculation name</string>
 </resources>
 
 

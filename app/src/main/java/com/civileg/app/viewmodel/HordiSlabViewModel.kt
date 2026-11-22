@@ -36,6 +36,9 @@ class HordiSlabViewModel @Inject constructor(
     private val _isExporting = MutableLiveData(false)
     val isExporting: LiveData<Boolean> = _isExporting
 
+    private val _isSaving = MutableLiveData(false)
+    val isSaving: LiveData<Boolean> = _isSaving
+
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
@@ -262,16 +265,34 @@ class HordiSlabViewModel @Inject constructor(
     }
 
     fun saveDesign(projectId: Long, name: String) {
-        // Capture before suspension. A queued Save must not follow later edits or recalculation.
-        val record = currentDesignSnapshot()?.record ?: return
+        val snapshot = currentDesignSnapshot() ?: return
+        saveDesign(projectId, name, snapshot)
+    }
+
+    /** Saves the exact typed snapshot captured when the Save dialog opened. */
+    fun saveDesign(
+        projectId: Long,
+        name: String,
+        snapshot: HordiSlabDesignSnapshot,
+        onSaved: (Long) -> Unit = {}
+    ) {
+        if (_isSaving.value == true) return
+        val record = snapshot.record
+        _isSaving.value = true
+        _error.value = null
         viewModelScope.launch {
-            try {
+            val savedId = try {
                 repository.saveHordiSlabSnapshot(projectId, name, record)
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
                 _error.value = "Save failed: ${error.message}"
+                return@launch
+            } finally {
+                _isSaving.value = false
             }
+            // A UI callback error must never be misreported as a failed database insert.
+            onSaved(savedId)
         }
     }
 
