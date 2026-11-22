@@ -361,70 +361,70 @@ private fun PostTensionedResultContent(
         PostTensionedElevationDrawing(input = result.input, result = result)
 
         ResultCard(stringResource(R.string.pt_prestress_design)) {
-            ResultRow("Required force", "${fmt(result.prestressDesign.requiredForce)} kN")
-            ResultRow("Jacking force", "${fmt(result.prestressDesign.jackingForce)} kN")
-            ResultRow("Initial stress", "${fmt(result.prestressDesign.initialStress)} MPa")
-            ResultRow("Effective stress", "${fmt(result.prestressDesign.effectiveStress)} MPa")
-            ResultRow("Eccentricity", "${fmt(result.prestressDesign.providedEccentricity)} mm")
-            ResultRow("Tendons", "${result.prestressDesign.numTendons} × ${result.input.tendonType.description}")
+            ResultRow(stringResource(R.string.pt_r_required_force), "${fmt(result.prestressDesign.requiredForce)} kN")
+            ResultRow(stringResource(R.string.pt_r_jacking_force), "${fmt(result.prestressDesign.jackingForce)} kN")
+            ResultRow(stringResource(R.string.pt_r_initial_stress), "${fmt(result.prestressDesign.initialStress)} MPa")
+            ResultRow(stringResource(R.string.pt_r_effective_stress), "${fmt(result.prestressDesign.effectiveStress)} MPa")
+            ResultRow(stringResource(R.string.pt_r_eccentricity), "${fmt(result.prestressDesign.providedEccentricity)} mm")
+            ResultRow(stringResource(R.string.pt_r_tendons), "${result.prestressDesign.numTendons} × ${result.input.tendonType.description}")
         }
 
         ResultCard(stringResource(R.string.pt_losses)) {
-            ResultRow("Elastic shortening", "${fmt(result.losses.elasticShortening)} MPa")
-            ResultRow("Creep", "${fmt(result.losses.creep)} MPa")
-            ResultRow("Shrinkage", "${fmt(result.losses.shrinkage)} MPa")
-            ResultRow("Relaxation", "${fmt(result.losses.steelRelaxation)} MPa")
-            ResultRow("Friction", "${fmt(result.losses.friction)} MPa")
-            ResultRow("Anchorage slip", "${fmt(result.losses.anchorageSlip)} MPa")
+            ResultRow(stringResource(R.string.pt_r_elastic_shortening), "${fmt(result.losses.elasticShortening)} MPa")
+            ResultRow(stringResource(R.string.pt_r_creep), "${fmt(result.losses.creep)} MPa")
+            ResultRow(stringResource(R.string.pt_r_shrinkage), "${fmt(result.losses.shrinkage)} MPa")
+            ResultRow(stringResource(R.string.pt_r_relaxation), "${fmt(result.losses.steelRelaxation)} MPa")
+            ResultRow(stringResource(R.string.pt_r_friction), "${fmt(result.losses.friction)} MPa")
+            ResultRow(stringResource(R.string.pt_r_anchorage_slip), "${fmt(result.losses.anchorageSlip)} MPa")
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            ResultRow("Total losses", "${fmt(result.losses.total)} MPa (${fmt(result.losses.totalPercent)}%)", bold = true)
+            ResultRow(stringResource(R.string.pt_r_total_losses), "${fmt(result.losses.total)} MPa (${fmt(result.losses.totalPercent)}%)", bold = true)
         }
 
         ResultCard(stringResource(R.string.pt_stress_check)) {
-            ResultRow("Transfer top", stressText(result.stressCheck.transferTopCompression, result.stressCheck.transferTopTension))
-            ResultRow("Transfer bottom", stressText(result.stressCheck.transferBottomCompression, result.stressCheck.transferBottomTension))
-            ResultRow("Service top", stressText(result.stressCheck.serviceTopCompression, result.stressCheck.serviceTopTension))
-            ResultRow("Service bottom", stressText(result.stressCheck.serviceBottomCompression, result.stressCheck.serviceBottomTension))
+            ResultRow(stringResource(R.string.pt_r_transfer_top), stressText(result.stressCheck.transferTopCompression, result.stressCheck.transferTopTension))
+            ResultRow(stringResource(R.string.pt_r_transfer_bottom), stressText(result.stressCheck.transferBottomCompression, result.stressCheck.transferBottomTension))
+            ResultRow(stringResource(R.string.pt_r_service_top), stressText(result.stressCheck.serviceTopCompression, result.stressCheck.serviceTopTension))
+            ResultRow(stringResource(R.string.pt_r_service_bottom), stressText(result.stressCheck.serviceBottomCompression, result.stressCheck.serviceBottomTension))
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            ResultRow("Transfer safe", yesNo(result.stressCheck.isTransferSafe))
-            ResultRow("Service safe", yesNo(result.stressCheck.isServiceSafe))
+            ResultRow(stringResource(R.string.pt_r_transfer_safe), yesNo(result.stressCheck.isTransferSafe))
+            ResultRow(stringResource(R.string.pt_r_service_safe), yesNo(result.stressCheck.isServiceSafe))
         }
 
         ResultCard(stringResource(R.string.pt_ultimate_strength)) {
             ResultRow("φMn", "${fmt(result.ultimateStrength.flexuralCapacity)} kN.m")
-            ResultRow("Mu required", "${fmt(result.ultimateStrength.requiredMoment)} kN.m")
-            ResultRow("Flexure utilization", "${fmt(result.ultimateStrength.flexuralUtilization * 100)}%")
-            ResultRow("Shear capacity", "${fmt(result.ultimateStrength.shearCapacity)} kN")
-            ResultRow("Shear required", "${fmt(result.ultimateStrength.requiredShear)} kN")
+            ResultRow(stringResource(R.string.pt_r_mu_required), "${fmt(result.ultimateStrength.requiredMoment)} kN.m")
+            ResultRow(stringResource(R.string.pt_r_flexure_util), "${fmt(result.ultimateStrength.flexuralUtilization * 100)}%")
+            ResultRow(stringResource(R.string.pt_r_shear_capacity), "${fmt(result.ultimateStrength.shearCapacity)} kN")
+            ResultRow(stringResource(R.string.pt_r_shear_required), "${fmt(result.ultimateStrength.requiredShear)} kN")
             result.ultimateStrength.requiredStirrups?.let { s ->
-                ResultRow("Stirrups", "${s.legs}Ø${s.diameter.toInt()} @ ${fmt(s.spacing)} mm")
+                ResultRow(stringResource(R.string.pt_r_stirrups), "${s.legs}Ø${s.diameter.toInt()} @ ${fmt(s.spacing)} mm")
             }
         }
 
         ResultCard(stringResource(R.string.pt_anchorage_zone)) {
-            ResultRow("Bursting force", "${fmt(result.anchorageZone.burstingForce)} kN")
-            ResultRow("Spalling force", "${fmt(result.anchorageZone.spallingForce)} kN")
-            ResultRow("Bursting steel", "${fmt(result.anchorageZone.burstingReinforcement)} mm²")
-            ResultRow("Provide", "${result.anchorageZone.stirrupLegs}Ø${result.anchorageZone.stirrupDiameter.toInt()} @ ${fmt(result.anchorageZone.stirrupSpacing)} mm")
+            ResultRow(stringResource(R.string.pt_r_bursting_force), "${fmt(result.anchorageZone.burstingForce)} kN")
+            ResultRow(stringResource(R.string.pt_r_spalling_force), "${fmt(result.anchorageZone.spallingForce)} kN")
+            ResultRow(stringResource(R.string.pt_r_bursting_steel), "${fmt(result.anchorageZone.burstingReinforcement)} mm²")
+            ResultRow(stringResource(R.string.pt_r_provide), "${result.anchorageZone.stirrupLegs}Ø${result.anchorageZone.stirrupDiameter.toInt()} @ ${fmt(result.anchorageZone.stirrupSpacing)} mm")
         }
 
         ResultCard(stringResource(R.string.pt_deflection)) {
-            ResultRow("Dead load", "${fmt(result.deflection.deadLoadDeflection)} mm")
-            ResultRow("Live load", "${fmt(result.deflection.liveLoadDeflection)} mm")
-            ResultRow("Prestress (upward)", "${fmt(result.deflection.prestressDeflection)} mm")
-            ResultRow("Long-term", "${fmt(result.deflection.longTermDeflection)} mm")
-            ResultRow("Total", "${fmt(result.deflection.totalDeflection)} mm", bold = true)
-            ResultRow("Allowable", "${fmt(result.deflection.allowableDeflection)} mm")
-            ResultRow("Safe", yesNo(result.deflection.isSafe))
+            ResultRow(stringResource(R.string.pt_r_dead_load), "${fmt(result.deflection.deadLoadDeflection)} mm")
+            ResultRow(stringResource(R.string.pt_r_live_load), "${fmt(result.deflection.liveLoadDeflection)} mm")
+            ResultRow(stringResource(R.string.pt_r_prestress_up), "${fmt(result.deflection.prestressDeflection)} mm")
+            ResultRow(stringResource(R.string.pt_r_long_term), "${fmt(result.deflection.longTermDeflection)} mm")
+            ResultRow(stringResource(R.string.pt_r_total), "${fmt(result.deflection.totalDeflection)} mm", bold = true)
+            ResultRow(stringResource(R.string.pt_r_allowable), "${fmt(result.deflection.allowableDeflection)} mm")
+            ResultRow(stringResource(R.string.pt_r_safe), yesNo(result.deflection.isSafe))
         }
 
         ResultCard(stringResource(R.string.pt_quantities)) {
-            ResultRow("Concrete", "${fmt(result.quantity.concreteVolume)} m³")
-            ResultRow("Mild steel", "${fmt(result.quantity.rebarWeight)} kg")
-            ResultRow("PT tendons", "${fmt(result.quantity.ptTendonWeight)} kg")
-            ResultRow("Ducts", "${fmt(result.quantity.ductWeight)} kg")
-            ResultRow("Anchorages", "${fmt(result.quantity.anchorageWeight)} kg")
-            ResultRow("Grout", "${fmt(result.quantity.groutVolume)} m³")
+            ResultRow(stringResource(R.string.pt_r_concrete), "${fmt(result.quantity.concreteVolume)} m³")
+            ResultRow(stringResource(R.string.pt_r_mild_steel), "${fmt(result.quantity.rebarWeight)} kg")
+            ResultRow(stringResource(R.string.pt_r_pt_tendons), "${fmt(result.quantity.ptTendonWeight)} kg")
+            ResultRow(stringResource(R.string.pt_r_ducts), "${fmt(result.quantity.ductWeight)} kg")
+            ResultRow(stringResource(R.string.pt_r_anchorages), "${fmt(result.quantity.anchorageWeight)} kg")
+            ResultRow(stringResource(R.string.pt_r_grout), "${fmt(result.quantity.groutVolume)} m³")
         }
 
         if (result.warnings.isNotEmpty()) {
