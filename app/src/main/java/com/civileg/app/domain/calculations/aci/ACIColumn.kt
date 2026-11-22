@@ -287,7 +287,7 @@ class ACIColumn : ColumnDesign {
 
     /**
      * معامل تكبير العزم بالطريقة الصحيحة من الكود — ACI 318M-14 §6.2.5 + §6.6.4.4/§6.6.4.5
-     * (F-09 fix; owner-approved 2026-11-21).
+     * (F-09 fix; approved 2026-11-21).
      *
      * Verified printed pages: 6.2.5 + 6.2.5.1 (printed pp.103-104),
      * 6.6.4.4.2/4.4.3/4.4.4 (printed pp.122-123),
@@ -383,6 +383,9 @@ class ACIColumn : ColumnDesign {
         }
         val ds = max(1.0, deltaS)
         return Pair(ds, Mns + ds * Ms)
+    }
+
+    /**
      * φPn, φMnx, φMny at neutral-axis orientation [theta] (normal from the centroid toward
      * the maximum-compression fiber) and neutral-axis depth [c], per ACI 318M-14
      * §22.2.1/§22.2.2/§22.2.4.1-2 and Table 21.2.2. Public for golden-vector verification
