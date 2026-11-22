@@ -278,9 +278,20 @@ class ExportManager(private val context: Context) {
                         description = step.title,
                         equation = step.formulaWithValues.ifBlank { step.formula },
                         reference = step.codeReference.ifBlank { null },
-                        result = listOf(step.result, step.unit)
-                            .filter { it.isNotBlank() }
-                            .joinToString(" ")
+                        // Several engines bake the unit into the result text
+                        // already; appending step.unit then prints "0mm mm" /
+                        // "kN kN". Only append when the tail does not already
+                        // carry the same unit.
+                        result = run {
+                            val res = step.result.trim()
+                            val unit = step.unit.trim()
+                            when {
+                                unit.isBlank() || unit == "-" -> res
+                                res.isBlank() -> unit
+                                res.endsWith(unit, ignoreCase = true) -> res
+                                else -> "$res $unit"
+                            }
+                        }
                     )
                 }
             )

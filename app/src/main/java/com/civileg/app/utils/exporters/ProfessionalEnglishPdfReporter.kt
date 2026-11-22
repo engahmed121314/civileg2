@@ -6,11 +6,9 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import com.civileg.app.domain.entities.GenericSafetyCheck
-import com.itextpdf.io.font.constants.StandardFonts
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.kernel.colors.DeviceRgb
 import com.itextpdf.kernel.font.PdfFont
-import com.itextpdf.kernel.font.PdfFontFactory
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.kernel.pdf.canvas.draw.SolidLine
@@ -110,17 +108,12 @@ object ProfessionalEnglishPdfReporter {
 
     // ==================== Font Helpers (English Only) ====================
 
-    /** Get a FRESH Helvetica regular font. Never cache across PdfDocuments. */
-    private fun getFont(bold: Boolean = false): PdfFont {
-        return try {
-            if (bold) PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD)
-            else PdfFontFactory.createFont(StandardFonts.HELVETICA)
-        } catch (e: Exception) {
-            Log.e(TAG, "Font creation failed: ${e.message}")
-            try { PdfFontFactory.createFont(StandardFonts.HELVETICA) }
-            catch (_: Exception) { throw RuntimeException("No font available") }
-        }
-    }
+    /**
+     * Get a FRESH font. Never cache across PdfDocuments.
+     * Uses the embedded Unicode font (Greek/math/symbol coverage) when
+     * EnglishFontProvider is initialized; base-14 Helvetica otherwise.
+     */
+    private fun getFont(bold: Boolean = false): PdfFont = EnglishFontProvider.getFont(bold)
 
     // ==================== Element Helpers ====================
 
@@ -262,7 +255,8 @@ object ProfessionalEnglishPdfReporter {
 
     private fun addCalculationMethodology(document: Document, designCode: String,
                                           reportType: ReportType,
-                                          steps: List<CalculationStep>) {
+                                          steps: List<CalculationStep>,
+                                          inputKeys: Set<String> = emptySet()) {
         document.add(sectionTitle("2. Calculation Methodology & Verification"))
         document.add(separator())
         document.add(Paragraph().add(text("Applicable design basis: $designCode", createPdfFont(), 10f, SECONDARY)))
@@ -274,8 +268,11 @@ object ProfessionalEnglishPdfReporter {
                 addCalculationStep(document, step)
             }
         } else {
-            // Generate default calculation steps based on report type
+            // Generate default calculation steps based on report type.
+            // Skip a default step whose title the inputs table already carries
+            // (e.g. "Load Combination"), otherwise the same text prints twice.
             val defaultSteps = getDefaultCalculationSteps(reportType, designCode)
+                .filter { step -> inputKeys.none { it.equals(step.description, ignoreCase = true) } }
             for (step in defaultSteps) {
                 addCalculationStep(document, step)
             }
@@ -288,6 +285,9 @@ object ProfessionalEnglishPdfReporter {
         val boldFont = createBoldFont()
         val stepTable = Table(UnitValue.createPercentArray(floatArrayOf(100f))).useAllAvailableWidth()
         stepTable.setBackgroundColor(CALC_BG)
+        // Keep a step's heading with its body: an orphaned "Step N" header at a
+        // page bottom with the equation on the next page reads as a defect.
+        stepTable.setKeepTogether(true)
 
         // Step number and description
         val descPara = Paragraph()
@@ -885,7 +885,7 @@ object ProfessionalEnglishPdfReporter {
             addDesignParameters(document, inputs)
 
             // 3. Calculation Methodology
-            addCalculationMethodology(document, designCode, reportType, calculationSteps)
+            addCalculationMethodology(document, designCode, reportType, calculationSteps, inputs.keys)
 
             // 4. Results
             addResultsSection(document, results)
@@ -994,7 +994,7 @@ object ProfessionalEnglishPdfReporter {
 
     private fun addPageNumbers(pdfDoc: PdfDocument) {
         val font = try {
-            PdfFontFactory.createFont(StandardFonts.HELVETICA)
+            EnglishFontProvider.getFont()
         } catch (_: Exception) {
             return
         }
@@ -1009,7 +1009,10 @@ object ProfessionalEnglishPdfReporter {
                     page.resources,
                     docEvent.document
                 )
-                val pageNumber = docEvent.document.numberOfPages
+                // END_PAGE fires after the NEXT page may already exist, so
+                // document.numberOfPages is off by one and duplicates the last
+                // number. Use the event page's own index instead.
+                val pageNumber = docEvent.document.getPageNumber(page)
                 canvas.beginText()
                     .setFontAndSize(font, 8f)
                     .setColor(footerColor, true)
