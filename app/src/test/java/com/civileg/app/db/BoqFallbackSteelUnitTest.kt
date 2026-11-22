@@ -35,4 +35,21 @@ class BoqFallbackSteelUnitTest {
         assertEquals(0.5, steel.quantity, 1e-9)
         assertEquals(9000.0, steel.total, 1e-6)
     }
+
+    @Suppress("UNCHECKED_CAST")
+    @Test fun `one thousand kg is exactly one tonne`() {
+        val design = Design(
+            id = 2L, projectId = 1L, type = DesignType.BEAM, name = "Beam",
+            inputData = "{}", results = "{}", isSafe = true, codeUsed = "ECP",
+            concreteVolume = 0.0, steelWeight = 1000.0
+        )
+        val vm = BOQViewModel(mockk(relaxed = true), mockk<CalculateElementBoq>(relaxed = true))
+        val method = BOQViewModel::class.java.getDeclaredMethod(
+            "generateBoqFromDesign", Design::class.java, MaterialPrices::class.java
+        ).apply { isAccessible = true }
+        val items = method.invoke(vm, design, MaterialPrices(steelPerTon = 20000.0)) as List<BoqItem>
+        val steel = items.single { it.category == BoqCategory.REINFORCEMENT }
+        assertEquals(1.0, steel.quantity, 1e-9)
+        assertEquals(20000.0, steel.total, 1e-6)
+    }
 }
