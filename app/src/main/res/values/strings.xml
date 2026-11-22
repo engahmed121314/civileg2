@@ -2405,7 +2405,7 @@
     <string name="settings_support_title">Support the app</string>
     <string name="settings_support_message">Civil Engineer Pro is free and ad-free. Voluntary donations fund new design codes, tests and drawings.</string>
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
-    <string name="soil_title">Soil-Structure Interaction</string>
+    <string name="soil_is_title">Soil-Structure Interaction</string>
     <string name="soil_back">Back</string>
     <string name="soil_section_inputs">Foundation &amp; Soil Data</string>
     <string name="soil_label_length">Foundation length (mm)</string>

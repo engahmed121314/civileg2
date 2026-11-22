@@ -56,7 +56,7 @@ fun SoilStructureScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_is_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_back))
