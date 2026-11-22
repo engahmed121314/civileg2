@@ -58,6 +58,12 @@ An independent below-flange vector is fcu30, fy400, bw150, B600, tf50, d300, a80
 
 The cross-rib count uses characteristic live load, not total or factored load. At live load <=3kN/m2, a span above 5m requires at least one midpoint cross-rib. Above 3kN/m2 the source's distinct threshold is 4m: spans from 4m through 7m require one and spans above 7m require three. Their section sizes, reinforcement and the separate topping/distribution requirements still need member-level checks. A returned count alone does not establish those details.
 
+## Explicit individual-bar layout
+
+`Ecp203BarLayout` uses printed7-6/7-7, clause7-3-3-1 and Figure7-2a. It checks separate, nonbundled bar layers against the available width inside the links and the vertical depth. Clear gap is at least max(largest individual diameter, 1.5 nominal maximum aggregate size), applied in both directions. The cover, link diameter, aggregate size and actual layer counts/diameters are explicit inputs. Effective depth comes from the actual reinforcement area centroid, not h minus a constant or the first layer alone. A layout that does not fit returns no effective depth.
+
+This is not approval of the chosen cover: exposure, durability and fire requirements still need separate verification. It does not check anchorage, bends, crack width or maximum longitudinal spacing. Bundles are excluded because their source spacing rule is different. Tests cover two-layer and unequal-layer centroids, diameter/aggregate gap control, horizontal and vertical fit, cover propagation and invalid inputs.
+
 ## Remaining integration scope
 
-A ribbed-member implementation still needs correct force/tributary-width mapping, cover and actual reinforcement centroid, positive/negative region and support classification, these section components wired to actual member inputs, transverse reinforcement, anchorage and serviceability. Existing member-level safety holds are unchanged by these isolated components. Existing saved input is unchanged.
+A ribbed-member implementation still needs correct force/tributary-width mapping, explicit cover/layout input propagation, positive/negative region and support classification, these section components wired to actual member inputs, transverse reinforcement, anchorage and serviceability. Existing member-level safety holds are unchanged by these isolated components. Existing saved input is unchanged.
