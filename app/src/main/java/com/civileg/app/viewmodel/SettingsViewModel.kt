@@ -20,9 +20,10 @@ import com.civileg.app.domain.calculations.InputGuard
 
 data class AppSettings(
     val defaultCode: DesignCode = DesignCode.ECP,
-    val concretePrice: Double = 1500.0,
-    val steelPrice: Double = 45000.0,
-    val formworkPrice: Double = 300.0,
+    /** null = the user has not saved a price in the selected currency. Never a default. */
+    val concretePrice: Double? = null,
+    val steelPrice: Double? = null,
+    val formworkPrice: Double? = null,
     val currency: String = "EGP",
     val unitSystem: String = "SI",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -45,9 +46,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val flows = arrayOf<Flow<Any>>(
                 repository.getDefaultDesignCode(),
-                repository.getConcretePrice(),
-                repository.getSteelPrice(),
-                repository.getFormworkPrice(),
+                repository.getSavedPrices(),
                 repository.getCurrency(),
                 repository.getUnitSystem(),
                 repository.getThemeMode(),
@@ -55,22 +54,22 @@ class SettingsViewModel @Inject constructor(
             )
             combine(*flows) { args: Array<Any> ->
                 val code = args[0] as String
-                val concrete = args[1] as Double
-                val steel = args[2] as Double
-                val formwork = args[3] as Double
-                val currency = args[4] as String
-                val unitSystem = args[5] as String
-                val theme = args[6] as String
-                val reportLang = args[7] as String
+                val saved = args[1] as com.civileg.app.domain.entities.SavedMaterialPrices
+                val currency = args[2] as String
+                val unitSystem = args[3] as String
+                val theme = args[4] as String
+                val reportLang = args[5] as String
+                fun shown(p: com.civileg.app.domain.entities.SavedPrice?) =
+                    p?.takeIf { it.currency == null || it.currency == currency }?.value
 
                 val parsed = try { DesignCode.valueOf(code) } catch (e: Exception) { DesignCode.ECP }
                 // Keep synchronous store in sync with DataStore (covers upgrades and external writes)
                 com.civileg.app.ui.DesignCodeStore.set(appContext, parsed)
                 AppSettings(
                     defaultCode = parsed,
-                    concretePrice = concrete,
-                    steelPrice = steel,
-                    formworkPrice = formwork,
+                    concretePrice = shown(saved.concrete),
+                    steelPrice = shown(saved.steel),
+                    formworkPrice = shown(saved.formwork),
                     currency = currency,
                     unitSystem = unitSystem,
                     themeMode = try { ThemeMode.valueOf(theme) } catch (e: Exception) { ThemeMode.SYSTEM },

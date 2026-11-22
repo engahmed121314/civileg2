@@ -174,7 +174,7 @@ fun SettingsScreen(
             ) {
                 SettingsPriceInput(
                     label = stringResource(R.string.settings_price_concrete),
-                    value = settings.concretePrice.toString(),
+                    value = settings.concretePrice?.toString() ?: "",
                     currency = settings.currency,
                     onValueChange = {
                         it.toDoubleOrNull()?.let { v -> viewModel.setConcretePrice(v) }
@@ -182,7 +182,7 @@ fun SettingsScreen(
                 )
                 SettingsPriceInput(
                     label = stringResource(R.string.settings_price_steel),
-                    value = settings.steelPrice.toString(),
+                    value = settings.steelPrice?.toString() ?: "",
                     currency = settings.currency,
                     onValueChange = {
                         it.toDoubleOrNull()?.let { v -> viewModel.setSteelPrice(v) }
@@ -190,7 +190,7 @@ fun SettingsScreen(
                 )
                 SettingsPriceInput(
                     label = stringResource(R.string.settings_price_formwork),
-                    value = settings.formworkPrice.toString(),
+                    value = settings.formworkPrice?.toString() ?: "",
                     currency = settings.currency,
                     onValueChange = {
                         it.toDoubleOrNull()?.let { v -> viewModel.setFormworkPrice(v) }
@@ -386,6 +386,7 @@ private fun SettingsPriceInput(
         value = value,
         onValueChange = onValueChange,
         label = { AppText(label, fontSize = 13.sp) },
+        placeholder = { AppText(stringResource(R.string.settings_price_not_set), fontSize = 13.sp) },
         suffix = { AppText(currency, fontWeight = FontWeight.Bold, fontSize = 13.sp) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         singleLine = true,

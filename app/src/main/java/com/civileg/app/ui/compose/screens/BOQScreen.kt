@@ -271,6 +271,9 @@ fun DesignsBOQContent(
     var selectedDesignId by remember { mutableLongStateOf(-1L) }
     val elementBoqItems by boqViewModel.elementBoqItems.observeAsState(emptyList())
     val elementBoqTotal by boqViewModel.elementBoqTotal.observeAsState(0.0)
+    val unpricedCount by boqViewModel.elementBoqUnpricedCount.observeAsState(0)
+    val unrecordedCurrency by boqViewModel.elementBoqUnrecordedCurrency.observeAsState(false)
+    val boqCurrency by boqViewModel.activeCurrency.observeAsState("EGP")
     val isLoading by boqViewModel.isLoading.observeAsState(false)
 
     LaunchedEffect(projects) { if (selectedProjectId == -1L && projects.isNotEmpty()) selectedProjectId = projects.first().id }
@@ -310,7 +313,16 @@ fun DesignsBOQContent(
                             label = "Export BOQ",
                             onClick = {
                                 val items = elementBoqItems
-                                val file = PdfGenerator.generateBOQReport(context, "${selectedDesign?.name ?: "Design"} BOQ", elementBoqTotal, items.filter { it.category == BoqCategory.CONCRETE }.sumOf { it.quantity }, items.filter { it.category == BoqCategory.REINFORCEMENT }.sumOf { it.quantity }, items.map { it.description to it.total })
+                                val file = PdfGenerator.generateBOQReport(
+                                    context, "${selectedDesign?.name ?: "Design"} BOQ", elementBoqTotal,
+                                    items.filter { it.category == BoqCategory.CONCRETE }.sumOf { it.quantity },
+                                    // steel BOQ quantity is in tons; the report takes kg
+                                    items.filter { it.category == BoqCategory.REINFORCEMENT }.sumOf { it.quantity } * 1000.0,
+                                    items.map { it.description to it.total },
+                                    currency = boqCurrency,
+                                    notes = if (unpricedCount > 0) listOf(context.getString(R.string.boq_total_priced_only, unpricedCount)) else emptyList(),
+                                    itemCostLabels = items.map { if (it.isPriced) null else context.getString(R.string.boq_price_not_set) }
+                                )
                                 sharePdf(context, file)
                             },
                             modifier = Modifier.weight(1f),
@@ -371,15 +383,29 @@ fun DesignsBOQContent(
                                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                                         Column(modifier = Modifier.weight(1f)) {
                                             AppText(item.description, style = MaterialTheme.typography.bodySmall)
-                                            AppText("${"%.3f".format(item.quantity)} ${item.unit} × ${"%,.0f".format(item.unitPrice)}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                            if (item.isPriced) {
+                                                AppText("${"%.3f".format(item.quantity)} ${item.unit} × ${"%,.0f".format(item.unitPrice)}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                            } else {
+                                                AppText("${"%.3f".format(item.quantity)} ${item.unit}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                            }
                                         }
-                                        AppText(String.format(Locale.US, "%,.0f EGP", item.total), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                                        if (item.isPriced) {
+                                            AppText(String.format(Locale.US, "%,.0f %s", item.total, boqCurrency), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                                        } else {
+                                            AppText(stringResource(R.string.boq_price_not_set), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                                        }
                                     }
                                     HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
                                 }
                                 Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    AppText("Total", fontWeight = FontWeight.Bold)
-                                    AppText(String.format(Locale.US, "%,.0f EGP", elementBoqTotal), fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+                                    AppText(if (unpricedCount == 0) stringResource(R.string.boq_total_complete) else stringResource(R.string.boq_total_priced_only, unpricedCount), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                    AppText(String.format(Locale.US, "%,.0f %s", elementBoqTotal, boqCurrency), fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.primary)
+                                }
+                                if (unpricedCount > 0) {
+                                    AppText(stringResource(R.string.boq_price_not_set_hint), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                                }
+                                if (unrecordedCurrency) {
+                                    AppText(stringResource(R.string.boq_currency_not_recorded), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                                 }
                             }
                         }
@@ -405,7 +431,20 @@ private fun exportProjectBOQPdf(context: Context, name: String, designs: List<co
         return
     }
     try {
-        val file = PdfGenerator.generateBOQReport(context, name, designs.sumOf { it.totalCost }, designs.sumOf { it.concreteVolume }, designs.sumOf { it.steelWeight }, designs.map { it.name to it.totalCost })
+        val sum = com.civileg.app.db.QuantityLedger.summarize(designs)
+        val notes = buildList {
+            add(context.getString(R.string.boq_pdf_measured_only))
+            if (sum.nominalCount + sum.legacyCount > 0) add(context.getString(R.string.boq_pdf_unverified_excluded, sum.nominalCount + sum.legacyCount))
+            if (sum.unknownQuantityCount > 0) add(context.getString(R.string.boq_pdf_unknown_excluded, sum.unknownQuantityCount))
+        }
+        val labels = designs.map {
+            when (it.quantityBasis) {
+                com.civileg.app.db.QuantityBasis.UNKNOWN -> context.getString(R.string.boq_pdf_quantity_unknown)
+                com.civileg.app.db.QuantityBasis.MEASURED -> null
+                else -> String.format(Locale.US, "%,.0f *", it.totalCost)
+            }
+        }
+        val file = PdfGenerator.generateBOQReport(context, name, sum.totalCost, sum.totalConcrete, sum.totalSteel, designs.map { it.name to it.totalCost }, notes = notes, itemCostLabels = labels)
         sharePdf(context, file)
     } catch (e: Exception) { Toast.makeText(context, context.getString(R.string.boq_export_failed_title), Toast.LENGTH_SHORT).show() }
 }

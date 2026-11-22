@@ -58,6 +58,7 @@ class ProjectRepositoryImpl @Inject constructor(
     override fun getConcretePrice(): Flow<Double> = preferencesManager.concretePrice
     override fun getSteelPrice(): Flow<Double> = preferencesManager.steelPrice
     override fun getFormworkPrice(): Flow<Double> = preferencesManager.formworkPrice
+    override fun getSavedPrices(): Flow<com.civileg.app.domain.entities.SavedMaterialPrices> = preferencesManager.savedPrices
     override fun getCurrency(): Flow<String> = preferencesManager.currency
     override fun getDefaultDesignCode(): Flow<String> = preferencesManager.defaultDesignCode
     override fun getUnitSystem(): Flow<String> = preferencesManager.unitSystem

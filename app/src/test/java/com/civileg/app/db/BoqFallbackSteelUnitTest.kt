@@ -24,7 +24,7 @@ class BoqFallbackSteelUnitTest {
             concreteVolume = 1.0, steelWeight = 500.0 // kg
         )
         val prices = MaterialPrices(steelPerTon = 18000.0)
-        val vm = BOQViewModel(mockk(relaxed = true), mockk<CalculateElementBoq>(relaxed = true))
+        val vm = BOQViewModel(mockk(relaxed = true), mockk<CalculateElementBoq>(relaxed = true), mockk(relaxed = true))
         val method = BOQViewModel::class.java.getDeclaredMethod(
             "generateBoqFromDesign", Design::class.java, MaterialPrices::class.java
         ).apply { isAccessible = true }
@@ -43,7 +43,7 @@ class BoqFallbackSteelUnitTest {
             inputData = "{}", results = "{}", isSafe = true, codeUsed = "ECP",
             concreteVolume = 0.0, steelWeight = 1000.0
         )
-        val vm = BOQViewModel(mockk(relaxed = true), mockk<CalculateElementBoq>(relaxed = true))
+        val vm = BOQViewModel(mockk(relaxed = true), mockk<CalculateElementBoq>(relaxed = true), mockk(relaxed = true))
         val method = BOQViewModel::class.java.getDeclaredMethod(
             "generateBoqFromDesign", Design::class.java, MaterialPrices::class.java
         ).apply { isAccessible = true }

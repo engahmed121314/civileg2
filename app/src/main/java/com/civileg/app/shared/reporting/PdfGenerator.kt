@@ -588,7 +588,12 @@ object PdfGenerator {
         totalBudget: Double,
         concreteVol: Double,
         steelWeight: Double,
-        items: kotlin.collections.List<Pair<String, Double>>
+        items: kotlin.collections.List<Pair<String, Double>>,
+        currency: String = "EGP",
+        /** Printed under the summary, e.g. that the total is partial or excludes unverified rows. */
+        notes: kotlin.collections.List<String> = emptyList(),
+        /** Cost cell text per item name index; null entries print the number. */
+        itemCostLabels: kotlin.collections.List<String?> = emptyList()
     ): File {
         val fileName = "CivilEngPro_BOQ_${System.currentTimeMillis()}.pdf"
         val file = File(context.getExternalFilesDir(null) ?: context.cacheDir, fileName)
@@ -612,19 +617,20 @@ object PdfGenerator {
 
         document.add(createStyledParagraph("PROJECT SUMMARY", arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
         val summaryTable = Table(UnitValue.createPercentArray(floatArrayOf(34f, 33f, 33f))).useAllAvailableWidth()
-        summaryTable.addCell(createSummaryCell("Total Estimated Budget", String.format(Locale.US, "%,.2f EGP", totalBudget), arabicFont))
+        summaryTable.addCell(createSummaryCell("Total Estimated Budget", String.format(Locale.US, "%,.2f %s", totalBudget, currency), arabicFont))
         summaryTable.addCell(createSummaryCell("Total Concrete Volume", String.format(Locale.US, "%.2f m\u00B3", concreteVol), arabicFont))
         summaryTable.addCell(createSummaryCell("Total Steel Weight", String.format(Locale.US, "%.2f Tons", steelWeight / 1000.0), arabicFont))
         document.add(summaryTable)
+        notes.forEach { document.add(createStyledParagraph(it, arabicFont, 9f).setFontColor(ColorConstants.GRAY)) }
         document.add(Paragraph("\n"))
 
         document.add(createStyledParagraph("DETAILED COST BREAKDOWN", arabicFont, 12f, isBold = true).setFontColor(PRIMARY_COLOR))
         val itemTable = Table(UnitValue.createPercentArray(floatArrayOf(70f, 30f))).useAllAvailableWidth()
         itemTable.addHeaderCell(createHeaderCell("Item / Design Name", arabicFont))
-        itemTable.addHeaderCell(createHeaderCell("Cost (EGP)", arabicFont))
-        items.forEach { (name, price) ->
+        itemTable.addHeaderCell(createHeaderCell("Cost ($currency)", arabicFont))
+        items.forEachIndexed { idx, (name, price) ->
             addArabicCell(itemTable, name, arabicFont, fontSize = 9f)
-            itemTable.addCell(Cell().add(Paragraph(String.format(Locale.US, "%,.0f", price)).setFontSize(9f).setTextAlignment(TextAlignment.RIGHT)))
+            itemTable.addCell(Cell().add(Paragraph(itemCostLabels.getOrNull(idx) ?: String.format(Locale.US, "%,.0f", price)).setFontSize(9f).setTextAlignment(TextAlignment.RIGHT)))
         }
         document.add(itemTable)
 

@@ -15,6 +15,7 @@ interface ProjectRepository {
     fun getConcretePrice(): Flow<Double>
     fun getSteelPrice(): Flow<Double>
     fun getFormworkPrice(): Flow<Double>
+    fun getSavedPrices(): Flow<com.civileg.app.domain.entities.SavedMaterialPrices>
     fun getCurrency(): Flow<String>
     fun getDefaultDesignCode(): Flow<String>
     fun getUnitSystem(): Flow<String>

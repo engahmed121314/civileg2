@@ -15,7 +15,9 @@ data class BoqItem(
     val quantity: Double,         // الكمية
     val unitPrice: Double,        // سعر الوحدة
     val total: Double = quantity * unitPrice,
-    val codeReference: String? = null  // مرجع الكود إن وجد
+    val codeReference: String? = null,  // مرجع الكود إن وجد
+    /** False when no usable user price exists: quantity is real, unitPrice/total are 0 and mean "not priced". */
+    val isPriced: Boolean = true
 ) : Parcelable
 
 enum class BoqCategory(val displayName: String) {

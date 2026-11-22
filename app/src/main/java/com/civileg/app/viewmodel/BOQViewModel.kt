@@ -3,7 +3,9 @@ package com.civileg.app.viewmodel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.first
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.usecases.CalculateElementBoq
 import com.civileg.app.utils.EstimationEngine
@@ -18,7 +20,8 @@ import com.civileg.app.domain.calculations.InputGuard
 @HiltViewModel
 class BOQViewModel @Inject constructor(
     private val estimationEngine: EstimationEngine,
-    private val calculateElementBoq: CalculateElementBoq
+    private val calculateElementBoq: CalculateElementBoq,
+    private val projectRepository: com.civileg.app.domain.repository.ProjectRepository
 ) : ViewModel() {
 
     private val _estimationResult = MutableLiveData<EstimationEngine.EstimationResult?>()
@@ -34,15 +37,58 @@ class BOQViewModel @Inject constructor(
     private val _elementBoqItems = MutableLiveData<List<BoqItem>>(emptyList())
     val elementBoqItems: LiveData<List<BoqItem>> = _elementBoqItems
 
+    /** Sum of PRICED lines only. Read with [elementBoqUnpricedCount]: it is partial when that is above zero. */
     private val _elementBoqTotal = MutableLiveData<Double>(0.0)
     val elementBoqTotal: LiveData<Double> = _elementBoqTotal
+
+    private val _elementBoqUnpricedCount = MutableLiveData(0)
+    val elementBoqUnpricedCount: LiveData<Int> = _elementBoqUnpricedCount
+
+    /** True when a price used was saved before its currency was recorded. */
+    private val _elementBoqUnrecordedCurrency = MutableLiveData(false)
+    val elementBoqUnrecordedCurrency: LiveData<Boolean> = _elementBoqUnrecordedCurrency
+
+    /** The Settings currency the BOQ amounts are priced in. */
+    val activeCurrency: LiveData<String> = projectRepository.getCurrency().asLiveData()
 
     /**
      * حساب كميات من كيان التصميم المحفوظ في قاعدة البيانات
      * يستخدم القيم المجمعة المخزنة (concreteVolume, steelWeight) إذا لم يتوفر inputData تفصيلي،
      * أو يحلل inputData JSON لاستخراج المعلمات التفصيلية إذا توفر.
      */
-    fun calculateDesignBoq(design: Design, prices: MaterialPrices = MaterialPrices()) {
+    /**
+     * Quantities for [design], priced only with the user's saved prices (Settings). A price the user
+     * never entered, or entered in another currency, leaves that line's quantity visible and unpriced.
+     */
+    fun calculateDesignBoq(design: Design) {
+        InputGuard.notNull("design", design)
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val saved = projectRepository.getSavedPrices().first()
+                val currency = projectRepository.getCurrency().first()
+                // The quantity code needs positive rates to run; they are replaced by BoqPricing.apply
+                // and never reach the screen or an export.
+                val quantityOnly = MaterialPrices(1.0, 1.0, 1.0, 1.0, 1.0)
+                val priced = BoqPricing.apply(generateBoqFromDesign(design, quantityOnly), saved, currency)
+                _elementBoqItems.value = priced.items
+                _elementBoqTotal.value = priced.pricedTotal
+                _elementBoqUnpricedCount.value = priced.unpricedCount
+                _elementBoqUnrecordedCurrency.value = priced.usesUnrecordedCurrency
+            } catch (e: Exception) {
+                _elementBoqItems.value = emptyList()
+                _elementBoqTotal.value = 0.0
+                _elementBoqUnpricedCount.value = 0
+                _elementBoqUnrecordedCurrency.value = false
+                _errorMessage.value = "BOQ calculation error / خطأ حساب الكميات: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    /** Explicit-price variant (tests, callers that own their prices). */
+    fun calculateDesignBoq(design: Design, prices: MaterialPrices) {
         InputGuard.notNull("design", design)
 
         viewModelScope.launch {
@@ -697,5 +743,7 @@ class BOQViewModel @Inject constructor(
         _estimationResult.value = null
         _elementBoqItems.value = emptyList()
         _elementBoqTotal.value = 0.0
+        _elementBoqUnpricedCount.value = 0
+        _elementBoqUnrecordedCurrency.value = false
     }
 }
