@@ -15,7 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -219,14 +222,21 @@ class HordiBlockedVisualTest {
     private fun captureRootOrNote(name: String) {
         val dir = File("build/reports/tests/compose-shots").apply { mkdirs() }
         val out = File(dir, "$name.png")
+        // Semantics capture re-renders in software (deterministic under Robolectric);
+        // window drawToBitmap is the flaky fallback (NPE bm=null on some runs).
         try {
-            val content = rule.activity.findViewById<android.view.ViewGroup>(android.R.id.content)
-            val bitmap = content.drawToBitmap()
+            val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
             FileOutputStream(out).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         } catch (e: Exception) {
-            File(dir, "$name-capture-failed.txt").writeText(
-                "window capture unavailable: ${e.javaClass.simpleName}: ${e.message?.take(120)}"
-            )
+            try {
+                val content = rule.activity.findViewById<android.view.ViewGroup>(android.R.id.content)
+                val bitmap = content.drawToBitmap()
+                FileOutputStream(out).use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            } catch (e2: Exception) {
+                File(dir, "$name-capture-failed.txt").writeText(
+                    "capture unavailable: ${e2.javaClass.simpleName}: ${e2.message?.take(120)}"
+                )
+            }
         }
     }
 }
