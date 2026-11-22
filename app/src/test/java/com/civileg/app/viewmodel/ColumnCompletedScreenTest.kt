@@ -3,6 +3,10 @@ package com.civileg.app.viewmodel
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.View
+import android.view.ViewTreeObserver
+import androidx.test.platform.app.InstrumentationRegistry
+import org.robolectric.shadows.ShadowDialog
+import java.util.concurrent.atomic.AtomicLong
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.*
@@ -95,13 +99,82 @@ class ColumnCompletedScreenTest {
         capture("unsafe-underutilized-banner")
     }
 
-    @Test fun `no existing project disables save confirm without assigning project one`() {
+    // AppButton's tag is on its layout wrapper. Assert/click the real Button.
+    private fun button(tag: String) = compose.onNodeWithTag(tag)
+        .onChildren().filterToOne(hasClickAction())
+
+    private fun captureDialog(name: String) {
+        val shown = requireNotNull(ShadowDialog.getLatestDialog())
+        check(shown.isShowing)
+        val root = requireNotNull(shown.window?.decorView)
+        check(root.width > 0 && root.height > 0)
+        val bitmap = Bitmap.createBitmap(root.width, root.height, Bitmap.Config.ARGB_8888)
+        root.draw(Canvas(bitmap))
+        val directory = File("build/reports/tests/column-completed-shots").apply { mkdirs() }
+        File(directory, "$name.png").outputStream().use {
+            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
+        }
+    }
+
+    private fun assertNoExistingProjectIsNotSaved() {
         open()
         scrollTo("column-save")
-        compose.onNodeWithTag("column-save").performClick()
-        compose.waitForIdle()
-        compose.onNodeWithTag("column-save-confirm").assertIsNotEnabled()
-        capture("no-project-save-disabled")
-        coVerify(exactly = 0) { repository.saveColumnDesignSnapshot(any(), any(), any()) }
+        val layouts = AtomicLong()
+        val draws = AtomicLong()
+        var dialogRoot: View? = null
+        val layoutListener = ViewTreeObserver.OnGlobalLayoutListener { layouts.incrementAndGet() }
+        val drawListener = ViewTreeObserver.OnPreDrawListener { draws.incrementAndGet(); true }
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        fun attachWhenAvailable() {
+            if (dialogRoot != null) return
+            val shown = ShadowDialog.getLatestDialog()?.takeIf { it.isShowing } ?: return
+            dialogRoot = shown.window?.decorView
+            dialogRoot?.viewTreeObserver?.addOnGlobalLayoutListener(layoutListener)
+            dialogRoot?.viewTreeObserver?.addOnPreDrawListener(drawListener)
+        }
+        try {
+            // Include the click itself: it may also wait for idle and fail.
+            button("column-save").performClick()
+            instrumentation.runOnMainSync { attachWhenAvailable() }
+            compose.waitForIdle()
+            button("column-save-confirm").assertIsNotEnabled()
+            compose.runOnIdle { captureDialog("no-project-save-disabled-${host.height}") }
+            coVerify(exactly = 0) { repository.saveColumnDesignSnapshot(any(), any(), any()) }
+        } catch (failure: Throwable) {
+            // Diagnostics never turn a timeout/assertion into a pass or replace its cause.
+            runCatching {
+                instrumentation.runOnMainSync {
+                    attachWhenAvailable()
+                    val root = dialogRoot
+                    println("COLUMN_DIALOG_UI_FAILURE type=${failure.javaClass.name} " +
+                        "layoutsSinceAttach=${layouts.get()} drawsSinceAttach=${draws.get()} " +
+                        "dialog=${root?.width}x${root?.height} layoutRequested=${root?.isLayoutRequested} " +
+                        "host=${host.width}x${host.height} hostLayoutRequested=${host.isLayoutRequested}")
+                    captureDialog("failed-save-dialog-${host.height}")
+                }
+            }.onFailure { println("COLUMN_DIALOG_DIAGNOSTIC_FAILED ${it.javaClass.name}") }
+            throw failure
+        } finally {
+            runCatching {
+                instrumentation.runOnMainSync {
+                    dialogRoot?.viewTreeObserver?.let {
+                        if (it.isAlive) {
+                            it.removeOnGlobalLayoutListener(layoutListener)
+                            it.removeOnPreDrawListener(drawListener)
+                        }
+                    }
+                }
+            }.onFailure { println("COLUMN_DIALOG_DIAGNOSTIC_CLEANUP_FAILED ${it.javaClass.name}") }
+        }
+    }
+
+    @Test fun `no existing project disables save confirm without assigning project one`() {
+        assertNoExistingProjectIsNotSaved()
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w400dp-h800dp")
+    fun `normal phone viewport also refuses a missing project`() {
+        assertNoExistingProjectIsNotSaved()
     }
 }
