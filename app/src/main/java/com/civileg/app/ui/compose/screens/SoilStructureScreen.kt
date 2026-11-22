@@ -26,6 +26,8 @@ import com.civileg.app.viewmodel.SoilStructureViewModel
 import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
+import androidx.compose.ui.res.stringResource
+import com.civileg.app.R
 import com.civileg.app.ui.components.AppText
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
@@ -185,41 +187,16 @@ fun SoilStructureScreen(
                     contentOverride = onColorFor(MaterialTheme.colorScheme.tertiary)
                 )
 
-                DesignSectionHeader(title = "الرسم الهندسي لتفاعل المنشأ مع التربة")
-
-                AppText(
-                    text = androidx.compose.ui.res.stringResource(
-                        com.civileg.app.R.string.design_status_not_verified
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                SoilDrawingSection(
+                    res = res,
+                    foundationLengthMm = foundationLengthMm,
+                    foundationWidthMm = foundationWidthMm,
+                    foundationThicknessMm = foundationThicknessMm,
+                    columnLoadKN = columnLoadKN,
+                    momentKNm = momentKNm,
+                    soilBearingCapacityKpa = soilBearingCapacityKpa,
+                    selectedCode = selectedCode
                 )
-
-                Card(
-                    modifier = Modifier.fillMaxWidth().height(350.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    ProfessionalSoilStructureDrawing(
-                        foundationLengthMm = foundationLengthMm.toDoubleOrNull() ?: 3000.0,
-                        foundationWidthMm = foundationWidthMm.toDoubleOrNull() ?: 2000.0,
-                        foundationThicknessMm = foundationThicknessMm.toDoubleOrNull() ?: 500.0,
-                        columnLoadKN = columnLoadKN.toDoubleOrNull() ?: 1200.0,
-                        momentKNm = momentKNm.toDoubleOrNull() ?: 50.0,
-                        soilBearingCapacityKpa = soilBearingCapacityKpa.toDoubleOrNull() ?: 150.0,
-                        maxPressureKpa = res.bearing.maxPressureKpa,
-                        minPressureKpa = res.bearing.minPressureKpa,
-                        averagePressureKpa = res.bearing.averagePressureKpa,
-                        settlementMm = res.settlement.totalSettlementMm,
-                        overturningFS = res.stability.factorOfSafetyOverturning,
-                        slidingFS = res.stability.factorOfSafetySliding,
-                        bearingFS = res.stability.factorOfSafetyBearing,
-                        cover = 75.0,
-                        designCode = selectedCode,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
 
                 DesignSectionHeader(title = "النتيجة")
 
@@ -273,5 +250,84 @@ fun SoilStructureScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * Drawing zone of the soil-structure results: mode chips + 350dp drawing card.
+ *
+ * The legacy "All" composite was unreadable at card height (everything stacked
+ * and colliding), so the selector offers only the four readable single-view
+ * modes and the initial view is the elevation. Extracted as its own composable
+ * so the real production path (chips + card + drawing) is renderable in tests.
+ */
+@Composable
+internal fun SoilDrawingSection(
+    res: com.civileg.app.domain.calculations.base.SoilStructureInteraction.Result,
+    foundationLengthMm: String,
+    foundationWidthMm: String,
+    foundationThicknessMm: String,
+    columnLoadKN: String,
+    momentKNm: String,
+    soilBearingCapacityKpa: String,
+    selectedCode: DesignCode
+) {
+    var soilViewMode by remember { mutableIntStateOf(1) }
+
+    DesignSectionHeader(title = "الرسم الهندسي لتفاعل المنشأ مع التربة")
+
+    val soilViewModeLabels = listOf(
+        stringResource(R.string.soil_vm_elevation),
+        stringResource(R.string.soil_vm_plan_kern),
+        stringResource(R.string.soil_vm_stress_bulb),
+        stringResource(R.string.soil_vm_table)
+    )
+    // Four chips share the width so every mode is visible without scrolling;
+    // a horizontally scrolling row read as a clipped last chip.
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        soilViewModeLabels.forEachIndexed { index, label ->
+            FilterChip(
+                selected = soilViewMode == index + 1,
+                onClick = { soilViewMode = index + 1 },
+                label = { AppText(label, fontSize = 11.sp, maxLines = 1, softWrap = false) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+
+    AppText(
+        text = stringResource(com.civileg.app.R.string.design_status_not_verified),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(vertical = 8.dp)
+    )
+
+    Card(
+        modifier = Modifier.fillMaxWidth().height(350.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        ProfessionalSoilStructureDrawing(
+            foundationLengthMm = foundationLengthMm.toDoubleOrNull() ?: 3000.0,
+            foundationWidthMm = foundationWidthMm.toDoubleOrNull() ?: 2000.0,
+            foundationThicknessMm = foundationThicknessMm.toDoubleOrNull() ?: 500.0,
+            columnLoadKN = columnLoadKN.toDoubleOrNull() ?: 1200.0,
+            momentKNm = momentKNm.toDoubleOrNull() ?: 50.0,
+            soilBearingCapacityKpa = soilBearingCapacityKpa.toDoubleOrNull() ?: 150.0,
+            maxPressureKpa = res.bearing.maxPressureKpa,
+            minPressureKpa = res.bearing.minPressureKpa,
+            averagePressureKpa = res.bearing.averagePressureKpa,
+            settlementMm = res.settlement.totalSettlementMm,
+            overturningFS = res.stability.factorOfSafetyOverturning,
+            slidingFS = res.stability.factorOfSafetySliding,
+            bearingFS = res.stability.factorOfSafetyBearing,
+            cover = 75.0,
+            designCode = selectedCode,
+            viewMode = soilViewMode,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
