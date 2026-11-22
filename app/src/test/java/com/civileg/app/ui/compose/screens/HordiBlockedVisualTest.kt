@@ -100,7 +100,6 @@ class HordiBlockedVisualTest {
         assertNull("blocked shear must be null, never a number", res.shearCapacity)
         assertNull("blocked utilization must be null, never 0", res.utilizationRatio)
         assertFalse("blocked design is never safe", res.isSafe)
-        assertTrue("per-rib bars text present", res.rebarText.isNotBlank())
 
         rule.setContent {
             CivilEngineerPremiumTheme(darkTheme = false) { ProductionResultCards(res, ar = false) }
@@ -110,13 +109,13 @@ class HordiBlockedVisualTest {
         rule.onAllNodesWithText("Shear Capacity", substring = true)[0].performScrollTo().assertIsDisplayed()
         rule.onAllNodesWithText("Utilization", substring = true)[0].performScrollTo().assertIsDisplayed()
         rule.onAllNodesWithText("Adopted Total Thickness", substring = true)[0].performScrollTo().assertIsDisplayed()
-        rule.onAllNodesWithText("Main Bars per Rib", substring = true)[0].performScrollTo().assertIsDisplayed()
+        rule.onAllNodesWithText("Main Bar Diameter", substring = true)[0].performScrollTo().assertIsDisplayed()
         rule.onAllNodesWithText("Rib Spacing", substring = true)[0].performScrollTo().assertIsDisplayed()
         // Explicit blocked values.
         rule.onAllNodesWithText("NOT EVALUATED", substring = true)[0].performScrollTo().assertIsDisplayed()
         rule.onAllNodesWithText("N/E", substring = true)[0].performScrollTo().assertIsDisplayed()
         assertTrue(rule.onAllNodesWithText("INCOMPLETE", substring = true).fetchSemanticsNodes().size >= 2)
-        rule.onAllNodesWithText(res.rebarText, substring = true)[0].performScrollTo().assertIsDisplayed()
+        rule.onAllNodesWithText("φ14 mm", substring = true)[0].performScrollTo().assertIsDisplayed()
         rule.onAllNodesWithText("300 mm", substring = true)[0].performScrollTo().assertIsDisplayed()
         rule.onAllNodesWithText("@650 mm", substring = true)[0].performScrollTo().assertIsDisplayed()
         assertEquals(0, rule.onAllNodesWithText("PASS", substring = true).fetchSemanticsNodes().size)
@@ -137,7 +136,7 @@ class HordiBlockedVisualTest {
         rule.onAllNodesWithText("مقاومة القص", substring = true)[0].performScrollTo().assertIsDisplayed()
         rule.onAllNodesWithText("الاستغلال", substring = true)[0].performScrollTo().assertIsDisplayed()
         rule.onAllNodesWithText("السماكة الكلية المعتمدة", substring = true)[0].performScrollTo().assertIsDisplayed()
-        rule.onAllNodesWithText("حديد الأعصبة", substring = true)[0].performScrollTo().assertIsDisplayed()
+        rule.onAllNodesWithText("قطر سيخ الأعصبة", substring = true)[0].performScrollTo().assertIsDisplayed()
         rule.onAllNodesWithText("تباعد الأعصبة", substring = true)[0].performScrollTo().assertIsDisplayed()
         // Explicit blocked values.
         rule.onAllNodesWithText("غير مقيّمة", substring = true)[0].performScrollTo().assertIsDisplayed()

@@ -547,7 +547,7 @@ internal fun HordiReinforcementCard(res: SlabDesignResult) {
         listOf(
             stringResource(R.string.hordi_slab_required_as) to String.format("%.1f mm²", res.requiredReinforcement),
             stringResource(R.string.hordi_slab_provided_as) to String.format("%.1f mm²", res.providedReinforcement),
-            stringResource(R.string.hordi_slab_bars_per_rib) to res.rebarText,
+            stringResource(R.string.hordi_slab_main_bar_diameter) to String.format("φ%.0f mm", res.barDiameter),
             stringResource(R.string.hordi_slab_rib_spacing_result) to String.format("@%.0f mm", res.barSpacing)
         ),
         icon = Icons.Default.Build,

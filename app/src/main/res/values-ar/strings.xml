@@ -1803,7 +1803,7 @@
     <string name="hordi_slab_shear_check">تحقق القص</string>
     <string name="hordi_slab_shear_capacity">مقاومة القص</string>
     <string name="hordi_slab_utilization">الاستغلال</string>
-    <string name="hordi_slab_bars_per_rib">حديد الأعصبة</string>
+    <string name="hordi_slab_main_bar_diameter">قطر سيخ الأعصبة</string>
     <string name="hordi_slab_rib_spacing_result">تباعد الأعصبة</string>
     <string name="hordi_slab_adopted_thickness">السماكة الكلية المعتمدة</string>
     <string name="hordi_slab_required_as">As مطلوب</string>
