@@ -120,13 +120,31 @@ jobs:
 
       - name: Enable and verify KVM on this disposable Linux runner
         run: |
-          test -c /dev/kvm || { echo "Runner KVM device is missing"; exit 1; }
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-          test -r /dev/kvm
-          test -w /dev/kvm
-          "$ANDROID_HOME/emulator/emulator" -accel-check
+          set -o pipefail
+          run_check() {
+            local label="$1" status
+            shift
+            echo "KVM preflight START: $label"
+            if "$@"; then status=0; else status=$?; fi
+            echo "KVM preflight END: $label status=$status"
+            return "$status"
+          }
+          {
+            run_check identity-before id || exit "$?"
+            run_check device-before ls -l /dev/kvm || echo "KVM device metadata unavailable before validation"
+            run_check character-device test -c /dev/kvm || exit "$?"
+            printf '%s\n' 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
+              run_check write-rule sudo tee /etc/udev/rules.d/99-kvm4all.rules || exit "$?"
+            run_check reload-rules sudo udevadm control --reload-rules || exit "$?"
+            run_check trigger sudo udevadm trigger --name-match=kvm || exit "$?"
+            run_check settle sudo udevadm settle --timeout=10 || exit "$?"
+            run_check identity-after id || exit "$?"
+            run_check device-after ls -l /dev/kvm || exit "$?"
+            run_check readable test -r /dev/kvm || exit "$?"
+            run_check writable test -w /dev/kvm || exit "$?"
+            run_check emulator-present test -x "$ANDROID_HOME/emulator/emulator" || exit "$?"
+            run_check acceleration "$ANDROID_HOME/emulator/emulator" -accel-check || exit "$?"
+          } 2>&1 | tee qa-evidence-kvm-preflight.txt
 
       - name: Run both upgrade cases on a fresh disposable emulator
         uses: reactivecircus/android-emulator-runner@v2
