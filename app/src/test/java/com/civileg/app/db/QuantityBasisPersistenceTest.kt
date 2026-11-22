@@ -155,4 +155,20 @@ class QuantityBasisPersistenceTest {
         assertTrue(saved.captured.inputData.contains("\"spanX\":6"))
         assertNull(saved.captured.snapshotRevision)
     }
+
+    @Test fun `fresh beam save is a nominal estimate and invents no span or materials`() = runBlocking {
+        val dao = mockk<DesignDao>()
+        val beams = mockk<BeamDao>(relaxed = true)
+        val saved = slot<Design>()
+        coEvery { dao.insertDesign(capture(saved)) } returns 1L
+        val repo = DesignRepository(
+            dao, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
+            beams, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)
+        )
+        repo.saveBeamDesign(1L, "B", CalculatorEngine.BeamResult(width = 250.0, depth = 600.0, isSafe = true, concreteVolume = 0.9, steelWeight = 70.0))
+        assertEquals(QuantityBasis.NOMINAL_ESTIMATE, saved.captured.quantityBasis)
+        assertFalse(saved.captured.inputData.contains("\"span\""))
+        assertFalse(saved.captured.inputData.contains("\"fcu\""))
+        coVerify(exactly = 0) { beams.insertBeam(any()) }
+    }
 }

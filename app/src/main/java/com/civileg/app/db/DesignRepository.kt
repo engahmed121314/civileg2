@@ -66,19 +66,22 @@ class DesignRepository @Inject constructor(
         footingDao.insertFooting(footing)
     }
 
+    // Column/beam quantities (CalculatorEngine): gross b*h*length concrete and straight full-length
+    // bars + stirrups by spacing, no laps/anchorage/hooks/cranks/curtailment: a nominal estimate, not a bar schedule.
     suspend fun saveColumnDesign(
         projectId: Long, name: String, result: CalculatorEngine.ColumnResult,
-        fcu: Double = 25.0, fy: Double = 360.0
+        fcu: Double? = null, fy: Double? = null
     ) {
         val inputData = JSONObject().apply {
-            put("fcu", fcu)
-            put("fy", fy)
+            if (fcu != null) put("fcu", fcu)
+            if (fy != null) put("fy", fy)
             put("load", result.pu)
             put("width", result.width)
             put("depth", result.depth)
         }.toString()
-        saveGeneralDesign(projectId, DesignType.COLUMN, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
+        saveGeneralDesign(projectId, DesignType.COLUMN, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData, quantityBasis = QuantityBasis.NOMINAL_ESTIMATE)
         
+        if (fcu == null || fy == null) return // no invented materials in the column row
         val column = ColumnEntity(
             projectId = projectId, load = result.pu, fcu = fcu, fy = fy,
             width = result.width, depth = result.depth,
@@ -91,19 +94,20 @@ class DesignRepository @Inject constructor(
 
     suspend fun saveBeamDesign(
         projectId: Long, name: String, result: CalculatorEngine.BeamResult,
-        span: Double = 5.0, fcu: Double = 25.0, fy: Double = 360.0
+        span: Double? = null, fcu: Double? = null, fy: Double? = null
     ) {
         val inputData = JSONObject().apply {
-            put("span", span)
-            put("fcu", fcu)
-            put("fy", fy)
+            if (span != null) put("span", span)
+            if (fcu != null) put("fcu", fcu)
+            if (fy != null) put("fy", fy)
             put("width", result.width)
             put("depth", result.depth)
             put("load", result.appliedMoment)
             put("supportType", result.supportType.name)
         }.toString()
-        saveGeneralDesign(projectId, DesignType.BEAM, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
+        saveGeneralDesign(projectId, DesignType.BEAM, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData, quantityBasis = QuantityBasis.NOMINAL_ESTIMATE)
         
+        if (span == null || fcu == null || fy == null) return // no invented span/materials in the beam row
         val beam = Beam(
             projectId = projectId, span = span, load = result.appliedMoment, fcu = fcu, fy = fy,
             width = result.width, depth = result.depth,
