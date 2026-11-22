@@ -246,8 +246,9 @@ fun QualityComplianceScreen() {
                                         }
                                     }
                                 }
+                                val isArabicUi = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]?.language == "ar"
                                 AppText(
-                                    item.description,
+                                    if (isArabicUi) item.descriptionAr.ifBlank { item.description } else item.description,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 AppText(
