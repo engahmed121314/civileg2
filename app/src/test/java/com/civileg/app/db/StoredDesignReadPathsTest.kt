@@ -67,7 +67,11 @@ class StoredDesignReadPathsTest {
         val summary = vm.getProjectSummary(2L).first()
         assertEquals(2, summary.designCount)
         assertEquals(1, summary.methodBlockedDesignCount)
-        assertEquals(6.0, summary.totalConcrete, 0.0)
+        // Both rows are LEGACY_UNVERIFIED: shown as a separate subtotal, never a measured total.
+        assertFalse(summary.hasMeasuredQuantities)
+        assertEquals(0.0, summary.totalConcrete, 0.0)
+        assertEquals(6.0, summary.legacyConcrete, 0.0)
+        assertEquals(2, summary.legacyCount)
         coVerify(exactly = 0) { dao.insertDesign(any()) }
     }
 
