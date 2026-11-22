@@ -37,9 +37,11 @@ internal object HordiSectionPreviewStrings {
             "EXPLICIT_ECONOMY_FOUR_BARS" -> "وضع اقتصادي بطلب صريح مع الحفاظ على الأربعة أسياخ"
             else -> null
         }
+        // Isolate the ordered numeric run so RTL prose cannot display 3+2 as 2+3.
+        val orderedRows = "\u2066$rows\u2069"
         return if (description != null && rows.matches(Regex("[0-9]+(?:\\+[0-9]+)*")) &&
             source.endsWith("Project detailing choice, not a code-mandated bar-count parity rule. All execution holds remain."))
-            "سياسة ترتيب التسليح: $description. الصفوف المعتمدة للحساب: $rows. هذا اختيار تفصيلي للمشروع، وليس قاعدة يفرضها الكود لزوجية أو فردية عدد الأسياخ. جميع قيود التنفيذ ما زالت قائمة."
+            "سياسة ترتيب التسليح: $description. الصفوف المعتمدة للحساب: $orderedRows. هذا اختيار تفصيلي للمشروع، وليس قاعدة يفرضها الكود لزوجية أو فردية عدد الأسياخ. جميع قيود التنفيذ ما زالت قائمة."
         else "ملاحظة أصلية لم تتوفر ترجمتها بعد، ولا يجوز تجاهلها: $source"
     }
 

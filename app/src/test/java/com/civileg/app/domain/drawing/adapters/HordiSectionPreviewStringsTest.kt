@@ -8,10 +8,26 @@ import com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.ByteArrayInputStream
+import java.text.Bidi
 
 /** Language is presentation only, never a second design or a changed source hold. */
 class HordiSectionPreviewStringsTest {
     private val fixtures = listOf("bottom-two-bars", "top-two-bars", "bottom-two-layers", "bottom-three-plus-two-corrected")
+
+    @Test fun `Arabic policy preserves actual three plus two row order in an RTL paragraph`() {
+        val f = HordiCalculatedSectionAdapterTest().fixture("bottom-three-plus-two-corrected")
+        val source = requireNotNull(HordiCalculatedSectionAdapter.build(f.handoff(), "H1").arrangementPolicyNote)
+        val translated = HordiSectionPreviewStrings.policyNote(source, true)
+        val start = translated.indexOf("3+2")
+        assertTrue(start >= 0)
+        val bidi = Bidi(translated, Bidi.DIRECTION_RIGHT_TO_LEFT)
+        val level = bidi.getLevelAt(start)
+        assertEquals("Ordered rows must be one left-to-right run", 0, level % 2)
+        assertEquals("Plus sign must not split the row order", level, bidi.getLevelAt(start + 1))
+        assertEquals(level, bidi.getLevelAt(start + 2))
+        assertTrue(translated.contains("\u20663+2\u2069"))
+        assertEquals(source, HordiSectionPreviewStrings.policyNote(source, false))
+    }
 
     @Test fun `English preview and warnings retain their source text`() {
         for (name in fixtures) {

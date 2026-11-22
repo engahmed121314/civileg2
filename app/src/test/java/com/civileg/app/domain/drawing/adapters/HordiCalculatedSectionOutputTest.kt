@@ -16,6 +16,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.LayoutDirection
 import com.civileg.app.ui.compose.components.drawings.HordiCalculatedSectionOutput
 import com.civileg.app.ui.compose.components.drawings.HordiSectionPreviewStrings
@@ -78,8 +81,21 @@ class HordiCalculatedSectionOutputTest {
             assertTrue("Source hold is clipped horizontally", warningNode.positionInRoot.x >= bounds.left && warningNode.positionInRoot.x + warningNode.size.width <= bounds.right)
         }
         policyNote?.let {
-            val node = compose.onNodeWithText(HordiSectionPreviewStrings.policyNote(it, arabic)).fetchSemanticsNode()
+            val displayed = HordiSectionPreviewStrings.policyNote(it, arabic)
+            val policyNode = compose.onNodeWithText(displayed)
+            val node = policyNode.fetchSemanticsNode()
             assertTrue("Selected policy disclosure is clipped", node.positionInRoot.y + node.size.height <= bounds.bottom)
+            if (arabic) {
+                val rows = it.substringAfter("actual adopted rows=").substringBefore(". ")
+                val start = displayed.indexOf(rows)
+                assertTrue(start >= 0)
+                val layouts = mutableListOf<TextLayoutResult>()
+                policyNode.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { action -> action(layouts) }
+                val layout = layouts.single()
+                val first = layout.getBoundingBox(start)
+                val last = layout.getBoundingBox(start + rows.lastIndex)
+                assertTrue("Actual Arabic numeric row order is reversed", first.left < last.left && first.top == last.top)
+            }
         }
         val bitmap = compose.runOnIdle {
             assertTrue("Component exceeds the captured viewport; do not hide warnings", bounds.bottom <= view.height)
