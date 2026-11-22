@@ -1,5 +1,6 @@
 import java.util.Properties
 import java.io.FileInputStream
+import org.gradle.api.tasks.testing.Test
 
 plugins {
     alias(libs.plugins.android.application)
@@ -196,18 +197,6 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
-            // CI pins the Robolectric android-all runtime jar into a local
-            // directory so test JVMs never fetch it from Maven Central at
-            // runtime (a recurring flake). Inert locally: this only activates
-            // when ROBOLECTRIC_DEPS_DIR is set, which the CI workflow does
-            // after downloading and sha1-verifying the jar into that dir.
-            val roboDepsDir = System.getenv("ROBOLECTRIC_DEPS_DIR")
-            if (!roboDepsDir.isNullOrBlank()) {
-                all {
-                    systemProperty("robolectric.dependency.dir", roboDepsDir)
-                    systemProperty("robolectric.offline", "true")
-                }
-            }
         }
     }
 
@@ -373,4 +362,16 @@ tasks.register<JacocoCoverageVerification>("jacocoCoverageVerification") {
     sourceDirectories.setFrom(files(jacocoSources))
     classDirectories.setFrom(files(jacocoClassTree))
     executionData.setFrom(jacocoExecData)
+}
+
+// CI pins the Robolectric android-all runtime jar into a local directory so
+// test JVMs never fetch it from Maven Central at runtime (a recurring flake).
+// Inert locally: this only activates when ROBOLECTRIC_DEPS_DIR is set, which
+// the CI workflow does after downloading and sha1-verifying the jar there.
+val robolectricDepsDir = System.getenv("ROBOLECTRIC_DEPS_DIR")
+if (!robolectricDepsDir.isNullOrBlank()) {
+    tasks.withType<Test>().configureEach {
+        systemProperty("robolectric.dependency.dir", robolectricDepsDir)
+        systemProperty("robolectric.offline", "true")
+    }
 }
