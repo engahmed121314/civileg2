@@ -860,7 +860,7 @@ private fun QuickToolCard(
 // ══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun RecentProjectsSection(
+internal fun RecentProjectsSection(
     projects: List<RecentProject>,
     isDark: Boolean
 ) {
