@@ -157,6 +157,9 @@ class I18nScreensVisualTest {
         assertTextAbsent("لوائح الامتثال")
         capture("i18n-qc-en-v1")
         scrollAndCapture("i18n-qc-en-v2")
+        // Data-level checklist titles stay English in the English UI.
+        assertTextPresent("Lap splice length")
+        assertTextAbsent("طول الوصلة")
         scrollAndCapture("i18n-qc-en-v3")
     }
 
@@ -169,6 +172,9 @@ class I18nScreensVisualTest {
         assertTextAbsent("Compliance Checklists")
         capture("i18n-qc-ar-v1")
         scrollAndCapture("i18n-qc-ar-v2")
+        // Data-level checklist titles flip to Arabic in the Arabic UI.
+        assertTextPresent("طول الوصلة (التراكب)")
+        assertTextAbsent("Lap splice length")
         scrollAndCapture("i18n-qc-ar-v3")
     }
 
