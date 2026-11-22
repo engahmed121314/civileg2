@@ -33,6 +33,14 @@ class ProfessionalEnglishPdfReporterTest {
         EnglishFontProvider.init(RuntimeEnvironment.getApplication())
     }
 
+    /** Copy into the test-report artifact dir for pixel inspection (pdftoppm). */
+    private fun stage(pdf: File, name: String): File {
+        val dir = File("build/reports/tests/pdf-shots").apply { mkdirs() }
+        val out = File(dir, name)
+        pdf.copyTo(out, overwrite = true)
+        return out
+    }
+
     private fun pageTexts(pdf: File): List<String> {
         val reader = PdfReader(pdf)
         val doc = PdfDocument(reader)
@@ -66,7 +74,8 @@ class ProfessionalEnglishPdfReporterTest {
             )
         )
         assertNotNull(file)
-        val all = pageTexts(file!!).joinToString("\n")
+        stage(file!!, "glyphs.pdf")
+        val all = pageTexts(file).joinToString("\n")
         assertTrue("rho text lost", all.contains("rho"))
         assertTrue("delta text lost", all.contains("delta"))
         assertTrue("kl-u-r text lost", all.contains("kl-u-r"))
@@ -95,7 +104,8 @@ class ProfessionalEnglishPdfReporterTest {
             calculationSteps = steps
         )
         assertNotNull(file)
-        val pages = pageTexts(file!!)
+        stage(file!!, "paging.pdf")
+        val pages = pageTexts(file)
         assertTrue("expected at least 3 pages, got ${pages.size}", pages.size >= 3)
         pages.forEachIndexed { i, text ->
             val n = i + 1
@@ -119,7 +129,8 @@ class ProfessionalEnglishPdfReporterTest {
             results = mapOf("As" to "1000 mm2")
         )
         assertNotNull(file)
-        val all = pageTexts(file!!).joinToString("\n")
+        stage(file!!, "dedupe.pdf")
+        val all = pageTexts(file).joinToString("\n")
         assertTrue("inputs row lost", all.contains("1.4DL + 1.6LL (actual)"))
         assertFalse(
             "default step duplicated the load-combination text",
@@ -161,7 +172,8 @@ class ProfessionalEnglishPdfReporterTest {
             outputPath = out.absolutePath
         )
         assertNotNull(bundle.pdfFile)
-        val all = pageTexts(bundle.pdfFile!!).joinToString("\n")
+        stage(bundle.pdfFile!!, "units.pdf")
+        val all = pageTexts(bundle.pdfFile).joinToString("\n")
         assertTrue("result text lost", all.contains("Ho = 0mm"))
         assertFalse("unit duplicated as '0mm mm'", all.contains("0mm mm"))
         assertFalse("unit duplicated as 'kN kN'", all.contains("kN kN"))
