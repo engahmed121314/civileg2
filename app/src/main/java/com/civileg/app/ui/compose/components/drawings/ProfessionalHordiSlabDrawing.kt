@@ -77,6 +77,11 @@ fun ProfessionalHordiSlabDrawing(
     InputGuard.positive("toppingThickness", toppingThickness)
     InputGuard.positive("cover", cover)
 
+    if (resultSummary?.safetyAssessmentBlocked == true) {
+        MethodHeldSlabDrawing(modifier)
+        return
+    }
+
     val codeLabel = designCode.version
     val cfg = drawingDimensionsConfig()
 

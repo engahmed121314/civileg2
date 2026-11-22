@@ -78,7 +78,7 @@ class HordiSafetyAssessmentTest {
     @Test fun methodHoldEnglish() { verify("en") }
     @Test fun methodHoldArabic() { verify("ar") }
 
-    @Test fun blockedDrawingStrip() {
+    private fun verifyHeldDrawing(mode: Int) {
         rule.setContent {
             CivilEngineerPremiumTheme(darkTheme = true) {
                 androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
@@ -87,16 +87,19 @@ class HordiSafetyAssessmentTest {
                         totalThickness = 300.0, toppingThickness = 60.0,
                         ribBottomDia = 12.0, ribBottomCount = 2,
                         stirrupDia = 8.0, stirrupSpacing = 200.0, cover = 25.0,
-                        viewMode = 1, resultSummary = hordiSlabDrawingSummary(result),
+                        viewMode = mode, resultSummary = hordiSlabDrawingSummary(result),
                         modifier = Modifier.fillMaxSize()
                     )
                 }
             }
         }
         rule.waitForIdle()
+        assertTrue(rule.onAllNodesWithText("METHOD NOT VERIFIED").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(rule.onAllNodesWithText("NOT FOR EXECUTION").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(rule.onAllNodesWithText("BBS SCHEDULE").fetchSemanticsNodes().isEmpty())
         val dir = File("build/reports/tests/compose-shots").apply { mkdirs() }
         val content = rule.activity.findViewById<android.view.ViewGroup>(android.R.id.content)
-        FileOutputStream(File(dir, "hordi-method-hold-drawing.png")).use {
+        FileOutputStream(File(dir, "hordi-method-hold-drawing-mode$mode.png")).use {
             content.drawToBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
         }
     }
@@ -105,5 +108,9 @@ class HordiSafetyAssessmentTest {
 
     @Test fun legacy_archive_shows_not_verified_en() = verify("en", archive = true)
     @Test fun legacy_archive_shows_not_verified_ar() = verify("ar", archive = true)
+
+    @Test fun heldPlanWithholdsReinforcementDrawing() = verifyHeldDrawing(1)
+    @Test fun heldAllModeWithholdsInlineSchedule() = verifyHeldDrawing(0)
+    @Test fun heldTableModeWithholdsInlineSchedule() = verifyHeldDrawing(4)
 
 }
