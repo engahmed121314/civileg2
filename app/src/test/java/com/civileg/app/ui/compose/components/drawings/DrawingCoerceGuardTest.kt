@@ -3,6 +3,7 @@ package com.civileg.app.ui.compose.components.drawings
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -71,18 +72,20 @@ class DrawingCoerceGuardTest {
 
     @Test
     fun `soil drawing survives degenerate canvas in every view mode`() {
-        for (mode in 0..4) {
-            setThemed {
-                Box(Modifier.size(24.dp)) {
-                    ProfessionalSoilStructureDrawing(
-                        foundationLengthMm = 3000.0, foundationWidthMm = 2000.0,
-                        foundationThicknessMm = 500.0, columnLoadKN = 1200.0,
-                        momentKNm = 50.0, soilBearingCapacityKpa = 150.0,
-                        maxPressureKpa = 133.0, minPressureKpa = 61.0,
-                        averagePressureKpa = 97.0, settlementMm = 12.0,
-                        overturningFS = 4.4, slidingFS = 2.1, bearingFS = 1.13,
-                        cover = 75.0, viewMode = mode, designCode = DesignCode.ECP
-                    )
+        setThemed {
+            Column {
+                for (mode in 0..4) {
+                    Box(Modifier.size(24.dp)) {
+                        ProfessionalSoilStructureDrawing(
+                            foundationLengthMm = 3000.0, foundationWidthMm = 2000.0,
+                            foundationThicknessMm = 500.0, columnLoadKN = 1200.0,
+                            momentKNm = 50.0, soilBearingCapacityKpa = 150.0,
+                            maxPressureKpa = 133.0, minPressureKpa = 61.0,
+                            averagePressureKpa = 97.0, settlementMm = 12.0,
+                            overturningFS = 4.4, slidingFS = 2.1, bearingFS = 1.13,
+                            cover = 75.0, viewMode = mode, designCode = DesignCode.ECP
+                        )
+                    }
                 }
             }
         }
@@ -128,6 +131,7 @@ class DrawingCoerceGuardTest {
     @Test
     fun `slab and footing drawings survive degenerate canvas`() {
         setThemed {
+            Column {
             Box(Modifier.size(24.dp)) {
                 ProfessionalHordiSlabDrawing(
                     span = 6000.0, ribWidth = 150.0, ribSpacing = 650.0,
@@ -136,8 +140,6 @@ class DrawingCoerceGuardTest {
                     stirrupDia = 8.0, stirrupSpacing = 200.0, cover = 25.0
                 )
             }
-        }
-        setThemed {
             Box(Modifier.size(24.dp)) {
                 ProfessionalWaffleSlabDrawing(
                     lx = 8.0, ly = 8.0, ribSpacing = 900.0, ribWidth = 150.0,
@@ -147,8 +149,6 @@ class DrawingCoerceGuardTest {
                     headBottomCount = 6, cover = 25.0
                 )
             }
-        }
-        setThemed {
             Box(Modifier.size(24.dp)) {
                 ProfessionalCombinedFootingDrawing(
                     footingLength = 5000.0, footingWidth = 2500.0, footingThickness = 700.0,
@@ -160,8 +160,6 @@ class DrawingCoerceGuardTest {
                     cover = 75.0, soilPressureMax = 180.0, soilPressureMin = 60.0
                 )
             }
-        }
-        setThemed {
             Box(Modifier.size(24.dp)) {
                 ProfessionalStrapFootingDrawing(
                     footing1Length = 2000.0, footing1Width = 2000.0, footing1Thickness = 600.0,
@@ -172,12 +170,14 @@ class DrawingCoerceGuardTest {
                     strapDia = 20.0, strapCount = 6, cover = 75.0
                 )
             }
+            }
         }
     }
 
     @Test
     fun `pile steel flat slab and stair drawings survive degenerate canvas`() {
         setThemed {
+            Column {
             Box(Modifier.size(24.dp)) {
                 ProfessionalPileDrawing(
                     pileDiameter = 600.0, pileLength = 18.0, numberOfPiles = 4,
@@ -188,14 +188,9 @@ class DrawingCoerceGuardTest {
                     capRebarCount = 10, soilType = "Dense Sand"
                 )
             }
-        }
-        setThemed {
             Box(Modifier.size(24.dp)) {
                 ProfessionalSteelDrawing(showBMD = true, showSFD = true)
             }
-        }
-        val rebar = RebarResult(10, 16, 150, 1340.0, 1200.0, 0.0125)
-        setThemed {
             Box(Modifier.size(24.dp)) {
                 ProfessionalFlatSlabDrawing(
                     lx = 6.0, ly = 6.0, slabThickness = 200.0,
@@ -205,14 +200,13 @@ class DrawingCoerceGuardTest {
                     midTopRebar = rebar, midBotRebar = rebar
                 )
             }
-        }
-        setThemed {
             Box(Modifier.size(24.dp)) {
                 ProfessionalStairDrawing(
                     stairWidth = 1200.0, totalHeight = 3000.0, totalLength = 4800.0,
                     riserHeight = 167.0, treadWidth = 300.0, slabThickness = 200.0,
                     mainRebarDia = 12.0, mainRebarSpacing = 150.0, cover = 25.0
                 )
+            }
             }
         }
     }
