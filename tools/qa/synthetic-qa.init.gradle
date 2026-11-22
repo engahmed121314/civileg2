@@ -1,0 +1,42 @@
+// Apply only to a disposable, nonpublishing emulator build with -I.
+// No production build file, signing secret, security check or keep rule is changed.
+if (gradle.startParameter.projectProperties['civilegSyntheticQa'] != 'true') {
+    throw new GradleException('Synthetic QA init requires -PcivilegSyntheticQa=true')
+}
+def requestedRoot = System.getProperty('civileg.syntheticQa.root')
+if (!requestedRoot) throw new GradleException('Synthetic QA root must be explicit')
+
+gradle.beforeProject { p ->
+    if (p.path == ':app' && p.rootProject.projectDir.canonicalFile == new File(requestedRoot).canonicalFile) {
+        // Register before the Android plugin's afterEvaluate variant finalization.
+        p.afterEvaluate {
+            def android = p.extensions.getByName('android')
+            if (android.namespace != 'com.civileg.app' || android.defaultConfig.applicationId != 'com.civileg.app') {
+                throw new GradleException('Unexpected application identity for synthetic upgrade QA')
+            }
+            def release = android.buildTypes.getByName('release')
+            if (!release.minifyEnabled || !release.shrinkResources || release.debuggable) {
+                throw new GradleException('Synthetic QA must retain configured release shrinking and non-debuggable state')
+            }
+            android.testBuildType = 'release'
+            release.signingConfig = android.signingConfigs.getByName('debug')
+            android.defaultConfig.versionCode = 9
+            android.defaultConfig.versionName = '1.8.0-synthetic-qa'
+            android.sourceSets.getByName('androidTest').java.srcDir(p.rootProject.file('tools/qa/androidTest/java'))
+            android.sourceSets.getByName('androidTest').assets.srcDir(p.rootProject.file('tools/qa/androidTest/assets'))
+            p.tasks.register('verifySyntheticQaContract') {
+                doLast {
+                    if (!release.minifyEnabled || !release.shrinkResources || release.debuggable ||
+                        android.testBuildType != 'release' ||
+                        release.signingConfig != android.signingConfigs.getByName('debug')) {
+                        throw new GradleException('Synthetic QA contract changed before execution')
+                    }
+                    println('Synthetic QA: minified/shrunk, non-debuggable, disposable debug signer, release instrumentation, code9')
+                }
+            }
+            p.tasks.matching { it.name == 'assembleFreeRelease' || it.name == 'assembleFreeReleaseAndroidTest' }.configureEach {
+                dependsOn(p.tasks.named('verifySyntheticQaContract'))
+            }
+        }
+    }
+}

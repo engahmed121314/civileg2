@@ -1,0 +1,212 @@
+#!/usr/bin/env bash
+# Disposable synthetic-upgrade QA sequence. Runs on the emulator-runner host inside
+# the android-emulator-runner script step, in the SAME job that built the candidate
+# and re-signed the old APK copy, so one temporary debug signer covers both APKs.
+#
+# Boundaries: no uninstall/pm clear WITHIN a case (independent cases restart from a
+# clean package state), no run-as against the non-debuggable builds, adb root only
+# after the ro.kernel.qemu=1 disposable-emulator check, no global host security
+# changes (network isolation is scoped to the disposable emulator's own radios and
+# restored on EVERY exit path), no connectedAndroidTest as the upgrade executor.
+#
+# Cleanup is an EXIT trap with a dirty flag: it fires on explicit `exit`, set -e
+# aborts and signals alike, preserves the original exit status, collects per-case
+# evidence and restores radios whenever a case left the emulator dirty.
+set -euo pipefail
+
+PKG=com.civileg.app
+DB=civil_eg_database
+OUT=qa-out
+mkdir -p "$OUT"
+
+for v in CANDIDATE_APK TEST_APK OLD_APK_RESIGNED; do
+  eval "p=\$$v"
+  test -n "${p:-}" && test -f "$p" || { echo "missing or ambiguous input: $v=$p"; exit 1; }
+done
+
+SERIAL=$(adb devices | awk '/emulator-/{print $1; exit}')
+test -n "$SERIAL" || { echo "no emulator found"; exit 1; }
+ADB="adb -s $SERIAL"
+$ADB shell getprop ro.kernel.qemu | tr -d '\r' | grep -q '^1$' || { echo "refusing: not a disposable emulator"; exit 1; }
+
+# Scoped offline boundary: disable ONLY the disposable emulator's own radios, then
+# VERIFY: the state capture must succeed, contain a recognizable CURRENT network
+# section, and show no CONNECTED transport in that section. An empty or failed
+# dump is never accepted as "offline". Restored on every exit path; no host-level
+# network changes.
+emu_network_off() {
+  $ADB shell svc wifi disable
+  $ADB shell svc data disable
+  sleep 3
+  local capture="$OUT/$CASE_DIRTY/connectivity-before-launch.txt"
+  if $ADB shell dumpsys connectivity > "$capture" 2>&1; then
+    :
+  else
+    local capture_rc=$?
+    echo "refusing: connectivity state capture failed (rc=$capture_rc)"
+    return "$capture_rc"
+  fi
+  python3 - "$capture" <<'PY'
+import pathlib, re, sys
+text = pathlib.Path(sys.argv[1]).read_text().replace('\r', '')
+active = re.search(r'^Active default network:\s*(.*?)\s*$', text, re.M)
+section = re.search(r'^Current Networks:[ \t]*\n(.*?)^(?:Status for known UIDs:|Network Requests:)', text, re.M | re.S)
+if not active or active.group(1).lower() != 'none' or not section:
+    sys.exit('refusing: missing or non-offline current connectivity state')
+# Conservative pinned-emulator boundary: require the current network inventory
+# to be empty. Android 13 ends this inventory at Status for known UIDs;
+# older minimal dumps can end it at Network Requests. Ignore later history.
+if section.group(1).strip():
+    sys.exit('refusing: current network inventory is not empty')
+PY
+  echo "verified: disposable emulator offline (saved current state; no default or current network)"
+}
+emu_network_on() {
+  local failures=0
+  $ADB shell svc wifi enable || failures=$((failures+1))
+  $ADB shell svc data enable || failures=$((failures+1))
+  if [ "$failures" -ne 0 ]; then
+    echo "cleanup FAILURE: radio restoration failed"
+    return 1
+  fi
+}
+
+# Per-case evidence collection. Every capture failure is reported loudly and
+# counted; the caller decides, but a failure NEVER passes silently.
+collect_evidence() {
+  local case_name=$1 dir="$OUT/$1" failures=0
+  mkdir -p "$dir"
+  $ADB logcat -d > "$dir/logcat.txt" 2>/dev/null || { echo "evidence FAILURE: logcat capture failed"; failures=$((failures+1)); }
+  $ADB logcat -b crash -d > "$dir/logcat-crash.txt" 2>/dev/null || { echo "evidence FAILURE: crash-buffer logcat capture failed"; failures=$((failures+1)); }
+  if $ADB shell screencap -p "/sdcard/qa-$case_name.png" >/dev/null 2>&1; then
+    $ADB pull "/sdcard/qa-$case_name.png" "$dir/" >/dev/null 2>&1 || { echo "evidence FAILURE: screenshot pull failed"; failures=$((failures+1)); }
+  else
+    echo "evidence FAILURE: screencap failed"; failures=$((failures+1))
+  fi
+  $ADB pull "/data/data/$PKG/databases/$DB" "$dir/migrated-$DB" >/dev/null 2>&1 || { echo "evidence FAILURE: migrated DB pull failed"; failures=$((failures+1)); }
+  return "$failures"
+}
+
+CASE_DIRTY=""
+on_exit() {
+  local rc=$?
+  trap - EXIT
+  set +e
+  if [ -n "$CASE_DIRTY" ]; then
+    echo "== exit (status $rc) with case $CASE_DIRTY unfinished; collecting evidence and restoring radios =="
+    collect_evidence "$CASE_DIRTY"
+    cleanup_rc=$?
+    emu_network_on
+    radio_rc=$?
+    if [ "$rc" -eq 0 ] && { [ "$cleanup_rc" -ne 0 ] || [ "$radio_rc" -ne 0 ]; }; then rc=1; fi
+  fi
+  exit "$rc"
+}
+trap on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# Fail-closed instrumentation check: exact final OK count (singular "test" or
+# plural "tests"), exactly N passing per-test status lines, no bad statuses.
+check_instr() {
+  local file=$1 expected=$2
+  [ "$expected" -ge 1 ] || { echo "expected test count must be positive (fail-closed)"; return 1; }
+  grep -qE "OK \($expected tests?\)" "$file" || { echo "instrumentation did not report OK ($expected test(s))"; return 1; }
+  local passed bad
+  passed=$(grep -c 'INSTRUMENTATION_STATUS_CODE: 0' "$file" || true)
+  bad=$(grep -cE 'INSTRUMENTATION_STATUS_CODE: -[0-9]+' "$file" || true)
+  [ "$passed" -eq "$expected" ] && [ "$bad" -eq 0 ] || { echo "unexpected per-test statuses: passed=$passed bad=$bad expected=$expected"; return 1; }
+}
+
+run_case() {
+  local case_name=$1 expected_tests=$2 instrument_classes=$3
+  local dir="$OUT/$case_name"
+  mkdir -p "$dir"
+  CASE_DIRTY=$case_name
+  echo "== case $case_name =="
+
+  echo "== scoped offline boundary for the disposable emulator =="
+  emu_network_off
+
+  # Independent case: start from a clean disposable package state.
+  $ADB uninstall "$PKG" >/dev/null 2>&1 || true
+
+  echo "== install re-signed old v1.8.0, real first launch (offline) =="
+  $ADB install "$OLD_APK_RESIGNED"
+  $ADB shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null
+  sleep 10
+  $ADB shell am force-stop "$PKG"
+
+  echo "== pull coherent DB set (root allowed: disposable emulator verified) =="
+  $ADB root >/dev/null && sleep 2
+  local remote=/data/data/$PKG/databases
+  $ADB shell "test -f $remote/$DB" || { echo "old database file missing after first launch"; exit 1; }
+  $ADB pull "$remote/$DB" "$dir/$DB" >/dev/null
+  for side in wal shm; do
+    if $ADB shell "test -f $remote/$DB-$side"; then
+      $ADB pull "$remote/$DB-$side" "$dir/$DB-$side" >/dev/null
+      echo "sidecar $DB-$side: present, pulled" | tee -a "$dir/sidecars.txt"
+    else
+      echo "sidecar $DB-$side: absent (optional)" | tee -a "$dir/sidecars.txt"
+    fi
+  done
+
+  echo "== record actual old user_version, then seed sentinels on host =="
+  python3 - "$dir/$DB" <<'PY'
+import sqlite3, sys
+v = sqlite3.connect(sys.argv[1]).execute("PRAGMA user_version").fetchone()[0]
+print("actual old user_version:", v)
+open(sys.argv[1] + ".user_version.txt", "w").write(str(v))
+PY
+  python3 tools/qa/host/seed_upgrade_db.py --db "$dir/$DB" --expectations "$dir/qa_expectations.json" --case "$case_name"
+
+  echo "== push seeded DB back, restore ownership/perms/SELinux =="
+  $ADB shell "rm -f $remote/$DB-wal $remote/$DB-shm"
+  $ADB push "$dir/$DB" "$remote/$DB" >/dev/null
+  UIDGID=$($ADB shell stat -c '%u:%g' "$remote" | tr -d '\r')
+  $ADB shell chown "$UIDGID" "$remote/$DB"
+  $ADB shell chmod 660 "$remote/$DB"
+  $ADB shell restorecon "$remote/$DB" 2>/dev/null || true
+
+  echo "== in-place upgrade: adb install -r candidate (same package, same disposable signer) =="
+  $ADB install -r "$CANDIDATE_APK"
+  $ADB shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null
+  sleep 15
+  $ADB shell am force-stop "$PKG"
+
+  echo "== instrumentation (fail-closed; per-command pipeline codes preserved) =="
+  $ADB push "$dir/qa_expectations.json" /data/local/tmp/qa_expectations.json >/dev/null
+  $ADB install -r "$TEST_APK" >/dev/null
+  local instr_rc=0 tee_rc=0 check_rc=0 ev_rc=0
+  local -a pipeline_rc
+  set +e
+  $ADB shell am instrument -w -r \
+    -e class "$instrument_classes" \
+    -e qaExpectations /data/local/tmp/qa_expectations.json \
+    com.civileg.app.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee "$dir/instrumentation.txt"
+  pipeline_rc=("${PIPESTATUS[@]}")
+  instr_rc=${pipeline_rc[0]}
+  tee_rc=${pipeline_rc[1]}
+  set -e
+  [ "$tee_rc" -eq 0 ] || echo "evidence FAILURE: tee of instrumentation output failed (rc=$tee_rc); instrumentation.txt may be incomplete"
+  check_instr "$dir/instrumentation.txt" "$expected_tests" || check_rc=$?
+
+  echo "== collect per-case evidence (before pass/fail decision) =="
+  collect_evidence "$case_name" || ev_rc=$?
+  emu_network_on
+  CASE_DIRTY=""
+
+  if [ "$instr_rc" -ne 0 ] || [ "$tee_rc" -ne 0 ] || [ "$check_rc" -ne 0 ] || [ "$ev_rc" -ne 0 ]; then
+    echo "== case $case_name FAILED (instrument rc=$instr_rc, tee rc=$tee_rc, check rc=$check_rc, evidence rc=$ev_rc); evidence in $dir =="
+    [ "$instr_rc" -eq 0 ] || exit "$instr_rc"
+    [ "$tee_rc" -eq 0 ] || exit "$tee_rc"
+    exit 1
+  fi
+  echo "== case $case_name PASSED =="
+}
+
+run_case "fresh-14" 5 \
+  "com.civileg.app.qa.UpgradePreservationTest,com.civileg.app.qa.MinifiedSourceSnapshotTest,com.civileg.app.qa.FrameEntryTest"
+run_case "historical-8to9-derived" 3 \
+  "com.civileg.app.qa.UpgradePreservationTest,com.civileg.app.qa.FrameEntryTest"
+echo "== synthetic upgrade QA: all cases PASSED =="
