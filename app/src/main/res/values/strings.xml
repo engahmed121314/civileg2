@@ -2458,6 +2458,12 @@
     <string name="bd_boq">Quantities &amp; cost table</string>
     <string name="bd_estimated_cost">Estimated cost: %1$s EGP</string>
     <string name="bd_run_design">Run Design &amp; Analysis</string>
+    <string name="bd_tools_label">Tools</string>
+    <string name="bd_tool_footing">Footing</string>
+    <string name="bd_tool_column">Column</string>
+    <string name="bd_tool_slab">Slab</string>
+    <string name="bd_tool_steel">Steel Beam</string>
+    <string name="bd_tool_erase">Erase</string>
     <string name="bd_boq_title">Estimated Quantities &amp; Cost (BOQ)</string>
     <string name="bd_total_concrete">Total concrete: %1$s m³</string>
     <string name="bd_total_rebar">Total reinforcement: %1$s ton</string>

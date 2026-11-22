@@ -137,7 +137,9 @@ class I18nScreensVisualTest {
         rule.waitForIdle()
         assertTextPresent("Structural Designer")
         assertTextPresent("Run Design & Analysis")
+        assertTextPresent("Footing")
         assertTextAbsent("المصمم الإنشائي")
+        assertTextAbsent("قاعدة")
         capture("i18n-bd-en")
     }
 
@@ -150,7 +152,9 @@ class I18nScreensVisualTest {
         rule.waitForIdle()
         assertTextPresent("المصمم الإنشائي")
         assertTextPresent("تشغيل التصميم والتحليل")
+        assertTextPresent("قاعدة")
         assertTextAbsent("Structural Designer")
+        assertTextAbsent("Footing")
         capture("i18n-bd-ar")
     }
 }

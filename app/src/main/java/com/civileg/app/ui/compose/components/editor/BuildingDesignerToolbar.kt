@@ -14,7 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.civileg.app.R
 
 @Composable
 fun BuildingDesignerToolbar(
@@ -36,35 +38,35 @@ fun BuildingDesignerToolbar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AppText("الأدوات:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            AppText(stringResource(R.string.bd_tools_label) + ":", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
 
             ToolbarChip(
                 icon = Icons.Default.Square,
-                label = "قاعدة",
+                label = stringResource(R.string.bd_tool_footing),
                 isSelected = activeTool == "Footing",
                 onClick = { onToolSelected("Footing") }
             )
             ToolbarChip(
                 icon = Icons.Default.ViewColumn,
-                label = "عمود",
+                label = stringResource(R.string.bd_tool_column),
                 isSelected = activeTool == "Column",
                 onClick = { onToolSelected("Column") }
             )
             ToolbarChip(
                 icon = Icons.Default.Layers,
-                label = "سقف",
+                label = stringResource(R.string.bd_tool_slab),
                 isSelected = activeTool == "Slab",
                 onClick = { onToolSelected("Slab") }
             )
             ToolbarChip(
                 icon = Icons.Default.Timeline,
-                label = "كمر ستيل",
+                label = stringResource(R.string.bd_tool_steel),
                 isSelected = activeTool == "Steel",
                 onClick = { onToolSelected("Steel") }
             )
             ToolbarChip(
                 icon = Icons.Default.Delete,
-                label = "مسح",
+                label = stringResource(R.string.bd_tool_erase),
                 isSelected = activeTool == "Erase",
                 onClick = { onToolSelected("Erase") }
             )

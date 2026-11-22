@@ -2461,6 +2461,12 @@
     <string name="bd_boq">جدول الكميات والتكلفة</string>
     <string name="bd_estimated_cost">التكلفة التقديرية: %1$s ج.م</string>
     <string name="bd_run_design">تشغيل التصميم والتحليل</string>
+    <string name="bd_tools_label">الأدوات</string>
+    <string name="bd_tool_footing">قاعدة</string>
+    <string name="bd_tool_column">عمود</string>
+    <string name="bd_tool_slab">سقف</string>
+    <string name="bd_tool_steel">كمر ستيل</string>
+    <string name="bd_tool_erase">مسح</string>
     <string name="bd_boq_title">جدول الكميات والتكلفة التقديرية (BOQ)</string>
     <string name="bd_total_concrete">إجمالي الخرسانة: %1$s م³</string>
     <string name="bd_total_rebar">إجمالي حديد التسليح: %1$s طن</string>
