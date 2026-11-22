@@ -1,8 +1,10 @@
 package com.civileg.app.utils.exporters
 
 import com.civileg.app.domain.calculations.ColumnDesignEngine
+import com.civileg.app.domain.calculations.ecp.ECPHordiSlabDesign
 import com.civileg.app.domain.entities.CalculationStep
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.utils.EnglishFontProvider
 import com.civileg.app.utils.ExportManager
 import com.itextpdf.kernel.pdf.PdfDocument
@@ -215,7 +217,8 @@ class ProfessionalEnglishPdfReporterTest {
                 "Height H" to "3000 mm",
                 "Pu" to "1500 kN",
                 "fcu" to "30 MPa",
-                "fy" to "400 MPa"
+                "fy" to "400 MPa",
+                "Design Code" to "ECP 203-2020"
             ),
             results = mapOf(
                 "Classification" to result.columnClassification,
@@ -234,8 +237,69 @@ class ProfessionalEnglishPdfReporterTest {
         assertTrue("result lost", all.contains(result.columnClassification))
         // The printed basis must be the editions the app is verified against,
         // never an edition string the project has no source copy of.
-        assertTrue("basis missing", all.contains("ACI 318M-14 / ECP 203-2020"))
+        assertTrue("basis must match the chosen engine code", all.contains("Applicable design basis: ECP 203-2020"))
         assertFalse("unverified edition label", all.contains("ECP 203-2025"))
         assertFalse("unverified edition label", all.contains("ACI 318-19"))
+    }
+
+    /**
+     * Representative Hordi export: real ECPHordiSlabDesign run through the
+     * production ExportManager path exactly as HordiSlabViewModel does
+     * (no calculation steps - the default methodology steps must not
+     * duplicate the load-combination inputs row; basis from Design Code).
+     */
+    @Test
+    fun `integrated hordi export keeps load combination once and honors engine code`() {
+        assertTrue(EnglishFontProvider.isReady)
+        val res = ECPHordiSlabDesign().designHordiSlab(
+            fcu = 30.0, fy = 400.0,
+            ribWidth = 120.0, ribSpacing = 500.0,
+            totalThickness = 250.0, toppingThickness = 50.0,
+            span = 4000.0,
+            designMoment = 18.0, designShear = 22.5,
+            loadCombination = LoadCombination.DEAD_LIVE
+        )
+        val out = File.createTempFile("hordi", ".pdf")
+        val context = RuntimeEnvironment.getApplication()
+        val bundle = ExportManager(context).exportReportAndDxf(
+            titleAr = "hordi",
+            titleEn = "Hordi Slab Design Report",
+            subtitle = "Code: ECP 203-2020",
+            designType = "Hordi Slab",
+            inputs = mapOf(
+                "Rib Width" to "120.0 mm",
+                "Rib Spacing" to "500.0 mm",
+                "Total Thickness" to "250.0 mm",
+                "Span" to "4.0 m",
+                "Design Moment" to "18.00 kN.m/rib",
+                "Design Shear" to "22.50 kN/rib",
+                "Load Combination" to LoadCombination.DEAD_LIVE.description,
+                "Design Code" to "ECP 203-2020"
+            ),
+            results = mapOf(
+                "Required As" to "${res.requiredReinforcement} mm2",
+                "Provided As" to "${res.providedReinforcement} mm2",
+                "Is Safe" to if (res.isSafe) "YES" else "NO"
+            ),
+            isSafe = res.isSafe,
+            outputPath = out.absolutePath
+        )
+        assertNotNull(bundle.pdfFile)
+        val f = bundle.pdfFile!!
+        stage(f, "hordi.pdf")
+        val all = pageTexts(f).joinToString("\n")
+        assertTrue("load combination lost", all.contains(LoadCombination.DEAD_LIVE.description))
+        assertFalse(
+            "default steps duplicated the load-combination text",
+            all.contains("Wu = 1.4*DL + 1.6*LL (kN/m^2)")
+        )
+        assertTrue(
+            "basis must match the chosen engine code",
+            all.contains("Applicable design basis: ECP 203-2020")
+        )
+        val pages = pageTexts(f)
+        pages.forEachIndexed { i, text ->
+            assertTrue("page ${i + 1} footer wrong or missing", text.contains("Page ${i + 1}"))
+        }
     }
 }

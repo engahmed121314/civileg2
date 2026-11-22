@@ -270,7 +270,11 @@ object ProfessionalEnglishPdfReporter {
                                           inputKeys: Set<String> = emptySet()) {
         document.add(sectionTitle("2. Calculation Methodology & Verification"))
         document.add(separator())
-        document.add(Paragraph().add(text("Applicable design basis: $designCode", createPdfFont(), 10f, SECONDARY)))
+        // Printed only when the caller actually supplied a code: a report whose
+        // engine/code choice is unknown must not claim a basis it never used.
+        if (designCode.isNotBlank()) {
+            document.add(Paragraph().add(text("Applicable design basis: $designCode", createPdfFont(), 10f, SECONDARY)))
+        }
         document.add(emptyLine())
 
         if (steps.isNotEmpty()) {
@@ -983,10 +987,9 @@ object ProfessionalEnglishPdfReporter {
             else -> ReportType.GENERIC
         }
 
-        // Extract design code from inputs if available
-        val defaultCode = if (reportType == ReportType.STEEL) "AISC 360-16 / ECP 205-2007" else "ACI 318M-14 / ECP 203-2020"
-        val codeStr = inputs["Design Code"]
-            ?: defaultCode
+        // Basis comes from the caller's engine/code choice ("Design Code"
+        // input). When unknown, print no basis rather than a global claim.
+        val codeStr = inputs["Design Code"] ?: ""
 
         return generateReport(
             reportType = reportType,
