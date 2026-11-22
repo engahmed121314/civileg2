@@ -97,7 +97,6 @@ fun BeamScreen(
     var pdfError by remember { mutableStateOf<String?>(null) }
     // ... existing state vars ...
     var showSaveDialog by remember { mutableStateOf(false) }
-    var selectedProjectId by remember { mutableLongStateOf(-1L) }
     val beamDefaultName = stringResource(R.string.beam_default_name)
     var designName by remember { mutableStateOf(beamDefaultName) }
     
@@ -516,58 +515,19 @@ fun BeamScreen(
     }
 
     if (showSaveDialog) {
-        AlertDialog(
-            onDismissRequest = { showSaveDialog = false },
-            title = { AppText(stringResource(R.string.save_design_in_project)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = designName,
-                        onValueChange = { designName = it },
-                        label = { AppText(stringResource(R.string.beam_name_hint)) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+        com.civileg.app.ui.components.SaveToProjectDialog(
+            title = stringResource(R.string.save_design_in_project),
+            nameLabel = stringResource(R.string.beam_name_hint),
+            noProjectsText = stringResource(R.string.no_projects_available),
+            designName = designName,
+            onDesignNameChange = { designName = it },
+            projects = projects,
+            onConfirm = { projectId ->
+                        result?.let { viewModel.saveBeam(projectId, designName, it) }
                     
-                    AppText(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
-                    if (projects.isEmpty()) {
-                        AppText(stringResource(R.string.no_projects_available), color = Color.Gray, fontSize = 12.sp)
-                    } else {
-                        projects.forEach { project ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = selectedProjectId == project.id,
-                                    onClick = { selectedProjectId = project.id }
-                                )
-                                AppText(project.name, modifier = Modifier.padding(start = 8.dp))
-                            }
-                        }
-                    }
-                }
+                showSaveDialog = false
             },
-            confirmButton = {
-                AppButton(
-                    label = stringResource(R.string.save),
-                    fillMaxWidth = false,
-                    onClick = {
-                        val pId = if (selectedProjectId == -1L) 1L else selectedProjectId
-                        result?.let { viewModel.saveBeam(pId, designName, it) }
-                        showSaveDialog = false
-                    }
-                )
-            },
-            dismissButton = {
-                AppButton(
-                    label = stringResource(R.string.cancel),
-                    onClick = { showSaveDialog = false },
-                    style = AppButtonStyle.Text,
-                    fillMaxWidth = false
-                )
-            }
+            onDismiss = { showSaveDialog = false }
         )
     }
 }

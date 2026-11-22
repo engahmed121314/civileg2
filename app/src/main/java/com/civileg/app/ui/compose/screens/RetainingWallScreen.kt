@@ -79,7 +79,6 @@ fun RetainingWallScreen(
     val screenW = configuration.screenWidthDp.dp
 
     var showSaveDialog by remember { mutableStateOf(false) }
-    var selectedProjectId by remember { mutableLongStateOf(-1L) }
     val rwDefaultName = stringResource(R.string.rw_default_name)
     var designName by remember { mutableStateOf(rwDefaultName) }
 
@@ -555,61 +554,19 @@ fun RetainingWallScreen(
     }
 
     if (showSaveDialog) {
-        AlertDialog(
-            onDismissRequest = { showSaveDialog = false },
-            title = { AppText(stringResource(R.string.save_design_in_project)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = designName,
-                        onValueChange = { designName = it },
-                        label = { AppText(stringResource(R.string.rw_name_hint)) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    AppText(stringResource(R.string.select_project), style = MaterialTheme.typography.labelMedium)
-                    if (projects.isEmpty()) {
-                        AppText(stringResource(R.string.rw_no_projects), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                    } else {
-                        Column(modifier = Modifier.heightIn(max = 200.dp).verticalScroll(rememberScrollState())) {
-                            projects.forEach { project ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { selectedProjectId = project.id }
-                                        .padding(vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = selectedProjectId == project.id,
-                                        onClick = { selectedProjectId = project.id }
-                                    )
-                                    AppText(project.name, modifier = Modifier.padding(start = 8.dp))
-                                }
-                            }
-                        }
-                    }
-                }
+        com.civileg.app.ui.components.SaveToProjectDialog(
+            title = stringResource(R.string.save_design_in_project),
+            nameLabel = stringResource(R.string.rw_name_hint),
+            noProjectsText = stringResource(R.string.rw_no_projects),
+            designName = designName,
+            onDesignNameChange = { designName = it },
+            projects = projects,
+            onConfirm = { projectId ->
+                        result?.let { viewModel.saveRetainingWall(projectId, designName, it) }
+                    
+                showSaveDialog = false
             },
-            confirmButton = {
-                AppButton(
-                    label = stringResource(R.string.save),
-                    fillMaxWidth = false,
-                    onClick = {
-                        val pId = if (selectedProjectId == -1L) (projects.firstOrNull()?.id ?: 1L) else selectedProjectId
-                        result?.let { viewModel.saveRetainingWall(pId, designName, it) }
-                        showSaveDialog = false
-                    }
-                )
-            },
-            dismissButton = {
-                AppButton(
-                    label = stringResource(R.string.cancel),
-                    onClick = { showSaveDialog = false },
-                    style = AppButtonStyle.Text,
-                    fillMaxWidth = false
-                )
-            }
+            onDismiss = { showSaveDialog = false }
         )
     }
 }
