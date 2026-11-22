@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import com.civileg.app.utils.EnglishFontProvider
 import com.itextpdf.kernel.pdf.PdfDocument
@@ -24,12 +22,14 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.io.ByteArrayInputStream
 import java.io.File
 
 /** Pixel artifacts prove backend output only, never a structural member design. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "mdpi")
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DrawingBackendRenderTest {
     @get:Rule val compose = createComposeRule()
 
@@ -56,13 +56,22 @@ class DrawingBackendRenderTest {
                 assertTrue("Missing actual technical label: $it", text.contains(it))
             }
         }
+        lateinit var hostView: android.view.View
         compose.setContent {
+            hostView = LocalView.current
             Box(Modifier.size(480.dp, 540.dp).background(Color.White)) {
                 ComposeRenderer.render(scene, Modifier.fillMaxSize())
             }
         }
         compose.waitForIdle()
-        val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+        // Robolectric has no frame-driven redraw callback for captureToImage.
+        // Draw the actual Compose host synchronously with the native raster backend.
+        val bitmap = compose.runOnIdle {
+            check(hostView.width > 0 && hostView.height > 0) { "Compose host has no drawable size" }
+            Bitmap.createBitmap(hostView.width, hostView.height, Bitmap.Config.ARGB_8888).also {
+                hostView.draw(android.graphics.Canvas(it))
+            }
+        }
         File(output, "shared-scene-ui.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         var inkPixels = 0
         for (y in 0 until bitmap.height) for (x in 0 until bitmap.width) {
