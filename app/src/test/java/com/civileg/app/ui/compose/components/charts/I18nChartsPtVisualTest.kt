@@ -86,7 +86,6 @@ class I18nChartsPtVisualTest {
     }
 
     @Composable
-    @Composable
     private fun interactionChart() {
         InteractionDiagramChart(
             axialCapacities = listOf(500.0, 1500.0, 2500.0),
