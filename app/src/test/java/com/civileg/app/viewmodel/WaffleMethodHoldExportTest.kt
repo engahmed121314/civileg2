@@ -37,4 +37,14 @@ class WaffleMethodHoldExportTest {
         assertTrue(called)
         assertNotNull(vm.error.value)
     }
+    @Test fun codeSelectionInvalidationRemovesPriorAssessment() {
+        val vm = held()
+        assertNotNull(vm.result.value)
+        vm.clearResult()
+        assertNull(vm.result.value)
+        assertNull(vm.lastCalculatedInput)
+        assertNull(vm.pendingDrawingBitmap)
+        assertNull(vm.buildDxfDrawing())
+    }
+
 }

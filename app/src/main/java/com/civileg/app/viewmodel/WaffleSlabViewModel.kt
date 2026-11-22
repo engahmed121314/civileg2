@@ -268,6 +268,8 @@ class WaffleSlabViewModel @Inject constructor(
 
     fun clearResult() {
         _result.value = null
+        pendingDrawingBitmap = null
+        lastInput = null
         _error.value = null
     }
 

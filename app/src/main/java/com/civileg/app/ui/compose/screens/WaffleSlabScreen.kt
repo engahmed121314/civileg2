@@ -140,7 +140,7 @@ fun WaffleSlabScreen(
                     CodeSelectorChips(
                         selectedCode = designCode,
                         codes = listOf("ECP" to "ECP 203", "ACI" to "ACI 318", "SBC" to "SBC 304"),
-                        onCodeSelected = { designCode = it }
+                        onCodeSelected = { viewModel.clearResult(); designCode = it }
                     )
                 }
 
