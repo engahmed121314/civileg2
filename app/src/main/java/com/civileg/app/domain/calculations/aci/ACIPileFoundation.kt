@@ -292,7 +292,7 @@ class ACIPileFoundation : PileFoundationDesign {
 
     private fun calculateAlphaFactor(cu: Double, pileType: PileType): Double {
         // API RP 2A-WSD 6.4.2 alpha method, applied as a CONTINUOUS curve
-        // (owner decision 2026-11-21: replace the old banded curve that dropped
+        // (design decision 2026-11-21: replace the old banded curve that dropped
         // alpha 0.75 -> 0.5 at cu = 50 kPa). With the engine's implicit
         // overburden p'0 = 100 kPa, psi = cu/100:
         //   psi <= 1: alpha = min(1.0, 0.5 * psi^-0.5)
@@ -499,7 +499,7 @@ class ACIPileFoundation : PileFoundationDesign {
         val d = input.pileDiameter / 1000.0
         val s = input.spacing * d
 
-        // Standard Converse-Labarre (owner decision 2026-11-21: replace the
+        // Standard Converse-Labarre (design decision 2026-11-21: replace the
         // engine variant that used atan(s/d) and dropped the (n-1)*m term):
         //   eta = 1 - theta * ((m-1)*ncols + (ncols-1)*m) / (90 * m * ncols)
         //   theta = atan(d/s) in DEGREES, m rows x ncols piles.

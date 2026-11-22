@@ -939,7 +939,7 @@ class AISCSteelDesignEngine {
             }
             is ConnectionType.Welded -> {
                 // AISC J4.3 block shear is a BOLTED-connection limit state; it
-                // does not apply to welded connections (owner decision
+                // does not apply to welded connections (design decision
                 // 2026-11-21, CLAUSE_LOG A-06). The old placeholder
                 // 0.75*0.6*Fy*Ag GOVERNED welded tension and understated
                 // capacity by ~50%. Returning +infinity excludes it from the
@@ -951,7 +951,7 @@ class AISCSteelDesignEngine {
             }
             is ConnectionType.Pressed -> {
                 // Swaged/pressed fitting: no bolt holes, so no J4.3 block-shear
-                // limit state either (same owner decision, CLAUSE_LOG A-06).
+                // limit state either (same design decision, CLAUSE_LOG A-06).
                 return Double.POSITIVE_INFINITY
             }
         }
@@ -1106,7 +1106,7 @@ class AISCSteelDesignEngine {
         // AISC E4: Fcr comes from E3 using the TORSIONAL elastic stress Fe,
         // with the inelastic/elastic branch chosen by Fy/Fe <= 2.25
         // (equivalently the torsional equivalent slenderness), NOT by the
-        // flexural slenderness (owner decision 2026-11-21, CLAUSE_LOG A-07;
+        // flexural slenderness (design decision 2026-11-21, CLAUSE_LOG A-07;
         // fixes U-A2). lambdaFlexural is kept in the signature for callers.
         return if (Fy / Fe <= 2.25) {
             minOf(0.658.pow(Fy / Fe) * Fy, Fy)
