@@ -14,6 +14,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.material3.Text
@@ -147,7 +148,8 @@ fun CivilEngineerPremiumTheme(
             MaterialTheme(
                 colorScheme = colorScheme,
                 // Use premium geometric typography
-                typography = PremiumTypography.Typography,
+                typography = typographyForUiLanguage(PremiumTypography.Typography,
+                    LocalConfiguration.current.locales[0].language),
                 content = content
             )
         }
@@ -292,11 +294,12 @@ object PremiumTypography {
     ) {
         Text(
             text = text,
-            fontFamily = FontFamily.Default,
-            fontWeight = FontWeight.ExtraBold,
+            fontFamily = ArabicUiFontFamily,
+            fontWeight = FontWeight.Bold,
             fontSize = fontSize,
             lineHeight = 40.sp,
-            letterSpacing = 0.01.sp,
+            letterSpacing = 0.sp,
+            style = TextStyle(fontSynthesis = androidx.compose.ui.text.font.FontSynthesis.None),
             color = color,
             modifier = modifier,
             textAlign = androidx.compose.ui.text.style.TextAlign.End
@@ -312,11 +315,12 @@ object PremiumTypography {
     ) {
         Text(
             text = text,
-            fontFamily = FontFamily.Default,
+            fontFamily = ArabicUiFontFamily,
             fontWeight = FontWeight.Normal,
             fontSize = fontSize,
             lineHeight = 24.sp,
-            letterSpacing = 0.02.sp,
+            letterSpacing = 0.sp,
+            style = TextStyle(fontSynthesis = androidx.compose.ui.text.font.FontSynthesis.None),
             color = color,
             modifier = modifier,
             textAlign = androidx.compose.ui.text.style.TextAlign.End
