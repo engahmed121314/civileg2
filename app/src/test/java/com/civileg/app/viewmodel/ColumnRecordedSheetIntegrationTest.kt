@@ -78,8 +78,17 @@ class ColumnRecordedSheetIntegrationTest {
     private fun newReport(before: Set<String>): File? = documents().listFiles()?.firstOrNull {
         it.name.startsWith("Column_Report_") && it.extension == "pdf" && it.name !in before && it.length() > 0
     }
+    private fun retainBitmap(name: String, bitmap: Bitmap) {
+        File(output, name).outputStream().use {
+            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
+        }
+    }
     private fun inspectReport(file: File, expectedDrawingStatus: String, artifactName: String,
                               expectedBitmap: Bitmap? = null) {
+        // Preserve the actual PDF and source capture even when an assertion below fails.
+        file.copyTo(File(output, artifactName), overwrite = true)
+        val artifactStem = artifactName.substringBeforeLast('.')
+        expectedBitmap?.let { retainBitmap("$artifactStem-observed-capture.png", it) }
         assertTrue(vm.uiState.value.errors.toString(), vm.uiState.value.errors.isEmpty())
         val revision = requireNotNull(vm.uiState.value.completedDesign).revisionSha256
         PdfDocument(PdfReader(file)).use { pdf ->
@@ -114,6 +123,7 @@ class ColumnRecordedSheetIntegrationTest {
                 assertEquals(expectedBitmap.height, image.height.toInt())
                 val bytes = image.imageBytes
                 val decoded = requireNotNull(BitmapFactory.decodeByteArray(bytes, 0, bytes.size))
+                retainBitmap("$artifactStem-pdf-image-resource.png", decoded)
                 assertEquals(expectedBitmap.width, decoded.width)
                 assertEquals(expectedBitmap.height, decoded.height)
                 val expected = IntArray(expectedBitmap.width * expectedBitmap.height)
@@ -130,6 +140,7 @@ class ColumnRecordedSheetIntegrationTest {
                 } else {
                     val maskBytes = PdfImageXObject(softMask).imageBytes
                     val mask = requireNotNull(BitmapFactory.decodeByteArray(maskBytes, 0, maskBytes.size))
+                    retainBitmap("$artifactStem-pdf-image-alpha-mask.png", mask)
                     assertEquals(expectedBitmap.width, mask.width)
                     assertEquals(expectedBitmap.height, mask.height)
                     val alpha = IntArray(expected.size)
@@ -141,7 +152,6 @@ class ColumnRecordedSheetIntegrationTest {
                 decoded.recycle()
             }
         }
-        file.copyTo(File(output, artifactName), overwrite = true)
         assertTrue("No synthetic CAD companion is allowed", !File(file.parentFile, file.nameWithoutExtension + ".dxf").exists())
     }
 
