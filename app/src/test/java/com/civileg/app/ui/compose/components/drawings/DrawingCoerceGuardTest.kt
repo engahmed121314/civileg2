@@ -191,6 +191,10 @@ class DrawingCoerceGuardTest {
             Box(Modifier.size(24.dp)) {
                 ProfessionalSteelDrawing(showBMD = true, showSFD = true)
             }
+            val rebar = RebarResult(
+                bars = 0, diameter = 16, spacing = 150,
+                providedArea = 1340.0, requiredArea = 1200.0, ratio = 0.9
+            )
             Box(Modifier.size(24.dp)) {
                 ProfessionalFlatSlabDrawing(
                     lx = 6.0, ly = 6.0, slabThickness = 200.0,
