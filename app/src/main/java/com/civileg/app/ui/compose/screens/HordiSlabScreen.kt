@@ -48,6 +48,8 @@ import com.civileg.app.ui.compose.components.common.BoqTableCard
 import com.civileg.app.domain.calculations.utils.BoqEstimator
 import com.civileg.app.domain.calculations.utils.BbsGenerator
 import com.civileg.app.viewmodel.HordiSlabViewModel
+import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.domain.entities.HordiSlabDesignSnapshot
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
 import com.civileg.app.utils.captureToAndroidBitmap
 import kotlinx.coroutines.launch
@@ -67,6 +69,7 @@ import com.civileg.app.ui.theme.onColorFor
 @Composable
 fun HordiSlabScreen(
     viewModel: HordiSlabViewModel = hiltViewModel(),
+    projectViewModel: ProjectViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -163,6 +166,9 @@ fun HordiSlabScreen(
     val viewModeLabels = listOf("All", "Plan", "Section", "Detail")
 
     val result by viewModel.result.observeAsState()
+    val projects by projectViewModel.allProjects.observeAsState(emptyList())
+    val isSaving by viewModel.isSaving.observeAsState(false)
+    var saveSnapshot by remember { mutableStateOf<HordiSlabDesignSnapshot?>(null) }
     var showSourceNotes by remember(result) { mutableStateOf(false) }
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
@@ -705,10 +711,10 @@ fun HordiSlabScreen(
                                 icon = Icons.Default.PictureAsPdf
                             )
                             AppButton(
-                                label = "Save",
-                                onClick = { /* save */ },
-                                modifier = Modifier.weight(1f),
-                                enabled = false,
+                                label = stringResource(R.string.save),
+                                onClick = { saveSnapshot = viewModel.currentDesignSnapshot() },
+                                modifier = Modifier.weight(1f).testTag("hordi-save-open"),
+                                enabled = !isSaving && !isLoading && result != null,
                                 style = AppButtonStyle.Outline,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
@@ -747,6 +753,23 @@ fun HordiSlabScreen(
                 }
             }
         }
+    }
+    val dialogSnapshot = saveSnapshot
+    if (dialogSnapshot != null) {
+        val savedMessage = stringResource(R.string.save_success)
+        HordiSnapshotSaveDialog(
+            snapshot = dialogSnapshot,
+            projects = projects,
+            isSaving = isSaving,
+            errorMessage = errorMsg,
+            onDismiss = { saveSnapshot = null },
+            onSave = { projectId, name ->
+                viewModel.saveDesign(projectId, name, dialogSnapshot) {
+                    saveSnapshot = null
+                    scope.launch { snackbarHostState.showSnackbar(savedMessage) }
+                }
+            }
+        )
     }
 }
 

@@ -14,6 +14,9 @@ import com.civileg.app.ui.DesignCodeStore
 import com.civileg.app.ui.theme.CivilEngineerPremiumTheme
 import com.civileg.app.utils.LocaleHelper
 import com.civileg.app.viewmodel.HordiSlabViewModel
+import com.civileg.app.viewmodel.ProjectViewModel
+import androidx.lifecycle.MutableLiveData
+import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.*
 import org.junit.Rule
@@ -58,10 +61,13 @@ class HordiSourceSectionUiTest {
         LocaleHelper.setLocale(app,lang)
         DesignCodeStore.set(app,DesignCode.ECP)
         val vm = HordiSlabViewModel(mockk(relaxed=true))
+        val projects = mockk<ProjectViewModel> {
+            every { allProjects } returns MutableLiveData(emptyList())
+        }
         rule.setContent {
             CompositionLocalProvider(LocalLayoutDirection provides
                 if (lang == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
-                CivilEngineerPremiumTheme(darkTheme=false) { HordiSlabScreen(viewModel=vm) }
+                CivilEngineerPremiumTheme(darkTheme=false) { HordiSlabScreen(viewModel=vm, projectViewModel=projects) }
             }
         }
         rule.waitForIdle()
