@@ -16,6 +16,174 @@ class ACIColumn : ColumnDesign {
         private const val PHI_SPIRAL = 0.75   // معامل الاختزال للأعمدة الحلزونية (ACI 318-21.2.1)
     }
 
+    /**
+     * Result of a strain-compatibility interaction check at the demand axial load.
+     * ACI 318M-14 §22.2 (general principles), §20.2.2 (steel), Table 21.2.2 (φ).
+     */
+    data class InteractionCheckResult(
+        val neutralAxis: Double,  // c, mm from compression face
+        val epsT: Double,         // net tensile strain in extreme tension steel (22.2.1.2 sense)
+        val phi: Double,          // strength reduction factor actually used (Table 21.2.2)
+        val phiPn: Double,        // N
+        val phiMn: Double         // N.mm about the centroidal axis
+    )
+
+    /** β1 stress-block factor per ACI 318M-14 Table 22.2.2.4.3. */
+    private fun beta1(fc: Double): Double = when {
+        fc <= 28.0 -> 0.85
+        fc >= 55.0 -> 0.65
+        else -> 0.85 - 0.05 * (fc - 28.0) / 7.0
+    }
+
+    /** φ for a tied column per ACI 318M-14 Table 21.2.2 (εty = fy/Es per 21.2.2.1). */
+    private fun phiTied(epsT: Double, epsTy: Double): Double = when {
+        epsT <= epsTy -> 0.65
+        epsT >= 0.005 -> 0.90
+        else -> 0.65 + 0.25 * (epsT - epsTy) / (0.005 - epsTy)
+    }
+
+    /**
+     * Deterministic perimeter bar layout: 4 corner bars plus face bars evenly spaced;
+     * the indivisible pair (when (nBars-4) % 4 == 2) goes to the top and bottom faces.
+     * Coordinates in mm from the top-left corner; y runs along [depth].
+     */
+    fun layoutPerimeterBars(nBars: Int, width: Double, depth: Double, dPrime: Double): List<Pair<Double, Double>> {
+        require(nBars >= 4 && nBars % 2 == 0) { "nBars must be even and >= 4" }
+        val bars = mutableListOf(
+            dPrime to dPrime, width - dPrime to dPrime,
+            dPrime to depth - dPrime, width - dPrime to depth - dPrime
+        )
+        val extra = nBars - 4
+        if (extra == 0) return bars
+        val perFace = extra / 4
+        val rem = (extra % 4) / 2          // 0 or 1 extra bar on each of top/bottom faces
+        val nTop = perFace + rem
+        val nSide = perFace
+        val nBottom = nTop
+        fun facePositions(n: Int, lo: Double, hi: Double): List<Double> =
+            (1..n).map { lo + (hi - lo) * it / (n + 1.0) }
+        for (x in facePositions(nTop, dPrime, width - dPrime)) bars += x to dPrime
+        for (x in facePositions(nBottom, dPrime, width - dPrime)) bars += x to depth - dPrime
+        for (y in facePositions(nSide, dPrime, depth - dPrime)) {
+            bars += dPrime to y
+            bars += width - dPrime to y
+        }
+        return bars
+    }
+
+    /** Groups bar ordinates into layers: (ordinate from compression face, summed area). */
+    private fun groupLayers(ordinates: List<Double>, barArea: Double): List<Pair<Double, Double>> {
+        val layers = mutableListOf<Pair<Double, Double>>()
+        for (y in ordinates.sorted()) {
+            val last = layers.lastOrNull()
+            if (last != null && abs(last.first - y) < 1e-6) {
+                layers[layers.lastIndex] = last.first to last.second + barArea
+            } else {
+                layers += y to barArea
+            }
+        }
+        return layers
+    }
+
+    /**
+     * Strain-compatibility uniaxial interaction check per ACI 318M-14:
+     * §22.2.1.1 equilibrium, §22.2.1.2 plane sections, §22.2.2.1 εcu = 0.003,
+     * §22.2.2.2 tension in concrete neglected, §22.2.2.4.1 0.85fc' block with a = β1c
+     * (β1 per Table 22.2.2.4.3), §20.2.2.1 elastic-plastic steel, §20.2.2.2 Es = 200000 MPa,
+     * φ per Table 21.2.2 tied-column transition (εty = fy/Es per 21.2.2.1).
+     *
+     * Solves φPn(c) = Pu by bisection (φPn is continuous and non-decreasing in c) and
+     * returns the section strength at that neutral axis, or null when the section cannot
+     * carry Pu even at full compression (φPn,max reached).
+     *
+     * @param width  section dimension parallel to the neutral axis (b), mm
+     * @param depth  section dimension in the bending direction (h), mm
+     * @param barOrds (ordinate from the compression face mm, area mm²) per bar layer
+     * @param Pu factored axial load, N (compression positive)
+     * @param Mu unused in the solve; the caller compares [InteractionCheckResult.phiMn] against it
+     */
+    fun checkInteraction(
+        fcu: Double,
+        fy: Double,
+        width: Double,
+        depth: Double,
+        barOrds: List<Pair<Double, Double>>,
+        Pu: Double
+    ): InteractionCheckResult? {
+        val fc = 0.8 * fcu
+        val Es = 200000.0
+        val epsTy = fy / Es
+        val b1 = beta1(fc)
+        val dt = barOrds.maxOf { it.first }
+        fun pnMn(c: Double): Triple<Double, Double, Double> {
+            val a = min(b1 * c, depth)
+            var Pn = 0.85 * fc * a * width
+            var Mn = Pn * (depth / 2.0 - a / 2.0)
+            for ((y, As) in barOrds) {
+                val es = 0.003 * (c - y) / c
+                var fs = (Es * es).coerceIn(-fy, fy)
+                if (y < a) fs -= 0.85 * fc  // displace concrete under the bar (22.2.1.2/R22.2)
+                Pn += fs * As
+                Mn += fs * As * (depth / 2.0 - y)
+            }
+            val epsT = 0.003 * (dt - c) / c
+            return Triple(Pn, Mn, phiTied(epsT, epsTy))
+        }
+        var lo = 1e-3
+        var hi = 1e9
+        val hiRes = pnMn(hi)
+        if (hiRes.third * hiRes.first < Pu) return null
+        repeat(200) {
+            val mid = (lo + hi) / 2.0
+            val r = pnMn(mid)
+            if (r.third * r.first < Pu) lo = mid else hi = mid
+        }
+        val c = (lo + hi) / 2.0
+        val (Pn, Mn, phi) = pnMn(c)
+        return InteractionCheckResult(c, 0.003 * (dt - c) / c, phi, phi * Pn, phi * Mn)
+    }
+
+    /**
+     * حساب نسبة النحافة ونسبة التحميل المسموحة
+     * ACI 318-22.4: λ = KL/r, Pn = Fcr × Ag
+     */
+    fun calculateSlendernessEffect(
+        unsupportedLength: Double, // m
+        effectiveLengthFactor: Double, // K
+        width: Double, depth: Double, // mm
+        fcu: Double, reinforcementRatio: Double = 0.01
+    ): Triple<Double, Boolean, Double> {
+        InputGuard.positive("unsupportedLength", unsupportedLength)
+        InputGuard.positive("effectiveLengthFactor", effectiveLengthFactor)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("fcu", fcu)
+        val Ag = width * depth
+        // نصف القطر الدوراني (المحور الأضع)
+        val minDimension = min(width, depth)
+        val r = minDimension / sqrt(12.0)
+        val L_mm = unsupportedLength * 1000.0
+        val slendernessRatio = effectiveLengthFactor * L_mm / r
+        
+        // ACI 318-22.4.2.1: العمود قصير إذا λ ≤ 22 (مربوط) أو λ ≤ 28 (حلزوني)
+        val isShort = slendernessRatio <= 22.0
+        
+        // حساب إجهاد الانبعاج الحرج Fcr
+        // ACI 22.4.2.1: EI = 0.4 × Ec × Ig + Es × As × (h/2 - d')^2
+        // Ig = b × h^3 / 12 (moment of inertia of gross concrete section)
+        val fc_prime = 0.8 * fcu
+        val Ig = width * depth.pow(3) / 12.0  // mm^4
+        val Ec = 4700.0 * sqrt(fc_prime)      // MPa
+        val Es = 200000.0                       // MPa
+        val As = reinforcementRatio * Ag
+        val d_prime = 40.0  // cover + tie dia (approximate, mm)
+        val EI = 0.4 * Ec * Ig + Es * As * ((minDimension / 2.0) - d_prime).pow(2)  // N.mm^2
+        val PI2_EI = PI * PI * EI / 1e6  // kN.m^2 (unit conversion)
+        val Pc = PI2_EI / (unsupportedLength * unsupportedLength)  // kN
+        
+        return Triple(slendernessRatio, !isShort, Pc)
+    }
+
     override fun calculateAxialCapacity(
         fcu: Double,
         fy: Double,
@@ -68,6 +236,55 @@ class ACIColumn : ColumnDesign {
         return phi * alpha * nominalCapacity / 1000.0
     }
     
+
+    /** Clips the centered rectangle by the compression-zone half-plane (a from the extreme fiber, normal n). Returns the polygon and the extreme-fiber distance tmax. */
+    private fun clipRectHalfPlane(
+        width: Double, depth: Double, nx: Double, ny: Double, a: Double
+    ): Pair<List<Pair<Double, Double>>, Double> {
+        val pts = listOf(
+            -width / 2 to -depth / 2, width / 2 to -depth / 2,
+            width / 2 to depth / 2, -width / 2 to depth / 2
+        )
+        val tmax = pts.maxOf { it.first * nx + it.second * ny }
+        val lim = tmax - a
+        fun f(p: Pair<Double, Double>) = p.first * nx + p.second * ny - lim
+        val out = mutableListOf<Pair<Double, Double>>()
+        for (i in 0 until 4) {
+            val cur = pts[i]
+            val prv = pts[(i + 3) % 4]
+            val fCur = f(cur)
+            val fPrv = f(prv)
+            if (fCur >= 0) {
+                if (fPrv < 0) {
+                    val t = fPrv / (fPrv - fCur)
+                    out += (prv.first + t * (cur.first - prv.first)) to (prv.second + t * (cur.second - prv.second))
+                }
+                out += cur
+            } else if (fPrv >= 0) {
+                val t = fPrv / (fPrv - fCur)
+                out += (prv.first + t * (cur.first - prv.first)) to (prv.second + t * (cur.second - prv.second))
+            }
+        }
+        return out to tmax
+    }
+
+    private fun polyAreaCentroid(poly: List<Pair<Double, Double>>): Pair<Double, Pair<Double, Double>> {
+        var A = 0.0
+        var cx = 0.0
+        var cy = 0.0
+        for (i in poly.indices) {
+            val (x0, y0) = poly[i]
+            val (x1, y1) = poly[(i + 1) % poly.size]
+            val cr = x0 * y1 - x1 * y0
+            A += cr
+            cx += (x0 + x1) * cr
+            cy += (y0 + y1) * cr
+        }
+        A *= 0.5
+        if (abs(A) < 1e-12) return 0.0 to (0.0 to 0.0)
+        return abs(A) to (cx / (6 * A) to cy / (6 * A))
+    }
+
     /**
      * معامل تكبير العزم بالطريقة الصحيحة من الكود — ACI 318M-14 §6.2.5 + §6.6.4.4/§6.6.4.5
      * (F-09 fix; owner-approved 2026-11-21).
@@ -166,6 +383,112 @@ class ACIColumn : ColumnDesign {
         }
         val ds = max(1.0, deltaS)
         return Pair(ds, Mns + ds * Ms)
+     * φPn, φMnx, φMny at neutral-axis orientation [theta] (normal from the centroid toward
+     * the maximum-compression fiber) and neutral-axis depth [c], per ACI 318M-14
+     * §22.2.1/§22.2.2/§22.2.4.1-2 and Table 21.2.2. Public for golden-vector verification
+     * against closed-form benchmarks.
+     */
+    fun contourPointAt(
+        fcu: Double, fy: Double, width: Double, depth: Double,
+        bars: List<Triple<Double, Double, Double>>, theta: Double, c: Double
+    ): Triple<Double, Double, Double> {
+        val fc = 0.8 * fcu
+        val nx = cos(theta)
+        val ny = sin(theta)
+        val a = beta1(fc) * c
+        val (poly, tmax) = clipRectHalfPlane(width, depth, nx, ny, min(a, 2.0 * max(width, depth)))
+        val (Ac, centroid) = if (poly.isEmpty()) 0.0 to (0.0 to 0.0) else polyAreaCentroid(poly)
+        val Cc = 0.85 * fc * Ac
+        var Pn = Cc
+        var Mnx = Cc * centroid.second
+        var Mny = Cc * centroid.first
+        var dt = 0.0
+        for ((x, y, As) in bars) {
+            val sBar = tmax - (x * nx + y * ny)
+            dt = max(dt, sBar)
+            val es = 0.003 * (c - sBar) / c
+            var fs = (200000.0 * es).coerceIn(-fy, fy)
+            if (sBar < a) fs -= 0.85 * fc
+            val F = fs * As
+            Pn += F
+            Mnx += F * y
+            Mny += F * x
+        }
+        val epsT = 0.003 * (dt - c) / c
+        val phi = phiTied(epsT, fy / 200000.0)
+        return Triple(phi * Pn, phi * Mnx, phi * Mny)
+    }
+
+    /**
+     * Biaxial axial-moment interaction check per ACI 318M-14 §22.2.1.1 (equilibrium at
+     * each section), §22.2.4.1 (0.85fc' over the compression zone bounded by the section
+     * edges and a line parallel to the neutral axis at a = β1c) and §22.2.4.2 (c measured
+     * perpendicular to the neutral axis). Finds the neutral-axis orientation whose moment
+     * vector direction matches the demand direction ([steps]-direction scan at 1 degree,
+     * each bracketing interval bisected), solves φPn(c) = Pu
+     * there by bisection, and passes when the contour magnitude at the demand direction
+     * covers |Mu|. No polygon interpolation is used, so no convexity assumption is made;
+     * when several orientations match the demand direction the LOWEST capacity governs
+     * (conservative), and a demand exactly on the boundary counts as pass only if
+     * |Mu| <= capacity exactly (ties fail closed on floating-point error).
+     *
+     * Convergence: c-bisection over [1e-3, 1e12] mm with 60 iterations (|Δc| < 1e-6 mm);
+     * direction scan 1 degree + 60 bisection iterations (direction error < 1e-15 rad).
+     * Verified against a closed-form benchmark in ACIColumnInteractionTest.
+     *
+     * @param bars bars in CENTROID coordinates: (x mm, y mm, area mm²)
+     */
+    fun checkBiaxial(
+        fcu: Double, fy: Double, width: Double, depth: Double,
+        bars: List<Triple<Double, Double, Double>>,
+        Pu: Double, Mux: Double, Muy: Double,
+        steps: Int = 360
+    ): Boolean {
+        require(Mux > 0.0 || Muy > 0.0) { "checkBiaxial needs a nonzero moment demand" }
+        val alpha = atan2(Muy, Mux)
+        val demandMag = hypot(Mux, Muy)
+        fun solveC(theta: Double): Double? {
+            var lo = 1e-3
+            var hi = 1e12
+            if (contourPointAt(fcu, fy, width, depth, bars, theta, hi).first < Pu) return null
+            repeat(60) {
+                val mid = (lo + hi) / 2.0
+                if (contourPointAt(fcu, fy, width, depth, bars, theta, mid).first < Pu) lo = mid else hi = mid
+            }
+            return (lo + hi) / 2.0
+        }
+        fun delta(theta: Double): Double? {
+            val c = solveC(theta) ?: return null
+            val p = contourPointAt(fcu, fy, width, depth, bars, theta, c)
+            var d = atan2(p.third, p.second) - alpha
+            while (d > PI) d -= 2 * PI
+            while (d <= -PI) d += 2 * PI
+            return d
+        }
+        var minCap = Double.POSITIVE_INFINITY
+        var prevTheta = 0.0
+        var prev = delta(0.0) ?: return false
+        for (k in 1..steps) {
+            val theta = 2 * PI * k / steps
+            val cur = delta(theta) ?: return false
+            if (prev * cur < 0.0) {
+                var lo = prevTheta
+                var hi = theta
+                repeat(60) {
+                    val mid = (lo + hi) / 2.0
+                    val d = delta(mid) ?: return false
+                    if (prev * d < 0.0) hi = mid else lo = mid
+                }
+                val th = (lo + hi) / 2.0
+                val c = solveC(th) ?: return false
+                val p = contourPointAt(fcu, fy, width, depth, bars, th, c)
+                minCap = min(minCap, hypot(p.second, p.third))
+            }
+            prev = cur
+            prevTheta = theta
+        }
+        if (minCap == Double.POSITIVE_INFINITY) return false
+        return demandMag <= minCap
     }
 
     override fun calculateReinforcement(
@@ -195,15 +518,6 @@ class ACIColumn : ColumnDesign {
         val alpha = 0.80
         var requiredSteelArea = (Pu / (phi * alpha) - 0.85 * fc_prime * Ag) / (fy - 0.85 * fc_prime)
         
-        // ── Moment consideration: increase As when eccentricity is significant ──
-        val Mu = sqrt(momentX.pow(2) + momentY.pow(2)) * 1e6 // N.mm
-        val eccentricity = if (Pu > 0) Mu / Pu else 0.0
-        val h = max(width, depth)
-        if (eccentricity > 0.05 * h) {
-            val momentFactor = max(1.0, 1.0 + 2.0 * eccentricity / h)
-            requiredSteelArea *= momentFactor
-            codeNotes.add("ACI 318-25: Significant moment (e=${String.format("%.1f", eccentricity)}mm > 0.05h), As increased by factor ${String.format("%.2f", momentFactor)}")
-        }
         
         // Reinforcement limits per ACI
         val minSteel = getMinReinforcementRatio() * Ag
@@ -239,12 +553,62 @@ class ACIColumn : ColumnDesign {
             codeNotes.add("Safest: ${alternatives.last()}")
         }
         
-        val barArea = PI * selectedBarDia * selectedBarDia / 4
-        val numberOfBars = ceil(astRequired / barArea).toInt().coerceIn(4, 16)
+        // F-08: strain-compatibility interaction per ACI 318M-14 §22.2 + Table 21.2.2
+        // replaces the removed invented 1+2e/h moment-amplification heuristic.
+        // Axial cap per Table 22.4.2.1 (0.80φPo for tied); φ from the actual strain state.
+        // Biaxial demands checked on the full φM contour (§22.2.1.1/§22.2.4.1/§22.2.4.2),
+        // bar clear spacing per §25.2.3 (max(40, 1.5db); the (4/3)dagg term needs the
+        // aggregate size, which the inputs do not carry). If the selected diameter cannot
+        // satisfy both, escalate to larger diameters before declaring the section inadequate.
+        val Mux = abs(momentX) * 1e6  // N.mm, bending in the depth direction
+        val Muy = abs(momentY) * 1e6  // N.mm, bending in the width direction
+        val diameters = availableBars.dropWhile { it < selectedBarDia }
+        var barDiameter = selectedBarDia
+        var numberOfBars = 4
+        var interactionOk = false
+        var dPrime = 0.0
+        var barArea = 0.0
+        outer@ for (dia in diameters) {
+            barArea = PI * dia * dia / 4
+            val tiesD = if (dia <= 32.0) 10.0 else 12.0
+            dPrime = getMinCover() + tiesD + dia / 2.0
+            var n = ceil(astRequired / barArea).toInt().coerceIn(4, 24)
+            if (n % 2 == 1) n += 1
+            while (n <= 24) {
+                val astTrial = n * barArea
+                val po = 0.85 * fc_prime * (Ag - astTrial) + fy * astTrial
+                if (Pu > 0.80 * PHI_TIED * po) { n += 2; continue }
+                val layout = layoutPerimeterBars(n, width, depth, dPrime)
+                val extra = n - 4
+                val perFace = extra / 4
+                val rem = (extra % 4) / 2
+                val spacingX = (width - 2 * dPrime) / (perFace + rem + 1)
+                val spacingY = (depth - 2 * dPrime) / (perFace + 1)
+                val spacingOk = min(spacingX, spacingY) - dia >= max(40.0, 1.5 * dia)
+                val barsCentered = layout.map { Triple(it.first - width / 2.0, it.second - depth / 2.0, barArea) }
+                val contourOk = (Mux <= 0.0 && Muy <= 0.0) ||
+                    checkBiaxial(fcu, fy, width, depth, barsCentered, Pu, Mux, Muy)
+                if (contourOk && spacingOk) {
+                    barDiameter = dia
+                    numberOfBars = n
+                    interactionOk = true
+                    break@outer
+                }
+                n += 2
+            }
+            numberOfBars = n
+        }
+        if (!interactionOk) {
+            barArea = PI * barDiameter * barDiameter / 4
+            warnings.add("Section inadequate for the axial-moment combination per ACI 318M-14 22.2 interaction and 25.2.3 spacing - increase section dimensions")
+            numberOfBars = numberOfBars.coerceAtMost(24)
+        } else if (Mux > 0.0 || Muy > 0.0) {
+            codeNotes.add("Axial-moment interaction checked by strain compatibility incl. biaxial contour (ACI 318M-14 22.2.1.1/22.2.4.1/22.2.4.2, Table 21.2.2)")
+        }
         val astProvided = numberOfBars * barArea
-        val barDiameter = selectedBarDia
-        
-        // Ties per ACI 318-25.7.2
+        codeNotes.add("Bar clear spacing checked vs max(40mm, 1.5db) per ACI 318M-14 25.2.3; the (4/3)dagg term is UNVERIFIED - the app has no aggregate-size input")
+
+        // Ties per ACI 318M-14 §25.7.2.2 (Ø10 for longitudinal bars ≤ Ø32)
         val tiesDiameter = if (barDiameter <= 32.0) 10.0 else 12.0
         val tiesSpacing = minOf(
             16 * barDiameter,           // 16 x longitudinal bar diameter
@@ -271,7 +635,7 @@ class ACIColumn : ColumnDesign {
             numberOfBars = numberOfBars,
             tiesDiameter = tiesDiameter,
             tiesSpacing = tiesSpacing,
-            isSafe = utilizationRatio <= 1.0,
+            isSafe = utilizationRatio <= 1.0 && interactionOk,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
             codeNotes = codeNotes
