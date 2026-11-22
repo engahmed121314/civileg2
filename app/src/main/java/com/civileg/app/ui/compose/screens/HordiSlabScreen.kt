@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -451,7 +452,11 @@ fun HordiSlabScreen(
                         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 AppText(stringResource(R.string.ecp_ribbed_section_trace), fontWeight = FontWeight.Bold)
-                                res.codeNotes.forEach { AppText(it, style = MaterialTheme.typography.bodySmall) }
+                                res.codeNotes.forEach {
+                                    AppText(it, modifier = Modifier.fillMaxWidth(),
+                                        textAlign = TextAlign.Left,
+                                        style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr))
+                                }
                             }
                         }
                     }

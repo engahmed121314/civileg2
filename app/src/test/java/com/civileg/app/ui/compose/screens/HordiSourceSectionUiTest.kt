@@ -40,10 +40,15 @@ class HordiSourceSectionUiTest {
         rule.onNode(hasText(text) and hasSetTextAction()).performTextReplacement(value)
     }
     private fun screenshot(name: String) {
-        val dir = File("build/reports/tests/compose-shots").apply { mkdirs() }
-        val view = rule.activity.findViewById<android.view.ViewGroup>(android.R.id.content)
-        File(dir, "$name.png").outputStream().use {
-            view.drawToBitmap().compress(Bitmap.CompressFormat.PNG,100,it)
+        rule.waitForIdle()
+        rule.mainClock.advanceTimeByFrame()
+        rule.waitForIdle()
+        rule.runOnIdle {
+            val dir = File("build/reports/tests/compose-shots").apply { mkdirs() }
+            val view = rule.activity.findViewById<android.view.ViewGroup>(android.R.id.content)
+            File(dir, "$name.png").outputStream().use {
+                view.drawToBitmap().compress(Bitmap.CompressFormat.PNG,100,it)
+            }
         }
     }
 
