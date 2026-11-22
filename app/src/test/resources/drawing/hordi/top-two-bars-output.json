@@ -1,0 +1,51 @@
+{
+  "revisionId": "68e4c8fe7b336262339ef511fe707ade5ed192af7bf6969055fdcca0391f0d3e",
+  "requiredSteelMm2": 197.1541230927482,
+  "providedSteelMm2": 628.3185307179587,
+  "methodReference": "ECP203-2020 bounded rib section; ADOPTED_SYMMETRIC_ROWS_CALCULATED_LAYER_CENTRES_V1",
+  "section": {
+    "geometryVersion": 1,
+    "ribWidthMm": 200.0,
+    "enteredRibPitchMm": 600.0,
+    "totalDepthMm": 350.0,
+    "toppingThicknessMm": 60.0,
+    "analyticalFlangeWidthMm": 200.0,
+    "tensionFace": "TOP",
+    "coverToOutsideLinksMm": 25.0,
+    "linkDiameterMm": 8.0,
+    "linkLegs": 2,
+    "linkSpacingMm": 200.0,
+    "placementBasis": "ADOPTED_SYMMETRIC_ROWS_CALCULATED_LAYER_CENTRES_V1",
+    "bars": [
+      {
+        "layerIndex": 0,
+        "indexInLayer": 0,
+        "xFromWebLeftMm": 43.0,
+        "yFromBottomMm": 307.0,
+        "diameterMm": 20.0
+      },
+      {
+        "layerIndex": 0,
+        "indexInLayer": 1,
+        "xFromWebLeftMm": 157.0,
+        "yFromBottomMm": 307.0,
+        "diameterMm": 20.0
+      }
+    ],
+    "incompleteGeometry": [
+      "One entered rib-pitch cell only; full-panel width and edge conditions are not supplied.",
+      "Longitudinal bar paths, lengths, support anchorage and curtailment are not supplied.",
+      "Link closure, bends, hooks and first longitudinal offset are not supplied.",
+      "Topping/distribution reinforcement and actual cross-rib provision are not supplied.",
+      "Adopted calculated section arrangement, not as-built or user-entered horizontal coordinates."
+    ]
+  },
+  "incompleteChecks": [
+    "Section forces, actual bar layout, flexure and web shear assessed. Whole-member serviceability approval, durability, topping reinforcement, cross-rib provision and anchorage are incomplete; execution exports remain blocked.",
+    "One entered rib-pitch cell only; full-panel width and edge conditions are not supplied.",
+    "Longitudinal bar paths, lengths, support anchorage and curtailment are not supplied.",
+    "Link closure, bends, hooks and first longitudinal offset are not supplied.",
+    "Topping/distribution reinforcement and actual cross-rib provision are not supplied.",
+    "Adopted calculated section arrangement, not as-built or user-entered horizontal coordinates."
+  ]
+}
