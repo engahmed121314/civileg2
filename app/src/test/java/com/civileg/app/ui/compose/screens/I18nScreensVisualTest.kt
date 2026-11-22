@@ -110,7 +110,7 @@ class I18nScreensVisualTest {
         }
         rule.waitForIdle()
         assertTextPresent("Compliance Checklists")
-        assertTextPresent("Concrete")
+        assertTextPresent("All disciplines")
         assertTextAbsent("لوائح الامتثال")
         capture("i18n-qc-en")
     }
@@ -123,7 +123,7 @@ class I18nScreensVisualTest {
         }
         rule.waitForIdle()
         assertTextPresent("لوائح الامتثال التنظيمية")
-        assertTextPresent("خرسانة")
+        assertTextPresent("كل التخصصات")
         assertTextAbsent("Compliance Checklists")
         capture("i18n-qc-ar")
     }
