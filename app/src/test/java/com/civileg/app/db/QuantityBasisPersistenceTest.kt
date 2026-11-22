@@ -70,7 +70,7 @@ class QuantityBasisPersistenceTest {
             assertTrue(it.isNull(6))
         }
         db.execSQL(
-            "INSERT INTO designs (projectId,type,name,inputData,results,isSafe,codeUsed) VALUES (1,'BEAM','new','{}','{}',0,'ECP')"
+            "INSERT INTO designs (projectId,type,name,inputData,results,isSafe,codeUsed,createdAt) VALUES (1,'BEAM','new','{}','{}',0,'ECP',1)"
         )
         db.query("SELECT quantityBasis FROM designs WHERE name='new'").use {
             assertTrue(it.moveToFirst()); assertEquals("LEGACY_UNVERIFIED", it.getString(0))
