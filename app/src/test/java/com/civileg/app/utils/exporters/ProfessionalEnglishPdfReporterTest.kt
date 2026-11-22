@@ -1,6 +1,8 @@
 package com.civileg.app.utils.exporters
 
+import com.civileg.app.domain.calculations.ColumnDesignEngine
 import com.civileg.app.domain.entities.CalculationStep
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.utils.EnglishFontProvider
 import com.civileg.app.utils.ExportManager
 import com.itextpdf.kernel.pdf.PdfDocument
@@ -64,11 +66,11 @@ class ProfessionalEnglishPdfReporterTest {
             isSafe = true,
             designCode = "ECP 203-2020",
             inputs = mapOf("Section" to "300 x 800 mm"),
-            results = mapOf("rho" to "0.0125"),
+            results = mapOf("ρ (rho)" to "0.0125"),
             calculationSteps = listOf(
                 ProfessionalEnglishPdfReporter.CalculationStep(
                     1, "Slenderness",
-                    "lambda = kl-u-r = 42.5, rho = 0.0125, delta = 3.2 mm, phi = 0.65, sqrt(fcu) = 6.32, dia 16 mm",
+                    "λ = k·lu/r = 42.5, ρ = 0.0125, δ = 3.2 mm, φ = 0.65, √fcu = 6.32, ⌀16 mm, As = 1000 mm², Mu×φ = 210 kN·m",
                     "ECP 203 step", "OK"
                 )
             )
@@ -77,9 +79,10 @@ class ProfessionalEnglishPdfReporterTest {
         val f = file!!
         stage(f, "glyphs.pdf")
         val all = pageTexts(f).joinToString("\n")
-        assertTrue("rho text lost", all.contains("rho"))
-        assertTrue("delta text lost", all.contains("delta"))
-        assertTrue("kl-u-r text lost", all.contains("kl-u-r"))
+        // The actual glyphs the base-14 font dropped; spelled-out names prove nothing.
+        for (sym in listOf("λ", "ρ", "δ", "φ", "√", "⌀", "×", "mm²", "kN·m")) {
+            assertTrue("glyph <$sym> lost from extracted text", all.contains(sym))
+        }
     }
 
     @Test
@@ -181,5 +184,58 @@ class ProfessionalEnglishPdfReporterTest {
         assertTrue("result text lost", all.contains("Ho = 0mm"))
         assertFalse("unit duplicated as '0mm mm'", all.contains("0mm mm"))
         assertFalse("unit duplicated as 'kN kN'", all.contains("kN kN"))
+    }
+
+    /**
+     * Representative end-to-end export: run the real column engine and push its
+     * steps through the production ExportManager path, not a handcrafted fixture.
+     */
+    @Test
+    fun `integrated column engine export produces a real report`() {
+        assertTrue(EnglishFontProvider.isReady)
+        val result = ColumnDesignEngine.designColumn(
+            b = 400.0, t = 400.0, H = 3000.0,
+            beamDepthIn = 600.0, beamDepthOut = 600.0,
+            cover = 40.0,
+            Pu = 1500.0, MextIn = 50.0, MextOut = 0.0,
+            fcu = 30.0, fy = 400.0,
+            isBraced = true,
+            topCond = 1, botCond = 1,
+            preferredDia = 20,
+            code = DesignCode.ECP
+        )
+        val out = File.createTempFile("integrated", ".pdf")
+        val context = RuntimeEnvironment.getApplication()
+        val bundle = ExportManager(context).exportReportAndDxf(
+            titleAr = "عمود C1",
+            titleEn = "Column C1 - Integrated Engine Export",
+            designType = "Column",
+            inputs = mapOf(
+                "Section b x t" to "400 x 400 mm",
+                "Height H" to "3000 mm",
+                "Pu" to "1500 kN",
+                "fcu" to "30 MPa",
+                "fy" to "400 MPa"
+            ),
+            results = mapOf(
+                "Classification" to result.columnClassification,
+                "As required" to "${result.AsRequired} mm2",
+                "Bars" to result.finalBars
+            ),
+            calculationSteps = result.calculationSteps,
+            outputPath = out.absolutePath
+        )
+        assertNotNull(bundle.pdfFile)
+        val f = bundle.pdfFile!!
+        stage(f, "integrated.pdf")
+        val all = pageTexts(f).joinToString("\n")
+        assertTrue("engine steps lost", all.contains("Effective Length Factors"))
+        assertTrue("code reference lost", all.contains("ECP 203"))
+        assertTrue("result lost", all.contains(result.columnClassification))
+        // The printed basis must be the editions the app is verified against,
+        // never an edition string the project has no source copy of.
+        assertTrue("basis missing", all.contains("ACI 318M-14 / ECP 203-2020"))
+        assertFalse("unverified edition label", all.contains("ECP 203-2025"))
+        assertFalse("unverified edition label", all.contains("ACI 318-19"))
     }
 }

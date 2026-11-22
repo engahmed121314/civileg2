@@ -16,6 +16,8 @@ import com.civileg.app.utils.EnglishFontProvider
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.*
 import com.itextpdf.layout.properties.HorizontalAlignment
+import com.itextpdf.layout.properties.OverflowWrapPropertyValue
+import com.itextpdf.layout.properties.Property
 import com.itextpdf.layout.properties.TextAlignment
 import com.itextpdf.layout.properties.UnitValue
 import java.io.ByteArrayOutputStream
@@ -138,6 +140,14 @@ object ProfessionalEnglishPdfReporter {
         return t
     }
 
+    /**
+     * Long unbroken tokens (formula strings, marks, ids) wrap mid-token
+     * instead of overflowing the cell and spilling off the page edge.
+     */
+    private fun Paragraph.breakAnywhere(): Paragraph = apply {
+        setProperty(Property.OVERFLOW_WRAP, OverflowWrapPropertyValue.ANYWHERE)
+    }
+
     private fun paragraph(text: String, fontSize: Float = 10f, bold: Boolean = false,
                           color: DeviceRgb? = null, alignment: TextAlignment? = null): Paragraph {
         val font = if (bold) createBoldFont() else createPdfFont()
@@ -154,14 +164,14 @@ object ProfessionalEnglishPdfReporter {
             .setPadding(6f)
             .setBackgroundColor(HEADER_BG)
             .setTextAlignment(TextAlignment.CENTER)
-            .add(Paragraph().add(text(text, font, 9f, DeviceRgb(255, 255, 255))).setTextAlignment(TextAlignment.CENTER))
+            .add(Paragraph().add(text(text, font, 9f, DeviceRgb(255, 255, 255))).setTextAlignment(TextAlignment.CENTER).breakAnywhere())
     }
 
     private fun dataCell(text: String, fontSize: Float = 9f, bold: Boolean = false,
                          bg: DeviceRgb? = null, align: TextAlignment = TextAlignment.CENTER): Cell {
         val font = if (bold) createBoldFont() else createPdfFont()
         val cell = Cell().setPadding(4f).setTextAlignment(align)
-        cell.add(Paragraph().add(text(text, font, fontSize)).setTextAlignment(align))
+        cell.add(Paragraph().add(text(text, font, fontSize)).setTextAlignment(align).breakAnywhere())
         bg?.let { cell.setBackgroundColor(it) }
         return cell
     }
@@ -294,6 +304,7 @@ object ProfessionalEnglishPdfReporter {
         val descPara = Paragraph()
             .add(text("Step ${step.stepNumber}: ", boldFont, 10f, PRIMARY))
             .add(text(step.description, boldFont, 10f, SECONDARY))
+            .breakAnywhere()
         stepTable.addCell(Cell().setPadding(6f).add(descPara))
 
         // Equation
@@ -302,6 +313,7 @@ object ProfessionalEnglishPdfReporter {
                 .add(text("  ", font, 9f))
                 .add(text(step.equation, font, 10f, EQUATION_COLOR))
                 .add(text("  ", font, 9f))
+                .breakAnywhere()
             stepTable.addCell(Cell().setPadding(4f).add(eqPara))
         }
 
@@ -310,6 +322,7 @@ object ProfessionalEnglishPdfReporter {
             val refPara = Paragraph()
                 .add(text("  Ref: ", boldFont, 8f, DeviceRgb(150, 150, 150)))
                 .add(text(step.reference, font, 8f, DeviceRgb(150, 150, 150)))
+                .breakAnywhere()
             stepTable.addCell(Cell().setPadding(4f).add(refPara))
         }
 
@@ -318,6 +331,7 @@ object ProfessionalEnglishPdfReporter {
             val resPara = Paragraph()
                 .add(text("  Result: ", boldFont, 9f, SUCCESS))
                 .add(text(step.result, font, 9f, SUCCESS))
+                .breakAnywhere()
             stepTable.addCell(Cell().setPadding(4f).add(resPara))
         }
 
@@ -844,7 +858,7 @@ object ProfessionalEnglishPdfReporter {
      * @param reportType Type of structural element being designed
      * @param title Report title (e.g., "Reinforced Concrete Beam Design Report")
      * @param subtitle Subtitle line
-     * @param designCode Design code name (e.g., "ACI 318-19")
+     * @param designCode Design code name (e.g., "ACI 318M-14")
      * @param inputs Map of design input parameters
      * @param results Map of design result values
      * @param safetyChecks List of safety verification checks
@@ -970,7 +984,7 @@ object ProfessionalEnglishPdfReporter {
         }
 
         // Extract design code from inputs if available
-        val defaultCode = if (reportType == ReportType.STEEL) "AISC 360-16 / ECP 205-2007" else "ACI 318-19 / ECP 203-2025"
+        val defaultCode = if (reportType == ReportType.STEEL) "AISC 360-16 / ECP 205-2007" else "ACI 318M-14 / ECP 203-2020"
         val codeStr = inputs["Design Code"]
             ?: defaultCode
 
