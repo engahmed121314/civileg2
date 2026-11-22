@@ -2407,6 +2407,7 @@
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
     <string name="hordi_method_hold">ECP ribbed-slab method not verified. Numerical results are legacy previews, not a safety approval. Execution reports and bar schedules are blocked until verification is complete.</string>
     <string name="stored_slab_method_hold">Stored ribbed-slab code or method is not verified. Recalculate with a verified method before execution reports or quantities. Saved data is preserved.</string>
+    <string name="design_date_unknown">Date unknown</string>
 </resources>
 
 

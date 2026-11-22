@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import com.civileg.app.db.createdAtLabel
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -232,7 +233,7 @@ fun HomeScreen(
                 DesignType.STEEL_MEMBER -> Icons.Default.Build
                 else -> Icons.Default.Description
             }
-            val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(design.createdAt)
+            val dateStr = design.createdAtLabel(SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()), stringResource(R.string.design_date_unknown))
             RecentProject(
                 name = design.name,
                 elementType = typeLabel,
