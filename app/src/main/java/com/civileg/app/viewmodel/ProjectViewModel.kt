@@ -83,21 +83,7 @@ class ProjectViewModel @Inject constructor(
 
     fun getProjectSummary(projectId: Long): Flow<ProjectSummary> {
         return designDao.getDesignsForProjectFlow(projectId).map { designs ->
-            val totalConcrete = designs.sumOf { it.concreteVolume }
-            val totalSteel = designs.sumOf { it.steelWeight }
-            val totalCost = designs.sumOf { it.totalCost }
-            val breakdown = designs.groupBy { it.type.name }
-                .mapValues { entry -> entry.value.sumOf { it.totalCost } }
-            
-            ProjectSummary(
-                totalConcrete = totalConcrete,
-                totalSteel = totalSteel,
-                totalCost = totalCost,
-                designCount = designs.size,
-                costEfficiencyIndex = 1.0,
-                costBreakdown = breakdown,
-                methodBlockedDesignCount = designs.count(StoredDesignSafety::isBlocked)
-            )
+            com.civileg.app.db.QuantityLedger.summarize(designs)
         }
     }
 
@@ -113,13 +99,7 @@ class ProjectViewModel @Inject constructor(
                     return@launch
                 }
                 
-                val totalConcrete = designsList.sumOf { it.concreteVolume }
-                val totalSteel = designsList.sumOf { it.steelWeight }
-                val totalCost = designsList.sumOf { it.totalCost }
-                val breakdown = designsList.groupBy { it.type.name }
-                    .mapValues { entry -> entry.value.sumOf { d -> d.totalCost } }
-                
-                val summary = ProjectSummary(totalConcrete, totalSteel, totalCost, designsList.size, 1.0, breakdown)
+                val summary = com.civileg.app.db.QuantityLedger.summarize(designsList)
                 
                 val fileName = "ProjectSummary_${System.currentTimeMillis()}.pdf"
                 val file = File(context.cacheDir, fileName)
@@ -127,10 +107,17 @@ class ProjectViewModel @Inject constructor(
                 val inputsMap = designsList.mapIndexed { idx, d ->
                     "Design ${idx + 1}" to "${d.type.name}: ${d.name}"
                 }.toMap()
-                val resultsMap = mapOf(
-                    "Total Concrete" to String.format("%.2f", totalConcrete) + " m³",
-                    "Total Steel" to String.format("%.1f", totalSteel) + " kg",
-                    "Total Cost" to String.format("%.2f", totalCost),
+                val notDetermined = "Not determined"
+                fun concrete(v: Double) = String.format("%.2f", v) + " m³"
+                fun steel(v: Double) = String.format("%.1f", v) + " kg"
+                val resultsMap = linkedMapOf(
+                    "Measured Concrete" to if (summary.hasMeasuredQuantities) concrete(summary.totalConcrete) else notDetermined,
+                    "Measured Steel" to if (summary.hasMeasuredQuantities) steel(summary.totalSteel) else notDetermined,
+                    "Nominal Estimate (${summary.nominalCount}, not a bar schedule)" to
+                        if (summary.nominalCount > 0) concrete(summary.nominalConcrete) + " / " + steel(summary.nominalSteel) else "-",
+                    "Legacy Unverified (${summary.legacyCount})" to
+                        if (summary.legacyCount > 0) concrete(summary.legacyConcrete) + " / " + steel(summary.legacySteel) else "-",
+                    "Designs With Unknown Quantities" to "${summary.unknownQuantityCount}",
                     "Design Count" to "${designsList.size}",
                     "Safe Designs" to "${designsList.count { it.isSafe }}"
                 )

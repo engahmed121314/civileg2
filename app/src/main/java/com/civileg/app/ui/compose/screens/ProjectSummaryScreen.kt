@@ -121,15 +121,32 @@ fun ProjectSummaryScreen(
 fun SummaryKPIRow(summary: ProjectSummary) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            KPICard("Total Cost", "${String.format(Locale.US, "%,.0f", summary.totalCost)}", "EGP", Modifier.weight(1f))
-            KPICard("Concrete", "${String.format(Locale.US, "%.1f", summary.totalConcrete)}", "m³", Modifier.weight(1f))
-            KPICard("Steel", "${String.format(Locale.US, "%,.0f", summary.totalSteel)}", "kg", Modifier.weight(1f))
+            val measured = summary.hasMeasuredQuantities
+            KPICard("Measured Cost", if (measured) String.format(Locale.US, "%,.0f", summary.totalCost) else "—", "EGP", Modifier.weight(1f))
+            KPICard("Measured Concrete", if (measured) String.format(Locale.US, "%.1f", summary.totalConcrete) else "—", "m³", Modifier.weight(1f))
+            KPICard("Measured Steel", if (measured) String.format(Locale.US, "%,.0f", summary.totalSteel) else "—", "kg", Modifier.weight(1f))
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val steelDensity = if (summary.totalConcrete > 0) summary.totalSteel / summary.totalConcrete else 0.0
-            KPICard("Steel Density", "${String.format(Locale.US, "%.1f", steelDensity)}", "kg/m³", Modifier.weight(1f))
+            val steelDensity = if (summary.hasMeasuredQuantities && summary.totalConcrete > 0) summary.totalSteel / summary.totalConcrete else null
+            KPICard("Steel Density", steelDensity?.let { String.format(Locale.US, "%.1f", it) } ?: "—", "kg/m³", Modifier.weight(1f))
             KPICard("Design Count", "${summary.designCount}", "Elements", Modifier.weight(1f))
-            KPICard("Avg Cost/Elem", "${if(summary.designCount > 0) (summary.totalCost/summary.designCount).toInt() else 0}", "EGP", Modifier.weight(1f))
+            KPICard("Unknown Quantities", "${summary.unknownQuantityCount}", "Elements", Modifier.weight(1f))
+        }
+        if (summary.nominalCount > 0 || summary.legacyCount > 0 || summary.unknownQuantityCount > 0) {
+            Card {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    AppText("Quantities are not a bar schedule. Figures below are separate and are not added to the measured totals.", style = MaterialTheme.typography.labelSmall)
+                    if (summary.nominalCount > 0) {
+                        AppText("Nominal estimate (${summary.nominalCount}): ${String.format(Locale.US, "%.1f", summary.nominalConcrete)} m³ concrete, ${String.format(Locale.US, "%,.0f", summary.nominalSteel)} kg straight-bar steel", style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (summary.legacyCount > 0) {
+                        AppText("Legacy, unverified (${summary.legacyCount}): ${String.format(Locale.US, "%.1f", summary.legacyConcrete)} m³ concrete, ${String.format(Locale.US, "%,.0f", summary.legacySteel)} kg steel", style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (summary.unknownQuantityCount > 0) {
+                        AppText("${summary.unknownQuantityCount} design(s) have quantities that are not determined yet and are excluded.", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
         }
     }
 }

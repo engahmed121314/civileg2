@@ -31,6 +31,15 @@ class Converters {
     }
 
     @TypeConverter
+    fun fromQuantityBasis(value: String): QuantityBasis {
+        // An unreadable value must never become a stronger claim than "unverified".
+        return QuantityBasis.entries.firstOrNull { it.name == value } ?: QuantityBasis.LEGACY_UNVERIFIED
+    }
+
+    @TypeConverter
+    fun quantityBasisToString(basis: QuantityBasis): String = basis.name
+
+    @TypeConverter
     fun fromDesignType(value: String): DesignType {
         return try {
             DesignType.valueOf(value)

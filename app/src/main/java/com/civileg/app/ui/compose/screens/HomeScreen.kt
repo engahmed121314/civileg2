@@ -40,6 +40,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.viewmodel.ProjectViewModel
+import com.civileg.app.db.Design
 import com.civileg.app.db.DesignType
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -52,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import com.civileg.app.db.createdAtLabel
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -232,7 +234,7 @@ fun HomeScreen(
                 DesignType.STEEL_MEMBER -> Icons.Default.Build
                 else -> Icons.Default.Description
             }
-            val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(design.createdAt)
+            val dateStr = homeDesignDateLabel(design)
             RecentProject(
                 name = design.name,
                 elementType = typeLabel,
@@ -858,7 +860,7 @@ private fun QuickToolCard(
 // ══════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun RecentProjectsSection(
+internal fun RecentProjectsSection(
     projects: List<RecentProject>,
     isDark: Boolean
 ) {
@@ -1098,3 +1100,8 @@ private fun SectionHeader(
         }
     }
 }
+
+/** Recent-design date text: the real date, or "date unknown" for migrated rows without one. */
+@Composable
+internal fun homeDesignDateLabel(design: Design): String =
+    design.createdAtLabel(SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()), stringResource(R.string.design_date_unknown))
