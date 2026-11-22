@@ -1,112 +1,84 @@
 package com.civileg.app.domain.drawing
 
+import android.graphics.DashPathEffect
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.unit.sp
 
-/**
- * Renders DrawingScene primitives on a Jetpack Compose Canvas.
- */
+/** All geometry and labels come from the same immutable scene consumed by PdfRenderer. */
 object ComposeRenderer {
-    private fun DrawScope.acvColor(layer: DrawingLayer): Color = when (layer.name) {
-        DrawingLayer.OUTLINE.name -> Color(0xFF1F2937)
-        DrawingLayer.REBAR_BOTTOM.name -> Color(0xFF059669)
-        DrawingLayer.REBAR_TOP.name -> Color(0xFF2563EB)
-        DrawingLayer.REBAR_STIRRUP.name -> Color(0xFFDC2626)
-        DrawingLayer.DIMENSION.name -> Color(0xFF0891B2)
-        DrawingLayer.TEXT.name -> Color(0xFF111827)
-        DrawingLayer.HATCH.name -> Color(0xFF9CA3AF)
-        DrawingLayer.CENTERLINE.name -> Color(0xFF6B7280)
-        DrawingLayer.TITLE_BLOCK.name -> Color(0xFF111827)
-        else -> Color(0xFF111827)
-    }
-
     @Composable
-    fun render(
-        scene: DrawingScene,
-        modifier: Modifier = Modifier
-    ) {
+    fun render(scene: DrawingScene, modifier: Modifier = Modifier) {
+        DrawingGeometry.validate(scene)
         Canvas(modifier = modifier) {
-            drawScene(scene)
-        }
-    }
-
-    private fun DrawScope.drawScene(scene: DrawingScene) {
-        for (p in scene.primitives) {
-            when (p) {
-                is Primitive.Line -> {
-                    drawLine(
-                        color = acvColor(p.layer),
-                        start = Offset(p.p1.x.toFloat(), p.p1.y.toFloat()),
-                        end = Offset(p.p2.x.toFloat(), p.p2.y.toFloat()),
-                        strokeWidth = p.layer.lineweightMm.toFloat() * 2f
-                    )
+            val canvas = drawContext.canvas.nativeCanvas
+            val viewport = DrawingGeometry.fit(scene.bounds, size.width.toDouble(), size.height.toDouble(), 6.0)
+            fun mapped(p: Point2D): Point2D = viewport.map(p).let { Point2D(it.x, size.height - it.y) }
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+            val minimumAnnotationPx = 12.sp.toPx()
+            fun line(a: Point2D, b: Point2D) {
+                val p1 = mapped(a); val p2 = mapped(b)
+                canvas.drawLine(p1.x.toFloat(), p1.y.toFloat(), p2.x.toFloat(), p2.y.toFloat(), paint)
+            }
+            fun path(points: List<Point2D>, closed: Boolean = false) {
+                val first = mapped(points.first())
+                val path = Path().apply {
+                    moveTo(first.x.toFloat(), first.y.toFloat())
+                    points.drop(1).forEach { val p = mapped(it); lineTo(p.x.toFloat(), p.y.toFloat()) }
+                    if (closed) close()
                 }
-                is Primitive.Polyline -> {
-                    for (i in 0 until p.points.size - 1) {
-                        val pt1 = p.points[i]
-                        val pt2 = p.points[i + 1]
-                        drawLine(
-                            color = acvColor(p.layer),
-                            start = Offset(pt1.x.toFloat(), pt1.y.toFloat()),
-                            end = Offset(pt2.x.toFloat(), pt2.y.toFloat()),
-                            strokeWidth = p.layer.lineweightMm.toFloat() * 2f
-                        )
+                canvas.drawPath(path, paint)
+            }
+            fun label(value: String, position: Point2D, height: Double, angle: Double = 0.0, halo: Boolean = true) {
+                val p = mapped(position)
+                val text = value
+                val textPaint = Paint(paint).apply {
+                    style = Paint.Style.FILL
+                    pathEffect = null
+                    // Model fit must not shrink annotations below readable UI type.
+                    // Geometry stays at the shared uniform scale; font scale is respected.
+                    textSize = DrawingGeometry.annotationSize(height, viewport.scale, minimumAnnotationPx.toDouble()).toFloat()
+                    typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL)
+                }
+                canvas.save()
+                try {
+                    canvas.translate(p.x.toFloat(), p.y.toFloat())
+                    canvas.rotate(-angle.toFloat())
+                    if (halo) {
+                        val background = Paint().apply { color = android.graphics.Color.WHITE }
+                        canvas.drawRect(RectF(-1f, -textPaint.textSize, textPaint.measureText(text) + 1f, textPaint.textSize * 0.25f), background)
                     }
-                    if (p.isClosed && p.points.size > 2) {
-                        val first = p.points.first()
-                        val last = p.points.last()
-                        drawLine(
-                            color = acvColor(p.layer),
-                            start = Offset(last.x.toFloat(), last.y.toFloat()),
-                            end = Offset(first.x.toFloat(), first.y.toFloat()),
-                            strokeWidth = p.layer.lineweightMm.toFloat() * 2f
-                        )
+                    canvas.drawText(text, 0f, 0f, textPaint)
+                } finally { canvas.restore() }
+            }
+            scene.primitives.forEach { p ->
+                paint.color = 0xFF000000.toInt() or DrawingGeometry.color(p.layer)
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = (p.layer.lineweightMm * 72.0 / 25.4).toFloat()
+                paint.pathEffect = if (p.layer.linetype == "CENTER") DashPathEffect(floatArrayOf(7f, 2f, 1f, 2f), 0f) else null
+                when (p) {
+                    is Primitive.Line -> line(p.p1, p.p2)
+                    is Primitive.Polyline -> path(p.points, p.isClosed)
+                    is Primitive.Circle -> { val c = mapped(p.center); canvas.drawCircle(c.x.toFloat(), c.y.toFloat(), (p.radius * viewport.scale).toFloat(), paint) }
+                    is Primitive.Arc -> path(DrawingGeometry.arcPoints(p))
+                    is Primitive.Text -> label(p.text, p.position, p.heightMm, p.rotationDeg, p.halo || p.pillBackground)
+                    is Primitive.Dimension -> {
+                        line(p.p1, p.p2)
+                        val tick = 2.5 / viewport.scale
+                        listOf(p.p1, p.p2).forEach { line(Point2D(it.x - tick, it.y - tick), Point2D(it.x + tick, it.y + tick)) }
+                        label(p.text, p.textPosition, 9.0 / viewport.scale)
                     }
-                }
-                is Primitive.Circle -> {
-                    drawCircle(
-                        color = acvColor(p.layer),
-                        radius = p.radius.toFloat(),
-                        center = Offset(p.center.x.toFloat(), p.center.y.toFloat()),
-                        style = Stroke(width = p.layer.lineweightMm.toFloat() * 2f)
-                    )
-                }
-                is Primitive.RebarDot -> {
-                    drawCircle(
-                        color = acvColor(p.layer),
-                        radius = (p.diameterMm / 2.0).toFloat(),
-                        center = Offset(p.center.x.toFloat(), p.center.y.toFloat())
-                    )
-                }
-                is Primitive.Text -> {
-                    // Text rendering handled via Compose text or canvas basic draw
-                }
-                is Primitive.Dimension -> {
-                    drawLine(
-                        color = acvColor(p.layer),
-                        start = Offset(p.p1.x.toFloat(), p.p1.y.toFloat()),
-                        end = Offset(p.p2.x.toFloat(), p.p2.y.toFloat()),
-                        strokeWidth = 1f
-                    )
-                }
-                is Primitive.Leader -> {
-                    for (i in 0 until p.points.size - 1) {
-                        val pt1 = p.points[i]
-                        val pt2 = p.points[i + 1]
-                        drawLine(
-                            color = acvColor(p.layer),
-                            start = Offset(pt1.x.toFloat(), pt1.y.toFloat()),
-                            end = Offset(pt2.x.toFloat(), pt2.y.toFloat()),
-                            strokeWidth = 1f
-                        )
+                    is Primitive.RebarDot -> {
+                        val c = mapped(p.center); paint.style = Paint.Style.FILL
+                        canvas.drawCircle(c.x.toFloat(), c.y.toFloat(), (p.diameterMm / 2 * viewport.scale).toFloat(), paint)
                     }
+                    is Primitive.Leader -> { path(p.points); label(p.text, p.points.last(), 9.0 / viewport.scale) }
                 }
-                else -> {}
             }
         }
     }
