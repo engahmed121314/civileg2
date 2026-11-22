@@ -490,21 +490,28 @@ private fun DrawScope.drawSoilStructureElevation(
         footX, footX + drawL, dimensionY,
         "L = ${safeL.toInt()} mm", dimColor, cfg.dimTextSize * 0.85f, 16f, cfg
     )
-    val legendSize = cfg.annotationTextSmall * 0.85f
-    val legendStep = legendSize * 1.45f
-    val legendY = dimensionY + 32f
+    val legendSize = cfg.annotationTextSmall.coerceAtLeast(9f)
+    val legendStep = legendSize * 1.4f
+    val legendY = dimensionY + 36f
+    // Reserve a solid legend band instead of printing small labels over hatches.
+    drawRoundRect(
+        color = DrawingColorDefaults.ConcreteFill,
+        topLeft = Offset(left - 4f, legendY - legendSize - 3f),
+        size = Size(width + 8f, legendStep * 3f + legendSize + 8f),
+        cornerRadius = CornerRadius(3f)
+    )
     drawSoilLegendLine(
         "q_max = ${maxPressureKpa.toInt()} kPa | q_min = ${minPressureKpa.toInt()} kPa",
         left, legendY, width, pressureColor, legendSize
     )
     drawSoilLegendLine(
-        "q_all = ${soilBearingCapacityKpa.toInt()} kPa | W.T. -${String.format("%.1f", waterTableDepthM)} m",
+        "q_all = ${soilBearingCapacityKpa.toInt()} kPa | W.T. -${String.format(java.util.Locale.US, "%.1f", waterTableDepthM)} m",
         left, legendY + legendStep, width, allowableColor, legendSize
     )
-    drawSoilLegendLine("Layer 1: Medium to Dense Sand (γ=18 kN/m³)",
-        left, legendY + legendStep * 2f, width, textColor.copy(alpha = 0.7f), legendSize)
-    drawSoilLegendLine("Layer 2: Stiff Silty Clay (cu=60 kPa)",
-        left, legendY + legendStep * 3f, width, textColor.copy(alpha = 0.7f), legendSize)
+    drawSoilLegendLine("Illustrative sand layer",
+        left, legendY + legendStep * 2f, width, textColor, legendSize)
+    drawSoilLegendLine("Illustrative clay layer",
+        left, legendY + legendStep * 3f, width, textColor, legendSize)
 
     // Footing thickness (left)
     drawVerticalDimension(
@@ -597,7 +604,7 @@ private fun DrawScope.drawFoundationPlanKern(
     drawCircle(color = Color.White, radius = 2f, center = Offset(pressurePtX, pressurePtY))
 
     // Status label
-    val compStatus = if (isFullCompression) "100% Bearing Area in Compression (Safe)" else "Partial Tension / Uplift (e > L/6)"
+    val compStatus = if (isFullCompression) "100% Bearing Area in Compression (Full Contact)" else "Partial Tension / Uplift (e > L/6)"
     // Put the status between the zone heading and plan, not between the
     // length dimension and title block where there is no free baseline.
     drawSoilLegendLine(compStatus, left, top + 20f,
@@ -688,7 +695,7 @@ private fun DrawScope.drawBoussinesqStressBulb(
         cornerRadius = CornerRadius(4f)
     )
     drawTextAnnotated(
-        "Estimated Settlement: ${String.format("%.1f", settlementMm)} mm (Allowable ≤ 25 mm ECP/ACI)",
+        "Estimated Settlement: ${String.format(java.util.Locale.US, "%.1f", settlementMm)} mm (Allowable ≤ 25 mm ECP/ACI)",
         left + width / 2f, badgeY + 14f,
         sColor, cfg.annotationTextSmall, center = true, bold = true
     )
@@ -715,12 +722,12 @@ private fun DrawScope.drawSoilStructureTable(
     val headers = listOf("Check", "Demand", "Limit", "F.S.", "Status")
     val rows = listOf(
         listOf("Bearing (q_max)", "${maxPressureKpa.toInt()} kPa", "${soilBearingCapacityKpa.toInt()} kPa",
-            "%.2f".format(bearingFS), if (brPass) "SAFE ✓" else "FAIL ✗"),
+            String.format(java.util.Locale.US, "%.2f", bearingFS), if (brPass) "SAFE ✓" else "FAIL ✗"),
         listOf("Overturning", "M_act", "M_res",
-            "%.2f".format(overturningFS), if (otPass) "SAFE ✓" else "FAIL ✗"),
+            String.format(java.util.Locale.US, "%.2f", overturningFS), if (otPass) "SAFE ✓" else "FAIL ✗"),
         listOf("Sliding", "H_act", "R_fric",
-            "%.2f".format(slidingFS), if (slPass) "SAFE ✓" else "FAIL ✗"),
-        listOf("Settlement", "${String.format("%.1f", settlementMm)}mm", "25 mm",
+            String.format(java.util.Locale.US, "%.2f", slidingFS), if (slPass) "SAFE ✓" else "FAIL ✗"),
+        listOf("Settlement", "${String.format(java.util.Locale.US, "%.1f", settlementMm)}mm", "25 mm",
             "—", if (stPass) "OK ✓" else "HIGH ✗"),
         listOf("Kern (e ≤ L/6)", "${eccentricityMm.toInt()} mm", "${kernLimitMm.toInt()} mm",
             "—", if (isFullCompression) "100% ✓" else "Uplift ⚠")
