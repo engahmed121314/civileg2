@@ -3,6 +3,7 @@ package com.civileg.app.ui.compose.screens
 import com.civileg.app.ui.responsive.dimens
 
 import kotlin.math.*
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -433,13 +434,32 @@ fun ColumnScreen(
                             label = stringResource(R.string.pdf_report),
                             onClick = {
                                 scope.launch {
+                                    // Passive diagnostic witnesses; every log is guarded
+                                    // so a logging failure can never change an outcome.
+                                    // The conversion throwable itself is owned by the
+                                    // shared helper's internal catch witness; a null
+                                    // bitmap here is only correlated as unknown-null.
+                                    val revision = completed.revisionSha256
                                     val renderedBefore = renderedDrawingRevision.get()
                                     val captureBitmap = try {
                                         pdfCaptureLayer.captureToAndroidBitmap()
                                     } catch (_: Exception) { null }
-                                    val capture = if (captureBitmap != null && renderedBefore == completed.revisionSha256 &&
-                                        renderedDrawingRevision.get() == completed.revisionSha256)
-                                        runCatching { ColumnDrawingCapture(completed.revisionSha256, captureBitmap) }.getOrNull() else null
+                                    val renderedAfter = renderedDrawingRevision.get()
+                                    val rejection = when {
+                                        captureBitmap == null -> "conversion-null(unknown; see shared-helper witness)"
+                                        renderedBefore != revision -> "renderedBefore-stale(revision-mismatch)"
+                                        renderedAfter != revision -> "renderedAfter-stale(revision-mismatch)"
+                                        else -> "none"
+                                    }
+                                    runCatching {
+                                        Log.d("ColumnCapture", "click revision=" + revision.take(12) + " renderedBefore=" + (renderedBefore?.take(12) ?: "null") + " renderedAfter=" + (renderedAfter?.take(12) ?: "null") + " bitmap=" + (captureBitmap?.let { it.width.toString() + "x" + it.height } ?: "null") + " rejection=" + rejection)
+                                    }
+                                    val capture = if (captureBitmap != null && renderedBefore == revision &&
+                                        renderedAfter == revision)
+                                        runCatching { ColumnDrawingCapture(revision, captureBitmap) }
+                                            .onSuccess { runCatching { Log.d("ColumnCapture", "freeze-runCatching success revision=" + revision.take(12)) } }
+                                            .onFailure { t -> runCatching { Log.w("ColumnCapture", "freeze-runCatching failure type=" + t.javaClass.name + " msg=" + t.message) } }
+                                            .getOrNull() else null
                                     viewModel.exportToPdf(context, completed, capture) { /* Handle completion */ }
                                 }
                             },
@@ -656,16 +676,35 @@ private fun CompletedColumnCaptureArea(
 ) {
     val width = widthPx.coerceAtLeast(1)
     val height = heightPx.coerceAtLeast(1)
+    // Passive diagnostic witnesses only; every log is guarded so a logging
+    // failure can never change an outcome. The outer node reports 0x0 by
+    // design, so witness entry/count, the inner measured size, the actual
+    // draw scope, each record outcome, and the layer size, keyed by a
+    // per-recorder instance tag (no global counters).
+    val instanceTag = remember(captureLayer) { Integer.toHexString(System.identityHashCode(captureLayer)) }
+    val drawCount = remember(captureLayer) { java.util.concurrent.atomic.AtomicInteger(0) }
     Box(Modifier.layout { measurable, _ ->
         val placeable = measurable.measure(Constraints.fixed(width, height))
+        runCatching { Log.d("ColumnCapture", "[$instanceTag] measure: inner=${placeable.width}x${placeable.height} outer-reported=0x0 requested=${width}x${height}") }
         layout(0, 0) { placeable.place(0, 0) }
     }.drawWithContent {
+        val drawIndex = drawCount.incrementAndGet()
         recordedRevision.set(null)
+        var recordOutcome = "unset"
         try {
             captureLayer.record(size = IntSize(width, height)) { this@drawWithContent.drawContent() }
             recordedRevision.set(revision)
-        } catch (_: Throwable) {
+            recordOutcome = "OK"
+        } catch (t: Throwable) {
+            // Reset FIRST, exactly as the original; only then capture the type
+            // for the post-block guarded witness.
             recordedRevision.set(null)
+            recordOutcome = runCatching { "FAILED type=" + t.javaClass.name + " msg=" + t.message }.getOrDefault("FAILED type=unknown")
+        }
+        val scopeW = this.size.width
+        val scopeH = this.size.height
+        runCatching {
+            Log.d("ColumnCapture", "[$instanceTag] draw#$drawIndex scope=${scopeW}x${scopeH} record=$recordOutcome layer=${captureLayer.size.width}x${captureLayer.size.height}")
         }
     }) { content() }
 }

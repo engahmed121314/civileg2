@@ -192,16 +192,28 @@ class ColumnRecordedSheetIntegrationTest {
         every { vm.exportToPdf(any(), any(), captureNullable(observedCaptures), any()) } answers { callOriginal() }
         val before = documents().listFiles().orEmpty().map { it.name }.toSet()
         scrollTo("column-pdf-export");
+        // Passive witnesses: completed-sheet revision before the click vs after
+        // pumping, so a stale revision, a failed freeze, and a failed capture
+        // are distinguishable in the report.
+        val revisionBeforeClick = vm.uiState.value.completedDesign?.revisionSha256
         button("column-pdf-export").performClick()
         try {
             awaitMainPumped(30000) { !vm.uiState.value.isExporting && newReport(before) != null }
         } catch (failure: Throwable) {
             retainColumnUiTimeout(output, documents(), before, "actual-button", vm.uiState.value,
-                "captureCalls=${observedCaptures.size}", failure)
+                runCatching { "captureCalls=${observedCaptures.size} revisionBeforeClick=$revisionBeforeClick revisionOnFailure=${vm.uiState.value.completedDesign?.revisionSha256}" }.getOrDefault("capture-witness-unavailable"), failure)
             runCatching {
                 observedCaptures.singleOrNull()?.bitmap?.let { retainBitmap("timeout-actual-button-capture.png", it) }
             }.onFailure { println("COLUMN_EXPORT_CAPTURE_DIAGNOSTIC_FAILED ${it.javaClass.name}") }
             throw failure
+        }
+        runCatching {
+            System.err.println(
+                "CAPTURE-WITNESS actual-button: revisionBeforeClick=" + revisionBeforeClick +
+                    " revisionAfterWait=" + vm.uiState.value.completedDesign?.revisionSha256 +
+                    " captures=" + observedCaptures.size +
+                    " isExporting=" + vm.uiState.value.isExporting
+            )
         }
         assertEquals("The real UI must supply one completed capture", 1, observedCaptures.size)
         val observed = requireNotNull(observedCaptures.single()) { "Real UI did not capture its completed sheet" }
