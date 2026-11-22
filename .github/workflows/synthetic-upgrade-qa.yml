@@ -91,6 +91,19 @@ jobs:
           "$BT_DIR/apksigner" verify --print-certs "$CANDIDATE" | tee qa-evidence-candidate-certs.txt
           sha256sum "$CANDIDATE" "${TESTS[0]}" | tee qa-evidence-hashes.txt
 
+      - name: Verify rebuilt QA-target linkage before unchanged tests
+        # Fail-closed: inspects the ACTUAL rebuilt APKs (facade hierarchy with
+        # exact directed chain, full-signature descriptor dependencies,
+        # instrumentation method-reference resolution) so a runner recovery is
+        # never mistaken for linkage the target lacks. Dependency-install or
+        # parser failure refuses with evidence. Focused positive/negative
+        # fixtures run first so a silently broken gate cannot pass.
+        run: |
+          # Installer stdout+stderr retained as the install-refusal evidence artifact.
+          pip install androguard==4.1.4 2>&1 | tee qa-evidence-androguard-install.txt || { echo 'GATE REFUSAL: androguard install failed (see qa-evidence-androguard-install.txt)'; exit 1; }
+          python3 tools/qa/host/selftest_lazy_facade_linkage.py | tee qa-evidence-lazy-facade-selftest.txt
+          python3 tools/qa/host/verify_lazy_facade_linkage.py "$CANDIDATE_APK" "$TEST_APK" | tee qa-evidence-lazy-facade-linkage.txt
+
       - name: Capture synthetic packaging diagnostics before emulator
         if: always()
         run: |
