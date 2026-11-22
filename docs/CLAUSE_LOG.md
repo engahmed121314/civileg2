@@ -73,19 +73,19 @@ Engineering fixes applied in this batch (documented, with golden vectors):
    diameter is accepted only when provided ≥ required.
 
 No other production formula was added or changed. Group-efficiency and the
-alpha-curve shape remain as-is pending owner engineering decisions (U-P1, U-P2).
+alpha-curve shape remain as-is pending engineering decisions (U-P1, U-P2).
 
-## Owner-decision batch — pile alpha curve + group efficiency (accessed 2026-11-21)
+## Decision batch — pile alpha curve + group efficiency (accessed 2026-11-21)
 
-The owner reviewed U-P1/U-P2 (from the ACIPileFoundation batch) and directed:
-"apply the correct and most accurate engineering option" for both.
+Decision on U-P1/U-P2 (from the ACIPileFoundation batch):
+apply the correct and most accurate engineering option for both.
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
 |---|---|---|---|
 | P-06 | API RP 2A-WSD §6.4.2 alpha method as a continuous curve: `α = 0.5·ψ^-0.5` (ψ ≤ 1), `α = 0.5·ψ^-0.25` (ψ > 1), `α ≤ 1.0`, ψ = cu/p'0; applied with the engine's implicit p'0 = 100 kPa. Replaces the banded curve that jumped 0.75 → 0.5 at cu = 50 kPa (U-P1, RESOLVED). Continuous at cu = 25 (α = 1.0) and cu = 100 (α = 0.5). | OpenBrIM API RP 2A-WSD alpha method page (opened earlier today, this session) | Verified (secondary) |
 | P-07 | Standard Converse-Labarre group efficiency: `η = 1 − θ·[(m−1)·nc + (nc−1)·m] / (90·m·nc)`, θ = atan(d/s) in degrees. Replaces the engine variant (atan(s/d), single term; U-P2, RESOLVED). 3×3 @ s=3d: η = 0.7269 (was 0.6466). | [FireCAD — Pile Group Efficiency (Converse–Labarre)](https://calc.firecad.com/civil/foundations/pile-group-efficiency); [Converse-Labarre calculator reference](https://calculatgeek.com/pile-group-efficiency-calculator-converse-labarre/) | Verified (secondary; textbook-standard form) |
 
-Behavior changes (intended, owner-approved):
+Behavior changes (intended):
 - Clay shaft capacity for 25 < cu ≤ 100 kPa increases (e.g. cu = 50: α 0.5 →
   0.707); for cu > 100 kPa it also increases slightly (ψ^-0.25 form).
 - Group efficiency increases to the standard values (3×3 @ 3d: 0.727; 2×2 @
@@ -103,7 +103,7 @@ Behavior changes (intended, owner-approved):
 | A-03 | AISC 360-16 E3-2/E3-3/E3-4: `Fe = π²E/(KL/r)²`; inelastic `Fcr = 0.658^(Fy/Fe)·Fy` for KL/r ≤ 4.71√(E/Fy), elastic `Fcr = 0.877·Fe` otherwise; φc = 0.90 | [ideCAD — Flexural Buckling per AISC 360-16](https://help.idecad.com/ideCAD/flexural-buckling) | Verified (secondary) |
 | A-04 | AISC 360-16 J4.3 block shear `Rn = min(0.6·Fy·Agv + Ubs·Fu·Ant, 0.6·Fu·Anv + Ubs·Fu·Ant)`, φ = 0.75 | Standard AISC form; engine geometry (gauge/edge/pitch estimates) is an engine simplification | Formula verified; engine geometry CHARACTERIZED |
 | A-05 | Section properties: box `Ix = (b·h³−(b−2t)(h−2t)³)/12`, I-shape open-form Ix/Iy | Standard strength-of-materials formulas | Verified |
-| U-A1 | Welded tension: engine returns a block-shear "placeholder" `0.75·0.6·Fy·Ag` that GOVERNS the design (cuts welded tension capacity ~50%). AISC J4.3 has no block-shear limit state for full welded connections | Engine inspection | **FLAGGED, not fixed** — conservative direction; owner engineering decision |
+| U-A1 | Welded tension: engine returns a block-shear "placeholder" `0.75·0.6·Fy·Ag` that GOVERNS the design (cuts welded tension capacity ~50%). AISC J4.3 has no block-shear limit state for full welded connections | Engine inspection | **FLAGGED, not fixed** — conservative direction; deferred engineering decision |
 | U-A2 | Torsional buckling (E4) branch selection uses the FLEXURAL slenderness for the E3-3/E3-4 choice and `min(KxLx, KyLy)` as the torsional length instead of Kz·Lz | Engine inspection | **FLAGGED, not fixed** — pinned by characterization test |
 | U-A3 | Plastic modulus `Zx = 1.12·Sx` (shape-factor approximation) for I-sections | Engine constant | Approximation, characterized; within typical rolled-shape range |
 
@@ -112,10 +112,10 @@ Golden vectors: A-01/A-02 (tension bolted, net rupture governs), A-03
 path and welded placeholder pinned as characterization (U-A1/U-A2).
 No production formula was added or changed in this batch.
 
-## Owner-decision batch — AISC steel corrections (accessed 2026-11-21)
+## Decision batch — AISC steel corrections (accessed 2026-11-21)
 
-The owner directed the engineering-correct fix for all three AISC findings
-from the member-design batch (his standing rule: fix correctly, document,
+Applied the engineering-correct fix for all three AISC findings
+from the member-design batch (standing rule: fix correctly, document,
 separate PR, nothing merges without his OK).
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
@@ -124,7 +124,7 @@ separate PR, nothing merges without his OK).
 | A-07 | AISC 360-16 E4: Fcr for torsional/flexural-torsional buckling comes from the E3 equations applied to the TORSIONAL elastic stress Fe, with the inelastic/elastic branch at Fy/Fe = 2.25. The branch no longer keys on the flexural slenderness. U-A2 RESOLVED. Remaining simplification: L = min(KxLx, KyLy) pending a Kz·Lz input (U-A2a, conservative). | [ideCAD — Flexural Buckling per AISC 360-16](https://help.idecad.com/ideCAD/flexural-buckling) | Verified (secondary) |
 | A-08 | Exact plastic section modulus replaces the 1.12·Sx approximation: I-shape `Zx = bf·tf·(h−tf) + tw·(h−2tf)²/4`; CHS/Pipe `(D³−(D−2t)³)/6`; RHS `(w·h²−(w−2t)(h−2t)²)/4`. Singly symmetric shapes (C/L/T/PG) keep shape factors pending plastic-NA work. U-A3 RESOLVED for I/CHS/RHS/Pipe. | Standard strength-of-materials exact forms (Zx of I 300x150x10x7 = 572,200 mm³, shape factor 1.131 vs the old flat 1.12) | Verified (textbook) |
 
-Behavior changes (intended, owner-approved): welded/pressed tension capacity
+Behavior changes (intended): welded/pressed tension capacity
 increases to the correct D2 values; torsional branch selection corrected;
 flexural capacities via Zx shift slightly (I-shapes up to ~1%, more accurate).
 Golden vectors updated on this branch (welded tension governs D2-1;
@@ -181,17 +181,17 @@ Golden guard: ECPBeamDeflectionFyTest pins MF behavior at fy = 240/360/400
 (span 6 m, depth 500 mm, ρ = 1.0%): ratio 0.240 / 0.320 / 0.344 respectively.
 ---
 
-## Owner-decision batch - ECPSlab two-way bending coefficients (accessed 2026-11-21)
+## Decision batch - ECPSlab two-way bending coefficients (accessed 2026-11-21)
 
 Replacement of the legacy simplified two-way slab moment table (BS 8110 / IS 456
 family values mislabeled as ECP) with the verified ECP 203-2020 method. Source:
-the owner's own copy of the official Arabic ECP 203-2020 PDF, sent via WhatsApp
+the official Arabic ECP 203-2020 PDF
 on 2026-11-21. Every row below was read directly from that PDF and is VERIFIED
 (primary source, first-party code text).
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
 |---|---|---|---|
-| TW-01 | ECP 203-2020 §6-1-2-6-3 (simplified method, two-way solid slabs, uniform loads): `M_a = alpha·w·a²/d`, `M_b = beta·w·b²/d`; d = 8 span simply supported both ends, d = 10 continuous one end, d = 12 continuous both ends [Eq. 6-7a/b/c] | Owner-provided ECP 203-2020 PDF, printed page 6-9 (PDF p. 242) | Verified (primary) |
+| TW-01 | ECP 203-2020 §6-1-2-6-3 (simplified method, two-way solid slabs, uniform loads): `M_a = alpha·w·a²/d`, `M_b = beta·w·b²/d`; d = 8 span simply supported both ends, d = 10 continuous one end, d = 12 continuous both ends [Eq. 6-7a/b/c] | ECP 203-2020 PDF, printed page 6-9 (PDF p. 242) | Verified (primary) |
 | TW-02 | Table 6-1 (slabs cast monolithically with beams, LL ≤ 5 kN/m²): alpha = 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85 and beta = 0.35, 0.29, 0.25, 0.21, 0.18, 0.16, 0.14, 0.12, 0.11, 0.09, 0.08 for r = 1.0..2.0; closed form Eq. 6-8: `alpha = 0.5r − 0.15`, `beta = 0.35/r²` | Same PDF, printed page 6-9 | Verified (primary) |
 | TW-03 | Method scope (§6-1-2-6-3 + §6-2-1-6-1): rectangular panels supported on four sides, cast monolithically with beams, rectangularity ratio r ≤ 2 (r > 2 → design one-way); LL > 5 kN/m² uses Table 6-3 (not yet implemented) | Same PDF, printed pages 6-8/6-9 | Verified (primary) |
 | TW-04 | Wall-supported variant: Table 6-1(2a) alpha 0.396..0.849, beta 0.396..0.053 (not yet implemented; engine assumes monolithic-with-beams) | Same PDF, printed page 6-10 (PDF p. 243) | Verified (primary), implementation deferred |
@@ -200,15 +200,15 @@ on 2026-11-21. Every row below was read directly from that PDF and is VERIFIED
 Removed provenance: the previous table ("جداول مبسطة من الكود المصري (قريبة من قيم
 ماركوس)") and the advanced-quality-fixes branch's 8-case table labeled "ECP 203
 جدول 6-1" are BS 8110 Table 3.13 / IS 456 Table 26 family values (interior-panel
-0.031/0.024 at r = 1.0 fingerprint), not ECP 203. Owner decision 2026-11-21:
+0.031/0.024 at r = 1.0 fingerprint), not ECP 203. Decision 2026-11-21:
 forget the Indian code and remove everything related to it; ECP 203-2020 and
 SBC PDFs are the references of record, ACI PDF to follow.
 
 ## ACI 318M-14 primary verification batch — ACIPileFoundation structural clauses (accessed 2026-11-21)
 
-Source of record: the owner's ACI 318M-14 Arabic/English edition (4 PDF parts,
-801 pages, forwarded by the owner 2026-11-21). Printed page numbers below are the
-code's own page footers; the PDF part/page locators point into the owner's files.
+Source of record: the ACI 318M-14 Arabic/English edition (4 PDF parts,
+801 pages, accessed 2026-11-21). Printed page numbers below are the
+code's own page footers; the PDF part/page locators point into the PDF parts.
 This batch upgrades P-04/P-05 from secondary-source to primary-source status.
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
@@ -234,14 +234,14 @@ No production formula was added or changed in this batch.
 
 ### ACI combined footing audit — `ACIFooting.designCombinedFooting` (same batch)
 
-Shared checks verified against the owner PDF (entries A-01..A-06 apply here too):
+Shared checks verified against the ACI 318M-14 PDF (entries A-01..A-06 apply here too):
 punching uses b0 = 2(c1+c2)+4d (perimeter at d/2, §22.6.4.1), vc = min of the
 three Table 22.6.5.2 cases with αs = 40, one-way Vc = 0.17·√f'c·b·d
 (§22.5.5.1), φshear = 0.75 / φflex = 0.90 (Table 21.2.1).
 
 | ID | Finding | Evidence | Status |
 |---|---|---|---|
-| CF-01 | Longitudinal bending uses the simply-supported simplification M = qu·B·L²/8. ACI 318M-14 §13.2.6.2 permits any procedure satisfying equilibrium and geometric compatibility; this form overstates mid-span sagging (≈ wL²/8 vs wL²/8 − P·S/2 for symmetric loads) but never designs top (hogging) reinforcement at the columns, and computes no transverse reinforcement under each column (beam-strip action). | Engine code; ACI 318M-14 §13.2.6.2, printed p. 307 (part 2, PDF p. 116) | **FLAGGED, not fixed** — needs an owner engineering decision (invert-beam shear/moment diagram + transverse strips is the recommended correct method) |
+| CF-01 | Longitudinal bending uses the simply-supported simplification M = qu·B·L²/8. ACI 318M-14 §13.2.6.2 permits any procedure satisfying equilibrium and geometric compatibility; this form overstates mid-span sagging (≈ wL²/8 vs wL²/8 − P·S/2 for symmetric loads) but never designs top (hogging) reinforcement at the columns, and computes no transverse reinforcement under each column (beam-strip action). | Engine code; ACI 318M-14 §13.2.6.2, printed p. 307 (part 2, PDF p. 116) | **FLAGGED, not fixed** — needs an engineering decision (invert-beam shear/moment diagram + transverse strips is the recommended correct method) |
 | CF-02 | One-way shear check omits the xResultant offset in the shear span (overestimates Vu — conservative direction) and never checks the inner face of column 2. | Engine code (Step 9) | **FLAGGED, not fixed** — bundle with CF-01 |
 | CF-03 | The eccentricity/trapezoid block is dead code: the footing centroid is placed at the load resultant by construction, so e ≡ 0 and maxSoilPressure always equals soilPressure. Reported max/min pressures are misleading. | Engine code (Steps 2–4) | **FLAGGED, not fixed** — cosmetic/reporting |
 
@@ -264,16 +264,16 @@ chosen by a uniaxial strain-compatibility interaction check per axis
 (φPn(c) = Pu solved by bisection, φMn(c) ≥ Mu), plus the Table 22.4.2.1 axial
 cap. Biaxial bending is checked per axis independently (no Bresler combination)
 — documented limitation. Sources opened and verified 2026-11-21 against the
-owner's bilingual ACI 318M-14 PDF (rendered pages):
+bilingual ACI 318M-14 PDF (rendered pages):
 
 | ID | Clause / value | Source (accessed 2026-11-21) | Status |
 |---|---|---|---|
-| A-19a | §22.2.1.1 equilibrium + §22.2.1.2 plane sections remain plane | ACI 318M-14 PDF, printed p. 552 (part 3, PDF p. 161) | Verified (owner PDF, printed page) |
-| A-19b | §22.2.2.1 εcu = 0.003; §22.2.2.2 tensile concrete strength neglected | ACI 318M-14 PDF, printed p. 553 (part 3, PDF p. 162) | Verified (owner PDF, printed page) |
-| A-19c | §22.2.2.4.1 stress block 0.85fc' over a = β1·c; Table 22.2.2.4.3 β1 = 0.85 (fc'≤28), 0.85−0.05(fc'−28)/7, 0.65 (fc'≥55) | ACI 318M-14 PDF, printed p. 554 (part 3, PDF p. 163); β1 table first logged A-08 | Verified (owner PDF, printed page) |
-| A-19d | §20.2.2.1 fs = Es·εs below yield else fy; §20.2.2.2 Es = 200 000 MPa | ACI 318M-14 PDF, printed p. 522 (part 3, PDF p. 131) | Verified (owner PDF, printed page) |
-| A-19e | §21.2.2.1 εty = fy/Es (= 0.002 for Gr420); Table 21.2.2 tied-column φ: 0.65 compression-controlled, 0.90 at εt ≥ 0.005, transition φ = 0.65 + 0.25(εt − εty)/(0.005 − εty) | ACI 318M-14 PDF, printed pp. 545 and 547 (part 3, PDF pp. 154 and 156) | Verified (owner PDF, printed page) |
-| A-19f | Table 22.4.2.1 design axial cap φPn,max = 0.80·φ·Po (tied), used as the steel-iteration gate | ACI 318M-14 PDF, printed p. 557 (part 3, PDF p. 166); first logged A-14 | Verified (owner PDF, printed page) |
+| A-19a | §22.2.1.1 equilibrium + §22.2.1.2 plane sections remain plane | ACI 318M-14 PDF, printed p. 552 (part 3, PDF p. 161) | Verified (PDF, printed page) |
+| A-19b | §22.2.2.1 εcu = 0.003; §22.2.2.2 tensile concrete strength neglected | ACI 318M-14 PDF, printed p. 553 (part 3, PDF p. 162) | Verified (PDF, printed page) |
+| A-19c | §22.2.2.4.1 stress block 0.85fc' over a = β1·c; Table 22.2.2.4.3 β1 = 0.85 (fc'≤28), 0.85−0.05(fc'−28)/7, 0.65 (fc'≥55) | ACI 318M-14 PDF, printed p. 554 (part 3, PDF p. 163); β1 table first logged A-08 | Verified (PDF, printed page) |
+| A-19d | §20.2.2.1 fs = Es·εs below yield else fy; §20.2.2.2 Es = 200 000 MPa | ACI 318M-14 PDF, printed p. 522 (part 3, PDF p. 131) | Verified (PDF, printed page) |
+| A-19e | §21.2.2.1 εty = fy/Es (= 0.002 for Gr420); Table 21.2.2 tied-column φ: 0.65 compression-controlled, 0.90 at εt ≥ 0.005, transition φ = 0.65 + 0.25(εt − εty)/(0.005 − εty) | ACI 318M-14 PDF, printed pp. 545 and 547 (part 3, PDF pp. 154 and 156) | Verified (PDF, printed page) |
+| A-19f | Table 22.4.2.1 design axial cap φPn,max = 0.80·φ·Po (tied), used as the steel-iteration gate | ACI 318M-14 PDF, printed p. 557 (part 3, PDF p. 166); first logged A-14 | Verified (PDF, printed page) |
 
 Golden vectors (hand-computed, `ACIColumnInteractionTest`): 8Ø20/400×400/fc'=24
 at Pu=1500 kN → c=283.31, φ=0.65, φMn=144.52 kNm; same at Pu=2000 kN →
@@ -322,7 +322,7 @@ Constructibility is not claimed as fully code-checked.
 ---
 
 **E-BS-1 (2026-11-21) — ECPBeam shear engine rebuilt against ECP 203-2020 printed pages.**
-Source of record: owner's ECP 203-2020 PDF (489-page scan), verified by direct
+Source of record: ECP 203-2020 PDF (489-page scan), verified by direct
 page renders this date (PDF pp.96-102 = printed 4-16..4-22, الباب الرابع).
 All page numbers below are the printed page of the PDF of record.
 
@@ -358,8 +358,8 @@ Golden vectors: ECPBeamShearTest (6 cases: stirrup design, min-only branch,
 
 ## SBC 304-CR-2018 joist rebuild batch — `SBCJoistSlab` (accessed 2026-11-22)
 
-Source of record: owner's SBC 304-CR-18 English PDF (284 pp, Edition 200923,
-complete, text-extractable + page renders), cross-confirmed against the owner's
+Source of record: SBC 304-CR-18 English PDF (284 pp, Edition 200923,
+complete, text-extractable + page renders), cross-confirmed against the
 ACI 318M-14 bilingual PDF (cover-render-confirmed edition). All SBC page
 numbers are the document's printed page. The engine is relabelled
 "SBC 304-CR-2018"; edition differences are isolated for a future 2024 upgrade
@@ -374,7 +374,7 @@ room for 2024).
 | SJ-4 | Strength reduction: Table 21.2.1(a) moment/axial 0.65-0.90 per 21.2.2, (b) shear φ = 0.75; Table 21.2.2 tension-controlled φ = 0.90 | SBC 304-CR-18 Tables 21.2.1/21.2.2, printed p. 169 (rendered 2026-11-22) | **Verified (primary, rendered)** |
 | SJ-5 | Minimum flexural reinforcement: §9.6.1.2 As,min = greater of (a) 0.25·√fc′/fy·bw·d and (b) 1.4/fy·bw·d; §9.6.1.3 exemption when As provided ≥ 4/3 As required | SBC 304-CR-18 §9.6.1.2/9.6.1.3, printed p. 68 (rendered 2026-11-22) | **Verified (primary, rendered)** |
 | SJ-6 | Stress block: §22.2.2.4.1 a = β1·c; Table 22.2.2.4.3 β1 = 0.85 (17 ≤ fc′ ≤ 28), 0.85 − 0.05(fc′−28)/7 (28 < fc′ < 55), 0.65 (fc′ ≥ 55) | SBC 304-CR-18 §22.2.2.4.1 printed p. 172 (rendered 2026-11-22); Table 22.2.2.4.3 printed p. 173 (text layer; identical ACI 318M-14 table render-verified printed p. 554) | **Verified (primary)** |
-| SJ-7 | One-way shear Vc: §9.8.1.5 permits Vc = 1.1 × the §22.5 value (printed p. 72, rendered) — BUT the base Eq (22.5.5.1) printed p. 174 (rendered) carries the content "Vu ≤ φ(Vc + 0.66√fc′ bw d)", a duplicate of Eq (22.5.1.2) that is circular as a definition of Vc. Independent SBC copy shows the same duplication (publication-level artifact hypothesis). SBC's own Table 22.5.5.1 (printed p. 182) matches ACI 318M-14's detailed method, whose simple-equation counterpart in ACI 318M-14 §22.5.5.1 (printed p. 563) is Vc = 0.17·λ·√fc′·bw·d | SBC 304-CR-18 pp. 72/174/182 (rendered); ACI 318M-14 §22.5.5.1 (dump + form-feed map); no official SBCNC erratum found | **UNVERIFIED — discrepancy held. Engine carries the shear check as BLOCKED: no capacity computed, no joist 1.1 factor applied, result never a design pass. Awaiting official erratum or owner decision; NOT resolved by substitution** |
+| SJ-7 | One-way shear Vc: §9.8.1.5 permits Vc = 1.1 × the §22.5 value (printed p. 72, rendered) — BUT the base Eq (22.5.5.1) printed p. 174 (rendered) carries the content "Vu ≤ φ(Vc + 0.66√fc′ bw d)", a duplicate of Eq (22.5.1.2) that is circular as a definition of Vc. Independent SBC copy shows the same duplication (publication-level artifact hypothesis). SBC's own Table 22.5.5.1 (printed p. 182) matches ACI 318M-14's detailed method, whose simple-equation counterpart in ACI 318M-14 §22.5.5.1 (printed p. 563) is Vc = 0.17·λ·√fc′·bw·d | SBC 304-CR-18 pp. 72/174/182 (rendered); ACI 318M-14 §22.5.5.1 (dump + form-feed map); no official SBCNC erratum found | **UNVERIFIED — discrepancy held. Engine carries the shear check as BLOCKED: no capacity computed, no joist 1.1 factor applied, result never a design pass. Awaiting official erratum or a design decision; NOT resolved by substitution** |
 | SJ-8 | Concrete strength basis: SBC 304-CR-18 is specified on cylinder strength fc′. Engine input is cube strength fcu (UI semantics preserved); engine converts fc′ = 0.8·fcu | Engine input contract; conversion is an approximation, not a code clause | **UNVERIFIED — approximation flagged in every result; user should enter the cylinder-equivalent strength** |
 | SJ-9 | Detailing notes carried as code notes (not computed): §9.8.1.6 ≥ 1 continuous bottom bar per joist developed at supports; §9.8.1.7 perpendicular reinforcement per §24.4 | SBC 304-CR-18 §9.8.1.6/9.8.1.7, printed p. 72 (rendered 2026-11-22) | **Verified (primary, rendered)** |
 
