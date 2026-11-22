@@ -262,33 +262,16 @@ class HordiSlabViewModel @Inject constructor(
     }
 
     fun saveDesign(projectId: Long, name: String) {
-        val res = _result.value ?: return
+        // Capture before suspension. A queued Save must not follow later edits or recalculation.
+        val record = currentDesignSnapshot()?.record ?: return
         viewModelScope.launch {
-            val engineCode = when (lastInputParams?.designCode ?: "ECP") {
-                "ACI" -> DesignCode.ACI
-                "SBC" -> DesignCode.SBC
-                else -> DesignCode.ECP
+            try {
+                repository.saveHordiSlabSnapshot(projectId, name, record)
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                _error.value = "Save failed: ${error.message}"
             }
-            // FIX: Estimate concrete volume and steel weight from available data
-            val inputParams = lastInputParams
-            val estimatedVolume = if (inputParams != null) {
-                // Approximate: (topping + rib_ratio × rib_height) × span² per m²
-                val ribRatio = inputParams.ribWidth / inputParams.ribSpacing
-                val thicknessEff = inputParams.toppingThickness + ribRatio * (inputParams.totalThickness - inputParams.toppingThickness)
-                (thicknessEff / 1000.0) * (inputParams.span / 1000.0) * (inputParams.span / 1000.0)
-            } else 0.0
-            val estimatedSteel = res.providedReinforcement * 7850.0 / 1e6  // As (mm²) × density / 1e6 → kg/m approx
-            repository.saveSlabDesign(projectId, name, com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabResult(
-                type = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
-                thickness = res.minThickness,
-                isSafe = res.isSafe,
-                safetyAssessmentBlocked = res.safetyAssessmentBlocked,
-                concreteVolume = estimatedVolume,
-                steelWeight = estimatedSteel,
-                code = engineCode,
-                utilizationRatio = res.utilizationRatio,
-                suggestions = res.warnings + res.codeNotes
-            ))
         }
     }
 
