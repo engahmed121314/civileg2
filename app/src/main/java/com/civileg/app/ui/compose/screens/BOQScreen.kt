@@ -400,6 +400,10 @@ private fun exportEstimationPdf(context: Context, result: EstimationEngine.Estim
 }
 
 private fun exportProjectBOQPdf(context: Context, name: String, designs: List<com.civileg.app.db.Design>) {
+    if (designs.any(com.civileg.app.db.StoredDesignSafety::isBlocked)) {
+        Toast.makeText(context, context.getString(R.string.stored_slab_method_hold), Toast.LENGTH_LONG).show()
+        return
+    }
     try {
         val file = PdfGenerator.generateBOQReport(context, name, designs.sumOf { it.totalCost }, designs.sumOf { it.concreteVolume }, designs.sumOf { it.steelWeight }, designs.map { it.name to it.totalCost })
         sharePdf(context, file)
@@ -518,6 +522,9 @@ fun DesignBOQCard(design: com.civileg.app.db.Design, isSelected: Boolean = false
             Column(modifier = Modifier.weight(1f)) {
                 AppText(design.name, fontWeight = FontWeight.Bold)
                 AppText(design.type.name, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                if (com.civileg.app.db.StoredDesignSafety.isBlocked(design)) {
+                    AppText(stringResource(R.string.design_status_not_verified), style = MaterialTheme.typography.labelSmall)
+                }
             }
             AppText(String.format(Locale.US, "%,.0f EGP", design.totalCost), fontWeight = FontWeight.Black)
         }

@@ -72,7 +72,7 @@ class BOQViewModel @Inject constructor(
         // محاولة تحليل inputData التفصيلي
         val inputJson = try { JSONObject(design.inputData) } catch (_: Exception) { null }
         val resultsJson = try { JSONObject(design.results) } catch (_: Exception) { null }
-        require(resultsJson?.optBoolean("safetyAssessmentBlocked", false) != true) {
+        require(!com.civileg.app.db.StoredDesignSafety.isBlocked(design)) {
             "Slab method not verified; execution quantities are blocked."
         }
 

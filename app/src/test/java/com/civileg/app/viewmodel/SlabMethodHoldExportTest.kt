@@ -13,9 +13,11 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class SlabMethodHoldExportTest {
-    private fun heldViewModel(): SlabViewModel {
+    private fun heldViewModel(legacy: Boolean = false): SlabViewModel {
         val vm = SlabViewModel(mockk(relaxed = true), mockk(relaxed = true))
-        val result = CalculatorEngine.SlabResult(
+        val result = if (legacy) com.google.gson.Gson().fromJson(
+            """{"type":"HOLLOW_BLOCK","code":"ECP","isSafe":true}""", CalculatorEngine.SlabResult::class.java
+        ) else CalculatorEngine.SlabResult(
             type = CalculatorEngine.SlabType.HOLLOW_BLOCK,
             safetyAssessmentBlocked = true
         )
@@ -52,4 +54,23 @@ class SlabMethodHoldExportTest {
         assertTrue(called)
         assertNotNull(vm.error.value)
     }
+    @Test fun `old result with no flag also stops shared exports`() {
+        val vm = heldViewModel(legacy = true)
+        val context = RuntimeEnvironment.getApplication<android.app.Application>()
+        assertNull(vm.buildDxfDrawing())
+        var callbacks = 0
+        vm.exportToPdf(context) { file -> callbacks++; assertNull(file) }
+        vm.exportToDxf(context) { file -> callbacks++; assertNull(file) }
+        assertEquals(2, callbacks)
+    }
+
+    @Test fun `old saved record cannot produce CSV execution output`() {
+        val old = com.civileg.app.db.Design(
+            projectId = 2L, name = "Archived slab", type = com.civileg.app.db.DesignType.SLAB,
+            codeUsed = "Egyptian Code", inputData = "{}", isSafe = true,
+            results = """{"type":"HOLLOW_BLOCK","code":"ECP","isSafe":true}"""
+        )
+        assertNull(com.civileg.app.utils.ExcelExporter.exportDesignToCsv(RuntimeEnvironment.getApplication(), old))
+    }
+
 }

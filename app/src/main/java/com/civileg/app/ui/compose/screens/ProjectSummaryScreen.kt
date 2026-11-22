@@ -78,6 +78,9 @@ fun ProjectSummaryScreen(
         ) {
             AppText(projectName, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
             
+            if (summary.methodBlockedDesignCount > 0) {
+                AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.stored_slab_method_hold))
+            }
             SummaryKPIRow(summary)
             
             AppText("Cost Breakdown by Element", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

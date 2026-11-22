@@ -445,7 +445,7 @@ fun SlabScreen(
                     }
                 }
 
-                if (!res.safetyAssessmentBlocked && res.safetyChecks.isNotEmpty()) {
+                if (!res.executionAssessmentBlocked && res.safetyChecks.isNotEmpty()) {
                     item {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
@@ -809,7 +809,7 @@ fun SlabScreen(
 
 @Composable
 internal fun SlabResultCard(res: CalculatorEngine.SlabResult) {
-    if (res.safetyAssessmentBlocked) {
+    if (res.executionAssessmentBlocked) {
         HordiMethodHoldNotice()
         return
     }

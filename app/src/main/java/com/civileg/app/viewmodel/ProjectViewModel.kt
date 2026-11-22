@@ -1,6 +1,7 @@
 package com.civileg.app.viewmodel
 
 import android.content.Context
+import androidx.lifecycle.map
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
@@ -43,7 +44,7 @@ class ProjectViewModel @Inject constructor(
     val activeProjectCount: LiveData<Int> = projectDao.getActiveProjectCount()
 
     // Designs
-    val allDesigns: LiveData<List<Design>> = designDao.getAllDesigns()
+    val allDesigns: LiveData<List<Design>> = designDao.getAllDesigns().map { rows -> rows.map(StoredDesignSafety::forDisplay) }
 
     // --- Main Project Methods ---
     fun insert(project: Project) {
@@ -77,7 +78,7 @@ class ProjectViewModel @Inject constructor(
     fun insertDesign(design: Design) = saveDesign(design)
 
     fun getDesignsForProject(projectId: Long): LiveData<List<Design>> {
-        return designDao.getDesignsForProject(projectId)
+        return designDao.getDesignsForProject(projectId).map { rows -> rows.map(StoredDesignSafety::forDisplay) }
     }
 
     fun getProjectSummary(projectId: Long): Flow<ProjectSummary> {
@@ -94,7 +95,8 @@ class ProjectViewModel @Inject constructor(
                 totalCost = totalCost,
                 designCount = designs.size,
                 costEfficiencyIndex = 1.0,
-                costBreakdown = breakdown
+                costBreakdown = breakdown,
+                methodBlockedDesignCount = designs.count(StoredDesignSafety::isBlocked)
             )
         }
     }
@@ -104,6 +106,12 @@ class ProjectViewModel @Inject constructor(
             try {
                 val designsList = designDao.getDesignsForProjectList(projectId)
                 if (designsList.isEmpty()) return@launch
+                if (designsList.any(StoredDesignSafety::isBlocked)) {
+                    withContext(Dispatchers.Main) {
+                        _errorMessage.value = context.getString(com.civileg.app.R.string.stored_slab_method_hold)
+                    }
+                    return@launch
+                }
                 
                 val totalConcrete = designsList.sumOf { it.concreteVolume }
                 val totalSteel = designsList.sumOf { it.steelWeight }

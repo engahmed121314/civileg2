@@ -48,6 +48,7 @@ materials.forEach { item ->
     }
 
     fun exportDesignToCsv(context: Context, design: Design): File? {
+        if (com.civileg.app.db.StoredDesignSafety.isBlocked(design)) return null
         val fileName = "Design_${design.name}_${System.currentTimeMillis()}.csv"
         val file = File(context.getExternalFilesDir(null) ?: context.cacheDir, fileName)
 

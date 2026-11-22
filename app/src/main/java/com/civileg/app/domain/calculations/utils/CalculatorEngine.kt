@@ -270,7 +270,11 @@ class CalculatorEngine @Inject constructor(
         val punchingStressAtDrop: Double = 0.0,
         val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
         val safetyAssessmentBlocked: Boolean = false
-    ) : Parcelable
+    ) : Parcelable {
+        // Missing/false flags in old JSON do not verify a legacy ECP Hordi method.
+        val executionAssessmentBlocked: Boolean
+            get() = safetyAssessmentBlocked || (type == SlabType.HOLLOW_BLOCK && code !in listOf(DesignCode.ACI, DesignCode.SBC))
+    }
 
     @Parcelize
     data class StairResult(

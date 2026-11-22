@@ -40,7 +40,7 @@ class HordiSafetyAssessmentTest {
         10.0, 1.0, LoadCombination.DEAD_LIVE
     )
 
-    private fun verify(lang: String, shared: Boolean = false) {
+    private fun verify(lang: String, shared: Boolean = false, archive: Boolean = false) {
         val app = RuntimeEnvironment.getApplication()
         LocaleHelper.initApplicationContext(app)
         LocaleHelper.setLocale(app, lang)
@@ -50,7 +50,11 @@ class HordiSafetyAssessmentTest {
                 CivilEngineerPremiumTheme(darkTheme = false) {
                     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                         androidx.compose.foundation.layout.Column {
-                            if (shared) SlabResultCard(com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabResult(
+                            if (archive) DesignBOQCard(com.civileg.app.db.Design(
+                                projectId = 2L, name = "Archived ribbed slab", type = com.civileg.app.db.DesignType.SLAB,
+                                codeUsed = "Egyptian Code", inputData = "{}", isSafe = true,
+                                results = """{"type":"HOLLOW_BLOCK","code":"ECP","isSafe":true}"""
+                            )) else if (shared) SlabResultCard(com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabResult(
                                 type = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
                                 safetyAssessmentBlocked = true
                             )) else HordiSafetyAssessment(result, "ECP")
@@ -60,13 +64,13 @@ class HordiSafetyAssessmentTest {
             }
         }
         rule.waitForIdle()
-        val expected = app.getString(R.string.hordi_method_hold)
+        val expected = app.getString(if (archive) R.string.design_status_not_verified else R.string.hordi_method_hold)
         assertTrue(rule.onAllNodesWithText(expected).fetchSemanticsNodes().isNotEmpty())
         assertTrue(rule.onAllNodesWithText("SAFE").fetchSemanticsNodes().isEmpty())
         assertEquals("NOT VERIFIED", hordiSlabDrawingSummary(result).safetyLabel)
         val dir = File("build/reports/tests/compose-shots").apply { mkdirs() }
         val content = rule.activity.findViewById<android.view.ViewGroup>(android.R.id.content)
-        FileOutputStream(File(dir, "hordi-method-hold-${if (shared) "shared-" else ""}$lang.png")).use {
+        FileOutputStream(File(dir, "hordi-method-hold-${if (archive) "archive-" else if (shared) "shared-" else ""}$lang.png")).use {
             content.drawToBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
         }
     }
@@ -98,5 +102,8 @@ class HordiSafetyAssessmentTest {
     }
     @Test fun shared_slab_result_shows_method_hold_en() = verify("en", shared = true)
     @Test fun shared_slab_result_shows_method_hold_ar() = verify("ar", shared = true)
+
+    @Test fun legacy_archive_shows_not_verified_en() = verify("en", archive = true)
+    @Test fun legacy_archive_shows_not_verified_ar() = verify("ar", archive = true)
 
 }
