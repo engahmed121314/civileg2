@@ -490,11 +490,13 @@ private fun DrawScope.drawSoilStructureElevation(
         footX, footX + drawL, dimensionY,
         "L = ${safeL.toInt()} mm", dimColor, cfg.dimTextSize * 0.85f, 16f, cfg
     )
-    val legendSize = cfg.annotationTextSmall.coerceAtLeast(9f)
+    val compactOverview = width < 180f || height < 180f
+    val legendSize = if (compactOverview) cfg.annotationTextSmall * 0.85f else cfg.annotationTextSmall.coerceAtLeast(9f)
     val legendStep = legendSize * 1.4f
-    val legendY = dimensionY + 36f
-    // Reserve a solid legend band instead of printing small labels over hatches.
-    drawRoundRect(
+    val legendY = dimensionY + if (compactOverview) 32f else 36f
+    // Reserve a solid legend band in the readable, dedicated elevation view.
+    // Keep overview geometry unchanged rather than adding an oversized band.
+    if (!compactOverview) drawRoundRect(
         color = DrawingColorDefaults.ConcreteFill,
         topLeft = Offset(left - 4f, legendY - legendSize - 3f),
         size = Size(width + 8f, legendStep * 3f + legendSize + 8f),
@@ -604,7 +606,7 @@ private fun DrawScope.drawFoundationPlanKern(
     drawCircle(color = Color.White, radius = 2f, center = Offset(pressurePtX, pressurePtY))
 
     // Status label
-    val compStatus = if (isFullCompression) "100% Bearing Area in Compression (Full Contact)" else "Partial Tension / Uplift (e > L/6)"
+    val compStatus = if (isFullCompression) "Full compression contact (100%)" else "Partial Tension / Uplift (e > L/6)"
     // Put the status between the zone heading and plan, not between the
     // length dimension and title block where there is no free baseline.
     drawSoilLegendLine(compStatus, left, top + 20f,
