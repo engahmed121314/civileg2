@@ -118,6 +118,16 @@ jobs:
           echo "OLD_APK_RESIGNED=qa-old/old-resigned.apk" >> "$GITHUB_ENV"
           echo "shared temporary signer: $CAND"
 
+      - name: Enable and verify KVM on this disposable Linux runner
+        run: |
+          test -c /dev/kvm || { echo "Runner KVM device is missing"; exit 1; }
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm
+          test -w /dev/kvm
+          "$ANDROID_HOME/emulator/emulator" -accel-check
+
       - name: Run both upgrade cases on a fresh disposable emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
