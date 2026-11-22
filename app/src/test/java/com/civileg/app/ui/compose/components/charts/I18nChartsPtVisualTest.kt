@@ -85,6 +85,7 @@ class I18nChartsPtVisualTest {
         )
     }
 
+    @Composable
     private fun charts() {
         Column {
             InteractionDiagramChart(
