@@ -106,7 +106,7 @@ class ColumnSeismicDetailingSectionTest {
         rule.onNodeWithTag("seismic-blocked-Capacity-design shear (column)").performScrollTo().assertIsDisplayed()
         rule.onNodeWithTag("seismic-blocked-Longitudinal bars per face (>= 3 each face)").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("INCOMPLETE", substring = true).assertIsDisplayed()
-        rule.onNodeWithText("BLOCKED:", substring = true).assertIsDisplayed()
+        rule.onAllNodesWithText("BLOCKED:", substring = true)[0].performScrollTo().assertIsDisplayed()
 
         // Rendered-pixel capture for post-CI visual inspection. Window capture can
         // time out under Robolectric CI (forceRedraw); capture is best-effort
@@ -190,7 +190,7 @@ class ColumnSeismicDetailingSectionTest {
             rule.onNodeWithText("تكسيح الممطولية", substring = true).assertIsDisplayed()
             rule.onNodeWithText("طول المنطقة الحرجة", substring = true).performScrollTo().assertIsDisplayed()
             // R-1: blocked checks localize too (prefix, name, reason) — no English leaks
-            rule.onNodeWithText("معلّق", substring = true).performScrollTo().assertIsDisplayed()
+            rule.onAllNodesWithText("معلّق", substring = true)[0].performScrollTo().assertIsDisplayed()
             rule.onNodeWithText("الأسياخ الطولية لكل وجه", substring = true).performScrollTo().assertIsDisplayed()
             rule.onNodeWithText("لا يمكن استنتاج عدد الأسياخ", substring = true).assertIsDisplayed()
             rule.onNodeWithText("قص التصميم بالسعة", substring = true).assertIsDisplayed()
