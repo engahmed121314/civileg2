@@ -38,15 +38,30 @@ emu_network_off() {
   $ADB shell svc wifi disable
   $ADB shell svc data disable
   sleep 3
+  # Bounded settling accommodation: the UNCHANGED fail-closed predicate below is
+  # re-checked a fixed number of times after the one-time radio disable, because
+  # a just-booted emulator can need longer than one 3s settle for its connectivity
+  # inventory to drain. Every attempt's dump is saved; a failed or unrecognized
+  # dump is NEVER accepted as offline; after the fixed bound we still refuse.
+  # No parser relaxation, no timing-based acceptance, fail closed.
+  local attempt=1 max_attempts=4
   local capture="$OUT/$CASE_DIRTY/connectivity-before-launch.txt"
-  if $ADB shell dumpsys connectivity > "$capture" 2>&1; then
-    :
-  else
-    local capture_rc=$?
-    echo "refusing: connectivity state capture failed (rc=$capture_rc)"
-    return "$capture_rc"
-  fi
-  python3 - "$capture" <<'PY'
+  while [ "$attempt" -le "$max_attempts" ]; do
+    local attempt_capture="$OUT/$CASE_DIRTY/connectivity-before-launch-attempt${attempt}.txt"
+    if $ADB shell dumpsys connectivity > "$attempt_capture" 2>&1; then
+      cp "$attempt_capture" "$capture"
+    else
+      local capture_rc=$?
+      echo "connectivity capture attempt $attempt failed (rc=$capture_rc); not accepted as offline"
+      if [ "$attempt" -eq "$max_attempts" ]; then
+        echo "refusing: connectivity state capture failed after $max_attempts attempts (rc=$capture_rc)"
+        return "$capture_rc"
+      fi
+      sleep 3
+      attempt=$((attempt+1))
+      continue
+    fi
+    if python3 - "$capture" <<'PY'
 import pathlib, re, sys
 text = pathlib.Path(sys.argv[1]).read_text().replace('\r', '')
 active = re.search(r'^Active default network:\s*(.*?)\s*$', text, re.M)
@@ -59,7 +74,18 @@ if not active or active.group(1).lower() != 'none' or not section:
 if section.group(1).strip():
     sys.exit('refusing: current network inventory is not empty')
 PY
-  echo "verified: disposable emulator offline (saved current state; no default or current network)"
+    then
+      echo "verified: disposable emulator offline (attempt $attempt of $max_attempts; saved current state; no default or current network)"
+      return 0
+    fi
+    echo "offline predicate unmet on attempt $attempt (dump saved: $attempt_capture)"
+    if [ "$attempt" -eq "$max_attempts" ]; then
+      echo "refusing: missing or non-offline current connectivity state after $max_attempts bounded attempts (fail closed)"
+      return 1
+    fi
+    sleep 3
+    attempt=$((attempt+1))
+  done
 }
 emu_network_on() {
   local failures=0
