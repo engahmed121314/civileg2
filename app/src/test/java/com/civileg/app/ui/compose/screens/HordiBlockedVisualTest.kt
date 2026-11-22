@@ -141,7 +141,7 @@ class HordiBlockedVisualTest {
         // Explicit blocked values.
         rule.onAllNodesWithText("غير مقيّمة", substring = true)[0].performScrollTo().assertIsDisplayed()
         assertTrue(rule.onAllNodesWithText("غير مكتمل", substring = true).fetchSemanticsNodes().size >= 2)
-        rule.onAllNodesWithText("غ/م", substring = true)[0].performScrollTo().assertIsDisplayed()
+        assertTrue(rule.onAllNodesWithText("غير مقيّمة", substring = true).fetchSemanticsNodes().size >= 2)
         assertEquals(0, rule.onAllNodesWithText("NOT EVALUATED", substring = true).fetchSemanticsNodes().size)
         assertEquals(0, rule.onAllNodesWithText("Shear Capacity", substring = true).fetchSemanticsNodes().size)
         assertEquals(0, rule.onAllNodesWithText("آمن ✓", substring = true).fetchSemanticsNodes().size)
