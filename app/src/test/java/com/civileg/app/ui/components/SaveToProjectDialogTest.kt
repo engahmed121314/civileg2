@@ -11,7 +11,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.isSelectable
-import androidx.compose.ui.test.onAllNodes
 import com.civileg.app.db.Project
 import com.civileg.app.testutils.saveNativeComposeScreenshot
 import org.junit.Assert.assertEquals
