@@ -106,6 +106,15 @@ class SplashOverlayLayout @JvmOverloads constructor(
     val inkReserveExhausted = mutableMapOf<Int, String>()
 
     /**
+     * Readable by tests: per placed pair ("top"/"bottom"), the LAST decision
+     * operands as "tMin=.. tMax=.. ordered=.. fits=.. applied=.." where
+     * applied is the shared translation actually placed (0 in the fallback
+     * path, which uses cursor stacking instead). Pure diagnostic recording:
+     * no decision input reads it.
+     */
+    val lastPairDecisions = mutableMapOf<String, String>()
+
+    /**
      * Per-side reserve (px) the CURRENTLY realized lines need inside the
      * text view: the largest per-line glyph overhang on each side plus that
      * side's shadow extent (blur radius plus offset). Measured on realized
@@ -343,14 +352,17 @@ class SplashOverlayLayout @JvmOverloads constructor(
             safeEnd - lowerTop - lowerH
         )
         val fits = ordered && tMin <= tMax
+        // Smallest |translation|: clamp zero into the admissible interval.
+        val applied = if (fits) (if (0f < tMin) tMin else if (0f > tMax) tMax else 0f) else 0f
+        lastPairDecisions[if (edgeIsTop) "top" else "bottom"] =
+            "tMin=" + tMin + " tMax=" + tMax + " ordered=" + ordered +
+                " fits=" + fits + " applied=" + applied
 
         if (fits) {
-            // Smallest |translation|: clamp zero into the admissible interval.
-            val t = if (0f < tMin) tMin else if (0f > tMax) tMax else 0f
             placementModes[upper.id] = PlacementMode.CLEAR_ANCHORED
             placementModes[lower.id] = PlacementMode.CLEAR_ANCHORED
-            placeCentered(upper, contentCx, upperTop + t)
-            placeCentered(lower, contentCx, lowerTop + t)
+            placeCentered(upper, contentCx, upperTop + applied)
+            placeCentered(lower, contentCx, lowerTop + applied)
         } else {
             // Shared fallback: the whole group moves together, in order.
             placementModes[upper.id] = PlacementMode.FALLBACK_SAFE_AREA
