@@ -106,8 +106,10 @@ public class FrameEntryCompanionTest {
             }
             String all = "xmlChars=" + xml.length() + "\n" + sb;
             if (all.length() > 60000) all = all.substring(0, 60000) + "\n[truncated]";
-            for (int i = 0; i < all.length(); i += 3000) {
-                android.util.Log.w("QA-COMPANION-HIER", tag + all.substring(i, Math.min(all.length(), i + 3000)));
+            // One log call per node line so every line carries the tag (a multi-line message loses it).
+            for (String line : all.split("\n")) {
+                if (line.isEmpty()) continue;
+                android.util.Log.w("QA-COMPANION-HIER", tag + (line.length() > 900 ? line.substring(0, 900) : line));
             }
         } catch (Throwable t) {
             android.util.Log.w("QA-COMPANION", "hierarchy summary failed for " + base, t);
@@ -164,6 +166,49 @@ public class FrameEntryCompanionTest {
         return ctx.getString(id);
     }
 
+    /**
+     * Installed-resource EN/AR pair for one string name. Evidence (run 45149902507 PNG): the app displays
+     * the Arabic resources while the target context is English, so a single-locale string can never match
+     * the UI text. We do NOT assume the app follows the target context locale, force a language or touch
+     * user prefs: both installed resource sets are listed and each assertion must match ONE language
+     * consistently (title+subtitle from the same language, never a cross-language mix).
+     */
+    private String[] pair(String name) {
+        String[] out = new String[2];
+        String[] langs = {"en", "ar"};
+        for (int i = 0; i < 2; i++) {
+            android.content.res.Configuration c = new android.content.res.Configuration(ctx.getResources().getConfiguration());
+            c.setLocale(new java.util.Locale(langs[i]));
+            android.content.res.Resources r = ctx.createConfigurationContext(c).getResources();
+            int id = r.getIdentifier(name, "string", pkg);
+            assertTrue("string resource not found in installed app: " + name, id != 0);
+            out[i] = r.getString(id);
+        }
+        return out;
+    }
+
+    /** Regex alternation of both languages' literal text (deduplicated). */
+    private static String anyOf(String[] p) {
+        return p[0].equals(p[1]) ? Pattern.quote(p[0]) : Pattern.quote(p[0]) + "|" + Pattern.quote(p[1]);
+    }
+
+    private static Pattern containsAny(String[] p) {
+        return Pattern.compile("(?s).*(" + anyOf(p) + ").*");
+    }
+
+    private static Pattern equalsAny(String[] p) {
+        return Pattern.compile("(?s)(" + anyOf(p) + ")");
+    }
+
+    /** "<label>: <n>" for either language's label; n as ASCII or Arabic-Indic digits; not followed by another digit. */
+    private static Pattern exactAny(String[] label, int n) {
+        String ascii = String.valueOf(n);
+        StringBuilder ar = new StringBuilder();
+        for (char ch : ascii.toCharArray()) ar.append((char) ('\u0660' + (ch - '0')));
+        String digits = Pattern.quote(ascii) + "|" + Pattern.quote(ar.toString());
+        return Pattern.compile("(?s).*(" + anyOf(label) + ")" + Pattern.quote(": ") + "(" + digits + ")(?![\\d\u0660-\u0669]).*");
+    }
+
     private void collect(UiObject2 n, StringBuilder sb) {
         if (n.getText() != null) sb.append(n.getText()).append('\n');
         if (n.getContentDescription() != null) sb.append(n.getContentDescription()).append('\n');
@@ -176,22 +221,33 @@ public class FrameEntryCompanionTest {
      * StaleObjectException (from the list or any subtree read) propagates and the whole scan is
      * discarded by the caller.
      */
-    private UiObject2 scanForModuleCard(String title, String sub) {
+    // Home module card only: title+subtitle must be the same language (EN+EN or AR+AR) in one
+    // clickable subtree; more than one candidate fails. Post-entry label helpers accept either language.
+    private UiObject2 scanForModuleCard(String[] title, String[] sub) {
         List<UiObject2> nodes = device.findObjects(By.pkg(pkg).clickable(true));
         UiObject2 found = null;
+        int count = 0;
         for (UiObject2 o : nodes) {
             StringBuilder sb = new StringBuilder();
             collect(o, sb);
             String t = sb.toString();
-            if (found == null && t.contains(title) && t.contains(sub)) found = o;
+            // One language per match: EN title+EN subtitle, or AR title+AR subtitle. Each node counts once.
+            boolean en = t.contains(title[0]) && t.contains(sub[0]);
+            boolean ar = t.contains(title[1]) && t.contains(sub[1]);
+            if (en || ar) {
+                count++;
+                if (found == null) found = o;
+            }
         }
+        // More than one candidate is ambiguous: fail, never click the first.
+        assertTrue("ambiguous Frame module card: " + count + " clickable candidates", count <= 1);
         return found;
     }
 
     /** Up to 3 whole fresh scans, repeating ONLY on StaleObjectException, no swipe between them. */
     private UiObject2 findModuleCard() {
-        String title = s("home_frame");
-        String sub = s("home_frame_sub");
+        String[] title = pair("home_frame");
+        String[] sub = pair("home_frame_sub");
         for (int attempt = 1; attempt <= 3; attempt++) {
             try {
                 return scanForModuleCard(title, sub);
@@ -202,8 +258,8 @@ public class FrameEntryCompanionTest {
         throw new IllegalStateException("unreachable");
     }
 
-    private UiObject2 waitText(String text, long timeoutMs) {
-        return device.wait(Until.findObject(By.pkg(pkg).textContains(text)), timeoutMs);
+    private UiObject2 waitText(String[] text, long timeoutMs) {
+        return device.wait(Until.findObject(By.pkg(pkg).text(containsAny(text))), timeoutMs);
     }
 
     private UiObject2 waitPattern(Pattern p, long timeoutMs) {
@@ -240,12 +296,12 @@ public class FrameEntryCompanionTest {
             device.waitForIdle();
         }
         assertTrue("Frame module card not found on Home after scrolling", clicked);
-        assertNotNull("Frame title never appeared", waitText(s("frame_title"), 30000));
+        assertNotNull("Frame title never appeared", waitText(pair("frame_title"), 30000));
     }
 
     private void assertFrameScreenVisible() {
-        assertVisible(By.pkg(pkg).textContains(s("frame_title")), "frame_title");
-        assertVisible(By.pkg(pkg).text(s("frame_tab_nodes")), "frame_tab_nodes");
+        assertVisible(By.pkg(pkg).text(containsAny(pair("frame_title"))), "frame_title");
+        assertVisible(By.pkg(pkg).text(equalsAny(pair("frame_tab_nodes"))), "frame_tab_nodes");
     }
 
     @Test
@@ -261,25 +317,25 @@ public class FrameEntryCompanionTest {
         assertFrameScreenVisible();
         capture("entry");
 
-        String nodes = s("frame_tab_nodes");
-        String members = s("frame_tab_members");
-        assertNotNull("empty baseline Nodes: 0 missing", waitPattern(exact(nodes, 0), 15000));
-        assertVisible(By.pkg(pkg).text(exact(nodes, 0)), nodes + ": 0");
-        assertVisible(By.pkg(pkg).text(exact(members, 0)), members + ": 0");
+        String[] nodes = pair("frame_tab_nodes");
+        String[] members = pair("frame_tab_members");
+        assertNotNull("empty baseline Nodes: 0 missing", waitPattern(exactAny(nodes, 0), 15000));
+        assertVisible(By.pkg(pkg).text(exactAny(nodes, 0)), nodes[0] + "|" + nodes[1] + ": 0");
+        assertVisible(By.pkg(pkg).text(exactAny(members, 0)), members[0] + "|" + members[1] + ": 0");
 
         UiObject2 actions = device.wait(Until.findObject(By.pkg(pkg).desc("Actions")), 15000);
         assertNotNull("Actions button not found", actions);
         actions.click();
-        UiObject2 open = device.wait(Until.findObject(By.pkg(pkg).text(s("frame_open_design"))), 15000);
+        UiObject2 open = device.wait(Until.findObject(By.pkg(pkg).text(equalsAny(pair("frame_open_design")))), 15000);
         assertNotNull("Open Saved Model item not found", open);
         open.click();
         UiObject2 rec = device.wait(Until.findObject(By.pkg(pkg).text("QA_SENTINEL_FRAME_RECORD")), 15000);
         assertNotNull("seeded QA_SENTINEL_FRAME_RECORD not listed", rec);
         rec.click();
 
-        assertNotNull("loaded Nodes: 4 never appeared", waitPattern(exact(nodes, 4), 15000));
-        assertVisible(By.pkg(pkg).text(exact(nodes, 4)), nodes + ": 4");
-        assertVisible(By.pkg(pkg).text(exact(members, 3)), members + ": 3");
+        assertNotNull("loaded Nodes: 4 never appeared", waitPattern(exactAny(nodes, 4), 15000));
+        assertVisible(By.pkg(pkg).text(exactAny(nodes, 4)), nodes[0] + "|" + nodes[1] + ": 4");
+        assertVisible(By.pkg(pkg).text(exactAny(members, 3)), members[0] + "|" + members[1] + ": 3");
         capture("loaded-4-3");
     }
 }
