@@ -211,7 +211,8 @@
 -keep class kotlinx.coroutines.selects.SelectInstanceInternal  # supertype/interface of kept class kotlinx.coroutines.selects.SelectImplementation
 
 # ── Finite harness ABI delta (derived from run 45087024831 exact retained failures) ──
-# One rule per observed category; evidence in the review packet. QA-approved scope.
+# One rule per observed category; evidence in the review packet (exact retained
+# failures of run 45087024831 and the review rounds that followed it).
 # Category 1: test dex holds 53 live invoke-static refs to these 4 members;
 # the class exists in neither APK.
 -keep class kotlin.jvm.internal.Intrinsics {
@@ -231,4 +232,19 @@
 -keep interface kotlinx.coroutines.CompletableJob {
     boolean complete();
     boolean completeExceptionally(java.lang.Throwable);
+}
+
+# ── Delta v2 (QA-accepted 2026-11-23): two exact observed members ──
+# Category 4: test dex invokes Gson.toJsonTree(Object); both overloads were
+# removed app-side (usage.txt). Only the observed single-arg overload is kept.
+# Header verified against the exact classpath gson 2.13.1 jar.
+-keep class com.google.gson.Gson {
+    public com.google.gson.JsonElement toJsonTree(java.lang.Object);
+}
+# Category 5: androidx.compose.ui.test.IdlingResourceRegistry invokes
+# Dispatchers.getMain(); the class was renamed to sz with the method dropped
+# (no mapping entry, no usage.txt removal record; runtime NSME).
+# Header verified against the exact classpath coroutines-core-jvm 1.10.2 jar.
+-keep class kotlinx.coroutines.Dispatchers {
+    public static final kotlinx.coroutines.MainCoroutineDispatcher getMain();
 }

@@ -124,6 +124,20 @@ class UpgradePreservationTest {
         val expectedNext = exp.getLong("designSeqAfterSeeding") + 1
         val sentinelProjectId = exp.getJSONObject("sentinelProject").getLong("id")
         SQLiteDatabase.openDatabase(dbPath(), null, SQLiteDatabase.OPEN_READWRITE).use { db ->
+            // The probe must satisfy the designs table's NOT NULL columns.
+            // Donor: the first original sentinel design row (already asserted
+            // intact above); its four remaining NOT NULL REAL columns are read
+            // back as exact typed doubles and only those are added. The probe
+            // keeps its own name/type/input/results and no id is supplied.
+            val donor = exp.getJSONArray("sentinelDesigns").getJSONObject(0)
+            val donorId = donor.getLong("id")
+            val donorCols = db.rawQuery(
+                "SELECT utilizationRatio, concreteVolume, steelWeight, totalCost FROM designs WHERE id = ?",
+                arrayOf(donorId.toString())
+            ).use { c ->
+                assertTrue("donor sentinel row " + donorId + " must exist", c.moveToFirst())
+                (0..3).map { c.getDouble(it) }
+            }
             val v = ContentValues().apply {
                 put("projectId", sentinelProjectId)
                 put("type", "BEAM")
@@ -133,6 +147,10 @@ class UpgradePreservationTest {
                 put("isSafe", 1)
                 put("codeUsed", "ECP")
                 put("createdAt", 0L)
+                put("utilizationRatio", donorCols[0])
+                put("concreteVolume", donorCols[1])
+                put("steelWeight", donorCols[2])
+                put("totalCost", donorCols[3])
             }
             val newId = db.insertOrThrow("designs", null, v)
             try {
