@@ -2,7 +2,9 @@ package com.civileg.app.ui.splash
 
 import android.content.Intent
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Log
 import android.view.View
 import android.view.ViewTreeObserver
@@ -32,8 +34,24 @@ class SplashActivity : AppCompatActivity() {
     private var postedGate: Runnable? = null
     private lateinit var contentRoot: View
 
+    // Observation only (no behavior change): timestamps and the navigation
+    // REASON, to establish from the next launch log whether the draw gate or
+    // the failsafe navigated, and whether a frame commit preceded Main START.
+    // Logging failures are swallowed and never affect navigation.
+    private var frameCommitCallback: Runnable? = null
+    private val frameCommitted = java.util.concurrent.atomic.AtomicBoolean(false)
+    private var commitObserver: ViewTreeObserver? = null
+    // Message construction happens INSIDE the guard (lazy lambda), so a
+    // formatting/state-read failure can never escape into real paths.
+    private inline fun navLog(msg: () -> String) {
+        try {
+            Log.i("SplashNav", "t=${SystemClock.elapsedRealtime()} thread=${Thread.currentThread().name} ${msg()}")
+        } catch (_: Throwable) {}
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        navLog { "onCreate wallClockMs=${System.currentTimeMillis()} sdk=${Build.VERSION.SDK_INT}" }
 
         // Full-bleed approved Treatment B: artwork extends behind the system
         // bars. SplashOverlayLayout applies systemBars+displayCutout insets to
@@ -63,12 +81,41 @@ class SplashActivity : AppCompatActivity() {
         val listener = object : ViewTreeObserver.OnDrawListener {
             override fun onDraw() {
                 if (!contentDrawObserved.compareAndSet(false, true)) return
+                navLog { "first onDraw dispatch" }
+                // Observational only: registered from the first onDraw dispatch;
+                // it reports the commit of an unspecified current or subsequent
+                // frame, NOT a guarantee about the first frame. Its lifetime
+                // ends at onDestroy (not at navigation) so a commit after Main
+                // START can still be seen. A callback that never ran means
+                // unobserved, not "no frame".
+                try {
+                    val vto = contentRoot.viewTreeObserver
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                        navLog { "frame-commit callback not registered: unsupported (sdk<29)" }
+                    } else if (!contentRoot.isHardwareAccelerated) {
+                        navLog { "frame-commit callback not registered: view not hardware accelerated" }
+                    } else if (!vto.isAlive) {
+                        navLog { "frame-commit callback not registered: observer dead" }
+                    } else {
+                        val commit = Runnable {
+                            try { frameCommitted.set(true) } catch (_: Throwable) {}
+                            navLog { "frame-commit callback ran (submission evidence of an unspecified frame, not pixel presentation)" }
+                        }
+                        vto.registerFrameCommitCallback(commit)
+                        frameCommitCallback = commit
+                        commitObserver = vto
+                        navLog { "frame-commit callback registered (hw accelerated)" }
+                    }
+                } catch (t: Throwable) {
+                    navLog { "frame-commit callback registration failed: ${t.javaClass.simpleName}" }
+                }
                 val gate = Runnable {
                     if (contentRoot.viewTreeObserver.isAlive) {
                         contentRoot.viewTreeObserver.removeOnDrawListener(this)
                     }
                     if (drawListener === this) drawListener = null
                     postedGate = null
+                    navLog { "posted gate ran" }
                     maybeNavigateWhenReady()
                 }
                 postedGate = gate
@@ -86,7 +133,8 @@ class SplashActivity : AppCompatActivity() {
         // fires into a destroyed activity.
         lifecycleScope.launch {
             delay(1500)
-            navigateToMain()
+            navLog { "failsafe fired" }
+            navigateToMain("failsafe")
         }
 
         try {
@@ -98,6 +146,7 @@ class SplashActivity : AppCompatActivity() {
             // once and the catch below still bypasses the gate entirely.
             AdManager.initConsent(this) {
                 Log.d("SplashActivity", "Ads consent process completed")
+                navLog { "consent completed" }
                 runOnUiThread {
                     consentCompleted.set(true)
                     maybeNavigateWhenReady()
@@ -105,11 +154,25 @@ class SplashActivity : AppCompatActivity() {
             }
         } catch (t: Throwable) {
             Log.w("SplashActivity", "Ads consent init skipped safely: ${t.message}")
-            navigateToMain()
+            navigateToMain("consent-init-exception")
         }
     }
 
     override fun onDestroy() {
+        try {
+            val cb = frameCommitCallback
+            val vto = commitObserver
+            if (cb != null && vto != null) {
+                if (vto.isAlive) {
+                    vto.unregisterFrameCommitCallback(cb)
+                    if (!frameCommitted.get()) navLog { "onDestroy: unregister attempted, frame-commit callback had not run (unobserved, not proof of no frame)" }
+                } else {
+                    navLog { "onDestroy: registered observer dead; callback not unregistered (observer discarded)" }
+                }
+            }
+        } catch (_: Throwable) {}
+        frameCommitCallback = null
+        commitObserver = null
         // Never leave the one-shot listener or the posted gate behind: a late
         // traversal or posted turn must not touch a dead activity.
         if (::contentRoot.isInitialized) {
@@ -126,10 +189,13 @@ class SplashActivity : AppCompatActivity() {
     // Navigates only when consent completed AND the content root's first draw
     // was observed. Either side may arrive first; the failsafe bypasses this.
     private fun maybeNavigateWhenReady() {
-        if (consentCompleted.get() && contentDrawObserved.get()) navigateToMain()
+        if (consentCompleted.get() && contentDrawObserved.get()) navigateToMain("gate")
     }
 
-    private fun navigateToMain() {
+    private fun navigateToMain(reason: String) {
+        // ATTEMPT record (before the latch) so a losing late call is not
+        // misattributed to the winner. Observation only.
+        navLog { "navigate ATTEMPT reason=$reason alreadyNavigated=${isNavigated.get()} consent=${consentCompleted.get()} drawObserved=${contentDrawObserved.get()} finishing=$isFinishing destroyed=$isDestroyed commitSeen=${frameCommitted.get()}" }
         if (isNavigated.getAndSet(true)) return
         // A late consent callback or failsafe must not navigate a dead activity.
         if (isFinishing || isDestroyed) return
@@ -139,6 +205,7 @@ class SplashActivity : AppCompatActivity() {
             drawListener?.let { contentRoot.viewTreeObserver.removeOnDrawListener(it) }
         }
         drawListener = null
+        navLog { "navigate WINNER reason=$reason, starting Main" }
         startActivity(Intent(this, MainActivity::class.java))
         finish()
     }
