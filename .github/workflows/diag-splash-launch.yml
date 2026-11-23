@@ -80,15 +80,25 @@ jobs:
           sha256sum "$MP4" | cut -d' ' -f1 >> "$OUT/recording-analysis.txt"
           ffprobe -v error -show_format -show_streams "$MP4" > "$OUT/recording-ffprobe.txt" 2>&1 || echo "ffprobe_exit=$?" >> "$OUT/recording-analysis.txt"
           mkdir -p "$OUT/frames"
-          # Decode every frame, name each by its exact media PTS (-frame_pts),
-          # then hash each extracted native frame for content-change validation.
-          ffmpeg -nostdin -i "$MP4" -frame_pts 1 "$OUT/frames/frame-%08d.png" > "$OUT/ffmpeg-frames.log" 2>&1 || echo "ffmpeg_exit=$?" >> "$OUT/recording-analysis.txt"
+          # Decode every media frame with passthrough frame sync (default
+          # frame-rate sync duplicated/dropped frames of this variable-rate
+          # recording, so extracted PNG counts and indexes did not match the
+          # media). Files are numbered in decode order; the EXACT media PTS of
+          # frame N (1-based) is line N of frame-pts.csv. Never treat the file
+          # index as a PTS.
+          ffprobe -v error -select_streams v -show_entries frame=best_effort_timestamp_time -of csv=p=0 "$MP4" > "$OUT/frame-pts.csv" 2>> "$OUT/recording-analysis.txt" || echo "ffprobe_pts_exit=$?" >> "$OUT/recording-analysis.txt"
+          ffmpeg -nostdin -i "$MP4" -vsync passthrough "$OUT/frames/frame-%08d.png" > "$OUT/ffmpeg-frames.log" 2>&1 || echo "ffmpeg_exit=$?" >> "$OUT/recording-analysis.txt"
+          echo "media_frame_count_ffprobe=$(grep -c . "$OUT/frame-pts.csv" 2>/dev/null || echo 0)" >> "$OUT/recording-analysis.txt"
+          # App milestones from logcat (device wall clock) to compare display
+          # timing with the activity lifecycle: a lagging display can show the
+          # platform starting window after the app window was added.
+          grep -E "ActivityTaskManager: START u0 .*(SplashActivity|MainActivity)|Window\{[0-9a-f]+ u0 com.civileg.app.debug/com.civileg.app.(ui.splash.SplashActivity|MainActivity)\}: Setting back callback|Splash Screen com.civileg.app.debug" "$OUT/logcat.txt" 2>/dev/null | cut -c1-200 > "$OUT/app-milestones.txt" || true
           FRAME_TOTAL=$(ls "$OUT"/frames/*.png 2>/dev/null | wc -l | tr -d ' ')
           if [ "$FRAME_TOTAL" -gt 0 ]; then
             (cd "$OUT/frames" && sha256sum *.png) > "$OUT/frame-shas.txt" 2>&1
             DISTINCT=$(awk '{print $1}' "$OUT/frame-shas.txt" | sort -u | wc -l | tr -d ' ')
             {
-              echo "decoded_frame_total=$FRAME_TOTAL"
+              echo "extracted_frame_file_total=$FRAME_TOTAL"
               echo "distinct_frame_content_count=$DISTINCT"
               if [ "$DISTINCT" -gt 1 ]; then
                 echo "content_change_validation=frame content changes across the recording"
@@ -98,7 +108,7 @@ jobs:
               echo "note: counts describe the recording only; whether any frame shows the intended composition requires actual pixel review"
             } >> "$OUT/recording-analysis.txt"
           else
-            echo "decoded_frame_total=0 (no decodable frames)" >> "$OUT/recording-analysis.txt"
+            echo "extracted_frame_file_total=0 (no decodable frames)" >> "$OUT/recording-analysis.txt"
           fi
           exit 0
 
