@@ -209,3 +209,26 @@
 -keep class kotlinx.coroutines.selects.SelectClause  # supertype/interface of kept class kotlinx.coroutines.selects.SelectClause0
 -keep class kotlinx.coroutines.selects.SelectInstance  # supertype/interface of kept class kotlinx.coroutines.selects.SelectImplementation
 -keep class kotlinx.coroutines.selects.SelectInstanceInternal  # supertype/interface of kept class kotlinx.coroutines.selects.SelectImplementation
+
+# ── Finite harness ABI delta (derived from run 45087024831 exact retained failures) ──
+# One rule per observed category; evidence in the review packet. QA-approved scope.
+# Category 1: test dex holds 53 live invoke-static refs to these 4 members;
+# the class exists in neither APK.
+-keep class kotlin.jvm.internal.Intrinsics {
+    boolean areEqual(java.lang.Object, java.lang.Object);
+    void reifiedOperationMarker(int, java.lang.String);
+    void throwNpe();
+    void throwUninitializedPropertyAccessException(java.lang.String);
+}
+# Category 2: test invokes JsonParser.parseString(String); class removed app-side.
+# Header verified against the exact classpath jar (gson 2.13.1):
+# public static com.google.gson.JsonElement parseString(java.lang.String).
+-keep class com.google.gson.JsonParser {
+    public static com.google.gson.JsonElement parseString(java.lang.String);
+}
+# Category 3: androidx test framework invokes complete()Z on the interface the
+# app renamed to Lkn; while removing both interface methods (usage.txt).
+-keep interface kotlinx.coroutines.CompletableJob {
+    boolean complete();
+    boolean completeExceptionally(java.lang.Throwable);
+}
