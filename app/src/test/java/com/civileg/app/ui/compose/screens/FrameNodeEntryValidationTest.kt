@@ -30,6 +30,9 @@ class FrameNodeEntryValidationTest {
     private lateinit var app:Application
     @Before fun setup() {
         app=ApplicationProvider.getApplicationContext()
+        // Default-width JVM fixture only; retained411dp diagnostic remains a separate control.
+        val config=app.resources.configuration
+        println("Frame default-width fixture: widthDp=${config.screenWidthDp} heightDp=${config.screenHeightDp} pixels=${app.resources.displayMetrics.widthPixels}x${app.resources.displayMetrics.heightPixels} locale=${config.locales[0]}")
         app.getSharedPreferences("frame_modeler_draft",Context.MODE_PRIVATE).edit().clear().commit()
         vm=FrameAnalysisViewModel(app,mockk<DesignRepository>(relaxed=true))
     }
@@ -59,8 +62,8 @@ class FrameNodeEntryValidationTest {
         rule.onNodeWithText(app.getString(R.string.save)).performClick()
         rule.runOnIdle { val node=vm.nodes.value.orEmpty().single();assertEquals(2.5,node.x,0.0);assertEquals(-3.0,node.y,0.0) }
     }
-    @Test @Config(sdk=[34],qualifiers="en-rUS-w411dp-h900dp")
+    @Test @Config(sdk=[34],qualifiers="en-rUS-h900dp")
     fun englishInvalidNodeDoesNotMutateAndCorrectedSignedCoordinatesSave() = actualNodeDialog("en")
-    @Test @Config(sdk=[34],qualifiers="ar-rEG-w411dp-h900dp")
+    @Test @Config(sdk=[34],qualifiers="ar-rEG-h900dp")
     fun arabicInvalidNodeDoesNotMutateAndCorrectedArabicCoordinatesSave() = actualNodeDialog("ar")
 }
