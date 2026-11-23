@@ -2413,6 +2413,10 @@
     <string name="frame_draft_recovery_start_new">Check copy and start a new draft</string>
     <string name="frame_draft_recovery_back">Go back</string>
     <string name="frame_draft_autosave_problem">Draft autosave is not working. Your current work is not saved. Save your design to keep it.</string>
+    <string name="frame_draft_recovery_export">Export or share a copy of the old draft</string>
+    <string name="frame_draft_recovery_export_chooser">Export old draft copy</string>
+    <string name="frame_draft_recovery_export_failed">The copy could not be exported or the share sheet could not be opened. Try again.</string>
+    <string name="frame_draft_recovery_export_privacy">A copy file is created on this device from your old frame draft. The draft may contain personal project data. If you choose Export, the app you pick can read the file and may preview or send it; there is no recipient check from this app. Cancelling the share sheet does not mean a copy was saved.</string>
 </resources>
 
 

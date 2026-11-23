@@ -8,6 +8,8 @@ internal interface DraftPrefs {
     fun get(key: String): String?
     /** Atomically applies [updates]; returns whether the write was durably accepted. */
     fun commit(updates: Map<String, String>): Boolean
+    /** Persisted keys that start with [prefix] (this store's own keys only). */
+    fun keysWithPrefix(prefix: String): Set<String> = emptySet()
 }
 
 internal sealed class FrameDraftStartup {
@@ -119,6 +121,16 @@ internal class FrameDraftStore(private val prefs: DraftPrefs) {
             return FrameDraftStartNew.WRITE_FAILED
         pending = false
         return FrameDraftStartNew.STARTED
+    }
+
+    /** Every stored raw (v1, v2, quarantine copies), byte-exact, for a user-initiated export. Read-only. */
+    fun rawsForExport(): Map<String, String> {
+        val out = LinkedHashMap<String, String>()
+        for (k in listOf(V1_KEY, V2_KEY)) prefs.get(k)?.let { out[k] = it }
+        // Persisted quarantine copies from earlier sessions, not just this session's memory.
+        for (k in prefs.keysWithPrefix(QUARANTINE_PREFIX).sorted()) prefs.get(k)?.let { out[k] = it }
+        for ((k, v) in retained) out[k] = v
+        return out
     }
 
     private fun sha12(s: String): String =

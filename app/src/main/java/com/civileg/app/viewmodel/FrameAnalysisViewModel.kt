@@ -389,6 +389,8 @@ class FrameAnalysisViewModel @Inject constructor(
 
     private val draftStore = FrameDraftStore(object : DraftPrefs {
         override fun get(key: String): String? = draftPrefs.getString(key, null)
+        override fun keysWithPrefix(prefix: String): Set<String> =
+            draftPrefs.all.keys.filter { it.startsWith(prefix) }.toSet()
         override fun commit(updates: Map<String, String>): Boolean {
             val e = draftPrefs.edit()
             updates.forEach { (k, v) -> e.putString(k, v) }
@@ -403,6 +405,36 @@ class FrameAnalysisViewModel @Inject constructor(
     /** Non-null while a stored draft was not restored; editing is gated by the screen. */
     private val _draftRecovery = MutableLiveData<DraftRecoveryUi?>(null)
     val draftRecovery: LiveData<DraftRecoveryUi?> get() = _draftRecovery
+
+    /**
+     * User-initiated: writes a NEW export file with every retained raw. Returns the file, or null
+     * and flags a visible failure. Never modifies preferences.
+     */
+    fun exportRetainedRaw(dir: java.io.File): java.io.File? {
+        val cur = _draftRecovery.value
+        return try {
+            val raws = draftStore.rawsForExport()
+            if (raws.isEmpty()) throw java.io.IOException("nothing retained")
+            val version = try {
+                getApplication<Application>().let { it.packageManager.getPackageInfo(it.packageName, 0).versionName } ?: "unknown"
+            } catch (e: Exception) { "unknown" }
+            val now = System.currentTimeMillis()
+            val f = FrameDraftRawExport.writeNew(dir, FrameDraftRawExport.build(raws, version, now), now, raws)
+            if (cur != null) _draftRecovery.value = cur.copy(exportFailed = false)
+            f
+        } catch (e: java.io.IOException) {
+            if (cur != null) _draftRecovery.value = cur.copy(exportFailed = true)
+            null
+        } catch (e: RuntimeException) {
+            if (cur != null) _draftRecovery.value = cur.copy(exportFailed = true)
+            null
+        }
+    }
+
+    /** The share sheet could not be launched (any provider/security/activity reason). Raws stay retained. */
+    fun reportExportShareFailed() {
+        _draftRecovery.value?.let { _draftRecovery.value = it.copy(exportFailed = true) }
+    }
 
     /** Explicit user choice. Failure keeps the gate and says why; originals are never deleted. */
     fun startNewDraft() {
@@ -1075,4 +1107,4 @@ enum class DiagramType(
 }
 
 /** What the recovery gate needs to say truthfully. */
-data class DraftRecoveryUi(val retained: Boolean, val startNewFailed: Boolean)
+data class DraftRecoveryUi(val retained: Boolean, val startNewFailed: Boolean, val exportFailed: Boolean = false)

@@ -87,7 +87,23 @@ fun FrameAnalysisScreen(
     // While a stored draft is not restored the editor (scaffold, actions, menus, dialogs,
     // keyboard effects) is not composed at all; only this recovery screen, with back available.
     if (r != null) {
-        FrameDraftRecoveryScreen(r, onStartNew = { viewModel.startNewDraft() }, onBack = onNavigateBack)
+        val ctx = LocalContext.current
+        FrameDraftRecoveryScreen(r, onStartNew = { viewModel.startNewDraft() }, onBack = onNavigateBack, onExport = {
+            val f = viewModel.exportRetainedRaw(java.io.File(ctx.cacheDir, "frame_draft_exports"))
+            if (f != null) {
+                try {
+                    val uri = androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.provider", f)
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    ctx.startActivity(Intent.createChooser(send, ctx.getString(R.string.frame_draft_recovery_export_chooser)))
+                } catch (e: Exception) {
+                    viewModel.reportExportShareFailed()
+                }
+            }
+        })
     } else {
         FrameAnalysisEditor(viewModel, projectViewModel, onNavigateBack)
     }
@@ -95,7 +111,7 @@ fun FrameAnalysisScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FrameDraftRecoveryScreen(rec: DraftRecoveryUi, onStartNew: () -> Unit, onBack: () -> Unit) {
+private fun FrameDraftRecoveryScreen(rec: DraftRecoveryUi, onStartNew: () -> Unit, onBack: () -> Unit, onExport: () -> Unit = {}) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     Scaffold(
         topBar = {
@@ -119,6 +135,9 @@ private fun FrameDraftRecoveryScreen(rec: DraftRecoveryUi, onStartNew: () -> Uni
                 else R.string.frame_draft_recovery_not_retained
             ))
             if (rec.startNewFailed) AppText(stringResource(R.string.frame_draft_recovery_failed))
+            AppText(stringResource(R.string.frame_draft_recovery_export_privacy))
+            if (rec.exportFailed) AppText(stringResource(R.string.frame_draft_recovery_export_failed))
+            AppButton(label = stringResource(R.string.frame_draft_recovery_export), onClick = onExport, style = AppButtonStyle.Outline)
             AppButton(label = stringResource(R.string.frame_draft_recovery_start_new), onClick = onStartNew)
             AppButton(
                 label = stringResource(R.string.frame_draft_recovery_back),
