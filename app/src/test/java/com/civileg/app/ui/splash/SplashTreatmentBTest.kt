@@ -258,10 +258,38 @@ class SplashTreatmentBTest {
                     v.paint.getTextBounds(v.text.toString(), 0, v.text.length, rawBounds)
                     sb.append(" rawPaintBounds=[").append(rawBounds.left).append(",").append(rawBounds.top)
                         .append(",").append(rawBounds.right).append(",").append(rawBounds.bottom).append("]")
+                    val txt = v.text.toString()
+                    val contentOriginX = v.compoundPaddingLeft - v.scrollX
                     for (i in 0 until l.lineCount) {
+                        val ls = l.getLineStart(i)
+                        val le = l.getLineEnd(i)
+                        val lve = l.getLineVisibleEnd(i)
+                        val fullOk = le in (ls + 1)..txt.length
+                        val visOk = lve in (ls + 1)..txt.length
+                        val advFull = if (fullOk) v.paint.measureText(txt, ls, le) else Float.NaN
+                        val advVis = if (visOk) v.paint.measureText(txt, ls, lve) else Float.NaN
+                        val bFull = Rect()
+                        val bVis = Rect()
+                        if (fullOk) v.paint.getTextBounds(txt, ls, le, bFull)
+                        if (visOk) v.paint.getTextBounds(txt, ls, lve, bVis)
                         sb.append(" line").append(i).append("=[l=").append(l.getLineLeft(i))
                             .append(",r=").append(l.getLineRight(i))
-                            .append(",baseline=").append(l.getLineBaseline(i)).append("]")
+                            .append(",baseline=").append(l.getLineBaseline(i))
+                            .append(",start=").append(ls).append(",end=").append(le)
+                            .append(",visibleEnd=").append(lve)
+                            .append(",dir=").append(l.getParagraphDirection(i))
+                            .append(",width=").append(l.getLineWidth(i))
+                            .append(",max=").append(l.getLineMax(i))
+                            .append(",originX=").append(contentOriginX + l.getLineLeft(i))
+                            .append(",advFull=").append(advFull)
+                            .append(",advVis=").append(advVis)
+                            .append(",bFull=[").append(bFull.left).append(",").append(bFull.top)
+                            .append(",").append(bFull.right).append(",").append(bFull.bottom).append("]")
+                            .append(",bVis=[").append(bVis.left).append(",").append(bVis.top)
+                            .append(",").append(bVis.right).append(",").append(bVis.bottom).append("]")
+                            .append(",cpFull=").append(escapeCodepoints(txt, ls, if (fullOk) le else ls))
+                            .append(",cpVis=").append(escapeCodepoints(txt, ls, if (visOk) lve else ls))
+                            .append("]")
                     }
                 }
             }
@@ -275,16 +303,14 @@ class SplashTreatmentBTest {
             val lowerInk = inkTopBottom(lower)
             val upperTop = upperAnchorY - (upperInk[0] + upperInk[1]) / 2f
             val lowerTop = lowerAnchorY - (lowerInk[0] + lowerInk[1]) / 2f
-            val tol = 1f
-            val containmentTop = upperTop + upperInk[0] >= stripTop - tol
-            val containmentBottom = lowerTop + lowerInk[1] <= stripBottom + tol
-            val order = upperTop + upperInk[1] <= lowerTop + lowerInk[0] + tol
+            // Raw anchor/ink/strip operands only. The fit VERDICT mirror moved
+            // to the *PairDecision lines, which carry the operands actually
+            // recorded by SplashOverlayLayout's own decision (tMin/tMax/
+            // ordered/fits/applied); no stale in-test boolean re-derivation.
             return tag + "Recomputed upperAnchorY=" + upperAnchorY + " lowerAnchorY=" + lowerAnchorY +
                 " upperAnchoredTop=" + upperTop + " lowerAnchoredTop=" + lowerTop +
                 " upperInkTopView=" + (upperTop + upperInk[0]) + " lowerInkBottomView=" + (lowerTop + lowerInk[1]) +
-                " stripTop=" + stripTop + " stripBottom=" + stripBottom +
-                " containmentTop=" + containmentTop + " containmentBottom=" + containmentBottom +
-                " order=" + order + " anchoredFits=" + (containmentTop && containmentBottom && order)
+                " stripTop=" + stripTop + " stripBottom=" + stripBottom
         }
         File(dir, "splash-B-$label-manifest.txt").writeText(
             "label=$label\n" +
@@ -308,7 +334,9 @@ class SplashTreatmentBTest {
                 group("caption", scene.caption) + "\n" +
                 group("loadingBar", scene.bar) + "\n" +
                 pairOperands("topPair", scene.name, scene.prayer, 52f, 110f, topStripTop, topStripBottom) + "\n" +
-                pairOperands("bottomPair", scene.caption, scene.bar, 1460f, 1523f, bottomStripTop, bottomStripBottom) + "\n"
+                pairOperands("bottomPair", scene.caption, scene.bar, 1460f, 1523f, bottomStripTop, bottomStripBottom) + "\n" +
+                "topPairDecision=" + scene.overlay.lastPairDecisions["top"] + "\n" +
+                "bottomPairDecision=" + scene.overlay.lastPairDecisions["bottom"] + "\n"
         )
     }
 
@@ -384,6 +412,21 @@ class SplashTreatmentBTest {
      * envelope: glyph bounds left/right around the line advance, plus the
      * shadow blur and offset on each side.
      */
+    /** Escaped codepoints for [start, end); whitespace is wrapped in brackets. */
+    private fun escapeCodepoints(s: String, start: Int, end: Int): String {
+        val sb = StringBuilder()
+        var i = start
+        while (i < end && i < s.length) {
+            val cp = s.codePointAt(i)
+            val hex = Integer.toHexString(cp).uppercase().padStart(4, '0')
+            if (Character.isWhitespace(cp)) sb.append("[U+").append(hex).append("]")
+            else sb.append("U+").append(hex)
+            i += Character.charCount(cp)
+            if (i < end && i < s.length) sb.append(' ')
+        }
+        return sb.toString()
+    }
+
     private fun assertRenderedTextInkWithinView(label: String, viewName: String, v: TextView) {
         val layout = v.layout ?: return
         val str = v.text.toString()
