@@ -122,17 +122,36 @@ public class FrameEntryCompanionTest {
         for (UiObject2 c : n.getChildren()) collect(c, sb);
     }
 
-    private UiObject2 findModuleCard() {
-        String title = s("home_frame");
-        String sub = s("home_frame_sub");
+    /**
+     * One complete, fresh scan. Returns the single clickable card whose own subtree holds both the
+     * title and the subtitle, or null when a stable complete scan found none. Any
+     * StaleObjectException (from the list or any subtree read) propagates and the whole scan is
+     * discarded by the caller.
+     */
+    private UiObject2 scanForModuleCard(String title, String sub) {
         List<UiObject2> nodes = device.findObjects(By.pkg(pkg).clickable(true));
+        UiObject2 found = null;
         for (UiObject2 o : nodes) {
             StringBuilder sb = new StringBuilder();
             collect(o, sb);
             String t = sb.toString();
-            if (t.contains(title) && t.contains(sub)) return o;
+            if (found == null && t.contains(title) && t.contains(sub)) found = o;
         }
-        return null;
+        return found;
+    }
+
+    /** Up to 3 whole fresh scans, repeating ONLY on StaleObjectException, no swipe between them. */
+    private UiObject2 findModuleCard() {
+        String title = s("home_frame");
+        String sub = s("home_frame_sub");
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try {
+                return scanForModuleCard(title, sub);
+            } catch (androidx.test.uiautomator.StaleObjectException stale) {
+                if (attempt == 3) throw stale; // fails explicitly, never reported as "not found"
+            }
+        }
+        throw new IllegalStateException("unreachable");
     }
 
     private UiObject2 waitText(String text, long timeoutMs) {
@@ -152,17 +171,27 @@ public class FrameEntryCompanionTest {
 
     private void openFrameScreenFromHome() {
         device.wait(Until.hasObject(By.pkg(pkg).scrollable(true)), 30000);
-        UiObject2 card = null;
-        for (int i = 1; i <= 10; i++) {
-            card = findModuleCard();
-            if (card != null) break;
+        boolean clicked = false;
+        for (int i = 1; i <= 10 && !clicked; i++) {
+            // fresh selection + click, repeated 3x only on StaleObjectException; no query after success
+            UiObject2 card = null;
+            for (int attempt = 1; attempt <= 3 && !clicked; attempt++) {
+                card = findModuleCard();
+                if (card == null) break;
+                try {
+                    card.click();
+                    clicked = true;
+                } catch (androidx.test.uiautomator.StaleObjectException stale) {
+                    if (attempt == 3) throw stale;
+                }
+            }
+            if (clicked) break;
             int w = device.getDisplayWidth();
             int h = device.getDisplayHeight();
             device.swipe(w / 2, (int) (h * 0.75), w / 2, (int) (h * 0.35), 20);
             device.waitForIdle();
         }
-        assertNotNull("Frame module card not found on Home after scrolling", card);
-        card.click();
+        assertTrue("Frame module card not found on Home after scrolling", clicked);
         assertNotNull("Frame title never appeared", waitText(s("frame_title"), 30000));
     }
 
