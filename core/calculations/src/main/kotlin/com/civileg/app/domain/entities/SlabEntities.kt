@@ -123,7 +123,9 @@ data class SlabDesignResult(
     val isSafe: Boolean,
     val utilizationRatio: Double,
     val warnings: List<String> = emptyList(),
-    val codeNotes: List<String> = emptyList()
+    val codeNotes: List<String> = emptyList(),
+    /** True when a method/applicability hold prevents any overall safety approval. */
+    val safetyAssessmentBlocked: Boolean = false
 ) : Parcelable
 
 @Parcelize

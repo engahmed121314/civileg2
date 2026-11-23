@@ -21,6 +21,9 @@ object SlabDrawingPackageBuilder {
         memberMark: String = "S1",
         codeVersion: String = "ECP 203"
     ): ElementReinforcementLayout {
+        require(!result.flexureResult.safetyAssessmentBlocked) {
+            "Execution drawing package blocked: slab method verification is incomplete."
+        }
         val layout = result.reinforcementLayout
 
         val shortSpan = 3000.0

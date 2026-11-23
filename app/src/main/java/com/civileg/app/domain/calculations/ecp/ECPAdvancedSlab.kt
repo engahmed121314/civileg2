@@ -50,10 +50,16 @@ class ECPAdvancedSlab {
         }
         
         // التحقق من القص العادي (Beam-like Shear)
-        val shearCheck = checkSlabShear(slabType, fcu, totalLoad, loadCombination)
+        val shearCheck = checkSlabShear(slabType, fcu, totalLoad, loadCombination).let {
+            if (flexureResult.safetyAssessmentBlocked) it.copy(isSafe = false,
+                warnings = it.warnings + "ECP ribbed-slab method not verified; no shear approval.") else it
+        }
         
         // التحقق من الانحراف (Deflection)
-        val deflectionCheck = checkSlabDeflection(slabType, fy, fcu)
+        val deflectionCheck = checkSlabDeflection(slabType, fy, fcu).let {
+            if (flexureResult.safetyAssessmentBlocked) it.copy(isSafe = false,
+                warnings = it.warnings + "ECP ribbed-slab method not verified; no deflection approval.") else it
+        }
         
         // التحقق من القص الاختراقي (Punching Shear) للبلاطات المسطحة
         val punchingCheck = if (slabType is SlabType.FlatPlate || slabType is SlabType.FlatSlab) {
@@ -65,7 +71,7 @@ class ECPAdvancedSlab {
         val formworkArea = calculateFormworkArea(slabType)
         
         // تحليل المخزون
-        val inventoryAnalysis = inventory?.let { inv ->
+        val inventoryAnalysis = inventory?.takeUnless { flexureResult.safetyAssessmentBlocked }?.let { inv ->
             analyzeSlabInventory(flexureResult, slabType, inv)
         }
         
@@ -75,8 +81,8 @@ class ECPAdvancedSlab {
         } else null
         
         if (flexureResult.warnings.isNotEmpty()) warnings.addAll(flexureResult.warnings)
-        if (!shearCheck.isSafe) warnings.add("⚠️ Slab shear capacity exceeded!")
-        if (!deflectionCheck.isSafe) warnings.add("⚠️ Deflection limit exceeded! Increase thickness.")
+        if (!flexureResult.safetyAssessmentBlocked && !shearCheck.isSafe) warnings.add("⚠️ Slab shear capacity exceeded!")
+        if (!flexureResult.safetyAssessmentBlocked && !deflectionCheck.isSafe) warnings.add("⚠️ Deflection limit exceeded! Increase thickness.")
         if (punchingCheck?.isSafe == false) warnings.add("⚠️ Punching shear failure! Increase thickness or use shear reinforcement")
         
         codeNotes.add(getCodeReference(slabType))
@@ -103,7 +109,9 @@ class ECPAdvancedSlab {
         fy: Double,
         totalLoad: Double
     ): SlabDesignResult {
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf(
+            "ECP ribbed-slab method verification is incomplete. No safety approval or execution package is available."
+        )
         val codeNotes = mutableListOf<String>()
         val ribSpacing = slab.ribSpacing / 1000.0  // m
         val loadPerRib = totalLoad * ribSpacing     // kN/m (الحمولة التصميمية لكل كمرتة)
@@ -147,10 +155,11 @@ class ECPAdvancedSlab {
             barSpacing = ribSpacing * 1000.0,
             minThickness = slab.totalThickness,
             shearCapacity = 0.0,
-            isSafe = K <= K_bal,
+            isSafe = false,
             utilizationRatio = K / K_bal,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            safetyAssessmentBlocked = true
         )
     }
 

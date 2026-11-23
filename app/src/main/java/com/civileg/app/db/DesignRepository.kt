@@ -7,6 +7,8 @@ import com.civileg.app.domain.entities.SteelWarehouseAnalysisResult
 import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import androidx.lifecycle.map
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -424,9 +426,9 @@ class DesignRepository @Inject constructor(
         return designDao.insertDesign(design)
     }
 
-    fun getDesignsForProject(projectId: Long) = designDao.getDesignsForProject(projectId)
-    suspend fun getDesignById(designId: Long): Design? = designDao.getDesignById(designId)
-    fun searchDesigns(query: String): Flow<List<Design>> = designDao.searchDesigns("%$query%")
+    fun getDesignsForProject(projectId: Long) = designDao.getDesignsForProject(projectId).map { rows -> rows.map(StoredDesignSafety::forDisplay) }
+    suspend fun getDesignById(designId: Long): Design? = designDao.getDesignById(designId)?.let(StoredDesignSafety::forDisplay)
+    fun searchDesigns(query: String): Flow<List<Design>> = designDao.searchDesigns("%$query%").map { rows -> rows.map(StoredDesignSafety::forDisplay) }
     suspend fun deleteDesign(design: Design) = designDao.deleteDesign(design)
     suspend fun getTotalCost(projectId: Long): Double = designDao.getTotalCostForProject(projectId) ?: 0.0
 

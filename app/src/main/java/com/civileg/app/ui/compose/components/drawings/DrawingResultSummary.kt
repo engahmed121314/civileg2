@@ -30,13 +30,14 @@ data class DrawingResultSummary(
     val deflectionRatio: Double = 0.0,      // actual / allowable (should be ≤ 1.0)
     val axialLoadRatio: Double = 0.0,       // P_u / φP_n for columns (should be ≤ 1.0)
     val crackWidth: Double = 0.0,           // mm (serviceability check)
+    val safetyAssessmentBlocked: Boolean = false,
     val formworkArea: Double = 0.0          // m² (for BOQ/costing)
 ) {
     /** Formatted utilization percentage, e.g. "65.3%" */
     val utilizationPercent: String get() = "%.1f%%".format(utilizationRatio * 100.0)
 
     /** PASS/FAIL label for safety status */
-    val safetyLabel: String get() = if (isSafe) "PASS" else "FAIL"
+    val safetyLabel: String get() = if (safetyAssessmentBlocked) "NOT VERIFIED" else if (isSafe) "PASS" else "FAIL"
 
     /** Number of failed safety checks */
     val failedCheckCount: Int get() = safetyChecks.count { !it.passed }

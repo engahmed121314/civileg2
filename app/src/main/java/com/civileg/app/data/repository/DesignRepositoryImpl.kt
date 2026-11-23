@@ -7,6 +7,7 @@ import com.civileg.app.domain.entities.SteelWarehouseAnalysisResult
 import com.civileg.app.domain.repository.DesignRepository
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /**
  * Decoupled implementation of [DesignRepository].
@@ -77,8 +78,8 @@ class DesignRepositoryImpl(
 
     // ── General Designs ──────────────────────────────────────────────────
 
-    override fun getDesignsForProject(projectId: Long): Flow<List<Design>> = designDao.getDesignsForProject(projectId).asFlow()
-    override fun searchDesigns(query: String): Flow<List<Design>> = designDao.searchDesigns("%$query%")
+    override fun getDesignsForProject(projectId: Long): Flow<List<Design>> = designDao.getDesignsForProject(projectId).asFlow().map { rows -> rows.map(StoredDesignSafety::forDisplay) }
+    override fun searchDesigns(query: String): Flow<List<Design>> = designDao.searchDesigns("%$query%").map { rows -> rows.map(StoredDesignSafety::forDisplay) }
     override suspend fun deleteDesign(design: Design) = designDao.deleteDesign(design)
     override suspend fun getTotalCost(projectId: Long): Double = designDao.getTotalCostForProject(projectId) ?: 0.0
 

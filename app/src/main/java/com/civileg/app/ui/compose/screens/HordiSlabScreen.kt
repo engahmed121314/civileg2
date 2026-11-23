@@ -140,6 +140,7 @@ fun HordiSlabScreen(
                         selectedCode = designCode,
                         codes = listOf("ECP" to "ECP 203", "ACI" to "ACI 318", "SBC" to "SBC 304"),
                         onCodeSelected = { newCode ->
+                            viewModel.clearResult()
                             designCode = newCode
                             val combos = LoadCombination.getByCode(
                                 runCatching { DesignCode.valueOf(newCode) }.getOrDefault(DesignCode.ECP)
@@ -307,7 +308,7 @@ fun HordiSlabScreen(
 
                 // ── Results ───────────────────────────────────────────
                 result?.let { res ->
-                    val bbsEntries = runCatching {
+                    val bbsEntries = if (res.safetyAssessmentBlocked) emptyList() else runCatching {
                         BbsGenerator.generateHordiSlabBbs(
                             mark = "H1",
                             result = res,
@@ -320,7 +321,7 @@ fun HordiSlabScreen(
                         item { BbsTableCard(bbsEntries, title = "Hordi Slab Bar Bending Schedule") }
                     }
 
-                    val boqRows = runCatching {
+                    val boqRows = if (res.safetyAssessmentBlocked) emptyList() else runCatching {
                         BoqEstimator.hordiSlabRows(
                             (span.toDoubleOrNull() ?: 6000.0) / 1000.0,
                             (totalThickness.toDoubleOrNull() ?: 350.0) / 1000.0,
@@ -334,11 +335,7 @@ fun HordiSlabScreen(
 
                     // Safety Status Gauge
                     item {
-                        SafetyStatusCard(
-                            utilizationRatio = res.utilizationRatio,
-                            isSafe = res.isSafe,
-                            title = stringResource(R.string.hordi_slab_safety_title, designCode)
-                        )
+                        HordiSafetyAssessment(res, designCode)
                     }
 
                     // Reinforcement Result
@@ -365,7 +362,8 @@ fun HordiSlabScreen(
                                 "Shear Capacity" to String.format("%.1f kN", res.shearCapacity),
                                 "Min Thickness" to String.format("%.0f mm", res.minThickness),
                                 "Utilization" to String.format("%.1f%%", res.utilizationRatio * 100),
-                                "Status" to if (res.isSafe) "PASS ✓" else "FAIL ✗"
+                                "Status" to if (res.safetyAssessmentBlocked) stringResource(R.string.design_status_not_verified)
+                                    else if (res.isSafe) "PASS ✓" else "FAIL ✗"
                             ),
                             icon = Icons.Default.Shield,
                             accentColor = if (res.isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)
@@ -533,5 +531,32 @@ fun HordiSlabScreen(
                 }
             }
         }
+    }
+}
+
+
+/** A method hold is distinct from a failed numerical check. */
+@Composable
+internal fun HordiSafetyAssessment(result: SlabDesignResult, designCode: String) {
+    if (result.safetyAssessmentBlocked) {
+        HordiMethodHoldNotice()
+    } else {
+        SafetyStatusCard(
+            utilizationRatio = result.utilizationRatio,
+            isSafe = result.isSafe,
+            title = stringResource(R.string.hordi_slab_safety_title, designCode)
+        )
+    }
+}
+
+/** Shared by dedicated and generic slab entry points while the ECP method is held. */
+@Composable
+internal fun HordiMethodHoldNotice() {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        AppText(
+            stringResource(R.string.hordi_method_hold),
+            modifier = Modifier.padding(16.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

@@ -177,7 +177,8 @@ class SBCJoistSlabTest {
         val aciResult = run(aci, 600.0)
         val ecpResult = run(ecp, 600.0)
 
-        // 0.25 (SBC) vs 0.24 (ECP) shear coefficient, same fc/d/bw/phi.
+        // Legacy numeric previews only: the ECP 0.24 calculation is NOT a
+        // verified ECP shear method. Its overall assessment must stay blocked.
         assertEquals(0.25 / 0.24, sbcResult.shearCapacity / ecpResult.shearCapacity, 1e-9)
         assertTrue(aciResult.shearCapacity < ecpResult.shearCapacity)
         assertTrue("SBC shear=${sbcResult.shearCapacity}, ACI shear=${aciResult.shearCapacity}",
@@ -188,14 +189,17 @@ class SBCJoistSlabTest {
         assertTrue(sbcResult.requiredReinforcement > aciResult.requiredReinforcement)
 
         // 750 mm clear spacing: SBC's 700 mm cap (2024 claim) rejects it, ACI's
-        // 30 in (~762 mm) and ECP's unbounded check accept it (S-02/S-03).
+        // 30 in (~762 mm) accepts it. ECP remains method-blocked, regardless
+        // of its legacy numeric preview (S-02/S-03).
         val sbcWide = run(sbc, 900.0)
         val aciWide = run(aci, 900.0)
         val ecpWide = run(ecp, 900.0)
         assertTrue(sbcWide.warnings.any { it.contains("8.4.1") })
         assertFalse(sbcWide.isSafe)
         assertTrue(aciWide.isSafe)
-        assertTrue(ecpWide.isSafe)
+        assertFalse(ecpWide.isSafe)
+        assertTrue(ecpWide.safetyAssessmentBlocked)
+        assertTrue(ecpWide.warnings.any { it.contains("verification is incomplete") })
     }
 
     @Test

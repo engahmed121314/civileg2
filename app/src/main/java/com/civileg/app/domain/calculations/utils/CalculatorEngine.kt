@@ -268,8 +268,13 @@ class CalculatorEngine @Inject constructor(
         val dropPanelWidth: Double = 0.0,
         val dropPanelThick: Double = 0.0,
         val punchingStressAtDrop: Double = 0.0,
-        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
-    ) : Parcelable
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
+        val safetyAssessmentBlocked: Boolean = false
+    ) : Parcelable {
+        // Missing/false flags in old JSON do not verify a legacy ECP Hordi method.
+        val executionAssessmentBlocked: Boolean
+            get() = safetyAssessmentBlocked || (type == SlabType.HOLLOW_BLOCK && code !in listOf(DesignCode.ACI, DesignCode.SBC))
+    }
 
     @Parcelize
     data class StairResult(
@@ -1550,8 +1555,10 @@ class CalculatorEngine @Inject constructor(
 
                 return SlabResult(
                     type = type, thickness = ts, isSafe = res.isSafe, code = code,
+                    safetyAssessmentBlocked = res.safetyAssessmentBlocked,
                     reinforcementMain = ReinforcementBar(spacing = res.barSpacing, diameter = res.barDiameter.toInt()),
                     momentX = muRib, utilizationRatio = res.utilizationRatio,
+                    suggestions = res.warnings + res.codeNotes,
                     concreteVolume = concreteVol, steelWeight = steelW, cost = costVal,
                     safetyChecks = listOf(DesignSafetyCheck("Flexure", res.requiredReinforcement, res.providedReinforcement, "mm²", res.isSafe))
                 )

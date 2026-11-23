@@ -143,6 +143,15 @@ class SlabViewModel @Inject constructor(
         )
     }
 
+    fun clearResult() {
+        _result.value = null
+        pendingDrawingBitmap = null
+        lastInputs = null
+        _error.value = null
+        _errorMessage.value = null
+        _validationReport.value = null
+    }
+
     fun saveSlab(projectId: Long, name: String, result: CalculatorEngine.SlabResult) {
         viewModelScope.launch {
             val inputs = lastInputs
@@ -157,6 +166,7 @@ class SlabViewModel @Inject constructor(
     /** Standalone DXF sheet for the current slab design (null when no result). */
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val res = _result.value ?: return null
+        if (res.executionAssessmentBlocked) return null
         val inputs = lastInputs ?: return null
         return com.civileg.app.utils.ElementDxfDrawings.slabSection(
             title = "SLAB ${inputs.type.displayName}",
@@ -170,6 +180,11 @@ class SlabViewModel @Inject constructor(
 
     /** Export just the CAD drawing (no PDF) for the current design. */
     fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        if (_result.value?.executionAssessmentBlocked == true) {
+            _error.value = context.getString(com.civileg.app.R.string.hordi_method_hold)
+            onComplete(null)
+            return
+        }
         com.civileg.app.utils.DxfQuickExport.export(
             context = context,
             drawing = buildDxfDrawing(),
@@ -181,6 +196,11 @@ class SlabViewModel @Inject constructor(
 
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val res = _result.value ?: return
+        if (res.executionAssessmentBlocked) {
+            _error.value = context.getString(com.civileg.app.R.string.hordi_method_hold)
+            onComplete(null)
+            return
+        }
         val inputs = lastInputs ?: return
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }

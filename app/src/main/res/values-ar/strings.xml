@@ -2408,4 +2408,6 @@
     <string name="settings_support_title">دعم التطبيق</string>
     <string name="settings_support_message">Civil Engineer Pro مجاني وبدون إعلانات. التبرعات الطوعية تموّل أكواد تصميم واختبارات ورسومات جديدة.</string>
     <string name="settings_support_button">تبرع عبر GitHub Sponsors</string>
+    <string name="hordi_method_hold">طريقة حساب الهوردي المصري غير متحقق منها. الأرقام معاينة للحسابات القديمة وليست اعتماد أمان. تقارير التنفيذ وجداول التسليح موقوفة لحين اكتمال التحقق.</string>
+    <string name="stored_slab_method_hold">لم يتم التحقق من الكود أو طريقة التصميم للبلاطة المفرغة المحفوظة. أعد الحساب بطريقة موثقة قبل تقارير التنفيذ أو الكميات. البيانات المحفوظة لم تتغير.</string>
 </resources>

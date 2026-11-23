@@ -167,5 +167,6 @@ data class ProjectSummary(
     val totalCost: Double = 0.0,
     val designCount: Int = 0,
     val costEfficiencyIndex: Double = 1.0,
-    val costBreakdown: Map<String, Double> = emptyMap()
+    val costBreakdown: Map<String, Double> = emptyMap(),
+    val methodBlockedDesignCount: Int = 0
 ) : Parcelable

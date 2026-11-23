@@ -172,6 +172,7 @@ fun SlabScreen(
                                 DropdownMenuItem(
                                     text = { AppText(type.displayName) },
                                     onClick = {
+                                        viewModel.clearResult()
                                         selectedType = type
                                         expandedType = false
                                     }
@@ -199,6 +200,7 @@ fun SlabScreen(
                                 DropdownMenuItem(
                                     text = { AppText(code.displayName) },
                                     onClick = {
+                                        viewModel.clearResult()
                                         selectedCode = code
                                         expandedCode = false
                                     }
@@ -445,7 +447,7 @@ fun SlabScreen(
                     }
                 }
 
-                if (res.safetyChecks.isNotEmpty()) {
+                if (!res.executionAssessmentBlocked && res.safetyChecks.isNotEmpty()) {
                     item {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
@@ -582,6 +584,7 @@ fun SlabScreen(
                                         cover = 25.0,
                                         viewMode = selectedViewMode,
                                         designCode = selectedCode,
+                                        resultSummary = slabDrawingSummary(res),
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
@@ -662,6 +665,7 @@ fun SlabScreen(
                                 cover = 25.0,
                                 viewMode = 0,
                                 designCode = selectedCode,
+                                resultSummary = slabDrawingSummary(res),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -806,7 +810,11 @@ fun SlabScreen(
 }
 
 @Composable
-private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
+internal fun SlabResultCard(res: CalculatorEngine.SlabResult) {
+    if (res.executionAssessmentBlocked) {
+        HordiMethodHoldNotice()
+        return
+    }
     val utilizationColor = when {
         res.utilizationRatio > 1.0 -> Color.Red
         res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
