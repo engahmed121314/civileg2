@@ -6,6 +6,12 @@ import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfName
 import com.itextpdf.kernel.pdf.PdfReader
 import com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor
+import com.itextpdf.kernel.pdf.canvas.parser.PdfCanvasProcessor
+import com.itextpdf.kernel.pdf.canvas.parser.listener.IEventListener
+import com.itextpdf.kernel.pdf.canvas.parser.EventType
+import com.itextpdf.kernel.pdf.canvas.parser.data.IEventData
+import com.itextpdf.kernel.pdf.canvas.parser.data.ImageRenderInfo
+import com.itextpdf.kernel.geom.Matrix
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -115,6 +121,37 @@ class ColumnRecordedReviewPaginationTest {
             val resultsPage = pages.indexOfFirst { it.contains("3. Recorded Engine Results") } + 1
             assertTrue(context, resultsPage > 0)
             for (i in 1..12) assertPageHasToken(pages[resultsPage - 1], "Raw scalar $i", context)
+
+            // Emitted display geometry: the actual image CTM written to the
+            // content stream (a,b,c,d,e,f with a=display width, d=display
+            // height in user units). Bounded assertions: aspect ratio of the
+            // emitted display matches the 1078x2210 source (no distortion),
+            // and display width stays within the production 480pt width cap.
+            // The full CTM-vs-measured-remaining-cap comparison needs the
+            // production measured reserve, which this test deliberately does
+            // not re-derive; the production path logs selected size, reserve,
+            // probe status and occupied bbox for that comparison.
+            val ctms = mutableListOf<Matrix>()
+            val listener = object : IEventListener {
+                override fun eventOccurred(data: IEventData, type: EventType) {
+                    if (data is ImageRenderInfo) ctms.add(data.imageCtm)
+                }
+                override fun getSupportedEvents(): Set<EventType> = setOf(EventType.RENDER_IMAGE)
+            }
+            val processor = PdfCanvasProcessor(listener)
+            processor.processPageContent(pdf.getPage(captionPage))
+            assertEquals(context, 1, ctms.size)
+            val ctm = ctms[0]
+            // iText Matrix is a 3x3 array; indices 0/1/3/4/6/7 are a/b/c/d/e/f
+            // (I11/I12/I21/I22/I31/I32). a=display width, d=display height.
+            val a = ctm.get(0); val b = ctm.get(1); val c = ctm.get(2); val d = ctm.get(4)
+            System.out.println("emitted image CTM a=$a b=$b c=$c d=$d e=${ctm.get(6)} f=${ctm.get(7)} on page $captionPage")
+            assertTrue("$context ctm=$ctm", a > 0f && a <= 480.5f)
+            assertTrue("$context ctm=$ctm", d > 0f)
+            // unrotated: off-diagonal shear terms ~0 before comparing a/d
+            assertEquals("$context ctm=$ctm", 0.0, b.toDouble(), 0.01)
+            assertEquals("$context ctm=$ctm", 0.0, c.toDouble(), 0.01)
+            assertEquals("$context ctm=$ctm", 1078.0 / 2210.0, a.toDouble() / d.toDouble(), 0.02)
 
             pages.forEachIndexed { index, page -> assertTrue(page, page.contains("Page ${index + 1}")) }
             assertTrue(context, pages.all { it.contains("NOT FOR CONSTRUCTION") })

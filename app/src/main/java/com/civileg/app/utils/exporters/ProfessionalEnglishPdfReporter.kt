@@ -273,23 +273,52 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
+    // Scoped measured-layout helpers (recorded route only): fresh-page usable
+    // geometry from the live document and iText-measured element heights laid
+    // out at the ACTUAL usable width, margins included. Only a FULL layout is
+    // a usable measurement; anything else reserves the whole page so callers
+    // degrade to normal flow instead of forcing an overflow.
+    private fun usableArea(document: Document): Pair<Float, Float> {
+        val page = document.pdfDocument.defaultPageSize
+        return (page.width - document.leftMargin - document.rightMargin) to
+            (page.height - document.topMargin - document.bottomMargin)
+    }
+
+    private fun measuredBlockHeight(element: BlockElement<*>, usableWidth: Float, usableHeight: Float, document: Document): Float {
+        val renderer = element.createRendererSubTree().setParent(document.renderer)
+        val result = renderer.layout(LayoutContext(LayoutArea(1, Rectangle(usableWidth, usableHeight))))
+        if (result.status != LayoutResult.FULL) return usableHeight
+        val marginTop = element.getOwnProperty<UnitValue>(Property.MARGIN_TOP)?.value ?: 0f
+        val marginBottom = element.getOwnProperty<UnitValue>(Property.MARGIN_BOTTOM)?.value ?: 0f
+        // occupiedArea may already include margins for some renderers, so
+        // adding them explicitly is CONSERVATIVE (an upper reserve) - not an
+        // exact minimal fit and not a no-overflow proof.
+        return result.occupiedArea.bBox.height + marginTop + marginBottom
+    }
+
     private fun addCalculationMethodology(document: Document, designCode: String,
                                           reportType: ReportType,
                                           steps: List<CalculationStep>, recordedReview: Boolean = false) {
         if (recordedReview) {
-            // Scoped pagination binding (recorded route only): keep the heading
-            // and separator with the first body block so the heading can never
-            // be stranded at a page bottom away from its trace.
-            document.add(sectionTitle("2. Recorded Calculation Trace (Unverified)").setKeepWithNext(true))
-            document.add(separator().setKeepWithNext(true))
-            // keepWithNext here binds the whole chain (heading -> separator ->
-            // warning) to the first actual step block, or to the empty-trace
-            // paragraph when no steps were supplied: no dangling chain end.
-            document.add(paragraph("Requested code: $designCode. Method, edition, references and applicability are NOT VERIFIED.", 9f, color = WARNING).setKeepWithNext(true))
+            // Scoped explicit block unit (recorded route only): heading +
+            // separator + warning + FIRST step laid out inside one Div so the
+            // heading moves with the first body block instead of being
+            // stranded at a page bottom. This REPLACES the keepWithNext chain,
+            // which the actual renderer demonstrably did not bind (actual
+            // device PDF: trace heading alone at a page bottom, body on the
+            // next page). keepTogether remains best-effort: a unit taller
+            // than a full page still splits. Remaining steps flow normally.
+            val headUnit = Div().setKeepTogether(true)
+            headUnit.add(sectionTitle("2. Recorded Calculation Trace (Unverified)"))
+            headUnit.add(separator())
+            headUnit.add(paragraph("Requested code: $designCode. Method, edition, references and applicability are NOT VERIFIED.", 9f, color = WARNING))
             if (steps.isEmpty()) {
-                document.add(paragraph("No calculation trace was supplied. No default methodology has been substituted.", 9f))
+                headUnit.add(paragraph("No calculation trace was supplied. No default methodology has been substituted.", 9f))
+                document.add(headUnit)
             } else {
-                steps.forEach { addCalculationStep(document, it, recordedReview = true) }
+                buildCalculationStep(steps.first(), recordedReview = true).forEach { headUnit.add(it) }
+                document.add(headUnit)
+                steps.drop(1).forEach { addCalculationStep(document, it, recordedReview = true) }
             }
             document.add(emptyLine())
             return
@@ -314,7 +343,7 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
-    private fun addCalculationStep(document: Document, step: CalculationStep, recordedReview: Boolean = false) {
+    private fun buildCalculationStep(step: CalculationStep, recordedReview: Boolean = false): List<IBlockElement> {
         val font = createPdfFont()
         val boldFont = createBoldFont()
         val stepTable = Table(UnitValue.createPercentArray(floatArrayOf(100f))).useAllAvailableWidth()
@@ -351,8 +380,11 @@ object ProfessionalEnglishPdfReporter {
             stepTable.addCell(Cell().setPadding(4f).add(resPara))
         }
 
-        document.add(stepTable)
-        document.add(Paragraph(" "))  // spacing
+        return listOf(stepTable, Paragraph(" "))  // spacing
+    }
+
+    private fun addCalculationStep(document: Document, step: CalculationStep, recordedReview: Boolean = false) {
+        buildCalculationStep(step, recordedReview).forEach { document.add(it) }
     }
 
     private fun getDefaultCalculationSteps(reportType: ReportType, designCode: String): List<CalculationStep> {
@@ -651,15 +683,7 @@ object ProfessionalEnglishPdfReporter {
     }
 
     private fun addResultsSection(document: Document, results: Map<String, String>, recordedReview: Boolean = false) {
-        document.add((if (recordedReview) sectionTitle("3. Recorded Engine Results (Unverified)").setKeepWithNext(true) else sectionTitle("3. Design Results")))
-        if (recordedReview) document.add(paragraph("Values and labels below are preserved engine output, not verified design conclusions.", 9f, color = WARNING).setKeepWithNext(true))
-        document.add(if (recordedReview) separator().setKeepWithNext(true) else separator())
-
         val table = Table(UnitValue.createPercentArray(floatArrayOf(50f, 50f))).useAllAvailableWidth()
-        // Scoped (recorded route only): keep the short engine-results table on
-        // one page so a single trailing row cannot orphan onto the next page.
-        // Best-effort by design: a table taller than a full page still splits.
-        if (recordedReview) table.setKeepTogether(true)
         var rowIndex = 0
         for ((key, value) in results) {
             val bg = if (rowIndex % 2 == 0) null else ROW_ALT
@@ -667,7 +691,45 @@ object ProfessionalEnglishPdfReporter {
             table.addCell(valueCell(value, bg))
             rowIndex++
         }
-        document.add(table)
+        if (!recordedReview) {
+            document.add(sectionTitle("3. Design Results"))
+            document.add(separator())
+            document.add(table)
+            document.add(emptyLine())
+            return
+        }
+        // Scoped measured block units (recorded route only). Replaces the
+        // keepWithNext chain + bare table keepTogether, which the actual
+        // renderer only partially honored (device PDF: table stayed whole but
+        // the heading/warning were stranded a page above it). MEASURED on the
+        // live document: heading + warning + separator + the whole table are
+        // wrapped in one keep-together Div only when the measured sum fits a
+        // fresh page (SHORT table); otherwise the heading unit stays together
+        // and the long table DELIBERATELY flows/splits. keepTogether remains
+        // best-effort, and a failed (non-FULL) measurement reserves the whole
+        // page, which selects the deliberate-split path.
+        val (uw, uh) = usableArea(document)
+        val headReserve = measuredBlockHeight(sectionTitle("3. Recorded Engine Results (Unverified)"), uw, uh, document) +
+            measuredBlockHeight(paragraph("Values and labels below are preserved engine output, not verified design conclusions.", 9f, color = WARNING), uw, uh, document) +
+            measuredBlockHeight(separator(), uw, uh, document)
+        val tableHeight = measuredBlockHeight(table, uw, uh, document)
+        if (headReserve + tableHeight <= uh) {
+            val unit = Div().setKeepTogether(true)
+            unit.add(sectionTitle("3. Recorded Engine Results (Unverified)"))
+            unit.add(paragraph("Values and labels below are preserved engine output, not verified design conclusions.", 9f, color = WARNING))
+            unit.add(separator())
+            unit.add(table)
+            document.add(unit)
+            Log.i(TAG, "Recorded results: short-table unit measured ${headReserve + tableHeight}pt of ${uh}pt usable; keep-together applied")
+        } else {
+            val headUnit = Div().setKeepTogether(true)
+            headUnit.add(sectionTitle("3. Recorded Engine Results (Unverified)"))
+            headUnit.add(paragraph("Values and labels below are preserved engine output, not verified design conclusions.", 9f, color = WARNING))
+            headUnit.add(separator())
+            document.add(headUnit)
+            document.add(table)
+            Log.i(TAG, "Recorded results: measured ${headReserve + tableHeight}pt exceeds ${uh}pt usable; deliberate long-table flow")
+        }
         document.add(emptyLine())
     }
 
@@ -795,15 +857,26 @@ object ProfessionalEnglishPdfReporter {
     }
 
     private fun addDrawingSection(document: Document, bitmap: Bitmap?, title: String, recordedReview: Boolean = false) {
-        document.add(if (recordedReview) sectionTitle("5. Column Schematic (Dimensions Only)").setKeepWithNext(true) else sectionTitle("5. Engineering Drawing"))
-        document.add(if (recordedReview) separator().setKeepWithNext(true) else separator())
+        if (!recordedReview) {
+            document.add(sectionTitle("5. Engineering Drawing"))
+            document.add(separator())
+        }
 
         if (bitmap == null) {
-            document.add(Paragraph().add(text(
+            val unavailable = Paragraph().add(text(
                 if (recordedReview) "UNAVAILABLE: no matching completed schematic was supplied. No reinforcement geometry is synthesized."
                 else "No drawing image was supplied for this report. Export from the element screen to include the generated detail drawing.",
                 createPdfFont(), 9f, SECONDARY
-            )).setTextAlignment(TextAlignment.CENTER))
+            )).setTextAlignment(TextAlignment.CENTER)
+            if (recordedReview) {
+                val unit = Div().setKeepTogether(true)
+                unit.add(sectionTitle("5. Column Schematic (Dimensions Only)"))
+                unit.add(separator())
+                unit.add(unavailable)
+                document.add(unit)
+            } else {
+                document.add(unavailable)
+            }
             document.add(emptyLine())
             return
         }
@@ -811,61 +884,73 @@ object ProfessionalEnglishPdfReporter {
         try {
             val stream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-            val img = Image(ImageDataFactory.create(stream.toByteArray()))
-            img.setAutoScale(true)
-            img.setMaxWidth(480f)
-            img.setHorizontalAlignment(HorizontalAlignment.CENTER)
+            val pngBytes = stream.toByteArray()
             val caption = Paragraph().add(text(title, createPdfFont(), 9f, SECONDARY))
                 .setTextAlignment(TextAlignment.CENTER)
             if (recordedReview) {
-                // Scoped (recorded route only): bind image + caption so the
-                // caption cannot orphan onto the next page. The budget is
-                // MEASURED per call, never approximated: fresh-page geometry
-                // from the live document (default page size + its current
-                // margins; the footer is canvas-drawn inside the bottom margin
-                // and consumes no layout area) minus the iText-measured
-                // heights of the section title, separator and caption laid out
-                // at the ACTUAL usable width, margins included.
-                val page = document.pdfDocument.defaultPageSize
-                val usableWidth = page.width - document.leftMargin - document.rightMargin
-                val usableHeight = page.height - document.topMargin - document.bottomMargin
-                fun measuredBlockHeight(element: BlockElement<*>): Float {
-                    val renderer = element.createRendererSubTree().setParent(document.renderer)
-                    val result = renderer.layout(LayoutContext(LayoutArea(1, Rectangle(usableWidth, usableHeight))))
-                    // Only a FULL layout is a usable measurement; anything else
-                    // reserves the whole page so the image path degrades safely.
-                    if (result.status != LayoutResult.FULL) return usableHeight
-                    val marginTop = element.getOwnProperty<UnitValue>(Property.MARGIN_TOP)?.value ?: 0f
-                    val marginBottom = element.getOwnProperty<UnitValue>(Property.MARGIN_BOTTOM)?.value ?: 0f
-                    // occupiedArea may already include margins for some
-                    // renderers, so adding them explicitly is CONSERVATIVE (an
-                    // upper reserve) - not an exact minimal fit and not a
-                    // no-overflow proof.
-                    return result.occupiedArea.bBox.height + marginTop + marginBottom
-                }
-                val reserve = measuredBlockHeight(sectionTitle("5. Column Schematic (Dimensions Only)")) +
-                    measuredBlockHeight(separator()) +
+                // Scoped explicit block unit (recorded route only): heading +
+                // separator + explicitly aspect-sized image + caption in one
+                // keep-together Div. This REPLACES (a) the keepWithNext chain
+                // and (b) autoScale + setMaxHeight, both of which the actual
+                // renderer demonstrably failed to bind (device PDF: image on
+                // p5 with the same tall display as the uncapped render,
+                // caption orphaned on an almost-blank p6 - consistent with
+                // autoScale re-expanding the image inside the Div so the unit
+                // overflowed a full page and keep-together gave up; that is
+                // the inspected hypothesis this change tests, not an
+                // established cause).
+                val (usableWidth, usableHeight) = usableArea(document)
+                val reserve = measuredBlockHeight(sectionTitle("5. Column Schematic (Dimensions Only)"), usableWidth, usableHeight, document) +
+                    measuredBlockHeight(separator(), usableWidth, usableHeight, document) +
                     measuredBlockHeight(Paragraph().add(text(title, createPdfFont(), 9f, SECONDARY))
-                        .setTextAlignment(TextAlignment.CENTER))
-                // Remaining-height aspect cap: the image height is capped to
-                // what a fresh page actually leaves after the measured reserve
-                // (autoscale preserves aspect; the embedded PNG stream - RAW
-                // image + soft mask - is untouched, only display size).
-                val remaining = usableHeight - reserve
+                        .setTextAlignment(TextAlignment.CENTER), usableWidth, usableHeight, document)
                 // Chosen fallback floor, NOT an established legibility
                 // standard: below ~300pt of display height the schematic's
-                // dimension labels are unlikely to be reviewable in print, so
-                // squeezing the image in would be dishonest.
+                // dimension labels are unlikely to be reviewable in print.
                 val minLegibleImageHeight = 300f
+                val remaining = usableHeight - reserve
+                val img = Image(ImageDataFactory.create(pngBytes))
+                img.setHorizontalAlignment(HorizontalAlignment.CENTER)
                 if (remaining >= minLegibleImageHeight) {
-                    img.setMaxHeight(remaining)
-                    // image(<= remaining) + caption(<= reserve) <= usableHeight,
-                    // so the unit provably fits a fresh page from the SAME
-                    // measured operands: keep-together cannot loop or overflow.
-                    // keepTogether stays best-effort, not a guarantee.
+                    // Explicit aspect-preserving display size from the
+                    // MEASURED available area: no autoScale on this route.
+                    // scaleAbsolute sets display width/height only and does
+                    // not resample the embedded PNG stream; whether the
+                    // emitted encoding stays identical is decided by the
+                    // actual PDF comparison, not assumed here.
+                    val maxDisplayWidth = minOf(480f, usableWidth)
+                    val scale = minOf(maxDisplayWidth / img.imageWidth, remaining / img.imageHeight)
+                    val displayWidth = img.imageWidth * scale
+                    val displayHeight = img.imageHeight * scale
+                    img.setAutoScale(false)
+                    img.scaleAbsolute(displayWidth, displayHeight)
                     val unit = Div().setKeepTogether(true)
+                    unit.add(sectionTitle("5. Column Schematic (Dimensions Only)"))
+                    unit.add(separator())
                     unit.add(img)
                     unit.add(caption)
+                    // Bounded occupancy probe: lay out a fresh equivalent
+                    // block in a fresh-page area and log status + occupied
+                    // bbox next to the selected size and reserve. This is
+                    // diagnostic logging only; the emitted image CTM is
+                    // verified from the produced PDF in the pagination test.
+                    val probeUnit = Div().setKeepTogether(true)
+                    probeUnit.add(sectionTitle("5. Column Schematic (Dimensions Only)"))
+                    probeUnit.add(separator())
+                    val probeImg = Image(ImageDataFactory.create(pngBytes))
+                    probeImg.setAutoScale(false)
+                    probeImg.scaleAbsolute(displayWidth, displayHeight)
+                    probeUnit.add(probeImg)
+                    probeUnit.add(Paragraph().add(text(title, createPdfFont(), 9f, SECONDARY))
+                        .setTextAlignment(TextAlignment.CENTER))
+                    val probeResult = probeUnit.createRendererSubTree().setParent(document.renderer)
+                        .layout(LayoutContext(LayoutArea(1, Rectangle(usableWidth, usableHeight))))
+                    val probeBox = if (probeResult.status == LayoutResult.NOTHING) "none" else probeResult.occupiedArea.bBox.toString()
+                    Log.i(TAG, "Recorded schematic: selected ${displayWidth}x${displayHeight}pt (scale=$scale, source ${img.imageWidth}x${img.imageHeight}px), reserve=${reserve}pt, remaining=${remaining}pt of ${usableHeight}pt usable; probe status=${probeResult.status} bbox=$probeBox")
+                    // The measured operands indicate room on a fresh page,
+                    // but keep-together stays best-effort: whether the unit
+                    // actually fits and stays whole is decided by the actual
+                    // PDF pixels, not assumed here.
                     document.add(unit)
                 } else {
                     // Deliberate continuation, NOT a silent keep-together
@@ -876,12 +961,20 @@ object ProfessionalEnglishPdfReporter {
                     // follows in normal flow. This fallback does NOT guarantee
                     // image and caption share a page, and no image content is
                     // clipped.
-                    Log.w(TAG, "Recorded schematic: measured reserve leaves " + remaining + "pt < " + minLegibleImageHeight + "pt legible floor; image placed without keep-together")
-                    img.setMaxHeight(usableHeight)
+                    Log.w(TAG, "Recorded schematic: measured reserve leaves ${remaining}pt < ${minLegibleImageHeight}pt legible floor; image placed without keep-together")
+                    document.add(sectionTitle("5. Column Schematic (Dimensions Only)"))
+                    document.add(separator())
+                    img.setAutoScale(false)
+                    val scale = minOf(minOf(480f, usableWidth) / img.imageWidth, usableHeight / img.imageHeight)
+                    img.scaleAbsolute(img.imageWidth * scale, img.imageHeight * scale)
                     document.add(img)
                     document.add(caption)
                 }
             } else {
+                val img = Image(ImageDataFactory.create(pngBytes))
+                img.setAutoScale(true)
+                img.setMaxWidth(480f)
+                img.setHorizontalAlignment(HorizontalAlignment.CENTER)
                 document.add(img)
                 document.add(caption)
             }
