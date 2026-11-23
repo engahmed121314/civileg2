@@ -81,6 +81,24 @@ class DesignPagesUiTest {
     }
 
     @Test
+    fun designHub_opensFrameAnalysis_defaultStateRenders() {
+        // Frame screen entry at the app's real entry path and default state:
+        // the drawing tab (selected by default) must render without crashing.
+        rule.onNodeWithText(arString(R.string.nav_design_hub)).performClick()
+        rule.waitForIdle()
+        scrollToText(arString(R.string.home_frame))
+        rule.onNodeWithText(arString(R.string.home_frame)).performClick()
+        rule.waitForIdle()
+        // Top bar title is only composed if the drawing tab rendered.
+        rule.onNodeWithText(arString(R.string.frame_title)).assertIsDisplayed()
+
+        // The results tab must also render at empty/default state.
+        rule.onNodeWithText(arString(R.string.frame_tab_results)).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithText(arString(R.string.frame_title)).assertIsDisplayed()
+    }
+
+    @Test
     fun columnDesign_enterValues_producesResult() {
         // Navigate: bottom tab -> Design Hub -> column card.
         rule.onNodeWithText(arString(R.string.nav_design_hub)).performClick()

@@ -55,6 +55,8 @@ fun PostTensionedSectionDrawing(
             .padding(10.dp)
     ) {
         Canvas(modifier = Modifier.fillMaxWidth().height(height.dp)) {
+            // Too small to draw truthfully: omit rather than distort geometry.
+            if (isDegenerateForDrawing()) return@Canvas
             drawPostTensionedSection(input, result)
         }
     }
@@ -79,6 +81,8 @@ fun PostTensionedElevationDrawing(
             .padding(10.dp)
     ) {
         Canvas(modifier = Modifier.fillMaxWidth().height(height.dp)) {
+            // Too small to draw truthfully: omit rather than distort geometry.
+            if (isDegenerateForDrawing()) return@Canvas
             drawPostTensionedElevation(input, result)
         }
     }
@@ -245,7 +249,7 @@ private fun DrawScope.drawPostTensionedElevation(
     // Parabolic tendon profile
     val eccentricity = result?.prestressDesign?.providedEccentricity
         ?: (input.depth / 2.0 - input.cover - 35.0)
-    val ePx = (eccentricity / input.depth * beamH).toFloat().coerceIn(0f, beamH * 0.42f)
+    val ePx = (eccentricity / input.depth * beamH).toFloat().coerceInMin(0f, beamH * 0.42f)
     val endY = centerY - beamH * 0.22f
     val midY = centerY + ePx
 
