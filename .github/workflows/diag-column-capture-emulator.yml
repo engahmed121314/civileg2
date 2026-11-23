@@ -49,16 +49,13 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
-          script: |
-            set +e
-            ./gradlew connectedFreeDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.civileg.app.qa.ColumnRecordedSheetEmulatorTest --no-daemon
-            STATUS=$?
-            mkdir -p diag-capture-evidence
-            adb pull /sdcard/Android/data/com.civileg.app.debug/files/capture-emulator-evidence diag-capture-evidence/capture-emulator-evidence
-            PULL=$?
-            adb logcat -d > diag-capture-evidence/logcat-full.txt
-            echo "gradle-status=$STATUS evidence-pull-status=$PULL"
-            exit $STATUS
+          # The emulator runner executes each script line in its own shell, so
+          # the whole sequence stays on ONE line: run gradle, save its status,
+          # guarded evidence extraction, logcat, exit the original status.
+          # API 33 scoped storage blocks a plain adb pull of
+          # /sdcard/Android/data, so evidence is streamed out with run-as
+          # (the debug build is debuggable); the plain pull remains a fallback.
+          script: ./gradlew connectedFreeDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.civileg.app.qa.ColumnRecordedSheetEmulatorTest --no-daemon; STATUS=$?; mkdir -p diag-capture-evidence; adb exec-out run-as com.civileg.app.debug tar -cf - -C /sdcard/Android/data/com.civileg.app.debug/files capture-emulator-evidence > diag-capture-evidence/evidence.tar && tar -xf diag-capture-evidence/evidence.tar -C diag-capture-evidence || adb pull /sdcard/Android/data/com.civileg.app.debug/files/capture-emulator-evidence diag-capture-evidence/capture-emulator-evidence; PULL=$?; adb logcat -d > diag-capture-evidence/logcat-full.txt; echo "gradle-status=$STATUS evidence-pull-status=$PULL"; exit $STATUS
 
       - name: Upload diagnostic evidence
         if: always()
