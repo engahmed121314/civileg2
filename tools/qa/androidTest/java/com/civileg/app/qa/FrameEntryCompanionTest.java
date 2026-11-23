@@ -13,7 +13,6 @@ import androidx.test.uiautomator.BySelector;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 import androidx.test.uiautomator.Until;
-import com.civileg.app.R;
 import java.io.File;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -108,7 +107,12 @@ public class FrameEntryCompanionTest {
         assertTrue("app window did not appear", device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 30000));
     }
 
-    private String s(int id) {
+    // The minified app has no com.civileg.app.R class for the test APK to link against
+    // (run 45136912761: NoClassDefFoundError R$string). Resolve by resource name at runtime
+    // from the installed app's own resources; fail loudly if the name is absent.
+    private String s(String name) {
+        int id = ctx.getResources().getIdentifier(name, "string", pkg);
+        assertTrue("string resource not found in installed app: " + name, id != 0);
         return ctx.getString(id);
     }
 
@@ -119,8 +123,8 @@ public class FrameEntryCompanionTest {
     }
 
     private UiObject2 findModuleCard() {
-        String title = s(R.string.home_frame);
-        String sub = s(R.string.home_frame_sub);
+        String title = s("home_frame");
+        String sub = s("home_frame_sub");
         List<UiObject2> nodes = device.findObjects(By.pkg(pkg).clickable(true));
         for (UiObject2 o : nodes) {
             StringBuilder sb = new StringBuilder();
@@ -159,12 +163,12 @@ public class FrameEntryCompanionTest {
         }
         assertNotNull("Frame module card not found on Home after scrolling", card);
         card.click();
-        assertNotNull("Frame title never appeared", waitText(s(R.string.frame_title), 30000));
+        assertNotNull("Frame title never appeared", waitText(s("frame_title"), 30000));
     }
 
     private void assertFrameScreenVisible() {
-        assertVisible(By.pkg(pkg).textContains(s(R.string.frame_title)), "frame_title");
-        assertVisible(By.pkg(pkg).text(s(R.string.frame_tab_nodes)), "frame_tab_nodes");
+        assertVisible(By.pkg(pkg).textContains(s("frame_title")), "frame_title");
+        assertVisible(By.pkg(pkg).text(s("frame_tab_nodes")), "frame_tab_nodes");
     }
 
     @Test
@@ -180,8 +184,8 @@ public class FrameEntryCompanionTest {
         assertFrameScreenVisible();
         capture("entry");
 
-        String nodes = s(R.string.frame_tab_nodes);
-        String members = s(R.string.frame_tab_members);
+        String nodes = s("frame_tab_nodes");
+        String members = s("frame_tab_members");
         assertNotNull("empty baseline Nodes: 0 missing", waitPattern(exact(nodes, 0), 15000));
         assertVisible(By.pkg(pkg).text(exact(nodes, 0)), nodes + ": 0");
         assertVisible(By.pkg(pkg).text(exact(members, 0)), members + ": 0");
@@ -189,7 +193,7 @@ public class FrameEntryCompanionTest {
         UiObject2 actions = device.wait(Until.findObject(By.pkg(pkg).desc("Actions")), 15000);
         assertNotNull("Actions button not found", actions);
         actions.click();
-        UiObject2 open = device.wait(Until.findObject(By.pkg(pkg).text(s(R.string.frame_open_design))), 15000);
+        UiObject2 open = device.wait(Until.findObject(By.pkg(pkg).text(s("frame_open_design"))), 15000);
         assertNotNull("Open Saved Model item not found", open);
         open.click();
         UiObject2 rec = device.wait(Until.findObject(By.pkg(pkg).text("QA_SENTINEL_FRAME_RECORD")), 15000);
