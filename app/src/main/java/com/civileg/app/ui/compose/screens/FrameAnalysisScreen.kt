@@ -1,5 +1,8 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.modeler.FrameMutationResult
+import com.civileg.app.domain.modeler.FrameInputValidation
+import com.civileg.app.domain.modeler.FrameInputValidation.Rule
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.*
@@ -810,7 +813,7 @@ private fun DrawingTab(
 // Tab 1: Nodes
 // ============================================================================
 @Composable
-private fun NodesTab(
+internal fun NodesTab(
     nodes: List<FrameNode>,
     members: List<FrameMember>,
     viewModel: FrameAnalysisViewModel
@@ -909,19 +912,15 @@ private fun NodesTab(
             title = { AppText(if (editingNode != null) stringResource(R.string.frame_edit_node) else stringResource(R.string.frame_add_node_title)) },
             text = {
                 Column {
-                    OutlinedTextField(
+                    FrameInputField(
                         value = editX, onValueChange = { editX = it },
-                        label = { AppText(stringResource(R.string.frame_x_m)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                        label = stringResource(R.string.frame_x_m),
+                        modifier = Modifier.fillMaxWidth(), rule = Rule.FINITE)
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
+                    FrameInputField(
                         value = editY, onValueChange = { editY = it },
-                        label = { AppText(stringResource(R.string.frame_y_m)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                        label = stringResource(R.string.frame_y_m),
+                        modifier = Modifier.fillMaxWidth(), rule = Rule.FINITE)
                     Spacer(modifier = Modifier.height(8.dp))
                     AppText(stringResource(R.string.frame_support_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(4.dp))
@@ -942,13 +941,14 @@ private fun NodesTab(
                     fillMaxWidth = false,
                     style = AppButtonStyle.Text,
                     onClick = {
-                        val x = editX.toDoubleOrNull() ?: return@AppButton
-                        val y = editY.toDoubleOrNull() ?: return@AppButton
-                        if (editingNode != null) {
+                        val x = FrameInputValidation.number(editX) ?: return@AppButton
+                        val y = FrameInputValidation.number(editY) ?: return@AppButton
+                        val mutation = if (editingNode != null) {
                             viewModel.updateNode(editingNode!!.id, x, y, editSupport)
                         } else {
                             viewModel.addNode(x, y, editSupport)
                         }
+                        if (mutation is FrameMutationResult.Rejected) return@AppButton
                         showAddDialog = false
                     }
                 )
@@ -969,7 +969,7 @@ private fun NodesTab(
 // Tab 2: Members
 // ============================================================================
 @Composable
-private fun MembersTab(
+internal fun MembersTab(
     nodes: List<FrameNode>,
     members: List<FrameMember>,
     settings: FrameAnalysisSettings,
@@ -1008,6 +1008,11 @@ private fun MembersTab(
         steelSectionExpanded = false
         showAddDialog = true
     }
+
+    val endpointI = FrameInputValidation.id(editNodeI)?.let { id -> nodes.find { it.id == id } }
+    val endpointJ = FrameInputValidation.id(editNodeJ)?.let { id -> nodes.find { it.id == id } }
+    val validEndpoints = endpointI != null && endpointJ != null && endpointI.id != endpointJ.id &&
+        kotlin.math.hypot(endpointI.x - endpointJ.x, endpointI.y - endpointJ.y).let { it.isFinite() && it > 1e-6 }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -1105,20 +1110,16 @@ private fun MembersTab(
             text = {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     item {
-                        OutlinedTextField(
+                        FrameInputField(
                             value = editNodeI, onValueChange = { editNodeI = it },
-                            label = { AppText(stringResource(R.string.frame_node_i)) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                            label = stringResource(R.string.frame_node_i),
+                            modifier = Modifier.fillMaxWidth(), rule = Rule.ID, contextualError = if (FrameInputValidation.id(editNodeI)?.let { id -> nodes.any { it.id == id } } == false) stringResource(R.string.frame_input_node_missing) else null)
                     }
                     item {
-                        OutlinedTextField(
+                        FrameInputField(
                             value = editNodeJ, onValueChange = { editNodeJ = it },
-                            label = { AppText(stringResource(R.string.frame_node_j)) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                            label = stringResource(R.string.frame_node_j),
+                            modifier = Modifier.fillMaxWidth(), rule = Rule.ID, contextualError = if (FrameInputValidation.id(editNodeJ)?.let { id -> nodes.any { it.id == id } } == false) stringResource(R.string.frame_input_node_missing) else if (FrameInputValidation.id(editNodeI) != null && FrameInputValidation.id(editNodeJ) != null && !validEndpoints) stringResource(R.string.frame_input_endpoints) else null)
                     }
                     item {
                         OutlinedTextField(value = editName, onValueChange = { editName = it },
@@ -1156,22 +1157,22 @@ private fun MembersTab(
                         }
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedTextField(value = editWidth, onValueChange = { editWidth = it },
-                                    label = { AppText(stringResource(R.string.frame_b_mm_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.weight(1f))
-                                OutlinedTextField(value = editDepth, onValueChange = { editDepth = it },
-                                    label = { AppText(stringResource(R.string.frame_h_mm_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.weight(1f))
+                                FrameInputField(value = editWidth, onValueChange = { editWidth = it },
+                                    label = stringResource(R.string.frame_b_mm_label),
+                                    modifier = Modifier.weight(1f), rule = Rule.POSITIVE)
+                                FrameInputField(value = editDepth, onValueChange = { editDepth = it },
+                                    label = stringResource(R.string.frame_h_mm_label),
+                                    modifier = Modifier.weight(1f), rule = Rule.POSITIVE, contextualError = if (FrameInputValidation.number(editDepth)?.let { it <= 60.0 } == true) stringResource(R.string.frame_input_cover) else null)
                             }
                         }
                         item {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedTextField(value = editFcu, onValueChange = { editFcu = it },
-                                    label = { AppText(stringResource(R.string.frame_fc_mpa_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    modifier = Modifier.weight(1f))
-                                OutlinedTextField(value = editFy, onValueChange = { editFy = it },
-                                    label = { AppText(stringResource(R.string.frame_fy_mpa_label)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    modifier = Modifier.weight(1f))
+                                FrameInputField(value = editFcu, onValueChange = { editFcu = it },
+                                    label = stringResource(R.string.frame_fc_mpa_label),
+                                    modifier = Modifier.weight(1f), rule = Rule.POSITIVE)
+                                FrameInputField(value = editFy, onValueChange = { editFy = it },
+                                    label = stringResource(R.string.frame_fy_mpa_label),
+                                    modifier = Modifier.weight(1f), rule = Rule.POSITIVE)
                             }
                         }
                     } else {
@@ -1233,8 +1234,8 @@ private fun MembersTab(
                             SteelSectionDrawing(
                                 sectionName = if (isAutoSection) "IPE 300" else editSteelSection,
                                 memberLengthMm = run {
-                                    val ni = nodes.find { it.id == editNodeI.toIntOrNull() }
-                                    val nj = nodes.find { it.id == editNodeJ.toIntOrNull() }
+                                    val ni = nodes.find { it.id == FrameInputValidation.id(editNodeI) }
+                                    val nj = nodes.find { it.id == FrameInputValidation.id(editNodeJ) }
                                     if (ni != null && nj != null) {
                                         (hypot(nj.x - ni.x, nj.y - ni.y) * 1000.0)
                                             .takeIf { it > 1.0 } ?: 6000.0
@@ -1255,14 +1256,16 @@ private fun MembersTab(
                     fillMaxWidth = false,
                     style = AppButtonStyle.Text,
                     onClick = {
-                        val nI = editNodeI.toIntOrNull() ?: return@AppButton
-                        val nJ = editNodeJ.toIntOrNull() ?: return@AppButton
+                        val nI = FrameInputValidation.id(editNodeI) ?: return@AppButton
+                        val nJ = FrameInputValidation.id(editNodeJ) ?: return@AppButton
+                        if (!validEndpoints) return@AppButton
+                        if (editMaterial == FrameMaterialType.Concrete && (listOf(editWidth, editDepth, editFcu, editFy).any { !FrameInputValidation.valid(it, Rule.POSITIVE) } || (FrameInputValidation.number(editDepth) ?: 0.0) <= 60.0)) return@AppButton
                         val concreteSec = if (editMaterial == FrameMaterialType.Concrete)
                             ConcreteSectionProps(
-                                width = editWidth.toDoubleOrNull() ?: 250.0,
-                                depth = editDepth.toDoubleOrNull() ?: 500.0,
-                                fcu = editFcu.toDoubleOrNull() ?: 25.0,
-                                fy = editFy.toDoubleOrNull() ?: 400.0
+                                width = FrameInputValidation.number(editWidth)!!,
+                                depth = FrameInputValidation.number(editDepth)!!,
+                                fcu = FrameInputValidation.number(editFcu)!!,
+                                fy = FrameInputValidation.number(editFy)!!
                             ) else null
                         val steelSectionChoice = if (
                             editMaterial == FrameMaterialType.Steel &&
@@ -1273,15 +1276,16 @@ private fun MembersTab(
                         if (editingMemberId != null) {
                             val existing = members.find { it.id == editingMemberId }
                             if (existing != null) {
-                                viewModel.updateMember(existing.copy(
+                                val mutation = viewModel.updateMember(existing.copy(
                                     nodeI = nI, nodeJ = nJ, materialType = editMaterial,
                                     memberType = editMemberType, concreteSection = concreteSec,
                                     steelSectionName = steelSectionChoice,
                                     name = editName
                                 ))
+                                if (mutation is FrameMutationResult.Rejected) return@AppButton
                             }
                         } else {
-                            viewModel.addMember(nI, nJ, editMaterial, editMemberType, concreteSec, steelSectionChoice, editName)
+                            if (viewModel.addMember(nI, nJ, editMaterial, editMemberType, concreteSec, steelSectionChoice, editName) is FrameMutationResult.Rejected) return@AppButton
                         }
                         editingMemberId = null
                         showAddDialog = false
@@ -1307,7 +1311,7 @@ private fun MembersTab(
 // Tab 3: Loads
 // ============================================================================
 @Composable
-private fun LoadsTab(
+internal fun LoadsTab(
     nodes: List<FrameNode>,
     members: List<FrameMember>,
     nodalLoads: List<NodalLoad>,
@@ -1329,6 +1333,13 @@ private fun LoadsTab(
     var mlType by remember { mutableStateOf(MemberLoadType.UDL) }
     var mlValue by remember { mutableStateOf("20") }
     var mlPosition by remember { mutableStateOf("0") }
+
+    val targetMember = FrameInputValidation.id(mlMemberId)?.let { id -> members.find { it.id == id } }
+    val targetLength = targetMember?.getLength(nodes) ?: 0.0
+    val validPosition = FrameInputValidation.positionValid(mlType, mlPosition, targetLength)
+    val positionError = if (mlType == MemberLoadType.Trapezoidal)
+        stringResource(R.string.frame_input_ramp, (targetLength / 2.0).toString())
+        else stringResource(R.string.frame_input_position, targetLength.toString())
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Tab for Nodal vs Member loads
@@ -1415,17 +1426,17 @@ private fun LoadsTab(
             title = { AppText(stringResource(R.string.frame_load_nodal_title)) },
             text = {
                 Column {
-                    OutlinedTextField(value = nlNodeId, onValueChange = { nlNodeId = it },
-                        label = { AppText(stringResource(R.string.frame_load_node_id)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                    FrameInputField(value = nlNodeId, onValueChange = { nlNodeId = it },
+                        label = stringResource(R.string.frame_load_node_id), modifier = Modifier.fillMaxWidth(), rule = Rule.ID, contextualError = if (FrameInputValidation.id(nlNodeId)?.let { id -> nodes.any { it.id == id } } == false) stringResource(R.string.frame_input_node_missing) else null)
                     Spacer(Modifier.height(4.dp))
-                    OutlinedTextField(value = nlFx, onValueChange = { nlFx = it },
-                        label = { AppText(stringResource(R.string.frame_load_fx)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                    FrameInputField(value = nlFx, onValueChange = { nlFx = it },
+                        label = stringResource(R.string.frame_load_fx), modifier = Modifier.fillMaxWidth(), rule = Rule.FINITE)
                     Spacer(Modifier.height(4.dp))
-                    OutlinedTextField(value = nlFy, onValueChange = { nlFy = it },
-                        label = { AppText(stringResource(R.string.frame_load_fy)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                    FrameInputField(value = nlFy, onValueChange = { nlFy = it },
+                        label = stringResource(R.string.frame_load_fy), modifier = Modifier.fillMaxWidth(), rule = Rule.FINITE)
                     Spacer(Modifier.height(4.dp))
-                    OutlinedTextField(value = nlMz, onValueChange = { nlMz = it },
-                        label = { AppText(stringResource(R.string.frame_load_mz)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                    FrameInputField(value = nlMz, onValueChange = { nlMz = it },
+                        label = stringResource(R.string.frame_load_mz), modifier = Modifier.fillMaxWidth(), rule = Rule.FINITE)
                 }
             },
             confirmButton = {
@@ -1434,8 +1445,9 @@ private fun LoadsTab(
                     fillMaxWidth = false,
                     style = AppButtonStyle.Text,
                     onClick = {
-                        val nid = nlNodeId.toIntOrNull() ?: return@AppButton
-                        viewModel.addNodalLoad(nid, nlFx.toDoubleOrNull() ?: 0.0, nlFy.toDoubleOrNull() ?: 0.0, nlMz.toDoubleOrNull() ?: 0.0, "DL")
+                        val nid = FrameInputValidation.id(nlNodeId) ?: return@AppButton
+                        if (nodes.none { it.id == nid } || listOf(nlFx, nlFy, nlMz).any { !FrameInputValidation.valid(it, Rule.FINITE) }) return@AppButton
+                        if (viewModel.addNodalLoad(nid, FrameInputValidation.number(nlFx)!!, FrameInputValidation.number(nlFy)!!, FrameInputValidation.number(nlMz)!!, "DL") is FrameMutationResult.Rejected) return@AppButton
                         showNodalDialog = false
                     }
                 )
@@ -1458,8 +1470,8 @@ private fun LoadsTab(
             title = { AppText(stringResource(R.string.frame_load_member_title)) },
             text = {
                 Column {
-                    OutlinedTextField(value = mlMemberId, onValueChange = { mlMemberId = it },
-                        label = { AppText(stringResource(R.string.frame_load_member_id)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                    FrameInputField(value = mlMemberId, onValueChange = { mlMemberId = it },
+                        label = stringResource(R.string.frame_load_member_id), modifier = Modifier.fillMaxWidth(), rule = Rule.ID, contextualError = if (FrameInputValidation.id(mlMemberId)?.let { id -> members.any { it.id == id } } == false) stringResource(R.string.frame_input_member_missing) else null)
                     Spacer(Modifier.height(4.dp))
                     AppText(stringResource(R.string.frame_load_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Row {
@@ -1469,12 +1481,12 @@ private fun LoadsTab(
                         }
                     }
                     Spacer(Modifier.height(4.dp))
-                    OutlinedTextField(value = mlValue, onValueChange = { mlValue = it },
-                        label = { AppText(stringResource(R.string.frame_load_value)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
-                    if (mlType != MemberLoadType.UDL) {
+                    FrameInputField(value = mlValue, onValueChange = { mlValue = it },
+                        label = stringResource(R.string.frame_load_value), modifier = Modifier.fillMaxWidth(), rule = Rule.FINITE)
+                    if (mlType == MemberLoadType.PointLoad || mlType == MemberLoadType.Moment || mlType == MemberLoadType.Trapezoidal) {
                         Spacer(Modifier.height(4.dp))
-                        OutlinedTextField(value = mlPosition, onValueChange = { mlPosition = it },
-                            label = { AppText(stringResource(R.string.frame_load_position)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth())
+                        FrameInputField(value = mlPosition, onValueChange = { mlPosition = it },
+                            label = stringResource(R.string.frame_load_position), modifier = Modifier.fillMaxWidth(), rule = Rule.FINITE, contextualError = if (!validPosition) positionError else null)
                     }
                 }
             },
@@ -1484,8 +1496,9 @@ private fun LoadsTab(
                     fillMaxWidth = false,
                     style = AppButtonStyle.Text,
                     onClick = {
-                        val mid = mlMemberId.toIntOrNull() ?: return@AppButton
-                        viewModel.addMemberLoad(mid, mlType, mlValue.toDoubleOrNull() ?: 0.0, mlPosition.toDoubleOrNull() ?: 0.0, "DL")
+                        val mid = FrameInputValidation.id(mlMemberId) ?: return@AppButton
+                        if (targetMember == null || !validPosition || !FrameInputValidation.valid(mlValue, Rule.FINITE)) return@AppButton
+                        if (viewModel.addMemberLoad(mid, mlType, FrameInputValidation.number(mlValue)!!, if (mlType == MemberLoadType.UDL || mlType == MemberLoadType.LinearVarying) 0.0 else FrameInputValidation.number(mlPosition)!!, "DL") is FrameMutationResult.Rejected) return@AppButton
                         showMemberDialog = false
                     }
                 )

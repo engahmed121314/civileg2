@@ -87,6 +87,24 @@ object ModelerClipboard {
     ): PasteResult {
         if (content.isEmpty) return PasteResult()
 
+        require(offsetMeters.isFinite())
+        fun capacity(ids: List<Int>, count: Int) {
+            val max = ids.maxOrNull() ?: 0
+            require(max >= 0 && max.toLong() + count <= Int.MAX_VALUE.toLong()) { "Paste IDs exhausted" }
+        }
+        capacity(existingNodes.map { it.id }, content.nodes.size)
+        capacity(existingMembers.map { it.id }, content.members.size)
+        capacity(existingSlabs.map { it.id }, content.slabs.size)
+        require(content.nodes.map { it.id }.distinct().size == content.nodes.size)
+        require(content.members.map { it.id }.distinct().size == content.members.size)
+        require(content.slabs.map { it.id }.distinct().size == content.slabs.size)
+        val sourceNodes = content.nodes.map { it.id }.toSet()
+        val sourceMembers = content.members.map { it.id }.toSet()
+        require(content.members.all { it.nodeI in sourceNodes && it.nodeJ in sourceNodes })
+        require(content.nodalLoads.all { it.nodeId in sourceNodes })
+        require(content.memberLoads.all { it.memberId in sourceMembers })
+        require(content.slabs.all { panel -> panel.nodeIds.all { it in sourceNodes } })
+
         val nodeIdMap = LinkedHashMap<Int, Int>()
         var nextNodeId = (existingNodes.maxOfOrNull { it.id } ?: 0) + 1
         val newNodes = content.nodes.map { node ->

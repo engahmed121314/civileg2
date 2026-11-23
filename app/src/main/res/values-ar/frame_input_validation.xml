@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="frame_input_finite">أدخل رقمًا محدودًا مثل -10 أو 2.5. لا تترك هذه الخانة فارغة.</string>
+  <string name="frame_input_positive">أدخل رقمًا محدودًا أكبر من صفر بالوحدة الموضحة.</string>
+  <string name="frame_input_nonnegative">أدخل صفرًا أو رقمًا موجبًا محدودًا بالوحدة الموضحة.</string>
+  <string name="frame_input_id">أدخل رقم تعريف صحيحًا موجبًا لعنصر موجود.</string>
+  <string name="frame_input_required">أدخل حالة حمل مثل DL أو LL.</string>
+  <string name="frame_input_node_missing">هذه العقدة غير موجودة. استخدم رقمًا من قائمة العقد.</string>
+  <string name="frame_input_member_missing">هذا العضو غير موجود. استخدم رقمًا من قائمة الأعضاء.</string>
+  <string name="frame_input_endpoints">اختر عقدتين مختلفتين موجودتين ولهما إحداثيات مختلفة.</string>
+  <string name="frame_input_position">أدخل موقعًا بين 0 و%1$s متر مقاسًا من عقدة البداية.</string>
+  <string name="frame_input_ramp">أدخل طول ارتفاع أكبر من صفر ولا يزيد على %1$s متر، أي نصف طول العضو.</string>
+  <string name="frame_input_steel">اختر الوضع التلقائي أو قطاعًا من قائمة القطاعات الحديدية.</string>
+  <string name="frame_input_cover">أدخل غطاءً يترك عمقًا فعالًا موجبًا: العمق ناقص الغطاء ناقص 10 مم.</string>
+</resources>

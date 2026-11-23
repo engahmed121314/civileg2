@@ -443,7 +443,8 @@ object FrameAnalysisEngine {
                     val cs = m.concreteSection
                     if (cs == null || !cs.width.isFinite() || !cs.depth.isFinite() ||
                         cs.width <= 0.0 || cs.depth <= 0.0 ||
-                        !cs.fcu.isFinite() || cs.fcu <= 0.0) {
+                        !cs.fcu.isFinite() || cs.fcu <= 0.0 || !cs.fy.isFinite() || cs.fy <= 0.0 ||
+                        !cs.cover.isFinite() || cs.cover < 0.0 || cs.effectiveDepth <= 0.0) {
                         return "مقطع خرساني غير صالح للعضو #${m.id} (b=${cs?.width}, h=${cs?.depth}, fcu=${cs?.fcu}) / Invalid concrete section on member #${m.id}"
                     }
                 }
@@ -469,7 +470,7 @@ object FrameAnalysisEngine {
             if (ml.loadType == MemberLoadType.PointLoad || ml.loadType == MemberLoadType.Moment) {
                 val member = members.find { it.id == ml.memberId } ?: continue
                 val L = member.getLength(nodes)
-                if (ml.position < -1e-9 || ml.position > L + 1e-9) {
+                if (!ml.position.isFinite() || ml.position < -1e-9 || ml.position > L + 1e-9) {
                     return "موقع الحمل (${ml.position} م) خارج طول العضو #${ml.memberId} ($L م) / Load position out of range on member #${ml.memberId}"
                 }
             }
@@ -478,7 +479,7 @@ object FrameAnalysisEngine {
             if (ml.loadType == MemberLoadType.Trapezoidal) {
                 val member = members.find { it.id == ml.memberId } ?: continue
                 val L = member.getLength(nodes)
-                if (ml.position <= 0.0 || ml.position > L / 2.0 + 1e-9) {
+                if (!ml.position.isFinite() || ml.position <= 0.0 || ml.position > L / 2.0 + 1e-9) {
                     return "طول ارتفاع شبه المنحرف (${ml.position} م) غير صالح للعضو #${ml.memberId} (المطلوب 0 < a ≤ L/2 = ${"%.3f".format(L / 2.0)} م) / Trapezoidal rise out of range on member #${ml.memberId}"
                 }
             }

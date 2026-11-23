@@ -1,5 +1,10 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.modeler.FrameMutationResult
+import com.civileg.app.domain.modeler.FrameInputValidation
+import com.civileg.app.domain.modeler.FrameInputValidation.Rule
+import androidx.compose.ui.res.stringResource
+import com.civileg.app.R
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -91,7 +96,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -100,7 +104,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 
-import com.civileg.app.R
 import com.civileg.app.domain.entities.ConcreteSectionProps
 import com.civileg.app.domain.entities.FrameMaterialType
 import com.civileg.app.domain.entities.FrameMember
@@ -318,8 +321,8 @@ fun FrameModelerTab(
             }
             ModelerTool.Joint -> {
                 if (tap.nodeId == null) {
-                    val id = viewModel.addNode(tap.worldX, tap.worldY)
-                    viewModel.selectNode(id)
+                    val result = viewModel.addNode(tap.worldX, tap.worldY)
+                    if (result is FrameMutationResult.Applied) viewModel.selectNode(result.value)
                 } else {
                     viewModel.selectNode(tap.nodeId)
                 }
@@ -339,7 +342,7 @@ fun FrameModelerTab(
                             FrameMemberType.Beam
                         }
                         val id = viewModel.addMemberBetween(start, nodeId, type)
-                        id?.let { viewModel.selectMember(it) }
+                        if (id is FrameMutationResult.Applied) viewModel.selectMember(id.value)
                     }
                     pendingStart = null
                 }
@@ -699,27 +702,9 @@ fun FrameModelerTab(
                 },
                 onMemberDragEnd = { endNodeId, x, y ->
                     val startNodeId = pendingStart
-                    val startNode = nodes.find { it.id == startNodeId }
-                    if (startNodeId != null && startNode != null &&
-                        kotlin.math.hypot(x - startNode.x, y - startNode.y) > 1e-6
-                    ) {
-                        val endId = endNodeId ?: viewModel.addNode(x, y)
-                        if (endId != startNodeId) {
-                            val endNode = nodes.find { it.id == endId }
-                            val isColumn = if (endNode != null) {
-                                abs(startNode.x - endNode.x) < 1e-6
-                            } else {
-                                abs(startNode.x - x) < 1e-6
-                            }
-                            val memberId = viewModel.addMemberBetween(
-                                startNodeId,
-                                endId,
-                                if (isColumn) FrameMemberType.Column else FrameMemberType.Beam
-                            )
-                            if (memberId != null) {
-                                viewModel.selectMember(memberId)
-                            }
-                        }
+                    if (startNodeId != null) {
+                        val result = viewModel.createMemberFromDrag(startNodeId,endNodeId,x,y)
+                        if (result is FrameMutationResult.Applied) viewModel.selectMember(result.value)
                     }
                     pendingStart = null
                     memberDragPreview = null
@@ -913,8 +898,7 @@ fun FrameModelerTab(
             nodeId = nodeId,
             onDismiss = { loadNodeTarget = null },
             onConfirm = { fx, fy, mz, loadCase ->
-                viewModel.addNodalLoad(nodeId, fx, fy, mz, loadCase)
-                loadNodeTarget = null
+                if (viewModel.addNodalLoad(nodeId, fx, fy, mz, loadCase) !is FrameMutationResult.Rejected) loadNodeTarget = null
             }
         )
     }
@@ -922,10 +906,10 @@ fun FrameModelerTab(
     loadMemberTarget?.let { memberId ->
         MemberLoadDialog(
             memberId = memberId,
+            memberLengthM = members.find { it.id == memberId }?.let { memberLength(it, nodes) } ?: 0.0,
             onDismiss = { loadMemberTarget = null },
             onConfirm = { type, value, position, loadCase ->
-                viewModel.addMemberLoad(memberId, type, value, position, loadCase)
-                loadMemberTarget = null
+                if (viewModel.addMemberLoad(memberId, type, value, position, loadCase) !is FrameMutationResult.Rejected) loadMemberTarget = null
             }
         )
     }
@@ -936,11 +920,8 @@ fun FrameModelerTab(
             initial = load,
             onDismiss = { editingNodalLoad = null },
             onConfirm = { fx, fy, mz, loadCase ->
-                viewModel.updateNodalLoad(
-                    index,
-                    load.copy(fx = fx, fy = fy, mz = mz, loadCase = loadCase)
-                )
-                editingNodalLoad = null
+                val result = viewModel.updateNodalLoad(index,load.copy(fx = fx, fy = fy, mz = mz, loadCase = loadCase))
+                if (result !is FrameMutationResult.Rejected) editingNodalLoad = null
             }
         )
     }
@@ -948,14 +929,12 @@ fun FrameModelerTab(
     editingMemberLoad?.let { (index, load) ->
         MemberLoadDialog(
             memberId = load.memberId,
+            memberLengthM = members.find { it.id == load.memberId }?.let { memberLength(it, nodes) } ?: 0.0,
             initial = load,
             onDismiss = { editingMemberLoad = null },
             onConfirm = { type, value, position, loadCase ->
-                viewModel.updateMemberLoad(
-                    index,
-                    load.copy(loadType = type, value = value, position = position, loadCase = loadCase)
-                )
-                editingMemberLoad = null
+                val result = viewModel.updateMemberLoad(index,load.copy(loadType = type, value = value, position = position, loadCase = loadCase))
+                if (result !is FrameMutationResult.Rejected) editingMemberLoad = null
             }
         )
     }
@@ -966,8 +945,7 @@ fun FrameModelerTab(
             memberLengthM = memberLength(member, nodes),
             onDismiss = { editingMemberProps = null },
             onSave = { updated ->
-                viewModel.updateMember(updated)
-                editingMemberProps = null
+                if (viewModel.updateMember(updated) !is FrameMutationResult.Rejected) editingMemberProps = null
             }
         )
     }
@@ -997,7 +975,7 @@ fun FrameModelerTab(
                     thicknessMm = thickness,
                     distribution = distribution
                 )
-                if (id != null) {
+                if (id is FrameMutationResult.Applied) {
                     slabDraft = null
                     pendingSlabNodes = emptyList()
                     tool = ModelerTool.Select
@@ -1011,8 +989,7 @@ fun FrameModelerTab(
             panel = panel,
             onDismiss = { editSlabTarget = null },
             onSave = { updated ->
-                viewModel.updateSlabPanel(updated)
-                editSlabTarget = null
+                if (viewModel.updateSlabPanel(updated) !is FrameMutationResult.Rejected) editSlabTarget = null
             },
             onDelete = {
                 viewModel.removeSlabPanel(panel.id)
@@ -1022,7 +999,7 @@ fun FrameModelerTab(
 }
 
 @Composable
-private fun MemberPropsDialog(
+internal fun MemberPropsDialog(
     member: FrameMember,
     onDismiss: () -> Unit,
     onSave: (FrameMember) -> Unit
@@ -1071,15 +1048,17 @@ private fun MemberPropsDialog(
                 Spacer(Modifier.height(6.dp))
                 if (material == FrameMaterialType.Concrete) {
                     Row {
-                        NumberField(widthMm, { widthMm = it }, t("العرض (مم)", "Width (mm)"), Modifier.weight(1f))
+                        NumberField(widthMm, { widthMm = it }, t("العرض (مم)", "Width (mm)"), Modifier.weight(1f), rule = Rule.POSITIVE)
                         Spacer(Modifier.width(6.dp))
-                        NumberField(depthMm, { depthMm = it }, t("الارتفاع (مم)", "Depth (mm)"), Modifier.weight(1f))
+                        NumberField(depthMm, { depthMm = it }, t("الارتفاع (مم)", "Depth (mm)"), Modifier.weight(1f), rule = Rule.POSITIVE, contextualError = if (FrameInputValidation.number(depthMm)?.let { it - (member.concreteSection?.cover ?: 50.0) - 10.0 <= 0.0 } == true) stringResource(R.string.frame_input_cover) else null)
                     }
                 } else {
                     OutlinedTextField(
                         value = steelSection,
                         onValueChange = { steelSection = it },
                         label = { AppText(t("المقطع الحديدي", "Steel Section")) },
+                        isError = !SteelFrameDesign.isAutoSection(steelSection) && SteelTables.getSectionByName(steelSection.trim()) == null,
+                        supportingText = { if (!SteelFrameDesign.isAutoSection(steelSection) && SteelTables.getSectionByName(steelSection.trim()) == null) Text(stringResource(R.string.frame_input_steel)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -1092,12 +1071,14 @@ private fun MemberPropsDialog(
                 fillMaxWidth = false,
                 style = AppButtonStyle.Text,
                 onClick = {
-                    val w = widthMm.toDoubleOrNull() ?: 250.0
-                    val d = depthMm.toDoubleOrNull() ?: 500.0
+                    if (material == FrameMaterialType.Concrete && (listOf(widthMm, depthMm).any { !FrameInputValidation.valid(it, Rule.POSITIVE) } || (FrameInputValidation.number(depthMm) ?: 0.0) - (member.concreteSection?.cover ?: 50.0) - 10.0 <= 0.0)) return@AppButton
+                    if (material == FrameMaterialType.Steel && !SteelFrameDesign.isAutoSection(steelSection) && SteelTables.getSectionByName(steelSection.trim()) == null) return@AppButton
+                    val w = FrameInputValidation.number(widthMm)
+                    val d = FrameInputValidation.number(depthMm)
                     val updated = member.copy(
                         materialType = material,
                         memberType = type,
-                        concreteSection = if (material == FrameMaterialType.Concrete) ConcreteSectionProps(w, d) else null,
+                        concreteSection = if (material == FrameMaterialType.Concrete) (member.concreteSection ?: ConcreteSectionProps(w!!, d!!)).copy(width = w!!, depth = d!!) else null,
                         steelSectionName = if (material == FrameMaterialType.Steel) {
                             steelSection.trim().takeUnless { SteelFrameDesign.isAutoSection(it) }
                         } else null
@@ -1150,21 +1131,19 @@ private fun NodeInspector(
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                NumberField(xText, { xText = it }, "X (m)", Modifier.weight(1f))
+                NumberField(xText, { xText = it }, "X (m)", Modifier.weight(1f), rule = Rule.FINITE)
                 Spacer(Modifier.width(6.dp))
-                NumberField(yText, { yText = it }, "Y (m)", Modifier.weight(1f))
+                NumberField(yText, { yText = it }, "Y (m)", Modifier.weight(1f), rule = Rule.FINITE)
                 Spacer(Modifier.width(6.dp))
                 AppButton(
                     label = t("تطبيق", "Apply"),
-                    enabled = xText.toDoubleOrNull() != null &&
-                        yText.toDoubleOrNull() != null &&
-                        (xText.toDoubleOrNull() != node.x || yText.toDoubleOrNull() != node.y),
+                    enabled = xText != formatCoord(node.x) || yText != formatCoord(node.y),
                     style = AppButtonStyle.Text,
                     fillMaxWidth = false,
                     fontSize = 12.sp,
                     onClick = {
-                        val x = xText.toDoubleOrNull() ?: return@AppButton
-                        val y = yText.toDoubleOrNull() ?: return@AppButton
+                        val x = FrameInputValidation.number(xText) ?: return@AppButton
+                        val y = FrameInputValidation.number(yText) ?: return@AppButton
                         onUpdate(x, y)
                     }
                 )
@@ -1352,7 +1331,7 @@ private fun MemberInspector(
 }
 
 @Composable
-private fun MemberPropertiesDialog(
+internal fun MemberPropertiesDialog(
     member: FrameMember,
     memberLengthM: Double,
     onDismiss: () -> Unit,
@@ -1373,16 +1352,16 @@ private fun MemberPropertiesDialog(
     var steelExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
-    val widthValue = width.toDoubleOrNull()
-    val depthValue = depth.toDoubleOrNull()
-    val fcuValue = fcu.toDoubleOrNull()
-    val fyValue = fy.toDoubleOrNull()
-    val coverValue = cover.toDoubleOrNull()
+    val widthValue = FrameInputValidation.number(width)
+    val depthValue = FrameInputValidation.number(depth)
+    val fcuValue = FrameInputValidation.number(fcu)
+    val fyValue = FrameInputValidation.number(fy)
+    val coverValue = FrameInputValidation.number(cover)
     val concreteValid = widthValue != null && widthValue > 0.0 &&
         depthValue != null && depthValue > 0.0 &&
         fcuValue != null && fcuValue > 0.0 &&
         fyValue != null && fyValue > 0.0 &&
-        coverValue != null && coverValue >= 0.0
+        coverValue != null && coverValue >= 0.0 && depthValue - coverValue - 10.0 > 0.0
     val isValid = if (materialType == FrameMaterialType.Concrete) {
         concreteValid
     } else {
@@ -1429,18 +1408,18 @@ private fun MemberPropertiesDialog(
                 if (materialType == FrameMaterialType.Concrete) {
                     Spacer(Modifier.height(6.dp))
                     Row {
-                        NumberField(width, { width = it }, t("العرض b (مم)", "Width b (mm)"), Modifier.weight(1f))
+                        NumberField(width, { width = it }, t("العرض b (مم)", "Width b (mm)"), Modifier.weight(1f), rule = Rule.POSITIVE)
                         Spacer(Modifier.width(6.dp))
-                        NumberField(depth, { depth = it }, t("العمق h (مم)", "Depth h (mm)"), Modifier.weight(1f))
+                        NumberField(depth, { depth = it }, t("العمق h (مم)", "Depth h (mm)"), Modifier.weight(1f), rule = Rule.POSITIVE)
                     }
                     Spacer(Modifier.height(6.dp))
                     Row {
-                        NumberField(fcu, { fcu = it }, t("fcu (MPa)", "fcu (MPa)"), Modifier.weight(1f))
+                        NumberField(fcu, { fcu = it }, t("fcu (MPa)", "fcu (MPa)"), Modifier.weight(1f), rule = Rule.POSITIVE)
                         Spacer(Modifier.width(6.dp))
-                        NumberField(fy, { fy = it }, t("fy (MPa)", "fy (MPa)"), Modifier.weight(1f))
+                        NumberField(fy, { fy = it }, t("fy (MPa)", "fy (MPa)"), Modifier.weight(1f), rule = Rule.POSITIVE)
                     }
                     Spacer(Modifier.height(6.dp))
-                    NumberField(cover, { cover = it }, t("الغطاء (مم)", "Cover (mm)"), Modifier.fillMaxWidth())
+                    NumberField(cover, { cover = it }, t("الغطاء (مم)", "Cover (mm)"), Modifier.fillMaxWidth(), rule = Rule.NON_NEGATIVE, contextualError = if (FrameInputValidation.number(cover)?.let { c -> FrameInputValidation.number(depth)?.let { d -> d - c - 10.0 <= 0.0 } } == true) stringResource(R.string.frame_input_cover) else null)
                 } else {
                     val isAutoSection = SteelFrameDesign.isAutoSection(steelSectionName)
                     Spacer(Modifier.height(6.dp))
@@ -1521,8 +1500,9 @@ private fun MemberPropertiesDialog(
                 label = t("حفظ", "Save"),
                 fillMaxWidth = false,
                 style = AppButtonStyle.Text,
-                enabled = isValid,
+                enabled = true,
                 onClick = {
+                    if (!isValid) return@AppButton
                     val section = if (materialType == FrameMaterialType.Concrete) {
                         ConcreteSectionProps(
                             width = widthValue ?: existingSection.width,
@@ -1703,24 +1683,13 @@ private fun snapLabel(mm: Int): String =
     if (mm == 0) "Off" else gridLabel(mm)
 
 @Composable
-private fun NumberField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    modifier: Modifier = Modifier
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { AppText(label, fontSize = 12.sp) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        singleLine = true,
-        modifier = modifier
-    )
+private fun NumberField(value: String, onValueChange: (String) -> Unit, label: String,
+    modifier: Modifier = Modifier, rule: Rule = Rule.FINITE, contextualError: String? = null) {
+    FrameInputField(value, onValueChange, label, modifier, rule, contextualError)
 }
 
 @Composable
-private fun NodalLoadDialog(
+internal fun NodalLoadDialog(
     nodeId: Int,
     initial: NodalLoad? = null,
     onDismiss: () -> Unit,
@@ -1741,15 +1710,15 @@ private fun NodalLoadDialog(
         text = {
             Column {
                 Row {
-                    NumberField(fx, { fx = it }, "Fx (kN)", Modifier.weight(1f))
+                    NumberField(fx, { fx = it }, "Fx (kN)", Modifier.weight(1f), rule = Rule.FINITE)
                     Spacer(Modifier.width(6.dp))
-                    NumberField(fy, { fy = it }, t("Fy (kN)", "Fy (kN)"), Modifier.weight(1f))
+                    NumberField(fy, { fy = it }, t("Fy (kN)", "Fy (kN)"), Modifier.weight(1f), rule = Rule.FINITE)
                 }
                 Spacer(Modifier.height(6.dp))
                 Row {
-                    NumberField(mz, { mz = it }, t("Mz (kN·m)", "Mz (kN·m)"), Modifier.weight(1f))
+                    NumberField(mz, { mz = it }, t("Mz (kN·m)", "Mz (kN·m)"), Modifier.weight(1f), rule = Rule.FINITE)
                     Spacer(Modifier.width(6.dp))
-                    NumberField(loadCase, { loadCase = it }, t("الحمل", "Case"), Modifier.weight(1f))
+                    NumberField(loadCase, { loadCase = it }, t("الحمل", "Case"), Modifier.weight(1f), rule = Rule.REQUIRED)
                 }
             }
         },
@@ -1759,11 +1728,12 @@ private fun NodalLoadDialog(
                 fillMaxWidth = false,
                 style = AppButtonStyle.Text,
                 onClick = {
+                    if (listOf(fx, fy, mz).any { !FrameInputValidation.valid(it, Rule.FINITE) } || loadCase.isBlank()) return@AppButton
                     onConfirm(
-                        fx.toDoubleOrNull() ?: 0.0,
-                        fy.toDoubleOrNull() ?: 0.0,
-                        mz.toDoubleOrNull() ?: 0.0,
-                        loadCase.ifBlank { "DL" }
+                        FrameInputValidation.number(fx)!!,
+                        FrameInputValidation.number(fy)!!,
+                        FrameInputValidation.number(mz)!!,
+                        loadCase.trim()
                     )
                 }
             )
@@ -1780,8 +1750,9 @@ private fun NodalLoadDialog(
 }
 
 @Composable
-private fun MemberLoadDialog(
+internal fun MemberLoadDialog(
     memberId: Int,
+    memberLengthM: Double,
     initial: MemberLoad? = null,
     onDismiss: () -> Unit,
     onConfirm: (MemberLoadType, Double, Double, String) -> Unit
@@ -1791,6 +1762,10 @@ private fun MemberLoadDialog(
     var position by remember(initial) { mutableStateOf(initial?.position?.let(::formatCoord) ?: "0") }
     var loadCase by remember(initial) { mutableStateOf(initial?.loadCase ?: "DL") }
     var typeExpanded by remember { mutableStateOf(false) }
+    val validPosition = FrameInputValidation.positionValid(loadType, position, memberLengthM)
+    val positionError = if (loadType == MemberLoadType.Trapezoidal)
+        stringResource(R.string.frame_input_ramp, (memberLengthM / 2.0).toString())
+        else stringResource(R.string.frame_input_position, memberLengthM.toString())
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -1840,12 +1815,12 @@ private fun MemberLoadDialog(
                 }
                 Spacer(Modifier.height(6.dp))
                 Row {
-                    NumberField(value, { value = it }, t("القيمة", "Value"), Modifier.weight(1f))
+                    NumberField(value, { value = it }, t("القيمة", "Value"), Modifier.weight(1f), rule = Rule.FINITE)
                     Spacer(Modifier.width(6.dp))
-                    NumberField(position, { position = it }, t("الموقع (م)", "Position (m)"), Modifier.weight(1f))
+                    if (loadType == MemberLoadType.PointLoad || loadType == MemberLoadType.Moment || loadType == MemberLoadType.Trapezoidal) NumberField(position, { position = it }, t("الموقع (م)", "Position (m)"), Modifier.weight(1f), rule = Rule.FINITE, contextualError = if (!validPosition) positionError else null)
                 }
                 Spacer(Modifier.height(6.dp))
-                NumberField(loadCase, { loadCase = it }, t("الحمل", "Case"), Modifier.fillMaxWidth())
+                NumberField(loadCase, { loadCase = it }, t("الحمل", "Case"), Modifier.fillMaxWidth(), rule = Rule.REQUIRED)
             }
         },
         confirmButton = {
@@ -1854,11 +1829,12 @@ private fun MemberLoadDialog(
                 fillMaxWidth = false,
                 style = AppButtonStyle.Text,
                 onClick = {
+                    if (!validPosition || !FrameInputValidation.valid(value, Rule.FINITE) || loadCase.isBlank()) return@AppButton
                     onConfirm(
                         loadType,
-                        value.toDoubleOrNull() ?: 0.0,
-                        position.toDoubleOrNull() ?: 0.0,
-                        loadCase.ifBlank { "DL" }
+                        FrameInputValidation.number(value)!!,
+                        if (loadType == MemberLoadType.UDL || loadType == MemberLoadType.LinearVarying) 0.0 else FrameInputValidation.number(position)!!,
+                        loadCase.trim()
                     )
                 }
             )
@@ -1919,7 +1895,7 @@ private fun HingeDialog(
 }
 
 @Composable
-private fun SlabDialog(
+internal fun SlabDialog(
     onDismiss: () -> Unit,
     onConfirm: (Double, Double, String, SlabDistribution) -> Unit
 ) {
@@ -1933,12 +1909,12 @@ private fun SlabDialog(
         text = {
             Column {
                 Row {
-                    NumberField(thickness, { thickness = it }, t("السماكة (مم)", "Thickness (mm)"), Modifier.weight(1f))
+                    NumberField(thickness, { thickness = it }, t("السماكة (مم)", "Thickness (mm)"), Modifier.weight(1f), rule = Rule.POSITIVE)
                     Spacer(Modifier.width(6.dp))
-                    NumberField(load, { load = it }, t("الحمل (kN/m²)", "Load (kN/m²)"), Modifier.weight(1f))
+                    NumberField(load, { load = it }, t("الحمل (kN/m²)", "Load (kN/m²)"), Modifier.weight(1f), rule = Rule.FINITE)
                 }
                 Spacer(Modifier.height(6.dp))
-                NumberField(loadCase, { loadCase = it }, t("الحمل", "Case"), Modifier.fillMaxWidth())
+                NumberField(loadCase, { loadCase = it }, t("الحمل", "Case"), Modifier.fillMaxWidth(), rule = Rule.REQUIRED)
                 Spacer(Modifier.height(8.dp))
                 AppText(t("توزيع الحمل", "Load distribution"), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1961,10 +1937,11 @@ private fun SlabDialog(
                 fillMaxWidth = false,
                 style = AppButtonStyle.Text,
                 onClick = {
+                    if (!FrameInputValidation.valid(thickness, Rule.POSITIVE) || !FrameInputValidation.valid(load, Rule.FINITE) || loadCase.isBlank()) return@AppButton
                     onConfirm(
-                        thickness.toDoubleOrNull() ?: 200.0,
-                        load.toDoubleOrNull() ?: 10.0,
-                        loadCase.ifBlank { "DL" },
+                        FrameInputValidation.number(thickness)!!,
+                        FrameInputValidation.number(load)!!,
+                        loadCase.trim(),
                         distribution
                     )
                 }
@@ -1982,7 +1959,7 @@ private fun SlabDialog(
 }
 
 @Composable
-private fun EditSlabDialog(
+internal fun EditSlabDialog(
     panel: SlabPanel,
     onDismiss: () -> Unit,
     onSave: (SlabPanel) -> Unit,
@@ -1998,12 +1975,12 @@ private fun EditSlabDialog(
         text = {
             Column {
                 Row {
-                    NumberField(thickness, { thickness = it }, t("السماكة (مم)", "Thickness (mm)"), Modifier.weight(1f))
+                    NumberField(thickness, { thickness = it }, t("السماكة (مم)", "Thickness (mm)"), Modifier.weight(1f), rule = Rule.POSITIVE)
                     Spacer(Modifier.width(6.dp))
-                    NumberField(load, { load = it }, t("الحمل (kN/m²)", "Load (kN/m²)"), Modifier.weight(1f))
+                    NumberField(load, { load = it }, t("الحمل (kN/m²)", "Load (kN/m²)"), Modifier.weight(1f), rule = Rule.FINITE)
                 }
                 Spacer(Modifier.height(6.dp))
-                NumberField(loadCase, { loadCase = it }, t("الحمل", "Case"), Modifier.fillMaxWidth())
+                NumberField(loadCase, { loadCase = it }, t("الحمل", "Case"), Modifier.fillMaxWidth(), rule = Rule.REQUIRED)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(
@@ -2025,11 +2002,12 @@ private fun EditSlabDialog(
                 fillMaxWidth = false,
                 style = AppButtonStyle.Text,
                 onClick = {
+                    if (!FrameInputValidation.valid(thickness, Rule.POSITIVE) || !FrameInputValidation.valid(load, Rule.FINITE) || loadCase.isBlank()) return@AppButton
                     onSave(
                         panel.copy(
-                            thicknessMm = thickness.toDoubleOrNull() ?: panel.thicknessMm,
-                            loadKNm2 = load.toDoubleOrNull() ?: panel.loadKNm2,
-                            loadCase = loadCase.ifBlank { panel.loadCase },
+                            thicknessMm = FrameInputValidation.number(thickness)!!,
+                            loadKNm2 = FrameInputValidation.number(load)!!,
+                            loadCase = loadCase.trim(),
                             distribution = distribution
                         )
                     )
