@@ -21,6 +21,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import com.civileg.app.R
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
@@ -29,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -76,12 +78,12 @@ fun PropertyPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AppText(
-                    text = if (node != null) "خصائص العقدة ${node.id}" else "خصائص العضو ${member?.id}",
+                    text = if (node != null) stringResource(R.string.ed_node_properties, node.id) else stringResource(R.string.ed_member_properties, member?.id ?: 0),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = { editorState.clearSelection() }) {
-                    Icon(Icons.Default.Close, contentDescription = "إغلاق")
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close))
                 }
             }
 
@@ -118,7 +120,7 @@ fun PropertyPanel(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                AppText("نوع الارتكاز:", style = MaterialTheme.typography.labelMedium)
+                AppText(stringResource(R.string.ed_support_type_colon), style = MaterialTheme.typography.labelMedium)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     SupportType.entries.forEach { st ->
                         FilterChip(
@@ -133,7 +135,7 @@ fun PropertyPanel(
                 }
 
                 AppButton(
-                    label = "حذف العقدة",
+                    label = stringResource(R.string.ed_delete_node),
                     icon = Icons.Default.Delete,
                     style = AppButtonStyle.Danger,
                     onClick = {
@@ -145,12 +147,12 @@ fun PropertyPanel(
                 )
             } else if (member != null) {
                 val length = member.getLength(nodes)
-                AppText(text = "العقد: ${member.nodeI} -> ${member.nodeJ}", style = MaterialTheme.typography.bodySmall)
-                AppText(text = "الطول: ${String.format(java.util.Locale.ROOT, "%.3f", length)} m", style = MaterialTheme.typography.bodySmall)
-                AppText(text = "المادة: ${member.materialType.displayName}", style = MaterialTheme.typography.bodySmall)
+                AppText(text = stringResource(R.string.ed_member_nodes, member.nodeI, member.nodeJ), style = MaterialTheme.typography.bodySmall)
+                AppText(text = stringResource(R.string.ed_member_length, String.format(java.util.Locale.ROOT, "%.3f", length)), style = MaterialTheme.typography.bodySmall)
+                AppText(text = stringResource(R.string.ed_member_material, member.materialType.displayName), style = MaterialTheme.typography.bodySmall)
 
                 AppButton(
-                    label = "حذف العضو",
+                    label = stringResource(R.string.ed_delete_member),
                     icon = Icons.Default.Delete,
                     style = AppButtonStyle.Danger,
                     onClick = {

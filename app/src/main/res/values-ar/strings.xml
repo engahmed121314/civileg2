@@ -2408,4 +2408,23 @@
     <string name="settings_support_title">دعم التطبيق</string>
     <string name="settings_support_message">Civil Engineer Pro مجاني وبدون إعلانات. التبرعات الطوعية تموّل أكواد تصميم واختبارات ورسومات جديدة.</string>
     <string name="settings_support_button">تبرع عبر GitHub Sponsors</string>
+    <string name="ed_undo">تراجع</string>
+    <string name="ed_redo">إعادة</string>
+    <string name="ed_snap_grid">التقاط الشبكة</string>
+    <string name="ed_fit_screen">ملاءمة الشاشة</string>
+    <string name="ed_load_on_node">حمولة على العقدة %1$s</string>
+    <string name="ed_load_on_member">حمولة على العضو %1$s</string>
+    <string name="ed_add">إضافة</string>
+    <string name="ed_load_value_hint">القيمة (kN/m أو kN)</string>
+    <string name="ed_load_trapezoid_a">طول الارتفاع من كل طرف a (m)</string>
+    <string name="ed_load_position">الموقع من البداية (m)</string>
+    <string name="ed_node_properties">خصائص العقدة %1$s</string>
+    <string name="ed_member_properties">خصائص العضو %1$s</string>
+    <string name="ed_support_type_colon">نوع الارتكاز:</string>
+    <string name="ed_delete_node">حذف العقدة</string>
+    <string name="ed_member_nodes">العقد: %1$s -> %2$s</string>
+    <string name="ed_member_length">الطول: %1$s m</string>
+    <string name="ed_member_material">المادة: %1$s</string>
+    <string name="ed_delete_member">حذف العضو</string>
+    <string name="ed_support_type_for_node">نوع الارتكاز للعقدة %1$s</string>
 </resources>

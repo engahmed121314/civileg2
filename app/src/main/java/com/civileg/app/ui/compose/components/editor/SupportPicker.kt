@@ -10,10 +10,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.civileg.app.R
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -31,7 +33,7 @@ fun SupportPicker(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            AppText("نوع الارتكاز للعقدة $nodeId", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            AppText(stringResource(R.string.ed_support_type_for_node, nodeId), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         },
         text = {
             Column(
@@ -63,7 +65,7 @@ fun SupportPicker(
         },
         confirmButton = {},
         dismissButton = {
-            AppButton(label = "إلغاء", style = AppButtonStyle.Text, fillMaxWidth = false, onClick = onDismiss)
+            AppButton(label = stringResource(R.string.cancel), style = AppButtonStyle.Text, fillMaxWidth = false, onClick = onDismiss)
         }
     )
 }
