@@ -1,0 +1,66 @@
+# Diagnostic-only: real launcher-to-SplashActivity evidence for PR #115.
+# Isolated from android.yml on purpose: ordinary CI is untouched, this never
+# gates, and it runs no unit tests. Cold-starts the real launcher intent on a
+# fresh API 33 emulator and captures timed full-display screencaps (real
+# status/navigation bars) from first attach through the transition out, with
+# no interaction, preserving consent/ad/navigation timing. Bootstrap mirrors
+# the existing ui-test job (same JDK/Gradle/KVM/emulator options).
+name: Diagnostic Splash Real Launch
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/fullbleed-splash-B]
+
+env:
+  JAVA_VERSION: '17'
+  JAVA_DISTRIBUTION: 'temurin'
+
+jobs:
+  diag-splash-launch:
+    name: Real launcher-to-SplashActivity capture (API 33 emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Build free debug APK
+        run: ./gradlew assembleFreeDebug --no-daemon
+
+      - name: Install, cold-launch SplashActivity, capture timed evidence
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          # Animations stay explicitly ENABLED: the advancing sweep IS the
+          # evidence; the ui-test job's disable-animations would freeze it.
+          disable-animations: false
+          # The runner executes each script line in its own shell, so the
+          # capture lives in one committed script invoked by a single line.
+          script: adb install -r app/build/outputs/apk/free/debug/app-free-debug.apk && bash tools/diag/splash-launch-capture.sh
+
+      - name: Upload splash launch evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: splash-launch-evidence
+          path: splash-launch-evidence/
