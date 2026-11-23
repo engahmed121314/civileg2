@@ -9,6 +9,7 @@ import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.civileg.app.R
+import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
@@ -87,6 +88,97 @@ class SplashOverlayLayout @JvmOverloads constructor(
         return artY * scale - offsetY
     }
 
+    // Original horizontal padding per text child id, captured once. The ink
+    // reserve is always derived FROM the original padding, so repeated
+    // measures never accumulate padding.
+    private val originalTextPadding = mutableMapOf<Int, Pair<Int, Int>>()
+
+    /** Bound on reserve-growth remeasure passes within one measure call. */
+    private val maxInkReservePasses = 4
+
+    /**
+     * Readable by tests: per text child id, a diagnostic recorded when the
+     * bounded ink-reserve remeasure exhausted its pass bound without the
+     * reserve covering the realized lines. Empty in every healthy measure;
+     * the crop witness fails on any entry, so an exhausted reserve can never
+     * become a silent no-clipping claim.
+     */
+    val inkReserveExhausted = mutableMapOf<Int, String>()
+
+    /**
+     * Per-side reserve (px) the CURRENTLY realized lines need inside the
+     * text view: the largest per-line glyph overhang on each side plus that
+     * side's shadow extent (blur radius plus offset). Measured on realized
+     * Layout lines only - never inferred from whole-string bounds.
+     */
+    private fun realizedLineReserve(child: TextView): Pair<Int, Int> {
+        val layout = child.layout ?: return 0 to 0
+        val str = child.text.toString()
+        var overhangLeft = 0f
+        var overhangRight = 0f
+        for (line in 0 until layout.lineCount) {
+            val start = layout.getLineStart(line)
+            val end = layout.getLineEnd(line)
+            if (end <= start || end > str.length) continue
+            val bounds = Rect()
+            child.paint.getTextBounds(str, start, end, bounds)
+            val advance = child.paint.measureText(str, start, end)
+            overhangLeft = max(overhangLeft, -bounds.left.toFloat())
+            overhangRight = max(overhangRight, bounds.right - advance)
+        }
+        val shadowLeft = child.shadowRadius + max(0f, -child.shadowDx)
+        val shadowRight = child.shadowRadius + max(0f, child.shadowDx)
+        return ceil((overhangLeft + shadowLeft).toDouble()).toInt() to
+            ceil((overhangRight + shadowRight).toDouble()).toInt()
+    }
+
+    /**
+     * Reserves horizontal ink room INSIDE the text view: the text canvas is
+     * inset by derived per-side internal padding equal to the actual per-line
+     * glyph overhang plus the shadow extents, so wrapped-line ink and shadow
+     * can never reach the view edge and clip (either direction: overhang is
+     * measured per realized line on BOTH sides, covering RTL). Original
+     * padding is preserved underneath the reserve; every pass starts from the
+     * recorded base padding, so later measure calls never accumulate.
+     * Reserving changes line breaks, so the reserve grows MONOTONICALLY per
+     * side (remeasuring the current realized lines each pass) until it covers
+     * them or the pass bound runs out; an exhausted bound records an explicit
+     * diagnostic the crop witness fails on. The padded view is measured
+     * within the same (already inset-safe) content bounds; text size,
+     * wording, font scale and style are untouched - the text only wraps
+     * earlier.
+     */
+    private fun measureTextChildWithInkReserve(child: TextView, widthSpec: Int, heightSpec: Int) {
+        val base = originalTextPadding.getOrPut(child.id) {
+            child.paddingLeft to child.paddingRight
+        }
+        var reserveLeft = 0
+        var reserveRight = 0
+        var passes = 0
+        while (true) {
+            child.setPadding(
+                base.first + reserveLeft, child.paddingTop,
+                base.second + reserveRight, child.paddingBottom
+            )
+            measureChild(child, widthSpec, heightSpec)
+            val need = realizedLineReserve(child)
+            if (need.first <= reserveLeft && need.second <= reserveRight) {
+                inkReserveExhausted.remove(child.id)
+                return
+            }
+            passes++
+            if (passes >= maxInkReservePasses) {
+                inkReserveExhausted[child.id] =
+                    "needed=" + need.first + "/" + need.second +
+                    " applied=" + reserveLeft + "/" + reserveRight +
+                    " passes=" + passes
+                return
+            }
+            reserveLeft = max(reserveLeft, need.first)
+            reserveRight = max(reserveRight, need.second)
+        }
+    }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
         val h = MeasureSpec.getSize(heightMeasureSpec)
@@ -97,6 +189,8 @@ class SplashOverlayLayout @JvmOverloads constructor(
                     MeasureSpec.makeMeasureSpec(((w - paddingLeft - paddingRight) * 0.5f).toInt(), MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(barHeightPx.toInt(), MeasureSpec.EXACTLY)
                 )
+            } else if (child is TextView) {
+                measureTextChildWithInkReserve(child, widthMeasureSpec, heightMeasureSpec)
             } else {
                 measureChild(child, widthMeasureSpec, heightMeasureSpec)
             }
@@ -222,18 +316,41 @@ class SplashOverlayLayout @JvmOverloads constructor(
         val upperTop = upperAnchorY - (upperInk[0] + upperInk[1]) / 2f
         val lowerTop = lowerAnchorY - (lowerInk[0] + lowerInk[1]) / 2f
 
-        // Ink-rectangle containment + order, never center-only checks.
+        // Clear-strip fitting of the ordered pair by the smallest SHARED
+        // vertical translation, computed from EXACT strip limits: the 1px
+        // verification tolerance stays in the order check only and is never
+        // spent as design margin. The admissible interval intersects ink
+        // containment in the visible strip with the safe-area bounds of BOTH
+        // full child rectangles. Order is gated on visible-ink nonoverlap
+        // (upper ink bottom above lower ink top) plus full-rectangle TOP
+        // order only; there is no full-rectangle non-overlap requirement.
+        // A shared translation preserves the pair's internal spacing, so
+        // CLEAR_ANCHORED means clear-strip fitted, not exact anchors.
         val tol = 1f
-        val anchoredFits =
-            upperTop + upperInk[0] >= stripTop - tol &&
-            lowerTop + lowerInk[1] <= stripBottom + tol &&
-            upperTop + upperInk[1] <= lowerTop + lowerInk[0] + tol
+        val upperH = upper.measuredHeight.toFloat()
+        val lowerH = lower.measuredHeight.toFloat()
+        val ordered =
+            upperTop + upperInk[1] <= lowerTop + lowerInk[0] + tol &&
+            upperTop <= lowerTop + tol
+        val tMin = maxOf(
+            stripTop - (upperTop + upperInk[0]),
+            safeStart - upperTop,
+            safeStart - lowerTop
+        )
+        val tMax = minOf(
+            stripBottom - (lowerTop + lowerInk[1]),
+            safeEnd - upperTop - upperH,
+            safeEnd - lowerTop - lowerH
+        )
+        val fits = ordered && tMin <= tMax
 
-        if (anchoredFits) {
+        if (fits) {
+            // Smallest |translation|: clamp zero into the admissible interval.
+            val t = if (0f < tMin) tMin else if (0f > tMax) tMax else 0f
             placementModes[upper.id] = PlacementMode.CLEAR_ANCHORED
             placementModes[lower.id] = PlacementMode.CLEAR_ANCHORED
-            placeCentered(upper, contentCx, upperTop)
-            placeCentered(lower, contentCx, lowerTop)
+            placeCentered(upper, contentCx, upperTop + t)
+            placeCentered(lower, contentCx, lowerTop + t)
         } else {
             // Shared fallback: the whole group moves together, in order.
             placementModes[upper.id] = PlacementMode.FALLBACK_SAFE_AREA
