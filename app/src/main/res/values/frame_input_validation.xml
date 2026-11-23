@@ -12,4 +12,4 @@
   <string name="frame_input_ramp">Enter a rise length greater than 0 and no more than %1$s m (half the member length).</string>
   <string name="frame_input_steel">Choose Auto or a section from the steel section list.</string>
   <string name="frame_input_cover">Enter a cover that leaves a positive effective depth (depth minus cover minus 10 mm).</string>
-</resources>diff --git a/app/src/main/res/values-ar/frame_input_validation.xml b/app/src/main/res/values-ar/frame_input_validation.xml
+</resources>

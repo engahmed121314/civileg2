@@ -12,4 +12,4 @@
   <string name="frame_input_ramp">أدخل طول ارتفاع أكبر من صفر ولا يزيد على %1$s متر، أي نصف طول العضو.</string>
   <string name="frame_input_steel">اختر الوضع التلقائي أو قطاعًا من قائمة القطاعات الحديدية.</string>
   <string name="frame_input_cover">أدخل غطاءً يترك عمقًا فعالًا موجبًا: العمق ناقص الغطاء ناقص 10 مم.</string>
-</resources>diff --git a/app/src/test/java/com/civileg/app/ui/compose/screens/FrameInputDialogsTest.kt b/app/src/test/java/com/civileg/app/ui/compose/screens/FrameInputDialogsTest.kt
+</resources>
