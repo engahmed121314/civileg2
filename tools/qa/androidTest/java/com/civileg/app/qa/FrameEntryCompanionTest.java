@@ -1,5 +1,6 @@
 package com.civileg.app.qa;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -39,12 +40,15 @@ import org.junit.runner.RunWith;
  *    swipe up to 10x, click)               -> findModuleCard(), same loop
  *  wait 30s for frame_title                -> waitText(frame_title)
  *  assertIsDisplayed frame_title/frame_tab_nodes -> assertVisible (node found, non-empty visibleBounds)
- *  baseline "Nodes: 0"/"Members: 0"        -> identical strings
+ *  baseline "Nodes: 0"/"Members: 0"        -> NOT identical: the screen opens on the Drawing tab, where the only count text is
+ *    the single toolbar summary "النموذج: N عقدة / M عضو / K بلاطة" | "Model: N joints / M members / K slabs"
+ *    (FrameModelerTab.kt). Companion asserts that summary 0/0/0 as exactly one full-string node.
  *  Actions desc -> frame_open_design -> QA_SENTINEL_FRAME_RECORD -> identical
- *  loaded "Nodes: 4"/"Members: 3"          -> identical, fail loudly otherwise
+ *  loaded "Nodes: 4"/"Members: 3"          -> summary 4/3/0 (seeded slabs = []), exactly one node, fail loudly otherwise
+ *  Home reset: bounded DOM-resolved scroll-to-top (scrollHomeToTop) runs once before the original forward loop.
  * State: launches a NEW task with CLEAR_TASK; only the activity/task state is reset.
- * The seeded DB and process are untouched. The Nodes: 0 baseline assertion is what proves
- * no stale in-memory model leaks into the loaded 4/3 check (nothing is cleared to hide it).
+ * The seeded DB and process are untouched. The 0/0/0 baseline assertion is what proves
+ * no stale in-memory model leaks into the loaded 4/3/0 check (nothing is cleared to hide it).
  * Disclosed differences: visibility = found + non-empty visibleBounds, not
  * assertIsDisplayed; node text comes from accessibility, unverified until first run.
  */
@@ -439,6 +443,115 @@ public class FrameEntryCompanionTest {
         return device.wait(Until.findObject(By.pkg(pkg).text(containsAny(text))), timeoutMs);
     }
 
+    /**
+     * The real Drawing-tab model summary (FrameModelerTab.kt, hard-coded t(ar,en) strings, not resources):
+     * "النموذج: N عقدة / M عضو / K بلاطة" or "Model: N joints / M members / K slabs". Full-string match only
+     * (the separate status-bar text without the prefix does not match), digits ASCII or Arabic-Indic.
+     */
+    private static Pattern summaryExact(int nodes, int members, int slabs) {
+        String n = dig(nodes), m = dig(members), k = dig(slabs);
+        return Pattern.compile("(?s)(\u0627\u0644\u0646\u0645\u0648\u0630\u062c: " + n + " \u0639\u0642\u062f\u0629 / " + m
+                + " \u0639\u0636\u0648 / " + k + " \u0628\u0644\u0627\u0637\u0629|Model: " + n + " joints / " + m + " members / " + k + " slabs)");
+    }
+
+    private static String dig(int v) {
+        String ascii = String.valueOf(v);
+        StringBuilder ar = new StringBuilder();
+        for (char ch : ascii.toCharArray()) ar.append((char) ('\u0660' + (ch - '0')));
+        return "(?:" + Pattern.quote(ascii) + "|" + Pattern.quote(ar.toString()) + ")";
+    }
+
+    /** Waits for the summary, then requires exactly ONE visible matching node (more than one fails, no first-match pick). */
+    private void assertSingleSummary(int nodes, int members, int slabs, String label) {
+        Pattern p = summaryExact(nodes, members, slabs);
+        assertNotNull(label + " summary never appeared", waitPattern(p, 15000));
+        java.util.List<UiObject2> found = device.findObjects(By.pkg(pkg).text(p));
+        assertEquals(label + " summary candidates", 1, found.size());
+        Rect b = found.get(0).getVisibleBounds();
+        assertTrue(label + " summary not visible", b.width() > 0 && b.height() > 0);
+    }
+
+    /**
+     * Bounded Home reset (prep before the original forward search, which is unchanged). Each round dumps the DOM and
+     * re-resolves the ONE enabled scrollable MAIN vertical container of this package from that snapshot (no live node
+     * kept): positive on-screen bounds, taller than wide, at least 40% of the display height; short horizontal scrollers
+     * (HorizontalScrollView, tools rows) are excluded. Zero or more than one such container fails. The gesture is a
+     * content-down swipe in the container's middle-lower band at an x that avoids every other scrollable's bounds.
+     * Stops on two identical consecutive dumps (NOCHANGE) or after 10 swipes (BUDGET: top is NOT verified). A fresh dump taken after the
+     * loop is retained as raw XML (home-prep-end) either way.
+     */
+    private void scrollHomeToTop() throws Exception {
+        String prev = null;
+        String cur = null;
+        String outcome = "BUDGET";
+        for (int i = 0; i < 10; i++) {
+            java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+            device.dumpWindowHierarchy(bo);
+            cur = bo.toString("UTF-8");
+            if (cur.equals(prev)) { outcome = "NOCHANGE"; break; }
+            prev = cur;
+            org.w3c.dom.Document doc = javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                    .parse(new java.io.ByteArrayInputStream(cur.getBytes("UTF-8")));
+            int[] c = homeVerticalContainer(doc, device.getDisplayWidth(), device.getDisplayHeight());
+            java.util.List<int[]> others = otherScrollables(doc, c);
+            int top = c[1] + (int) ((c[3] - c[1]) * 0.45), bottom = c[1] + (int) ((c[3] - c[1]) * 0.85);
+            int w = c[2] - c[0];
+            int x = -1;
+            for (double f : new double[]{0.5, 0.25, 0.75}) {
+                int cx = c[0] + (int) (w * f);
+                boolean blocked = false;
+                for (int[] o : others) {
+                    if (cx >= o[0] && cx < o[2] && bottom > o[1] && top < o[3]) { blocked = true; break; }
+                }
+                if (!blocked) { x = cx; break; }
+            }
+            assertTrue("no swipe x clear of nested scrollables in Home container " + java.util.Arrays.toString(c), x >= 0);
+            android.util.Log.w("QA-COMPANION", "home-prep swipe " + (i + 1) + " container=" + java.util.Arrays.toString(c) + " x=" + x);
+            device.swipe(x, top, x, bottom, 20);
+            device.waitForIdle();
+        }
+        android.util.Log.w("QA-COMPANION", "home-prep outcome=" + outcome + (outcome.equals("BUDGET") ? " (top NOT verified)" : ""));
+        // Fresh dump after the loop: the retained prep-end XML is the actual state, not the pre-last-swipe dump.
+        java.io.ByteArrayOutputStream fin = new java.io.ByteArrayOutputStream();
+        device.dumpWindowHierarchy(fin);
+        logRawXml(safe(testName) + "-home-prep-end", fin.toString("UTF-8"));
+    }
+
+    /** The single enabled scrollable vertical main container of this package; fails when absent or ambiguous. */
+    private int[] homeVerticalContainer(org.w3c.dom.Document doc, int displayWidth, int displayHeight) {
+        java.util.List<int[]> found = new java.util.ArrayList<>();
+        org.w3c.dom.NodeList all = doc.getElementsByTagName("node");
+        for (int i = 0; i < all.getLength(); i++) {
+            org.w3c.dom.Element e = (org.w3c.dom.Element) all.item(i);
+            if (!"true".equals(e.getAttribute("scrollable")) || !"true".equals(e.getAttribute("enabled"))) continue;
+            if (!pkg.equals(e.getAttribute("package"))) continue;
+            if (e.getAttribute("class").contains("HorizontalScrollView")) continue;
+            java.util.regex.Matcher m = BOUNDS.matcher(e.getAttribute("bounds"));
+            if (!m.matches()) continue;
+            int l = Integer.parseInt(m.group(1)), t = Integer.parseInt(m.group(2)), r = Integer.parseInt(m.group(3)), b = Integer.parseInt(m.group(4));
+            if (l < 0 || t < 0 || r <= l || b <= t || r > displayWidth || b > displayHeight) continue;
+            int w = r - l, h = b - t;
+            if (h > w && h * 10 >= displayHeight * 4) found.add(new int[]{l, t, r, b});
+        }
+        assertEquals("Home vertical scroll containers (need exactly 1)", 1, found.size());
+        return found.get(0);
+    }
+
+    private java.util.List<int[]> otherScrollables(org.w3c.dom.Document doc, int[] main) {
+        java.util.List<int[]> out = new java.util.ArrayList<>();
+        org.w3c.dom.NodeList all = doc.getElementsByTagName("node");
+        for (int i = 0; i < all.getLength(); i++) {
+            org.w3c.dom.Element e = (org.w3c.dom.Element) all.item(i);
+            if (!"true".equals(e.getAttribute("scrollable")) || !pkg.equals(e.getAttribute("package"))) continue;
+            java.util.regex.Matcher m = BOUNDS.matcher(e.getAttribute("bounds"));
+            if (!m.matches()) continue;
+            int[] r = {Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)), Integer.parseInt(m.group(3)), Integer.parseInt(m.group(4))};
+            if (java.util.Arrays.equals(r, main)) continue;
+            out.add(r);
+        }
+        return out;
+    }
+
     private UiObject2 waitPattern(Pattern p, long timeoutMs) {
         return device.wait(Until.findObject(By.pkg(pkg).text(p)), timeoutMs);
     }
@@ -452,6 +565,7 @@ public class FrameEntryCompanionTest {
 
     private void openFrameScreenFromHome() throws Exception {
         device.wait(Until.hasObject(By.pkg(pkg).scrollable(true)), 30000);
+        scrollHomeToTop();
         boolean clicked = false;
         for (int i = 1; i <= 10 && !clicked; i++) {
             clicked = clickModuleCardFromSnapshots();
@@ -483,11 +597,7 @@ public class FrameEntryCompanionTest {
         assertFrameScreenVisible();
         capture("entry");
 
-        String[] nodes = pair("frame_tab_nodes");
-        String[] members = pair("frame_tab_members");
-        assertNotNull("empty baseline Nodes: 0 missing", waitPattern(exactAny(nodes, 0), 15000));
-        assertVisible(By.pkg(pkg).text(exactAny(nodes, 0)), nodes[0] + "|" + nodes[1] + ": 0");
-        assertVisible(By.pkg(pkg).text(exactAny(members, 0)), members[0] + "|" + members[1] + ": 0");
+        assertSingleSummary(0, 0, 0, "empty baseline");
 
         UiObject2 actions = device.wait(Until.findObject(By.pkg(pkg).desc("Actions")), 15000);
         assertNotNull("Actions button not found", actions);
@@ -499,9 +609,7 @@ public class FrameEntryCompanionTest {
         assertNotNull("seeded QA_SENTINEL_FRAME_RECORD not listed", rec);
         rec.click();
 
-        assertNotNull("loaded Nodes: 4 never appeared", waitPattern(exactAny(nodes, 4), 15000));
-        assertVisible(By.pkg(pkg).text(exactAny(nodes, 4)), nodes[0] + "|" + nodes[1] + ": 4");
-        assertVisible(By.pkg(pkg).text(exactAny(members, 3)), members[0] + "|" + members[1] + ": 3");
+        assertSingleSummary(4, 3, 0, "loaded");
         capture("loaded-4-3");
     }
 }
