@@ -29,6 +29,19 @@ gradle.beforeProject { p ->
                 throw new GradleException('Synthetic QA facade keep file missing: ' + facadeKeep)
             }
             release.proguardFile(facadeKeep)
+            // QA-init-only member-level harness ABI retention: the instrumentation
+            // APK references these kotlin/kotlinx classes and member signatures
+            // through the minified app's obfuscation dictionary; without the
+            // pinned names the rebuilt target drops or renames them and the
+            // harness cannot link. Derived from the exact APK pair against
+            // pinned jars; scoped to this init script only - the shipping build
+            // config is unchanged (default-off: no production file references
+            // the keep).
+            def abiKeep = p.rootProject.file('tools/qa/qa-harness-abi-keep.pro')
+            if (!abiKeep.isFile()) {
+                throw new GradleException('Synthetic QA harness ABI keep file missing: ' + abiKeep)
+            }
+            release.proguardFile(abiKeep)
             release.signingConfig = android.signingConfigs.getByName('debug')
             android.defaultConfig.versionCode = 9
             android.defaultConfig.versionName = '1.8.0-synthetic-qa'
@@ -44,8 +57,12 @@ gradle.beforeProject { p ->
                     if (!release.proguardFiles.any { it == p.rootProject.file('tools/qa/qa-lazykt-facade-keep.pro') }) {
                         throw new GradleException('Synthetic QA facade keep was not applied to the release build type')
                     }
+                    if (!release.proguardFiles.any { it == p.rootProject.file('tools/qa/qa-harness-abi-keep.pro') }) {
+                        throw new GradleException('Synthetic QA harness ABI keep was not applied to the release build type')
+                    }
                     println('Synthetic QA: minified/shrunk, non-debuggable, disposable debug signer, release instrumentation, code9')
                     println('Synthetic QA caveat: QA target differs from shipping - kotlin.LazyKt facade hierarchy is kept (qa-lazykt-facade-keep.pro), so runner recovery is NOT a production fix claim')
+                    println('Synthetic QA caveat: QA target additionally retains 80 pinned kotlin/kotlinx harness ABI classes (qa-harness-abi-keep.pro), so harness linkage recovery is NOT a production fix claim')
                 }
             }
             p.tasks.register('captureSyntheticQaPackagingDiagnostics') {

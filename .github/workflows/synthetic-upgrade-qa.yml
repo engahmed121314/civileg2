@@ -107,7 +107,15 @@ jobs:
           pip install androguard==4.1.4 2>&1 | tee qa-evidence-androguard-install.txt || { echo 'GATE REFUSAL: androguard install failed (see qa-evidence-androguard-install.txt)'; exit 1; }
           python3 tools/qa/host/selftest_lazy_facade_linkage.py | tee qa-evidence-lazy-facade-selftest.txt
           python3 tools/qa/host/verify_lazy_facade_linkage.py "$CANDIDATE_APK" "$TEST_APK" | tee qa-evidence-lazy-facade-linkage.txt
-
+          # Structural DIAGNOSTIC only (never gates): records observations about
+          # the rebuilt APKs against the finite ABI keep list for review
+          # alongside native results. It is not a linkage proof and its output
+          # never suppresses or substitutes for native failure. The pipeline
+          # must succeed under pipefail on ANY script/parser/unexpected/
+          # missing-script failure: stderr is retained in the evidence file and
+          # a refusal line marks the outcome. pip install, the selftest and the
+          # Lazy gate above remain hard-gated and are never wrapped this way.
+          { python3 tools/qa/host/harness_abi_structure_diagnostic.py "$CANDIDATE_APK" "$TEST_APK" tools/qa/qa-harness-abi-keep.pro 2>&1 || echo "DIAGNOSTIC REFUSAL: diagnostic step exited nonzero (script/parser/unexpected/missing-script failure); native evidence unaffected"; } | tee qa-evidence-harness-abi-diagnostic.txt
 
       - name: Capture synthetic packaging diagnostics before emulator
         if: always()
