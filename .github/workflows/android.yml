@@ -176,6 +176,20 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+      # Bounded retention for the synthetic recorded-review pagination PDFs
+      # the unit tests emit (ColumnRecordedReview*Test fixtures): explicit
+      # artifact so long-table overflow pixel review never has to wait for a
+      # later cycle to learn the files were not uploaded. Same-job upload
+      # only; no extra account or service.
+      - name: Retain synthetic recorded-review pagination PDFs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: column-recorded-review-pdfs
+          path: app/build/reports/tests/column-recorded-review/
+          retention-days: 14
+          if-no-files-found: warn
+
   # ─── Job 4: Debug APK Build ──────────────────────────────────────────
   build-debug:
     name: Build Debug APK
