@@ -58,6 +58,10 @@ jobs:
           # capture lives in one committed script invoked by a single line.
           script: adb install -r app/build/outputs/apk/free/debug/app-free-debug.apk && bash tools/diag/splash-launch-capture.sh
 
+      - name: Install ffmpeg for media analysis
+        if: always()
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
       - name: Analyze recording (ffprobe metadata, exact-PTS frames)
         if: always()
         run: |
