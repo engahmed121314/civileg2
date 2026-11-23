@@ -429,7 +429,7 @@ class SplashTreatmentBTest {
 
     private fun assertRenderedTextInkWithinView(label: String, viewName: String, v: TextView) {
         val layout = v.layout ?: return
-        val str = v.text.toString()
+        val str = layout.text.toString()
         val shadowLeft = v.shadowRadius + maxOf(0f, -v.shadowDx)
         val shadowRight = v.shadowRadius + maxOf(0f, v.shadowDx)
         // Layout line coordinates are content-relative: shift by the actual
@@ -439,7 +439,14 @@ class SplashTreatmentBTest {
         val contentOriginX = v.compoundPaddingLeft - v.scrollX
         for (line in 0 until layout.lineCount) {
             val start = layout.getLineStart(line)
-            val end = layout.getLineEnd(line)
+            // Visible boundary only: getLineEnd may add a non-drawn trailing
+            // whitespace at the wrap point; pairing its advance with the
+            // visible line origin is what produced the forced-wrap false
+            // positive (42 + 139 + 5 = 186 vs visible 42 + 133 + 5 = 180).
+            // Empty visible lines are skipped; advance and glyph bounds use
+            // the SAME visible range. Full-versus-visible operands stay in
+            // the manifest diagnostics.
+            val end = layout.getLineVisibleEnd(line)
             if (end <= start || end > str.length) continue
             val bounds = Rect()
             v.paint.getTextBounds(str, start, end, bounds)

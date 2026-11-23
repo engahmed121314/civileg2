@@ -122,12 +122,17 @@ class SplashOverlayLayout @JvmOverloads constructor(
      */
     private fun realizedLineReserve(child: TextView): Pair<Int, Int> {
         val layout = child.layout ?: return 0 to 0
-        val str = child.text.toString()
+        val str = layout.text.toString()
         var overhangLeft = 0f
         var overhangRight = 0f
         for (line in 0 until layout.lineCount) {
             val start = layout.getLineStart(line)
-            val end = layout.getLineEnd(line)
+            // Visible boundary only: getLineEnd can include a non-drawn
+            // trailing whitespace at the wrap point, whose advance is not
+            // ink and must not grow the reserve. Empty visible lines are
+            // skipped. Advance and glyph bounds are measured over the SAME
+            // visible range, paired with the Layout line geometry.
+            val end = layout.getLineVisibleEnd(line)
             if (end <= start || end > str.length) continue
             val bounds = Rect()
             child.paint.getTextBounds(str, start, end, bounds)
