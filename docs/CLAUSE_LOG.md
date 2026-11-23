@@ -353,6 +353,31 @@ All page numbers below are the printed page of the PDF of record.
 
 Golden vectors: ECPBeamShearTest (6 cases: stirrup design, min-only branch,
 4-leg wide beam, fy=600 cap, mild-240 min-ratio floor, q_umax 4.4 cap).
+## A-08 — Table 22.2.2.4.3 — β1 for equivalent rectangular stress distribution (VERIFIED)
+- **Date**: 2026-11-21 (19:35 EET)
+- **Source opened**: ACI 318M-14 PDF part 3, PDF page 163, printed page **554** — rendered as image; bilingual table read directly.
+- **Code says**: β1 = 0.85 for 17 ≤ fc' ≤ 28 MPa; 0.85 − 0.05(fc'−28)/7 for 28 < fc' < 55; 0.65 for fc' ≥ 55.
+- **Also verified same page**: §22.2.2.4.1 — stress 0.85fc' uniform over zone of depth a = β1·c.
+- **Engine**: ACIBeam.kt `calculateBeta1` (fc≤28 → 0.85; fc≥55 → 0.65; else interpolation) — matches (below 17 MPa the table is silent; 0.85 is standard continuation).
+- **Action**: no code change; golden flexure vector added to ACIBeamTest locking the Rn–ρ method + bar selection against this clause and 9.6.1.2.
+
+## A-09 — §9.6.3 + Table 9.6.3.3 — minimum shear reinforcement (VERIFIED)
+- **Date**: 2026-11-21 (19:39 EET)
+- **Source opened**: ACI 318M-14 PDF part 2, PDF pages 33 & 37, printed pages **224 & 228** — rendered as images and read directly.
+- **Code says**: §9.6.3.1 Av,min where Vu > 0.5φVc (exceptions: Table 9.6.3.1 shallow/slab-integral cases). Table 9.6.3.3 (nonprestressed): Av,min/s = greater of 0.062√fc'·bw/fy and 0.35·bw/fy.
+- **Engine**: ACIBeam.kt shear — matches both exactly. NOTE: engine does NOT apply the Table 9.6.3.1 exemptions (h ≤ 250 mm shallow beams etc.); it always requires Av,min above 0.5φVc. Conservative direction; no fix proposed.
+- **Action**: none; locked by golden shear vector.
+
+## A-10 — Table 9.7.6.2.2 — maximum stirrup spacing (VERIFIED)
+- **Date**: 2026-11-21 (19:40 EET)
+- **Source opened**: ACI 318M-14 PDF part 2, PDF page 47, printed page **238** — rendered as image; table values read directly.
+- **Code says** (nonprestressed beam): Vs ≤ 0.33√fc'·bw·d → s_max = lesser of d/2 and 600; Vs > 0.33√fc'·bw·d → s_max = lesser of d/4 and 300.
+- **Engine**: ACIBeam.kt spacing limits match exactly (extra constant 300 mm cap is an additional conservative bound).
+
+## A-11 — §22.5.1.1 + §22.5.1.2 — one-way shear strength (VERIFIED)
+- **Source opened**: ACI 318M-14 PDF part 3, PDF page 168, printed page **559** — rendered as image and read directly.
+- **Code says**: Vn = Vc + Vs; cross-sections must satisfy Vu ≤ φ(Vc + 0.66√fc'·bw·d).
+- **Engine**: ACIBeam.kt max-shear check (maxShearCapacity = φVc + φ×0.66√fc'·bw·d) matches exactly; Vs = (Vu − φVc)/φ is the direct rearrangement of 22.5.1.1.
 
 ## ACI footing min-steel fix — F-01 (accessed 2026-11-21)
 
