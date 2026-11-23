@@ -10,6 +10,7 @@ import kotlin.math.abs
 import kotlin.math.hypot
 
 enum class FrameValidationCode {
+    INVALID_NUMBER,
     TOO_FEW_JOINTS,
     NO_MEMBERS,
     DUPLICATE_JOINT_ID,
@@ -51,6 +52,43 @@ object FrameModelValidator {
         slabs: List<SlabPanel> = emptyList()
     ): List<FrameValidationIssue> {
         val issues = mutableListOf<FrameValidationIssue>()
+
+        fun invalid(ar: String, en: String, nodeIds: List<Int> = emptyList(), memberIds: List<Int> = emptyList()) {
+            issues += FrameValidationIssue(FrameValidationCode.INVALID_NUMBER, ar, en, nodeIds, memberIds)
+        }
+        nodes.filter { !it.x.isFinite() || !it.y.isFinite() }.forEach { n ->
+            invalid("إحداثيات العقدة ${n.id}: أدخل قيم X وY محدودة بالمتر.", "Joint ${n.id} coordinates: enter finite X and Y values in metres.", nodeIds = listOf(n.id))
+        }
+        members.forEach { m ->
+            m.concreteSection?.takeIf { m.materialType == com.civileg.app.domain.entities.FrameMaterialType.Concrete }?.let { c ->
+                if (!c.width.isFinite() || c.width <= 0 || !c.depth.isFinite() || c.depth <= 0 ||
+                    !c.fcu.isFinite() || c.fcu <= 0 || !c.fy.isFinite() || c.fy <= 0 || !c.cover.isFinite() || c.cover < 0 || c.effectiveDepth <= 0) {
+                    invalid("مقطع العضو ${m.id}: أدخل عرضًا وعمقًا ومقاومات موجبة ومحدودة، وغطاءً غير سالب يترك عمقًا فعالًا موجبًا.",
+                        "Member ${m.id} section: enter finite positive width, depth and strengths, and non-negative cover leaving positive effective depth.", memberIds = listOf(m.id))
+                }
+            }
+        }
+        nodalLoads.filter { !it.fx.isFinite() || !it.fy.isFinite() || !it.mz.isFinite() }.forEach { load ->
+            invalid("حمل العقدة ${load.nodeId}: أدخل قيم Fx وFy وMz محدودة. الإشارة السالبة مسموحة.",
+                "Joint ${load.nodeId} load: enter finite Fx, Fy and Mz values. Negative values are allowed.", nodeIds = listOf(load.nodeId))
+        }
+        memberLoads.forEach { load ->
+            if (!load.value.isFinite()) invalid("حمل العضو ${load.memberId}: أدخل قيمة حمل محدودة؛ الإشارة السالبة مسموحة.",
+                "Member ${load.memberId} load: enter a finite load value; negative values are allowed.", memberIds = listOf(load.memberId))
+            val member = members.find { it.id == load.memberId }
+            if (member != null && !FrameInputValidation.positionValid(load.loadType, load.position.toString(), member.getLength(nodes))) {
+                val ramp = load.loadType == com.civileg.app.domain.entities.MemberLoadType.Trapezoidal
+                val limit = member.getLength(nodes) / if (ramp) 2.0 else 1.0
+                invalid(if (ramp) "حمل العضو ${load.memberId}: أدخل طول ارتفاع أكبر من صفر ولا يزيد على $limit متر."
+                    else "حمل العضو ${load.memberId}: أدخل موقعًا محدودًا بين صفر و$limit متر من عقدة البداية.",
+                    if (ramp) "Member ${load.memberId} load: enter a finite rise length greater than 0 and at most $limit m."
+                    else "Member ${load.memberId} load: enter a finite position from 0 to $limit m from the start joint.", memberIds = listOf(load.memberId))
+            }
+        }
+        slabs.filter { !it.thicknessMm.isFinite() || it.thicknessMm <= 0 || !it.loadKNm2.isFinite() }.forEach { slab ->
+            invalid("البلاطة ${slab.id}: أدخل سمكًا موجبًا محدودًا بالمليمتر وحملًا محدودًا بالكيلونيوتن/م².",
+                "Slab ${slab.id}: enter finite positive thickness in mm and a finite load in kN/m2.")
+        }
 
         if (nodes.size < 2) {
             issues += FrameValidationIssue(
