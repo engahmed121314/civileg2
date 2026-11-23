@@ -56,3 +56,31 @@ plugins {
     alias(libs.plugins.google.services) apply false
     alias(libs.plugins.google.firebase.crashlytics) apply false
 }
+
+// Lint and annotation processors resolve independently of buildscript and app runtimes.
+// Keep these constraints scoped to the tool graphs that actually contain the advisories.
+subprojects {
+    val targetProject = this
+    configurations.configureEach {
+        val configurationName = name
+        val patchedToolDependencies = when {
+            configurationName == "androidLintTool" -> listOf(
+                "org.bouncycastle:bcprov-jdk18on:1.85",
+                "org.bouncycastle:bcpkix-jdk18on:1.85",
+                "com.google.guava:guava:33.8.0-jre",
+                "org.apache.commons:commons-lang3:3.18.0",
+                "org.apache.httpcomponents:httpclient:4.5.14"
+            )
+            (configurationName.startsWith("_agp_internal_") && configurationName.endsWith("_kspClasspath")) ||
+                configurationName.startsWith("hiltAnnotationProcessor") ||
+                (configurationName.startsWith("ksp") && configurationName.endsWith("KotlinProcessorClasspath")) ->
+                listOf("com.google.guava:guava:33.8.0-jre")
+            else -> emptyList()
+        }
+        patchedToolDependencies.forEach { coordinate ->
+            targetProject.dependencies.constraints.add(configurationName, coordinate) {
+                because("Patch verified Dependabot paths in lint and Hilt/KSP tool configurations")
+            }
+        }
+    }
+}

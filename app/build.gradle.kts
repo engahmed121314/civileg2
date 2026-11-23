@@ -301,6 +301,9 @@ dependencies {
     // Older resolved lines are affected by CVE-2023-2976, CVE-2020-8908 and
     // GHSA-xxph-c9ww-hj94 (CompactHashMap deserialization, patched in 33.7.2).
     constraints {
+        testImplementation("org.bouncycastle:bcprov-jdk18on:1.85") {
+            because("Robolectric test runtime: GHSA-9pwp-9qqc-pr26, GHSA-qp49-qgx5-5m26, GHSA-574f-3g2m-x479, GHSA-p93r-85wp-75v3, GHSA-c3fc-8qff-9hwx")
+        }
         implementation("com.google.guava:guava:33.8.0-android") {
             because("CVE-2023-2976 / CVE-2020-8908 / GHSA-xxph-c9ww-hj94")
         }
