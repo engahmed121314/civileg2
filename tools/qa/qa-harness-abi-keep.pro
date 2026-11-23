@@ -274,3 +274,24 @@
     public abstract java.lang.String hintOnError();
     public abstract int getLoadPriority();
 }
+
+# ── Delta v4 (QA-accepted 2026-11-23): exact one field ──
+# Category 7: run 45105190528, both FrameEntryTest cases fail at
+# androidx.compose.ui.test.AndroidComposeUiTestEnvironment.<init> with
+# java.lang.NoSuchFieldError: No field Key of type
+# Lkotlin/coroutines/ContinuationInterceptor$Key; in class Lrt
+# (kotlin.coroutines.ContinuationInterceptor -> rt, freeRelease mapping line
+# 1817114). usage.txt records this exact field as removed app-side; the
+# instrumentation dex references Lrt;.Key:Lkotlin/coroutines/ContinuationInterceptor$Key;.
+# Mechanism: app-side shrinking removed the companion Key field while the
+# separately minified test APK still references it; class rename itself is
+# consistent across both APKs. Field header verified against the exact
+# classpath kotlin-stdlib-2.4.21.jar (sha256
+# bd8250210584cb659847dce9cda660f8e9906e5def7fbebcea93dc6dcb6a88a3):
+# flags 0x19 public static final Key Lkotlin/coroutines/ContinuationInterceptor$Key;.
+# Plain -keep of the exact one field: no all-members, no package, no
+# production change. The nested Key TYPE is deliberately not kept here; the
+# rebuild-inspect checks whether it survives on its own.
+-keep class kotlin.coroutines.ContinuationInterceptor {
+    public static final kotlin.coroutines.ContinuationInterceptor$Key Key;
+}
