@@ -169,6 +169,21 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testFreeDebugUnitTest testPlayDebugUnitTest --no-daemon
 
+      # :app tests above do not execute :core:calculations tests. Run them explicitly.
+      - name: Run core calculations unit tests
+        run: ./gradlew :core:calculations:testDebugUnitTest --no-daemon
+
+      - name: Upload core test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-test-report
+          path: |
+            core/calculations/build/reports/tests/
+            core/calculations/build/test-results/
+          retention-days: 14
+          if-no-files-found: warn
+
       - name: Generate JaCoCo coverage report
         run: ./gradlew :app:jacocoTestReport --no-daemon
 
