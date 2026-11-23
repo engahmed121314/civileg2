@@ -3,15 +3,15 @@ package com.civileg.app.ui.compose.screens
 import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
+import android.view.ViewGroup
+import androidx.activity.ComponentActivity
+import androidx.core.view.drawToBitmap
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.MutableLiveData
 import androidx.test.core.app.ApplicationProvider
@@ -45,7 +45,7 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class FrameAnalysisScreenRecoveryGateCaptureTest {
-    @get:Rule val rule = createComposeRule()
+    @get:Rule val rule = createAndroidComposeRule<ComponentActivity>()
 
     private lateinit var app: Application
     private val badV1 = "{\"a\":[{\"zz\":1}],\"b\":7}"
@@ -92,12 +92,23 @@ class FrameAnalysisScreenRecoveryGateCaptureTest {
         rule.onNodeWithText(app.getString(R.string.frame_draft_recovery_retained)).assertIsDisplayed()
         rule.onNodeWithText(app.getString(R.string.frame_draft_recovery_export)).assertIsDisplayed()
         rule.onNodeWithText(app.getString(R.string.frame_draft_recovery_start_new)).assertIsDisplayed()
-        val bmp = rule.onRoot().captureToImage().asAndroidBitmap()
+        // Same full-content capture route as the working DrawingCoerceGuardTest: the activity content view on the UI thread.
+        var bmp: Bitmap? = null
+        rule.runOnUiThread {
+            val content = rule.activity.findViewById<ViewGroup>(android.R.id.content)
+            assertTrue("content view is not attached", content.isAttachedToWindow)
+            assertTrue("content view has no measured size", content.width > 0 && content.height > 0)
+            bmp = content.drawToBitmap()
+        }
+        val shot = bmp!!
+        assertTrue("bitmap has no size", shot.width > 0 && shot.height > 0)
         val dir = File("build/reports/tests/compose-shots").apply { mkdirs() }
-        FileOutputStream(File(dir, "frame-recovery-gate-$locale.png")).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        val out = File(dir, "frame-recovery-gate-$locale.png")
+        FileOutputStream(out).use { assertTrue("png compress failed", shot.compress(Bitmap.CompressFormat.PNG, 100, it)) }
+        assertTrue("png file is empty", out.length() > 0)
         // Diagnostic only, not the correctness gate: the capture must not be one flat colour.
         val seen = HashSet<Int>()
-        for (x in 0 until bmp.width step 4) for (y in 0 until bmp.height step 4) seen.add(bmp.getPixel(x, y))
+        for (x in 0 until shot.width step 4) for (y in 0 until shot.height step 4) seen.add(shot.getPixel(x, y))
         assertTrue("capture is a single flat colour", seen.size > 3)
     }
 
