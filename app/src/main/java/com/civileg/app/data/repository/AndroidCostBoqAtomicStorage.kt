@@ -18,9 +18,15 @@ class AndroidCostBoqAtomicStorage(context:Context):CostBoqAtomicStorage {
     }
     @Synchronized override fun read(projectId:Long,maxBytes:Int):ByteArray? {
         val atomic=file(projectId)
-        // AtomicFile.exists also recognizes its recovery backup. Corruption is never treated as absence.
-        if(!atomic.exists()) return null
-        return atomic.openRead().use { input ->
+        // openRead performs legacy .bak recovery before opening the base. Never gate on base.exists().
+        val input=try { atomic.openRead() }
+        catch(missing:java.io.FileNotFoundException) {
+            val base=atomic.baseFile
+            // Distinguish genuinely absent recovery from unreadable/partial recovery artifacts.
+            if(base.exists() || File(base.path+".bak").exists() || File(base.path+".new").exists()) throw missing
+            return null
+        }
+        return input.use { input ->
             val bytes=java.io.ByteArrayOutputStream()
             val buffer=ByteArray(8192)
             while(true) { val n=input.read(buffer);if(n<0)break

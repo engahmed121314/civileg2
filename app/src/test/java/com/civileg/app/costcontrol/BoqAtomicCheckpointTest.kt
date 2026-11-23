@@ -28,6 +28,11 @@ class BoqAtomicCheckpointTest {
             val acknowledged=file.readBytes()
             File(file.path+".bak").writeBytes(acknowledged);file.writeBytes("bad base".toByteArray())
             assertEquals(cp,BoundedCostBoqCheckpointStore(AndroidCostBoqAtomicStorage(context)).load(cp.projectId))
+            // Backup-only state must recover even when the base has disappeared.
+            File(file.path+".bak").writeBytes(acknowledged);assertTrue(file.delete())
+            assertEquals(cp,BoundedCostBoqCheckpointStore(AndroidCostBoqAtomicStorage(context)).load(cp.projectId))
+            assertTrue(file.exists())
+            assertNull(store.load(999))
         } finally { context.root.deleteRecursively() }
     }
 
