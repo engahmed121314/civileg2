@@ -248,3 +248,29 @@
 -keep class kotlinx.coroutines.Dispatchers {
     public static final kotlinx.coroutines.MainCoroutineDispatcher getMain();
 }
+
+# ── Delta v3 (QA-accepted 2026-11-23): exact 3-member external implementation contract ──
+# Category 6: run 45099351385, both FrameEntryTest cases fail at compose-rule
+# init with AbstractMethodError "kotlinx.coroutines.MainCoroutineDispatcher
+# kotlinx.coroutines.internal.MainDispatcherFactory.a()" at
+# MainDispatchersKt.tryCreateDispatcher <- wq0.<clinit> (renamed
+# MainDispatcherLoader). Mechanism is parameter signature drift across the two
+# separately minified APKs, NOT inconsistent rename: member renames are
+# consistent (createDispatcher->a, hintOnError->b, getLoadPriority->c) but the
+# app-side pass also stripped createDispatcher's unused List parameter
+# (candidate interface classdef declares no-arg a(); implementor z3 overrides
+# no-arg), while the instrumentation factory implements
+# a(Ljava/util/List;) and defines no interface copy of its own, so its
+# override never binds to the loaded stripped interface. Retaining the three
+# members with their exact original signatures pins both names and parameter
+# signatures across the app-side hierarchy. Plain -keep: no allowoptimization,
+# no allowobfuscation, no allowshrinking; no library blanket. Headers verified
+# against the exact classpath kotlinx-coroutines-core-jvm 1.10.2 jar:
+# public abstract kotlinx.coroutines.MainCoroutineDispatcher createDispatcher(java.util.List)
+# public abstract java.lang.String hintOnError()
+# public abstract int getLoadPriority()
+-keep interface kotlinx.coroutines.internal.MainDispatcherFactory {
+    public abstract kotlinx.coroutines.MainCoroutineDispatcher createDispatcher(java.util.List);
+    public abstract java.lang.String hintOnError();
+    public abstract int getLoadPriority();
+}
