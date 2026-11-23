@@ -120,7 +120,7 @@ class DialogWidthHarnessProbeTest {
                 }
             )
         }
-        repeat(4) { compose.mainClock.advanceByFrame() }
+        repeat(4) { compose.mainClock.advanceTimeByFrame() }
     }
 
     @Test

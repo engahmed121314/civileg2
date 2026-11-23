@@ -123,7 +123,7 @@ class ColumnCompletedScreenTest {
         // auto-advancing clock. Deterministic, TEST-ONLY frame delivery.
         compose.mainClock.autoAdvance = false
         open()
-        repeat(4) { compose.mainClock.advanceByFrame() }
+        repeat(4) { compose.mainClock.advanceTimeByFrame() }
         compose.waitForIdle()
         // Scroll retained: column-content is a LazyColumn (ColumnScreen.kt:125),
         // so scrolling is the genuine user gesture that composes the save
@@ -147,7 +147,7 @@ class ColumnCompletedScreenTest {
             button("column-save").performClick()
             // Deliver the dialog's first frames deterministically (finite
             // count, no deadlines changed) before the passive listeners attach.
-            repeat(6) { compose.mainClock.advanceByFrame() }
+            repeat(6) { compose.mainClock.advanceTimeByFrame() }
             instrumentation.runOnMainSync { attachWhenAvailable() }
             compose.waitForIdle()
             button("column-save-confirm").assertIsNotEnabled()

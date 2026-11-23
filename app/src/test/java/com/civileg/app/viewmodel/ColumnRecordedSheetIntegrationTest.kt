@@ -79,7 +79,7 @@ class ColumnRecordedSheetIntegrationTest {
      * a real LAYOUT (attached, non-zero size). Host size proves layout only -
      * NOT draw, NOT presentation. The predicate never calls waitForIdle or
      * runOnIdle inside the bounded loop (each can block up to its own 60s);
-     * frame delivery is bounded (advanceByFrame only) and the size read is a
+     * frame delivery is bounded (advanceTimeByFrame only) and the size read is a
      * plain UI-thread read. Success is checked BEFORE the budget break; the
      * deadline is monotonic. Fails loudly after the original 30s budget.
      */
@@ -89,7 +89,7 @@ class ColumnRecordedSheetIntegrationTest {
             // Budget checked BEFORE every advance and every read, and a late
             // success is never accepted after the deadline.
             if (System.nanoTime() >= deadlineNanos) break
-            compose.mainClock.advanceByFrame()
+            compose.mainClock.advanceTimeByFrame()
             if (System.nanoTime() >= deadlineNanos) break
             var laidOut = false
             // Plain UI-thread read. NOT guaranteed bounded if the main thread
