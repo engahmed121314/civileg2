@@ -7,6 +7,7 @@ import com.civileg.app.domain.entities.FrameNode
 import com.civileg.app.domain.entities.MemberLoad
 import com.civileg.app.domain.entities.NodalLoad
 import com.civileg.app.domain.entities.SupportType
+import com.civileg.app.domain.modeler.FrameMutationResult
 import com.civileg.app.viewmodel.FrameAnalysisViewModel
 
 /** Interface for undoable editor commands */
@@ -26,8 +27,8 @@ class AddNodeCommand(
     override val description = "إضافة عقدة عند ($x, $y)"
 
     override fun execute() {
-        viewModel.addNode(x, y, support)
-        resultingNodeId = viewModel.nodes.value?.maxOfOrNull { it.id } ?: -1
+        val result = viewModel.addNode(x,y,support)
+        resultingNodeId = (result as? FrameMutationResult.Applied<Int>)?.value ?: -1
     }
 
     override fun undo() {
@@ -87,8 +88,9 @@ class AddMemberCommand(
     override val description = "إضافة عضو من العقدة $nodeI إلى $nodeJ"
 
     override fun execute() {
-        viewModel.addMember(nodeI, nodeJ, materialType, memberType)
-        resultingMemberId = viewModel.members.value?.maxOfOrNull { it.id } ?: -1
+        val result = viewModel.addMember(nodeI,nodeJ,materialType,memberType,
+            concreteSection = if(materialType == FrameMaterialType.Concrete) com.civileg.app.domain.entities.ConcreteSectionProps(250.0,500.0) else null)
+        resultingMemberId = (result as? FrameMutationResult.Applied<Int>)?.value ?: -1
     }
 
     override fun undo() {

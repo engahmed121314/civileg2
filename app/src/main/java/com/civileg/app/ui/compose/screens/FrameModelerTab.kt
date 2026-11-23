@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.modeler.FrameMutationResult
 import com.civileg.app.domain.modeler.FrameInputValidation
 import com.civileg.app.domain.modeler.FrameInputValidation.Rule
 import androidx.compose.ui.res.stringResource
@@ -320,8 +321,8 @@ fun FrameModelerTab(
             }
             ModelerTool.Joint -> {
                 if (tap.nodeId == null) {
-                    val id = viewModel.addNode(tap.worldX, tap.worldY)
-                    viewModel.selectNode(id)
+                    val result = viewModel.addNode(tap.worldX, tap.worldY)
+                    if (result is FrameMutationResult.Applied) viewModel.selectNode(result.value)
                 } else {
                     viewModel.selectNode(tap.nodeId)
                 }
@@ -341,7 +342,7 @@ fun FrameModelerTab(
                             FrameMemberType.Beam
                         }
                         val id = viewModel.addMemberBetween(start, nodeId, type)
-                        id?.let { viewModel.selectMember(it) }
+                        if (id is FrameMutationResult.Applied) viewModel.selectMember(id.value)
                     }
                     pendingStart = null
                 }
@@ -701,27 +702,9 @@ fun FrameModelerTab(
                 },
                 onMemberDragEnd = { endNodeId, x, y ->
                     val startNodeId = pendingStart
-                    val startNode = nodes.find { it.id == startNodeId }
-                    if (startNodeId != null && startNode != null &&
-                        kotlin.math.hypot(x - startNode.x, y - startNode.y) > 1e-6
-                    ) {
-                        val endId = endNodeId ?: viewModel.addNode(x, y)
-                        if (endId != startNodeId) {
-                            val endNode = nodes.find { it.id == endId }
-                            val isColumn = if (endNode != null) {
-                                abs(startNode.x - endNode.x) < 1e-6
-                            } else {
-                                abs(startNode.x - x) < 1e-6
-                            }
-                            val memberId = viewModel.addMemberBetween(
-                                startNodeId,
-                                endId,
-                                if (isColumn) FrameMemberType.Column else FrameMemberType.Beam
-                            )
-                            if (memberId != null) {
-                                viewModel.selectMember(memberId)
-                            }
-                        }
+                    if (startNodeId != null) {
+                        val result = viewModel.createMemberFromDrag(startNodeId,endNodeId,x,y)
+                        if (result is FrameMutationResult.Applied) viewModel.selectMember(result.value)
                     }
                     pendingStart = null
                     memberDragPreview = null
@@ -915,8 +898,7 @@ fun FrameModelerTab(
             nodeId = nodeId,
             onDismiss = { loadNodeTarget = null },
             onConfirm = { fx, fy, mz, loadCase ->
-                viewModel.addNodalLoad(nodeId, fx, fy, mz, loadCase)
-                loadNodeTarget = null
+                if (viewModel.addNodalLoad(nodeId, fx, fy, mz, loadCase) !is FrameMutationResult.Rejected) loadNodeTarget = null
             }
         )
     }
@@ -927,8 +909,7 @@ fun FrameModelerTab(
             memberLengthM = members.find { it.id == memberId }?.let { memberLength(it, nodes) } ?: 0.0,
             onDismiss = { loadMemberTarget = null },
             onConfirm = { type, value, position, loadCase ->
-                viewModel.addMemberLoad(memberId, type, value, position, loadCase)
-                loadMemberTarget = null
+                if (viewModel.addMemberLoad(memberId, type, value, position, loadCase) !is FrameMutationResult.Rejected) loadMemberTarget = null
             }
         )
     }
@@ -939,11 +920,8 @@ fun FrameModelerTab(
             initial = load,
             onDismiss = { editingNodalLoad = null },
             onConfirm = { fx, fy, mz, loadCase ->
-                viewModel.updateNodalLoad(
-                    index,
-                    load.copy(fx = fx, fy = fy, mz = mz, loadCase = loadCase)
-                )
-                editingNodalLoad = null
+                val result = viewModel.updateNodalLoad(index,load.copy(fx = fx, fy = fy, mz = mz, loadCase = loadCase))
+                if (result !is FrameMutationResult.Rejected) editingNodalLoad = null
             }
         )
     }
@@ -955,11 +933,8 @@ fun FrameModelerTab(
             initial = load,
             onDismiss = { editingMemberLoad = null },
             onConfirm = { type, value, position, loadCase ->
-                viewModel.updateMemberLoad(
-                    index,
-                    load.copy(loadType = type, value = value, position = position, loadCase = loadCase)
-                )
-                editingMemberLoad = null
+                val result = viewModel.updateMemberLoad(index,load.copy(loadType = type, value = value, position = position, loadCase = loadCase))
+                if (result !is FrameMutationResult.Rejected) editingMemberLoad = null
             }
         )
     }
@@ -970,8 +945,7 @@ fun FrameModelerTab(
             memberLengthM = memberLength(member, nodes),
             onDismiss = { editingMemberProps = null },
             onSave = { updated ->
-                viewModel.updateMember(updated)
-                editingMemberProps = null
+                if (viewModel.updateMember(updated) !is FrameMutationResult.Rejected) editingMemberProps = null
             }
         )
     }
@@ -1001,7 +975,7 @@ fun FrameModelerTab(
                     thicknessMm = thickness,
                     distribution = distribution
                 )
-                if (id != null) {
+                if (id is FrameMutationResult.Applied) {
                     slabDraft = null
                     pendingSlabNodes = emptyList()
                     tool = ModelerTool.Select
@@ -1015,8 +989,7 @@ fun FrameModelerTab(
             panel = panel,
             onDismiss = { editSlabTarget = null },
             onSave = { updated ->
-                viewModel.updateSlabPanel(updated)
-                editSlabTarget = null
+                if (viewModel.updateSlabPanel(updated) !is FrameMutationResult.Rejected) editSlabTarget = null
             },
             onDelete = {
                 viewModel.removeSlabPanel(panel.id)

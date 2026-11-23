@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.domain.modeler.FrameMutationResult
 import com.civileg.app.domain.modeler.FrameInputValidation
 import com.civileg.app.domain.modeler.FrameInputValidation.Rule
 import android.content.Intent
@@ -942,11 +943,12 @@ internal fun NodesTab(
                     onClick = {
                         val x = FrameInputValidation.number(editX) ?: return@AppButton
                         val y = FrameInputValidation.number(editY) ?: return@AppButton
-                        if (editingNode != null) {
+                        val mutation = if (editingNode != null) {
                             viewModel.updateNode(editingNode!!.id, x, y, editSupport)
                         } else {
                             viewModel.addNode(x, y, editSupport)
                         }
+                        if (mutation is FrameMutationResult.Rejected) return@AppButton
                         showAddDialog = false
                     }
                 )
@@ -1274,15 +1276,16 @@ internal fun MembersTab(
                         if (editingMemberId != null) {
                             val existing = members.find { it.id == editingMemberId }
                             if (existing != null) {
-                                viewModel.updateMember(existing.copy(
+                                val mutation = viewModel.updateMember(existing.copy(
                                     nodeI = nI, nodeJ = nJ, materialType = editMaterial,
                                     memberType = editMemberType, concreteSection = concreteSec,
                                     steelSectionName = steelSectionChoice,
                                     name = editName
                                 ))
+                                if (mutation is FrameMutationResult.Rejected) return@AppButton
                             }
                         } else {
-                            viewModel.addMember(nI, nJ, editMaterial, editMemberType, concreteSec, steelSectionChoice, editName)
+                            if (viewModel.addMember(nI, nJ, editMaterial, editMemberType, concreteSec, steelSectionChoice, editName) is FrameMutationResult.Rejected) return@AppButton
                         }
                         editingMemberId = null
                         showAddDialog = false
@@ -1444,7 +1447,7 @@ internal fun LoadsTab(
                     onClick = {
                         val nid = FrameInputValidation.id(nlNodeId) ?: return@AppButton
                         if (nodes.none { it.id == nid } || listOf(nlFx, nlFy, nlMz).any { !FrameInputValidation.valid(it, Rule.FINITE) }) return@AppButton
-                        viewModel.addNodalLoad(nid, FrameInputValidation.number(nlFx)!!, FrameInputValidation.number(nlFy)!!, FrameInputValidation.number(nlMz)!!, "DL")
+                        if (viewModel.addNodalLoad(nid, FrameInputValidation.number(nlFx)!!, FrameInputValidation.number(nlFy)!!, FrameInputValidation.number(nlMz)!!, "DL") is FrameMutationResult.Rejected) return@AppButton
                         showNodalDialog = false
                     }
                 )
@@ -1495,7 +1498,7 @@ internal fun LoadsTab(
                     onClick = {
                         val mid = FrameInputValidation.id(mlMemberId) ?: return@AppButton
                         if (targetMember == null || !validPosition || !FrameInputValidation.valid(mlValue, Rule.FINITE)) return@AppButton
-                        viewModel.addMemberLoad(mid, mlType, FrameInputValidation.number(mlValue)!!, if (mlType == MemberLoadType.UDL || mlType == MemberLoadType.LinearVarying) 0.0 else FrameInputValidation.number(mlPosition)!!, "DL")
+                        if (viewModel.addMemberLoad(mid, mlType, FrameInputValidation.number(mlValue)!!, if (mlType == MemberLoadType.UDL || mlType == MemberLoadType.LinearVarying) 0.0 else FrameInputValidation.number(mlPosition)!!, "DL") is FrameMutationResult.Rejected) return@AppButton
                         showMemberDialog = false
                     }
                 )

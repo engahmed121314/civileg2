@@ -16,6 +16,11 @@ import com.civileg.app.domain.calculations.ConcreteFrameDesign
 import com.civileg.app.domain.calculations.FrameAnalysisEngine
 import com.civileg.app.domain.calculations.SteelFrameDesign
 import com.civileg.app.domain.entities.*
+import com.civileg.app.domain.modeler.FrameNodeMoveValidation
+import com.civileg.app.domain.modeler.FrameMutationResult
+import com.civileg.app.domain.modeler.FrameMutationValidation
+import com.civileg.app.domain.modeler.FrameEditCandidate
+import com.civileg.app.domain.modeler.FrameValidationCode
 import com.civileg.app.domain.modeler.FrameModelValidator
 import com.civileg.app.domain.modeler.FrameSceneView
 import com.civileg.app.domain.modeler.ModelerClipboard
@@ -77,6 +82,7 @@ class FrameAnalysisViewModel @Inject constructor(
     private val undoStack = ArrayDeque<ModelSnapshot>()
     private val redoStack = ArrayDeque<ModelSnapshot>()
     private var nodeDragSnapshot: ModelSnapshot? = null
+    private var nodeDragValidation: Pair<Int,FrameNodeMoveValidation>? = null
     private var restoringHistory = false
     private val _historyState = MutableLiveData(0)
 
@@ -147,23 +153,29 @@ class FrameAnalysisViewModel @Inject constructor(
     fun beginNodeDrag() {
         if (nodeDragSnapshot == null) {
             nodeDragSnapshot = snapshot()
+            nodeDragValidation = null
         }
     }
 
     fun dragNode(nodeId: Int, x: Double, y: Double) {
-        val current = _nodes.value?.toMutableList() ?: return
-        val index = current.indexOfFirst { it.id == nodeId }
-        if (index < 0) return
-        val node = current[index]
-        if (node.x == x && node.y == y) return
-        current[index] = node.copy(x = x, y = y)
-        _nodes.value = current
+        val current=_nodes.value.orEmpty()
+        val index=current.indexOfFirst { it.id==nodeId }
+        if(index<0) return
+        val checker=nodeDragValidation?.takeIf { it.first==nodeId }?.second
+            ?: FrameNodeMoveValidation(editCandidate(),nodeId).also { nodeDragValidation=nodeId to it }
+        val issues=checker.validate(x,y)
+        if(issues.isNotEmpty()) { _validationIssues.value=issues;return }
+        val node=current[index]
+        if(node.x==x && node.y==y) return
+        _nodes.value=current.toMutableList().also { it[index]=node.copy(x=x,y=y) }
+        _validationIssues.value=emptyList()
         invalidateResults()
     }
 
     fun endNodeDrag() {
         val before = nodeDragSnapshot ?: return
         nodeDragSnapshot = null
+        nodeDragValidation = null
         if (before.nodes != snapshot().nodes) {
             undoStack.addLast(before)
             while (undoStack.size > 60) undoStack.removeFirst()
@@ -175,6 +187,7 @@ class FrameAnalysisViewModel @Inject constructor(
     fun cancelNodeDrag() {
         val before = nodeDragSnapshot ?: return
         nodeDragSnapshot = null
+        nodeDragValidation = null
         restore(before)
     }
 
@@ -324,27 +337,26 @@ class FrameAnalysisViewModel @Inject constructor(
 
     fun pasteClipboard(): Boolean {
         val content = clipboard ?: return false
-        val result = ModelerClipboard.paste(
-            content = content,
-            existingNodes = _nodes.value.orEmpty(),
-            existingMembers = _members.value.orEmpty(),
-            existingSlabs = _slabs.value.orEmpty(),
-            offsetMeters = PASTE_OFFSET_METERS * (pasteCount + 1)
-        )
+        val before = editCandidate()
+        val offset = PASTE_OFFSET_METERS * (pasteCount.toLong()+1L)
+        val result = try { ModelerClipboard.paste(content,before.nodes,before.members,before.slabs,offset) }
+            catch (_: IllegalArgumentException) { rejectEdit<Unit>("تعذر لصق عناصر غير صالحة. لم يتغير النموذج.", "Cannot paste invalid items. The model was not changed."); return false }
         if (result.isEmpty) return false
-
-        recordUndo()
-        _nodes.value = _nodes.value.orEmpty() + result.nodes
-        _members.value = _members.value.orEmpty() + result.members
-        _nodalLoads.value = _nodalLoads.value.orEmpty() + result.nodalLoads
-        _memberLoads.value = _memberLoads.value.orEmpty() + result.memberLoads
-        _slabs.value = _slabs.value.orEmpty() + result.slabs
-        _selectedNodeIds.value = result.nodes.map { it.id }.toSet()
-        _selectedMemberIds.value = result.members.map { it.id }.toSet()
+        // Do not accept a helper dropping broken references from a partial paste.
+        if (result.nodes.size != content.nodes.size || result.members.size != content.members.size ||
+            result.nodalLoads.size != content.nodalLoads.size || result.memberLoads.size != content.memberLoads.size || result.slabs.size != content.slabs.size) {
+            rejectEdit<Unit>("الحافظة تحتوي على مراجع ناقصة. أعد نسخ العناصر المتصلة. لم يتغير النموذج.", "The clipboard has missing references. Copy connected items again. The model was not changed.")
+            return false
+        }
+        val applied = commitEdit(before.copy(nodes=before.nodes+result.nodes,members=before.members+result.members,
+            nodalLoads=before.nodalLoads+result.nodalLoads,memberLoads=before.memberLoads+result.memberLoads,slabs=before.slabs+result.slabs),Unit)
+        if (applied !is FrameMutationResult.Applied) return false
+        _selectedNodeIds.value=result.nodes.map { it.id }.toSet()
+        _selectedMemberIds.value=result.members.map { it.id }.toSet()
         pasteCount++
-        regenerateDimensions()
         return true
     }
+
 
     fun hasClipboard(): Boolean = clipboard != null
 
@@ -552,25 +564,47 @@ class FrameAnalysisViewModel @Inject constructor(
     // Node Management
     // ========================================================================
 
-    fun addNode(x: Double, y: Double, support: SupportType = SupportType.Free): Int {
-        recordUndo()
-        val current = _nodes.value?.toMutableList() ?: mutableListOf()
-        val id = (current.maxOfOrNull { it.id } ?: 0) + 1
-        current.add(FrameNode(id, x, y, support))
-        _nodes.value = current
-        return id
+    private fun editCandidate() = FrameEditCandidate(_nodes.value.orEmpty(), _members.value.orEmpty(),
+        _nodalLoads.value.orEmpty(), _memberLoads.value.orEmpty(), _slabs.value.orEmpty())
+
+    private fun <T> rejectEdit(ar: String, en: String): FrameMutationResult<T> {
+        val issues = listOf(FrameValidationIssue(FrameValidationCode.INVALID_NUMBER, ar, en))
+        _validationIssues.value = issues
+        return FrameMutationResult.Rejected(issues)
     }
 
-    fun updateNode(nodeId: Int, x: Double, y: Double, support: SupportType) {
-        val current = _nodes.value?.toMutableList() ?: return
-        val index = current.indexOfFirst { it.id == nodeId }
-        if (index < 0) return
-        val updated = current[index].copy(x = x, y = y, support = support)
-        if (updated == current[index]) return
+    /** Validate the WHOLE proposed batch before undo, mutation, autosave observers or invalidation. */
+    private fun <T> commitEdit(next: FrameEditCandidate, value: T): FrameMutationResult<T> {
+        val before = editCandidate()
+        if (before == next) return FrameMutationResult.Unchanged
+        val issues = FrameMutationValidation.introduced(before, next)
+        if (issues.isNotEmpty()) { _validationIssues.value = issues; return FrameMutationResult.Rejected(issues) }
         recordUndo()
-        current[index] = updated
-        _nodes.value = current
+        if (next.nodes != before.nodes) _nodes.value = next.nodes
+        if (next.members != before.members) _members.value = next.members
+        if (next.nodalLoads != before.nodalLoads) _nodalLoads.value = next.nodalLoads
+        if (next.memberLoads != before.memberLoads) _memberLoads.value = next.memberLoads
+        if (next.slabs != before.slabs) _slabs.value = next.slabs
+        _validationIssues.value = emptyList()
+        regenerateDimensions()
+        return FrameMutationResult.Applied(value)
     }
+
+    fun addNode(x: Double, y: Double, support: SupportType = SupportType.Free): FrameMutationResult<Int> {
+        val before = editCandidate()
+        val max = before.nodes.maxOfOrNull { it.id } ?: 0
+        if (max == Int.MAX_VALUE) return rejectEdit("أرقام العقد ممتلئة. لم تتم الإضافة.", "Joint IDs are exhausted. No joint was added.")
+        val node = FrameNode(max + 1, x, y, support)
+        return commitEdit(before.copy(nodes = before.nodes + node), node.id)
+    }
+
+
+    fun updateNode(nodeId: Int, x: Double, y: Double, support: SupportType): FrameMutationResult<Unit> {
+        val before = editCandidate()
+        if (before.nodes.none { it.id == nodeId }) return rejectEdit("العقدة $nodeId غير موجودة. اختر عقدة من القائمة.", "Joint $nodeId does not exist. Select one from the joints list.")
+        return commitEdit(before.copy(nodes = before.nodes.map { if(it.id == nodeId) it.copy(x=x,y=y,support=support) else it }), Unit)
+    }
+
 
     fun setNodeSupport(nodeId: Int, support: SupportType) {
         val node = _nodes.value?.find { it.id == nodeId } ?: return
@@ -599,59 +633,44 @@ class FrameAnalysisViewModel @Inject constructor(
     // Member Management
     // ========================================================================
 
-    fun addMember(
-        nodeI: Int, nodeJ: Int,
-        materialType: FrameMaterialType,
-        memberType: FrameMemberType,
-        concreteSection: ConcreteSectionProps? = null,
-        steelSectionName: String? = null,
-        name: String = ""
-    ): Int {
-        recordUndo()
-        val current = _members.value?.toMutableList() ?: mutableListOf()
-        val id = (current.maxOfOrNull { it.id } ?: 0) + 1
-        current.add(FrameMember(id, nodeI, nodeJ, materialType, memberType, concreteSection, steelSectionName, name))
-        _members.value = current
-        regenerateDimensions()
-        return id
+    fun addMember(nodeI: Int, nodeJ: Int, materialType: FrameMaterialType, memberType: FrameMemberType,
+        concreteSection: ConcreteSectionProps? = null, steelSectionName: String? = null, name: String = ""): FrameMutationResult<Int> {
+        val before = editCandidate()
+        val max = before.members.maxOfOrNull { it.id } ?: 0
+        if (max == Int.MAX_VALUE) return rejectEdit("أرقام الأعضاء ممتلئة. لم تتم الإضافة.", "Member IDs are exhausted. No member was added.")
+        val member = FrameMember(max+1,nodeI,nodeJ,materialType,memberType,concreteSection,steelSectionName,name)
+        return commitEdit(before.copy(members = before.members + member), member.id)
     }
 
-    fun addMemberBetween(
-        nodeI: Int,
-        nodeJ: Int,
-        memberType: FrameMemberType = FrameMemberType.Beam
-    ): Int? {
-        if (nodeI == nodeJ) return null
-        val exists = _members.value?.any { m ->
-            (m.nodeI == nodeI && m.nodeJ == nodeJ) || (m.nodeI == nodeJ && m.nodeJ == nodeI)
-        } ?: false
-        if (exists) return null
-        return addMember(
-            nodeI = nodeI,
-            nodeJ = nodeJ,
-            materialType = FrameMaterialType.Concrete,
-            memberType = memberType,
-            concreteSection = ConcreteSectionProps(
-                width = if (memberType == FrameMemberType.Column) 300.0 else 250.0,
-                depth = if (memberType == FrameMemberType.Column) 300.0 else 500.0
-            )
-        )
+
+    fun addMemberBetween(nodeI: Int, nodeJ: Int, memberType: FrameMemberType = FrameMemberType.Beam): FrameMutationResult<Int> =
+        addMember(nodeI,nodeJ,FrameMaterialType.Concrete,memberType,
+            ConcreteSectionProps(if(memberType == FrameMemberType.Column) 300.0 else 250.0,
+                if(memberType == FrameMemberType.Column) 300.0 else 500.0))
+
+
+    fun createMemberFromDrag(startId: Int, endId: Int?, x: Double, y: Double): FrameMutationResult<Int> {
+        val before = editCandidate()
+        val start = before.nodes.find { it.id == startId }
+            ?: return rejectEdit("عقدة البداية غير موجودة. اخترها مرة أخرى.", "The start joint no longer exists. Select it again.")
+        val nodeMax = before.nodes.maxOfOrNull { it.id } ?: 0
+        val memberMax = before.members.maxOfOrNull { it.id } ?: 0
+        if (memberMax == Int.MAX_VALUE || (endId == null && nodeMax == Int.MAX_VALUE))
+            return rejectEdit("تعذر تخصيص رقم جديد. لم يتغير النموذج.", "A new ID could not be allocated. The model was not changed.")
+        val end = if(endId == null) FrameNode(nodeMax+1,x,y) else before.nodes.find { it.id == endId }
+            ?: return rejectEdit("عقدة النهاية غير موجودة. اخترها مرة أخرى.", "The end joint no longer exists. Select it again.")
+        val type = if(kotlin.math.abs(start.x-end.x) < 1e-6) FrameMemberType.Column else FrameMemberType.Beam
+        val member = FrameMember(memberMax+1,start.id,end.id,memberType=type,concreteSection=ConcreteSectionProps(
+            if(type == FrameMemberType.Column) 300.0 else 250.0,if(type == FrameMemberType.Column) 300.0 else 500.0))
+        return commitEdit(before.copy(nodes = if(endId == null) before.nodes+end else before.nodes,members=before.members+member),member.id)
     }
 
-    fun updateMember(member: FrameMember) {
-        val current = _members.value?.toMutableList() ?: return
-        val index = current.indexOfFirst { it.id == member.id }
-        if (index < 0) return
-        val previous = current[index]
-        if (previous == member) return
-        recordUndo()
-        current[index] = member
-        _members.value = current
-        // Dimensions are derived from member end joints, so they must follow endpoint edits.
-        if (previous.nodeI != member.nodeI || previous.nodeJ != member.nodeJ) {
-            regenerateDimensions()
-        }
+    fun updateMember(member: FrameMember): FrameMutationResult<Unit> {
+        val before = editCandidate()
+        if (before.members.none { it.id == member.id }) return rejectEdit("العنصر غير موجود. أعد اختياره من النموذج.", "This item no longer exists. Select it again from the model.")
+        return commitEdit(before.copy(members = before.members.map { if(it.id == member.id) member else it }), Unit)
     }
+
 
     fun updateMemberReleases(memberId: Int, releaseI: Boolean, releaseJ: Boolean) {
         val current = _members.value?.toMutableList() ?: return
@@ -693,12 +712,11 @@ class FrameAnalysisViewModel @Inject constructor(
     // Load Management
     // ========================================================================
 
-    fun addNodalLoad(nodeId: Int, fx: Double, fy: Double, mz: Double, loadCase: String) {
-        recordUndo()
-        val current = _nodalLoads.value?.toMutableList() ?: mutableListOf()
-        current.add(NodalLoad(nodeId, fx, fy, mz, loadCase))
-        _nodalLoads.value = current
+    fun addNodalLoad(nodeId: Int, fx: Double, fy: Double, mz: Double, loadCase: String): FrameMutationResult<Unit> {
+        val before = editCandidate()
+        return commitEdit(before.copy(nodalLoads = before.nodalLoads + NodalLoad(nodeId,fx,fy,mz,loadCase)), Unit)
     }
+
 
     fun removeNodalLoad(index: Int) {
         val current = _nodalLoads.value ?: return
@@ -707,21 +725,18 @@ class FrameAnalysisViewModel @Inject constructor(
         _nodalLoads.value = current.filterIndexed { i, _ -> i != index }
     }
 
-    fun updateNodalLoad(index: Int, load: NodalLoad) {
-        val current = _nodalLoads.value?.toMutableList() ?: return
-        if (index !in current.indices) return
-        if (current[index] == load) return
-        recordUndo()
-        current[index] = load
-        _nodalLoads.value = current
+    fun updateNodalLoad(index: Int, load: NodalLoad): FrameMutationResult<Unit> {
+        val before = editCandidate()
+        if (index !in before.nodalLoads.indices) return rejectEdit("الحمل غير موجود. أعد اختياره من القائمة.", "This load no longer exists. Select it again from the list.")
+        return commitEdit(before.copy(nodalLoads = before.nodalLoads.mapIndexed { i, old -> if(i == index) load else old }), Unit)
     }
 
-    fun addMemberLoad(memberId: Int, loadType: MemberLoadType, value: Double, position: Double, loadCase: String) {
-        recordUndo()
-        val current = _memberLoads.value?.toMutableList() ?: mutableListOf()
-        current.add(MemberLoad(memberId, loadType, value, position, loadCase))
-        _memberLoads.value = current
+
+    fun addMemberLoad(memberId: Int, loadType: MemberLoadType, value: Double, position: Double, loadCase: String): FrameMutationResult<Unit> {
+        val before = editCandidate()
+        return commitEdit(before.copy(memberLoads = before.memberLoads + MemberLoad(memberId,loadType,value,position,loadCase)), Unit)
     }
+
 
     fun removeMemberLoad(index: Int) {
         val current = _memberLoads.value ?: return
@@ -730,45 +745,26 @@ class FrameAnalysisViewModel @Inject constructor(
         _memberLoads.value = current.filterIndexed { i, _ -> i != index }
     }
 
-    fun updateMemberLoad(index: Int, load: MemberLoad) {
-        val current = _memberLoads.value?.toMutableList() ?: return
-        if (index !in current.indices) return
-        if (current[index] == load) return
-        recordUndo()
-        current[index] = load
-        _memberLoads.value = current
+    fun updateMemberLoad(index: Int, load: MemberLoad): FrameMutationResult<Unit> {
+        val before = editCandidate()
+        if (index !in before.memberLoads.indices) return rejectEdit("الحمل غير موجود. أعد اختياره من القائمة.", "This load no longer exists. Select it again from the list.")
+        return commitEdit(before.copy(memberLoads = before.memberLoads.mapIndexed { i, old -> if(i == index) load else old }), Unit)
     }
+
 
     // ========================================================================
     // Slab Panel Management
     // ========================================================================
 
-    fun addSlabPanel(
-        nodeIds: List<Int>,
-        loadKNm2: Double,
-        loadCase: String = "DL",
-        thicknessMm: Double = 200.0,
-        distribution: SlabDistribution = SlabDistribution.TwoWay
-    ): Int? {
-        if (nodeIds.size != 4 || nodeIds.distinct().size != 4) return null
-        val nodes = _nodes.value ?: return null
-        if (nodeIds.any { id -> nodes.none { it.id == id } }) return null
-        val current = _slabs.value?.toMutableList() ?: mutableListOf()
-        val id = (current.maxOfOrNull { it.id } ?: 0) + 1
-        recordUndo()
-        current.add(
-            SlabPanel(
-                id = id,
-                nodeIds = nodeIds,
-                thicknessMm = thicknessMm,
-                loadKNm2 = loadKNm2,
-                loadCase = loadCase,
-                distribution = distribution
-            )
-        )
-        _slabs.value = current
-        return id
+    fun addSlabPanel(nodeIds: List<Int>, loadKNm2: Double, loadCase: String = "DL", thicknessMm: Double = 200.0,
+        distribution: SlabDistribution = SlabDistribution.TwoWay): FrameMutationResult<Int> {
+        val before = editCandidate()
+        val max = before.slabs.maxOfOrNull { it.id } ?: 0
+        if (max == Int.MAX_VALUE) return rejectEdit("أرقام البلاطات ممتلئة. لم تتم الإضافة.", "Slab IDs are exhausted. No panel was added.")
+        val panel = SlabPanel(id=max+1,nodeIds=nodeIds.toList(),thicknessMm=thicknessMm,loadKNm2=loadKNm2,loadCase=loadCase,distribution=distribution)
+        return commitEdit(before.copy(slabs = before.slabs + panel), panel.id)
     }
+
 
     fun removeSlabPanel(panelId: Int) {
         if (_slabs.value.orEmpty().none { it.id == panelId }) return
@@ -776,15 +772,12 @@ class FrameAnalysisViewModel @Inject constructor(
         _slabs.value = _slabs.value?.filter { it.id != panelId }
     }
 
-    fun updateSlabPanel(panel: SlabPanel) {
-        val current = _slabs.value?.toMutableList() ?: return
-        val index = current.indexOfFirst { it.id == panel.id }
-        if (index < 0) return
-        if (current[index] == panel) return
-        recordUndo()
-        current[index] = panel
-        _slabs.value = current
+    fun updateSlabPanel(panel: SlabPanel): FrameMutationResult<Unit> {
+        val before = editCandidate()
+        if (before.slabs.none { it.id == panel.id }) return rejectEdit("العنصر غير موجود. أعد اختياره من النموذج.", "This item no longer exists. Select it again from the model.")
+        return commitEdit(before.copy(slabs = before.slabs.map { if(it.id == panel.id) panel else it }), Unit)
     }
+
 
     fun slabMemberLoads(nodes: List<FrameNode>, members: List<FrameMember>): List<MemberLoad> {
         return _slabs.value.orEmpty().flatMap { panel ->
@@ -809,8 +802,10 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     fun updateSteelFy(fy: Double) {
+        if (!fy.isFinite() || fy <= 0.0) { rejectEdit<Unit>("مقاومة الحديد fy: أدخل رقمًا موجبًا محدودًا بالميجاباسكال.", "Steel fy: enter a finite positive value in MPa."); return }
         _steelFy.value = fy
     }
+
 
     fun setDiagramType(type: DiagramType) {
         _activeDiagramType.value = type
