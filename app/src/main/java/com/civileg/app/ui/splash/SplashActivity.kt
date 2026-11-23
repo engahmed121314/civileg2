@@ -41,6 +41,17 @@ class SplashActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
+        // Light (white) system-bar icons for the dark-blue artwork, set before
+        // the first content is shown. Actual launch pixels showed dark status
+        // icons/clock on the dark artwork for the whole splash (low contrast);
+        // the theme's windowLightStatusBar=false did not produce light icons
+        // on the observed window, so appearance is set explicitly here. Scoped
+        // to this activity's window only: MainActivity sets its own appearance
+        // via its theme, so Main is not affected.
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
 
         setContentView(R.layout.activity_splash)
 
