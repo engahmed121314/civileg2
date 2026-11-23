@@ -47,6 +47,9 @@ gradle.beforeProject { p ->
             android.defaultConfig.versionName = '1.8.0-synthetic-qa'
             android.sourceSets.getByName('androidTest').java.srcDir(p.rootProject.file('tools/qa/androidTest/java'))
             android.sourceSets.getByName('androidTest').assets.srcDir(p.rootProject.file('tools/qa/androidTest/assets'))
+            // QA-init-only, instrumentation-APK-only companion dependency (androidTestImplementation).
+            // Java, no kotlin/kotlinx refs; transitive: androidx.annotation 1.4.0, androidx.tracing 1.1.0, junit 4.13.2.
+            p.dependencies.add('androidTestImplementation', 'androidx.test.uiautomator:uiautomator:2.3.0')
             p.tasks.register('verifySyntheticQaContract') {
                 doLast {
                     if (!release.minifyEnabled || !release.shrinkResources || release.debuggable ||

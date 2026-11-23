@@ -113,6 +113,7 @@ collect_evidence() {
   return "$failures"
 }
 
+AGG_RC=0
 CASE_DIRTY=""
 on_exit() {
   local rc=$?
@@ -142,6 +143,51 @@ check_instr() {
   passed=$(grep -c 'INSTRUMENTATION_STATUS_CODE: 0' "$file" || true)
   bad=$(grep -cE 'INSTRUMENTATION_STATUS_CODE: -[0-9]+' "$file" || true)
   [ "$passed" -eq "$expected" ] && [ "$bad" -eq 0 ] || { echo "unexpected per-test statuses: passed=$passed bad=$bad expected=$expected"; return 1; }
+}
+
+# One am instrument invocation. Returns nonzero on instrument/tee/check failure, never exits.
+run_instrument() {
+  local logfile=$1 expected=$2 classes=$3
+  local instr_rc=0 tee_rc=0 check_rc=0
+  local -a pipeline_rc
+  set +e
+  $ADB shell am instrument -w -r \
+    -e class "$classes" \
+    -e qaExpectations /data/local/tmp/qa_expectations.json \
+    com.civileg.app.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee "$logfile"
+  pipeline_rc=("${PIPESTATUS[@]}")
+  instr_rc=${pipeline_rc[0]}
+  tee_rc=${pipeline_rc[1]}
+  set -e
+  [ "$tee_rc" -eq 0 ] || echo "evidence FAILURE: tee of instrumentation output failed (rc=$tee_rc); $logfile may be incomplete"
+  check_instr "$logfile" "$expected" || check_rc=$?
+  [ "$instr_rc" -eq 0 ] || return "$instr_rc"
+  [ "$tee_rc" -eq 0 ] || return "$tee_rc"
+  return "$check_rc"
+}
+
+# Required companion proof: for every companion method the log reports as PASSED, its
+# entry PNG+XML must exist and be non-empty and readable; the saved-model method also
+# needs loaded-4-3 PNG+XML. Missing/empty proof fails evidence status (no acceptance).
+require_companion_evidence() {
+  local logfile=$1 evdir=$2 bad=0 name f
+  local passed
+  passed=$(awk '/^INSTRUMENTATION_STATUS: test=/{n=$0; sub(/^INSTRUMENTATION_STATUS: test=/,"",n)} /^INSTRUMENTATION_STATUS_CODE: 0/{if(n!=""){print n; n=""}}' "$logfile" | sort -u)
+  for name in $passed; do
+    local need="${name}-entry.png ${name}-entry.xml"
+    case "$name" in savedFrameModelOpensFromRealSeededRecord) need="$need ${name}-loaded-4-3.png ${name}-loaded-4-3.xml";; esac
+    for f in $need; do
+      if [ ! -s "$evdir/$f" ]; then echo "evidence FAILURE: companion test $name passed but required proof $f is missing or empty"; bad=$((bad+1)); fi
+    done
+    for f in $need; do
+      case "$f" in
+        *.png) [ ! -s "$evdir/$f" ] || head -c 8 "$evdir/$f" | grep -q 'PNG' || { echo "evidence FAILURE: $f is not a readable PNG"; bad=$((bad+1)); } ;;
+        *.xml) [ ! -s "$evdir/$f" ] || grep -q '<hierarchy' "$evdir/$f" || { echo "evidence FAILURE: $f is not a readable window hierarchy"; bad=$((bad+1)); } ;;
+      esac
+    done
+  done
+  [ -n "$passed" ] || echo "evidence NOTE: no companion method reported PASSED, so no success proof is required (failure evidence is best-effort)"
+  return "$bad"
 }
 
 run_case() {
@@ -203,36 +249,56 @@ PY
   echo "== instrumentation (fail-closed; per-command pipeline codes preserved) =="
   $ADB push "$dir/qa_expectations.json" /data/local/tmp/qa_expectations.json >/dev/null
   $ADB install -r "$TEST_APK" >/dev/null
-  local instr_rc=0 tee_rc=0 check_rc=0 ev_rc=0
-  local -a pipeline_rc
-  set +e
-  $ADB shell am instrument -w -r \
-    -e class "$instrument_classes" \
-    -e qaExpectations /data/local/tmp/qa_expectations.json \
-    com.civileg.app.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee "$dir/instrumentation.txt"
-  pipeline_rc=("${PIPESTATUS[@]}")
-  instr_rc=${pipeline_rc[0]}
-  tee_rc=${pipeline_rc[1]}
-  set -e
-  [ "$tee_rc" -eq 0 ] || echo "evidence FAILURE: tee of instrumentation output failed (rc=$tee_rc); instrumentation.txt may be incomplete"
-  check_instr "$dir/instrumentation.txt" "$expected_tests" || check_rc=$?
+
+  local crc=0
+  case_instrument "$case_name" "$dir" "$expected_tests" "$instrument_classes" || crc=$?
+  [ "$crc" -eq 0 ] || AGG_RC=1
+}
+
+# Instrumentation phase of a case. Called with `|| crc=$?` so one case failing does
+# not stop the other; the SETUP part of run_case still runs under strict set -e.
+case_instrument() {
+  local case_name=$1 dir=$2 expected_tests=$3 instrument_classes=$4
+  # Invocation 1: companion ALONE (own log/status/count), BEFORE the originals, so a
+  # linkage abort in the original classes cannot prevent it from running. It does
+  # not write app data; it only opens the already-migrated seeded DB through the UI.
+  local comp_rc=0 comp_check=0 comp_ev=0
+  CASE_COMPANION_DIR="$dir/companion"
+  rm -rf "$CASE_COMPANION_DIR"; mkdir -p "$CASE_COMPANION_DIR"
+  # Clear ONLY the per-case external companion evidence dir (never app data).
+  $ADB shell "rm -rf /sdcard/Android/data/$PKG.test/files/companion" || true
+  echo "== instrumentation 1/2: FrameEntryCompanionTest (expect 2) =="
+  run_instrument "$dir/instrumentation-companion.txt" 2 "com.civileg.app.qa.FrameEntryCompanionTest" || comp_rc=$?
+  $ADB pull "/sdcard/Android/data/$PKG.test/files/companion/." "$CASE_COMPANION_DIR/" >/dev/null 2>&1 || echo "evidence NOTE: companion dir pull returned nothing"
+  require_companion_evidence "$dir/instrumentation-companion.txt" "$CASE_COMPANION_DIR" || comp_ev=$?
+
+  # Invocation 2: the ORIGINAL classes, unchanged selection and counts, fail-closed.
+  local orig_rc=0
+  echo "== instrumentation 2/2: ORIGINAL classes (expect $expected_tests) =="
+  run_instrument "$dir/instrumentation.txt" "$expected_tests" "$instrument_classes" || orig_rc=$?
 
   echo "== collect per-case evidence (before pass/fail decision) =="
+  local ev_rc=0
   collect_evidence "$case_name" || ev_rc=$?
   emu_network_on
   CASE_DIRTY=""
 
-  if [ "$instr_rc" -ne 0 ] || [ "$tee_rc" -ne 0 ] || [ "$check_rc" -ne 0 ] || [ "$ev_rc" -ne 0 ]; then
-    echo "== case $case_name FAILED (instrument rc=$instr_rc, tee rc=$tee_rc, check rc=$check_rc, evidence rc=$ev_rc); evidence in $dir =="
-    [ "$instr_rc" -eq 0 ] || exit "$instr_rc"
-    [ "$tee_rc" -eq 0 ] || exit "$tee_rc"
-    exit 1
+  echo "== case $case_name RESULTS: companion instrument/check rc=$comp_rc, companion evidence rc=$comp_ev; original rc=$orig_rc; evidence rc=$ev_rc =="
+  if [ "$comp_rc" -ne 0 ] || [ "$comp_ev" -ne 0 ] || [ "$orig_rc" -ne 0 ] || [ "$ev_rc" -ne 0 ]; then
+    echo "== case $case_name FAILED; evidence in $dir =="
+    return 1
   fi
   echo "== case $case_name PASSED =="
 }
 
 run_case "fresh-14" 5 \
   "com.civileg.app.qa.UpgradePreservationTest,com.civileg.app.qa.MinifiedSourceSnapshotTest,com.civileg.app.qa.FrameEntryTest"
+# Case 2 runs even if case 1 failed so both results are real; nothing is marked
+# passed or skipped silently. The aggregate stays red if either case failed.
 run_case "historical-8to9-derived" 3 \
   "com.civileg.app.qa.UpgradePreservationTest,com.civileg.app.qa.FrameEntryTest"
+if [ "$AGG_RC" -ne 0 ]; then
+  echo "== synthetic upgrade QA: AT LEAST ONE CASE FAILED (see RESULTS lines) =="
+  exit 1
+fi
 echo "== synthetic upgrade QA: all cases PASSED =="
