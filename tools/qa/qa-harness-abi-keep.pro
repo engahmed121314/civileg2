@@ -295,3 +295,29 @@
 -keep class kotlin.coroutines.ContinuationInterceptor {
     public static final kotlin.coroutines.ContinuationInterceptor$Key Key;
 }
+
+# ── Delta v5 (QA-accepted 2026-11-23): exact one constructor ──
+# Category 7: run 45109485074 (v4 head 89c0b3a9), both FrameEntryTest cases
+# fail at kotlinx.coroutines.test.TestCoroutineScheduler.<init> (obf :6 =
+# source :34, the `events = ThreadSafeHeap<TimedTask>()` init) with
+# java.lang.InstantiationError: jv1, reached via UnconfinedTestDispatcher <-
+# AndroidComposeUiTestEnvironment.<init> <- createAndroidComposeRule <-
+# FrameEntryTest.<init>: test-environment construction only, not test body.
+# Mechanism (dex/mapping verified): candidate.apk classes3.dex defines
+# kotlinx.coroutines.internal.ThreadSafeHeap -> jv1 with flags 0x401
+# (public|abstract), super Object, no interfaces, and holds NO <init> method
+# ref for it; instrumentation.apk defines the class nowhere yet holds the
+# method ref Ljv1;.<init>()V for the intended `new`. Original library jar
+# kotlinx-coroutines-core-jvm-1.10.2.jar (sha256
+# 5ca175b38df331fd64155b35cd8cae1251fa9ee369709b36d42e0a288ccce3fd) has
+# ThreadSafeHeap concrete (access 0x21) with public <init>()V: the target R8
+# pass abstracted/stripped it, the test pass stripped the class but kept the
+# call site, and the runtime new-instance binds to the abstract target shell.
+# Plain -keep of the class with ONLY the public no-arg constructor: restores
+# the concrete instantiable class + ctor in the target; no allowoptimization/
+# allowshrinking/allowobfuscation, no all-members, no package, no production
+# change. The nested $Key holder rename (rt) was verified consistent across
+# both APKs in v4 and needs no further keep.
+-keep class kotlinx.coroutines.internal.ThreadSafeHeap {
+    public <init>();
+}
