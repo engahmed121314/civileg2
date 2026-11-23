@@ -354,6 +354,34 @@ All page numbers below are the printed page of the PDF of record.
 Golden vectors: ECPBeamShearTest (6 cases: stirrup design, min-only branch,
 4-leg wide beam, fy=600 cap, mild-240 min-ratio floor, q_umax 4.4 cap).
 
+---
+
+**E-SC (2026-11-21) — ECPColumn seismic ductility modes (ordinary / limited / adequate) per ECP 203-2020 Ch6 §6-8.**
+Source of record: ECP 203-2020 PDF (489-page scan), every row below
+read by direct page renders this date. Chapter-6 offset: printed 6-X = PDF
+page X+233; chapter-7 figures: printed 7-16/7-17 = PDF 371/372. All page
+numbers are the printed pages of the PDF of record. The three-mode selector
+(عادي / ممطولية محدودة / ممطولية كافية) is a code-derived expansion of the
+the binary ordinary/special input; no ACI special-frame category mapping is
+implied anywhere.
+
+| ID | Clause / value | Source (accessed 2026-11-21) | Status |
+|---|---|---|---|
+| E-SC-1 | §6-8-1-3(ج): seismic frames are classified into two ductility levels beyond ordinary detailing: ممطولية محدودة (limited) and ممطولية كافية (adequate) | ECP 203-2020 PDF, printed page 6-86 | Verified (primary) |
+| E-SC-2 | §6-8-1-3(و) + fig 6-35: critical region length Lo for columns at each end at beam joints: Lo = max(clear column height/6, largest section dimension, 500 mm); beams: 2× depth; ductile walls: max(total height/6, wall length) ≤ 2× wall section length | Same PDF, printed pages 6-87..6-88 | Verified (primary) |
+| E-SC-3 | §6-8-1-3(ح): deformed bars only for longitudinal reinforcement; max-yield/min-yield ratio ≤ 1.25; concrete grade ≥ 25 MPa | Same PDF, printed pages 6-87..6-88 | Verified (primary) |
+| E-SC-4 | §6-8-2-2-3 (limited-ductility columns): critical-region tie spacing S0 = min(8×smallest longitudinal bar dia [fy 420] / 6× [fy 500], 24× tie dia, half smallest section dim, 150 mm); first tie ≤ S0/2 from beam face; outside critical region spacing ≤ 2·S0 and ≤ 200 mm; ≥ 3 longitudinal bars each face; capacity shear per fig 6-39 (hinges at both ends, axial level giving larger moment resistance) | Same PDF, printed pages 6-92..6-93 (fig 6-39 at 6-93) | Verified (primary) |
+| E-SC-5 | §6-8-2-3-2 (adequate-ductility columns): smallest section dim ≥ 300 mm; short/long side ratio ≥ 0.40; column dim along beam span ≥ 20× largest beam bar dia through joint; if P > 0.04·Ag·fcu then ΣMc ≥ 1.2·ΣMg (Eq [6-62], slab contribution rules); ρ_long ≥ 1%; tension splices in middle half of column height only; ties continue through the joint per Eqs [6-63a/b]; capacity shear per fig 6-40 with Mpr = 1.25× max end moment per §6-8-2-1-3; Vc = 0 when P < 0.05·fcu·Ac; same S0 rule as E-SC-4; ≥ 3 bars each face | Same PDF, printed pages 6-95..6-97 (fig 6-40 at 6-96) | Verified (primary) |
+| E-SC-6 | Eqs [6-63a]/[6-63b] (confinement tie area): Ash = 0.313·(s·y1·(fcu/γc)/(fyst/γs))·(Ag/Ak − 1); Ast = 0.100·(s·y1·(fcu/γc)/(fyst/γs)); Eq [6-64] exterior-joint beam bar hook ldh = 0.20·(fy/γs)/√(fcu/γc)·φ ≥ 8φ or 150 mm, vertical extension ≥ 12φ | Same PDF, printed page 6-98 | Verified (primary) |
+| E-SC-7 | Fig 7-7(أ): limited-ductility column tie/dowel arrangement (cross-tie offsets ≤ 150/250 mm, 6:1 offsets); fig 7-7(ب): adequate-ductility column critical regions — dense S0 zones of length Lo at both clear-height ends, wider mid-height zone, staggered mid-height dowel splices; the figure's own note cross-references S0 to البند (6-8-2-2-3) and Lo to البند (6-8-2-3-1) | Same PDF, printed pages 7-16..7-17 | Verified (primary) |
+| E-SC-8 | Scope decision: frame-context checks (capacity shear figs 6-39/6-40, strong-column/weak-beam Eq [6-62], joint dim vs beam bars) need inputs a single-column tool does not have; they are carried as BLOCKED checks in results and exports — a ductile-mode result is never an overall design pass | Engine design decision implementing the verified clauses E-SC-4/E-SC-5; approved direction from orchestration (no silent ordinary fallback, no clean export) | Design decision (not a code clause) |
+| E-SC-9 | fy multiplier selection: 8×db applies for fy ≤ 420 MPa, 6×db for fy 500 MPa (the two grades named in the clause); grades above 500 take the 6×db (stricter) branch | Same PDF, printed page 6-92; branch extension for fy > 500 is an engine convention toward the stricter value | Verified (primary) + stated convention |
+
+Golden guards: `ECPColumnDuctilityTest` — Lo/S0/first-tie/elsewhere vectors
+(limited, fy 400 and 500 branches), adequate dimension/aspect/ρ checks, the
+Eq [6-63a/b] confinement tie-area vector (hand-computed 620.9/448.5 mm² at
+400×600, fcu 30, Φ20/Φ10, s = 150), the blocked-check semantics (no overall
+pass, confinement length = ECP Lo), and the ordinary-mode regression.
 ## ACI footing min-steel fix — F-01 (accessed 2026-11-21)
 
 Found while building the combined-footing golden vectors: the shared ACI

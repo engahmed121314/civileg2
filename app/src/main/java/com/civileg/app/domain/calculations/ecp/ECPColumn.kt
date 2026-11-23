@@ -2,8 +2,12 @@ package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ColumnDesign
+import com.civileg.app.domain.entities.BlockedSeismicCheck
 import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.ColumnShearDesignResult
+import com.civileg.app.domain.entities.EcpColumnDuctilityMode
+import com.civileg.app.domain.entities.EcpColumnSeismicCheck
+import com.civileg.app.domain.entities.EcpColumnSeismicDetailing
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.ReinforcementResult
 import com.civileg.app.domain.entities.SlendernessCheckResult
@@ -494,5 +498,166 @@ class ECPColumn : ColumnDesign {
         
         // Safety: Pu must be ≤ maxPuAtMu at this Mu level
         return Pu <= maxPuAtMu * 1.001  // Small tolerance for numerical errors
+    }
+    // ── Seismic ductile detailing per ECP 203-2020 §6-8 ──────────────────────
+
+    /**
+     * Ductile detailing for a rectangular column per ECP 203-2020 Ch6 §6-8
+     * (owner's scan, verified by direct page renders 2026-11-21; clause log
+     * E-SC-1..E-SC-9). Returns the computable spacing/dimension/confinement
+     * requirements; frame-context checks (capacity shear per figs 6-39/6-40,
+     * strong-column/weak-beam Eq 6-62, joint dimension vs beam bars) are
+     * returned as blocked with reasons. The result is never a complete design:
+     * [EcpColumnSeismicDetailing.isComplete] stays false.
+     *
+     * @param mode LIMITED (§6-8-2-2) or ADEQUATE (§6-8-2-3); ORDINARY is rejected
+     * @param tieYieldMPa tie steel yield (defaults to fy)
+     * @param clearHeightMm column clear height between beams (Hc), mm
+     * @param tieLegs legs of the provided tie (default 2)
+     */
+    fun designSeismicDetailing(
+        mode: EcpColumnDuctilityMode,
+        fcu: Double,
+        fy: Double,
+        width: Double,
+        depth: Double,
+        clearHeightMm: Double,
+        barDiameter: Double,
+        tieDiameter: Double,
+        providedLongitudinalArea: Double,
+        tieYieldMPa: Double = fy,
+        cover: Double = 40.0,
+        tieLegs: Int = 2
+    ): EcpColumnSeismicDetailing {
+        require(mode != EcpColumnDuctilityMode.ORDINARY) { "Ordinary detailing needs no §6-8 computation" }
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("clearHeightMm", clearHeightMm)
+        InputGuard.positive("barDiameter", barDiameter)
+        InputGuard.positive("tieDiameter", tieDiameter)
+        InputGuard.positive("providedLongitudinalArea", providedLongitudinalArea)
+        InputGuard.positive("tieYieldMPa", tieYieldMPa)
+        InputGuard.positive("cover", cover)
+        InputGuard.inRange("tieLegs", tieLegs, 2, 8)
+
+        // Lo — §6-8-1-3(و) + fig 6-35 (printed 6-87..6-88):
+        // max(clear height/6, largest section dimension, 500 mm)
+        val lo = maxOf(clearHeightMm / 6.0, max(width, depth), 500.0)
+
+        // S0 — §6-8-2-2-3 (printed 6-92), restated for adequate columns in
+        // §6-8-2-3-2(ي) (printed 6-97):
+        // min(8·db [fy 420] or 6·db [fy 500], 24·tie dia, half smallest dim, 150 mm)
+        val dbFactor = if (fy <= 420.0) 8.0 else 6.0
+        val s0 = minOf(dbFactor * barDiameter, 24.0 * tieDiameter, min(width, depth) / 2.0, 150.0)
+        val firstTieOffset = s0 / 2.0
+        val elsewhereSpacing = minOf(2.0 * s0, 200.0)
+
+        val checks = mutableListOf<EcpColumnSeismicCheck>()
+        val blocked = mutableListOf<BlockedSeismicCheck>()
+        val clauseRefs = mutableListOf<String>()
+        clauseRefs += "ECP 203-2020 §6-8-1-3(ج) ductility levels عادية/محدودة/كافية (printed 6-86)"
+        clauseRefs += "ECP 203-2020 §6-8-1-3(و) + fig 6-35 critical regions (printed 6-87..6-88)"
+
+        // ≥3 longitudinal bars each face — §6-8-2-2-3 (printed 6-92) and
+        // §6-8-2-3-2 (printed 6-95). The per-face count is NOT derivable from the
+        // total bar count alone: with the arrangement unknown the check is not
+        // evaluated here (never a fabricated pass) and must be verified on the
+        // actual section arrangement.
+        blocked += BlockedSeismicCheck(
+            name = "Longitudinal bars per face (>= 3 each face)",
+            clause = "ECP 203-2020 §6-8-2-2-3 / §6-8-2-3-2 (printed 6-92 / 6-95)",
+            reason = "Per-face bar count cannot be derived from the total bar count without the actual arrangement; verify at least 3 bars on each face on the section drawing."
+        )
+
+        if (mode == EcpColumnDuctilityMode.LIMITED) {
+            clauseRefs += "ECP 203-2020 §6-8-2-2-3 limited-ductility columns (printed 6-92)"
+            clauseRefs += "ECP 203-2020 fig 7-7(أ) limited-column ties (printed 7-16)"
+            blocked += BlockedSeismicCheck(
+                name = "Capacity-design shear (column)",
+                clause = "ECP 203-2020 §6-8-2-2-3 + fig 6-39 (printed 6-92..6-93)",
+                reason = "Needs column end moments from a frame analysis at the axial level giving the larger flexural resistance; not derivable from single-column inputs."
+            )
+        } else {
+            clauseRefs += "ECP 203-2020 §6-8-2-3-2 adequate-ductility columns (printed 6-95..6-97)"
+            clauseRefs += "ECP 203-2020 fig 7-7(ب) adequate-column critical regions (printed 7-17)"
+            clauseRefs += "ECP 203-2020 §6-8-2-3-2 (printed 6-97): tension splices confined to the middle half of the column height"
+
+            val bMin = min(width, depth)
+            checks += EcpColumnSeismicCheck(
+                name = "Smallest section dimension",
+                clause = "ECP 203-2020 §6-8-2-3-2(أ) (printed 6-95)",
+                demand = "%.0f mm".format(bMin),
+                limit = "≥ 300 mm",
+                satisfied = bMin >= 300.0
+            )
+            val aspect = bMin / max(width, depth)
+            checks += EcpColumnSeismicCheck(
+                name = "Section aspect ratio (short/long)",
+                clause = "ECP 203-2020 §6-8-2-3-2(أ) (printed 6-95)",
+                demand = "%.2f".format(aspect),
+                limit = "≥ 0.40",
+                satisfied = aspect >= 0.40
+            )
+            val rho = providedLongitudinalArea / (width * depth)
+            checks += EcpColumnSeismicCheck(
+                name = "Longitudinal reinforcement ratio",
+                clause = "ECP 203-2020 §6-8-2-3-2 (printed 6-97)",
+                demand = "%.2f%%".format(rho * 100.0),
+                limit = "≥ 1.0%",
+                satisfied = rho >= 0.01
+            )
+
+            // Confinement tie area per Eqs [6-63a/b] (printed 6-98), at s = S0:
+            // Ash = 0.313·(s·y1·(fcu/γc)/(fyst/γs))·(Ag/Ak − 1)
+            // Ast = 0.100·(s·y1·(fcu/γc)/(fyst/γs))
+            val coreW = (width - 2.0 * cover).coerceAtLeast(1.0)
+            val coreD = (depth - 2.0 * cover).coerceAtLeast(1.0)
+            val y1 = max(coreW, coreD)
+            val ak = coreW * coreD
+            val ag = width * depth
+            val fcuD = fcu / GAMMA_C
+            val fystD = tieYieldMPa / GAMMA_S
+            val ashReq = 0.313 * (s0 * y1 * fcuD / fystD) * (ag / ak - 1.0)
+            val astMin = 0.1 * (s0 * y1 * fcuD / fystD)
+            val ashProvided = tieLegs * PI * tieDiameter * tieDiameter / 4.0
+            val ashLimit = max(ashReq, astMin)
+            checks += EcpColumnSeismicCheck(
+                name = "Critical-region tie area (Eqs 6-63a/b at s = S0)",
+                clause = "ECP 203-2020 Eqs [6-63a]/[6-63b] (printed 6-98)",
+                demand = "%.0f mm² provided".format(ashProvided),
+                limit = "≥ %.0f mm² (0.313·s·y1·(fcu/γc)/(fyst/γs)·(Ag/Ak−1) = %.0f; 0.1·s·y1·(fcu/γc)/(fyst/γs) = %.0f)".format(ashLimit, ashReq, astMin),
+                satisfied = ashProvided >= ashLimit
+            )
+
+            blocked += BlockedSeismicCheck(
+                name = "Strong-column/weak-beam (ΣMc ≥ 1.2·ΣMg)",
+                clause = "ECP 203-2020 §6-8-2-3-2 Eq [6-62] (printed 6-95); required when P > 0.04·Ag·fcu",
+                reason = "Needs the connected beam design moments at each joint from a frame analysis; not derivable from single-column inputs."
+            )
+            blocked += BlockedSeismicCheck(
+                name = "Capacity-design shear (column)",
+                clause = "ECP 203-2020 §6-8-2-3-2 + fig 6-40 (printed 6-96..6-97); Mpr = 1.25× max end moment per §6-8-2-1-3; Vc = 0 when P < 0.05·fcu·Ac",
+                reason = "Needs probable column end moments from a frame analysis; not derivable from single-column inputs."
+            )
+            blocked += BlockedSeismicCheck(
+                name = "Joint dimension vs beam bars (≥ 20·db through joint)",
+                clause = "ECP 203-2020 §6-8-2-3-2 (printed 6-95)",
+                reason = "Needs the largest beam bar diameter passing through the joint; not a column-tool input."
+            )
+        }
+
+        return EcpColumnSeismicDetailing(
+            mode = mode,
+            criticalRegionLengthMm = lo,
+            criticalTieSpacingMm = s0,
+            firstTieMaxOffsetMm = firstTieOffset,
+            elsewhereTieSpacingMm = elsewhereSpacing,
+            checks = checks,
+            blockedChecks = blocked,
+            clauseReferences = clauseRefs,
+            isComplete = false
+        )
     }
 }

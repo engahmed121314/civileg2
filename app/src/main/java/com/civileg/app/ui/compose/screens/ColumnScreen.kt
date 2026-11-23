@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.entities.EcpColumnDuctilityMode
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.domain.calculations.utils.BbsGenerator
@@ -229,6 +230,35 @@ fun ColumnScreen(
                             checked = uiState.isSeismic,
                             onCheckedChange = { viewModel.updateInputs(isSeismic = it) }
                         )
+                    }
+                }
+            }
+
+            if (uiState.designCode == DesignCode.ECP) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            AppText(if (com.civileg.app.utils.LocaleHelper.isArabic()) "مستوى الممطولية (ECP 203 §6-8)" else "Ductility level (ECP 203 §6-8)", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            AppText(
+                                if (com.civileg.app.utils.LocaleHelper.isArabic()) "الممطولية المحدودة/الكافية تضيف تكسيح §6-8 لكنها تبقى غير مكتملة حتى إغلاق فحوصات الإطار (قص الاتزان، عمود قوي/كمرة ضعيفة)" else "Ductility level: limited/adequate modes add §6-8 detailing but stay INCOMPLETE until frame checks (capacity shear, strong-column/weak-beam) are closed",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                EcpColumnDuctilityMode.entries.forEach { mode ->
+                                    FilterChip(
+                                        selected = uiState.ecpDuctilityMode == mode,
+                                        onClick = { viewModel.updateEcpDuctilityMode(mode) },
+                                        label = { AppText(if (com.civileg.app.utils.LocaleHelper.isArabic()) mode.displayNameAr else mode.displayNameEn, fontSize = 12.sp) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -657,9 +687,13 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
                 ResultDataRow(stringResource(R.string.stirrups), result.stirrups.description)
             }
             ResultDataRow(stringResource(R.string.column_reinforcement_ratio), String.format("%.2f %%", result.reinforcementRatio))
-            
+
+            result.seismicDetailing?.let { d ->
+                com.civileg.app.ui.compose.components.ColumnSeismicDetailingSection(d)
+            }
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
-            
+
             AppText(stringResource(R.string.column_quantities), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ResultDataRow(stringResource(R.string.column_concrete_vol), String.format("%.3f m³", result.concreteVolume))
             ResultDataRow(stringResource(R.string.column_steel_weight), String.format("%.2f kg", result.steelWeight))
