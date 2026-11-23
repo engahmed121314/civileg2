@@ -142,10 +142,11 @@ class ColumnRecordedReviewPaginationTest {
             processor.processPageContent(pdf.getPage(captionPage))
             assertEquals(context, 1, ctms.size)
             val ctm = ctms[0]
-            // iText Matrix is a 3x3 array; indices 0/1/3/4/6/7 are a/b/c/d/e/f
-            // (I11/I12/I21/I22/I31/I32). a=display width, d=display height.
-            val a = ctm.get(0); val b = ctm.get(1); val c = ctm.get(2); val d = ctm.get(4)
-            System.out.println("emitted image CTM a=$a b=$b c=$c d=$d e=${ctm.get(6)} f=${ctm.get(7)} on page $captionPage")
+            // iText Matrix is a 3x3 array with named component indices:
+            // a=I11, b=I12, c=I21, d=I22, e=I31, f=I32 (row three is I13/I23/I33).
+            // a=display width, d=display height.
+            val a = ctm.get(Matrix.I11); val b = ctm.get(Matrix.I12); val c = ctm.get(Matrix.I21); val d = ctm.get(Matrix.I22)
+            System.out.println("emitted image CTM a=$a b=$b c=$c d=$d e=${ctm.get(Matrix.I31)} f=${ctm.get(Matrix.I32)} on page $captionPage")
             assertTrue("$context ctm=$ctm", a > 0f && a <= 480.5f)
             assertTrue("$context ctm=$ctm", d > 0f)
             // unrotated: off-diagonal shear terms ~0 before comparing a/d
