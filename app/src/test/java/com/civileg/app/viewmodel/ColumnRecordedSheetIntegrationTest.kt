@@ -109,9 +109,21 @@ class ColumnRecordedSheetIntegrationTest {
 
     private fun button(tag: String) = compose.onNodeWithTag(tag)
         .onChildren().filterToOne(hasClickAction())
-    private fun scrollTo(tag: String) {
-        compose.onNodeWithTag("column-content").performScrollToNode(hasTestTag(tag))
+    // Second recorded delta (same manual-clock/h800dp setup as the 113 hang): bounded
+    // swipe gesture instead of performScrollToNode. See ColumnCompletedScreenTest for the
+    // observed stack and the unproven hypothesis. Counts bound gesture steps, not wall time.
+    private fun scrollTo(tag: String, maxSwipes: Int = 12) {
+        fun displayed(): Boolean = try {
+            compose.onNodeWithTag(tag).assertIsDisplayed(); true
+        } catch (_: AssertionError) { false }
+        var swipes = 0
+        while (!displayed() && swipes < maxSwipes) {
+            compose.onNodeWithTag("column-content").performTouchInput { swipeUp() }
+            repeat(40) { compose.mainClock.advanceTimeByFrame() }
+            swipes++
+        }
         compose.waitForIdle()
+        compose.onNodeWithTag(tag).assertIsDisplayed()
     }
     private fun documents() = requireNotNull(host.context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS))
     private fun newReport(before: Set<String>): File? = documents().listFiles()?.firstOrNull {
