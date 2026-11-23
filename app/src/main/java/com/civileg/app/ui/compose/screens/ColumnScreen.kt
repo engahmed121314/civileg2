@@ -454,6 +454,9 @@ fun ColumnScreen(
                                     runCatching {
                                         Log.d("ColumnCapture", "click revision=" + revision.take(12) + " renderedBefore=" + (renderedBefore?.take(12) ?: "null") + " renderedAfter=" + (renderedAfter?.take(12) ?: "null") + " bitmap=" + (captureBitmap?.let { it.width.toString() + "x" + it.height } ?: "null") + " rejection=" + rejection)
                                     }
+                                    runCatching {
+                                        System.err.println("CAPTURE-WITNESS column-click revision=" + revision.take(12) + " bitmap=" + (captureBitmap?.let { it.width.toString() + "x" + it.height } ?: "null") + " rejection=" + rejection)
+                                    }
                                     val capture = if (captureBitmap != null && renderedBefore == revision &&
                                         renderedAfter == revision)
                                         runCatching { ColumnDrawingCapture(revision, captureBitmap) }

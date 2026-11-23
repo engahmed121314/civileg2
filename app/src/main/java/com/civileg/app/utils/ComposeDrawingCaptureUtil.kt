@@ -147,6 +147,7 @@ suspend fun GraphicsLayer.captureToAndroidBitmap(): Bitmap? {
     return try {
         if (size.width <= 0 || size.height <= 0) {
             runCatching { Log.w(TAG_CAPTURE, "captureToAndroidBitmap zero-size fastpath: layer.size=${size.width}x${size.height}") }
+            runCatching { System.err.println("CAPTURE-WITNESS zero-size fastpath: layer=${size.width}x${size.height}") }
             null
         } else {
             val bmp = toImageBitmap().asAndroidBitmap()
@@ -155,6 +156,7 @@ suspend fun GraphicsLayer.captureToAndroidBitmap(): Bitmap? {
         }
     } catch (t: Throwable) {
         runCatching { Log.w(TAG_CAPTURE, "captureToAndroidBitmap conversion failure: layer=${size.width}x${size.height} type=${t.javaClass.name} msg=${t.message}") }
+        runCatching { System.err.println("CAPTURE-WITNESS conversion failure: layer=${size.width}x${size.height} type=${t.javaClass.name} msg=${t.message}") }
         t.printStackTrace()
         null
     }
