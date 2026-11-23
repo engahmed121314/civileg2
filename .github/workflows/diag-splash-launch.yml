@@ -1,0 +1,120 @@
+# Diagnostic-only: real launcher-to-SplashActivity evidence for PR #115.
+# Isolated from android.yml on purpose: ordinary CI is untouched, this never
+# gates, and it runs no unit tests. Cold-starts the real launcher intent on a
+# fresh API 33 emulator and captures timed full-display screencaps (real
+# status/navigation bars) from first attach through the transition out, with
+# no interaction, preserving consent/ad/navigation timing. Bootstrap mirrors
+# the existing ui-test job (same JDK/Gradle/KVM/emulator options).
+name: Diagnostic Splash Real Launch
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/fullbleed-splash-B]
+
+env:
+  JAVA_VERSION: '17'
+  JAVA_DISTRIBUTION: 'temurin'
+
+jobs:
+  diag-splash-launch:
+    name: Real launcher-to-SplashActivity capture (API 33 emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Build free debug APK
+        run: ./gradlew assembleFreeDebug --no-daemon
+
+      - name: Install, cold-launch SplashActivity, capture timed evidence
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          # Animations stay explicitly ENABLED: the advancing sweep IS the
+          # evidence; the ui-test job's disable-animations would freeze it.
+          disable-animations: false
+          # The runner executes each script line in its own shell, so the
+          # capture lives in one committed script invoked by a single line.
+          script: adb install -r app/build/outputs/apk/free/debug/app-free-debug.apk && bash tools/diag/splash-launch-capture.sh
+
+      - name: Install ffmpeg for media analysis
+        if: always()
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: Analyze recording (ffprobe metadata, exact-PTS frames)
+        if: always()
+        run: |
+          set -u
+          OUT=splash-launch-evidence
+          MP4="$OUT/splash-launch-recording.mp4"
+          {
+            echo "ffprobe_version=$(ffprobe -version 2>/dev/null | head -1 || echo unavailable)"
+            echo "ffmpeg_version=$(ffmpeg -version 2>/dev/null | head -1 || echo unavailable)"
+          } > "$OUT/recording-analysis.txt" 2>&1
+          if [ ! -s "$MP4" ]; then
+            echo "recording missing or empty; no media analysis possible" >> "$OUT/recording-analysis.txt"
+            exit 0
+          fi
+          echo -n "recording_sha256=" >> "$OUT/recording-analysis.txt"
+          sha256sum "$MP4" | cut -d' ' -f1 >> "$OUT/recording-analysis.txt"
+          ffprobe -v error -show_format -show_streams "$MP4" > "$OUT/recording-ffprobe.txt" 2>&1 || echo "ffprobe_exit=$?" >> "$OUT/recording-analysis.txt"
+          mkdir -p "$OUT/frames"
+          # Decode every media frame with passthrough frame sync (default
+          # frame-rate sync duplicated/dropped frames of this variable-rate
+          # recording, so extracted PNG counts and indexes did not match the
+          # media). Files are numbered in decode order; the EXACT media PTS of
+          # frame N (1-based) is line N of frame-pts.csv. Never treat the file
+          # index as a PTS.
+          ffprobe -v error -select_streams v -show_entries frame=best_effort_timestamp_time -of csv=p=0 "$MP4" > "$OUT/frame-pts.csv" 2>> "$OUT/recording-analysis.txt" || echo "ffprobe_pts_exit=$?" >> "$OUT/recording-analysis.txt"
+          ffmpeg -nostdin -i "$MP4" -vsync passthrough "$OUT/frames/frame-%08d.png" > "$OUT/ffmpeg-frames.log" 2>&1 || echo "ffmpeg_exit=$?" >> "$OUT/recording-analysis.txt"
+          echo "media_frame_count_ffprobe=$(grep -c . "$OUT/frame-pts.csv" 2>/dev/null || echo 0)" >> "$OUT/recording-analysis.txt"
+          # App milestones from logcat (device wall clock) to compare display
+          # timing with the activity lifecycle: a lagging display can show the
+          # platform starting window after the app window was added.
+          grep -E "ActivityTaskManager: START u0 .*(SplashActivity|MainActivity)|Window\{[0-9a-f]+ u0 com.civileg.app.debug/com.civileg.app.(ui.splash.SplashActivity|MainActivity)\}: Setting back callback|Splash Screen com.civileg.app.debug" "$OUT/logcat.txt" 2>/dev/null | cut -c1-200 > "$OUT/app-milestones.txt" || true
+          FRAME_TOTAL=$(ls "$OUT"/frames/*.png 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$FRAME_TOTAL" -gt 0 ]; then
+            (cd "$OUT/frames" && sha256sum *.png) > "$OUT/frame-shas.txt" 2>&1
+            DISTINCT=$(awk '{print $1}' "$OUT/frame-shas.txt" | sort -u | wc -l | tr -d ' ')
+            {
+              echo "extracted_frame_file_total=$FRAME_TOTAL"
+              echo "distinct_frame_content_count=$DISTINCT"
+              if [ "$DISTINCT" -gt 1 ]; then
+                echo "content_change_validation=frame content changes across the recording"
+              else
+                echo "content_change_validation=all decoded frames byte-identical (frozen or single-frame recording)"
+              fi
+              echo "note: counts describe the recording only; whether any frame shows the intended composition requires actual pixel review"
+            } >> "$OUT/recording-analysis.txt"
+          else
+            echo "extracted_frame_file_total=0 (no decodable frames)" >> "$OUT/recording-analysis.txt"
+          fi
+          exit 0
+
+      - name: Upload splash launch evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: splash-launch-evidence
+          path: splash-launch-evidence/
