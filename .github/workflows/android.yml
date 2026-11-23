@@ -132,37 +132,113 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # Pin the one Robolectric runtime artifact (android-all-instrumented for
-      # SDK 34, the only SDK the unit tests configure) into a local directory
-      # and point Robolectric's offline resolver at it via ROBOLECTRIC_DEPS_DIR
-      # (consumed in app/build.gradle.kts testOptions). This removes the
-      # per-test-JVM Maven Central fetch that intermittently fails CI with
-      # MavenArtifactFetcher IOExceptions. The sha1 is verified so a truncated
-      # or poisoned download fails loudly instead of corrupting the test run.
+      # SDK 34 and 35 android-all-instrumented jars for Robolectric, served from a local dir via
+      # ROBOLECTRIC_DEPS_DIR (app/build.gradle.kts testOptions). Cached; the sha1 is checked on every
+      # run (cache hit or download), a bad cached jar is deleted and replaced. The anchors below are the
+      # sha1 values already pinned in this file. To renew a poisoned cache, bump -v1 in the key.
+      - name: Cache Robolectric android-all jars
+        uses: actions/cache@v4
+        with:
+          path: .robolectric-deps
+          key: robolectric-android-all-v1-14-robolectric-10818077-i7-dd5e1d35-15-robolectric-12650502-i7-4a727564
+
       - name: Provision Robolectric android-all jar
+        timeout-minutes: 12
         run: |
           set -euo pipefail
           DIR="$GITHUB_WORKSPACE/.robolectric-deps"
           mkdir -p "$DIR"
-          # SDK 34 (most tests) and SDK 35 (resolved by the Robolectric runner
-          # for the Robolectric-backed suite on this project's config); both
-          # were previously fetched from Maven Central at runtime per test JVM.
-          for entry in             "14-robolectric-10818077-i7 dd5e1d356107e9d99ebf58beb5329debe2849140"             "15-robolectric-12650502-i7 4a72756411af462a4ca89b355b0834799dc8258e"; do
-            V="${entry%% *}"
-            SHA1="${entry##* }"
+          BUDGET=600        # global seconds for both jars (step timeout-minutes is 12 = 720 s)
+          REQ_MAX=90        # per-request max seconds
+          CONNECT_MAX=20
+          DEFAULT_RA=30     # explicit policy when a 429/503 carries no Retry-After
+          RA_MAX=120        # a longer server-requested wait fails without retry
+          RETRY_PAUSE=10    # pause after a transport error or other HTTP status
+          BASE="https://repo1.maven.org/maven2"
+          START=$(date +%s)
+          remaining() { echo $(( BUDGET - ( $(date +%s) - START ) )); }
+          WORK="$(mktemp -d)"
+          cleanup() { rm -rf "$WORK"; }
+          trap cleanup EXIT
+          # Final response only (curl -D lists every redirect hop). Prints: absent | secs:N | bad:<value>
+          retry_after() {
+            python3 - "$1" <<'PY'
+          import sys, email.utils, datetime
+          blocks, cur = [], []
+          for line in open(sys.argv[1], errors="replace").read().replace("\r", "").split("\n"):
+              if line.startswith("HTTP/"):
+                  cur = []; blocks.append(cur)
+              elif cur is not None and blocks:
+                  cur.append(line)
+          val = None
+          if blocks:
+              for line in blocks[-1]:
+                  if line.lower().startswith("retry-after:"):
+                      val = line.split(":", 1)[1].strip()
+          if val is None:
+              print("absent")
+          elif val.isdigit():
+              print("secs:" + val)
+          else:
+              try:
+                  dt = email.utils.parsedate_to_datetime(val)
+                  if dt.tzinfo is None:
+                      dt = dt.replace(tzinfo=datetime.timezone.utc)
+                  d = (dt - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
+                  print("secs:%d" % max(0, int(d) + (1 if d % 1 else 0)))
+              except Exception:
+                  print("bad:" + val[:80])
+          PY
+          }
+          fail() { echo "::error::$1"; exit 1; }
+          for entry in "14-robolectric-10818077-i7 dd5e1d356107e9d99ebf58beb5329debe2849140" "15-robolectric-12650502-i7 4a72756411af462a4ca89b355b0834799dc8258e"; do
+            V="${entry%% *}"; SHA1="${entry##* }"
             JAR="$DIR/android-all-instrumented-$V.jar"
-            URL="https://repo1.maven.org/maven2/org/robolectric/android-all-instrumented/$V/android-all-instrumented-$V.jar"
+            URL="$BASE/org/robolectric/android-all-instrumented/$V/android-all-instrumented-$V.jar"
+            if [ -f "$JAR" ]; then
+              if echo "$SHA1  $JAR" | sha1sum -c - >/dev/null 2>&1; then
+                echo "cache hit, sha1 verified (0 fetches): $V"; continue
+              fi
+              echo "::warning::cached $V failed sha1; deleted and replaced from the origin (actions/cache never overwrites an existing key: bump the -vN key suffix to renew it)"
+              rm -f "$JAR"
+            fi
+            ok=0
             for attempt in 1 2 3; do
-              if curl -fsSL --retry 3 --connect-timeout 30 -o "$JAR" "$URL"; then
-                break
+              REM=$(remaining)
+              [ "$REM" -ge 15 ] || fail "provision budget (${BUDGET}s) exhausted before attempt $attempt for $V"
+              MAXT=$REQ_MAX; [ "$REM" -ge "$MAXT" ] || MAXT=$REM
+              HDR="$WORK/hdr"; PART="$WORK/part"; ERR="$WORK/err"; rm -f "$HDR" "$PART" "$ERR"
+              set +e
+              CODE="$(curl -sS -L --connect-timeout "$CONNECT_MAX" --max-time "$MAXT" -D "$HDR" -o "$PART" -w '%{http_code}' "$URL" 2>"$ERR")"
+              RC=$?
+              set -e
+              echo "attempt $attempt for $V: curl_rc=$RC http=${CODE:-none} (max ${MAXT}s)"
+              grep -iE '^(HTTP/|retry-after:|date:)' "$HDR" 2>/dev/null | tr -d '\r' || true
+              [ ! -s "$ERR" ] || head -c 200 "$ERR" | tr -d '\r' || true
+              if [ "$RC" -eq 0 ] && [ "$CODE" = "200" ]; then
+                ACT="$(sha1sum "$PART" | cut -d' ' -f1)"
+                if [ "$ACT" = "$SHA1" ]; then mv "$PART" "$JAR"; ok=1; break; fi
+                fail "checksum mismatch for $V: expected $SHA1 actual $ACT (not retried, bad part discarded)"
               fi
-              if [ "$attempt" = 3 ]; then
-                echo "::error::failed to download Robolectric android-all jar $V after 3 attempts"
-                exit 1
+              if [ "$RC" -eq 0 ] && { [ "$CODE" = "429" ] || [ "$CODE" = "503" ]; }; then
+                RA="$(retry_after "$HDR")"
+                case "$RA" in
+                  absent) WAIT=$DEFAULT_RA; echo "no Retry-After; policy wait ${WAIT}s" ;;
+                  secs:*) WAIT="${RA#secs:}"
+                          [ "$WAIT" -le "$RA_MAX" ] || fail "server asked to wait ${WAIT}s (Retry-After), over the ${RA_MAX}s limit; not retrying. Re-run later." ;;
+                  *) fail "unparseable Retry-After value: ${RA#bad:}" ;;
+                esac
+              else
+                WAIT=$RETRY_PAUSE
               fi
-              sleep 10
+              [ "$attempt" != 3 ] || break
+              REM=$(remaining)
+              [ $(( WAIT + 15 )) -le "$REM" ] || fail "wait ${WAIT}s plus a request cannot fit the remaining ${REM}s budget for $V"
+              echo "waiting ${WAIT}s before attempt $((attempt+1))"
+              sleep "$WAIT"
             done
-            echo "$SHA1  $JAR" | sha1sum -c -
+            [ "$ok" = 1 ] || fail "no verified Robolectric jar $V after 3 bounded attempts (last curl_rc=$RC http=${CODE:-none})"
+            echo "downloaded, sha1 verified: $V"
           done
           echo "ROBOLECTRIC_DEPS_DIR=$DIR" >> "$GITHUB_ENV"
 
