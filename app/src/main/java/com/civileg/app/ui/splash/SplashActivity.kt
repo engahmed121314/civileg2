@@ -162,7 +162,7 @@ class SplashActivity : AppCompatActivity() {
         try {
             val cb = frameCommitCallback
             val vto = commitObserver
-            if (cb != null && vto != null) {
+            if (cb != null && vto != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 if (vto.isAlive) {
                     vto.unregisterFrameCommitCallback(cb)
                     if (!frameCommitted.get()) navLog { "onDestroy: unregister attempted, frame-commit callback had not run (unobserved, not proof of no frame)" }
