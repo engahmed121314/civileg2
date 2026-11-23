@@ -148,7 +148,15 @@ jobs:
           echo "ROBOLECTRIC_DEPS_DIR=$RUNNER_TEMP/robolectric-sdk" >> "$GITHUB_ENV"
 
       - name: Run unit tests
-        run: ./gradlew testFreeDebugUnitTest testPlayDebugUnitTest --no-daemon
+        run: |
+          mkdir -p "$RUNNER_TEMP/jvm-diag"
+          set +e
+          tools/ci/diag-jvm-watchdog.sh 1380 "$RUNNER_TEMP/jvm-diag" &
+          WD=$!
+          ./gradlew -I tools/ci/diag-test-logging.init.gradle testFreeDebugUnitTest testPlayDebugUnitTest --no-daemon
+          rc=$?
+          kill "$WD" 2>/dev/null || true
+          exit $rc
 
       - name: Generate JaCoCo coverage report
         run: ./gradlew :app:jacocoTestReport --no-daemon
@@ -164,6 +172,15 @@ jobs:
         with:
           name: coverage-report
           path: app/build/reports/jacoco/jacocoTestReport/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload JVM watchdog dumps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-watchdog-dumps
+          path: ${{ runner.temp }}/jvm-diag/
           retention-days: 14
           if-no-files-found: warn
 
