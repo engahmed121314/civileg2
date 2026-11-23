@@ -93,7 +93,24 @@
 -keep class kotlin.text.Regex { Regex(java.lang.String); }
 -keep class kotlin.text.Regex { java.lang.String replace(java.lang.CharSequence, java.lang.String); }
 -keep class kotlin.time.AbstractLongTimeSource
--keep class kotlin.time.AbstractLongTimeSource { AbstractLongTimeSource(kotlin.time.DurationUnit); }
+# Delta v6 (QA-accepted 2026-11-23): the simple-spelling constructor rule
+# below was REPLACED, not appended: the original line
+#   -keep class kotlin.time.AbstractLongTimeSource { AbstractLongTimeSource(kotlin.time.DurationUnit); }
+# was present in the effective v5 configuration (configuration.txt lines
+# 347-349) yet usage.txt lists "public void <init>(kotlin.time.DurationUnit)"
+# among the class's REMOVED members and both FrameEntryTest cases failed at
+# TestCoroutineScheduler$timeSource$1.<init> with NoSuchMethodError
+# <init>(Lc10;)V (run 45118067467): parser acceptance was not R8 matching.
+# Corrected to the explicit <init> spelling. The class pin (-keep class
+# kotlin.time.AbstractLongTimeSource, which held: freeRelease mapping keeps
+# the name) and the read() override contract below are preserved unchanged;
+# the class stays abstract - this does not force concrete. Original member
+# verified in kotlin-stdlib-2.4.21.jar (sha256
+# bd8250210584cb659847dce9cda660f8e9906e5def7fbebcea93dc6dcb6a88a3):
+# public void <init>(kotlin.time.DurationUnit). Rebuild-inspect: rebuilt
+# public ctor with mapped DurationUnit owner plus the test subclass
+# invoke-direct joint descriptor, then the unchanged 5 tests.
+-keep class kotlin.time.AbstractLongTimeSource { public <init>(kotlin.time.DurationUnit); }
 -keep class kotlin.time.AbstractLongTimeSource { long read(); }  # override contract: subclass TestCoroutineScheduler$timeSource$1; overrides this member
 -keep class kotlin.time.Duration$Companion
 -keep class kotlin.time.Duration$Companion { long parse-UwyO8pc(java.lang.String); }
