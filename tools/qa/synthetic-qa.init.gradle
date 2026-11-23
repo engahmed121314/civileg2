@@ -1,0 +1,160 @@
+// Apply only to a disposable, nonpublishing emulator build with -I.
+// No production build file, signing secret, security check or keep rule is changed.
+if (gradle.startParameter.projectProperties['civilegSyntheticQa'] != 'true') {
+    throw new GradleException('Synthetic QA init requires -PcivilegSyntheticQa=true')
+}
+def requestedRoot = System.getProperty('civileg.syntheticQa.root')
+if (!requestedRoot) throw new GradleException('Synthetic QA root must be explicit')
+
+gradle.beforeProject { p ->
+    if (p.path == ':app' && p.rootProject.projectDir.canonicalFile == new File(requestedRoot).canonicalFile) {
+        // Register before the Android plugin's afterEvaluate variant finalization.
+        p.afterEvaluate {
+            def android = p.extensions.getByName('android')
+            if (android.namespace != 'com.civileg.app' || android.defaultConfig.applicationId != 'com.civileg.app') {
+                throw new GradleException('Unexpected application identity for synthetic upgrade QA')
+            }
+            def release = android.buildTypes.getByName('release')
+            if (!release.minifyEnabled || !release.shrinkResources || release.debuggable) {
+                throw new GradleException('Synthetic QA must retain configured release shrinking and non-debuggable state')
+            }
+            android.testBuildType = 'release'
+            // QA-init-only narrow facade keep: the androidx.test runner reaches
+            // kotlin.LazyKt.lazy via a direct static invoke; without this the
+            // minified target drops the facade. Scoped to this init script only -
+            // the shipping build config is unchanged (default-off: no production
+            // file references the keep).
+            def facadeKeep = p.rootProject.file('tools/qa/qa-lazykt-facade-keep.pro')
+            if (!facadeKeep.isFile()) {
+                throw new GradleException('Synthetic QA facade keep file missing: ' + facadeKeep)
+            }
+            release.proguardFile(facadeKeep)
+            // QA-init-only member-level harness ABI retention: the instrumentation
+            // APK references these kotlin/kotlinx classes and member signatures
+            // through the minified app's obfuscation dictionary; without the
+            // pinned names the rebuilt target drops or renames them and the
+            // harness cannot link. Derived from the exact APK pair against
+            // pinned jars; scoped to this init script only - the shipping build
+            // config is unchanged (default-off: no production file references
+            // the keep).
+            def abiKeep = p.rootProject.file('tools/qa/qa-harness-abi-keep.pro')
+            if (!abiKeep.isFile()) {
+                throw new GradleException('Synthetic QA harness ABI keep file missing: ' + abiKeep)
+            }
+            release.proguardFile(abiKeep)
+            release.signingConfig = android.signingConfigs.getByName('debug')
+            android.defaultConfig.versionCode = 9
+            android.defaultConfig.versionName = '1.8.0-synthetic-qa'
+            android.sourceSets.getByName('androidTest').java.srcDir(p.rootProject.file('tools/qa/androidTest/java'))
+            android.sourceSets.getByName('androidTest').assets.srcDir(p.rootProject.file('tools/qa/androidTest/assets'))
+            // QA-init-only, instrumentation-APK-only companion dependency (androidTestImplementation).
+            // Java, no kotlin/kotlinx refs; transitive: androidx.annotation 1.4.0, androidx.tracing 1.1.0, junit 4.13.2.
+            p.dependencies.add('androidTestImplementation', 'androidx.test.uiautomator:uiautomator:2.3.0')
+            p.tasks.register('verifySyntheticQaContract') {
+                doLast {
+                    if (!release.minifyEnabled || !release.shrinkResources || release.debuggable ||
+                        android.testBuildType != 'release' ||
+                        release.signingConfig != android.signingConfigs.getByName('debug')) {
+                        throw new GradleException('Synthetic QA contract changed before execution')
+                    }
+                    if (!release.proguardFiles.any { it == p.rootProject.file('tools/qa/qa-lazykt-facade-keep.pro') }) {
+                        throw new GradleException('Synthetic QA facade keep was not applied to the release build type')
+                    }
+                    if (!release.proguardFiles.any { it == p.rootProject.file('tools/qa/qa-harness-abi-keep.pro') }) {
+                        throw new GradleException('Synthetic QA harness ABI keep was not applied to the release build type')
+                    }
+                    println('Synthetic QA: minified/shrunk, non-debuggable, disposable debug signer, release instrumentation, code9')
+                    println('Synthetic QA caveat: QA target differs from shipping - kotlin.LazyKt facade hierarchy is kept (qa-lazykt-facade-keep.pro), so runner recovery is NOT a production fix claim')
+                    println('Synthetic QA caveat: QA target additionally retains 80 pinned kotlin/kotlinx harness ABI classes (qa-harness-abi-keep.pro), so harness linkage recovery is NOT a production fix claim')
+                }
+            }
+            p.tasks.register('captureSyntheticQaPackagingDiagnostics') {
+                // Provider-backed ASM outputs must belong to this invocation's completed graph.
+                dependsOn('assembleFreeRelease', 'assembleFreeReleaseAndroidTest')
+                doLast {
+                    def out = p.rootProject.file('qa-packaging/gradle')
+                    out.mkdirs()
+                    def failures = []
+                    def describeFailure = { Throwable error ->
+                        def causes = []
+                        def seen = Collections.newSetFromMap(new IdentityHashMap())
+                        def current = error
+                        while (current != null && seen.add(current) && causes.size() < 8) {
+                            causes << current.class.name + ': ' + current.message
+                            current = current.cause
+                        }
+                        causes.join('\ncaused by: ') + '\n'
+                    }
+                    def versions = ["Gradle=${p.gradle.gradleVersion}", "Java=${System.getProperty('java.version')}"]
+                    def loader = p.plugins.getPlugin('com.android.application').class.classLoader
+                    [['AGP', 'com.android.Version', 'ANDROID_GRADLE_PLUGIN_VERSION'],
+                     ['R8', 'com.android.tools.r8.Version', null]].each { spec ->
+                        try {
+                            def type = Class.forName(spec[1], false, loader)
+                            def value = spec[2] ? type.getField(spec[2]).get(null) : type.getMethod('getVersionString').invoke(null)
+                            versions << "${spec[0]}=${value}"
+                            versions << "${spec[0]}_code_source=${type.protectionDomain?.codeSource?.location}"
+                        } catch (Throwable e) {
+                            versions << "${spec[0]}_not_visible=${e.class.name}"
+                        }
+                    }
+                    new File(out, 'tool-versions.txt').text = versions.join('\n') + '\n'
+                    ['freeReleaseRuntimeClasspath', 'freeReleaseAndroidTestRuntimeClasspath'].each { name ->
+                        try {
+                            def configuration = p.configurations.getByName(name)
+                            def graph = configuration.incoming.resolutionResult
+                            def lines = graph.allDependencies.collect { dependency ->
+                                if (dependency instanceof org.gradle.api.artifacts.result.ResolvedDependencyResult) {
+                                    return "${dependency.from.id} -> ${dependency.requested} => ${dependency.selected.id}"
+                                }
+                                return "UNRESOLVED ${dependency.requested}"
+                            }.sort()
+                            // Keep the resolved/unresolved graph even if artifact materialization fails.
+                            new File(out, name + '.txt').text = lines.join('\n') + '\n'
+                            def artifactHeader = 'ARTIFACTS'
+                            def artifacts
+                            if (name == 'freeReleaseRuntimeClasspath') {
+                                // AGP exposes several project artifacts. Select runtime classes explicitly,
+                                // instead of the legacy untyped view that cannot choose a project artifact.
+                                def view = configuration.incoming.artifactView {
+                                    attributes.attribute(org.gradle.api.artifacts.type.ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE,
+                                        'android-classes-jar')
+                                }
+                                artifactHeader += ' artifactType=android-classes-jar'
+                                artifacts = view.artifacts.artifacts.collect { artifact ->
+                                    "${artifact.id.componentIdentifier} | ${artifact.file.absolutePath} | bytes=${artifact.file.length()}"
+                                }.sort()
+                            } else {
+                                artifacts = configuration.resolvedConfiguration.resolvedArtifacts.collect { artifact ->
+                                    "${artifact.moduleVersion.id} | ${artifact.file.absolutePath} | bytes=${artifact.file.length()}"
+                                }.sort()
+                            }
+                            new File(out, name + '.txt').append(([artifactHeader] + artifacts).join('\n') + '\n')
+                        } catch (Throwable e) {
+                            failures << name
+                            new File(out, name + '.error.txt').text = describeFailure(e)
+                        }
+                    }
+                    ['minifyFreeReleaseWithR8', 'minifyFreeReleaseAndroidTestWithR8'].each { taskName ->
+                        try {
+                            def task = p.tasks.findByName(taskName)
+                            if (task == null) throw new GradleException('Expected minify task absent: ' + taskName)
+                            def files = task.inputs.files.files.collect { file ->
+                                def sensitive = file.name.toLowerCase().matches('.*\\.(keystore|jks|p12|pfx|pem|key)$')
+                                sensitive ? '[signing/secret path excluded]' : "${file.absolutePath} | bytes=${file.isFile() ? file.length() : 'directory'}"
+                            }.sort()
+                            new File(out, task.name + '-inputs.txt').text = "task=${task.path}\ntype=${task.class.name}\n" + files.join('\n') + '\n'
+                        } catch (Throwable e) {
+                            failures << taskName
+                            new File(out, taskName + '.error.txt').text = describeFailure(e)
+                        }
+                    }
+                    if (!failures.isEmpty()) throw new GradleException('Packaging diagnostics incomplete: ' + failures.join(', '))
+                }
+            }
+            p.tasks.matching { it.name == 'assembleFreeRelease' || it.name == 'assembleFreeReleaseAndroidTest' }.configureEach {
+                dependsOn(p.tasks.named('verifySyntheticQaContract'))
+            }
+        }
+    }
+}

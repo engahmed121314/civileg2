@@ -1,0 +1,241 @@
+# DRAFT - real CI execution validation pending
+# Synthetic minified-upgrade QA for civileg2 (disposable, nonpublishing).
+# Lives at .github/workflows/synthetic-upgrade-qa.yml on its own qa/synthetic-*
+# branch when published; the existing release workflow is untouched.
+#
+# Route registration: for pull_request events GitHub runs the workflow version
+# from the PR's merge commit, so this file is executable from its own branch
+# without landing on the default branch first.
+#
+# Hard boundaries (do not weaken):
+#   - never publishes a release; no release-upload or tag steps
+#   - default debug signer only, generated inside this job's fresh runner;
+#     no production keystore, no secrets, no signing material leaves the job
+#   - ONE job builds the candidate, re-signs the old-APK copy and runs the
+#     upgrade, so the SAME temporary signer covers both APKs (no key artifact
+#     transfer between runners)
+#   - the re-signed old copy tests synthetic migration ONLY; it proves nothing
+#     about production in-place certificate compatibility
+#   - no connectedAndroidTest as upgrade executor; no uninstall/pm clear within
+#     a case; independent cases restart from a clean disposable package state
+name: Synthetic Upgrade QA (disposable)
+
+on:
+  pull_request:
+    paths:
+      - 'tools/qa/**'
+      - '.github/workflows/synthetic-upgrade-qa.yml'
+  workflow_dispatch:
+    inputs:
+      synthetic_qa:
+        description: "Must be exactly 'true' to run disposable QA"
+        required: true
+        default: "false"
+
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: '21'   # Disposable QA toolchain; main CI pins 17 and remains a separate gate
+  JAVA_DISTRIBUTION: 'temurin'
+  OLD_APK_SHA256: '8af5940b490e3db76b12c1a42c00defe93ac4b39246adef398387f56b6236729'
+  OLD_APK_URL: 'https://github.com/engahmed121314/civileg2/releases/download/v1.8.0/CivilEngineerPro-1.8.0.apk'
+
+jobs:
+  synthetic-upgrade-qa:
+    name: Build, re-sign, upgrade and verify (single disposable job)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: >-
+      (github.event_name == 'pull_request' && startsWith(github.head_ref, 'qa/synthetic-')) ||
+      (github.event_name == 'workflow_dispatch' && inputs.synthetic_qa == 'true')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      - name: Resolve and verify installed build-tools once
+        run: |
+          BT=$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)
+          BT_DIR="$ANDROID_HOME/build-tools/$BT"
+          test -x "$BT_DIR/apksigner" && test -x "$BT_DIR/zipalign"
+          echo "build-tools in use: $BT_DIR"
+          echo "BT_DIR=$BT_DIR" >> "$GITHUB_ENV"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Non-sensitive synthetic google-services.json (CI-only, never committed)
+        run: python3 tools/qa/host/write_synthetic_google_services.py app/google-services.json
+
+      - name: Build candidate app + QA instrumentation under the synthetic contract
+        run: |
+          ./gradlew -I tools/qa/synthetic-qa.init.gradle \
+            -PcivilegSyntheticQa=true \
+            -Dcivileg.syntheticQa.root="$GITHUB_WORKSPACE" \
+            -PfirebaseCrashlytics.mappingFileUploadEnabled=false \
+            --no-daemon verifySyntheticQaContract \
+            assembleFreeRelease assembleFreeReleaseAndroidTest
+
+      - name: Resolve deterministic APK paths (refuse missing or ambiguous)
+        run: |
+          CANDIDATE=app/build/outputs/apk/free/release/app-free-release.apk
+          test -f "$CANDIDATE" || { echo "candidate APK missing at $CANDIDATE"; exit 1; }
+          mapfile -t TESTS < <(find app/build/outputs -name '*androidTest*.apk' -type f)
+          [ "${#TESTS[@]}" -eq 1 ] || { echo "expected exactly 1 androidTest APK, found ${#TESTS[@]}"; printf '%s\n' "${TESTS[@]}"; exit 1; }
+          echo "CANDIDATE_APK=$CANDIDATE" >> "$GITHUB_ENV"
+          echo "TEST_APK=${TESTS[0]}" >> "$GITHUB_ENV"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest application-id "$CANDIDATE" | tee qa-evidence-manifest.txt
+          "$BT_DIR/apksigner" verify --print-certs "$CANDIDATE" | tee qa-evidence-candidate-certs.txt
+          sha256sum "$CANDIDATE" "${TESTS[0]}" | tee qa-evidence-hashes.txt
+
+      - name: Verify rebuilt QA-target linkage before unchanged tests
+        # Fail-closed: inspects the ACTUAL rebuilt APKs (facade hierarchy with
+        # exact directed chain, full-signature descriptor dependencies,
+        # instrumentation method-reference resolution) so a runner recovery is
+        # never mistaken for linkage the target lacks. Dependency-install or
+        # parser failure refuses with evidence. Focused positive/negative
+        # fixtures run first so a silently broken gate cannot pass.
+        run: |
+          # Fail closed through pipes: without pipefail the gate's non-zero exit
+          # is masked by tee's success and the pipeline would continue on a
+          # failed linkage gate.
+          set -o pipefail
+          # Installer stdout+stderr retained as the install-refusal evidence artifact.
+          pip install androguard==4.1.4 2>&1 | tee qa-evidence-androguard-install.txt || { echo 'GATE REFUSAL: androguard install failed (see qa-evidence-androguard-install.txt)'; exit 1; }
+          python3 tools/qa/host/selftest_lazy_facade_linkage.py | tee qa-evidence-lazy-facade-selftest.txt
+          python3 tools/qa/host/verify_lazy_facade_linkage.py "$CANDIDATE_APK" "$TEST_APK" | tee qa-evidence-lazy-facade-linkage.txt
+          # Structural DIAGNOSTIC only (never gates): records observations about
+          # the rebuilt APKs against the finite ABI keep list for review
+          # alongside native results. It is not a linkage proof and its output
+          # never suppresses or substitutes for native failure. The pipeline
+          # must succeed under pipefail on ANY script/parser/unexpected/
+          # missing-script failure: stderr is retained in the evidence file and
+          # a refusal line marks the outcome. pip install, the selftest and the
+          # Lazy gate above remain hard-gated and are never wrapped this way.
+          { python3 tools/qa/host/harness_abi_structure_diagnostic.py "$CANDIDATE_APK" "$TEST_APK" tools/qa/qa-harness-abi-keep.pro 2>&1 || echo "DIAGNOSTIC REFUSAL: diagnostic step exited nonzero (script/parser/unexpected/missing-script failure); native evidence unaffected"; } | tee qa-evidence-harness-abi-diagnostic.txt
+
+      - name: Capture synthetic packaging diagnostics before emulator
+        if: always()
+        run: |
+          mkdir -p qa-packaging
+          status=0
+          if ./gradlew -I tools/qa/synthetic-qa.init.gradle \
+            -PcivilegSyntheticQa=true \
+            -Dcivileg.syntheticQa.root="$GITHUB_WORKSPACE" \
+            -PfirebaseCrashlytics.mappingFileUploadEnabled=false \
+            --no-daemon captureSyntheticQaPackagingDiagnostics > qa-packaging/gradle-capture.log 2>&1; then
+            echo "Gradle packaging diagnostics captured"
+          else
+            status=$?
+          fi
+          python3 tools/qa/host/capture_packaging_evidence.py
+          cat qa-packaging/gradle-capture.log
+          exit "$status"
+
+      - name: Fetch old v1.8.0 APK over public HTTP and hash-verify
+        run: |
+          mkdir -p qa-old
+          # Public release asset, grounded 2026-11-22: 20,287,187 bytes, official
+          # digest sha256:8af5940b...6729 (matches the pinned value below).
+          # Plain unauthenticated curl; no Authorization header is ever attached.
+          curl -sL -o qa-old/old.apk "$OLD_APK_URL"
+          echo "$OLD_APK_SHA256  qa-old/old.apk" | sha256sum -c -
+
+      - name: Re-sign a COPY of the old APK with this job's temporary debug signer
+        run: |
+          test -f "$HOME/.android/debug.keystore" || { echo "debug keystore missing after candidate build"; exit 1; }
+          cp qa-old/old.apk qa-old/old-resigned-unaligned.apk
+          "$BT_DIR/zipalign" -f 4 qa-old/old-resigned-unaligned.apk qa-old/old-resigned.apk
+          "$BT_DIR/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-pass pass:android \
+            --out qa-old/old-resigned-final.apk qa-old/old-resigned.apk
+          mv qa-old/old-resigned-final.apk qa-old/old-resigned.apk
+          "$BT_DIR/apksigner" verify --print-certs qa-old/old-resigned.apk | tee qa-old/old-resigned-certs.txt
+
+      - name: Assert candidate and re-signed old share the same temporary signer
+        run: |
+          CAND=$(grep -oP 'certificate SHA-256 digest: \K[0-9a-f]+' qa-evidence-candidate-certs.txt | sort -u)
+          OLD=$(grep -oP 'certificate SHA-256 digest: \K[0-9a-f]+' qa-old/old-resigned-certs.txt | sort -u)
+          test -n "$CAND" && [ "$CAND" = "$OLD" ] || { echo "signer mismatch between candidate and re-signed old"; exit 1; }
+          echo "OLD_APK_RESIGNED=qa-old/old-resigned.apk" >> "$GITHUB_ENV"
+          echo "shared temporary signer: $CAND"
+
+      - name: Enable and verify KVM on this disposable Linux runner
+        run: |
+          set -o pipefail
+          run_check() {
+            local label="$1" status
+            shift
+            echo "KVM preflight START: $label"
+            if "$@"; then status=0; else status=$?; fi
+            echo "KVM preflight END: $label status=$status"
+            return "$status"
+          }
+          linked_libraries() {
+            local output status
+            if output=$(env LC_ALL=C LD_LIBRARY_PATH="$ANDROID_HOME/emulator/lib64:$ANDROID_HOME/emulator/lib64/qt/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ldd "$1" 2>&1); then
+              printf '%s\n' "$output"
+              if grep -Fq 'not found' <<< "$output"; then return 1; fi
+            else
+              status=$?
+              printf '%s\n' "$output"
+              return "$status"
+            fi
+          }
+          {
+            run_check identity-before id || exit "$?"
+            run_check device-before ls -l /dev/kvm || echo "KVM device metadata unavailable before validation"
+            run_check character-device test -c /dev/kvm || exit "$?"
+            printf '%s\n' 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
+              run_check write-rule sudo tee /etc/udev/rules.d/99-kvm4all.rules || exit "$?"
+            run_check reload-rules sudo udevadm control --reload-rules || exit "$?"
+            run_check trigger sudo udevadm trigger --name-match=kvm || exit "$?"
+            run_check settle sudo udevadm settle --timeout=10 || exit "$?"
+            run_check identity-after id || exit "$?"
+            run_check device-after ls -l /dev/kvm || exit "$?"
+            run_check readable test -r /dev/kvm || exit "$?"
+            run_check writable test -w /dev/kvm || exit "$?"
+            # The emulator action installs this package later; preflight cannot
+            # assume it is already present on the runner. Install the same stable
+            # package explicitly, without auto-accepting new license prompts.
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            echo "SDK manager in use: $SDKMANAGER"
+            run_check sdkmanager-present test -x "$SDKMANAGER" || exit "$?"
+            run_check emulator-install "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --install emulator --channel=0 < /dev/null || exit "$?"
+            run_check emulator-present test -x "$ANDROID_HOME/emulator/emulator" || exit "$?"
+            # This runner image lacks the evidenced libpulse.so.0 dependency.
+            # Install only its client library, not a sound server or speculative bundle.
+            run_check host-package-index sudo apt-get update -o APT::Update::Error-Mode=any || exit "$?"
+            run_check host-library-install sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libpulse0 || exit "$?"
+            run_check host-library-package dpkg-query -W -f='${binary:Package} ${Version}\n' libpulse0 || exit "$?"
+            run_check host-library-cache bash -o pipefail -c 'ldconfig -p | grep -F libpulse.so.0' || exit "$?"
+            run_check emulator-linked-libraries linked_libraries "$ANDROID_HOME/emulator/emulator" || exit "$?"
+            run_check qemu-linked-libraries linked_libraries "$ANDROID_HOME/emulator/qemu/linux-x86_64/qemu-system-x86_64" || exit "$?"
+            run_check emulator-version "$ANDROID_HOME/emulator/emulator" -version || exit "$?"
+            run_check acceleration "$ANDROID_HOME/emulator/emulator" -accel-check || exit "$?"
+          } 2>&1 | tee qa-evidence-kvm-preflight.txt
+
+      - name: Run both upgrade cases on a fresh disposable emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
+          disable-animations: true
+          script: tools/qa/host/run_upgrade_case.sh
+
+      - name: Upload QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-upgrade-evidence
+          path: |
+            qa-out/**
+            qa-packaging/**
+            qa-evidence-*.txt
+            qa-old/old-resigned-certs.txt
