@@ -79,9 +79,9 @@ object FrameModelValidator {
             if (member != null && !FrameInputValidation.positionValid(load.loadType, load.position.toString(), member.getLength(nodes))) {
                 val ramp = load.loadType == com.civileg.app.domain.entities.MemberLoadType.Trapezoidal
                 val limit = member.getLength(nodes) / if (ramp) 2.0 else 1.0
-                invalid(if (ramp) "حمل العضو ${load.memberId}: أدخل طول ارتفاع أكبر من صفر ولا يزيد على $limit متر."
+                invalid(if (ramp) "حمل شبه منحرف (Trapezoidal) على العضو ${load.memberId}: أدخل طول ارتفاع أكبر من صفر ولا يزيد على $limit متر (نصف طول العضو)."
                     else "حمل العضو ${load.memberId}: أدخل موقعًا محدودًا بين صفر و$limit متر من عقدة البداية.",
-                    if (ramp) "Member ${load.memberId} load: enter a finite rise length greater than 0 and at most $limit m."
+                    if (ramp) "Trapezoidal load on member ${load.memberId}: enter a finite rise length greater than 0 and at most $limit m (half the member length)."
                     else "Member ${load.memberId} load: enter a finite position from 0 to $limit m from the start joint.", memberIds = listOf(load.memberId))
             }
         }
