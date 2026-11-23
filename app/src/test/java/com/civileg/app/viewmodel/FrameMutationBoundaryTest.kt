@@ -28,14 +28,43 @@ class FrameMutationBoundaryTest {
     @After fun cleanup() {
         FrameAnalysisViewModel::class.java.getDeclaredMethod("onCleared").apply { isAccessible=true }.invoke(vm)
     }
+    private fun autosavePending(): Boolean {
+        val type=FrameAnalysisViewModel::class.java
+        val handler=type.getDeclaredField("autosaveHandler").apply { isAccessible=true }.get(vm) as android.os.Handler
+        val work=type.getDeclaredField("autosaveRunnable").apply { isAccessible=true }.get(vm) as Runnable
+        return handler.hasCallbacks(work)
+    }
+    @Test fun constructionAloneSchedulesAndPersistsBlankDraftWithoutAnyEdit() {
+        val prefs=app.getSharedPreferences("frame_modeler_draft",Context.MODE_PRIVATE)
+        assertTrue(prefs.all.isEmpty())
+        assertTrue(autosavePending())
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2))
+        assertFalse(autosavePending())
+        assertEquals(setOf(FrameDraftStore.V2_KEY),prefs.all.keys)
+        val draft=FrameDraftCodec.decode(prefs.getString(FrameDraftStore.V2_KEY,null)!!,FrameDraftSource.V2)
+        assertTrue(draft.nodes.isEmpty());assertTrue(draft.members.isEmpty())
+        assertTrue(draft.nodalLoads.isEmpty());assertTrue(draft.memberLoads.isEmpty());assertTrue(draft.slabs.isEmpty())
+        assertFalse(vm.canUndo)
+    }
     @Test fun partialModelIsEditableButRejectedNodeChangesNothingIncludingAutosaveUndo() {
         assertFalse(vm.canUndo)
         val prefs=app.getSharedPreferences("frame_modeler_draft",Context.MODE_PRIVATE)
+        // Constructor schedules its own600ms write before any attempted edit. Drain only that
+        // independent startup work; rejection must neither change storage nor queue another write.
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2))
+        assertTrue(prefs.contains(FrameDraftStore.V2_KEY))
+        assertFalse(autosavePending())
         val raw=prefs.all.toMap()
+        val history=vm.historyState.value
         assertTrue(vm.addNode(Double.NaN,0.0) is FrameMutationResult.Rejected)
         assertTrue(vm.nodes.value.orEmpty().isEmpty());assertFalse(vm.canUndo)
+        assertEquals(history,vm.historyState.value)
+        assertFalse(autosavePending())
+        assertEquals(raw,prefs.all)
         shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2))
         assertEquals(raw,prefs.all)
+        assertFalse(autosavePending())
+        assertEquals(history,vm.historyState.value)
         assertEquals(1,id(vm.addNode(0.0,0.0))) // No support/no members is valid WHILE drawing.
     }
     @Test fun rejectedAtomicDragCreatesNoOrphanAndOneUndoRemovesWholeValidDrag() {
