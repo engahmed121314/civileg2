@@ -16,6 +16,12 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[34])
 class BoqRoomTransactionTest {
+    private fun assertSnapshot(expected:com.civileg.app.domain.repository.SavedCostBoq,actual:com.civileg.app.domain.repository.SavedCostBoq?) {
+        assertNotNull(actual)
+        assertEquals(expected.revision,actual!!.revision)
+        // DAO contract orders by itemId; candidate insertion order is not semantic content.
+        assertEquals(expected.items.sortedBy{it.itemId},actual.items)
+    }
     @Test fun exactHistoricalRetryDoesNotMoveNewerHeadAndProjectCascadeIsOwned()=runBlocking {
         val db=Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(),BoqIsolatedTestDatabase::class.java).allowMainThreadQueries().build()
         try {
@@ -25,12 +31,12 @@ class BoqRoomTransactionTest {
             val first=draft();repo.append(null,first)
             val expected=CostBoqHeadEntity(10,first.revision.revisionId,first.revision.contentHash)
             val second=CostBoqDraftEditor.add(10,first,first,2);repo.append(expected,second)
-            assertEquals(first,repo.append(null,first))
-            assertEquals(second,repo.loadCurrent(10))
+            assertSnapshot(first,repo.append(null,first))
+            assertSnapshot(second,repo.loadCurrent(10))
             val stale=CostBoqDraftEditor.add(10,first,first,3)
             var rejected=false;try{repo.append(expected,stale)}catch(_:Exception){rejected=true}
             assertTrue(rejected);assertNull(db.boq().revision(10,stale.revision.revisionId))
-            assertEquals(second,repo.loadCurrent(10))
+            assertSnapshot(second,repo.loadCurrent(10))
             assertNull(repo.loadCurrent(20))
             db.projects().delete(10)
             assertNull(repo.loadCurrent(10));assertTrue(db.boq().items(10,first.revision.revisionId).isEmpty())

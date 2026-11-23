@@ -16,6 +16,12 @@ import com.civileg.app.viewmodel.costcontrol.*
 import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import org.junit.Assert.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.resetMain
+import org.junit.Before
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,7 +30,18 @@ import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[34],qualifiers="en-rUS")
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class BoqEditorComposeTest {
+    @Before fun installMainDispatcher() { Dispatchers.setMain(UnconfinedTestDispatcher()) }
+    @After fun restoreMainDispatcher() { Dispatchers.resetMain() }
+
+    private fun awaitOpened(vm:CostBoqViewModel) {
+        try { rule.waitUntil(5000){!vm.state.value.loading} }
+        catch(failure:Exception) { throw AssertionError("openProject did not finish; state=${vm.state.value}; main=${Dispatchers.Main}; thread=${Thread.currentThread().name}",failure) }
+        val state=vm.state.value
+        assertFalse("Recovery failed before UI assertions: $state",state.recoveryBlocked)
+        assertNotNull("No candidate after checkpoint open: $state",state.draft)
+    }
     @get:Rule val rule=createComposeRule()
 
     @Test fun unappliedTextSurvivesLazyDisposalAndIsRestoredFromRealCheckpoint() {
@@ -40,7 +57,7 @@ class BoqEditorComposeTest {
                 } }
             }
             rule.runOnIdle{vm.openProject(10)}
-            rule.waitUntil(5000){!vm.state.value.loading && vm.state.value.draft!=null}
+            awaitOpened(vm)
             rule.onNode(hasSetTextAction() and hasText("Work item 0")).performTextReplacement("Unapplied exact text")
             rule.waitUntil(5000){vm.state.value.checkpointAcknowledged}
             val list=rule.onNode(SemanticsMatcher.keyIsDefined(SemanticsActions.ScrollToIndex))
@@ -49,7 +66,7 @@ class BoqEditorComposeTest {
             rule.runOnIdle{vm.save()};assertEquals(0,repo.writes)
             val restored=CostBoqViewModel(repo,BoundedCostBoqCheckpointStore(AndroidCostBoqAtomicStorage(context)))
             rule.runOnIdle{restored.openProject(10)}
-            rule.waitUntil(5000){!restored.state.value.loading}
+            awaitOpened(restored)
             assertEquals("Unapplied exact text",restored.state.value.itemInputs["item-0"]?.description)
         } finally {context.root.deleteRecursively()}
     }
@@ -69,7 +86,7 @@ class BoqEditorComposeTest {
             var back:OnBackPressedDispatcher?=null
             rule.setContent{back=LocalOnBackPressedDispatcherOwner.current!!.onBackPressedDispatcher;MaterialTheme{CostBoqEditorHost(vm,{left=true},{})}}
             rule.runOnIdle{vm.openProject(10)}
-            rule.waitUntil(5000){!vm.state.value.loading && vm.state.value.draft!=null}
+            awaitOpened(vm)
             rule.onNode(hasSetTextAction() and hasText("Work item 0")).performTextReplacement("Do not lose this")
             rule.waitUntil(5000){vm.state.value.checkpointAcknowledged}
             fail=true
