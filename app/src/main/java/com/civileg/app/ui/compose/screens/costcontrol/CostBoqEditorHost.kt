@@ -23,7 +23,7 @@ fun CostBoqEditorHost(viewModel:CostBoqViewModel,onLeft:()->Unit,onAssistedInput
                 Text(stringResource(R.string.cost_boq_leave_text))
                 if(state.loading || state.saving) Text(stringResource(R.string.cost_boq_leave_working))
                 if(state.recoveryBlocked) Text(stringResource(R.string.cost_boq_recovery_failed),color=MaterialTheme.colorScheme.error)
-                state.errorKey?.let { Text(stringResource(errorResource(it)),color=MaterialTheme.colorScheme.error) }
+                state.errorKey?.takeUnless { state.recoveryBlocked && it=="cost_boq_recovery_failed" }?.let { Text(stringResource(errorResource(it)),color=MaterialTheme.colorScheme.error) }
             }
         },
         confirmButton={TextButton(enabled=!state.loading && !state.saving && !state.recoveryBlocked,onClick={viewModel.leaveEditor(true){leavePrompt=false;destination()}}){Text(stringResource(R.string.cost_boq_keep_leave))}},
@@ -35,6 +35,9 @@ fun CostBoqEditorHost(viewModel:CostBoqViewModel,onLeft:()->Unit,onAssistedInput
         confirmButton={TextButton(enabled=!state.loading,onClick={leavePrompt=true}){Text(stringResource(R.string.cost_boq_leave_title))}},
         dismissButton={TextButton(enabled=!state.loading,onClick={viewModel.discardAndReload()}){Text(stringResource(R.string.cost_boq_discard_reload))}}
     )
-    CostBoqEditorDraft(state,viewModel::chooseMethod,viewModel::addItem,viewModel::changeItemInput,
+    // The active leave modal owns operation errors. Do not repeat its warning behind the modal.
+    // Presentation only: ViewModel retains the failure, draft and retry state unchanged.
+    val editorState=if(leavePrompt) state.copy(errorKey=null) else state
+    CostBoqEditorDraft(editorState,viewModel::chooseMethod,viewModel::addItem,viewModel::changeItemInput,
         viewModel::applyItemInput,viewModel::confirmManualQuantity,viewModel::save,{requestLeave(onAssistedInput)})
 }

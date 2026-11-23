@@ -93,7 +93,9 @@ class BoqEditorComposeTest {
             rule.runOnIdle{back!!.onBackPressed()}
             rule.onNodeWithText("Keep draft and leave").performClick()
             rule.waitUntil(5000){vm.state.value.errorKey=="cost_boq_checkpoint_failed" && !vm.state.value.loading}
-            rule.onNodeWithText("Unsaved-work preservation was not confirmed. Stay here or retry; your current text remains.").assertIsDisplayed()
+            val warning="Unsaved-work preservation was not confirmed. Stay here or retry; your current text remains."
+            rule.onAllNodesWithText(warning).assertCountEquals(1)
+            rule.onNode(hasText(warning) and hasAnyAncestor(isDialog())).assertIsDisplayed()
             assertFalse(left);assertEquals(0,repo.writes)
             fail=false
             rule.onNodeWithText("Keep draft and leave").performClick()
