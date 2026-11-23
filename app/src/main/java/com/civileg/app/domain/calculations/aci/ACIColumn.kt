@@ -286,6 +286,106 @@ class ACIColumn : ColumnDesign {
     }
 
     /**
+     * معامل تكبير العزم بالطريقة الصحيحة من الكود — ACI 318M-14 §6.2.5 + §6.6.4.4/§6.6.4.5
+     * (F-09 fix; approved 2026-11-21).
+     *
+     * Verified printed pages: 6.2.5 + 6.2.5.1 (printed pp.103-104),
+     * 6.6.4.4.2/4.4.3/4.4.4 (printed pp.122-123),
+     * 6.6.4.5.1/5.2/5.3 (printed pp.124-125) — CLAUSE_LOG A-17.
+     *
+     * Sign convention (6.2.5): M1/M2 is NEGATIVE in single curvature,
+     * POSITIVE in double curvature.
+     *
+     * NONSWAY frames only (6.6.4.5). Sway frames: calculateSwayMagnification (6.6.4.6).
+     *
+     * 6.6.4.5.4 minimum moment is enforced here: when M2,min = Pu(15+0.03h) mm
+     * exceeds M2, M2 is replaced by M2,min and Cm is taken 1.0 (printed pp.125-126;
+     * metric form 15+0.03h — the bilingual printing shows the US-inch 0.6+0.03h
+     * form, see CLAUSE_LOG F-09/A-18).
+     *
+     * @return Pair(δ, M2_used): δ >= 1.0 and the moment to magnify (M2 or M2,min);
+     *         design moment Mc = δ × M2_used (6.6.4.5.1).
+     */
+    fun calculateMomentMagnification(
+        Pu: Double,                      // kN, factored axial load
+        M1: Double,                      // kNm, smaller end moment, signed
+        M2: Double,                      // kNm, larger end moment, positive
+        kLu: Double,                     // mm, effective length k×ℓu
+        width: Double,                   // mm, perpendicular to bending
+        depth: Double,                   // mm, in bending direction
+        fcu: Double,
+        betaDns: Double = 0.0            // 6.6.4.4.4 sustained-axial ratio (0.6 → simplified 0.25EcIg)
+    ): Pair<Double, Double> {
+        InputGuard.positive("Pu", Pu)
+        InputGuard.positive("M2", M2)
+        InputGuard.positive("kLu", kLu)
+        InputGuard.positive("width", width)
+        InputGuard.positive("depth", depth)
+        InputGuard.positive("fcu", fcu)
+        require(M2 >= abs(M1)) { "M2 must be the larger end moment in absolute value" }
+        require(betaDns in 0.0..1.0) { "betaDns must be in 0..1" }
+
+        // 6.2.5.1(b): r = 0.30 × dimension in the direction stability is considered
+        val r = 0.30 * depth
+        val kluOverR = kLu / r
+        val mRatio = M1 / M2
+        // 6.2.5(b): nonsway (braced) neglect limit — 6.2.5b AND 6.2.5c (cap 40).
+        // Sway frames are NOT this method: use calculateSwayMagnification (6.6.4.6).
+        val mayNeglect = kluOverR <= (34.0 + 12.0 * mRatio).coerceAtMost(40.0)
+        // 6.6.4.5.4: minimum design moment M2,min = Pu(15 + 0.03h) mm → kNm
+        val m2Min = Pu * (15.0 + 0.03 * depth) / 1000.0
+        val m2Used = max(M2, m2Min)
+        if (mayNeglect) return Pair(1.0, m2Used)
+
+        // 6.6.4.4.4(a): EI = 0.4EcIg / (1+βdns)
+        val fcPrime = 0.8 * fcu
+        val ec = 4700.0 * sqrt(fcPrime)
+        val ig = width * depth.pow(3) / 12.0
+        val ei = 0.4 * ec * ig / (1.0 + betaDns)
+        // 6.6.4.4.2: Pc = π²EI / (kℓu)²
+        val pc = PI * PI * ei / (kLu * kLu) / 1000.0  // N → kN
+        // 6.6.4.5.3(a): Cm = 0.6 − 0.4(M1/M2); 6.6.4.5.4: Cm = 1.0 when M2,min governs
+        val cm = if (m2Min > M2) 1.0 else 0.6 - 0.4 * mRatio
+        // 6.6.4.5.2: δ = Cm / (1 − Pu/(0.75Pc)) ≥ 1.0
+        val delta = cm / (1.0 - Pu / (0.75 * pc))
+        return Pair(max(1.0, delta), m2Used)
+    }
+
+    /**
+     * تكبير العزوم للإطارات غير المقيدة — ACI 318M-14 §6.6.4.6 (sway frames).
+     * Verified printed pages 125-126 (CLAUSE_LOG A-17).
+     *
+     * 6.6.4.6.1: M = Mns + δs·Ms (sway moments amplified, nonsway are not).
+     * 6.6.4.6.2: δs = 1/(1−Q) ≥ 1 (a) when [stabilityIndexQ] is given, else
+     * δs = 1/(1 − ΣPu/(0.75ΣPc)) ≥ 1 (b) from the story sums. Method (a) is
+     * only permitted while δs ≤ 1.5; method (b) has no such limit.
+     *
+     * @return Pair(δs, magnified moment M = Mns + δs·Ms)
+     */
+    fun calculateSwayMagnification(
+        Mns: Double,                     // kNm, first-order NONSWAY moment
+        Ms: Double,                      // kNm, first-order SWAY moment
+        sumPu: Double,                   // kN, story ΣPu (needed for 6.6.4.6.2b)
+        sumPc: Double,                   // kN, story ΣPc (needed for 6.6.4.6.2b)
+        stabilityIndexQ: Double? = null  // 6.6.4.6.2a; when null, method (b) is used
+    ): Pair<Double, Double> {
+        InputGuard.positive("sumPu", sumPu)
+        InputGuard.positive("sumPc", sumPc)
+        val deltaS = if (stabilityIndexQ != null) {
+            require(stabilityIndexQ < 1.0) { "Q must be < 1.0 (unstable otherwise)" }
+            val d = 1.0 / (1.0 - stabilityIndexQ)
+            require(d <= 1.5) {
+                "6.6.4.6.2: Q-method only permitted while δs ≤ 1.5 (δs=$d); use the ΣPc method (stabilityIndexQ = null) or second-order analysis"
+            }
+            d
+        } else {
+            1.0 / (1.0 - sumPu / (0.75 * sumPc))
+        }
+        val ds = max(1.0, deltaS)
+        return Pair(ds, Mns + ds * Ms)
+    }
+
+    /**
      * φPn, φMnx, φMny at neutral-axis orientation [theta] (normal from the centroid toward
      * the maximum-compression fiber) and neutral-axis depth [c], per ACI 318M-14
      * §22.2.1/§22.2.2/§22.2.4.1-2 and Table 21.2.2. Public for golden-vector verification

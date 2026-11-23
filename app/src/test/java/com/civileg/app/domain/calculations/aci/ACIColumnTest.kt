@@ -219,56 +219,126 @@ class ACIColumnTest {
     // 7. Slenderness effect
     // ══════════════════════════════════════════════════════════════════════
 
+    // ══════════════════════════════════════════════════════════════════════
+    // GOLDEN VECTORS — moment magnification §6.2.5 + §6.6.4.4/§6.6.4.5
+    // (F-09 fix; CLAUSE_LOG A-17, printed pp.103-104, 122-125)
+    // 400×400, fcu=30 → fc'=24, Ec=23025.2, Ig=2.13333e9 mm⁴
+    // Pc(kLu=6000) = 5386.6584 kN; Pc(3000) = 21546.6335 kN
+    // Case 1 single curvature M1=-50,M2=100: Cm=0.8
+    //   δ = 0.8/(1−2000/(0.75×5386.6584)) = 1.584316
+    // Case 2 double curvature M1=+50: Cm=0.4 → 0.7922 < 1 → δ=1.0
+    // Case 3 braced short kLu=3000: 25 ≤ 34+12(−0.5)=28 → neglect → 1.0
+    // Case 4 unbraced kLu=3000: 25 > 22; Cm=1.0 (M1=−100)
+    //   δ = 1/(1−2000/(0.75×21546.6335)) = 1.141243
+    // Case 5 creep βdns=0.6: EI=0.25EcIg, Pc=3366.6615
+    //   δ = 0.8/(1−2000/(0.75×3366.6615)) = 3.847642
+    // ══════════════════════════════════════════════════════════════════════
+
     @Test
-    fun calculateSlendernessEffect_validInputs_returnsPositiveRatio() {
-        val (slendernessRatio, isSlender, Pc) = column.calculateSlendernessEffect(
-            3.0, 1.0, WIDTH, DEPTH, FCU
+    fun goldenMagnification_singleCurvature() {
+        val (d, m2) = column.calculateMomentMagnification(
+            Pu = 2000.0, M1 = -50.0, M2 = 100.0, kLu = 6000.0,
+            width = 400.0, depth = 400.0, fcu = 30.0
         )
-        assertTrue("Slenderness ratio must be positive", slendernessRatio > 0)
+        assertEquals(1.584316, d, 0.001)
+        assertEquals(100.0, m2, 0.001)  // M2=100 > M2,min=54, unchanged
     }
 
     @Test
-    fun calculateSlendernessEffect_shortColumn_returnsIsSlenderFalse() {
-        // Short column: L=3m, K=1, 300x300 → λ ≈ 34.6, limit for braced tied = 22
-        // Actually 1.0 * 3000 / (300/sqrt(12)) ≈ 34.6 > 22, so it IS slender
-        // Let's use a shorter height
-        val (ratio, isSlender, Pc) = column.calculateSlendernessEffect(
-            2.0, 0.7, 400.0, 400.0, FCU
+    fun goldenMagnification_doubleCurvatureFloorsAtOne() {
+        val (d, _) = column.calculateMomentMagnification(
+            Pu = 2000.0, M1 = 50.0, M2 = 100.0, kLu = 6000.0,
+            width = 400.0, depth = 400.0, fcu = 30.0
         )
-        // K=0.7, L=2m, r=400/sqrt(12)=115.5, λ=0.7*2000/115.5≈12.1 → short
-        assertFalse("Should be a short column", isSlender)
+        assertEquals(1.0, d, 0.001)
     }
 
     @Test
-    fun calculateSlendernessEffect_tallColumn_returnsIsSlenderTrue() {
-        val (ratio, isSlender, Pc) = column.calculateSlendernessEffect(
-            6.0, 1.0, 250.0, 250.0, FCU
+    fun goldenMagnification_bracedShortColumnNeglected() {
+        val (d, _) = column.calculateMomentMagnification(
+            Pu = 2000.0, M1 = -50.0, M2 = 100.0, kLu = 3000.0,
+            width = 400.0, depth = 400.0, fcu = 30.0
         )
-        // K=1, L=6m, r=250/sqrt(12)=72.2, λ=6000/72.2≈83 → very slender
-        assertTrue("Should be a slender column", isSlender)
+        assertEquals(1.0, d, 0.001)
+    }
+
+    // Sway vectors — §6.6.4.6 (printed pp.125-126): story of 4 identical
+    // columns (Pc each = 21546.6335 at kLu=3000) → ΣPc = 86186.5342
+    // δs = 1/(1 − ΣPu/(0.75ΣPc)): ΣPu=8000 → 1.141243; ΣPu=20000 → 1.448030
+    // M = Mns + δs×Ms with Mns=40, Ms=60: 108.474591 / 126.881780 kNm
+
+    @Test
+    fun goldenSwayMagnification_sumPcMethod() {
+        val (ds, m) = column.calculateSwayMagnification(
+            Mns = 40.0, Ms = 60.0, sumPu = 8000.0, sumPc = 86186.5342
+        )
+        assertEquals(1.141243, ds, 0.001)
+        assertEquals(108.474591, m, 0.001)
     }
 
     @Test
-    fun calculateSlendernessEffect_criticalLoadPositive() {
-        val (_, _, Pc) = column.calculateSlendernessEffect(
-            3.0, 1.0, WIDTH, DEPTH, FCU
+    fun goldenSwayMagnification_heavyStory() {
+        val (ds, m) = column.calculateSwayMagnification(
+            Mns = 40.0, Ms = 60.0, sumPu = 20000.0, sumPc = 86186.5342
         )
-        assertTrue("Critical load (Pc) must be positive", Pc > 0)
+        assertEquals(1.448030, ds, 0.001)
+        assertEquals(126.881780, m, 0.001)
+    }
+
+    @Test
+    fun goldenSwayMagnification_qMethod() {
+        val (ds, m) = column.calculateSwayMagnification(
+            Mns = 40.0, Ms = 60.0, sumPu = 8000.0, sumPc = 86186.5342,
+            stabilityIndexQ = 0.1237683
+        )
+        assertEquals(1.141243, ds, 0.001)
+        assertEquals(108.474591, m, 0.001)
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun calculateSlendernessEffect_zeroLength_throwsException() {
-        column.calculateSlendernessEffect(0.0, 1.0, WIDTH, DEPTH, FCU)
+    fun swayMagnification_qMethodBeyond15_throws() {
+        column.calculateSwayMagnification(
+            Mns = 40.0, Ms = 60.0, sumPu = 8000.0, sumPc = 86186.5342,
+            stabilityIndexQ = 0.5
+        )
+    }
+
+    @Test
+    fun goldenMagnification_creepBetaDns() {
+        val (d, _) = column.calculateMomentMagnification(
+            Pu = 2000.0, M1 = -50.0, M2 = 100.0, kLu = 6000.0,
+            width = 400.0, depth = 400.0, fcu = 30.0, betaDns = 0.6
+        )
+        assertEquals(3.847642, d, 0.001)
+    }
+
+    // 6.6.4.5.4 minimum-moment vector: Pu=2000, h=400 → M2,min = 54 kNm > M2=30
+    // → M2 replaced by 54, Cm=1.0, δ = 1/(1−2000/(0.75×5386.6584)) = 1.980395
+
+    @Test
+    fun goldenMagnification_minimumMomentGoverns() {
+        val (d, m2) = column.calculateMomentMagnification(
+            Pu = 2000.0, M1 = 0.0, M2 = 30.0, kLu = 6000.0,
+            width = 400.0, depth = 400.0, fcu = 30.0
+        )
+        assertEquals(1.980395, d, 0.001)
+        assertEquals(54.0, m2, 0.001)
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun calculateSlendernessEffect_zeroWidth_throwsException() {
-        column.calculateSlendernessEffect(3.0, 1.0, 0.0, DEPTH, FCU)
+    fun momentMagnification_m2SmallerThanM1_throws() {
+        column.calculateMomentMagnification(
+            Pu = 2000.0, M1 = -150.0, M2 = 100.0, kLu = 6000.0,
+            width = 400.0, depth = 400.0, fcu = 30.0
+        )
     }
 
     @Test(expected = IllegalArgumentException::class)
-    fun calculateSlendernessEffect_negativeFcu_throwsException() {
-        column.calculateSlendernessEffect(3.0, 1.0, WIDTH, DEPTH, -30.0)
+    fun momentMagnification_zeroLength_throws() {
+        column.calculateMomentMagnification(
+            Pu = 2000.0, M1 = -50.0, M2 = 100.0, kLu = 0.0,
+            width = 400.0, depth = 400.0, fcu = 30.0
+        )
     }
 
     // ══════════════════════════════════════════════════════════════════════

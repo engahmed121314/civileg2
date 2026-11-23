@@ -251,6 +251,34 @@ golden vectors pin combined-footing numbers; a fix for CF-01..CF-03 should
 land with golden vectors per R4.
 
 No production formula was added or changed in this batch.
+## F-09 — ACIColumn.calculateSlendernessEffect deviated from §6.6.4 (RESOLVED)
+- **Date**: 2026-11-21 (20:05 EET) — fix approved.
+- **Was**: comment cited "22.4.2.1 λ≤22 tied / ≤28 spiral" (§22.4 is axial strength — wrong clause; 28 is not ACI); EI formula 0.4EcIg + EsAs(h/2−d')² with no 1+βdns creep term and Pc divided by L² without k²; universal 22 limit ignoring braced/unbraced and M1/M2.
+- **Now**: calculateMomentMagnification(Pu, M1, M2, kLu, width, depth, fcu, betaDns, isBraced) implementing the verified clauses below. Old function removed (it was dormant — only test callers).
+- **Golden vectors**: single curvature δ=1.584316; double curvature floors at 1.0; braced-short neglect (6.2.5b+c) δ=1.0; unbraced sway δ=1.141243; creep βdns=0.6 δ=3.847642. All hand-computed from the printed equations.
+
+## A-17 — §6.2.5 + §6.2.5.1 + §6.6.4.4/§6.6.4.5 — slenderness & moment magnification (VERIFIED)
+- **Date**: 2026-11-21 (20:04 EET)
+- **Source opened**: ACI 318M-14 PDF part 1, PDF pages 110-113 (printed **101-104**), 131-134 (printed **122-125**) — rendered and read directly.
+- **Code says**: slenderness may be neglected if klu/r ≤ 22 unbraced (6.2.5a), ≤ 34+12(M1/M2) and ≤ 40 braced (6.2.5b, c), with M1/M2 negative in single curvature; r = √(Ig/Ag), 0.30×dim rect, 0.25×dia circ (6.2.5.1); Pc = π²(EI)eff/(klu)² (6.6.4.4.2); (EI)eff = 0.4EcIg/(1+βdns) (6.6.4.4.4a), βdns=0.6 simplification → 0.25EcIg; Mc = δM2 (6.6.4.5.1); δ = Cm/(1 − Pu/(0.75Pc)) ≥ 1.0 (6.6.4.5.2); Cm = 0.6 − 0.4(M1/M2) (6.6.4.5.3a), 1.0 with transverse loads (b).
+- **Note**: this bilingual 318M-14 printing shows 6.2.5b as 34+12(M1/M2) and 6.6.4.5.3a as Cm = 0.6 − 0.4(M1/M2) under the stated sign convention (negative = single curvature); both are internally consistent and implemented exactly as printed. No ≥0.4 floor on Cm appears in this printing.
+
+## F-09 amendment — sway frames moved to their own code path (6.6.4.6)
+- **Date**: 2026-11-21 (20:09 EET) — review reconciliation before calling the fix code-complete.
+- **Issue**: the first cut applied the nonsway δ (6.6.4.5.2, Cm-based) to unbraced columns too. Per 6.6.4.6, sway frames magnify only the sway moments: M = Mns + δs·Ms, with δs = 1/(1−Q) ≥ 1 (a, permitted only while δs ≤ 1.5) or 1/(1 − ΣPu/(0.75ΣPc)) ≥ 1 (b) — story-level data, not a per-column formula.
+- **Now**: calculateMomentMagnification is explicitly nonsway-only (6.6.4.5, neglect per 6.2.5b/c); new calculateSwayMagnification(Mns, Ms, sumPu, sumPc, stabilityIndexQ?) implements 6.6.4.6.1/6.6.4.6.2 with the (a) δs ≤ 1.5 limit enforced (throws with guidance), Q < 1 guarded.
+- **Verified addition**: §6.6.4.6.1/6.6.4.6.2 (printed pp.125-126, part 1 PDF pp.134-135) — rendered and read directly. Also noted: the printed 6.6.4.5.4 shows M2,min = Pu(0.6 + 0.03h) in US-inch form inside this metric edition; NOT implemented — flagged here, no golden vectors depend on it.
+- **Golden vectors (story of 4 columns, Pc=21546.6335 each)**: ΣPu=8000 → δs=1.141243, M=108.474591; ΣPu=20000 → δs=1.448030, M=126.881780; Q-method (Q=0.1237683) reproduces 1.141243; Q-method beyond δs>1.5 correctly refused.
+- **Caller safety**: full-repo grep — removed calculateSlendernessEffect had no callers outside ACIColumnTest; the same-named functions in ACIAdvancedColumn/SBC/ECP engines are separate implementations, untouched.
+
+## A-18 — §6.6.4.5.4 minimum design moment M2,min (VERIFIED + enforced)
+- **Date**: 2026-11-21 (20:14 EET)
+- **Source opened**: ACI 318M-14 PDF part 1, PDF pages 134-135, printed pages **125-126** — rendered and read directly; equation shown as M2,min = Pu(0.6 + 0.03h).
+- **STATUS: UNRESOLVED SOURCE DISCREPANCY (do not treat as confirmed printing error).** The bilingual printing shows the US-inch form 0.6+0.03h. The official-metric-edition form (expected 15+0.03h, mm) could NOT be verified from an authoritative metric 318M-14 or official ACI erratum: concrete.org document-errata page yielded no clause text; no 318M ERTA clause text retrievable online. Only secondary corroboration was found (an online calculator page quoting ACI 318(M)-14 §6.6.4.5.4 as Pu·(15 + 0.03h) with h in mm; retrieved 2026-11-21; independent secondary reference, NOT authoritative; link removed 2026-11-21 — external site links are not kept in project records). The discrepancy remains UNRESOLVED pending an authoritative metric 318M-14 source or official ACI erratum.
+- **Engineering position taken (disclosed, not source-proven)**: enforce the metric form Pu(15 + 0.03h) mm inside the API. Rationale: 0.6+0.03h is dimensionally the inch form (0.6 in = 15.24 mm) and is nonsensical with mm inputs; the metric form is the only coherent reading for a metric design function. If an authoritative metric edition or erratum settles otherwise, the constant lives in one place and the single golden vector (δ=1.980395, M2_used=54) updates.
+- **Merge gate**: #74 must not receive a merge-ready recommendation until this is settled from an authoritative source or the disclosed position is accepted.
+- **Enforcement**: INSIDE calculateMomentMagnification — the function now returns Pair(δ, M2_used); when M2,min > M2, M2 is replaced by M2,min and Cm = 1.0 per the clause's own rule. Not left to callers. Golden vector: Pu=2000, h=400 → M2,min=54 > M2=30 → δ=1.980395, M2_used=54.
+- **API change note**: return type changed Double → Pair<Double, Double> within this same unmerged PR; no external callers exist (verified by full-repo grep).
 
 ### F-08 — ACI column axial-moment interaction (strain compatibility), batch 2026-11-21
 
