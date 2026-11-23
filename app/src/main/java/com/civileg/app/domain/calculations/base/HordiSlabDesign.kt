@@ -16,6 +16,10 @@ interface HordiSlabDesign {
         span: Double,               // mm
         designMoment: Double,       // kN.m/rib
         designShear: Double,        // kN/rib
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        /** Cylinder compressive strength fc' (MPa). REQUIRED for SBC 304
+         *  (cylinder-based code; no cube conversion basis exists in the Saudi
+         *  sources). Ignored by cube-based (ECP) and fc'-via-fcu (ACI) engines. */
+        cylinderStrengthMPa: Double? = null
     ): SlabDesignResult
 }

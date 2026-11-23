@@ -31,7 +31,7 @@ class DesignRepositoryImpl(
 
     private data class ResultFields(
         val isSafe: Boolean = false,
-        val utilizationRatio: Double = 0.0,
+        val utilizationRatio: Double? = null,
         val concreteVolume: Double = 0.0,
         val steelWeight: Double = 0.0,
         val cost: Double = 0.0,
@@ -94,7 +94,7 @@ class DesignRepositoryImpl(
             width = f.width, length = f.length, thickness = f.thickness,
             reinforcementBottom = f.reinforcementBottom, reinforcementTop = null,
             concreteVolume = f.concreteVolume, steelWeight = f.steelWeight, cost = f.cost,
-            utilizationRatio = f.utilizationRatio
+            utilizationRatio = f.utilizationRatio ?: 0.0  // non-slab results always serialize it; the nullable not-evaluated path is slab-only
         )
         footingDao.insertFooting(footing)
     }
@@ -108,7 +108,7 @@ class DesignRepositoryImpl(
             width = f.width, depth = f.depth,
             reinforcement = f.reinforcement, ties = f.ties,
             concreteVolume = f.concreteVolume, steelWeight = f.steelWeight, cost = f.cost,
-            utilizationRatio = f.utilizationRatio
+            utilizationRatio = f.utilizationRatio ?: 0.0  // non-slab results always serialize it; the nullable not-evaluated path is slab-only
         )
         columnDao.insertColumn(column)
     }
@@ -122,7 +122,7 @@ class DesignRepositoryImpl(
             width = f.width, depth = f.depth,
             reinforcement = f.reinforcementBottom, stirrups = f.stirrups,
             concreteVolume = f.concreteVolume, steelWeight = f.steelWeight, cost = f.cost,
-            utilizationRatio = f.utilizationRatio
+            utilizationRatio = f.utilizationRatio ?: 0.0  // non-slab results always serialize it; the nullable not-evaluated path is slab-only
         )
         beamDao.insertBeam(beam)
     }
@@ -149,7 +149,7 @@ class DesignRepositoryImpl(
             projectId = projectId, thickness = f.thickness, load = 5.0, fcu = 25.0, fy = 360.0,
             reinforcement = f.reinforcement,
             concreteVolume = f.concreteVolume, steelWeight = f.steelWeight, cost = f.cost,
-            utilizationRatio = f.utilizationRatio
+            utilizationRatio = f.utilizationRatio ?: 0.0  // non-slab results always serialize it; the nullable not-evaluated path is slab-only
         )
         stairDao.insertStair(stair)
     }
@@ -163,7 +163,7 @@ class DesignRepositoryImpl(
             wallThickness = f.wallThickness, baseThickness = f.baseThickness,
             reinforcement = f.wallReinforcement,
             concreteVolume = f.concreteVolume, steelWeight = f.steelWeight, cost = f.cost,
-            utilizationRatio = f.utilizationRatio
+            utilizationRatio = f.utilizationRatio ?: 0.0  // non-slab results always serialize it; the nullable not-evaluated path is slab-only
         )
         tankDao.insertTank(tank)
     }
@@ -177,7 +177,7 @@ class DesignRepositoryImpl(
             baseWidth = f.baseWidth, baseThickness = 500.0,
             reinforcement = f.stemReinforcement,
             concreteVolume = f.concreteVolume, steelWeight = f.steelWeight, cost = f.cost,
-            utilizationRatio = f.utilizationRatio
+            utilizationRatio = f.utilizationRatio ?: 0.0  // non-slab results always serialize it; the nullable not-evaluated path is slab-only
         )
         retainingWallDao.insertRetainingWall(wall)
     }
@@ -222,7 +222,7 @@ class DesignRepositoryImpl(
     // ── Private helpers ──────────────────────────────────────────────────
 
     private suspend fun saveGeneralDesign(
-        projectId: Long, type: DesignType, name: String, isSafe: Boolean, utilizationRatio: Double,
+        projectId: Long, type: DesignType, name: String, isSafe: Boolean, utilizationRatio: Double?,
         concreteVolume: Double, steelWeight: Double, totalCost: Double, result: Any, codeUsed: String
     ) {
         val design = Design(

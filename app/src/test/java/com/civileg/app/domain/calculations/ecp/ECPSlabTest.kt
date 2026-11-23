@@ -98,7 +98,7 @@ class ECPSlabTest {
             p.fcu, p.fy, p.thickness, p.span, p.moment, p.shear,
             LoadCombination.DEAD_LIVE
         )
-        assertTrue("Shear capacity > 0", result.shearCapacity > 0)
+        assertTrue("Shear capacity > 0", (result.shearCapacity ?: 0.0) > 0)
     }
 
     @Test
@@ -119,7 +119,7 @@ class ECPSlabTest {
             p.fcu, p.fy, p.thickness, p.span, p.moment, p.shear,
             LoadCombination.DEAD_LIVE
         )
-        assertTrue("Utilization ratio should be finite", result.utilizationRatio.isFinite())
+        assertTrue("Utilization ratio should be finite", result.utilizationRatio?.isFinite() == true)
     }
 
     // ═══════════════════════════════════════════════════════════════

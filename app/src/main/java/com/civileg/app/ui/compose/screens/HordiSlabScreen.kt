@@ -69,10 +69,12 @@ fun HordiSlabScreen(
     val config = LocalConfiguration.current
     val screenWidthPx = (config.screenWidthDp * density.density).toInt()
     val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+    val isArabic = com.civileg.app.utils.LocaleHelper.isArabic()
 
     // ── Input state ────────────────────────────────────────────────
     var designCode by remember { mutableStateOf(defaultDesignCode().name) }
     var fcu by remember { mutableStateOf("30") }
+    var fcCylinder by remember { mutableStateOf("") }   // SBC-only: cylinder f'c (MPa), required
     var fy by remember { mutableStateOf("400") }
     var ribWidth by remember { mutableStateOf("120") }
     var ribSpacing by remember { mutableStateOf("500") }
@@ -158,6 +160,17 @@ fun HordiSlabScreen(
                     ) {
                         PremiumInputField(fcu, "fcu (MPa)", { fcu = it }, modifier = Modifier.weight(1f))
                         PremiumInputField(fy, "fy (MPa)", { fy = it }, modifier = Modifier.weight(1f))
+                    }
+                }
+                if (designCode == "SBC") {
+                    // SBC 304-CR-2018 is cylinder-based; no cube conversion basis (SJ-8).
+                    item {
+                        PremiumInputField(
+                            fcCylinder,
+                            stringResource(R.string.hordi_slab_fc_cylinder),
+                            { fcCylinder = it },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
 
@@ -277,7 +290,8 @@ fun HordiSlabScreen(
                                 designMoment = designMoment.toDoubleOrNull() ?: 80.0,
                                 designShear = designShear.toDoubleOrNull() ?: 30.0,
                                 loadCombination = loadCombination,
-                                designCode = designCode
+                                designCode = designCode,
+                                cylinderStrength = if (designCode == "SBC") fcCylinder.toDoubleOrNull() else null
                             )
                         },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -333,44 +347,13 @@ fun HordiSlabScreen(
                     }
 
                     // Safety Status Gauge
-                    item {
-                        SafetyStatusCard(
-                            utilizationRatio = res.utilizationRatio,
-                            isSafe = res.isSafe,
-                            title = stringResource(R.string.hordi_slab_safety_title, designCode)
-                        )
-                    }
+                    item { HordiSafetyStatusSection(res, designCode, isArabic) }
 
                     // Reinforcement Result
-                    item {
-                        ResultDataCard(
-                            stringResource(R.string.hordi_slab_reinforcement),
-                            listOf(
-                                stringResource(R.string.hordi_slab_required_as) to String.format("%.1f mm²", res.requiredReinforcement),
-                                stringResource(R.string.hordi_slab_provided_as) to String.format("%.1f mm²", res.providedReinforcement),
-                                "Bar Diameter" to String.format("φ%.0f mm", res.barDiameter),
-                                "Bar Spacing" to String.format("@%.0f mm", res.barSpacing),
-                                "Bar String" to String.format("φ%.0f @%.0f mm", res.barDiameter, res.barSpacing)
-                            ),
-                            icon = Icons.Default.Build,
-                            accentColor = Color(0xFF1565C0)
-                        )
-                    }
+                    item { HordiReinforcementCard(res) }
 
                     // Shear Check
-                    item {
-                        ResultDataCard(
-                            stringResource(R.string.hordi_slab_shear_check),
-                            listOf(
-                                "Shear Capacity" to String.format("%.1f kN", res.shearCapacity),
-                                "Min Thickness" to String.format("%.0f mm", res.minThickness),
-                                "Utilization" to String.format("%.1f%%", res.utilizationRatio * 100),
-                                "Status" to if (res.isSafe) "PASS ✓" else "FAIL ✗"
-                            ),
-                            icon = Icons.Default.Shield,
-                            accentColor = if (res.isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)
-                        )
-                    }
+                    item { HordiShearCheckCard(res, isArabic) }
 
                     // Warnings
                     if (res.warnings.isNotEmpty()) {
@@ -534,4 +517,56 @@ fun HordiSlabScreen(
             }
         }
     }
+}
+
+/** Production safety section: gauge when utilization exists, explicit blocked status otherwise. */
+@Composable
+internal fun HordiSafetyStatusSection(res: SlabDesignResult, designCode: String, isArabic: Boolean) {
+    val util = res.utilizationRatio
+    if (util != null) {
+        SafetyStatusCard(
+            utilizationRatio = util,
+            isSafe = res.isSafe,
+            title = stringResource(R.string.hordi_slab_safety_title, designCode)
+        )
+    } else {
+        ResultDataCard(
+            stringResource(R.string.hordi_slab_safety_title, designCode),
+            listOf(stringResource(R.string.status) to HordiResultPresentation.statusText(res.isSafe, false, isArabic)),
+            icon = Icons.Default.Shield,
+            accentColor = Color(0xFFE53935)
+        )
+    }
+}
+
+/** Production reinforcement card: per-rib main bars and rib spacing (never a misleading bar-within-rib spacing). */
+@Composable
+internal fun HordiReinforcementCard(res: SlabDesignResult) {
+    ResultDataCard(
+        stringResource(R.string.hordi_slab_reinforcement),
+        listOf(
+            stringResource(R.string.hordi_slab_required_as) to String.format("%.1f mm²", res.requiredReinforcement),
+            stringResource(R.string.hordi_slab_provided_as) to String.format("%.1f mm²", res.providedReinforcement),
+            stringResource(R.string.hordi_slab_main_bar_diameter) to String.format("φ%.0f mm", res.barDiameter),
+            stringResource(R.string.hordi_slab_rib_spacing_result) to String.format("@%.0f mm", res.barSpacing)
+        ),
+        icon = Icons.Default.Build,
+        accentColor = Color(0xFF1565C0)
+    )
+}
+
+/** Production shear card: blocked shear carries its not-evaluated reason, never a substitute value. */
+@Composable
+internal fun HordiShearCheckCard(res: SlabDesignResult, isArabic: Boolean) {
+    ResultDataCard(
+        stringResource(R.string.hordi_slab_shear_check),
+        listOf(
+            stringResource(R.string.hordi_slab_shear_capacity) to HordiResultPresentation.shearCapacityText(res.shearCapacity, isArabic),
+            stringResource(R.string.hordi_slab_adopted_thickness) to String.format("%.0f mm", res.minThickness),
+            stringResource(R.string.hordi_slab_utilization) to HordiResultPresentation.utilizationText(res.utilizationRatio, isArabic),
+            stringResource(R.string.status) to HordiResultPresentation.statusText(res.isSafe, res.utilizationRatio != null, isArabic)
+        ),
+        icon = Icons.Default.Shield,
+        accentColor = if (res.isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)
+    )
 }

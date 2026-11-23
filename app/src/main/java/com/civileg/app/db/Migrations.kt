@@ -375,6 +375,66 @@ object Migrations {
      * Migration from version 12 to 13.
      * Adds saved building layouts without replacing existing project data.
      */
+    /**
+     * 14 → 15: utilizationRatio becomes NULLABLE in `designs` and `slabs`.
+     * A blocked/not-evaluated check (e.g. SBC joist shear, SJ-7) is stored as
+     * NULL — never as NaN and never as a fake 0.0 capacity/utilization.
+     * SQLite cannot drop a NOT NULL constraint in place, so each table is
+     * rebuilt with data preserved, then its index is recreated; the projectId
+     * FOREIGN KEY (CASCADE) is restated in the new table definition.
+     */
+    val MIGRATION_14_15: Migration = object : Migration(14, 15) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            // ── designs ──
+            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS designs_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    projectId INTEGER NOT NULL,
+                    type TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    inputData TEXT NOT NULL,
+                    results TEXT NOT NULL,
+                    isSafe INTEGER NOT NULL,
+                    utilizationRatio REAL,
+                    codeUsed TEXT NOT NULL,
+                    concreteVolume REAL NOT NULL DEFAULT 0.0,
+                    steelWeight REAL NOT NULL DEFAULT 0.0,
+                    totalCost REAL NOT NULL DEFAULT 0.0,
+                    createdAt INTEGER,
+                    FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+                )
+            """)
+            database.execSQL("""INSERT INTO designs_new
+                SELECT id, projectId, type, name, inputData, results, isSafe,
+                       utilizationRatio, codeUsed, concreteVolume, steelWeight, totalCost, createdAt
+                FROM designs""")
+            database.execSQL("DROP TABLE designs")
+            database.execSQL("ALTER TABLE designs_new RENAME TO designs")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_designs_projectId ON designs(projectId)")
+
+            // ── slabs ──
+            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS slabs_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    projectId INTEGER NOT NULL,
+                    type TEXT NOT NULL, spanX REAL NOT NULL, spanY REAL NOT NULL,
+                    thickness REAL NOT NULL, load REAL NOT NULL, fcu REAL NOT NULL, fy REAL NOT NULL,
+                    reinforcement TEXT NOT NULL,
+                    concreteVolume REAL NOT NULL, steelWeight REAL NOT NULL, cost REAL NOT NULL,
+                    utilizationRatio REAL,
+                    FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+                )
+            """)
+            database.execSQL("""INSERT INTO slabs_new
+                SELECT id, projectId, type, spanX, spanY, thickness, load, fcu, fy,
+                       reinforcement, concreteVolume, steelWeight, cost, utilizationRatio
+                FROM slabs""")
+            database.execSQL("DROP TABLE slabs")
+            database.execSQL("ALTER TABLE slabs_new RENAME TO slabs")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_slabs_projectId ON slabs(projectId)")
+        }
+    }
+
     val MIGRATION_12_13: Migration = object : Migration(12, 13) {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL(

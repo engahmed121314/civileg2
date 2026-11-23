@@ -807,10 +807,14 @@ fun SlabScreen(
 
 @Composable
 private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
+    // Null utilization means NOT EVALUATED (e.g. blocked check / incomplete input):
+    // render an explicit N/E state, never a 0% gauge.
+    val utilization = res.utilizationRatio
     val utilizationColor = when {
-        res.utilizationRatio > 1.0 -> Color.Red
-        res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
-        res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
+        utilization == null -> MaterialTheme.colorScheme.onSurfaceVariant
+        utilization > 1.0 -> Color.Red
+        utilization > 0.9 -> Color(0xFFFF9800)
+        utilization > 0.4 -> Color(0xFF4CAF50)
         else -> Color(0xFF2196F3)
     }
 
@@ -847,22 +851,31 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
                 }
 
                 Box(contentAlignment = Alignment.Center) {
-                    val animatedRatio by animateFloatAsState(
-                        targetValue = res.utilizationRatio.toFloat(),
-                        animationSpec = tween(1000), label = ""
-                    )
-                    CircularProgressIndicator(
-                        progress = { animatedRatio },
-                        modifier = Modifier.size(54.dp),
-                        strokeWidth = 5.dp,
-                        color = utilizationColor,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    )
-                    AppText(
-                        "${(res.utilizationRatio * 100).toInt()}%",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp
-                    )
+                    if (utilization == null) {
+                        AppText(
+                            "N/E",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        val animatedRatio by animateFloatAsState(
+                            targetValue = utilization.toFloat(),
+                            animationSpec = tween(1000), label = ""
+                        )
+                        CircularProgressIndicator(
+                            progress = { animatedRatio },
+                            modifier = Modifier.size(54.dp),
+                            strokeWidth = 5.dp,
+                            color = utilizationColor,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                        AppText(
+                            "${(utilization * 100).toInt()}%",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    }
                 }
             }
 

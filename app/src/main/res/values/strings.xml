@@ -1880,6 +1880,7 @@
     <string name="hordi_slab_config">Configuration</string>
     <string name="hordi_slab_geometry">Geometry</string>
     <string name="hordi_slab_material_properties">Material Properties</string>
+    <string name="hordi_slab_fc_cylinder">f\'c cylinder (MPa) — required for SBC</string>
     <string name="hordi_slab_design_forces">Design Forces</string>
     <string name="hordi_slab_design_button">Design Hordi Slab</string>
     <string name="hordi_slab_designing">Designing…</string>
@@ -1887,6 +1888,11 @@
     <string name="hordi_slab_safety_title">Hordi Slab — %s</string>
     <string name="hordi_slab_reinforcement">Reinforcement</string>
     <string name="hordi_slab_shear_check">Shear Check</string>
+    <string name="hordi_slab_shear_capacity">Shear Capacity</string>
+    <string name="hordi_slab_utilization">Utilization</string>
+    <string name="hordi_slab_main_bar_diameter">Main Bar Diameter</string>
+    <string name="hordi_slab_rib_spacing_result">Rib Spacing</string>
+    <string name="hordi_slab_adopted_thickness">Adopted Total Thickness</string>
     <string name="hordi_slab_required_as">Required As</string>
     <string name="hordi_slab_provided_as">Provided As</string>
     <string name="hordi_slab_warnings">Warnings</string>

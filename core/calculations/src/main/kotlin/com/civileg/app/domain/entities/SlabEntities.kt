@@ -119,11 +119,17 @@ data class SlabDesignResult(
     val barDiameter: Double,
     val barSpacing: Double,
     val minThickness: Double,
-    val shearCapacity: Double,
+    /** Null when the shear check is NOT EVALUATED (e.g. blocked clause) - never a
+     *  fake number: UI/export/save must render "not evaluated", never a capacity. */
+    val shearCapacity: Double?,
     val isSafe: Boolean,
-    val utilizationRatio: Double,
+    /** Null when not evaluated (blocked); finite otherwise. */
+    val utilizationRatio: Double?,
     val warnings: List<String> = emptyList(),
-    val codeNotes: List<String> = emptyList()
+    val codeNotes: List<String> = emptyList(),
+    /** Engine-authored methodology steps for exports (English, ADR-005/009);
+     *  empty for engines not yet migrated to step output. */
+    val calculationSteps: List<CalculationStep> = emptyList()
 ) : Parcelable
 
 @Parcelize

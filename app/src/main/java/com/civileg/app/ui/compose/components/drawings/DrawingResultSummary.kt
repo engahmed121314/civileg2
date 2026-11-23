@@ -19,7 +19,8 @@ import com.civileg.app.domain.entities.GenericSafetyCheck
  */
 data class DrawingResultSummary(
     val isSafe: Boolean = true,
-    val utilizationRatio: Double = 0.0,
+    /** Null = not evaluated (blocked check); rendered as "N/E", never as a number. */
+    val utilizationRatio: Double? = null,
     val concreteVolume: Double = 0.0,       // m³
     val steelWeight: Double = 0.0,          // kg
     val safetyChecks: List<GenericSafetyCheck> = emptyList(),
@@ -33,7 +34,7 @@ data class DrawingResultSummary(
     val formworkArea: Double = 0.0          // m² (for BOQ/costing)
 ) {
     /** Formatted utilization percentage, e.g. "65.3%" */
-    val utilizationPercent: String get() = "%.1f%%".format(utilizationRatio * 100.0)
+    val utilizationPercent: String get() = utilizationRatio?.let { "%.1f%%".format(it * 100.0) } ?: "N/E"
 
     /** PASS/FAIL label for safety status */
     val safetyLabel: String get() = if (isSafe) "PASS" else "FAIL"

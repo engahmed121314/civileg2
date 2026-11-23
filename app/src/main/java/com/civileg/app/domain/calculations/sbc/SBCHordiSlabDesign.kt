@@ -57,8 +57,8 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
-    ): SlabDesignResult {
+        loadCombination: LoadCombination,
+        cylinderStrengthMPa: Double?    ): SlabDesignResult {
         // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)

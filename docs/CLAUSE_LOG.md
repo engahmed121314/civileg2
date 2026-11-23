@@ -354,6 +354,36 @@ All page numbers below are the printed page of the PDF of record.
 Golden vectors: ECPBeamShearTest (6 cases: stirrup design, min-only branch,
 4-leg wide beam, fy=600 cap, mild-240 min-ratio floor, q_umax 4.4 cap).
 
+---
+
+## SBC 304-CR-2018 joist rebuild batch — `SBCJoistSlab` (accessed 2026-11-22)
+
+Source of record: SBC 304-CR-18 English PDF (284 pp, Edition 200923,
+complete, text-extractable + page renders), cross-confirmed against the
+ACI 318M-14 bilingual PDF (cover-render-confirmed edition). All SBC page
+numbers are the document's printed page. The engine is relabelled
+"SBC 304-CR-2018"; edition differences are isolated for a future 2024 upgrade
+(user decision 2026-11-22: work on the supplied English 2018 copies now, leave
+room for 2024).
+
+| ID | Clause | Source | Status |
+|---|---|---|---|
+| SJ-1 | One-way joist geometry: §9.8.1.2 rib width ≥ 100 mm; §9.8.1.3 overall rib depth ≤ 3.5 × min width; §9.8.1.4 clear rib spacing ≤ 750 mm; §9.8.1.8 non-conforming joists designed as slabs and beams | SBC 304-CR-18 §9.8, printed p. 72 (rendered 2026-11-22); identical in ACI 318M-14 §9.8.1.2-9.8.1.8, printed pp. 243-244 (rendered 2026-11-22) | **Verified (primary, rendered)** |
+| SJ-2 | Topping thickness: §9.8.3.1 (other/removable forms) ≥ greater of 1/12 clear rib distance and 50 mm; §9.8.2.1.1 (structural fillers) ≥ greater of 1/12 clear distance and 40 mm | SBC 304-CR-18 §9.8.2.1.1/§9.8.3.1, printed p. 72 (rendered 2026-11-22) | **Verified (primary, rendered)** |
+| SJ-3 | Effective flange width (T-beam): Table 6.3.2.1 — overhang each side of web = least of 8h, sw/2, ln/8 (one side: 6h, sw/2, ln/12) | SBC 304-CR-18 Table 6.3.2.1, printed p. 40 (rendered 2026-11-22) | **Verified (primary, rendered)** |
+| SJ-4 | Strength reduction: Table 21.2.1(a) moment/axial 0.65-0.90 per 21.2.2, (b) shear φ = 0.75; Table 21.2.2 tension-controlled φ = 0.90 | SBC 304-CR-18 Tables 21.2.1/21.2.2, printed p. 169 (rendered 2026-11-22) | **Verified (primary, rendered)** |
+| SJ-5 | Minimum flexural reinforcement: §9.6.1.2 As,min = greater of (a) 0.25·√fc′/fy·bw·d and (b) 1.4/fy·bw·d; §9.6.1.3 exemption when As provided ≥ 4/3 As required | SBC 304-CR-18 §9.6.1.2/9.6.1.3, printed p. 68 (rendered 2026-11-22) | **Verified (primary, rendered)** |
+| SJ-6 | Stress block: §22.2.2.4.1 a = β1·c; Table 22.2.2.4.3 β1 = 0.85 (17 ≤ fc′ ≤ 28), 0.85 − 0.05(fc′−28)/7 (28 < fc′ < 55), 0.65 (fc′ ≥ 55) | SBC 304-CR-18 §22.2.2.4.1 printed p. 172 (rendered 2026-11-22); Table 22.2.2.4.3 printed p. 173 (text layer; identical ACI 318M-14 table render-verified printed p. 554) | **Verified (primary)** |
+| SJ-7 | One-way shear Vc: §9.8.1.5 permits Vc = 1.1 × the §22.5 value (printed p. 72, rendered) — BUT the base Eq (22.5.5.1) printed p. 174 (rendered) carries the content "Vu ≤ φ(Vc + 0.66√fc′ bw d)", a duplicate of Eq (22.5.1.2) that is circular as a definition of Vc. Independent SBC copy shows the same duplication (publication-level artifact hypothesis). SBC's own Table 22.5.5.1 (printed p. 182) matches ACI 318M-14's detailed method, whose simple-equation counterpart in ACI 318M-14 §22.5.5.1 (printed p. 563) is Vc = 0.17·λ·√fc′·bw·d | SBC 304-CR-18 pp. 72/174/182 (rendered); ACI 318M-14 §22.5.5.1 (dump + form-feed map); no official SBCNC erratum found | **UNVERIFIED — discrepancy held. Engine carries the shear check as BLOCKED: no capacity computed, no joist 1.1 factor applied, result never a design pass. Awaiting official erratum or a design decision; NOT resolved by substitution** |
+| SJ-8 | Concrete strength basis: SBC 304-CR-18 is specified on cylinder strength fc′. Engine input is cube strength fcu (UI semantics preserved); engine converts fc′ = 0.8·fcu | Engine input contract; conversion is an approximation, not a code clause | **UNVERIFIED — approximation flagged in every result; user should enter the cylinder-equivalent strength** |
+| SJ-9 | Detailing notes carried as code notes (not computed): §9.8.1.6 ≥ 1 continuous bottom bar per joist developed at supports; §9.8.1.7 perpendicular reinforcement per §24.4 | SBC 304-CR-18 §9.8.1.6/9.8.1.7, printed p. 72 (rendered 2026-11-22) | **Verified (primary, rendered)** |
+
+Replaces the previous fabricated attributions ("SBC 304-2024 §8.4/§4.2/§4.3",
+ECP-style γc/γs partial factors, 0.25 shear coefficient, spacing-ratio shear
+enhancement, 700 mm spacing limit, "§8.4.4" min-steel pattern), which are
+removed wholesale. Golden vectors cover geometry, flexure, min-steel and the
+blocked-shear semantics only; no shear-capacity vector exists while SJ-7 is
+held.
 ## ACI footing min-steel fix — F-01 (accessed 2026-11-21)
 
 Found while building the combined-footing golden vectors: the shared ACI

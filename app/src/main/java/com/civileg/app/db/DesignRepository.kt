@@ -412,7 +412,7 @@ class DesignRepository @Inject constructor(
     }
 
     private suspend fun saveGeneralDesign(
-        projectId: Long, type: DesignType, name: String, isSafe: Boolean, utilizationRatio: Double,
+        projectId: Long, type: DesignType, name: String, isSafe: Boolean, utilizationRatio: Double?,
         concreteVolume: Double, steelWeight: Double, totalCost: Double, result: Any, codeUsed: String,
         inputData: String = "{}"
     ): Long {

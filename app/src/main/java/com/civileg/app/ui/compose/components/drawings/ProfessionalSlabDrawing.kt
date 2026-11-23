@@ -56,7 +56,7 @@ fun ProfessionalSlabDrawing(
     fcu: Double = 25.0,
     fy: Double = 360.0,
     isSafe: Boolean = true,
-    utilizationRatio: Double = 0.0
+    utilizationRatio: Double? = null
 ) {
     // ── InputGuard: validate key dimensions before drawing ─────────────────
     // Slab span and thickness must be positive for valid geometry.
@@ -180,7 +180,8 @@ fun ProfessionalSlabDrawing(
             size = Size(w, 36f), cornerRadius = CornerRadius(0f)
         )
         val statusLabel = if (isSafe) "✓ ${"SAFE"}" else "✗ ${"UNSAFE"}"
-        val headerText = "${"SLAB DETAIL"} — ${slabType.uppercase()}  •  $statusLabel  •  U=${(utilizationRatio * 100).toInt()}%"
+        val utilizationLabel = utilizationRatio?.let { "U=${(it * 100).toInt()}%" } ?: "U=N/E"
+        val headerText = "${"SLAB DETAIL"} — ${slabType.uppercase()}  •  $statusLabel  •  $utilizationLabel"
         dt(headerText, w / 2f, 24f, textColor, 11f, bold = true)
 
         // ── Section separators & zone labels ───────────────────────

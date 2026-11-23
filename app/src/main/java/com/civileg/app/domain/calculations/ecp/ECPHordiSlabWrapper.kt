@@ -17,8 +17,8 @@ class ECPHordiSlabWrapper : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
-    ): SlabDesignResult {
+        loadCombination: LoadCombination,
+        cylinderStrengthMPa: Double?    ): SlabDesignResult {
         // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)

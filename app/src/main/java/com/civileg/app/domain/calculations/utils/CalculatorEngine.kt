@@ -256,7 +256,9 @@ class CalculatorEngine @Inject constructor(
         val momentX: Double = 0.0, val momentY: Double = 0.0, val totalLoad: Double = 0.0,
         val punchingSafe: Boolean = true, val safetyChecks: List<DesignSafetyCheck> = emptyList(),
         val minThickness: Double = 0.0,
-        val utilizationRatio: Double = 0.0,
+        /** Null when not evaluated (e.g. blocked SBC joist shear) - explicit
+         *  incomplete status, never NaN/zero-as-capacity. */
+        val utilizationRatio: Double? = null,
         val efficiencyScore: Double = 0.0,
         val suggestions: List<String> = emptyList(),
         val trimmerReinforcement: String = "",
@@ -1692,7 +1694,10 @@ class CalculatorEngine @Inject constructor(
             val costVal = concreteVol * 120.0 + steelW * 1.5
             val vu = wu * shortM / 2.0
             val flexureSafe = mainProvided >= mainRequired - 1e-6
-            val shearSafe = vu <= mainRes.shearCapacity
+            // Solid-slab engines always evaluate shear; a null capacity means NOT EVALUATED
+            // and must surface as its own state, never as a fabricated number or silent pass.
+            val shearCap = mainRes.shearCapacity
+            val shearSafe = shearCap != null && vu <= shearCap
             val thicknessSafe = ts >= mainRes.minThickness
 
             val ref = codeNoteRef(domainCode)
@@ -1735,13 +1740,20 @@ class CalculatorEngine @Inject constructor(
                     codeReference = ref, isPass = secondarySafe,
                     status = if (secondarySafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
                 ),
-                CalculationStep(
+                if (shearCap != null) CalculationStep(
                     stepNumber = 6, title = "Shear Check",
                     formula = "vu = wu·L/2 ≤ vc",
-                    formulaWithValues = "vu = ${"%.2f".format(vu)} kN/m vs vc = ${"%.2f".format(mainRes.shearCapacity)} kN/m",
+                    formulaWithValues = "vu = ${"%.2f".format(vu)} kN/m vs vc = ${"%.2f".format(shearCap)} kN/m",
                     result = if (shearSafe) "OK" else "Shear reinforcement required", unit = "kN/m",
                     codeReference = ref, isPass = shearSafe,
                     status = if (shearSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                ) else CalculationStep(
+                    stepNumber = 6, title = "Shear Check",
+                    formula = "vu = wu·L/2 ≤ vc",
+                    formulaWithValues = "vu = ${"%.2f".format(vu)} kN/m vs vc = NOT EVALUATED",
+                    result = "NOT EVALUATED", unit = "kN/m",
+                    codeReference = ref, isPass = false,
+                    status = StepStatus.INFO
                 )
             )
 
@@ -1762,15 +1774,25 @@ class CalculatorEngine @Inject constructor(
                 steelWeight = steelW,
                 cost = costVal,
                 minThickness = mainRes.minThickness,
-                safetyChecks = listOf(
+                safetyChecks = listOfNotNull(
                     DesignSafetyCheck("Flexure (main)", mainProvided, mainRequired, "mm²/m", flexureSafe),
                     DesignSafetyCheck("Flexure (secondary)", secondaryProvided, secondaryRequired, "mm²/m", secondarySafe),
-                    DesignSafetyCheck("Shear", vu, mainRes.shearCapacity, "kN/m", shearSafe),
+                    shearCap?.let { DesignSafetyCheck("Shear", vu, it, "kN/m", shearSafe) },
                     DesignSafetyCheck("Min Thickness", ts, mainRes.minThickness, "mm", thicknessSafe)
                 ),
                 suggestions = mainRes.warnings + mainRes.codeNotes,
                 calculationSteps = steps
             )
+        } catch (e: com.civileg.app.domain.calculations.sbc.MissingCylinderStrengthException) {
+            // Incomplete INPUT, not a failed computation: never masquerade as a
+            // completed design. Saved/legacy projects stay loadable; the user
+            // must supply the cylinder strength before any Saudi computation.
+            SlabResult(thickness = ts, isSafe = false, code = code, type = type,
+                safetyChecks = listOf(DesignSafetyCheck(
+                    "INPUT INCOMPLETE: SBC 304-CR-2018 requires cylinder strength f'c (MPa) - not a completed design",
+                    0.0, 1.0, "", false)),
+                suggestions = listOf(
+                    "Input incomplete: enter the cylinder strength f'c explicitly; legacy cube values cannot be converted (SJ-8) / أدخل مقاومة الأسطوانة صراحة — لا يمكن تحويل قيمة المكعب"))
         } catch (e: Exception) {
             // ADR-010: لا تُرجع isSafe=true عند الفشل — loud failure, no silent safe
             SlabResult(thickness = ts, isSafe = false, code = code, type = type,
