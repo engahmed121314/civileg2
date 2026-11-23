@@ -273,6 +273,13 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
+    // Diagnostic logging must never affect report generation: in plain JVM
+    // unit tests (no Robolectric) android.util.Log throws "not mocked", which
+    // would turn a log line into a failed report. Swallow logging failures only.
+    private fun diagLog(warn: Boolean, message: String) {
+        try { if (warn) Log.w(TAG, message) else Log.i(TAG, message) } catch (_: Throwable) {}
+    }
+
     // Scoped measured-layout helpers (recorded route only): fresh-page usable
     // geometry from the live document and iText-measured element heights laid
     // out at the ACTUAL usable width, margins included. Only a FULL layout is
@@ -720,7 +727,7 @@ object ProfessionalEnglishPdfReporter {
             unit.add(separator())
             unit.add(table)
             document.add(unit)
-            Log.i(TAG, "Recorded results: short-table unit measured ${headReserve + tableHeight}pt of ${uh}pt usable; keep-together applied")
+            diagLog(false, "Recorded results: short-table unit measured ${headReserve + tableHeight}pt of ${uh}pt usable; keep-together applied")
         } else {
             val headUnit = Div().setKeepTogether(true)
             headUnit.add(sectionTitle("3. Recorded Engine Results (Unverified)"))
@@ -728,7 +735,7 @@ object ProfessionalEnglishPdfReporter {
             headUnit.add(separator())
             document.add(headUnit)
             document.add(table)
-            Log.i(TAG, "Recorded results: measured ${headReserve + tableHeight}pt exceeds ${uh}pt usable; deliberate long-table flow")
+            diagLog(false, "Recorded results: measured ${headReserve + tableHeight}pt exceeds ${uh}pt usable; deliberate long-table flow")
         }
         document.add(emptyLine())
     }
@@ -946,7 +953,7 @@ object ProfessionalEnglishPdfReporter {
                     val probeResult = probeUnit.createRendererSubTree().setParent(document.renderer)
                         .layout(LayoutContext(LayoutArea(1, Rectangle(usableWidth, usableHeight))))
                     val probeBox = if (probeResult.status == LayoutResult.NOTHING) "none" else probeResult.occupiedArea.bBox.toString()
-                    Log.i(TAG, "Recorded schematic: selected ${displayWidth}x${displayHeight}pt (scale=$scale, source ${img.imageWidth}x${img.imageHeight}px), reserve=${reserve}pt, remaining=${remaining}pt of ${usableHeight}pt usable; probe status=${probeResult.status} bbox=$probeBox")
+                    diagLog(false, "Recorded schematic: selected ${displayWidth}x${displayHeight}pt (scale=$scale, source ${img.imageWidth}x${img.imageHeight}px), reserve=${reserve}pt, remaining=${remaining}pt of ${usableHeight}pt usable; probe status=${probeResult.status} bbox=$probeBox")
                     // The measured operands indicate room on a fresh page,
                     // but keep-together stays best-effort: whether the unit
                     // actually fits and stays whole is decided by the actual
@@ -961,7 +968,7 @@ object ProfessionalEnglishPdfReporter {
                     // follows in normal flow. This fallback does NOT guarantee
                     // image and caption share a page, and no image content is
                     // clipped.
-                    Log.w(TAG, "Recorded schematic: measured reserve leaves ${remaining}pt < ${minLegibleImageHeight}pt legible floor; image placed without keep-together")
+                    diagLog(true, "Recorded schematic: measured reserve leaves ${remaining}pt < ${minLegibleImageHeight}pt legible floor; image placed without keep-together")
                     document.add(sectionTitle("5. Column Schematic (Dimensions Only)"))
                     document.add(separator())
                     img.setAutoScale(false)
