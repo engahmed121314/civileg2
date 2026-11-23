@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.lifecycle.MutableLiveData
 import com.civileg.app.BuildConfig
 import com.civileg.app.db.DesignRepository
@@ -51,6 +52,9 @@ class ColumnRecordedSheetIntegrationTest {
     private val output get() = File("build/reports/tests/column-full-export/${BuildConfig.FLAVOR}").apply { mkdirs() }
 
     private fun open() {
+        // Manual compose clock BEFORE any setContent/idle wait, so no
+        // scheduler-held animation can keep the tree busy from the start.
+        compose.mainClock.autoAdvance = false
         val settings = mockk<SettingsManager>(relaxed = true)
         every { settings.defaultDesignCode } returns DesignCode.ECP
         vm = spyk(ColumnViewModel(mockk<DesignRepository>(relaxed = true), CalculatorEngine(settings), settings))
@@ -62,10 +66,45 @@ class ColumnRecordedSheetIntegrationTest {
         }
         compose.runOnIdle { vm.calculateManual() }
         compose.waitForIdle()
+        awaitLaidOutHost()
         val recorded = requireNotNull(vm.uiState.value.completedDesign).result()
         // These are actual legacy route values, not a new engineering benchmark.
         assertEquals(9, recorded.reinforcement.numBars)
         assertEquals(20, recorded.reinforcement.diameter)
+    }
+
+    /**
+     * Deterministic, TEST-ONLY frame delivery with a finite original budget:
+     * pumps frames on the manual compose clock until the attached host reports
+     * a real LAYOUT (attached, non-zero size). Host size proves layout only -
+     * NOT draw, NOT presentation. The predicate never calls waitForIdle or
+     * runOnIdle inside the bounded loop (each can block up to its own 60s);
+     * frame delivery is bounded (advanceByFrame only) and the size read is a
+     * plain UI-thread read. Success is checked BEFORE the budget break; the
+     * deadline is monotonic. Fails loudly after the original 30s budget.
+     */
+    private fun awaitLaidOutHost(budgetMs: Long = 30000) {
+        val deadlineNanos = System.nanoTime() + budgetMs * 1_000_000L
+        while (true) {
+            // Budget checked BEFORE every advance and every read, and a late
+            // success is never accepted after the deadline.
+            if (System.nanoTime() >= deadlineNanos) break
+            compose.mainClock.advanceByFrame()
+            if (System.nanoTime() >= deadlineNanos) break
+            var laidOut = false
+            // Plain UI-thread read. NOT guaranteed bounded if the main thread
+            // hangs: only the OUTER poll budget is claimed here, and the
+            // original 60s idling waits in setup/click can still fail
+            // legitimately on their own terms.
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                laidOut = host.isAttachedToWindow && host.width > 0 && host.height > 0
+            }
+            if (System.nanoTime() >= deadlineNanos) break
+            if (laidOut) return
+            // Tiny yield so the bounded pump loop is not a tight busy loop.
+            Thread.sleep(5)
+        }
+        error("Host layout not observed within " + budgetMs + "ms (host not attached or zero-size)")
     }
 
     private fun button(tag: String) = compose.onNodeWithTag(tag)
@@ -191,10 +230,15 @@ class ColumnRecordedSheetIntegrationTest {
         val observedCaptures = mutableListOf<ColumnDrawingCapture?>()
         every { vm.exportToPdf(any(), any(), captureNullable(observedCaptures), any()) } answers { callOriginal() }
         val before = documents().listFiles().orEmpty().map { it.name }.toSet()
-        scrollTo("column-pdf-export");
-        // Passive witnesses: completed-sheet revision before the click vs after
-        // pumping, so a stale revision, a failed freeze, and a failed capture
-        // are distinguishable in the report.
+        // Original path to the button: column-content is a LazyColumn
+        // (ColumnScreen.kt:125), so the genuine user gesture to reach the
+        // export button is a scroll; without it the semantics node is not
+        // composed and the failure would be node-absence, not behavior.
+        scrollTo("column-pdf-export")
+        // Passive VM-state witness (NOT a pixel read-back, does not touch or
+        // drive rendering): completed-sheet revision before the click vs after
+        // pumping, so a stale revision and a failed capture stay
+        // distinguishable in the report.
         val revisionBeforeClick = vm.uiState.value.completedDesign?.revisionSha256
         button("column-pdf-export").performClick()
         try {

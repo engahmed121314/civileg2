@@ -117,7 +117,17 @@ class ColumnCompletedScreenTest {
     }
 
     private fun assertNoExistingProjectIsNotSaved() {
+        // Manual compose clock BEFORE open()'s setContent/idle waits, so no
+        // scheduler-held animation can keep the tree busy from the start.
+        // Scoped to this failing path only; other tests in the class keep the
+        // auto-advancing clock. Deterministic, TEST-ONLY frame delivery.
+        compose.mainClock.autoAdvance = false
         open()
+        repeat(4) { compose.mainClock.advanceByFrame() }
+        compose.waitForIdle()
+        // Scroll retained: column-content is a LazyColumn (ColumnScreen.kt:125),
+        // so scrolling is the genuine user gesture that composes the save
+        // button's semantics node. No pre-click capture or read-back follows it.
         scrollTo("column-save")
         val layouts = AtomicLong()
         val draws = AtomicLong()
@@ -135,6 +145,9 @@ class ColumnCompletedScreenTest {
         try {
             // Include the click itself: it may also wait for idle and fail.
             button("column-save").performClick()
+            // Deliver the dialog's first frames deterministically (finite
+            // count, no deadlines changed) before the passive listeners attach.
+            repeat(6) { compose.mainClock.advanceByFrame() }
             instrumentation.runOnMainSync { attachWhenAvailable() }
             compose.waitForIdle()
             button("column-save-confirm").assertIsNotEnabled()

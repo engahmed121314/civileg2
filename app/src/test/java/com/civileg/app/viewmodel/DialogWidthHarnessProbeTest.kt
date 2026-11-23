@@ -28,8 +28,12 @@ import java.io.File
  * reproduces the width dependence.
  *
  * This probe adds NO product changes and touches NO existing test. Three
- * minimal same-environment fixtures isolate the harness interaction:
- *  1. w400dp Dialog+OutlinedTextField  -> expected to freeze if 8460 applies
+ * minimal same-environment fixtures isolate the harness interaction, now
+ * under deterministic manual clock control (autoAdvance=false + frame pumps):
+ *  1. w400dp Dialog+OutlinedTextField  -> froze under the auto-advancing
+ *     clock; if it STILL fails under 4 manual frame pumps, only THIS
+ *     frame-delivery strategy is falsified - no categorical cause is claimed
+ *     and the recorded bounds remain the evidence
  *  2. w320dp Dialog+OutlinedTextField  -> expected to pass (below threshold)
  *  3. w400dp Dialog with plain Text    -> expected to pass (no TextField)
  *
@@ -93,6 +97,11 @@ class DialogWidthHarnessProbeTest {
     }
 
     private fun setDialogContent(withTextField: Boolean) {
+        // Deterministic, TEST-ONLY frame delivery: manual compose clock set
+        // BEFORE setContent, then frames pumped manually. If a fixture still
+        // fails after this, only this strategy is falsified - the recorded
+        // bounds in the finally block remain the evidence either way.
+        compose.mainClock.autoAdvance = false
         compose.setContent {
             AlertDialog(
                 onDismissRequest = {},
@@ -111,6 +120,7 @@ class DialogWidthHarnessProbeTest {
                 }
             )
         }
+        repeat(4) { compose.mainClock.advanceByFrame() }
     }
 
     @Test
