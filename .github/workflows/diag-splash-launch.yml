@@ -58,6 +58,46 @@ jobs:
           # capture lives in one committed script invoked by a single line.
           script: adb install -r app/build/outputs/apk/free/debug/app-free-debug.apk && bash tools/diag/splash-launch-capture.sh
 
+      - name: Analyze recording (ffprobe metadata, exact-PTS frames)
+        if: always()
+        run: |
+          set -u
+          OUT=splash-launch-evidence
+          MP4="$OUT/splash-launch-recording.mp4"
+          {
+            echo "ffprobe_version=$(ffprobe -version 2>/dev/null | head -1 || echo unavailable)"
+            echo "ffmpeg_version=$(ffmpeg -version 2>/dev/null | head -1 || echo unavailable)"
+          } > "$OUT/recording-analysis.txt" 2>&1
+          if [ ! -s "$MP4" ]; then
+            echo "recording missing or empty; no media analysis possible" >> "$OUT/recording-analysis.txt"
+            exit 0
+          fi
+          echo -n "recording_sha256=" >> "$OUT/recording-analysis.txt"
+          sha256sum "$MP4" | cut -d' ' -f1 >> "$OUT/recording-analysis.txt"
+          ffprobe -v error -show_format -show_streams "$MP4" > "$OUT/recording-ffprobe.txt" 2>&1 || echo "ffprobe_exit=$?" >> "$OUT/recording-analysis.txt"
+          mkdir -p "$OUT/frames"
+          # Decode every frame, name each by its exact media PTS (-frame_pts),
+          # then hash each extracted native frame for content-change validation.
+          ffmpeg -nostdin -i "$MP4" -frame_pts 1 "$OUT/frames/frame-%08d.png" > "$OUT/ffmpeg-frames.log" 2>&1 || echo "ffmpeg_exit=$?" >> "$OUT/recording-analysis.txt"
+          FRAME_TOTAL=$(ls "$OUT"/frames/*.png 2>/dev/null | wc -l | tr -d ' ')
+          if [ "$FRAME_TOTAL" -gt 0 ]; then
+            (cd "$OUT/frames" && sha256sum *.png) > "$OUT/frame-shas.txt" 2>&1
+            DISTINCT=$(awk '{print $1}' "$OUT/frame-shas.txt" | sort -u | wc -l | tr -d ' ')
+            {
+              echo "decoded_frame_total=$FRAME_TOTAL"
+              echo "distinct_frame_content_count=$DISTINCT"
+              if [ "$DISTINCT" -gt 1 ]; then
+                echo "content_change_validation=frame content changes across the recording"
+              else
+                echo "content_change_validation=all decoded frames byte-identical (frozen or single-frame recording)"
+              fi
+              echo "note: counts describe the recording only; whether any frame shows the intended composition requires actual pixel review"
+            } >> "$OUT/recording-analysis.txt"
+          else
+            echo "decoded_frame_total=0 (no decodable frames)" >> "$OUT/recording-analysis.txt"
+          fi
+          exit 0
+
       - name: Upload splash launch evidence
         if: always()
         uses: actions/upload-artifact@v4
