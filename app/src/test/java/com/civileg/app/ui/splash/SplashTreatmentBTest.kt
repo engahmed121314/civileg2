@@ -241,6 +241,8 @@ class SplashTreatmentBTest {
                     .append(" transformation=").append(v.transformationMethod?.javaClass?.simpleName ?: "null")
                     .append(" layoutTextEqualsText=").append(l?.text?.toString() == v.text.toString())
                     .append(" ellipsized=").append(if (l != null && l.lineCount > 0) l.getEllipsisCount(0) else -1)
+                    .append(" compoundPaddingLeft=").append(v.compoundPaddingLeft)
+                    .append(" scrollX=").append(v.scrollX)
                     .append(" compoundPaddingTop=").append(v.compoundPaddingTop)
                     .append(" extendedPaddingTop=").append(v.extendedPaddingTop)
                     .append(" totalPaddingTop=").append(v.totalPaddingTop)
@@ -373,6 +375,46 @@ class SplashTreatmentBTest {
     /** Gold tip #D9B36A: high red, mid green, low blue. Separate from fill. */
     private val isTipPixel = { r: Int, g: Int, b: Int -> r > 170 && g in 130..210 && b in 60..170 }
 
+    /**
+     * Rendered-text horizontal bounds/crop witness: for every realized line
+     * of a label, the glyph ink extended by the shadow extents must lie
+     * INSIDE the view's laid-out width, so view geometry can never hide
+     * clipping (the forced-wrap prayer right-clipped at exactly the view
+     * edge before the internal ink reserve existed). Conservative per-side
+     * envelope: glyph bounds left/right around the line advance, plus the
+     * shadow blur and offset on each side.
+     */
+    private fun assertRenderedTextInkWithinView(label: String, viewName: String, v: TextView) {
+        val layout = v.layout ?: return
+        val str = v.text.toString()
+        val shadowLeft = v.shadowRadius + maxOf(0f, -v.shadowDx)
+        val shadowRight = v.shadowRadius + maxOf(0f, v.shadowDx)
+        // Layout line coordinates are content-relative: shift by the actual
+        // content origin inside the view (compound padding left minus any
+        // horizontal scroll) so padded or shifted text is judged against the
+        // true view edges.
+        val contentOriginX = v.compoundPaddingLeft - v.scrollX
+        for (line in 0 until layout.lineCount) {
+            val start = layout.getLineStart(line)
+            val end = layout.getLineEnd(line)
+            if (end <= start || end > str.length) continue
+            val bounds = Rect()
+            v.paint.getTextBounds(str, start, end, bounds)
+            val advance = v.paint.measureText(str, start, end)
+            val originX = contentOriginX + layout.getLineLeft(line)
+            val inkLeft = originX + minOf(bounds.left.toFloat(), 0f) - shadowLeft
+            val inkRight = originX + maxOf(bounds.right.toFloat(), advance) + shadowRight
+            assertTrue(
+                "$label/$viewName line$line ink left " + inkLeft + " clips view left (width=" + v.width + ")",
+                inkLeft >= 0f
+            )
+            assertTrue(
+                "$label/$viewName line$line ink right " + inkRight + " exceeds view width " + v.width,
+                inkRight <= v.width.toFloat()
+            )
+        }
+    }
+
     private fun assertSceneGeometry(scene: Scene, label: String) {
         assertEquals("CivilEG", scene.name.text.toString())
         assertEquals("صلى الله على محمد", scene.prayer.text.toString())
@@ -380,6 +422,12 @@ class SplashTreatmentBTest {
         assertTrue("name bold", scene.name.typeface?.isBold == true)
         assertTrue("prayer bold", scene.prayer.typeface?.isBold == true)
         assertTrue("caption regular", scene.caption.typeface?.isBold == false)
+
+        assertTrue("ink reserve exhausted: " + scene.overlay.inkReserveExhausted,
+            scene.overlay.inkReserveExhausted.isEmpty())
+        assertRenderedTextInkWithinView(label, "name", scene.name)
+        assertRenderedTextInkWithinView(label, "prayer", scene.prayer)
+        assertRenderedTextInkWithinView(label, "caption", scene.caption)
 
         assertEquals(ImageView.ScaleType.CENTER_CROP, scene.background.scaleType)
         assertNotNull(scene.background.drawable)
@@ -715,8 +763,11 @@ class SplashTreatmentBTest {
         withAttachedScene(fontScale = 2.0f, label = "forced-wrap") { scene ->
             // 180dp width at 2x font scale genuinely wraps the fixed labels
             // to multiple lines; the narrow measurement contract no longer
-            // holds, so inkExtents must return the full measured rectangle
-            // and BOTH groups must decline anchoring. Witness BEFORE asserts.
+            // holds for the TOP pair, so the title group takes the
+            // conservative full-rectangle path and falls back together. The
+            // caption pair is decided on its own fit: caption stays single
+            // line, both ink rectangles fit the bottom strip, so the bottom
+            // pair anchors. Witness BEFORE asserts.
             capture(scene.root, "splash-B-forced-wrap")
             recordWitnessManifest(scene, "forced-wrap")
             assertTrue("prayer actually wraps under 180dp at 2x scale",
@@ -725,9 +776,9 @@ class SplashTreatmentBTest {
                 scene.overlay.placementModes[R.id.tvAppName])
             assertEquals(SplashOverlayLayout.PlacementMode.FALLBACK_SAFE_AREA,
                 scene.overlay.placementModes[R.id.tvPrayer])
-            assertEquals(SplashOverlayLayout.PlacementMode.FALLBACK_SAFE_AREA,
+            assertEquals(SplashOverlayLayout.PlacementMode.CLEAR_ANCHORED,
                 scene.overlay.placementModes[R.id.tvCaption])
-            assertEquals(SplashOverlayLayout.PlacementMode.FALLBACK_SAFE_AREA,
+            assertEquals(SplashOverlayLayout.PlacementMode.CLEAR_ANCHORED,
                 scene.overlay.placementModes[R.id.loadingBar])
             assertSceneGeometry(scene, "forced-wrap")
         }
