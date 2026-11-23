@@ -95,6 +95,26 @@ class ColumnRecordedSheetEmulatorTest {
         }
     }
 
+    // Gradle uninstalls the app and the test app the moment instrumentation
+    // finishes, wiping the app-private evidence dir before the workflow can
+    // pull it, and API 33 scoped storage blocks the shell from app-private
+    // external dirs anyway. So everything retained is ALSO mirrored to the
+    // shared Downloads collection (app-owned files via the File API survive
+    // uninstall and stay pullable). Best-effort: a mirror failure is not a
+    // test failure and never masks the original outcome.
+    private fun mirrorEvidenceToShared() {
+        runCatching {
+            val shared = File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                "capture-emulator-evidence"
+            )
+            shared.mkdirs()
+            evidenceDir.listFiles()?.forEach { f ->
+                f.copyTo(File(shared, f.name), overwrite = true)
+            }
+        }
+    }
+
     @Test
     fun actual_pdf_button_embeds_the_completed_capture_through_real_ExportManager() {
         open()
@@ -157,6 +177,8 @@ class ColumnRecordedSheetEmulatorTest {
                 }
             }
             throw failure
+        } finally {
+            mirrorEvidenceToShared()
         }
     }
 
