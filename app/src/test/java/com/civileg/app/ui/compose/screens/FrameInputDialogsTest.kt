@@ -4,7 +4,8 @@ import android.app.Application
 import android.graphics.Bitmap
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.core.view.drawToBitmap
+import org.robolectric.shadows.ShadowDialog
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -47,7 +48,17 @@ class FrameInputDialogsTest {
     }
     private fun field(index: Int) = rule.onAllNodes(hasSetTextAction())[index]
     private fun capture(name: String) {
-        val image = rule.onNode(isDialog()).captureToImage().asAndroidBitmap()
+        rule.onNode(isDialog()).assertIsDisplayed()
+        val image = rule.runOnIdle {
+            // WindowCapture.captureRegionToImage waits for a hardware window callback which
+            // does not complete in this native Robolectric fixture. Draw the actual shown
+            // Android dialog decorView instead, retaining its measured size and content.
+            val dialog=requireNotNull(ShadowDialog.getLatestDialog())
+            check(dialog.isShowing)
+            val decor=requireNotNull(dialog.window).decorView
+            check(decor.isShown && decor.width>0 && decor.height>0)
+            decor.drawToBitmap()
+        }
         val dir = File("build/reports/tests/compose-shots").apply { mkdirs() }
         FileOutputStream(File(dir, "frame-input-$name.png")).use { image.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }

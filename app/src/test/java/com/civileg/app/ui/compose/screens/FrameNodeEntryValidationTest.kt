@@ -5,7 +5,8 @@ import android.content.Context
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.core.view.drawToBitmap
+import org.robolectric.shadows.ShadowDialog
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -55,7 +56,15 @@ class FrameNodeEntryValidationTest {
         rule.runOnIdle { assertTrue(vm.nodes.value.orEmpty().isEmpty()) }
         rule.onNodeWithText(app.getString(R.string.frame_input_finite)).assertIsDisplayed()
         fields[1].assertTextContains("-3")
-        val bitmap=rule.onNode(isDialog()).captureToImage().asAndroidBitmap()
+        rule.onNode(isDialog()).assertIsDisplayed()
+        val bitmap=rule.runOnIdle {
+            // Capture the actual shown native dialog, not the Activity behind its window.
+            val dialog=requireNotNull(ShadowDialog.getLatestDialog())
+            check(dialog.isShowing)
+            val decor=requireNotNull(dialog.window).decorView
+            check(decor.isShown && decor.width>0 && decor.height>0)
+            decor.drawToBitmap()
+        }
         val dir=java.io.File("build/reports/tests/compose-shots").apply{mkdirs()}
         java.io.FileOutputStream(java.io.File(dir,"frame-input-node-$locale.png")).use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it) }
         fields[0].performTextReplacement(if(locale=="ar") "٢٫٥" else "2.5")
