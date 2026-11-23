@@ -12,7 +12,6 @@ import com.civileg.app.domain.calculations.utils.BoqEstimator
 import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter
 import com.civileg.app.domain.calculations.utils.CalculationValidator
-import com.civileg.app.shared.reporting.PdfDrawingGenerator
 import com.civileg.app.utils.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -266,28 +265,24 @@ class ColumnViewModel @Inject constructor(
     /** Standalone DXF sheet for the current column design (null when no result). */
     fun buildDxfDrawing(snapshot: ColumnDesignSnapshot): com.civileg.app.utils.DxfDrawable? {
         require(snapshot.hasValidFingerprint())
-        val res = snapshot.result()
-        // This legacy builder draws rectangles only. Do not label one as a circular result.
-        if (snapshot.input().isCircular || res.columnType.contains("CIRCULAR", ignoreCase = true)) return null
-        return com.civileg.app.utils.ElementDxfDrawings.columnSection(
-            title = "COLUMN ${res.columnType}",
-            widthMm = res.width.toDouble(),
-            depthMm = res.depth.toDouble(),
-            coverMm = 40.0,
-            mainBarDiaMm = res.reinforcement.diameter.toDouble(),
-            mainBarCount = res.reinforcement.numBars,
-            tieDiaMm = res.stirrups.diameter.toDouble(),
-            tieSpacingMm = res.stirrups.spacing.toDouble()
-        )
+        // A count/diameter is not an adopted coordinate or detailing contract.
+        // Do not synthesize a CAD reinforcement layout from this legacy result.
+        return null
     }
 
     /** Export just the CAD drawing (no PDF) for the current design. */
     fun exportToDxf(context: Context, onComplete: (File?) -> Unit = {}) {
         val snapshot = _uiState.value.completedDesign ?: return
         if (!isCurrent(snapshot)) return
+        val drawing = buildDxfDrawing(snapshot)
+        if (drawing == null) {
+            _errorMessage.value = "Column CAD detailing is withheld: checked reinforcement coordinates are unavailable."
+            onComplete(null)
+            return
+        }
         com.civileg.app.utils.DxfQuickExport.export(
             context = context,
-            drawing = buildDxfDrawing(snapshot),
+            drawing = drawing,
             baseName = "Column",
             scope = viewModelScope,
             onComplete = onComplete
@@ -314,23 +309,10 @@ class ColumnViewModel @Inject constructor(
                 val fyVal = input.fyMpa
 
                 // Generate drawing for PDF
-                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
-                val isSpiralTies = res.stirrups.description.contains("SPIRAL", ignoreCase = true)
-                val drawingBitmap = capture?.takeIf { it.revisionSha256 == snapshot.revisionSha256 }?.bitmap ?: try {
-                    PdfDrawingGenerator.generateColumnDrawing(
-                        columnWidth = res.width,
-                        columnDepth = res.depth,
-                        columnHeight = h * 1000.0,
-                        numBars = res.reinforcement.numBars,
-                        barDia = res.reinforcement.diameter.toDouble(),
-                        tieDia = res.stirrups.diameter.toDouble(),
-                        tieSpacing = res.stirrups.spacing,
-                        cover = 40.0,
-                        isSpiral = isSpiralTies,
-                        spiralPitch = if (isSpiralTies) res.stirrups.spacing else 0.0,
-                        sectionType = if (input.isCircular) "Circular" else "Rectangular"
-                    )
-                } catch (e: Exception) { e.printStackTrace(); null }
+                // Only a matching captured schematic may be embedded; no synthetic-bar fallback.
+                val drawingBitmap = capture?.takeIf { it.revisionSha256 == snapshot.revisionSha256 }?.bitmap
+                val drawingStatus = if (drawingBitmap != null) "Captured completed revision schematic; no checked bar coordinates"
+                    else "UNAVAILABLE: no matching completed capture; reinforcement geometry is not synthesized"
 
                 val codeName = when(input.code) {
                     com.civileg.app.domain.entities.DesignCode.ACI -> "ACI 318"
@@ -340,6 +322,10 @@ class ColumnViewModel @Inject constructor(
 
                 val inputsMap = mutableMapOf(
                     "Completed Revision" to snapshot.revisionSha256,
+                    "Drawing Capture" to drawingStatus,
+                    "Detailing Status" to "No checked bar-coordinate/detailing record. CAD reinforcement geometry withheld.",
+                    "Code Edition Status" to "Not verified for this recorded method; legacy step references are not approval.",
+                    "Quantity Basis" to "Unverified legacy estimates; BBS and BOQ are not a coordinated fabrication/takeoff contract.",
                     "Output Scope" to "Recorded engine output and schematic only; this repair does not verify the member-design method or grant execution approval.",
                     "Reinforcement Selection Intent" to input.reinforcementIntent.name,
                     "Preferred Diameter Request (not adopted layout)" to "${input.preferredDiameterMm} mm",
@@ -387,8 +373,8 @@ class ColumnViewModel @Inject constructor(
                 // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم العمود - ${res.columnType}",
-                    titleEn = "Column Design Report - ${res.columnType}",
-                    subtitle = "Code: $codeName | ${res.width}x${res.depth}mm, H=${h}m",
+                    titleEn = "Column Recorded Review - ${res.columnType}",
+                    subtitle = "Requested code: $codeName (method/edition unverified) | ${res.width}x${res.depth}mm, H=${h}m",
                     designType = "Column (${res.columnType})",
                     inputs = inputsMap,
                     results = resultsMap,
@@ -401,7 +387,8 @@ class ColumnViewModel @Inject constructor(
                     boqRows = BoqEstimator.columnRows(res, h, "C1"),
                     drawingBitmap = drawingBitmap,
                     drawing = buildDxfDrawing(snapshot),
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    presentation = com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.ReportPresentation.COLUMN_RECORDED_REVIEW
                 ).pdfFile
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {

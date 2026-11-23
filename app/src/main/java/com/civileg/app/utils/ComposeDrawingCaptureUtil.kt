@@ -3,6 +3,7 @@ package com.civileg.app.utils
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas as AndroidCanvas
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -22,6 +23,7 @@ import java.io.FileOutputStream
  * for embedding into PDF reports.
  */
 object ComposeDrawingCaptureUtil {
+
 
     /**
      * Creates a [GraphicsLayer] that can be attached to a composable via
@@ -139,17 +141,28 @@ object ComposeDrawingCaptureUtil {
  * Call from a coroutine (e.g. `rememberCoroutineScope().launch { }`).
  */
 suspend fun GraphicsLayer.captureToAndroidBitmap(): Bitmap? {
+    // This helper owns the conversion failure witness. Every log is guarded so
+    // a logging failure can never turn a valid bitmap into null or replace the
+    // original failure outcome.
     return try {
         if (size.width <= 0 || size.height <= 0) {
+            runCatching { Log.w(TAG_CAPTURE, "captureToAndroidBitmap zero-size fastpath: layer.size=${size.width}x${size.height}") }
+            runCatching { System.err.println("CAPTURE-WITNESS zero-size fastpath: layer=${size.width}x${size.height}") }
             null
         } else {
-            toImageBitmap().asAndroidBitmap()
+            val bmp = toImageBitmap().asAndroidBitmap()
+            runCatching { Log.d(TAG_CAPTURE, "captureToAndroidBitmap ok: layer=${size.width}x${size.height} bitmap=${bmp.width}x${bmp.height}") }
+            bmp
         }
     } catch (t: Throwable) {
+        runCatching { Log.w(TAG_CAPTURE, "captureToAndroidBitmap conversion failure: layer=${size.width}x${size.height} type=${t.javaClass.name} msg=${t.message}") }
+        runCatching { System.err.println("CAPTURE-WITNESS conversion failure: layer=${size.width}x${size.height} type=${t.javaClass.name} msg=${t.message}") }
         t.printStackTrace()
         null
     }
 }
+
+private const val TAG_CAPTURE = "DrawingCapture"
 
 fun Constraints.sanitize(): Constraints {
     val minW = minWidth.coerceAtLeast(0)

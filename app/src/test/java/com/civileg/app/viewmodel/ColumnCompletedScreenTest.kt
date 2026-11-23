@@ -59,6 +59,31 @@ class ColumnCompletedScreenTest {
         compose.waitForIdle()
     }
 
+    /**
+     * Manual-clock variant of scrollTo, used only where mainClock.autoAdvance=false.
+     * Observed (113 run 45132211224): the main thread was busy inside performScrollToNode ->
+     * findMatchInHierarchy while this test's scrollTo("column-save") was running. Hypothesis,
+     * not proven: with no frames delivered between its ScrollBy iterations the lazy list never
+     * moves and the loop never exits (the exact ui-test version's source was not verified).
+     * This helper uses a genuine swipe on the LazyColumn with a finite swipe count and a finite
+     * frame count per swipe. The counts bound the gesture steps, not wall time: node queries
+     * can still spin. Failure is honest: the final assertIsDisplayed is retained; the
+     * AssertionError catch only probes visibility.
+     */
+    private fun scrollToWithSwipes(tag: String, maxSwipes: Int = 12) {
+        fun displayed(): Boolean = try {
+            compose.onNodeWithTag(tag).assertIsDisplayed(); true
+        } catch (_: AssertionError) { false }
+        var swipes = 0
+        while (!displayed() && swipes < maxSwipes) {
+            compose.onNodeWithTag("column-content").performTouchInput { swipeUp() }
+            repeat(40) { compose.mainClock.advanceTimeByFrame() }
+            swipes++
+        }
+        compose.waitForIdle()
+        compose.onNodeWithTag(tag).assertIsDisplayed()
+    }
+
     private fun capture(name: String) {
         val bitmap = compose.runOnIdle {
             Bitmap.createBitmap(host.width, host.height, Bitmap.Config.ARGB_8888).also { host.draw(Canvas(it)) }
@@ -117,8 +142,18 @@ class ColumnCompletedScreenTest {
     }
 
     private fun assertNoExistingProjectIsNotSaved() {
+        // Manual compose clock BEFORE open()'s setContent/idle waits, so no
+        // scheduler-held animation can keep the tree busy from the start.
+        // Scoped to this failing path only; other tests in the class keep the
+        // auto-advancing clock. Deterministic, TEST-ONLY frame delivery.
+        compose.mainClock.autoAdvance = false
         open()
-        scrollTo("column-save")
+        repeat(4) { compose.mainClock.advanceTimeByFrame() }
+        compose.waitForIdle()
+        // Scroll retained: column-content is a LazyColumn (ColumnScreen.kt:125),
+        // so scrolling is the genuine user gesture that composes the save
+        // button's semantics node. No pre-click capture or read-back follows it.
+        scrollToWithSwipes("column-save")
         val layouts = AtomicLong()
         val draws = AtomicLong()
         var dialogRoot: View? = null
@@ -135,6 +170,9 @@ class ColumnCompletedScreenTest {
         try {
             // Include the click itself: it may also wait for idle and fail.
             button("column-save").performClick()
+            // Deliver the dialog's first frames deterministically (finite
+            // count, no deadlines changed) before the passive listeners attach.
+            repeat(6) { compose.mainClock.advanceTimeByFrame() }
             instrumentation.runOnMainSync { attachWhenAvailable() }
             compose.waitForIdle()
             button("column-save-confirm").assertIsNotEnabled()
@@ -153,6 +191,8 @@ class ColumnCompletedScreenTest {
                     captureDialog("failed-save-dialog-${host.height}")
                 }
             }.onFailure { println("COLUMN_DIALOG_DIAGNOSTIC_FAILED ${it.javaClass.name}") }
+            retainColumnUiTimeout(File("build/reports/tests/column-completed-shots"), null,
+                emptySet(), "save-dialog-${host.height}", vm.uiState.value, "save-not-requested", failure)
             throw failure
         } finally {
             runCatching {

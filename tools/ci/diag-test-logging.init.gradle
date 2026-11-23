@@ -1,0 +1,10 @@
+// Diagnostic only: logs per-test STARTED/PASSED/FAILED/SKIPPED. No assertion, timing or execution change.
+allprojects {
+    tasks.withType(Test).configureEach {
+        testLogging {
+            events "started", "passed", "failed", "skipped"
+            exceptionFormat "full"
+            showStandardStreams = false
+        }
+    }
+}

@@ -3,6 +3,7 @@ package com.civileg.app.ui.compose.screens
 import com.civileg.app.ui.responsive.dimens
 
 import kotlin.math.*
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -56,8 +57,8 @@ import com.civileg.app.ui.compose.components.common.BoqTableCard
 import com.civileg.app.domain.calculations.utils.BoqEstimator
 import com.civileg.app.ui.compose.components.drawings.columnDrawingSummary
 import com.civileg.app.ui.compose.components.drawings.ProfessionalColumnDrawing
-import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.BarInfo
+import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
@@ -433,17 +434,39 @@ fun ColumnScreen(
                             label = stringResource(R.string.pdf_report),
                             onClick = {
                                 scope.launch {
+                                    // Passive diagnostic witnesses; every log is guarded
+                                    // so a logging failure can never change an outcome.
+                                    // The conversion throwable itself is owned by the
+                                    // shared helper's internal catch witness; a null
+                                    // bitmap here is only correlated as unknown-null.
+                                    val revision = completed.revisionSha256
                                     val renderedBefore = renderedDrawingRevision.get()
                                     val captureBitmap = try {
                                         pdfCaptureLayer.captureToAndroidBitmap()
                                     } catch (_: Exception) { null }
-                                    val capture = if (captureBitmap != null && renderedBefore == completed.revisionSha256 &&
-                                        renderedDrawingRevision.get() == completed.revisionSha256)
-                                        runCatching { ColumnDrawingCapture(completed.revisionSha256, captureBitmap) }.getOrNull() else null
+                                    val renderedAfter = renderedDrawingRevision.get()
+                                    val rejection = when {
+                                        captureBitmap == null -> "conversion-null(unknown; see shared-helper witness)"
+                                        renderedBefore != revision -> "renderedBefore-stale(revision-mismatch)"
+                                        renderedAfter != revision -> "renderedAfter-stale(revision-mismatch)"
+                                        else -> "none"
+                                    }
+                                    runCatching {
+                                        Log.d("ColumnCapture", "click revision=" + revision.take(12) + " renderedBefore=" + (renderedBefore?.take(12) ?: "null") + " renderedAfter=" + (renderedAfter?.take(12) ?: "null") + " bitmap=" + (captureBitmap?.let { it.width.toString() + "x" + it.height } ?: "null") + " rejection=" + rejection)
+                                    }
+                                    runCatching {
+                                        System.err.println("CAPTURE-WITNESS column-click tag=" + Integer.toHexString(System.identityHashCode(pdfCaptureLayer)) + " revision=" + revision.take(12) + " bitmap=" + (captureBitmap?.let { it.width.toString() + "x" + it.height } ?: "null") + " rejection=" + rejection)
+                                    }
+                                    val capture = if (captureBitmap != null && renderedBefore == revision &&
+                                        renderedAfter == revision)
+                                        runCatching { ColumnDrawingCapture(revision, captureBitmap) }
+                                            .onSuccess { runCatching { Log.d("ColumnCapture", "freeze-runCatching success revision=" + revision.take(12)) } }
+                                            .onFailure { t -> runCatching { Log.w("ColumnCapture", "freeze-runCatching failure type=" + t.javaClass.name + " msg=" + t.message) } }
+                                            .getOrNull() else null
                                     viewModel.exportToPdf(context, completed, capture) { /* Handle completion */ }
                                 }
                             },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).testTag("column-pdf-export"),
                             enabled = !uiState.isExporting,
                             loading = uiState.isExporting,
                             icon = Icons.Default.PictureAsPdf
@@ -466,6 +489,13 @@ fun ColumnScreen(
                 }
 
                 item {
+                    AppText(stringResource(R.string.column_adopted_coordinates_unavailable),
+                        modifier = Modifier.testTag("column-adopted-layout-hold"),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                }
+
+                item {
                     var selectedViewMode by remember { mutableStateOf(0) }
                     val configuration = LocalConfiguration.current
                     val screenW = configuration.screenWidthDp.dp
@@ -477,7 +507,7 @@ fun ColumnScreen(
                         else -> (700 * wRatio).toInt().coerceIn(450, 1000)
                     }
                     InteractiveDrawingScreen(
-                        onExportDxf = { viewModel.exportToDxf(context) },
+                        onExportDxf = null, // Reinforcement coordinates/detailing are not verified.
                         title = stringResource(R.string.column_drawing_title),
                         subtitle = stringResource(R.string.column_drawing_subtitle),
                         drawingHeightDp = drawingHeight,
@@ -489,12 +519,7 @@ fun ColumnScreen(
                                 columnWidth = result.width.toDouble(),
                                 columnDepth = result.depth.toDouble(),
                                 columnHeight = calculationInput.heightM * 1000.0,
-                                longitudinalBars = generateBarPositions(
-                                    result.width.toDouble(), result.depth.toDouble(),
-                                    result.reinforcement.numBars,
-                                    result.reinforcement.diameter.toDouble(),
-                                    result.columnType.contains("CIRCULAR", ignoreCase = true)
-                                ),
+                                longitudinalBars = columnCheckedCoordinateInputs(completed),
                                 tieDia = result.stirrups.diameter.toDouble(),
                                 tieSpacing = result.stirrups.spacing.toDouble(),
                                 cover = 40.0,
@@ -527,12 +552,7 @@ fun ColumnScreen(
                         columnWidth = result.width.toDouble(),
                         columnDepth = result.depth.toDouble(),
                         columnHeight = calculationInput.heightM * 1000.0,
-                        longitudinalBars = generateBarPositions(
-                            result.width.toDouble(), result.depth.toDouble(),
-                            result.reinforcement.numBars,
-                            result.reinforcement.diameter.toDouble(),
-                            result.columnType.contains("CIRCULAR", ignoreCase = true)
-                        ),
+                        longitudinalBars = columnCheckedCoordinateInputs(completed),
                         tieDia = result.stirrups.diameter.toDouble(),
                         tieSpacing = result.stirrups.spacing.toDouble(),
                         cover = 40.0,
@@ -659,16 +679,39 @@ private fun CompletedColumnCaptureArea(
 ) {
     val width = widthPx.coerceAtLeast(1)
     val height = heightPx.coerceAtLeast(1)
+    // Passive diagnostic witnesses only; every log is guarded so a logging
+    // failure can never change an outcome. The outer node reports 0x0 by
+    // design, so witness entry/count, the inner measured size, the actual
+    // draw scope, each record outcome, and the layer size, keyed by a
+    // per-recorder instance tag (no global counters).
+    val instanceTag = remember(captureLayer) { Integer.toHexString(System.identityHashCode(captureLayer)) }
+    val drawCount = remember(captureLayer) { java.util.concurrent.atomic.AtomicInteger(0) }
     Box(Modifier.layout { measurable, _ ->
         val placeable = measurable.measure(Constraints.fixed(width, height))
+        runCatching { Log.d("ColumnCapture", "[$instanceTag] measure: inner=${placeable.width}x${placeable.height} outer-reported=0x0 requested=${width}x${height}") }
+        runCatching { System.err.println("CAPTURE-WITNESS [$instanceTag] measure: inner=${placeable.width}x${placeable.height} outer-reported=0x0 requested=${width}x${height}") }
         layout(0, 0) { placeable.place(0, 0) }
     }.drawWithContent {
+        val drawIndex = drawCount.incrementAndGet()
         recordedRevision.set(null)
+        var recordOutcome = "unset"
         try {
             captureLayer.record(size = IntSize(width, height)) { this@drawWithContent.drawContent() }
             recordedRevision.set(revision)
-        } catch (_: Throwable) {
+            recordOutcome = "OK"
+        } catch (t: Throwable) {
+            // Reset FIRST, exactly as the original; only then capture the type
+            // for the post-block guarded witness.
             recordedRevision.set(null)
+            recordOutcome = runCatching { "FAILED type=" + t.javaClass.name + " msg=" + t.message }.getOrDefault("FAILED type=unknown")
+        }
+        val scopeW = this.size.width
+        val scopeH = this.size.height
+        runCatching {
+            Log.d("ColumnCapture", "[$instanceTag] draw#$drawIndex scope=${scopeW}x${scopeH} record=$recordOutcome layer=${captureLayer.size.width}x${captureLayer.size.height}")
+        }
+        runCatching {
+            System.err.println("CAPTURE-WITNESS [$instanceTag] draw#$drawIndex scope=${scopeW}x${scopeH} record=$recordOutcome layer=${captureLayer.size.width}x${captureLayer.size.height}")
         }
     }) { content() }
 }
@@ -915,62 +958,10 @@ private fun LoadCombinationSelector(selected: LoadCombination, code: com.civileg
     }
 }
 
-private fun generateBarPositions(width: Double, depth: Double, numBars: Int, diameter: Double, isCircular: Boolean = false): List<BarInfo> {
-    val cover = 40.0
-    val totalBars = maxOf(4, numBars)
-    val positions = mutableListOf<BarInfo>()
-
-    if (isCircular) {
-        val radius = (minOf(width, depth) - 2 * cover) / 2.0
-        val cx = width / 2.0
-        val cy = depth / 2.0
-        for (i in 0 until totalBars) {
-            val angle = 2.0 * Math.PI * i / totalBars
-            val x = cx + radius * cos(angle)
-            val y = cy + radius * sin(angle)
-            positions.add(BarInfo(x, y, diameter, isCorner = true))
-        }
-        return positions
-    }
-
-    val xMin = cover
-    val xMax = width - cover
-    val yMin = cover
-    val yMax = depth - cover
-    val effW = width - 2 * cover
-    val effD = depth - 2 * cover
-
-    positions.add(BarInfo(xMin, yMin, diameter, isCorner = true))
-    positions.add(BarInfo(xMax, yMin, diameter, isCorner = true))
-    positions.add(BarInfo(xMax, yMax, diameter, isCorner = true))
-    positions.add(BarInfo(xMin, yMax, diameter, isCorner = true))
-
-    val remaining = totalBars - 4
-    if (remaining <= 0) return positions
-
-    val aspect = effW / effD
-    val barsY = maxOf(0, round((remaining / (2.0 * (aspect + 1.0)))).toInt())
-    val barsX = maxOf(0, (remaining - 2 * barsY) / 2)
-    var leftover = remaining - 2 * (barsX + barsY)
-
-    for (i in 1..barsX + (if (leftover > 0) 1 else 0)) {
-        if (leftover > 0 && i == barsX + 1) leftover--
-        val t = i.toDouble() / (barsX + 1 + (if (leftover > 0) 1 else 0))
-        positions.add(BarInfo(xMin + t * effW, yMin, diameter))
-    }
-    for (i in 1..barsX + (if (leftover > 0) 1 else 0)) {
-        if (leftover > 0 && i == barsX + 1) leftover--
-        val t = i.toDouble() / (barsX + 1 + (if (leftover > 0) 1 else 0))
-        positions.add(BarInfo(xMin + t * effW, yMax, diameter))
-    }
-    for (i in 1..barsY) {
-        val t = i.toDouble() / (barsY + 1)
-        positions.add(BarInfo(xMin, yMin + t * effD, diameter))
-    }
-    for (i in 1..barsY) {
-        val t = i.toDouble() / (barsY + 1)
-        positions.add(BarInfo(xMax, yMin + t * effD, diameter))
-    }
-
-    return positions
+/** A recorded count/diameter is not an engine-adopted coordinate/detailing contract.
+ * Keep that absence explicit rather than arranging bars solely for a plausible picture.
+ */
+internal fun columnCheckedCoordinateInputs(snapshot: ColumnDesignSnapshot): List<BarInfo> {
+    require(snapshot.hasValidFingerprint())
+    return emptyList()
 }

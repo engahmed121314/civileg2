@@ -1181,7 +1181,7 @@
     <string name="column_steel_weight">Steel Weight</string>
     <string name="column_estimated_cost">Estimated Cost</string>
     <string name="column_equations_title">Design Equations</string>
-    <string name="column_drawing_title">Reinforcement Detail</string>
+    <string name="column_drawing_title">Column schematic</string>
     <string name="column_formula_aci_pu">ACI Pu Formula</string>
     <string name="column_formula_sbc_pu">SBC Pu Formula</string>
     <string name="column_formula_ecp_pu">ECP Pu Formula</string>
@@ -1597,7 +1597,7 @@
     <string name="wind_importance">Importance Factor (I)</string>
     <string name="wind_roof_type">Roof Type</string>
     <string name="wind_roof_slope">Roof Slope (°)</string>
-    <string name="column_drawing_subtitle">Reinforcement Cross-Section</string>
+    <string name="column_drawing_subtitle">Dimensions only</string>
     <string name="slab_drawing_title">Slab Reinforcement Plan</string>
     <string name="stair_default_name">Stair S1</string>
     <string name="stair_type_label">Staircase Type</string>
@@ -2405,6 +2405,7 @@
     <string name="settings_support_title">Support the app</string>
     <string name="settings_support_message">Civil Engineer Pro is free and ad-free. Voluntary donations fund new design codes, tests and drawings.</string>
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
+    <string name="column_adopted_coordinates_unavailable">No checked bar-coordinate/detailing record is available. Reinforcement geometry and CAD detailing are withheld. Recorded bar counts are not a construction layout.</string>
 </resources>
 
 

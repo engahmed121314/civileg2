@@ -1176,7 +1176,7 @@
     <string name="column_steel_weight">وزن الحديد</string>
     <string name="column_estimated_cost">التكلفة التقديرية</string>
     <string name="column_equations_title">معادلات التصميم</string>
-    <string name="column_drawing_title">تفاصيل التسليح</string>
+    <string name="column_drawing_title">رسم تخطيطي للعمود</string>
     <string name="column_formula_aci_pu">معادلة ACI لـ Pu</string>
     <string name="column_formula_sbc_pu">معادلة SBC لـ Pu</string>
     <string name="column_formula_ecp_pu">معادلة ECP لـ Pu</string>
@@ -1599,7 +1599,7 @@
     <string name="wind_importance">معامل الأهمية (I)</string>
     <string name="wind_roof_type">نوع السقف</string>
     <string name="wind_roof_slope">ميل السقف (°)</string>
-    <string name="column_drawing_subtitle">قطاع عرضي للتسليح</string>
+    <string name="column_drawing_subtitle">الأبعاد فقط</string>
     <string name="slab_drawing_title">لوحة تسليح البلاطة</string>
     <string name="stair_default_name">سلم S1</string>
     <string name="stair_type_label">نوع السلم</string>
@@ -2408,4 +2408,5 @@
     <string name="settings_support_title">دعم التطبيق</string>
     <string name="settings_support_message">Civil Engineer Pro مجاني وبدون إعلانات. التبرعات الطوعية تموّل أكواد تصميم واختبارات ورسومات جديدة.</string>
     <string name="settings_support_button">تبرع عبر GitHub Sponsors</string>
+    <string name="column_adopted_coordinates_unavailable">لا يوجد سجل مُراجع لإحداثيات الأسياخ وتفاصيلها. تم حجب رسم التسليح وتفاصيل CAD. عدد الأسياخ المسجل ليس تفصيلة تنفيذية.</string>
 </resources>
