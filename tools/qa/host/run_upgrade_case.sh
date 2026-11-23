@@ -154,6 +154,7 @@ run_instrument() {
   $ADB shell am instrument -w -r \
     -e class "$classes" \
     -e qaExpectations /data/local/tmp/qa_expectations.json \
+    -e qaNonce "${QA_NONCE:-nononce}" \
     com.civileg.app.test/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee "$logfile"
   pipeline_rc=("${PIPESTATUS[@]}")
   instr_rc=${pipeline_rc[0]}
@@ -267,9 +268,30 @@ case_instrument() {
   rm -rf "$CASE_COMPANION_DIR"; mkdir -p "$CASE_COMPANION_DIR"
   # Clear ONLY the per-case external companion evidence dir (never app data).
   $ADB shell "rm -rf /sdcard/Android/data/$PKG.test/files/companion" || true
+  # Fresh-evidence proof: every shell-route file carries a per-case/run nonce, so an old file can never
+  # be mistaken for this run. Old nonce files are removed and the removal is proven (empty listing).
+  QA_NONCE="$(echo "$case_name" | tr -c 'A-Za-z0-9\n' '_')-$(date +%s)"
+  export QA_NONCE
+  local fresh_ok=1
+  $ADB shell "rm -f /sdcard/qa-companion-*" || fresh_ok=0
+  if [ -n "$($ADB shell 'ls /sdcard/qa-companion-* 2>/dev/null' | tr -d '\r')" ]; then fresh_ok=0; fi
+  [ "$fresh_ok" -eq 1 ] || { echo "evidence FAILURE: could not prove /sdcard/qa-companion-* was empty before the companion run"; comp_ev=$((comp_ev+1)); }
+  echo "== companion evidence nonce: $QA_NONCE (marker for pulled files and QA-COMPANION-HIER lines) =="
   echo "== instrumentation 1/2: FrameEntryCompanionTest (expect 2) =="
   run_instrument "$dir/instrumentation-companion.txt" 2 "com.civileg.app.qa.FrameEntryCompanionTest" || comp_rc=$?
   $ADB pull "/sdcard/Android/data/$PKG.test/files/companion/." "$CASE_COMPANION_DIR/" >/dev/null 2>&1 || echo "evidence NOTE: companion dir pull returned nothing"
+  # Shell-route screenshots (the external-files pull returned nothing in run 45144868187). Only files of THIS
+  # nonce are pulled, saved under the manifest names <method>-<stage>.png. Required success XML is NOT satisfied
+  # by this route and stays required (require_companion_evidence is unchanged).
+  for f in $($ADB shell "ls /sdcard/qa-companion-${QA_NONCE}-*.png 2>/dev/null" | tr -d '\r'); do
+    bn="$(basename "$f")"; dest="${bn#qa-companion-${QA_NONCE}-}"
+    case "$dest" in *[!A-Za-z0-9._-]*|"") echo "evidence NOTE: skipped odd file name $bn"; continue;; esac
+    $ADB pull "$f" "$CASE_COMPANION_DIR/$dest" >/dev/null 2>&1 || echo "evidence NOTE: pull of $bn failed"
+  done
+  # Bounded, nonce-filtered node summary (a summary, NOT the per-stage raw XML and NOT selector truth).
+  # logcat is NOT cleared: earlier pre-migration/launch/crash lines stay in logcat.txt.
+  $ADB logcat -d -s QA-COMPANION-HIER:W QA-COMPANION:W 2>&1 | grep -F "[${QA_NONCE}:" | head -c 400000 > "$dir/companion-hierarchy.txt" \
+    || echo "evidence NOTE: no nonce-matching companion hierarchy lines"
   require_companion_evidence "$dir/instrumentation-companion.txt" "$CASE_COMPANION_DIR" || comp_ev=$?
 
   # Invocation 2: the ORIGINAL classes, unchanged selection and counts, fail-closed.

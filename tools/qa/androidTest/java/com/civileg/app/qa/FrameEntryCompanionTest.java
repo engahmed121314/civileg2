@@ -70,20 +70,68 @@ public class FrameEntryCompanionTest {
         }
     };
 
-    /** Writes to the instrumentation package's external files dir (host pulls it). */
+    /**
+     * Failure/entry evidence by a path the host can actually pull. Observed run 45144868187: the
+     * instrumentation external-files route pulled NOTHING. So (1) the screenshot is written by
+     * `screencap` through the shell (uid shell, /sdcard root, the same place the host script already
+     * pulls qa-<case>.png from), and (2) a compact window-hierarchy summary (class, text,
+     * content-desc, clickable, bounds of nodes that have text/desc or are clickable) is logged to
+     * logcat under QA-COMPANION-HIER, which the host already captures. The old external-files
+     * write is kept as a best-effort extra. Evidence only; no assertion depends on any of it.
+     */
     private void capture(String stage) {
+        // Only [A-Za-z0-9_-] ever reaches a shell command or a file name; no UI/model text is used.
+        String base = safe(testName) + "-" + safe(stage);
+        String nonce = safe(String.valueOf(InstrumentationRegistry.getArguments().getString("qaNonce", "nononce")));
+        String tag = "[" + nonce + ":" + base + "] ";
+        try {
+            device.executeShellCommand("screencap -p /sdcard/qa-companion-" + nonce + "-" + base + ".png");
+        } catch (Throwable t) {
+            android.util.Log.w("QA-COMPANION", "screencap failed for " + base, t);
+        }
+        try {
+            java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+            device.dumpWindowHierarchy(bo);
+            String xml = bo.toString("UTF-8");
+            java.util.regex.Matcher m = Pattern.compile("<node [^>]*>").matcher(xml);
+            StringBuilder sb = new StringBuilder();
+            while (m.find()) {
+                String n = m.group();
+                String text = attr(n, "text");
+                String desc = attr(n, "content-desc");
+                boolean click = "true".equals(attr(n, "clickable"));
+                if (text.isEmpty() && desc.isEmpty() && !click) continue;
+                sb.append(attr(n, "class")).append(" | t=").append(text).append(" | d=").append(desc)
+                  .append(" | click=").append(click).append(" | ").append(attr(n, "bounds")).append('\n');
+            }
+            String all = "xmlChars=" + xml.length() + "\n" + sb;
+            if (all.length() > 60000) all = all.substring(0, 60000) + "\n[truncated]";
+            for (int i = 0; i < all.length(); i += 3000) {
+                android.util.Log.w("QA-COMPANION-HIER", tag + all.substring(i, Math.min(all.length(), i + 3000)));
+            }
+        } catch (Throwable t) {
+            android.util.Log.w("QA-COMPANION", "hierarchy summary failed for " + base, t);
+        }
         try {
             Context ic = InstrumentationRegistry.getInstrumentation().getContext();
             File dir = ic.getExternalFilesDir(null);
             if (dir == null) return;
             File out = new File(dir, "companion");
             out.mkdirs();
-            String base = testName + "-" + stage;
             device.takeScreenshot(new File(out, base + ".png"));
             device.dumpWindowHierarchy(new File(out, base + ".xml"));
         } catch (Throwable t) {
             android.util.Log.w("QA-COMPANION", "capture failed for " + stage, t);
         }
+    }
+
+    private static String safe(String v) {
+        return v.replaceAll("[^A-Za-z0-9_-]", "_");
+    }
+
+    private static String attr(String node, String name) {
+        java.util.regex.Matcher m = Pattern.compile(" " + Pattern.quote(name) + "=\"([^\"]*)\"").matcher(node);
+        return m.find() ? m.group(1) : "";
     }
 
     /** Exact count: "<label>: <n>" not followed by another digit (so 4 never matches 40). */
