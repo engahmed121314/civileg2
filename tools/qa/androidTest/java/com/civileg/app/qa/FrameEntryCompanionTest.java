@@ -566,35 +566,113 @@ public class FrameEntryCompanionTest {
 
 
     /**
-     * Bounded guard for the app's own OPTIONAL donation dialog (reviewed QA scope; evidence runs
+     * Bounded guard for the app's own OPTIONAL donation dialog (110 QA experiment; evidence run
      * 45169098235 PNG/XML): when that dialog covers Home, recognize it exactly and decline it once so
-     * the unchanged Home prep below can run. Everything is resolved from ONE fresh DOM snapshot
-     * (nothing live kept, same rule as scrollHomeToTop).
-     * Recognition: a UNIQUE app-package android:id/content subtree whose descendants carry the FULL
-     * installed same-language tuple donation_title + donation_message + donation_decline +
-     * donation_confirm, each EXACTLY once and all four in ONE language (never a cross-language mix,
-     * same rule as the rest of this class), with positive on-screen bounds. The same
-     * bounds/path/text predicates run identically in the fresh and historical cases. NO markers in
-     * either language means the dialog is absent: return, Home path unchanged. Partial markers, a
-     * duplicated label, or more than one dialog subtree carrying the tuple: capture and FAIL.
-     * Decline: the UNIQUE nearest enabled clickable ancestor of the decline label, wholly inside the
-     * dialog subtree, carrying the decline label and NOT the confirm label; the confirm label's own
-     * nearest clickable ancestor must exist and be a DIFFERENT node (never clicked). The decline
-     * bounds center is clicked exactly once per test via device.click (no UiObject2 is retained
-     * across the transition); the click call must report execution, then a bounded wait (10 x 500ms)
-     * requires the whole modal tuple to be absent from a fresh dump. Still present: capture and FAIL.
-     * Raw XML + pixels are captured before the click and after the dismissal. No Back, no retry
-     * loop, no prefs seed/reset, and the confirm/donate button is never clicked.
+     * the unchanged Home prep below can run.
+     *
+     * Resolution runs TWICE through the same resolver over two independent fresh DOM dumps (nothing
+     * live kept): A, then the before-capture, then B immediately before the click. A
+     * and B must agree on the dialog / decline / confirm DOM index-paths, their bounds, and the four
+     * recognized tuple texts; a changed, absent or ambiguous B FAILS with evidence and nothing is
+     * clicked (no stale coordinates, no retry). Only B's decline bounds center is clicked, exactly
+     * once per test, via device.click (no UiObject2 kept across the transition); the click call must
+     * report execution.
+     *
+     * Recognition within one resolution: exactly ONE language carries the FULL installed tuple
+     * donation_title + donation_message + donation_decline + donation_confirm, each label EXACTLY
+     * once, and the OTHER language has ZERO markers; all four labels inside a UNIQUE app-package
+     * android:id/content subtree with positive on-screen bounds. NO markers in either language means
+     * the dialog is absent: the Home path is unchanged. Partial markers, any marker in the other
+     * language, a duplicated label, or more than one dialog subtree: INVALID, caller captures + FAILs.
+     * The same bounds/path/text predicates run identically in the fresh and historical cases.
+     *
+     * Decline: the UNIQUE nearest app-package enabled clickable ancestor of the decline label,
+     * walking up ONLY while still a DOM descendant of the dialog element (never past it), carrying
+     * the decline label and NOT the confirm label, with its rectangle wholly within the dialog
+     * bounds; BOTH DOM ancestry and bounds containment are required. The confirm label's matching
+     * ancestor must exist and be a DIFFERENT node (never clicked).
+     *
+     * After the click: bounded wait (10 x 500ms) until a fresh dump has ZERO donation markers in BOTH
+     * languages; otherwise capture + FAIL (a repeated or non-dismissing modal is a failure, not a
+     * retry). Raw XML + pixels are captured before the click and after the dismissal. No Back, no
+     * retry loop, no prefs seed/reset, confirm never clicked.
      * NOTE: this guard is NOT state-neutral, by design: a normal visible decline persists
      * answered=true in the app's own donation_prompt prefs on this disposable emulator, exactly as
      * a user tapping "Not now" would. No other app data is touched.
      */
     private void dismissDonationDialogIfPresent() throws Exception {
+        DonationResolution a = resolveDonationDialog();
+        if (a.invalidReason != null) {
+            capture("donation-unrecognized");
+            fail("donation guard: " + a.invalidReason);
+        }
+        if (a.absent) {
+            android.util.Log.w("QA-COMPANION", "donation guard: no donation markers; Home path unchanged");
+            return;
+        }
+        capture("donation-before");
+        // Fresh second resolution immediately before the click; only B's coordinates are clicked.
+        DonationResolution b = resolveDonationDialog();
+        if (b.invalidReason != null || b.absent) {
+            capture("donation-unrecognized");
+            fail("donation guard: dialog changed, absent or ambiguous on re-resolution: "
+                    + (b.invalidReason != null ? b.invalidReason : "markers gone before click"));
+        }
+        if (!a.dialogPath.equals(b.dialogPath) || !a.declinePath.equals(b.declinePath) || !a.confirmPath.equals(b.confirmPath)
+                || !java.util.Arrays.equals(a.dialogBounds, b.dialogBounds) || !java.util.Arrays.equals(a.declineBounds, b.declineBounds)
+                || !java.util.Arrays.equals(a.confirmBounds, b.confirmBounds) || !java.util.Arrays.equals(a.tupleTexts, b.tupleTexts)) {
+            capture("donation-unrecognized");
+            fail("donation guard: dialog/decline/confirm path, bounds or tuple texts changed between resolutions");
+        }
+        int cx = b.declineBounds[0] + (b.declineBounds[2] - b.declineBounds[0]) / 2;
+        int cy = b.declineBounds[1] + (b.declineBounds[3] - b.declineBounds[1]) / 2;
+        android.util.Log.w("QA-COMPANION", "donation guard: declining optional donation dialog at (" + cx + "," + cy + ") lang=" + b.lang);
+        assertTrue("donation guard: decline click not executed", device.click(cx, cy));
+        device.waitForIdle();
+
+        // Bounded wait: ZERO donation markers in BOTH languages on a fresh dump; a repeated or
+        // non-dismissing modal FAILS. No retry loop, no Back fallback.
+        boolean gone = false;
+        for (int i = 0; i < 10 && !gone; i++) {
+            java.io.ByteArrayOutputStream p = new java.io.ByteArrayOutputStream();
+            device.dumpWindowHierarchy(p);
+            org.w3c.dom.Document d2 = javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                    .parse(new java.io.ByteArrayInputStream(p.toString("UTF-8").getBytes("UTF-8")));
+            gone = donationMarkerCount(d2.getElementsByTagName("node")) == 0;
+            if (!gone) try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+        }
+        if (!gone) {
+            capture("donation-still-present");
+            fail("donation guard: donation modal still present after one decline click");
+        }
+        capture("donation-after");
+        android.util.Log.w("QA-COMPANION", "donation guard: modal absent (both languages) after one decline click");
+    }
+
+    /** Plain result record of one donation-dialog resolution pass: absent, invalid (reason), or resolved. */
+    private static final class DonationResolution {
+        boolean absent;
+        String invalidReason;
+        int lang;
+        String[] tupleTexts;
+        String dialogPath, declinePath, confirmPath;
+        int[] dialogBounds, declineBounds, confirmBounds;
+    }
+
+    /**
+     * Single resolver used for BOTH the A and B passes, so they run exactly the same code. One pass
+     * performs one fresh dumpWindowHierarchy read plus installed-string lookups (pair() fails loudly
+     * if a string is missing, as everywhere in this class) and returns a DonationResolution. It
+     * performs no clicks, captures, logs, assertions or UI mutations of its own.
+     */
+    private DonationResolution resolveDonationDialog() throws Exception {
         String[] title = pair("donation_title");
         String[] message = pair("donation_message");
         String[] decline = pair("donation_decline");
         String[] confirm = pair("donation_confirm");
+        String[][] names = {title, message, decline, confirm};
 
+        DonationResolution r = new DonationResolution();
         java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
         device.dumpWindowHierarchy(bo);
         org.w3c.dom.Document doc = javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder()
@@ -602,31 +680,33 @@ public class FrameEntryCompanionTest {
         org.w3c.dom.NodeList all = doc.getElementsByTagName("node");
         int dw = device.getDisplayWidth(), dh = device.getDisplayHeight();
 
-        org.w3c.dom.Element[] els = null;   // [title, message, decline, confirm] of the recognized language
+        // Per language: each tuple label EXACTLY once. Exactly one full-tuple language, zero markers
+        // in the other language; everything else is partial or ambiguous.
+        org.w3c.dom.Element[] els = null;
         int lang = -1;
-        int markerCount = 0;
+        int[] langMarkers = new int[2];
         for (int i = 0; i < 2; i++) {
-            String[] t = {title[i], message[i], decline[i], confirm[i]};
             java.util.List<org.w3c.dom.Element> hits = new java.util.ArrayList<>();
-            int n = 0;
-            boolean dup = false;
-            for (String s : t) {
-                java.util.List<org.w3c.dom.Element> h = exactTextNodes(all, s);
-                n += h.size();
-                if (h.size() > 1) dup = true;
+            boolean clean = true;
+            for (int j = 0; j < 4; j++) {
+                java.util.List<org.w3c.dom.Element> h = exactTextNodes(all, names[j][i]);
+                langMarkers[i] += h.size();
+                if (h.size() != 1) clean = false;
                 hits.add(h.isEmpty() ? null : h.get(0));
             }
-            markerCount += n;
-            if (n == 4 && !dup) { lang = i; els = hits.toArray(new org.w3c.dom.Element[0]); }
+            if (clean) {
+                if (lang >= 0) { r.invalidReason = "both languages carry the full donation tuple"; return r; }
+                lang = i;
+                els = hits.toArray(new org.w3c.dom.Element[0]);
+            }
         }
-        if (markerCount == 0) {
-            android.util.Log.w("QA-COMPANION", "donation guard: no donation markers; Home path unchanged");
-            return;
+        if (langMarkers[0] == 0 && langMarkers[1] == 0) { r.absent = true; return r; }
+        if (lang < 0 || langMarkers[1 - lang] != 0) {
+            r.invalidReason = "partial/ambiguous/other-language donation markers (en=" + langMarkers[0] + " ar=" + langMarkers[1] + ")";
+            return r;
         }
-        if (els == null) {
-            capture("donation-unrecognized");
-            fail("donation guard: partial or ambiguous donation markers (markerCount=" + markerCount + ")");
-        }
+        r.lang = lang;
+        r.tupleTexts = new String[]{title[lang], message[lang], decline[lang], confirm[lang]};
 
         // Unique app android:id/content dialog subtree containing all four tuple nodes.
         org.w3c.dom.Element dialog = null;
@@ -636,54 +716,42 @@ public class FrameEntryCompanionTest {
             boolean inside = true;
             for (org.w3c.dom.Element t : els) if (!isDescendant(e, t)) { inside = false; break; }
             if (!inside) continue;
-            if (dialog != null) {
-                capture("donation-unrecognized");
-                fail("donation guard: more than one app android:id/content subtree carries the donation tuple");
-            }
+            if (dialog != null) { r.invalidReason = "more than one app android:id/content subtree carries the donation tuple"; return r; }
             dialog = e;
         }
-        if (dialog == null) {
-            capture("donation-unrecognized");
-            fail("donation guard: donation tuple not inside one app android:id/content subtree");
-        }
+        if (dialog == null) { r.invalidReason = "donation tuple not inside one app android:id/content subtree"; return r; }
         int[] db = boundsOf(dialog);
-        assertTrue("donation guard: dialog bounds invalid " + java.util.Arrays.toString(db),
-                db != null && db[0] >= 0 && db[1] >= 0 && db[2] > db[0] && db[3] > db[1] && db[2] <= dw && db[3] <= dh);
+        if (db == null || db[0] < 0 || db[1] < 0 || db[2] <= db[0] || db[3] <= db[1] || db[2] > dw || db[3] > dh) {
+            r.invalidReason = "dialog bounds invalid " + java.util.Arrays.toString(db);
+            return r;
+        }
 
-        // Unique nearest enabled clickable decline ancestor (decline label, no confirm label, wholly in
-        // the dialog); the confirm (donate) ancestor must exist and be distinct and is never clicked.
-        org.w3c.dom.Element declineBtn = nearestClickable(els[2], decline[lang], confirm[lang], db, dw, dh);
-        org.w3c.dom.Element confirmBtn = nearestClickable(els[3], confirm[lang], decline[lang], db, dw, dh);
+        // Decline/confirm clickable ancestors: DOM descendants of the dialog only; distinct; confirm
+        // is resolved (it must exist) but never clicked.
+        org.w3c.dom.Element declineBtn = nearestClickable(dialog, db, els[2], r.tupleTexts[2], r.tupleTexts[3], dw, dh);
+        org.w3c.dom.Element confirmBtn = nearestClickable(dialog, db, els[3], r.tupleTexts[3], r.tupleTexts[2], dw, dh);
         if (declineBtn == null || confirmBtn == null || declineBtn == confirmBtn) {
-            capture("donation-unrecognized");
-            fail("donation guard: decline/confirm clickable ancestors missing or not distinct");
+            r.invalidReason = "decline/confirm clickable ancestors missing or not distinct";
+            return r;
         }
-        int[] rb = boundsOf(declineBtn);
-        int cx = rb[0] + (rb[2] - rb[0]) / 2, cy = rb[1] + (rb[3] - rb[1]) / 2;
-        android.util.Log.w("QA-COMPANION", "donation guard: declining optional donation dialog at (" + cx + "," + cy + ") lang=" + lang);
-        capture("donation-before");
-        assertTrue("donation guard: decline click not executed", device.click(cx, cy));
-        device.waitForIdle();
+        r.dialogPath = pathOf(dialog);
+        r.declinePath = pathOf(declineBtn);
+        r.confirmPath = pathOf(confirmBtn);
+        r.dialogBounds = db;
+        r.declineBounds = boundsOf(declineBtn);
+        r.confirmBounds = boundsOf(confirmBtn);
+        return r;
+    }
 
-        // Bounded wait: the modal tuple must be absent from a fresh dump. A repeated or non-dismissed
-        // dialog FAILS; there is no retry loop and no Back fallback.
-        boolean gone = false;
-        for (int i = 0; i < 10 && !gone; i++) {
-            java.io.ByteArrayOutputStream p = new java.io.ByteArrayOutputStream();
-            device.dumpWindowHierarchy(p);
-            org.w3c.dom.Document d2 = javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder()
-                    .parse(new java.io.ByteArrayInputStream(p.toString("UTF-8").getBytes("UTF-8")));
-            org.w3c.dom.NodeList a2 = d2.getElementsByTagName("node");
-            gone = exactTextNodes(a2, title[lang]).isEmpty() && exactTextNodes(a2, message[lang]).isEmpty()
-                    && exactTextNodes(a2, decline[lang]).isEmpty() && exactTextNodes(a2, confirm[lang]).isEmpty();
-            if (!gone) try { Thread.sleep(500); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+    /** Total exact-text donation markers (all four labels, BOTH languages) in one dump. */
+    private int donationMarkerCount(org.w3c.dom.NodeList all) {
+        String[] names = {"donation_title", "donation_message", "donation_decline", "donation_confirm"};
+        int n = 0;
+        for (String name : names) {
+            String[] texts = pair(name);
+            n += exactTextNodes(all, texts[0]).size() + exactTextNodes(all, texts[1]).size();
         }
-        if (!gone) {
-            capture("donation-still-present");
-            fail("donation guard: donation modal still present after one decline click");
-        }
-        capture("donation-after");
-        android.util.Log.w("QA-COMPANION", "donation guard: modal absent after one decline click");
+        return n;
     }
 
     /** Nodes whose text attribute EXACTLY equals s (no substring, no regex). */
@@ -713,12 +781,17 @@ public class FrameEntryCompanionTest {
     }
 
     /**
-     * Nearest enabled clickable ancestor of start whose subtree carries the include text and NOT the
-     * exclude text, with positive on-screen bounds wholly inside the dialog bounds; null if none.
+     * Nearest app-package enabled clickable ancestor of start, walking up ONLY while still a DOM
+     * descendant of dialog (stops at the dialog element itself, never goes past it), whose subtree
+     * carries the include text and NOT the exclude text; null if none. BOTH membership checks are
+     * required together: DOM ancestry inside the dialog subtree AND the candidate's rectangle wholly
+     * within the dialog bounds, plus positive on-screen bounds.
      */
-    private static org.w3c.dom.Element nearestClickable(org.w3c.dom.Element start, String include, String exclude, int[] dlg, int dw, int dh) {
+    private org.w3c.dom.Element nearestClickable(org.w3c.dom.Element dialog, int[] dlg, org.w3c.dom.Element start, String include, String exclude, int dw, int dh) {
         for (org.w3c.dom.Node p = start.getParentNode(); p instanceof org.w3c.dom.Element; p = p.getParentNode()) {
             org.w3c.dom.Element e = (org.w3c.dom.Element) p;
+            if (!isDescendant(dialog, e)) return null;
+            if (!pkg.equals(e.getAttribute("package"))) continue;
             if (!"true".equals(e.getAttribute("clickable")) || !"true".equals(e.getAttribute("enabled"))) continue;
             if (!subtreeHasText(e, include) || subtreeHasText(e, exclude)) continue;
             int[] b = boundsOf(e);
