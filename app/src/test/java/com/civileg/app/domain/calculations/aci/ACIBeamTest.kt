@@ -399,4 +399,95 @@ class ACIBeamTest {
     fun calculateDoublyReinforced_zeroFy_throwsException() {
         beam.calculateDoublyReinforcedBeam(DESIGN_MOMENT, WIDTH, TOTAL_DEPTH, FCU, 0.0)
     }
+    // ══════════════════════════════════════════════════════════════════════
+    // GOLDEN VECTORS — development length (F-07 regression, hand-verified
+    // 2026-11-21 vs ACI 318M-14 Table 25.4.2.2/25.4.2.4, printed pp.652/655)
+    // fcu=30 (fc'=24), favourable-confinement case, denominator 1.1×1.5=1.65
+    // (the code basis of Table 25.4.2.2 row 1, general Eq 25.4.2.3a):
+    // 16mm bottom uncoated fy=420: 420×0.8/(1.65√24)×16 = 665.1 → 675
+    // 25mm bottom uncoated fy=420: 420×1.0/(1.65√24)×25 = 1299.1 → 1300
+    // 32mm top epoxy fy=420: 420×1.3×1.2×1.0/(1.65√24)×32 = 2593.5 → 2600
+    // 12mm fy=280: 280×0.8/(1.65√24)×12 = 332.5 → 350 (≥ 300 min, 25.4.2.1)
+    // ══════════════════════════════════════════════════════════════════════
+
+    @Test
+    fun goldenDevLength_smallBarGetsPsiS08() {
+        val ld = beam.calculateDevelopmentLength(
+            16.0, 420.0, 30.0, BarLocation.BOTTOM, CoatingType.UNCOATED
+        )
+        assertEquals(675.0, ld, 0.001)
+    }
+
+    @Test
+    fun goldenDevLength_largeBarGetsPsiS10() {
+        val ld = beam.calculateDevelopmentLength(
+            25.0, 420.0, 30.0, BarLocation.BOTTOM, CoatingType.UNCOATED
+        )
+        assertEquals(1300.0, ld, 0.001)
+    }
+
+    @Test
+    fun goldenDevLength_topEpoxyFactors() {
+        val ld = beam.calculateDevelopmentLength(
+            32.0, 420.0, 30.0, BarLocation.TOP, CoatingType.EPOXY_COATED
+        )
+        assertEquals(2600.0, ld, 0.001)
+    }
+
+    @Test
+    fun goldenDevLength_lowFySmallBar() {
+        val ld = beam.calculateDevelopmentLength(
+            12.0, 280.0, 30.0, BarLocation.BOTTOM, CoatingType.UNCOATED
+        )
+        assertEquals(350.0, ld, 0.001)
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // GOLDEN VECTORS — optional detailing inputs toggle (owner-approved
+    // 2026-11-21), Table 25.4.2.2 row conditions + Table 25.4.2.4 full ψe
+    // fcu=30 (fc'=24), fy=420:
+    // favourable 16mm (cover 40≥16, spacing 50≥32): same as default → 675
+    // "other cases" 16mm (spacing 20<32, no ties): 420×0.8/(1.1√24)×16
+    //   = 997.8 → 1000
+    // epoxy tight 25mm (cover 50<75): ψe=1.5, favourable →
+    //   420×1.5/(1.65√24)×25 = 1948.9 → 1950
+    // top epoxy tight 25mm: ψtψe=1.95 capped to 1.7 →
+    //   420×1.7/(1.65√24)×25 = 2208.3 → 2225
+    // ══════════════════════════════════════════════════════════════════════
+
+    @Test
+    fun goldenDevLengthToggle_favourableMatchesDefault() {
+        val ld = beam.calculateDevelopmentLength(
+            16.0, 420.0, 30.0, BarLocation.BOTTOM, CoatingType.UNCOATED,
+            DevLengthInputs(clearCover = 40.0, clearSpacing = 50.0, hasMinTies = true)
+        )
+        assertEquals(675.0, ld, 0.001)
+    }
+
+    @Test
+    fun goldenDevLengthToggle_otherCasesDenominator() {
+        val ld = beam.calculateDevelopmentLength(
+            16.0, 420.0, 30.0, BarLocation.BOTTOM, CoatingType.UNCOATED,
+            DevLengthInputs(clearCover = 40.0, clearSpacing = 20.0, hasMinTies = false)
+        )
+        assertEquals(1000.0, ld, 0.001)
+    }
+
+    @Test
+    fun goldenDevLengthToggle_epoxyTightCover() {
+        val ld = beam.calculateDevelopmentLength(
+            25.0, 420.0, 30.0, BarLocation.BOTTOM, CoatingType.EPOXY_COATED,
+            DevLengthInputs(clearCover = 50.0, clearSpacing = 60.0, hasMinTies = true)
+        )
+        assertEquals(1950.0, ld, 0.001)
+    }
+
+    @Test
+    fun goldenDevLengthToggle_psiTEcapped() {
+        val ld = beam.calculateDevelopmentLength(
+            25.0, 420.0, 30.0, BarLocation.TOP, CoatingType.EPOXY_COATED,
+            DevLengthInputs(clearCover = 50.0, clearSpacing = 60.0, hasMinTies = true)
+        )
+        assertEquals(2225.0, ld, 0.001)
+    }
 }

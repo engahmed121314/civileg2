@@ -289,24 +289,82 @@ class ACIBeam : BeamDesign {
         InputGuard.positive("barDiameter", barDiameter)
         InputGuard.positive("fy", fy)
         InputGuard.positive("fcu", fcu)
-        // ACI 25.4.2: Ld = (fy * ψt * ψe * ψs) / (1.7 * λ * √(fc')) * db
+        // ACI 318M-14 §25.4.2 (printed pp.651-655): general-equation form
+        // with (cb+Ktr)/db = 1.5, the basis of Table 25.4.2.2's favourable
+        // case → denominator 1.1×1.5 = 1.65 (rounded values 2.1/1.7 in the
+        // table's ψs-embedded form). Tight "other cases" (denominators
+        // 1.4/1.1) and epoxy ψe=1.5 are covered by the optional-input
+        // overload below (owner-approved toggle 2026-11-21).
         // λ يظهر في المقام فقط (ليس في البسط)
-        
+
         var psi_t = 1.0
         if (barLocation == BarLocation.TOP) psi_t = 1.3
-        
+
+        // Table 25.4.2.4: ψe = 1.5 when epoxy with clear cover < 3db or
+        // spacing < 6db; 1.2 otherwise. No cover input here — 1.2 assumes
+        // cover >= 3db (documented F-07 limitation).
         var psi_e = 1.0
         if (coating == CoatingType.EPOXY_COATED) psi_e = 1.2
-        
-        val psi_s = if (barDiameter <= 22.0) 1.0 else 0.8
+
+        // Table 25.4.2.4 (printed p.655): ψs = 0.8 for No.19 (19 mm) and
+        // smaller bars, 1.0 for No.22 (22 mm) and larger.
+        val psi_s = if (barDiameter >= 22.0) 1.0 else 0.8
         val lambda = LAMBDA
         val fc_prime = 0.8 * fcu  // تحويل مكعب لأسطوانة
         
         val numerator = fy * psi_t * psi_e * psi_s
-        val denominator = 1.7 * lambda * sqrt(fc_prime.coerceAtLeast(1.0))
-        
+        val denominator = 1.65 * lambda * sqrt(fc_prime.coerceAtLeast(1.0))
+
         var Ld = (numerator / denominator) * barDiameter
-        
+
+        Ld = max(Ld, ACI_MIN_DEVELOPMENT_LENGTH)
+        return ceil(Ld / 25) * 25
+    }
+
+    /**
+     * طول التثبيت مع مدخلات التكسيح الاختيارية — Table 25.4.2.2/25.4.2.4 كاملة
+     * (owner-approved optional toggle 2026-11-21). When [inputs] is null this
+     * delegates to the default favourable-confinement path above.
+     */
+    fun calculateDevelopmentLength(
+        barDiameter: Double,
+        fy: Double,
+        fcu: Double,
+        barLocation: BarLocation,
+        coating: CoatingType,
+        inputs: DevLengthInputs?
+    ): Double {
+        if (inputs == null) {
+            return calculateDevelopmentLength(barDiameter, fy, fcu, barLocation, coating)
+        }
+        InputGuard.positive("barDiameter", barDiameter)
+        InputGuard.positive("fy", fy)
+        InputGuard.positive("fcu", fcu)
+        InputGuard.positive("clearCover", inputs.clearCover)
+        InputGuard.positive("clearSpacing", inputs.clearSpacing)
+
+        // Table 25.4.2.2 row 1 (favourable): spacing >= 2db with cover >= db,
+        // OR spacing >= db with cover >= db and minimum ties along ℓd
+        val favourable =
+            (inputs.clearSpacing >= 2.0 * barDiameter && inputs.clearCover >= barDiameter) ||
+            (inputs.clearSpacing >= barDiameter && inputs.clearCover >= barDiameter && inputs.hasMinTies)
+
+        // Table 25.4.2.4 (printed p.655)
+        val psi_t = if (barLocation == BarLocation.TOP) 1.3 else 1.0
+        val psi_e = when {
+            coating != CoatingType.EPOXY_COATED -> 1.0
+            inputs.clearCover < 3.0 * barDiameter || inputs.clearSpacing < 6.0 * barDiameter -> 1.5
+            else -> 1.2
+        }
+        // Table 25.4.2.4 footnote: ψt×ψe ≤ 1.7
+        val psiTE = min(psi_t * psi_e, 1.7)
+        val psi_s = if (barDiameter >= 22.0) 1.0 else 0.8
+
+        // General Eq 25.4.2.3a denominators: 1.1×1.5 = 1.65 (favourable),
+        // 1.1×1.0 = 1.1 (other cases)
+        val kDenom = if (favourable) 1.65 else 1.1
+        val fc_prime = 0.8 * fcu
+        var Ld = fy * psiTE * psi_s / (kDenom * LAMBDA * sqrt(fc_prime.coerceAtLeast(1.0))) * barDiameter
         Ld = max(Ld, ACI_MIN_DEVELOPMENT_LENGTH)
         return ceil(Ld / 25) * 25
     }
@@ -513,3 +571,15 @@ class ACIBeam : BeamDesign {
         return (span * 1000) / 240
     }
 }
+
+/**
+ * Optional detailing inputs for development length verification — enabled by
+ * the app user (owner decision 2026-11-21): clear cover, clear spacing and
+ * whether minimum stirrups/ties run along the development length
+ * (ACI 318M-14 Table 25.4.2.2 row 1 conditions).
+ */
+data class DevLengthInputs(
+    val clearCover: Double,
+    val clearSpacing: Double,
+    val hasMinTies: Boolean
+)
