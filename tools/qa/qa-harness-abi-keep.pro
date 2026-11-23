@@ -338,3 +338,20 @@
 -keep class kotlinx.coroutines.internal.ThreadSafeHeap {
     public <init>();
 }
+
+# v7 (QA-only, one exact member): run 45120131782 at aecce18d. The ctor keep
+# held (AbstractLongTimeSource failure gone); FrameEntryTest.<init> now fails
+# with NoSuchFieldError: No field Key of type Lyt; in class
+# Lkotlinx/coroutines/CoroutineExceptionHandler at TestScopeKt.TestScope.
+# freeRelease mapping line 1824323: CoroutineExceptionHandler$Key -> yt;
+# usage.txt lines 61734-61736 list "public static final
+# CoroutineExceptionHandler$Key Key" and <clinit> as REMOVED from the
+# interface. Original (kotlinx-coroutines-core-jvm-1.10.2.jar, sha256 prefix
+# 5ca175b38df331fd): interface access 0x601, field Key flags 0x19 public static
+# final of type CoroutineExceptionHandler$Key. Exact owner field only; the
+# nested $Key holder is not kept (rename consistency to be verified on rebuild,
+# as in v4). Rebuild-inspect: full field descriptor, defined joint Key holder
+# and static init, then the unchanged 5 tests.
+-keep class kotlinx.coroutines.CoroutineExceptionHandler {
+    public static final kotlinx.coroutines.CoroutineExceptionHandler$Key Key;
+}
