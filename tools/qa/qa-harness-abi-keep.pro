@@ -355,3 +355,5 @@
 -keep class kotlinx.coroutines.CoroutineExceptionHandler {
     public static final kotlinx.coroutines.CoroutineExceptionHandler$Key Key;
 }
+# v8 QA-only: runtime TestScopeImpl.toString() overrides JobSupport.toString(); R8 made the renamed holder method final (LinkageError). Exact member, conditional on live holder.
+-keepclassmembers class kotlinx.coroutines.JobSupport { public java.lang.String toString(); }
