@@ -56,10 +56,10 @@ fun SoilStructureScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { AppText("تفاعل المنشأ مع التربة", fontWeight = FontWeight.Bold) },
+                title = { AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_is_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "عودة")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_back))
                     }
                 }
             )
@@ -71,44 +71,44 @@ fun SoilStructureScreen(
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            DesignSectionHeader(title = "بيانات الأساس والتربة")
+            DesignSectionHeader(title = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_section_inputs))
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
             ) {
                 item {
-                    DesignInputField(value = foundationLengthMm, label = "طول الأساس (mm)", onValueChange = { foundationLengthMm = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    DesignInputField(value = foundationLengthMm, label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_label_length), onValueChange = { foundationLengthMm = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                 }
                 item {
-                    DesignInputField(value = foundationWidthMm, label = "عرض الأساس (mm)", onValueChange = { foundationWidthMm = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    DesignInputField(value = foundationWidthMm, label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_label_width), onValueChange = { foundationWidthMm = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                 }
                 item {
-                    DesignInputField(value = foundationThicknessMm, label = "سماكة الأساس (mm)", onValueChange = { foundationThicknessMm = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    DesignInputField(value = foundationThicknessMm, label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_label_thickness), onValueChange = { foundationThicknessMm = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                 }
                 item {
-                    DesignInputField(value = columnLoadKN, label = "حمل العمود (kN)", onValueChange = { columnLoadKN = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    DesignInputField(value = columnLoadKN, label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_label_column_load), onValueChange = { columnLoadKN = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                 }
                 item {
-                    DesignInputField(value = momentKNm, label = "العزم (kN.m)", onValueChange = { momentKNm = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    DesignInputField(value = momentKNm, label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_label_moment), onValueChange = { momentKNm = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                 }
                 item {
-                    DesignInputField(value = soilBearingCapacityKpa, label = "سعة التربة المسموحة (kPa)", onValueChange = { soilBearingCapacityKpa = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    DesignInputField(value = soilBearingCapacityKpa, label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_label_bearing), onValueChange = { soilBearingCapacityKpa = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                 }
                 item {
-                    DesignInputField(value = soilUnitWeightKNm3, label = "الوزن النوعي للتربة (kN/m³)", onValueChange = { soilUnitWeightKNm3 = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    DesignInputField(value = soilUnitWeightKNm3, label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_label_unit_weight), onValueChange = { soilUnitWeightKNm3 = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                 }
                 item {
-                    DesignInputField(value = frictionAngleDeg, label = "زاوية الاحتكاك (درجة)", onValueChange = { frictionAngleDeg = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    DesignInputField(value = frictionAngleDeg, label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_label_friction), onValueChange = { frictionAngleDeg = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                 }
                 item {
-                    DesignInputField(value = fcu, label = "مقاومة الخرسانة fcu (MPa)", onValueChange = { fcu = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    DesignInputField(value = fcu, label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_label_fcu), onValueChange = { fcu = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                 }
                 item {
-                    DesignInputField(value = fy, label = "إجهاد الخضوع fy (MPa)", onValueChange = { fy = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    DesignInputField(value = fy, label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_label_fy), onValueChange = { fy = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                 }
                 item {
-                    DesignInputField(value = embedmentDepthMm, label = "عمق الدفن (mm)", onValueChange = { embedmentDepthMm = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    DesignInputField(value = embedmentDepthMm, label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_label_embedment), onValueChange = { embedmentDepthMm = it }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
                 }
             }
 
@@ -119,7 +119,7 @@ fun SoilStructureScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 AppButton(
-                    label = "حساب",
+                    label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.wo_calculate),
                     onClick = {
                         viewModel.calculate(
                             foundationLengthMm = foundationLengthMm.toDoubleOrNull() ?: 3000.0,
@@ -139,7 +139,7 @@ fun SoilStructureScreen(
                     modifier = Modifier.weight(1f)
                 )
                 AppButton(
-                    label = "إعادة تعيين",
+                    label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_reset),
                     onClick = { viewModel.reset() },
                     modifier = Modifier.weight(1f),
                     style = AppButtonStyle.Outline
@@ -163,7 +163,7 @@ fun SoilStructureScreen(
                 val context = androidx.compose.ui.platform.LocalContext.current
 
                 AppButton(
-                    label = "تصدير تقرير PDF برو (3 قطاعات)",
+                    label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_export_pdf),
                     onClick = {
                         viewModel.exportToPdf(
                             context = context,
@@ -185,7 +185,7 @@ fun SoilStructureScreen(
                     contentOverride = onColorFor(MaterialTheme.colorScheme.tertiary)
                 )
 
-                DesignSectionHeader(title = "الرسم الهندسي لتفاعل المنشأ مع التربة")
+                DesignSectionHeader(title = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_drawing_header))
 
                 AppText(
                     text = androidx.compose.ui.res.stringResource(
@@ -221,39 +221,39 @@ fun SoilStructureScreen(
                     )
                 }
 
-                DesignSectionHeader(title = "النتيجة")
+                DesignSectionHeader(title = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_results_header))
 
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     DesignResultRow(
-                        label = "حالة التحقق",
+                        label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_result_status),
                         value = androidx.compose.ui.res.stringResource(
                             com.civileg.app.R.string.design_status_not_verified
                         )
                     )
                     DesignResultRow(
-                        label = "أقصى ضغط تربة",
+                        label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_result_max_pressure),
                         value = "${res.bearing.maxPressureKpa.toInt()} kPa"
                     )
                     DesignResultRow(
-                        label = "أقل ضغط تربة",
+                        label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_result_min_pressure),
                         value = "${res.bearing.minPressureKpa.toInt()} kPa"
                     )
                     DesignResultRow(
-                        label = "الهبوط",
-                        value = "${res.settlement.totalSettlementMm.toInt()} مم"
+                        label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_result_settlement),
+                        value = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_value_mm, res.settlement.totalSettlementMm.toInt())
                     )
                     DesignResultRow(
-                        label = "عامل الأمان الانقلاب",
+                        label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_result_fs_overturning),
                         value = "%.2f".format(res.stability.factorOfSafetyOverturning)
                     )
                     DesignResultRow(
-                        label = "عامل الأمان الانزلاق",
+                        label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_result_fs_sliding),
                         value = "%.2f".format(res.stability.factorOfSafetySliding)
                     )
                     DesignResultRow(
-                        label = "عامل الأمان التحمل",
+                        label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.soil_result_fs_bearing),
                         value = "%.2f".format(res.stability.factorOfSafetyBearing)
                     )
                 }

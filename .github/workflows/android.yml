@@ -74,8 +74,12 @@ jobs:
       # Lint always runs to completion so the report exists for the budget
       # check and the uploaded artifacts, even when errors are found.
       - name: Run Android Lint
-        run: ./gradlew lintFreeDebug --no-daemon
-        continue-on-error: true
+        run: |
+          set +e
+          ./gradlew lintFreeDebug --no-daemon --console=plain > lint-output.txt 2>&1
+          code=$?
+          cat lint-output.txt
+          exit 0
 
       # Ratchet: fail only when errors exceed the budget recorded in
       # .github/lint-error-budget, so NEW lint errors block the build while
@@ -110,6 +114,7 @@ jobs:
           path: |
             app/build/reports/lint-results-freeDebug.html
             app/build/reports/lint-results-freeDebug.xml
+            lint-output.txt
           retention-days: 14
           if-no-files-found: ignore
 

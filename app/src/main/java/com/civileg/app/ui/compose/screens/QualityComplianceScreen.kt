@@ -15,8 +15,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.civileg.app.R
 import com.civileg.app.utils.ComplianceMatrix
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
@@ -83,7 +85,7 @@ fun QualityComplianceScreen() {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
                 AppText(
-                    "لوائح الامتثال التنظيمية",
+                    androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -104,7 +106,7 @@ fun QualityComplianceScreen() {
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 AppText(
-                    standard?.let { "${it.name} — نسخة ${it.version}" } ?: "",
+                    standard?.let { androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_version, it.name, it.version) } ?: "",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -116,9 +118,9 @@ fun QualityComplianceScreen() {
             Column(modifier = Modifier.padding(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
-                        AppText("التقدم", style = MaterialTheme.typography.titleSmall)
+                        AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_progress), style = MaterialTheme.typography.titleSmall)
                         AppText(
-                            "$checkedCount من ${items.size} خانة",
+                            androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_progress_count, checkedCount, items.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Gray
                         )
@@ -127,7 +129,7 @@ fun QualityComplianceScreen() {
                         onClick = { showResetConfirm = true },
                         enabled = checked.isNotEmpty()
                     ) {
-                        Icon(Icons.Default.Delete, contentDescription = "إعادة ضبط")
+                        Icon(Icons.Default.Delete, contentDescription = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_reset))
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -142,7 +144,7 @@ fun QualityComplianceScreen() {
 
                 Spacer(modifier = Modifier.height(12.dp))
                 AppText(
-                    "التخصص",
+                    androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_discipline),
                     style = MaterialTheme.typography.titleSmall
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -152,7 +154,7 @@ fun QualityComplianceScreen() {
                     onExpandedChange = { filterExpanded = !filterExpanded }
                 ) {
                     OutlinedTextField(
-                        value = disciplineFilter?.let { disciplineLabel(it) } ?: "كل التخصصات",
+                        value = disciplineFilter?.let { disciplineLabel(it) } ?: androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_all_disciplines),
                         onValueChange = {},
                         readOnly = true,
                         singleLine = true,
@@ -166,12 +168,12 @@ fun QualityComplianceScreen() {
                         onDismissRequest = { filterExpanded = false }
                     ) {
                         DropdownMenuItem(
-                            text = { AppText("كل التخصصات") },
+                            text = { AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_all_disciplines)) },
                             onClick = { disciplineFilter = null; filterExpanded = false }
                         )
-                        ALL_DISCIPLINES.forEach { (key, label) ->
+                        ALL_DISCIPLINES.forEach { key ->
                             DropdownMenuItem(
-                                text = { AppText(label) },
+                                text = { AppText(disciplineLabel(key)) },
                                 onClick = { disciplineFilter = key; filterExpanded = false }
                             )
                         }
@@ -185,7 +187,7 @@ fun QualityComplianceScreen() {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     AppText(
-                        "لا توجد بنود لهذا الكود والتخصص",
+                        androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_no_items),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray
                     )
@@ -195,7 +197,7 @@ fun QualityComplianceScreen() {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     AppText(
-                        "قائمة الفحص (${items.size})",
+                        androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_checklist, items.size),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -237,7 +239,7 @@ fun QualityComplianceScreen() {
                                             color = MaterialTheme.colorScheme.secondaryContainer
                                         ) {
                                             AppText(
-                                                "اختياري",
+                                                androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_optional),
                                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                                                 style = MaterialTheme.typography.labelSmall
                                             )
@@ -249,7 +251,7 @@ fun QualityComplianceScreen() {
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 AppText(
-                                    "المرجع: ${item.reference}",
+                                    androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_reference, item.reference),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color.Gray
                                 )
@@ -272,11 +274,11 @@ fun QualityComplianceScreen() {
     if (showResetConfirm) {
         AlertDialog(
             onDismissRequest = { showResetConfirm = false },
-            title = { AppText("إعادة ضبط القائمة") },
-            text = { AppText("سيتم إلغاء جميع الخانات المحددة. هل تريد المتابعة؟") },
+            title = { AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_reset_title)) },
+            text = { AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_reset_message)) },
             confirmButton = {
                 AppButton(
-                    label = "نعم، أعد الضبط",
+                    label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.qc_reset_confirm),
                     fillMaxWidth = false,
                     style = AppButtonStyle.Text,
                     onClick = {
@@ -288,7 +290,7 @@ fun QualityComplianceScreen() {
             },
             dismissButton = {
                 AppButton(
-                    label = "إلغاء",
+                    label = stringResource(R.string.cancel),
                     onClick = { showResetConfirm = false },
                     style = AppButtonStyle.Text,
                     fillMaxWidth = false
@@ -299,15 +301,18 @@ fun QualityComplianceScreen() {
 }
 
 private val ALL_DISCIPLINES = listOf(
-    "CONCRETE" to "خرسانة",
-    "SOIL" to "تربة وأساسات",
-    "REBAR" to "حديد التسليح",
-    "STEEL" to "المنشآت المعدنية",
-    "ROADS" to "الطرق",
-    "BRIDGES" to "الكباري",
-    "TUNNELS" to "الأنفاق",
-    "BUILDINGS" to "المباني"
+    "CONCRETE", "SOIL", "REBAR", "STEEL", "ROADS", "BRIDGES", "TUNNELS", "BUILDINGS"
 )
 
-private fun disciplineLabel(key: String): String =
-    ALL_DISCIPLINES.firstOrNull { it.first == key }?.second ?: key
+@Composable
+private fun disciplineLabel(key: String): String = when (key) {
+    "CONCRETE" -> stringResource(R.string.qc_discipline_concrete)
+    "SOIL" -> stringResource(R.string.qc_discipline_soil)
+    "REBAR" -> stringResource(R.string.qc_discipline_rebar)
+    "STEEL" -> stringResource(R.string.qc_discipline_steel)
+    "ROADS" -> stringResource(R.string.qc_discipline_roads)
+    "BRIDGES" -> stringResource(R.string.qc_discipline_bridges)
+    "TUNNELS" -> stringResource(R.string.qc_discipline_tunnels)
+    "BUILDINGS" -> stringResource(R.string.qc_discipline_buildings)
+    else -> key
+}

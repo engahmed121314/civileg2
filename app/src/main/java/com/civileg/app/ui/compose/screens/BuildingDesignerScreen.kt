@@ -82,10 +82,10 @@ fun BuildingDesignerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { AppText("المصمم الإنشائي وحساب الكميات (2D Building Designer)") },
+                title = { AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "رجوع")
+                        Icon(Icons.Default.ArrowBack, contentDescription = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.back))
                     }
                 },
                 actions = {
@@ -97,10 +97,10 @@ fun BuildingDesignerScreen(
                             )
                         }
                     }) {
-                        Icon(Icons.Default.CloudSync, contentDescription = "تحديث الأسعار")
+                        Icon(Icons.Default.CloudSync, contentDescription = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_refresh_prices))
                     }
                     IconButton(onClick = { showBoqDialog = true }) {
-                        Icon(Icons.Default.ReceiptLong, contentDescription = "جدول الكميات والتكلفة")
+                        Icon(Icons.Default.ReceiptLong, contentDescription = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_boq))
                     }
                 }
             )
@@ -121,13 +121,13 @@ fun BuildingDesignerScreen(
                         )
                     } else {
                         AppText(
-                            "التكلفة التقديرية: ${summary.totalCost} ج.م",
+                            androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_estimated_cost, summary.totalCost),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                     AppButton(
-                        label = "تشغيل التصميم والتحليل",
+                        label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_run_design),
                         onClick = {
                             scope.launch {
                                 snackbarHostState.showSnackbar(
@@ -195,7 +195,7 @@ fun BuildingDesignerScreen(
     if (showBoqDialog) {
         AlertDialog(
             onDismissRequest = { showBoqDialog = false },
-            title = { AppText("جدول الكميات والتكلفة التقديرية (BOQ)") },
+            title = { AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_boq_title)) },
             text = {
                 val summary = quantitySummary
                 if (summary == null) {
@@ -206,26 +206,26 @@ fun BuildingDesignerScreen(
                             context.getString(com.civileg.app.R.string.quantity_estimate_notice),
                             style = MaterialTheme.typography.bodySmall
                         )
-                        AppText("إجمالي الخرسانة: ${summary.totalConcreteVolumeM3} م³", style = MaterialTheme.typography.bodyLarge)
-                        AppText("إجمالي حديد التسليح: ${summary.totalRebarWeightTon} طن", style = MaterialTheme.typography.bodyLarge)
-                        AppText("إجمالي حديد الستيل الهيكلي: ${summary.totalSteelProfileWeightTon} طن", style = MaterialTheme.typography.bodyLarge)
-                        AppText("إجمالي الشدات الخشبية: ${summary.totalFormworkAreaM2} م²", style = MaterialTheme.typography.bodyLarge)
-                        AppText("إجمالي الحفر: ${summary.totalExcavationVolumeM3} م³", style = MaterialTheme.typography.bodyLarge)
+                        AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_total_concrete, summary.totalConcreteVolumeM3), style = MaterialTheme.typography.bodyLarge)
+                        AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_total_rebar, summary.totalRebarWeightTon), style = MaterialTheme.typography.bodyLarge)
+                        AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_total_steel, summary.totalSteelProfileWeightTon), style = MaterialTheme.typography.bodyLarge)
+                        AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_total_formwork, summary.totalFormworkAreaM2), style = MaterialTheme.typography.bodyLarge)
+                        AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_total_excavation, summary.totalExcavationVolumeM3), style = MaterialTheme.typography.bodyLarge)
                         Spacer(modifier = Modifier.height(12.dp))
-                        AppText("التكلفة الإجمالية التقديرية: ${summary.totalCost} ج.م", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_total_cost, summary.totalCost), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(8.dp))
                         HorizontalDivider()
                         Spacer(modifier = Modifier.height(8.dp))
-                        AppText("بنود جدول الكميات (BOQ Items):", style = MaterialTheme.typography.titleSmall)
+                        AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_boq_items), style = MaterialTheme.typography.titleSmall)
                         summary.boqItems.forEach { item ->
-                            AppText("• ${item.descriptionAr}: ${item.quantity} ${item.unitAr} (${item.totalPrice} ج.م)")
+                            AppText(androidx.compose.ui.res.stringResource(com.civileg.app.R.string.bd_boq_item_line, item.descriptionAr, item.quantity, item.unitAr, item.totalPrice))
                         }
                     }
                 }
             },
             confirmButton = {
                 AppButton(
-                    label = "إغلاق",
+                    label = androidx.compose.ui.res.stringResource(com.civileg.app.R.string.close),
                     onClick = { showBoqDialog = false },
                     style = AppButtonStyle.Text,
                     fillMaxWidth = false
