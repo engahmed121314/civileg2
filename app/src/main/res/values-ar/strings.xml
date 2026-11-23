@@ -2408,4 +2408,12 @@
     <string name="settings_support_title">دعم التطبيق</string>
     <string name="settings_support_message">Civil Engineer Pro مجاني وبدون إعلانات. التبرعات الطوعية تموّل أكواد تصميم واختبارات ورسومات جديدة.</string>
     <string name="settings_support_button">تبرع عبر GitHub Sponsors</string>
+    <string name="frame_draft_recovery_title">لم تتم استعادة المسودة السابقة للإطار</string>
+    <string name="frame_draft_recovery_body">لم تتم استعادة مسودة الإطار السابقة. لا توجد حاليا طريقة داخل التطبيق لاستعادتها. بدء مسودة جديدة لا يحذف البيانات القديمة، والحفظ التلقائي متوقف حتى تختار.</string>
+    <string name="frame_draft_recovery_retained">نسخة من المسودة القديمة محفوظة على هذا الجهاز.</string>
+    <string name="frame_draft_recovery_not_retained">لم نتمكن بعد من تأكيد نسخة آمنة من المسودة القديمة. الضغط على الزر يعيد هذا الفحص أولا ثم يبدأ مسودة جديدة.</string>
+    <string name="frame_draft_recovery_failed">لم يكتمل بدء مسودة جديدة ولم يبدأ شيء جديد. حاول مرة أخرى.</string>
+    <string name="frame_draft_recovery_start_new">تحقق من النسخة وابدأ مسودة جديدة</string>
+    <string name="frame_draft_recovery_back">رجوع</string>
+    <string name="frame_draft_autosave_problem">الحفظ التلقائي للمسودة لا يعمل. عملك الحالي غير محفوظ. احفظ تصميمك للاحتفاظ به.</string>
 </resources>

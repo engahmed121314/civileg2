@@ -377,20 +377,8 @@ class FrameAnalysisViewModel @Inject constructor(
     private val _savedDesignId = MutableLiveData<Long?>(null)
     val savedDesignId: LiveData<Long?> get() = _savedDesignId
 
-    private data class FrameDraft(
-        val version: Int = 1,
-        val nodes: List<FrameNode> = emptyList(),
-        val members: List<FrameMember> = emptyList(),
-        val nodalLoads: List<NodalLoad> = emptyList(),
-        val memberLoads: List<MemberLoad> = emptyList(),
-        val slabs: List<SlabPanel> = emptyList(),
-        val settings: FrameAnalysisSettings = FrameAnalysisSettings(),
-        val steelFy: Double = 355.0
-    )
-
     private val draftPrefs =
         application.getSharedPreferences("frame_modeler_draft", Context.MODE_PRIVATE)
-    private val draftGson = Gson()
     private val autosaveHandler = Handler(Looper.getMainLooper())
     private val autosaveRunnable = Runnable { persistDraft() }
 
@@ -399,9 +387,55 @@ class FrameAnalysisViewModel @Inject constructor(
         autosaveHandler.postDelayed(autosaveRunnable, 600)
     }
 
+    private val draftStore = FrameDraftStore(object : DraftPrefs {
+        override fun get(key: String): String? = draftPrefs.getString(key, null)
+        override fun commit(updates: Map<String, String>): Boolean {
+            val e = draftPrefs.edit()
+            updates.forEach { (k, v) -> e.putString(k, v) }
+            return e.commit()
+        }
+    })
+
+    /** True while the last autosave attempt failed or could not be verified. */
+    private val _draftSaveProblem = MutableLiveData(false)
+    val draftSaveProblem: LiveData<Boolean> get() = _draftSaveProblem
+
+    /** Non-null while a stored draft was not restored; editing is gated by the screen. */
+    private val _draftRecovery = MutableLiveData<DraftRecoveryUi?>(null)
+    val draftRecovery: LiveData<DraftRecoveryUi?> get() = _draftRecovery
+
+    /** Explicit user choice. Failure keeps the gate and says why; originals are never deleted. */
+    fun startNewDraft() {
+        val blank = FrameDraftData(emptyList(), emptyList(), emptyList(), emptyList(), emptyList(),
+            FrameAnalysisSettings(), 355.0)
+        when (draftStore.startNew(blank)) {
+            FrameDraftStartNew.STARTED -> {
+                // Memory now equals the durably written blank draft exactly, before the editor shows.
+                restoringHistory = true
+                _nodes.value = emptyList(); _members.value = emptyList()
+                _nodalLoads.value = emptyList(); _memberLoads.value = emptyList()
+                _slabs.value = emptyList(); _dimensions.value = emptyList()
+                _settings.value = blank.settings; _steelFy.value = blank.steelFy
+                _selectedNodeIds.value = emptySet(); _selectedMemberIds.value = emptySet()
+                _selectedMemberId.value = null
+                _result.value = null; _concreteResults.value = emptyList(); _steelResults.value = emptyList()
+                _errorMessage.value = null
+                restoringHistory = false
+                undoStack.clear(); redoStack.clear()
+                _historyState.value = (_historyState.value ?: 0) + 1
+                _draftSaveProblem.value = false
+                _draftRecovery.value = null
+            }
+            FrameDraftStartNew.RETENTION_FAILED ->
+                _draftRecovery.value = DraftRecoveryUi(retained = false, startNewFailed = true)
+            FrameDraftStartNew.WRITE_FAILED ->
+                _draftRecovery.value = DraftRecoveryUi(retained = true, startNewFailed = true)
+        }
+    }
+
     private fun persistDraft() {
         try {
-            val draft = FrameDraft(
+            val draft = FrameDraftData(
                 nodes = _nodes.value.orEmpty(),
                 members = _members.value.orEmpty(),
                 nodalLoads = _nodalLoads.value.orEmpty(),
@@ -410,27 +444,41 @@ class FrameAnalysisViewModel @Inject constructor(
                 settings = _settings.value ?: FrameAnalysisSettings(),
                 steelFy = _steelFy.value ?: 355.0
             )
-            draftPrefs.edit().putString(DRAFT_KEY, draftGson.toJson(draft)).apply()
-        } catch (_: Exception) {
+            // Blocked while recovery is pending; never touches v1 or quarantine copies.
+            val r = draftStore.save(draft)
+            if (r != FrameDraftSave.BLOCKED_RECOVERY_PENDING) {
+                val failed = r == FrameDraftSave.WRITE_FAILED || r == FrameDraftSave.SKIPPED_NOT_ROUNDTRIPPABLE
+                if (failed != (_draftSaveProblem.value == true)) _draftSaveProblem.postValue(failed)
+            }
+        } catch (_: RuntimeException) {
+            _draftSaveProblem.postValue(true)
         }
     }
 
     private fun restoreDraft(): Boolean {
-        return try {
-            val raw = draftPrefs.getString(DRAFT_KEY, null) ?: return false
-            val draft = draftGson.fromJson(raw, FrameDraft::class.java) ?: return false
-            if (draft.nodes.isEmpty()) return false
-            _nodes.value = draft.nodes
-            _members.value = draft.members
-            _nodalLoads.value = draft.nodalLoads
-            _memberLoads.value = draft.memberLoads
-            _slabs.value = draft.slabs
-            _settings.value = draft.settings
-            _steelFy.value = draft.steelFy
-            _historyState.value = (_historyState.value ?: 0) + 1
-            true
-        } catch (_: Exception) {
-            false
+        return when (val r = draftStore.load()) {
+            FrameDraftStartup.Blank -> false
+            is FrameDraftStartup.RecoveryPending -> {
+                _draftRecovery.value = DraftRecoveryUi(retained = r.quarantineRetained, startNewFailed = false)
+                false
+            }
+            is FrameDraftStartup.Restored -> {
+                val draft = r.data
+                _nodes.value = draft.nodes
+                _members.value = draft.members
+                _nodalLoads.value = draft.nodalLoads
+                _memberLoads.value = draft.memberLoads
+                _slabs.value = draft.slabs
+                _settings.value = draft.settings
+                _steelFy.value = draft.steelFy
+                _historyState.value = (_historyState.value ?: 0) + 1
+                if (!r.migrationPersisted) _draftSaveProblem.value = true
+                if (draft.warnings.isNotEmpty()) {
+                    _errorMessage.value = "Draft restored as stored, but: " + draft.warnings.joinToString("; ") +
+                        ". Check the model before analysing."
+                }
+                true
+            }
         }
     }
 
@@ -440,6 +488,7 @@ class FrameAnalysisViewModel @Inject constructor(
     private val memberLoadsAutosaveObserver = Observer<List<MemberLoad>> { scheduleAutosave() }
     private val slabsAutosaveObserver = Observer<List<SlabPanel>> { scheduleAutosave() }
     private val settingsAutosaveObserver = Observer<FrameAnalysisSettings> { scheduleAutosave() }
+    private val steelFyAutosaveObserver = Observer<Double> { scheduleAutosave() }
 
     init {
         // Start with a blank drawing page; templates remain available from the toolbar.
@@ -450,6 +499,7 @@ class FrameAnalysisViewModel @Inject constructor(
         _memberLoads.observeForever(memberLoadsAutosaveObserver)
         _slabs.observeForever(slabsAutosaveObserver)
         _settings.observeForever(settingsAutosaveObserver)
+        _steelFy.observeForever(steelFyAutosaveObserver)
         scheduleAutosave()
     }
 
@@ -462,6 +512,7 @@ class FrameAnalysisViewModel @Inject constructor(
         _memberLoads.removeObserver(memberLoadsAutosaveObserver)
         _slabs.removeObserver(slabsAutosaveObserver)
         _settings.removeObserver(settingsAutosaveObserver)
+        _steelFy.removeObserver(steelFyAutosaveObserver)
         super.onCleared()
     }
 
@@ -998,7 +1049,6 @@ class FrameAnalysisViewModel @Inject constructor(
     }
 
     private companion object {
-        const val DRAFT_KEY = "frame_modeler_draft_v1"
         const val PASTE_OFFSET_METERS = 1.0
     }
 }
@@ -1023,3 +1073,6 @@ enum class DiagramType(
 
     fun localizedDisplayName(): String = localizedLabel
 }
+
+/** What the recovery gate needs to say truthfully. */
+data class DraftRecoveryUi(val retained: Boolean, val startNewFailed: Boolean)
