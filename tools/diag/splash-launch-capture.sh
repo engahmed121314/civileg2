@@ -5,9 +5,13 @@
 # for a grounded cold start, then captures the actual display at target
 # offsets after the am start REQUEST, recording the real monotonic elapsed
 # of every sample (begin/end) relative to both request and return.
-# A short on-device screenrecord runs from just before the launch through
-# past the observed transition window. No taps, no input, no consent/ad/
-# navigation interaction; whatever the app shows is captured as-is.
+# An on-device screenrecord runs from just before the launch through a
+# fixed 40 s window sized to cover the actual observed cold start, the
+# custom splash presentation (observed at ~+8.5 s after the launch request
+# in the ca0ec181 run, past the prior 15 s window's usable span after
+# recorder startup latency) and the transition out into Main. No taps, no
+# input, no consent/ad/navigation interaction; whatever the app shows is
+# captured as-is.
 # Diagnostic only; it never gates CI, and it exits nonzero when the launch
 # or every capture failed - no success claims. Whether the video's frames
 # advance where the stills froze is UNPROVEN until the actual MP4 and its
@@ -21,7 +25,7 @@ APK=app/build/outputs/apk/free/debug/app-free-debug.apk
 STATUS="$OUT/status.txt"
 TIMELINE="$OUT/timeline.txt"
 REC_DEVICE=/sdcard/splash-launch-recording.mp4
-REC_LIMIT_S=15
+REC_LIMIT_S=40
 : > "$STATUS"; : > "$TIMELINE"
 
 now_ms() { date +%s%3N; }
@@ -100,7 +104,10 @@ fi
 adb logcat -c
 
 # --- 2. Start the recorder BEFORE the launcher request -----------------------
-# Fixed short limit, on-device, zero interaction. Host PID and monotonic
+# Fixed 40 s diagnostic window (authorized extension from 15 s: the prior
+# run's usable capture ended ~1.4-2.3 s before the custom frame appeared;
+# 40 s covers observed cold start + presentation + transition out).
+# On-device, zero interaction. Host PID and monotonic
 # start/ack bounds are retained so the launch request can be bound to the
 # record timeline; ack is the device file appearing, which bounds recorder
 # startup but not encoder first-frame time (see uncertainty note below).
