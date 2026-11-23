@@ -93,6 +93,7 @@ public class FrameEntryCompanionTest {
             java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
             device.dumpWindowHierarchy(bo);
             String xml = bo.toString("UTF-8");
+            logRawXml(base, xml);
             java.util.regex.Matcher m = Pattern.compile("<node [^>]*>").matcher(xml);
             StringBuilder sb = new StringBuilder();
             while (m.find()) {
@@ -209,53 +210,229 @@ public class FrameEntryCompanionTest {
         return Pattern.compile("(?s).*(" + anyOf(label) + ")" + Pattern.quote(": ") + "(" + digits + ")(?![\\d\u0660-\u0669]).*");
     }
 
-    private void collect(UiObject2 n, StringBuilder sb) {
-        if (n.getText() != null) sb.append(n.getText()).append('\n');
-        if (n.getContentDescription() != null) sb.append(n.getContentDescription()).append('\n');
-        for (UiObject2 c : n.getChildren()) collect(c, sb);
+    private static final Pattern BOUNDS = Pattern.compile("\\[(-?\\d+),(-?\\d+)\\]\\[(-?\\d+),(-?\\d+)\\]");
+    private static int dumpSeq = 0;
+
+    /** One clickable DOM element that satisfies the ORIGINAL contract: its own subtree (self + descendants) holds both strings. */
+    private static final class Card {
+        org.w3c.dom.Element el;
+        org.w3c.dom.Element scope; // the card's own subtree: its own text may sit above the click point, nothing else may
+        String identity; // child-index path + raw bounds + subtree text: must be equal in both snapshots
+        int l, t, r, b;
+        int cx() { return (l + r) / 2; }
+        int cy() { return (t + b) / 2; }
+    }
+
+    /** ONE dumpWindowHierarchy string, parsed with the JDK DOM parser (nothing live, nothing can go stale). */
+    private org.w3c.dom.Document snapshot(String rawStage) throws Exception {
+        java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+        device.dumpWindowHierarchy(bo);
+        String xml = bo.toString("UTF-8");
+        if (rawStage != null) logRawXml(safe(testName) + "-" + rawStage, xml);
+        return javax.xml.parsers.DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                .parse(new java.io.ByteArrayInputStream(xml.getBytes("UTF-8")));
+    }
+
+    private static void subtreeText(org.w3c.dom.Element e, StringBuilder sb) {
+        String tx = e.getAttribute("text"), ds = e.getAttribute("content-desc");
+        if (!tx.isEmpty()) sb.append(tx).append('\n');
+        if (!ds.isEmpty()) sb.append(ds).append('\n');
+        for (org.w3c.dom.Node c = e.getFirstChild(); c != null; c = c.getNextSibling()) {
+            if (c instanceof org.w3c.dom.Element && "node".equals(c.getNodeName())) subtreeText((org.w3c.dom.Element) c, sb);
+        }
+    }
+
+    private static String pathOf(org.w3c.dom.Element e) {
+        StringBuilder p = new StringBuilder();
+        for (org.w3c.dom.Node n = e; n instanceof org.w3c.dom.Element; n = n.getParentNode()) {
+            int i = 0;
+            for (org.w3c.dom.Node s = n.getPreviousSibling(); s != null; s = s.getPreviousSibling()) if (s instanceof org.w3c.dom.Element) i++;
+            p.insert(0, "/" + i);
+        }
+        return p.toString();
     }
 
     /**
-     * One complete, fresh scan. Returns the single clickable card whose own subtree holds both the
-     * title and the subtitle, or null when a stable complete scan found none. Any
-     * StaleObjectException (from the list or any subtree read) propagates and the whole scan is
-     * discarded by the caller.
+     * ORIGINAL contract, unchanged in meaning: a clickable node (this app's package, enabled, positive bounds)
+     * whose OWN SUBTREE holds both the title and the subtitle of the SAME language (EN+EN or AR+AR). Each
+     * element counts once. No geometry is used to pick or rank candidates; the caller fails on more than one.
      */
-    // Home module card only: title+subtitle must be the same language (EN+EN or AR+AR) in one
-    // clickable subtree; more than one candidate fails. Post-entry label helpers accept either language.
-    private UiObject2 scanForModuleCard(String[] title, String[] sub) {
-        List<UiObject2> nodes = device.findObjects(By.pkg(pkg).clickable(true));
-        UiObject2 found = null;
-        int count = 0;
-        for (UiObject2 o : nodes) {
+    private List<Card> cards(org.w3c.dom.Document doc, String[] title, String[] sub) {
+        List<Card> out = new java.util.ArrayList<>();
+        org.w3c.dom.NodeList all = doc.getElementsByTagName("node");
+        for (int i = 0; i < all.getLength(); i++) {
+            org.w3c.dom.Element e = (org.w3c.dom.Element) all.item(i);
+            if (!"true".equals(e.getAttribute("clickable")) || !"true".equals(e.getAttribute("enabled"))) continue;
+            if (!pkg.equals(e.getAttribute("package"))) continue;
+            java.util.regex.Matcher m = BOUNDS.matcher(e.getAttribute("bounds"));
+            if (!m.matches()) continue;
+            Card c = new Card();
+            c.l = Integer.parseInt(m.group(1)); c.t = Integer.parseInt(m.group(2));
+            c.r = Integer.parseInt(m.group(3)); c.b = Integer.parseInt(m.group(4));
+            if (c.r <= c.l || c.b <= c.t) continue;
             StringBuilder sb = new StringBuilder();
-            collect(o, sb);
+            subtreeText(e, sb);
             String t = sb.toString();
-            // One language per match: EN title+EN subtitle, or AR title+AR subtitle. Each node counts once.
             boolean en = t.contains(title[0]) && t.contains(sub[0]);
             boolean ar = t.contains(title[1]) && t.contains(sub[1]);
-            if (en || ar) {
-                count++;
-                if (found == null) found = o;
-            }
+            if (!en && !ar) continue;
+            c.el = e;
+            c.scope = e;
+            c.identity = "SUBTREE:" + pathOf(e) + "|" + e.getAttribute("bounds") + "|" + t;
+            out.add(c);
         }
-        // More than one candidate is ambiguous: fail, never click the first.
-        assertTrue("ambiguous Frame module card: " + count + " clickable candidates", count <= 1);
-        return found;
+        // commonParentCards(...) fallback intentionally NOT called this run: the real DOM shape is unknown; if no clickable
+        // node holds both strings in its own subtree the test fails closed and the retained raw FAILURE XML settles it.
+        return out;
     }
 
-    /** Up to 3 whole fresh scans, repeating ONLY on StaleObjectException, no swipe between them. */
-    private UiObject2 findModuleCard() {
+    /**
+     * Used ONLY when no clickable node holds both strings in its own subtree (title and subtitle are then
+     * siblings of the clickable node, not descendants). Equivalent unique card identity, no geometry: the
+     * lowest common ancestor of one title element and one subtitle element of the SAME language, whose own
+     * subtree holds exactly one title element, exactly one subtitle element and exactly one enabled clickable
+     * node of this package with positive bounds. That clickable is the card action. Any other shape yields no
+     * candidate (it is never guessed).
+     */
+    private List<Card> commonParentCards(org.w3c.dom.Document doc, String[] title, String[] sub) {
+        List<Card> out = new java.util.ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        org.w3c.dom.NodeList all = doc.getElementsByTagName("node");
+        for (int lang = 0; lang < 2; lang++) {
+            for (int i = 0; i < all.getLength(); i++) {
+                org.w3c.dom.Element tn = (org.w3c.dom.Element) all.item(i);
+                if (!ownText(tn).contains(title[lang])) continue;
+                for (int j = 0; j < all.getLength(); j++) {
+                    org.w3c.dom.Element sn = (org.w3c.dom.Element) all.item(j);
+                    if (sn == tn || !ownText(sn).contains(sub[lang])) continue;
+                    org.w3c.dom.Element lca = lowestCommonAncestor(tn, sn);
+                    if (lca == null || lca == tn || lca == sn || !"node".equals(lca.getNodeName())) continue;
+                    if (countOwnText(lca, title[lang]) != 1 || countOwnText(lca, sub[lang]) != 1) continue;
+                    List<org.w3c.dom.Element> clicks = new java.util.ArrayList<>();
+                    collectClickables(lca, clicks);
+                    if (clicks.size() != 1) continue;
+                    org.w3c.dom.Element ce = clicks.get(0);
+                    java.util.regex.Matcher m = BOUNDS.matcher(ce.getAttribute("bounds"));
+                    if (!m.matches()) continue;
+                    Card c = new Card();
+                    c.l = Integer.parseInt(m.group(1)); c.t = Integer.parseInt(m.group(2));
+                    c.r = Integer.parseInt(m.group(3)); c.b = Integer.parseInt(m.group(4));
+                    if (c.r <= c.l || c.b <= c.t) continue;
+                    StringBuilder sb = new StringBuilder();
+                    subtreeText(lca, sb);
+                    c.el = ce;
+                    c.scope = lca;
+                    c.identity = "COMMONPARENT:" + pathOf(lca) + "|" + ce.getAttribute("bounds") + "|" + sb;
+                    if (seen.add(c.identity)) out.add(c);
+                }
+            }
+        }
+        return out;
+    }
+
+    private static String ownText(org.w3c.dom.Element e) {
+        return e.getAttribute("text") + "\n" + e.getAttribute("content-desc");
+    }
+
+    private static int countOwnText(org.w3c.dom.Element root, String needle) {
+        int n = ownText(root).contains(needle) ? 1 : 0;
+        for (org.w3c.dom.Node c = root.getFirstChild(); c != null; c = c.getNextSibling()) {
+            if (c instanceof org.w3c.dom.Element && "node".equals(c.getNodeName())) n += countOwnText((org.w3c.dom.Element) c, needle);
+        }
+        return n;
+    }
+
+    private void collectClickables(org.w3c.dom.Element e, List<org.w3c.dom.Element> out) {
+        if ("true".equals(e.getAttribute("clickable")) && "true".equals(e.getAttribute("enabled")) && pkg.equals(e.getAttribute("package"))) out.add(e);
+        for (org.w3c.dom.Node c = e.getFirstChild(); c != null; c = c.getNextSibling()) {
+            if (c instanceof org.w3c.dom.Element && "node".equals(c.getNodeName())) collectClickables((org.w3c.dom.Element) c, out);
+        }
+    }
+
+    private static org.w3c.dom.Element lowestCommonAncestor(org.w3c.dom.Element a, org.w3c.dom.Element b) {
+        java.util.Set<org.w3c.dom.Node> anc = new java.util.HashSet<>();
+        for (org.w3c.dom.Node n = a; n != null; n = n.getParentNode()) anc.add(n);
+        for (org.w3c.dom.Node n = b; n != null; n = n.getParentNode()) {
+            if (anc.contains(n)) return n instanceof org.w3c.dom.Element ? (org.w3c.dom.Element) n : null;
+        }
+        return null;
+    }
+
+    /** Conservative FAIL-only heuristic: the last dumped node containing the point must be the card or inside it, else fail. Dump order is NOT claimed to be draw order, so this cannot prove the hit is unobscured; it only refuses an obviously suspicious click.*/
+    private static String coveredBy(org.w3c.dom.Document doc, Card c) {
+        org.w3c.dom.NodeList all = doc.getElementsByTagName("node");
+        org.w3c.dom.Element top = null;
+        for (int i = 0; i < all.getLength(); i++) {
+            org.w3c.dom.Element e = (org.w3c.dom.Element) all.item(i);
+            java.util.regex.Matcher m = BOUNDS.matcher(e.getAttribute("bounds"));
+            if (!m.matches()) continue;
+            int l = Integer.parseInt(m.group(1)), t = Integer.parseInt(m.group(2)), r = Integer.parseInt(m.group(3)), b = Integer.parseInt(m.group(4));
+            if (c.cx() >= l && c.cx() < r && c.cy() >= t && c.cy() < b) top = e;
+        }
+        for (org.w3c.dom.Node n = top; n != null; n = n.getParentNode()) if (n == c.el || n == c.scope) return null;
+        return top == null ? "no node at point" : top.getAttribute("class") + " " + top.getAttribute("bounds");
+    }
+
+    /**
+     * Finds and clicks the unique Home card. Snapshot A selects it; snapshot B, taken right before the click,
+     * must select the SAME single card identity (path, bounds, subtree text); otherwise the attempt is discarded
+     * (3 attempts, then a loud AssertionError, never "not found"). More than one candidate fails at once. The click
+     * point (full X/Y center) must be on screen and not obviously covered (conservative heuristic, not proof). B is the dump retained as
+     * raw XML. Returns false when a stable snapshot shows no card (the caller scrolls).
+     */
+    private boolean clickModuleCardFromSnapshots() throws Exception {
         String[] title = pair("home_frame");
         String[] sub = pair("home_frame_sub");
         for (int attempt = 1; attempt <= 3; attempt++) {
-            try {
-                return scanForModuleCard(title, sub);
-            } catch (androidx.test.uiautomator.StaleObjectException stale) {
-                if (attempt == 3) throw stale; // fails explicitly, never reported as "not found"
+            List<Card> a = cards(snapshot(null), title, sub);
+            assertTrue("ambiguous Frame module card: " + a.size() + " clickable candidates", a.size() <= 1);
+            if (a.isEmpty()) return false;
+            org.w3c.dom.Document docB = snapshot("click-pre");
+            List<Card> b = cards(docB, title, sub);
+            assertTrue("ambiguous Frame module card at click: " + b.size() + " clickable candidates", b.size() <= 1);
+            if (b.size() == 1 && a.get(0).identity.equals(b.get(0).identity)) {
+                Card c = b.get(0);
+                android.util.Log.w("QA-COMPANION", "card rule=" + c.identity.substring(0, c.identity.indexOf(':')) + " bounds=" + c.l + "," + c.t + "," + c.r + "," + c.b);
+                assertTrue("card click point is off screen", c.cx() >= 0 && c.cx() < device.getDisplayWidth() && c.cy() >= 0 && c.cy() < device.getDisplayHeight());
+                String cover = coveredBy(docB, c);
+                assertTrue("card click point is covered by " + cover, cover == null);
+                assertTrue("click failed", device.click(c.cx(), c.cy()));
+                return true;
             }
+            if (attempt == 3) throw new AssertionError("Frame card changed between snapshots: " + a.size() + " vs " + b.size() + " candidates");
         }
         throw new IllegalStateException("unreachable");
+    }
+
+    /**
+     * Raw XML retained as gzip+base64 chunks in logcat under a UNIQUE dump id (d<seq>, never reused in this process).
+     * The host reassembles, verifies sha256 and root, and only then writes the file.
+     */
+    private void logRawXml(String base, String xml) {
+        try {
+            String nonce = safe(String.valueOf(InstrumentationRegistry.getArguments().getString("qaNonce", "nononce")));
+            int id;
+            synchronized (FrameEntryCompanionTest.class) { id = ++dumpSeq; }
+            String tag = "[" + nonce + ":" + base + ":d" + id + "] ";
+            byte[] raw = xml.getBytes("UTF-8");
+            String sha = bytesToHex(java.security.MessageDigest.getInstance("SHA-256").digest(raw));
+            java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+            try (java.util.zip.GZIPOutputStream gz = new java.util.zip.GZIPOutputStream(bo)) { gz.write(raw); }
+            String b64 = android.util.Base64.encodeToString(bo.toByteArray(), android.util.Base64.NO_WRAP);
+            int n = (b64.length() + 2999) / 3000;
+            android.util.Log.w("QA-COMPANION-XML", tag + "meta bytes=" + raw.length + " sha256=" + sha + " chunks=" + n);
+            for (int i = 0; i < n; i++) {
+                android.util.Log.w("QA-COMPANION-XML", tag + (i + 1) + "/" + n + " " + b64.substring(i * 3000, Math.min(b64.length(), (i + 1) * 3000)));
+            }
+        } catch (Throwable t) {
+            android.util.Log.w("QA-COMPANION", "raw xml log failed for " + base, t);
+        }
+    }
+
+    private static String bytesToHex(byte[] d) {
+        StringBuilder sb = new StringBuilder();
+        for (byte x : d) sb.append(String.format("%02x", x));
+        return sb.toString();
     }
 
     private UiObject2 waitText(String[] text, long timeoutMs) {
@@ -273,22 +450,11 @@ public class FrameEntryCompanionTest {
         assertTrue("not visible: " + label, b.width() > 0 && b.height() > 0);
     }
 
-    private void openFrameScreenFromHome() {
+    private void openFrameScreenFromHome() throws Exception {
         device.wait(Until.hasObject(By.pkg(pkg).scrollable(true)), 30000);
         boolean clicked = false;
         for (int i = 1; i <= 10 && !clicked; i++) {
-            // fresh selection + click, repeated 3x only on StaleObjectException; no query after success
-            UiObject2 card = null;
-            for (int attempt = 1; attempt <= 3 && !clicked; attempt++) {
-                card = findModuleCard();
-                if (card == null) break;
-                try {
-                    card.click();
-                    clicked = true;
-                } catch (androidx.test.uiautomator.StaleObjectException stale) {
-                    if (attempt == 3) throw stale;
-                }
-            }
+            clicked = clickModuleCardFromSnapshots();
             if (clicked) break;
             int w = device.getDisplayWidth();
             int h = device.getDisplayHeight();
@@ -305,14 +471,14 @@ public class FrameEntryCompanionTest {
     }
 
     @Test
-    public void frameAnalysisEntryShowsRealFrameScreen() {
+    public void frameAnalysisEntryShowsRealFrameScreen() throws Exception {
         openFrameScreenFromHome();
         assertFrameScreenVisible();
         capture("entry");
     }
 
     @Test
-    public void savedFrameModelOpensFromRealSeededRecord() {
+    public void savedFrameModelOpensFromRealSeededRecord() throws Exception {
         openFrameScreenFromHome();
         assertFrameScreenVisible();
         capture("entry");

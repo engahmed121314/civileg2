@@ -292,6 +292,68 @@ case_instrument() {
   # logcat is NOT cleared: earlier pre-migration/launch/crash lines stay in logcat.txt.
   $ADB logcat -d -s QA-COMPANION-HIER:W QA-COMPANION:W 2>&1 | grep -F "[${QA_NONCE}:" | head -c 400000 > "$dir/companion-hierarchy.txt" \
     || echo "evidence NOTE: no nonce-matching companion hierarchy lines"
+  # Raw window-hierarchy XML: the companion logs each dump under a unique id d<N> as gzip+base64 chunks. Reassemble,
+  # reject conflicting duplicates and non-strict base64, verify count/sha256/<hierarchy> root, keep every valid dump as
+  # <base>-d<N>.xml, and alias <method>-<stage>.xml only for entry/loaded-4-3/FAILURE from the LATEST complete valid dump.
+  # An invalid or missing stage is NOT written, so require_companion_evidence still fails for it.
+  cat > "$dir/reassemble_companion_xml.py" <<'PY'
+import sys, re, base64, gzip, hashlib, os
+import xml.etree.ElementTree as ET
+nonce, out = sys.argv[1], sys.argv[2]
+ALIAS = ("entry", "loaded-4-3", "FAILURE")
+rx = re.compile(r"QA-COMPANION-XML: \[" + re.escape(nonce) + r":([A-Za-z0-9_-]+):d(\d+)\] (.*)$")
+B64 = re.compile(r"^[A-Za-z0-9+/]*={0,2}$")
+meta, chunks, bad = {}, {}, {}
+for line in sys.stdin:
+    m = rx.search(line.rstrip("\n"))
+    if not m: continue
+    key = (m.group(1), int(m.group(2))); rest = m.group(3)
+    mm = re.match(r"meta bytes=(\d+) sha256=([0-9a-f]{64}) chunks=(\d+)$", rest)
+    if mm:
+        v = (int(mm.group(1)), mm.group(2), int(mm.group(3)))
+        if key in meta and meta[key] != v: bad[key] = "conflicting duplicate meta"
+        meta[key] = v; chunks.setdefault(key, {}); continue
+    cm = re.match(r"(\d+)/(\d+) ([A-Za-z0-9+/=]*)$", rest)
+    if cm:
+        i, n, data = int(cm.group(1)), int(cm.group(2)), cm.group(3)
+        d = chunks.setdefault(key, {})
+        if i in d and d[i] != (n, data): bad[key] = "conflicting duplicate chunk %d" % i
+        d[i] = (n, data)
+valid = {}
+for key in sorted(meta, key=lambda k: (k[1], k[0])):
+    base, did = key; nbytes, sha, n = meta[key]; tag = "%s-d%d" % (base, did)
+    if key in bad: print("INVALID", tag, bad[key]); continue
+    c = chunks.get(key, {})
+    if sorted(c) != list(range(1, n + 1)) or any(v[0] != n for v in c.values()):
+        print("INVALID", tag, "missing or wrong-count chunks", n, sorted(c)); continue
+    b64 = "".join(c[i][1] for i in range(1, n + 1))
+    if not B64.match(b64) or len(b64) % 4: print("INVALID", tag, "not strict base64"); continue
+    try:
+        raw = gzip.decompress(base64.b64decode(b64, validate=True))
+        if len(raw) != nbytes or hashlib.sha256(raw).hexdigest() != sha: print("INVALID", tag, "size/sha mismatch"); continue
+        if ET.fromstring(raw).tag != "hierarchy": print("INVALID", tag, "root is not hierarchy"); continue
+    except Exception as e:
+        print("INVALID", tag, type(e).__name__); continue
+    with open(os.path.join(out, tag + ".xml"), "wb") as f: f.write(raw)
+    valid[key] = raw
+    print("OK", tag, nbytes, sha)
+# Alias <base>.xml ONLY for the entry / loaded-4-3 / FAILURE capture stages, from the LATEST dump of that base,
+# and only when that latest dump is itself complete and valid. Never from an older dump.
+latest = {}
+# Latest stage dump over the UNION of meta, chunk and invalid-recognized records: a newest dump whose meta is
+# missing (chunks only) is still the latest and must NOT alias; an older valid dump is never substituted.
+for key in set(meta) | set(chunks) | set(bad):
+    latest[key[0]] = max(latest.get(key[0], 0), key[1])
+for base, did in sorted(latest.items()):
+    if not base.endswith(ALIAS): continue
+    if (base, did) in valid:
+        with open(os.path.join(out, base + ".xml"), "wb") as f: f.write(valid[(base, did)])
+        print("ALIAS", base + ".xml", "<-", "%s-d%d.xml" % (base, did))
+    else:
+        print("NOALIAS", base, "latest dump d%d is not valid or has no meta" % did)
+PY
+  $ADB logcat -d -s QA-COMPANION-XML:W 2>&1 | python3 "$dir/reassemble_companion_xml.py" "$QA_NONCE" "$CASE_COMPANION_DIR" > "$dir/companion-xml-reassembly.txt" || echo "evidence NOTE: raw XML reassembly script failed"
+  cat "$dir/companion-xml-reassembly.txt" 2>/dev/null | head -40
   require_companion_evidence "$dir/instrumentation-companion.txt" "$CASE_COMPANION_DIR" || comp_ev=$?
 
   # Invocation 2: the ORIGINAL classes, unchanged selection and counts, fail-closed.
