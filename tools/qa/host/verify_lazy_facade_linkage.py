@@ -41,7 +41,12 @@ except Exception as e:
     sys.exit(1)
 
 FACADE = 'Lkotlin/LazyKt;'
-PARTS = ['Lkotlin/LazyKt__LazyJVMKt;', 'Lkotlin/LazyKt__LazyKt;']
+# Genuine directed chain, verified against kotlin-stdlib-2.4.21 class headers
+# (sha256 bd8250210584cb659847dce9cda660f8e9906e5def7fbebcea93dc6dcb6a88a3):
+# LazyKt extends LazyKt__LazyKt; LazyKt__LazyKt extends LazyKt__LazyJVMKt;
+# LazyKt__LazyJVMKt extends Object. An earlier revision had the two parts
+# swapped, which made the gate reject the correct rebuilt hierarchy.
+PARTS = ['Lkotlin/LazyKt__LazyKt;', 'Lkotlin/LazyKt__LazyJVMKt;']
 LAZY_IFACE = 'Lkotlin/Lazy;'
 # Exact Lazy contract: member name + full descriptor, each public abstract
 # non-static on a public interface.

@@ -99,10 +99,15 @@ jobs:
         # parser failure refuses with evidence. Focused positive/negative
         # fixtures run first so a silently broken gate cannot pass.
         run: |
+          # Fail closed through pipes: without pipefail the gate's non-zero exit
+          # is masked by tee's success and the pipeline would continue on a
+          # failed linkage gate.
+          set -o pipefail
           # Installer stdout+stderr retained as the install-refusal evidence artifact.
           pip install androguard==4.1.4 2>&1 | tee qa-evidence-androguard-install.txt || { echo 'GATE REFUSAL: androguard install failed (see qa-evidence-androguard-install.txt)'; exit 1; }
           python3 tools/qa/host/selftest_lazy_facade_linkage.py | tee qa-evidence-lazy-facade-selftest.txt
           python3 tools/qa/host/verify_lazy_facade_linkage.py "$CANDIDATE_APK" "$TEST_APK" | tee qa-evidence-lazy-facade-linkage.txt
+
 
       - name: Capture synthetic packaging diagnostics before emulator
         if: always()

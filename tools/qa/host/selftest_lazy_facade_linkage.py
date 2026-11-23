@@ -20,8 +20,11 @@ from make_fixture_dex import DexBuilder, ACC_PUBLIC, ACC_STATIC, ACC_INTERFACE, 
 
 GATE = os.path.join(HERE, 'verify_lazy_facade_linkage.py')
 FACADE = 'Lkotlin/LazyKt;'
-P1 = 'Lkotlin/LazyKt__LazyJVMKt;'
-P2 = 'Lkotlin/LazyKt__LazyKt;'
+# P1 is the facade's direct superclass; the genuine stdlib-2.4.21 chain is
+# facade -> __LazyKt -> __LazyJVMKt -> Object (jar-header verified). The
+# negative-reversed-chain fixture below encodes the earlier wrong order.
+P1 = 'Lkotlin/LazyKt__LazyKt;'
+P2 = 'Lkotlin/LazyKt__LazyJVMKt;'
 LAZY = 'Lkotlin/Lazy;'
 # Real mapped path: in the rebuilt QA universe Function0 stays renamed by R8
 # (the broken instrumentation references it as Llf0;), while the kept facade
