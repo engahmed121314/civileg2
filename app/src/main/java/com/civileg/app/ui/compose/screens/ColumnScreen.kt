@@ -455,7 +455,7 @@ fun ColumnScreen(
                                         Log.d("ColumnCapture", "click revision=" + revision.take(12) + " renderedBefore=" + (renderedBefore?.take(12) ?: "null") + " renderedAfter=" + (renderedAfter?.take(12) ?: "null") + " bitmap=" + (captureBitmap?.let { it.width.toString() + "x" + it.height } ?: "null") + " rejection=" + rejection)
                                     }
                                     runCatching {
-                                        System.err.println("CAPTURE-WITNESS column-click revision=" + revision.take(12) + " bitmap=" + (captureBitmap?.let { it.width.toString() + "x" + it.height } ?: "null") + " rejection=" + rejection)
+                                        System.err.println("CAPTURE-WITNESS column-click tag=" + Integer.toHexString(System.identityHashCode(pdfCaptureLayer)) + " revision=" + revision.take(12) + " bitmap=" + (captureBitmap?.let { it.width.toString() + "x" + it.height } ?: "null") + " rejection=" + rejection)
                                     }
                                     val capture = if (captureBitmap != null && renderedBefore == revision &&
                                         renderedAfter == revision)
@@ -689,6 +689,7 @@ private fun CompletedColumnCaptureArea(
     Box(Modifier.layout { measurable, _ ->
         val placeable = measurable.measure(Constraints.fixed(width, height))
         runCatching { Log.d("ColumnCapture", "[$instanceTag] measure: inner=${placeable.width}x${placeable.height} outer-reported=0x0 requested=${width}x${height}") }
+        runCatching { System.err.println("CAPTURE-WITNESS [$instanceTag] measure: inner=${placeable.width}x${placeable.height} outer-reported=0x0 requested=${width}x${height}") }
         layout(0, 0) { placeable.place(0, 0) }
     }.drawWithContent {
         val drawIndex = drawCount.incrementAndGet()
@@ -708,6 +709,9 @@ private fun CompletedColumnCaptureArea(
         val scopeH = this.size.height
         runCatching {
             Log.d("ColumnCapture", "[$instanceTag] draw#$drawIndex scope=${scopeW}x${scopeH} record=$recordOutcome layer=${captureLayer.size.width}x${captureLayer.size.height}")
+        }
+        runCatching {
+            System.err.println("CAPTURE-WITNESS [$instanceTag] draw#$drawIndex scope=${scopeW}x${scopeH} record=$recordOutcome layer=${captureLayer.size.width}x${captureLayer.size.height}")
         }
     }) { content() }
 }
