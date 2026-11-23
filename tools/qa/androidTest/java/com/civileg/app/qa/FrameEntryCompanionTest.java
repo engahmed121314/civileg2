@@ -385,15 +385,73 @@ public class FrameEntryCompanionTest {
      * point (full X/Y center) must be on screen and not obviously covered (conservative heuristic, not proof). B is the dump retained as
      * raw XML. Returns false when a stable snapshot shows no card (the caller scrolls).
      */
-    private boolean clickModuleCardFromSnapshots() throws Exception {
+    /**
+     * Diagnostic-only label accounting for one retained search snapshot; it selects and changes NOTHING.
+     * Counts nodes whose own text carries either installed label, then CLASSIFIES every node whose subtree
+     * holds BOTH labels of one language with the same checks the unchanged selector applies (clickable,
+     * enabled, package, bounds parse, positive area): a node passing all checks is reported as
+     * "eligible-candidate", never as a rejection; only an actual failing check is named
+     * (not-clickable / not-enabled / foreign-package / no-bounds / nonpositive-bounds). Nodes are ordered
+     * nearest-first (deepest DOM depth) before the four-entry cap so broad ancestors of the card cannot
+     * consume the cap and hide the near-card classification.
+     */
+    private String labelDiag(org.w3c.dom.Document doc, String[] title, String[] sub) {
+        org.w3c.dom.NodeList all = doc.getElementsByTagName("node");
+        int t = 0, s = 0;
+        java.util.List<org.w3c.dom.Element> holders = new java.util.ArrayList<>();
+        for (int i = 0; i < all.getLength(); i++) {
+            org.w3c.dom.Element e = (org.w3c.dom.Element) all.item(i);
+            String ot = ownText(e);
+            if (ot.contains(title[0]) || ot.contains(title[1])) t++;
+            if (ot.contains(sub[0]) || ot.contains(sub[1])) s++;
+            StringBuilder sb = new StringBuilder();
+            subtreeText(e, sb);
+            String x = sb.toString();
+            if ((x.contains(title[0]) && x.contains(sub[0])) || (x.contains(title[1]) && x.contains(sub[1]))) holders.add(e);
+        }
+        holders.sort((a, b) -> Integer.compare(depthOf(b), depthOf(a)));
+        java.util.List<String> classes = new java.util.ArrayList<>();
+        for (org.w3c.dom.Element e : holders) {
+            if (classes.size() >= 4) break;
+            String cls;
+            if (!"true".equals(e.getAttribute("clickable"))) cls = "check-failed:not-clickable";
+            else if (!"true".equals(e.getAttribute("enabled"))) cls = "check-failed:not-enabled";
+            else if (!pkg.equals(e.getAttribute("package"))) cls = "check-failed:foreign-package";
+            else {
+                java.util.regex.Matcher m = BOUNDS.matcher(e.getAttribute("bounds"));
+                if (!m.matches()) cls = "check-failed:no-bounds";
+                else {
+                    int l = Integer.parseInt(m.group(1)), tt = Integer.parseInt(m.group(2));
+                    int r = Integer.parseInt(m.group(3)), b2 = Integer.parseInt(m.group(4));
+                    cls = (r <= l || b2 <= tt) ? "check-failed:nonpositive-bounds" : "eligible-candidate";
+                }
+            }
+            classes.add(cls + "@" + pathOf(e));
+        }
+        return "titleNodes=" + t + " subNodes=" + s + " bothLabelSubtreeClasses(nearestFirst)=" + classes;
+    }
+
+    private static int depthOf(org.w3c.dom.Element e) {
+        int d = 0;
+        for (org.w3c.dom.Node p = e.getParentNode(); p instanceof org.w3c.dom.Element; p = p.getParentNode()) d++;
+        return d;
+    }
+
+    private boolean clickModuleCardFromSnapshots(String tag) throws Exception {
         String[] title = pair("home_frame");
         String[] sub = pair("home_frame_sub");
+        // Diagnostic retention only: the literal installed EN/AR label pairs used by the unchanged selector.
+        android.util.Log.w("QA-COMPANION", "card-search " + tag + " test=" + safe(testName)
+                + " labels title=['" + title[0] + "','" + title[1] + "'] sub=['" + sub[0] + "','" + sub[1] + "']");
         for (int attempt = 1; attempt <= 3; attempt++) {
-            List<Card> a = cards(snapshot(null), title, sub);
+            org.w3c.dom.Document docA = snapshot(tag + "-A" + attempt);
+            List<Card> a = cards(docA, title, sub);
+            android.util.Log.w("QA-COMPANION", "card-search " + tag + " A" + attempt + " candidates=" + a.size() + " " + labelDiag(docA, title, sub));
             assertTrue("ambiguous Frame module card: " + a.size() + " clickable candidates", a.size() <= 1);
             if (a.isEmpty()) return false;
-            org.w3c.dom.Document docB = snapshot("click-pre");
+            org.w3c.dom.Document docB = snapshot(tag + "-B");
             List<Card> b = cards(docB, title, sub);
+            android.util.Log.w("QA-COMPANION", "card-search " + tag + " B candidates=" + b.size() + " " + labelDiag(docB, title, sub));
             assertTrue("ambiguous Frame module card at click: " + b.size() + " clickable candidates", b.size() <= 1);
             if (b.size() == 1 && a.get(0).identity.equals(b.get(0).identity)) {
                 Card c = b.get(0);
@@ -814,12 +872,21 @@ public class FrameEntryCompanionTest {
         scrollHomeToTop();
         boolean clicked = false;
         for (int i = 1; i <= 10 && !clicked; i++) {
-            clicked = clickModuleCardFromSnapshots();
+            clicked = clickModuleCardFromSnapshots("search-" + i);
             if (clicked) break;
             int w = device.getDisplayWidth();
             int h = device.getDisplayHeight();
-            device.swipe(w / 2, (int) (h * 0.75), w / 2, (int) (h * 0.35), 20);
+            boolean swiped = device.swipe(w / 2, (int) (h * 0.75), w / 2, (int) (h * 0.35), 20);
+            // Diagnostic retention only: the swipe itself, its arguments and result are logged; the
+            // gesture, count, order and the 10-iteration budget are unchanged.
+            android.util.Log.w("QA-COMPANION", "card-search swipe test=" + safe(testName) + " iteration=" + i
+                    + " display=" + w + "x" + h + " from=" + (w / 2) + "," + (int) (h * 0.75)
+                    + " to=" + (w / 2) + "," + (int) (h * 0.35) + " steps=20 swiped=" + swiped);
             device.waitForIdle();
+        }
+        if (!clicked) {
+            // Retained diagnostic ONLY: the state after the final swipe. NOT an 11th scan and no click.
+            snapshot("search-postfinalswipe-diagnostic");
         }
         assertTrue("Frame module card not found on Home after scrolling", clicked);
         assertNotNull("Frame title never appeared", waitText(pair("frame_title"), 30000));
