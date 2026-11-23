@@ -2405,6 +2405,18 @@
     <string name="settings_support_title">Support the app</string>
     <string name="settings_support_message">Civil Engineer Pro is free and ad-free. Voluntary donations fund new design codes, tests and drawings.</string>
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
+    <string name="frame_draft_recovery_title">Previous frame draft not restored</string>
+    <string name="frame_draft_recovery_body">Your previous frame draft was not restored. This app has no way to restore it yet. The old data is not deleted by starting a new draft, and autosave stays off until you choose.</string>
+    <string name="frame_draft_recovery_retained">A copy of the old draft is kept on this device.</string>
+    <string name="frame_draft_recovery_not_retained">A safe copy of the old draft could not be confirmed yet. Tapping the button retries that check first and only then starts a new draft.</string>
+    <string name="frame_draft_recovery_failed">Starting a new draft did not complete, so nothing new was started. Try again.</string>
+    <string name="frame_draft_recovery_start_new">Check copy and start a new draft</string>
+    <string name="frame_draft_recovery_back">Go back</string>
+    <string name="frame_draft_autosave_problem">Draft autosave is not working. Your current work is not saved. Save your design to keep it.</string>
+    <string name="frame_draft_recovery_export">Export or share a copy of the old draft</string>
+    <string name="frame_draft_recovery_export_chooser">Export old draft copy</string>
+    <string name="frame_draft_recovery_export_failed">The copy could not be exported or the share sheet could not be opened. Try again.</string>
+    <string name="frame_draft_recovery_export_privacy">A copy file is created on this device from your old frame draft. The draft may contain personal project data. If you choose Export, the app you pick can read the file and may preview or send it; there is no recipient check from this app. Cancelling the share sheet does not mean a copy was saved.</string>
 </resources>
 
 

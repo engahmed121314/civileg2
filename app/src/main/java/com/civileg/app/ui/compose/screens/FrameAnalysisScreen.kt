@@ -41,12 +41,16 @@ import com.civileg.app.ui.compose.components.drawings.FrameSteelSectionDrawing
 import com.civileg.app.ui.compose.components.drawings.SteelSectionDrawing
 import com.civileg.app.utils.SteelTables
 import com.civileg.app.ui.theme.CivilEngineerTheme
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.viewmodel.DiagramType
+import com.civileg.app.viewmodel.DraftRecoveryUi
 import com.civileg.app.viewmodel.FrameAnalysisViewModel
 import com.civileg.app.viewmodel.FrameDesignNotice
 import com.civileg.app.viewmodel.ProjectViewModel
@@ -78,6 +82,79 @@ fun FrameAnalysisScreen(
     projectViewModel: ProjectViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit = {}
 ) {
+    val rec by viewModel.draftRecovery.observeAsState(null)
+    val r = rec
+    // While a stored draft is not restored the editor (scaffold, actions, menus, dialogs,
+    // keyboard effects) is not composed at all; only this recovery screen, with back available.
+    if (r != null) {
+        val ctx = LocalContext.current
+        FrameDraftRecoveryScreen(r, onStartNew = { viewModel.startNewDraft() }, onBack = onNavigateBack, onExport = {
+            val f = viewModel.exportRetainedRaw(java.io.File(ctx.cacheDir, "frame_draft_exports"))
+            if (f != null) {
+                try {
+                    val uri = androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.provider", f)
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    ctx.startActivity(Intent.createChooser(send, ctx.getString(R.string.frame_draft_recovery_export_chooser)))
+                } catch (e: Exception) {
+                    viewModel.reportExportShareFailed()
+                }
+            }
+        })
+    } else {
+        FrameAnalysisEditor(viewModel, projectViewModel, onNavigateBack)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FrameDraftRecoveryScreen(rec: DraftRecoveryUi, onStartNew: () -> Unit, onBack: () -> Unit, onExport: () -> Unit = {}) {
+    androidx.activity.compose.BackHandler(onBack = onBack)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { AppText(stringResource(R.string.frame_draft_recovery_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.frame_draft_recovery_back))
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier.padding(padding).padding(16.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            AppText(stringResource(R.string.frame_draft_recovery_body))
+            AppText(stringResource(
+                if (rec.retained) R.string.frame_draft_recovery_retained
+                else R.string.frame_draft_recovery_not_retained
+            ))
+            if (rec.startNewFailed) AppText(stringResource(R.string.frame_draft_recovery_failed))
+            AppText(stringResource(R.string.frame_draft_recovery_export_privacy))
+            if (rec.exportFailed) AppText(stringResource(R.string.frame_draft_recovery_export_failed))
+            AppButton(label = stringResource(R.string.frame_draft_recovery_export), onClick = onExport, style = AppButtonStyle.Outline)
+            AppButton(label = stringResource(R.string.frame_draft_recovery_start_new), onClick = onStartNew)
+            AppButton(
+                label = stringResource(R.string.frame_draft_recovery_back),
+                onClick = onBack,
+                style = AppButtonStyle.Outline
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FrameAnalysisEditor(
+    viewModel: FrameAnalysisViewModel,
+    projectViewModel: ProjectViewModel,
+    onNavigateBack: () -> Unit
+) {
     val nodes by viewModel.nodes.observeAsState(emptyList())
     val members by viewModel.members.observeAsState(emptyList())
     val nodalLoads by viewModel.nodalLoads.observeAsState(emptyList())
@@ -88,6 +165,7 @@ fun FrameAnalysisScreen(
     val isLoading by viewModel.isLoading.observeAsState(false)
     val errorMsg by viewModel.errorMessage.observeAsState()
     val validationIssues by viewModel.validationIssues.observeAsState(emptyList())
+    val draftSaveProblem by viewModel.draftSaveProblem.observeAsState(false)
     val designNotice by viewModel.designNotice.observeAsState()
     val modelLoadVersion by viewModel.modelLoadVersion.observeAsState(0)
     val diagramType by viewModel.activeDiagramType.observeAsState(DiagramType.BMD)
@@ -367,6 +445,19 @@ fun FrameAnalysisScreen(
                 )
             }
         )
+    }
+    if (draftSaveProblem) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            androidx.compose.material3.Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }
+            ) {
+                AppText(
+                    stringResource(R.string.frame_draft_autosave_problem),
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
     }
     if (isLoading) {
         Box(
