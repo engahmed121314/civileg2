@@ -69,6 +69,13 @@ class DrawingSampleUiTest {
         // Focused elevation is readable on the actual phone-sized viewport.
         rule.onNodeWithText(ar(R.string.view_elevation)).performClick()
         rule.waitForIdle()
+        // Remove only the known emulator launcher ANR, never hide an app failure.
+        val root = instrumentation.uiAutomation.rootInActiveWindow
+        if (root?.findAccessibilityNodeInfosByText("Pixel Launcher isn't responding")?.isNotEmpty() == true) {
+            root.findAccessibilityNodeInfosByText("Close app").firstOrNull()
+                ?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
+            android.os.SystemClock.sleep(800)
+        }
         instrumentation.uiAutomation.takeScreenshot().let { bitmap ->
             assertTrue("Actual Android screen screenshot missing", bitmap != null)
             File(out,"design-page.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }

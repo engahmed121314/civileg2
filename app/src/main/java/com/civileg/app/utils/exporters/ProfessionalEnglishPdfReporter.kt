@@ -140,7 +140,16 @@ object ProfessionalEnglishPdfReporter {
     private fun createBoldFont(): PdfFont = getFont(bold = true)
 
     private fun text(text: String, font: PdfFont, size: Float = 10f, color: DeviceRgb? = null): Text {
-        val t = Text(text).setFont(font).setFontSize(size)
+        // Android's Arabic locale formats numbers with Arabic-Indic digits.
+        // Reports are English-only; normalize digits before passing to Latin fonts.
+        val latinText = text.map { ch -> when (ch) {
+            in '\u0660'..'\u0669' -> ('0'.code + ch.code - '\u0660'.code).toChar()
+            in '\u06F0'..'\u06F9' -> ('0'.code + ch.code - '\u06F0'.code).toChar()
+            '\u066B' -> '.'
+            '\u066C' -> ','
+            else -> ch
+        } }.joinToString("")
+        val t = Text(latinText).setFont(font).setFontSize(size)
         color?.let { t.setFontColor(it) }
         return t
     }
@@ -769,8 +778,9 @@ object ProfessionalEnglishPdfReporter {
             val stream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
             val img = Image(ImageDataFactory.create(stream.toByteArray()))
-            img.setAutoScale(true)
-            img.setMaxWidth(480f)
+            // Reserve room for the section heading, caption and page footer.
+            // AutoScale previously filled the page then orphaned its caption.
+            img.scaleToFit(480f, 620f)
             img.setHorizontalAlignment(HorizontalAlignment.CENTER)
             document.add(img)
             document.add(Paragraph().add(text(title, createPdfFont(), 9f, SECONDARY))
