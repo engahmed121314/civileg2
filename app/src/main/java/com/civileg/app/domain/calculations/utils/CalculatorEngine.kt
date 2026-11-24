@@ -2134,28 +2134,28 @@ class CalculatorEngine @Inject constructor(
                     stepNumber = 1, title = "Geometry",
                     formula = "n = L/tread; total rise = riser·(n+1)",
                     formulaWithValues = "${nRisers} risers × ${"%.0f".format(riser)} mm, ${nTreads} treads × ${"%.0f".format(tread)} mm",
-                    result = "Total rise ${"%.2f".format(totalRise)} m", unit = "m",
+                    result = "Total rise ${"%.2f".format(totalRise)}", unit = "m",
                     codeReference = ref
                 ),
                 CalculationStep(
                     stepNumber = 2, title = "Factored Load",
                     formula = "wu = γD·DL + γL·LL (per m width)",
                     formulaWithValues = "wu = ${"%.2f".format(result.horizontalLoad)} kN/m",
-                    result = "${"%.2f".format(result.horizontalLoad)} kN/m", unit = "kN/m",
+                    result = "${"%.2f".format(result.horizontalLoad)}", unit = "kN/m",
                     codeReference = ref
                 ),
                 CalculationStep(
                     stepNumber = 3, title = "Design Moment",
                     formula = "Mu = wu·L²/8",
                     formulaWithValues = "Mu = ${"%.1f".format(result.maxMoment)} kN·m/m",
-                    result = "${"%.1f".format(result.maxMoment)} kN·m/m", unit = "kN·m/m",
+                    result = "${"%.1f".format(result.maxMoment)}", unit = "kN·m/m",
                     codeReference = ref
                 ),
                 CalculationStep(
                     stepNumber = 4, title = "Main Steel",
                     formula = "As = Mu / (0.87fy·j·d)",
                     formulaWithValues = "As = ${"%.0f".format(result.mainRebarArea)} mm²/m → ${mainBar.barString}",
-                    result = mainBar.barString, unit = "mm²/m",
+                    result = mainBar.barString, unit = "",
                     codeReference = ref, isPass = result.isSafe,
                     status = if (result.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
                 ),
@@ -2163,7 +2163,7 @@ class CalculatorEngine @Inject constructor(
                     stepNumber = 5, title = "Distribution Steel",
                     formula = "As,dist = ρmin·b·h",
                     formulaWithValues = "As = ${"%.0f".format(result.distributionRebarArea)} mm²/m → ${distBar.barString}",
-                    result = distBar.barString, unit = "mm²/m",
+                    result = distBar.barString, unit = "",
                     codeReference = ref
                 ),
                 CalculationStep(
