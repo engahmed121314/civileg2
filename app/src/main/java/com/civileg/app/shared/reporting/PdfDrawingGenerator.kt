@@ -959,17 +959,23 @@ object PdfDrawingGenerator {
         dropPanelSize: Double = 0.0,
         ribWidth: Double = 100.0,
         ribSpacing: Double = 500.0,
-        columnSize: Double = 400.0
+        columnSize: Double = 400.0,
+        spansInMm: Boolean = false
     ): Bitmap {
+        // Unit contract: spanX/spanY are metres unless spansInMm is true. The flat,
+        // hollow-block and waffle drawings work in millimetres (column, drop panel,
+        // rib width and spacing are mm), so spans are normalised to mm for them.
+        val spanXmm = SlabDrawingUnits.spanToMm(spanX, spansInMm)
+        val spanYmm = SlabDrawingUnits.spanToMm(spanY, spansInMm)
         return when (slabType) {
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.SOLID ->
                 generateSolidSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover)
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.FLAT ->
-                generateFlatSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, dropPanelSize, columnSize)
+                generateFlatSlabDrawing(spanXmm, spanYmm, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, dropPanelSize, columnSize)
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK ->
-                generateHordiSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
+                generateHordiSlabDrawing(spanXmm, spanYmm, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.WAFFLE ->
-                generateWaffleSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
+                generateWaffleSlabDrawing(spanXmm, spanYmm, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.POST_TENSION ->
                 generatePostTensionSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover)
         }
@@ -1055,8 +1061,8 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
-        canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${spanX.toInt()} mm (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${spanY.toInt()} mm (Ly)", offset = 25f)
         canvas.drawTextCentered("FLAT SLAB PLAN — DROP PANELS", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
@@ -1074,8 +1080,8 @@ object PdfDrawingGenerator {
         val secL = W * 0.55f; val secT = 100f
         val secViewW = planW * 0.75f
         val secScale = secViewW / spanX.toFloat()
-        val secH = maxOf(thickness.toFloat() / 1000f * secScale * 4f, 40f)
-        val dpH = maxOf((dropPanelSize.toFloat() / 1000f * secScale * 4f), 20f)
+        val secH = maxOf(thickness.toFloat() * secScale * 4f, 40f)
+        val dpH = maxOf((dropPanelSize.toFloat() * secScale * 4f), 20f)
 
         // Drop panel zone (left + right — represents column strip)
         canvas.drawRect(secL, secT, secL + 60f, secT + secH + dpH, fillPaint(Color.parseColor("#8A8A8A")))
@@ -1092,7 +1098,7 @@ object PdfDrawingGenerator {
 
         // Bottom bars in section
         val barR = maxOf(mainDia.toFloat() * 0.4f, 4f)
-        val numBars = minOf((spanX * 1000 / mainSpacing).toInt(), 12)
+        val numBars = minOf((spanX / mainSpacing).toInt(), 12)
         val barStartX = secL + 10f + barR
         val barEndX = secL + secViewW - 10f - barR
         for (i in 0 until numBars) {
@@ -1102,7 +1108,7 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(secL, secL + secViewW, secT + secH + dpH + 50f, "${(spanX * 1000).toInt()} mm")
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + dpH + 50f, "${spanX.toInt()} mm")
         canvas.drawVDim(secT, secT + secH + dpH, secL + secViewW + 20f, "t=${thickness.toInt()}mm + DP=${dropPanelSize.toInt()}mm", offset = 25f)
         canvas.drawTextCentered("SECTION A-A (WITH DROP PANEL)", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
@@ -1111,8 +1117,8 @@ object PdfDrawingGenerator {
             x = 80f, y = H * 0.6f,
             data = listOf(
                 listOf("Mark", "Dia", "Direction", "Spacing", "Layer", "Length"),
-                listOf("M1", "${mainDia.toInt()}", "Short span Lx", "@ ${mainSpacing.toInt()} c/c", "Bottom", "${(spanX * 1000).toInt()}"),
-                listOf("D1", "${distDia.toInt()}", "Long span Ly", "@ ${distSpacing.toInt()} c/c", "Bottom", "${(spanY * 1000).toInt()}")
+                listOf("M1", "${mainDia.toInt()}", "Short span Lx", "@ ${mainSpacing.toInt()} c/c", "Bottom", "${spanX.toInt()}"),
+                listOf("D1", "${distDia.toInt()}", "Long span Ly", "@ ${distSpacing.toInt()} c/c", "Bottom", "${spanY.toInt()}")
             )
         )
         drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Flat Slab Detail")
@@ -1201,8 +1207,8 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
-        canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${spanX.toInt()} mm (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${spanY.toInt()} mm (Ly)", offset = 25f)
         canvas.drawTextCentered("HORDI SLAB PLAN — RIBS & VOID BLOCKS", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
@@ -1252,7 +1258,7 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${(spanX * 1000).toInt()} mm")
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${spanX.toInt()} mm")
         canvas.drawVDim(secT, secT + secH, secL + secViewW + 20f, "t=${thickness.toInt()}mm", offset = 25f)
         canvas.drawTextCentered("SECTION A-A — RIBS & BLOCKS", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
@@ -1261,9 +1267,9 @@ object PdfDrawingGenerator {
             x = 80f, y = H * 0.6f,
             data = listOf(
                 listOf("Mark", "Dia", "Location", "Spacing", "Length"),
-                listOf("R1", "${mainDia.toInt()}", "Rib bottom", "@ ${ribSpacing.toInt()} mm", "${(spanX * 1000).toInt()}"),
-                listOf("T1", "${distDia.toInt()}", "Slab top", "@ ${distSpacing.toInt()} mm", "${(spanY * 1000).toInt()}"),
-                listOf("S1", "8", "Rib stirrups", "@ 200 mm", "${(spanX * 1000).toInt()}")
+                listOf("R1", "${mainDia.toInt()}", "Rib bottom", "@ ${ribSpacing.toInt()} mm", "${spanX.toInt()}"),
+                listOf("T1", "${distDia.toInt()}", "Slab top", "@ ${distSpacing.toInt()} mm", "${spanY.toInt()}"),
+                listOf("S1", "8", "Rib stirrups", "@ 200 mm", "${spanX.toInt()}")
             )
         )
         drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Hordi Slab Detail")
@@ -1325,8 +1331,8 @@ object PdfDrawingGenerator {
         canvas.drawRect(planL, planT, planL + planW, planT + planH, outlineP)
 
         // Dimensions
-        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
-        canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${spanX.toInt()} mm (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${spanY.toInt()} mm (Ly)", offset = 25f)
         canvas.drawTextCentered("WAFFLE SLAB PLAN — TWO-WAY RIBS", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
@@ -1364,7 +1370,7 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${(spanX * 1000).toInt()} mm")
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${spanX.toInt()} mm")
         canvas.drawVDim(secT, secT + secH, secL + secViewW + 20f, "t=${thickness.toInt()}mm", offset = 25f)
         canvas.drawTextCentered("SECTION A-A — WAFFLE", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 

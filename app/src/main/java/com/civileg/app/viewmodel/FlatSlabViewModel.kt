@@ -205,7 +205,7 @@ class FlatSlabViewModel @Inject constructor(
                 val drawingBitmap = pendingDrawingBitmap ?: runCatching {
                     com.civileg.app.shared.reporting.PdfDrawingGenerator.generateSlabDrawingByType(
                         slabType = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.FLAT,
-                        spanX = input.lx, spanY = input.ly, thickness = input.slabThickness,
+                        spanX = input.lx, spanY = input.ly, spansInMm = true, thickness = input.slabThickness,
                         mainDia = res.columnStripBotRebar.diameter.toDouble(),
                         mainSpacing = res.columnStripBotRebar.spacing.toDouble(),
                         distDia = res.middleStripBotRebar.diameter.toDouble(),
