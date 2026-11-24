@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
+import com.civileg.app.domain.calculations.utils.StairFlightGeometry
 import com.civileg.app.domain.calculations.utils.BbsGenerator
 import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.domain.calculations.utils.CalculatorEngine.StairType
@@ -477,7 +478,7 @@ fun StairScreen(
                         selectedViewMode = selectedViewMode,
                         onViewModeChanged = { selectedViewMode = it },
                         drawingContent = {
-                            val nRisers = ((res.span * 1000.0) / res.tread).toInt().coerceAtLeast(1)
+                            val geometry = StairFlightGeometry.from(res.span, res.riser, res.tread)
                             val codeAwareCover = when (selectedCode) {
                                 DesignCode.ACI -> 38.0
                                 DesignCode.SBC -> 40.0
@@ -488,8 +489,8 @@ fun StairScreen(
                             val landingLen = if (hasLanding) res.tread * 2.0 else 0.0
                             ProfessionalStairDrawing(
                                 stairWidth = (FormValidator.parseNumber(stairWidth) ?: 1200.0),
-                                totalHeight = nRisers.toDouble() * res.riser,
-                                totalLength = nRisers.toDouble() * res.tread,
+                                totalHeight = geometry.riseMm,
+                                totalLength = geometry.runMm,
                                 riserHeight = res.riser,
                                 treadWidth = res.tread,
                                 slabThickness = res.thickness,
@@ -513,7 +514,7 @@ fun StairScreen(
         }
         // PDF drawing capture area (invisible, renders at viewMode=0)
         result?.let { res ->
-            val nRisers = ((res.span * 1000.0) / res.tread).toInt().coerceAtLeast(1)
+            val geometry = StairFlightGeometry.from(res.span, res.riser, res.tread)
             val codeAwareCover = when (selectedCode) {
                 DesignCode.ACI -> 38.0
                 DesignCode.SBC -> 40.0
@@ -530,8 +531,8 @@ fun StairScreen(
                 Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
                     ProfessionalStairDrawing(
                         stairWidth = (FormValidator.parseNumber(stairWidth) ?: 1200.0),
-                        totalHeight = nRisers.toDouble() * res.riser,
-                        totalLength = nRisers.toDouble() * res.tread,
+                        totalHeight = geometry.riseMm,
+                        totalLength = geometry.runMm,
                         riserHeight = res.riser,
                         treadWidth = res.tread,
                         slabThickness = res.thickness,

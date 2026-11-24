@@ -82,9 +82,9 @@ object BoqEstimator {
         widthM: Double,
         mark: String = "Stair"
     ): List<BoqRow> {
-        val runM = result.span
-        val risers = if (result.tread > 0.0) (runM * 1000.0 / result.tread).toInt().coerceAtLeast(1) else 0
-        val riseM = risers * result.riser / 1000.0
+        val geometry = StairFlightGeometry.from(result.span, result.riser, result.tread)
+        val runM = geometry.runMm / 1000.0
+        val riseM = geometry.riseMm / 1000.0
         val inclinedLengthM = sqrt(runM * runM + riseM * riseM)
         return listOf(
             item(1, "Concrete - $mark", "m3", result.concreteVolume),
