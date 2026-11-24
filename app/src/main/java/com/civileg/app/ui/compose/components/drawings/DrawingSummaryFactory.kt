@@ -21,13 +21,13 @@ private fun List<CalculatorEngine.DesignSafetyCheck>.asDrawingChecks(): List<Gen
 
 fun beamDrawingSummary(result: CalculatorEngine.BeamResult): DrawingResultSummary =
     DrawingResultSummary(
-        isSafe = result.isSafe,
+        isSafe = result.isSafe && result.codeAcceptanceComplete,
         utilizationRatio = result.utilizationRatio,
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
-        codeNotes = result.codeNotes,
-        designCodeLabel = result.code.version
+        codeNotes = result.codeNotes + result.warnings,
+        designCodeLabel = result.shearCodeReview?.basis ?: "Unverified edition"
     )
 
 fun columnDrawingSummary(result: CalculatorEngine.ColumnResult): DrawingResultSummary =

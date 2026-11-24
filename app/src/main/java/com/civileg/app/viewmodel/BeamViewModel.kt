@@ -143,6 +143,7 @@ class BeamViewModel @Inject constructor(
     /** Standalone DXF sheet for the current beam design (null when no result). */
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val res = _result.value ?: return null
+        if (!res.codeAcceptanceComplete) return null
         return com.civileg.app.utils.ElementDxfDrawings.beamSection(
             title = "BEAM ${lastSupportType.displayName}",
             widthMm = res.width.toDouble(),
@@ -157,6 +158,11 @@ class BeamViewModel @Inject constructor(
 
     /** Export just the CAD drawing (no PDF) for the current design. */
     fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        if (_result.value?.codeAcceptanceComplete != true) {
+            _errorMessage.value = "Export pending: complete the listed case/code checks before issuing drawings or BBS."
+            onComplete(null)
+            return
+        }
         val res = _result.value
         val spanMm = ((if (res != null && res.span > 0) res.span else lastSpan) * 1000.0)
         val bbs = if (res != null) {
@@ -176,6 +182,11 @@ class BeamViewModel @Inject constructor(
 
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val res = _result.value ?: return
+        if (!res.codeAcceptanceComplete) {
+            _errorMessage.value = "Export pending: complete the listed case/code checks before issuing drawings or BBS."
+            onComplete(null)
+            return
+        }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {

@@ -246,7 +246,8 @@ class ExportManager(private val context: Context) {
         bbsEntries: List<BbsEntry> = emptyList(),
         boqRows: List<ProfessionalEnglishPdfReporter.BoqRow> = emptyList(),
         outputPath: String,
-        openPdfOnComplete: Boolean = false
+        openPdfOnComplete: Boolean = false,
+        incompleteReview: Boolean = false
     ): ExportBundle {
         val pdfFile = try {
             ProfessionalEnglishPdfReporter.generateReportLegacy(
@@ -261,6 +262,7 @@ class ExportManager(private val context: Context) {
                 drawingBitmap = drawingBitmap,
                 outputPath = outputPath,
                 boqRows = boqRows,
+                incompleteReview = incompleteReview,
                 bbsRows = bbsEntries.map { entry ->
                     ProfessionalEnglishPdfReporter.BbsRow(
                         memberMark = entry.memberMark,

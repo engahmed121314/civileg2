@@ -28,6 +28,27 @@ data class BbsEntry(
 
 object BbsGenerator {
 
+    /** Builds rows only from explicitly adopted physical groups. No extra
+     * topping steel, hooks, laps or stirrups are invented here. Review-only
+     * schedules must be labeled by the caller, never issued as final detailing.
+     */
+    fun fromAdoptedSchedule(memberMark: String, schedule: AdoptedReinforcementSchedule): List<BbsEntry> {
+        InputGuard.notBlank("memberMark", memberMark)
+        return schedule.groups.map { group ->
+            require(group.startExtensionMm == 0.0 && group.endExtensionMm == 0.0) {
+                "Non-straight adopted bars require an explicit shape-code adapter"
+            }
+            BbsEntry(
+                memberMark = memberMark, barMark = group.mark,
+                diameter = group.diameterMm, shapeCode = 0,
+                count = group.totalCount, lengthA = group.bodyLengthMm,
+                lengthB = group.startExtensionMm, lengthC = group.endExtensionMm,
+                totalLengthPerBar = group.cutLengthMm, totalWeightKg = group.totalWeightKg
+            )
+        }
+    }
+
+
     /**
      * Generates a Bar Bending Schedule for a designed Beam.
      * @param storyHeight_mm Column/beam story height in mm (default 3000mm = 3m)

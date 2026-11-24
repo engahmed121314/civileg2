@@ -187,15 +187,20 @@ class SBCJoistSlabTest {
         assertTrue(ecpResult.requiredReinforcement > sbcResult.requiredReinforcement)
         assertTrue(sbcResult.requiredReinforcement > aciResult.requiredReinforcement)
 
-        // 750 mm clear spacing: SBC's 700 mm cap (2024 claim) rejects it, ACI's
-        // 30 in (~762 mm) and ECP's unbounded check accept it (S-02/S-03).
+        // Geometry characterization: SBC rejects 750 mm clear spacing, while
+        // ACI accepts it. The legacy ECP engine has no spacing check here;
+        // its four-bar cap independently leaves this flexural demand unsafe.
+        // The separate ECP2020 validator covers verified geometry boundaries.
         val sbcWide = run(sbc, 900.0)
         val aciWide = run(aci, 900.0)
         val ecpWide = run(ecp, 900.0)
         assertTrue(sbcWide.warnings.any { it.contains("8.4.1") })
         assertFalse(sbcWide.isSafe)
         assertTrue(aciWide.isSafe)
-        assertTrue(ecpWide.isSafe)
+        assertFalse(ecpWide.isSafe)
+        assertTrue(ecpWide.providedReinforcement < ecpWide.requiredReinforcement)
+        assertTrue(ecpWide.utilizationRatio > 1.0)
+        assertTrue(ecpWide.warnings.any { it.contains("less than") })
     }
 
     @Test

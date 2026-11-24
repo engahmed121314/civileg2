@@ -41,16 +41,22 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         InputGuard.positive("ribWidth", ribWidth)
         InputGuard.positive("ribSpacing", ribSpacing)
         InputGuard.positive("totalThickness", totalThickness)
+        InputGuard.positive("toppingThickness", toppingThickness)
+        InputGuard.nonNegative("designMoment", designMoment)
+        InputGuard.nonNegative("designShear", designShear)
+        InputGuard.require(toppingThickness < totalThickness, "Topping must be thinner than total slab thickness")
         InputGuard.positive("span", span)
         InputGuard.notNull("loadCombination", loadCombination)
         val fc = fcu / GAMMA_C
-        val d = totalThickness - 20.0 - 10.0 // cover + half bar diameter
+        val d = totalThickness - 20.0 - 10.0 // Legacy effective depth, pending code-specific adoption.
+        InputGuard.positive("effectiveDepth", d)
 
         // Required area of steel per rib
         val Mu = designMoment * 1e6 // N.mm
         val Rn = Mu / (PHI_FLEXURE * ribWidth * d * d)
         val m = fy / (0.85 * fc)
-        val rho = (1.0 - sqrt(max(0.0, 1.0 - 2.0 * m * Rn / fy))) / m
+        val discriminant = 1.0 - 2.0 * m * Rn / fy
+        val rho = (1.0 - sqrt(max(0.0, discriminant))) / m
         val AsReq = rho * ribWidth * d
 
         // Min steel
@@ -66,8 +72,17 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         // Shear capacity
         val Vc = 0.24 * sqrt(fc) * ribWidth * d / 1000.0 * PHI_SHEAR
 
-        val utilizationRatio = if (Vc > 0) designShear / Vc else 2.0
-        val isSafe = designShear <= Vc
+        val flexureFeasible = discriminant >= 0.0
+        val areaSufficient = com.civileg.app.domain.calculations.utils.HordiBarAdoption
+            .areaIsSufficient(AsReq, AsProvActual)
+        val shearUtilization = if (Vc > 0) designShear / Vc else 2.0
+        val areaUtilization = if (AsProvActual > 0) AsReq / AsProvActual else 2.0
+        val utilizationRatio = maxOf(shearUtilization, areaUtilization, if (flexureFeasible) 0.0 else 2.0)
+        val isSafe = flexureFeasible && areaSufficient && designShear <= Vc
+        val warnings = buildList {
+            if (!flexureFeasible) add("Flexure is outside the legacy singly reinforced section solution; redesign required")
+            if (!areaSufficient) add("Adopted main bars provide less than the calculated required steel area")
+        }
 
         return SlabDesignResult(
             requiredReinforcement = AsReq,
@@ -77,7 +92,8 @@ class ECPHordiSlabDesign : HordiSlabDesign {
             minThickness = totalThickness,
             shearCapacity = Vc,
             isSafe = isSafe,
-            utilizationRatio = utilizationRatio
+            utilizationRatio = utilizationRatio,
+            warnings = warnings
         )
     }
 }

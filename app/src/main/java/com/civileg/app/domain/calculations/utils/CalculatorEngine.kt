@@ -166,7 +166,9 @@ class CalculatorEngine @Inject constructor(
         val steelWasteTons: Double = 0.0,
         val neutralAxisDepth: Double = 0.0,
         val warnings: List<String> = emptyList(),
-        val codeNotes: List<String> = emptyList()
+        val codeNotes: List<String> = emptyList(),
+        val shearCodeReview: @RawValue BeamShearCodeReview.Review? = null,
+        val codeAcceptanceComplete: Boolean = false
     ) : Parcelable
 
     @Parcelize
@@ -1137,7 +1139,7 @@ class CalculatorEngine @Inject constructor(
             DesignCode.ACI, DesignCode.SBC -> 0.85 * 0.8 * fcu
         }
         val fsDesign = when (code) {
-            DesignCode.ECP -> fy / 1.15
+            DesignCode.ECP -> minOf(fy,420.0) / 1.15
             DesignCode.ACI, DesignCode.SBC -> fy
         }
         val phi = if (code == DesignCode.ECP) 1.0 else 0.65
@@ -1365,16 +1367,22 @@ class CalculatorEngine @Inject constructor(
         // ── Provided shear capacity: Vc + Vs (or φ(Vc + Vs) for ACI/SBC) ──
         val stirrupSpacing = shearRes.stirrupSpacing.takeIf { it > 0.0 } ?: 200.0
         val stirrupDia = shearRes.stirrupDiameter.takeIf { it > 0.0 } ?: stirrupDiameter
-        val asvPerS = shearRes.providedShearReinforcement.takeIf { it > 0.0 }
-            ?: (shearRes.numLegs * PI / 4.0 * stirrupDia * stirrupDia / stirrupSpacing)
+        // Factory field is mm2/m. Derive mm2/mm from the actual adopted links
+        // instead of silently treating that field as1000x larger Av/s.
+        val asvPerS = shearRes.numLegs * PI / 4.0 * stirrupDia * stirrupDia / stirrupSpacing
         val steelShearStrength = when (code) {
-            DesignCode.ECP -> fy / 1.15
-            DesignCode.ACI, DesignCode.SBC -> fy
+            DesignCode.ECP -> minOf(fy,420.0) / 1.15
+            DesignCode.ACI, DesignCode.SBC -> minOf(fy,420.0)
         }
         val vsKn = asvPerS * steelShearStrength * effectiveDepth / 1000.0
         val shearPhi = if (code == DesignCode.ECP) 1.0 else 0.75
-        val totalShearCapacity = shearPhi * (shearRes.concreteShearCapacity + vsKn)
-        val shearSafe = vu <= totalShearCapacity + 1e-6
+        // ECP cracked concrete contribution where links contribute, Eq4-30.
+        val vcWithLinks = if(code==DesignCode.ECP) 0.12*sqrt(fcu/1.5)*width*effectiveDepth/1000.0 else shearRes.concreteShearCapacity
+        val linkCapacity = shearPhi * (vcWithLinks + vsKn)
+        val codeMaximum = if(shearRes.utilizationRatio>0 && vu>0) vu/shearRes.utilizationRatio else Double.POSITIVE_INFINITY
+        val shearReview=BeamShearCodeReview.review(code,fcu,fy,width,height,effectiveDepth,vu,stirrupDia,shearRes.numLegs,stirrupSpacing)
+        val totalShearCapacity = minOf(linkCapacity,codeMaximum,shearReview.capacityKn)
+        val shearSafe = shearRes.isSafe && shearReview.numericChecksPass && vu <= totalShearCapacity + 1e-6
 
         // ── Moment capacity from the provided steel (engine's own capacity) ──
         fun capacityOf(res: com.civileg.app.domain.entities.ReinforcementResult, moment: Double, d: Double): Double {
@@ -1390,7 +1398,7 @@ class CalculatorEngine @Inject constructor(
         }
         val topCapacity = capacityOf(topRes, topMoment, effectiveDepth)
         val bottomCapacity = capacityOf(bottomRes, bottomMoment, effectiveDepth)
-        val flexureSafe = topMoment <= topCapacity + 1e-6 && bottomMoment <= bottomCapacity + 1e-6
+        val flexureSafe = topRes.isSafe && bottomRes.isSafe && topMoment <= topCapacity + 1e-6 && bottomMoment <= bottomCapacity + 1e-6
 
         val concreteVolume = (width / 1000.0) * (height / 1000.0) * span
         val topBarWeight = topRes.astProvided * span * 7850.0 / 1e6
@@ -1412,11 +1420,13 @@ class CalculatorEngine @Inject constructor(
         )
 
         val warnings = (topRes.warnings + bottomRes.warnings + shearRes.warnings + defCheck.warnings +
-            listOfNotNull(defCheck.message.takeIf { it.isNotBlank() })).distinct()
+            listOfNotNull(defCheck.message.takeIf { it.isNotBlank() }) +
+            shearReview.checks.filterNot { it.passed }.map { "${it.name}: ${it.value} ${it.unit}; limit ${it.limit}. ${it.redesign} [${it.clause}]" } +
+            shearReview.unresolved.map { "PRELIMINARY: $it" }).distinct()
         val codeNotes = (topRes.codeNotes + bottomRes.codeNotes + shearRes.codeNotes).distinct()
         val ref = when (code) {
             DesignCode.ECP -> "ECP 203-2020 §4"
-            DesignCode.ACI -> "ACI 318-19 §9"
+            DesignCode.ACI -> "ACI 318M-14 §9"
             DesignCode.SBC -> "SBC 304-2018 §9"
         }
         val steps = listOf(
@@ -1457,7 +1467,7 @@ class CalculatorEngine @Inject constructor(
             CalculationStep(
                 stepNumber = 5, title = "Shear Reinforcement",
                 formula = "V = φ(Vc + Vs); Vs = Asv/s·fy·d",
-                formulaWithValues = "Vc = ${"%.1f".format(shearRes.concreteShearCapacity)} kN, Vs = ${"%.1f".format(vsKn)} kN, ø${stirrupDia.toInt()}@${"%.0f".format(stirrupSpacing)} mm",
+                formulaWithValues = "Vc = ${"%.1f".format(vcWithLinks)} kN, Vs = ${"%.1f".format(vsKn)} kN, ø${stirrupDia.toInt()}@${"%.0f".format(stirrupSpacing)} mm",
                 result = "V = ${"%.1f".format(totalShearCapacity)} kN vs Vu = ${"%.1f".format(vu)} kN", unit = "kN",
                 codeReference = ref,
                 isPass = shearSafe,
@@ -1476,6 +1486,8 @@ class CalculatorEngine @Inject constructor(
 
         return BeamResult(
             width = width, depth = height, mu = mu, vu = vu,
+            shearCodeReview = shearReview,
+            codeAcceptanceComplete = false,
             reinforcementBottom = ReinforcementBar(
                 numBars = bottomRes.numberOfBars, diameter = bottomRes.barDiameter.toInt(),
                 weightKg = bottomBarWeight
@@ -1486,6 +1498,7 @@ class CalculatorEngine @Inject constructor(
             ),
             stirrups = StirrupReinforcement(
                 diameter = stirrupDia.toInt(), spacing = stirrupSpacing,
+                description = "${shearRes.numLegs}-leg ${stirrupDia.toInt()} mm @ ${stirrupSpacing} mm",
                 numLegs = shearRes.numLegs, weightKg = stirrupWeight
             ),
             safetyChecks = safetyChecks,

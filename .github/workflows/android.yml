@@ -140,6 +140,7 @@ jobs:
       # MavenArtifactFetcher IOExceptions. The sha1 is verified so a truncated
       # or poisoned download fails loudly instead of corrupting the test run.
       - name: Provision Robolectric android-all jar
+        timeout-minutes: 10
         run: |
           set -euo pipefail
           DIR="$GITHUB_WORKSPACE/.robolectric-deps"
@@ -151,18 +152,36 @@ jobs:
             V="${entry%% *}"
             SHA1="${entry##* }"
             JAR="$DIR/android-all-instrumented-$V.jar"
-            URL="https://repo1.maven.org/maven2/org/robolectric/android-all-instrumented/$V/android-all-instrumented-$V.jar"
-            for attempt in 1 2 3; do
-              if curl -fsSL --retry 3 --connect-timeout 30 -o "$JAR" "$URL"; then
-                break
-              fi
-              if [ "$attempt" = 3 ]; then
-                echo "::error::failed to download Robolectric android-all jar $V after 3 attempts"
+            TMP="$JAR.part"
+            downloaded=false
+            for host in repo1.maven.org repo.maven.apache.org; do
+              URL="https://$host/maven2/org/robolectric/android-all-instrumented/$V/android-all-instrumented-$V.jar"
+              rm -f "$TMP"
+              HEADERS="$TMP.headers"
+              STATUS=$(curl -fL --connect-timeout 15 --max-time 120 --speed-limit 1024 --speed-time 30 -D "$HEADERS" -w '%{http_code}' -o "$TMP" "$URL") && transfer_ok=true || transfer_ok=false
+              if [ "$STATUS" = 429 ]; then
+                RETRY_AFTER=$(awk 'tolower($1)=="retry-after:" {sub(/\r$/,"",$2);print $2}' "$HEADERS")
+                echo "::error::Maven Central rate limited this runner (429); Retry-After=${RETRY_AFTER:-not supplied}. No fallback or immediate retry attempted."
+                rm -f "$TMP" "$HEADERS"
                 exit 1
               fi
-              sleep 10
+              rm -f "$HEADERS"
+              if [ "$transfer_ok" = true ]; then
+                if ! printf '%s  %s\n' "$SHA1" "$TMP" | sha1sum -c -; then
+                  echo "::error::Robolectric jar checksum mismatch; refusing fallback or unverified artifact"
+                  rm -f "$TMP"
+                  exit 1
+                fi
+                mv "$TMP" "$JAR"
+                downloaded=true
+                break
+              fi
+              rm -f "$TMP"
             done
-            echo "$SHA1  $JAR" | sha1sum -c -
+            if [ "$downloaded" != true ]; then
+              echo "::error::failed to download and verify Robolectric android-all jar $V from both Maven Central hosts"
+              exit 1
+            fi
           done
           echo "ROBOLECTRIC_DEPS_DIR=$DIR" >> "$GITHUB_ENV"
 
