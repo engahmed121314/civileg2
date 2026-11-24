@@ -1563,6 +1563,8 @@
     <string name="converter_moment">العزم</string>
     <string name="converter_input_value">القيمة المدخلة</string>
     <string name="converter_result">النتيجة</string>
+    <string name="converter_invalid_number">أدخل رقمًا صحيحًا</string>
+    <string name="converter_result_out_of_range">النتيجة أكبر من أن تُعرض</string>
 
     <!-- ميزان القامة -->
     <string name="water_level_tool">أداة الميزان الاحترافية</string>
@@ -2418,4 +2420,29 @@
     <string name="validation_out_of_range">يجب أن تكون القيمة بين %1$s و %2$s</string>
     <string name="validation_invalid_combination">هذه القيمة تتعارض مع مدخلات أخرى</string>
     <string name="validation_summary">صحّح %1$d من الخانات المعلّمة بالأحمر</string>
+    <string name="tool_spirit_level">ميزان مياه</string>
+    <string name="tool_spirit_level_sub">ميزان بحساس الهاتف (مسطح، الشاشة لأعلى)</string>
+    <string name="tool_ruler">مسطرة</string>
+    <string name="tool_ruler_sub">مم وسم، معايرة ببطاقة بنكية</string>
+    <string name="level_sensor_unavailable">لا يوجد حساس جاذبية أو مقياس تسارع في هذا الجهاز، لذلك ميزان المياه غير متاح.</string>
+    <string name="level_face_up_hint">ضع الهاتف مسطحاً والشاشة لأعلى.</string>
+    <string name="level_sensor_unreliable">الجهاز يبلّغ أن الحساس غير موثوق. قد تكون القراءات خاطئة.</string>
+    <string name="level_readout">X: %1$s°  Y: %2$s°  (%3$s%%, %4$s%%)</string>
+    <string name="level_waiting">بانتظار بيانات الحساس…</string>
+    <string name="level_zero_none">الصفر: معايرة الحساس الأصلية (بدون ضبط)</string>
+    <string name="level_zero_set">الصفر: مضبوط يدوياً على سطح تعتبره مستوياً</string>
+    <string name="level_set_zero">اضبط الصفر هنا</string>
+    <string name="level_reset_zero">إعادة ضبط الصفر</string>
+    <string name="level_note">الدقة تعتمد على معايرة حساس هذا الجهاز. اضبط الصفر على سطح مستوٍ معروف وتحقق بتدوير الهاتف 180 درجة. هذا ليس أداة مناسيب الميزان (RL/HI).</string>
+    <string name="ruler_calibrated">تمت المعايرة ببطاقة مرجعية</string>
+    <string name="ruler_uncalibrated">غير معايَرة: تستخدم كثافة الشاشة التي يبلغ بها الجهاز وهي غير دقيقة في كل الأجهزة</string>
+    <string name="ruler_calibrate">معايرة</string>
+    <string name="ruler_reset">إلغاء المعايرة</string>
+    <string name="ruler_save">حفظ</string>
+    <string name="ruler_cancel">إلغاء</string>
+    <string name="ruler_calibrate_help">ضع بطاقة بنكية (طولها 85.60 مم) على الشاشة من الحافة العليا للمسطرة. اسحب المستطيل حتى يساوي طول البطاقة ثم احفظ.</string>
+    <string name="calc_err_syntax">خطأ في الصيغة</string>
+    <string name="calc_err_div0">القسمة على صفر</string>
+    <string name="calc_err_domain">خطأ رياضي (خارج مجال الدالة)</string>
+    <string name="calc_err_overflow">النتيجة كبيرة جداً</string>
 </resources>

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,6 +30,9 @@ import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import java.util.Locale
+import com.civileg.app.utils.tools.ScientificEvaluator
+import com.civileg.app.utils.tools.ScientificEvaluator.AngleMode
+import com.civileg.app.utils.tools.ScientificEvaluator.ErrorKind
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,11 +40,12 @@ fun CalculatorScreen(
     onNavigateBack: () -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    var expression by remember { mutableStateOf("") }
-    var result by remember { mutableStateOf("0") }
-    var history by remember { mutableStateOf(listOf<String>()) }
-    var isNewCalculation by remember { mutableStateOf(true) }
-    var showHistory by remember { mutableStateOf(false) }
+    var expression by rememberSaveable { mutableStateOf("") }
+    var result by rememberSaveable { mutableStateOf("0") }
+    var history by rememberSaveable { mutableStateOf(listOf<String>()) }
+    var isNewCalculation by rememberSaveable { mutableStateOf(true) }
+    var showHistory by rememberSaveable { mutableStateOf(false) }
+    var angleMode by rememberSaveable { mutableStateOf(AngleMode.DEG) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -151,12 +156,23 @@ fun CalculatorScreen(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                ScientificFuncButton(angleMode.name) {
+                    angleMode = when (angleMode) { AngleMode.DEG -> AngleMode.RAD; AngleMode.RAD -> AngleMode.GRAD; AngleMode.GRAD -> AngleMode.DEG }
+                }
                 ScientificFuncButton("sin") { appendFunc("sin", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("cos") { appendFunc("cos", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("tan") { appendFunc("tan", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("asin") { appendFunc("asin", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("acos") { appendFunc("acos", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("atan") { appendFunc("atan", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("sinh") { appendFunc("sinh", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("cosh") { appendFunc("cosh", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("tanh") { appendFunc("tanh", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("∛") { appendFunc("cbrt", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("eˣ") { appendFunc("exp", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("log") { appendFunc("log", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("ln") { appendFunc("ln", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("√") { appendFunc("√", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("√") { appendFunc("sqrt", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("x²") { expression += "^2"; isNewCalculation = false }
                 ScientificFuncButton("π") { appendNumber("π", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("e") { appendNumber("e", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
@@ -219,24 +235,34 @@ fun CalculatorScreen(
                 // Row 5: ±, 0, ., =
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     CalcButton("±", Modifier.weight(1f)) {
+                        // Negate the whole expression: -(2+3) is -5. Prepending "-" alone would only negate the first term.
                         if (expression.isNotEmpty()) {
-                            if (expression.startsWith("-")) expression = expression.drop(1)
-                            else expression = "-$expression"
+                            expression = if (expression.startsWith("-(") && expression.endsWith(")")) expression.drop(2).dropLast(1)
+                            else "-($expression)"
                         }
                     }
                     CalcButton("0", Modifier.weight(1f)) { appendNumber("0", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton(".", Modifier.weight(1f)) { expression += "."; isNewCalculation = false }
-                    val calcErrorMsg = stringResource(R.string.error)
+                    val msgSyntax = stringResource(R.string.calc_err_syntax)
+                    val msgDiv0 = stringResource(R.string.calc_err_div0)
+                    val msgDomain = stringResource(R.string.calc_err_domain)
+                    val msgOverflow = stringResource(R.string.calc_err_overflow)
                     CalcButton("=", Modifier.weight(1f), Color(0xFF2E7D32)) {
-                        try {
-                            val evalResult = evaluateExpression(expression)
-                            val formatted = formatResult(evalResult, calcErrorMsg)
-                            history = history + "$expression = $formatted"
-                            result = formatted
-                            expression = formatted
-                            isNewCalculation = true
-                        } catch (e: Exception) {
-                            result = calcErrorMsg
+                        when (val r = ScientificEvaluator.evaluate(expression, angleMode)) {
+                            is ScientificEvaluator.Result.Value -> {
+                                val formatted = ScientificEvaluator.format(r.value)
+                                history = history + "$expression = $formatted (${angleMode.name})"
+                                result = formatted
+                                // Scientific text such as 1.5e-05 is not parsable as typed, so carry it forward as a product.
+                                expression = if ('e' in formatted) "(" + formatted.replace("e", "×10^") + ")" else formatted
+                                isNewCalculation = true
+                            }
+                            is ScientificEvaluator.Result.Error -> result = when (r.kind) {
+                                ErrorKind.SYNTAX -> msgSyntax
+                                ErrorKind.DIVIDE_BY_ZERO -> msgDiv0
+                                ErrorKind.DOMAIN -> msgDomain
+                                ErrorKind.OVERFLOW -> msgOverflow
+                            }
                         }
                     }
                 }
@@ -312,110 +338,5 @@ private fun appendFunc(
         setExpr("$func(")
     } else {
         setExpr(expr + "$func(")
-    }
-}
-
-private fun evaluateExpression(expr: String): Double {
-    val sanitized = expr
-        .replace("×", "*")
-        .replace("÷", "/")
-        .replace("π", PI.toString())
-        .replace("e", E.toString())
-
-    return object : Any() {
-        var pos = -1
-        var ch = 0
-
-        fun nextChar() {
-            ch = if (++pos < sanitized.length) sanitized[pos].toInt() else -1
-        }
-
-        fun eat(charToEat: Int): Boolean {
-            while (ch == ' '.toInt()) nextChar()
-            if (ch == charToEat) {
-                nextChar()
-                return true
-            }
-            return false
-        }
-
-        fun parse(): Double {
-            nextChar()
-            val x = parseExpression()
-            if (pos < sanitized.length) throw RuntimeException("Unexpected: " + ch.toChar())
-            return x
-        }
-
-        fun parseExpression(): Double {
-            var x = parseTerm()
-            while (true) {
-                if (eat('+'.toInt())) x += parseTerm() // addition
-                else if (eat('-'.toInt())) x -= parseTerm() // subtraction
-                else return x
-            }
-        }
-
-        fun parseTerm(): Double {
-            var x = parseFactor()
-            while (true) {
-                if (eat('*'.toInt())) x *= parseFactor() // multiplication
-                else if (eat('/'.toInt())) x /= parseFactor() // division
-                else return x
-            }
-        }
-
-        fun parseFactor(): Double {
-            if (eat('+'.toInt())) return parseFactor()
-            if (eat('-'.toInt())) return -parseFactor()
-
-            var x: Double
-            val startPos = pos
-            if (eat('('.toInt())) {
-                x = parseExpression()
-                eat(')'.toInt())
-            } else if ((ch >= '0'.toInt() && ch <= '9'.toInt()) || ch == '.'.toInt()) {
-                while ((ch >= '0'.toInt() && ch <= '9'.toInt()) || ch == '.'.toInt()) nextChar()
-                x = sanitized.substring(startPos, pos).toDouble()
-            } else if (ch >= 'a'.toInt() && ch <= 'z'.toInt()) {
-                while (ch >= 'a'.toInt() && ch <= 'z'.toInt()) nextChar()
-                val func = sanitized.substring(startPos, pos)
-                if (eat('('.toInt())) {
-                    x = parseExpression()
-                    eat(')'.toInt())
-                } else {
-                    x = parseFactor()
-                }
-                x = when (func) {
-                    "sin" -> sin(Math.toRadians(x))
-                    "cos" -> cos(Math.toRadians(x))
-                    "tan" -> tan(Math.toRadians(x))
-                    "log" -> log10(x)
-                    "ln" -> ln(x)
-                    "sqrt", "√" -> sqrt(x)
-                    "abs" -> abs(x)
-                    else -> throw RuntimeException("Unknown function: $func")
-                }
-            } else {
-                throw RuntimeException("Unexpected: " + ch.toChar())
-            }
-
-            if (eat('^'.toInt())) x = x.pow(parseFactor()) // exponentiation
-            if (eat('!'.toInt())) {
-                var fact = 1.0
-                for (i in 1..x.toInt()) fact *= i.toDouble()
-                x = fact
-            }
-
-            return x
-        }
-    }.parse()
-}
-
-private fun formatResult(value: Double, errorMsg: String): String {
-    if (!value.isFinite()) return errorMsg
-    return if (value == value.toInt().toDouble()) {
-        value.toInt().toString()
-    } else {
-        String.format(Locale.US, "%.6f", value).trimEnd('0').trimEnd('.')
     }
 }

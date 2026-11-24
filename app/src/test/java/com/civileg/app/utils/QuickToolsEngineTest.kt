@@ -150,9 +150,9 @@ class QuickToolsEngineTest {
         assertEquals(1.0, mpa, 0.005)
 
         // Round trip: 10 ton -> kg -> ton
-        val kg = QuickToolsEngine.convertUnit(QuickToolsEngine.QuantityType.MASS, 10.0, "ton", "kg")
+        val kg = QuickToolsEngine.convertUnit(QuickToolsEngine.QuantityType.MASS, 10.0, "tonne", "kg")
         assertEquals(10000.0, kg, 0.01)
-        val back = QuickToolsEngine.convertUnit(QuickToolsEngine.QuantityType.MASS, kg, "kg", "ton")
+        val back = QuickToolsEngine.convertUnit(QuickToolsEngine.QuantityType.MASS, kg, "kg", "tonne")
         assertEquals(10.0, back, 0.001)
 
         assertTrue(QuickToolsEngine.unitsFor(QuickToolsEngine.QuantityType.LENGTH).contains("mm"))

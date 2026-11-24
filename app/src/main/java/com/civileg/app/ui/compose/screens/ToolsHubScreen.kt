@@ -43,6 +43,8 @@ private data class ToolItem(
 private val toolsList = listOf(
     ToolItem(R.string.home_calculator,    R.string.tool_calculator_sub,    Icons.Default.Calculate, Color(0xFF1B5E20).copy(alpha = 0.12f), Color(0xFF2E7D32), AppScreen.Calculator.route),
     ToolItem(R.string.home_unit_converter, R.string.tool_converter_sub,   Icons.Default.SwapHoriz, Color(0xFF0D47A1).copy(alpha = 0.12f), Color(0xFF1565C0), AppScreen.UnitConverter.route),
+    ToolItem(R.string.tool_spirit_level, R.string.tool_spirit_level_sub, Icons.Default.RadioButtonChecked, Color(0xFF00695C).copy(alpha = 0.12f), Color(0xFF00897B), AppScreen.SpiritLevel.route),
+    ToolItem(R.string.tool_ruler, R.string.tool_ruler_sub, Icons.Default.Straighten, Color(0xFF6A1B9A).copy(alpha = 0.12f), Color(0xFF7B1FA2), AppScreen.Ruler.route),
     ToolItem(R.string.home_steel_tables,  R.string.tool_steel_tables_sub, Icons.Default.TableChart, Color(0xFF4E342E).copy(alpha = 0.12f), Color(0xFF5D4037), AppScreen.SteelTables.route),
     ToolItem(R.string.home_boq,           R.string.tool_boq_sub,          Icons.AutoMirrored.Filled.Assignment, Color(0xFFE65100).copy(alpha = 0.12f), Color(0xFFEF6C00), AppScreen.BOQ.route),
     ToolItem(R.string.home_inventory,     R.string.tool_inventory_sub,    Icons.Default.Inventory2, Color(0xFFB71C1C).copy(alpha = 0.12f), Color(0xFFD32F2F), AppScreen.Inventory.route),

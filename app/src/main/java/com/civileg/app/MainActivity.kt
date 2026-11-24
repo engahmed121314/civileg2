@@ -382,6 +382,12 @@ fun AppNavigation(
                 composable(AppScreen.WaterLevel.route) {
                     WaterLevelScreen(onNavigateBack = { navController.popBackStack() })
                 }
+                composable(AppScreen.SpiritLevel.route) {
+                    SpiritLevelScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(AppScreen.Ruler.route) {
+                    RulerScreen(onNavigateBack = { navController.popBackStack() })
+                }
                 composable(AppScreen.RebarTool.route) {
                     RebarToolScreen(onNavigateBack = { navController.popBackStack() })
                 }
