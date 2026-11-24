@@ -101,6 +101,35 @@ fi
   echo "pid_after_force_stop=$(adb shell pidof "$PKG" | tr -d '\r')"
 } >> "$STATUS" 2>&1
 
+# Open the real launcher app drawer and resolve the installed label's bounds.
+# No am-start substitute: absence of a visible icon is a diagnostic failure.
+adb shell am force-stop com.google.android.apps.nexuslauncher
+adb shell input keyevent KEYCODE_HOME
+sleep 5
+adb shell input swipe 540 2100 540 400 500
+sleep 3
+adb shell uiautomator dump /sdcard/splash-launcher.xml
+adb pull /sdcard/splash-launcher.xml "$OUT/launcher-before-tap.xml"
+LABEL=$("$AAPT" dump badging "$APK" | sed -n "s/^application-label:'\(.*\)'$/\1/p" | head -1)
+if [ -z "$LABEL" ]; then
+  LABEL=$("$AAPT" dump badging "$APK" | sed -n "s/^application: label='\([^']*\)'.*/\1/p" | head -1)
+fi
+if [ -z "$LABEL" ]; then echo "Unable to resolve installed label" >> "$STATUS"; exit 1; fi
+python3 - "$OUT/launcher-before-tap.xml" "$LABEL" > "$OUT/icon-tap-coordinates.txt" <<'PYICON'
+import sys,re,xml.etree.ElementTree as ET
+root=ET.parse(sys.argv[1]).getroot()
+for node in root.iter('node'):
+    if node.get('text') == sys.argv[2] or node.get('content-desc') == sys.argv[2]:
+        numbers=list(map(int,re.findall(r'\d+',node.get('bounds',''))))
+        if len(numbers)==4:
+            a,b,c,d=numbers;print((a+c)//2,(b+d)//2);break
+else:raise SystemExit('Visible installed app icon not found; no synthetic launch used')
+PYICON
+ICON_RC=$?
+if [ "$ICON_RC" -ne 0 ]; then exit "$ICON_RC"; fi
+read -r TAP_X TAP_Y < "$OUT/icon-tap-coordinates.txt"
+adb shell settings put system show_touches 1
+adb exec-out screencap -p > "$OUT/launcher-before-tap.png"
 adb logcat -c
 
 # --- 2. Start the recorder BEFORE the launcher request -----------------------
@@ -131,7 +160,8 @@ done
 
 # --- 3. Launch with monotonic request/return stamps --------------------------
 T0=$(now_ms)
-adb shell am start -n "$COMPONENT" > "$OUT/am-start.txt" 2>&1
+sleep 1
+adb shell input tap "$TAP_X" "$TAP_Y" > "$OUT/icon-tap.txt" 2>&1
 AM_RC=$?
 T1=$(now_ms)
 {
@@ -145,7 +175,7 @@ T1=$(now_ms)
 } >> "$TIMELINE"
 if [ $AM_RC -ne 0 ]; then
   echo "am start failed rc=$AM_RC; see am-start.txt" >> "$STATUS"
-  echo "valid_png_count=0 launch_status=am-start-failed" >> "$STATUS"
+  echo "valid_png_count=0 launch_status=icon-tap-failed" >> "$STATUS"
   collect_recording
   adb logcat -d > "$OUT/logcat.txt" 2>&1
   exit 1
