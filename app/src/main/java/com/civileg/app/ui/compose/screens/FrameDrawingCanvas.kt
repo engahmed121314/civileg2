@@ -596,7 +596,7 @@ private fun DrawScope.drawCrossSection(
 
     // Separate panels reserve room for headings, dimensions and wrapped captions.
     // Stack on narrow canvases; section aspect ratios and engineering values are unchanged.
-    val stacked = canvasW < 600f
+    val stacked = canvasW < 600f && canvasH >= 560f
     val panelW = if (stacked) canvasW else canvasW / 2f
     val panelH = if (stacked) (canvasH - 60f) / 2f else canvasH - 60f
     val colCenterX = if (stacked) canvasW / 2f else canvasW * 0.25f
@@ -631,7 +631,7 @@ private fun DrawScope.drawColumnSection(
     val stirrupSpacing = designRes?.stirrupSpacing?.takeIf { it > 0 }?.toInt() ?: 150
 
     val maxMm = maxOf(colW, colD)
-    val sectionSize = min(220f, min(panelWidth - 90f, panelHeight - 110f)).coerceAtLeast(12f)
+    val sectionSize = min(220f, min(panelWidth - 70f, panelHeight - 130f)).coerceAtLeast(12f)
     val drawW = if (colW >= colD) sectionSize else (colW.toFloat() / colD.toFloat() * sectionSize)
     val drawH = if (colD >= colW) sectionSize else (colD.toFloat() / colW.toFloat() * sectionSize)
     val left = cx - drawW / 2
@@ -697,21 +697,21 @@ private fun DrawScope.drawColumnSection(
     // Dimensions
     val dimColor = Color(0xFF8E24AA)
     val dimPaint = android.graphics.Paint().apply {
-        color = dimColor.toArgb(); textSize = 18f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
+        color = dimColor.toArgb(); textSize = 12f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
     }
     val dimYTop = top - 20f
     drawLine(dimColor, Offset(left, top - 5f), Offset(left, dimYTop - 3f), strokeWidth = 1f)
     drawLine(dimColor, Offset(left + drawW, top - 5f), Offset(left + drawW, dimYTop - 3f), strokeWidth = 1f)
     drawLine(dimColor, Offset(left, dimYTop), Offset(left + drawW, dimYTop), strokeWidth = 1.2f)
-    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_b_format, colW), left + drawW / 2, dimYTop - 4f, dimPaint)
+    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_b_format, colW), left + drawW / 2, dimYTop - 3f, dimPaint)
 
     val dimXRight = left + drawW + 20f
     drawLine(dimColor, Offset(left + drawW + 5f, top), Offset(dimXRight + 3f, top), strokeWidth = 1f)
     drawLine(dimColor, Offset(left + drawW + 5f, top + drawH), Offset(dimXRight + 3f, top + drawH), strokeWidth = 1f)
     drawLine(dimColor, Offset(dimXRight, top), Offset(dimXRight, top + drawH), strokeWidth = 1.2f)
     drawContext.canvas.nativeCanvas.save()
-    drawContext.canvas.nativeCanvas.rotate(-90f, dimXRight + 14f, top + drawH / 2)
-    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_h_format, colD), dimXRight + 14f, top + drawH / 2 + 6f, dimPaint)
+    drawContext.canvas.nativeCanvas.rotate(-90f, dimXRight + 8f, top + drawH / 2)
+    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_h_format, colD), dimXRight + 8f, top + drawH / 2 + 6f, dimPaint)
     drawContext.canvas.nativeCanvas.restore()
 
     val caption = context.getString(R.string.frame_rebar_column_format, numBars, barDia, tieDia, stirrupSpacing)
@@ -745,7 +745,7 @@ private fun DrawScope.drawBeamSection(
     val stirrupSpacing = designRes?.stirrupSpacing?.takeIf { it > 0 }?.toInt() ?: 150
 
     val maxMm = maxOf(beamW, beamD)
-    val drawSize = min(220f, min(panelWidth - 90f, panelHeight - 110f)).coerceAtLeast(12f)
+    val drawSize = min(220f, min(panelWidth - 70f, panelHeight - 130f)).coerceAtLeast(12f)
     val drawW = (beamW.toFloat() / maxMm.toFloat()) * drawSize
     val drawH = (beamD.toFloat() / maxMm.toFloat()) * drawSize
     val left = cx - drawW / 2
@@ -812,21 +812,21 @@ private fun DrawScope.drawBeamSection(
     // Dimensions
     val dimColor = Color(0xFF8E24AA)
     val dimPaint = android.graphics.Paint().apply {
-        color = dimColor.toArgb(); textSize = 18f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
+        color = dimColor.toArgb(); textSize = 12f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
     }
     val dimYTop = top - 20f
     drawLine(dimColor, Offset(left, top - 5f), Offset(left, dimYTop - 3f), strokeWidth = 1f)
     drawLine(dimColor, Offset(left + drawW, top - 5f), Offset(left + drawW, dimYTop - 3f), strokeWidth = 1f)
     drawLine(dimColor, Offset(left, dimYTop), Offset(left + drawW, dimYTop), strokeWidth = 1.2f)
-    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_b_format, beamW), left + drawW / 2, dimYTop - 4f, dimPaint)
+    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_b_format, beamW), left + drawW / 2, dimYTop - 3f, dimPaint)
 
     val dimXRight = left + drawW + 20f
     drawLine(dimColor, Offset(left + drawW + 5f, top), Offset(dimXRight + 3f, top), strokeWidth = 1f)
     drawLine(dimColor, Offset(left + drawW + 5f, top + drawH), Offset(dimXRight + 3f, top + drawH), strokeWidth = 1f)
     drawLine(dimColor, Offset(dimXRight, top), Offset(dimXRight, top + drawH), strokeWidth = 1.2f)
     drawContext.canvas.nativeCanvas.save()
-    drawContext.canvas.nativeCanvas.rotate(-90f, dimXRight + 14f, top + drawH / 2)
-    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_h_format, beamD), dimXRight + 14f, top + drawH / 2 + 6f, dimPaint)
+    drawContext.canvas.nativeCanvas.rotate(-90f, dimXRight + 8f, top + drawH / 2)
+    drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_h_format, beamD), dimXRight + 8f, top + drawH / 2 + 6f, dimPaint)
     drawContext.canvas.nativeCanvas.restore()
 
     val caption = context.getString(R.string.frame_rebar_beam_bot_top_format, numBarsBottom, barDia, numBarsTop, barDia) +
@@ -884,10 +884,10 @@ private fun DrawScope.drawPlanView(
     val nLevels = yLevels.size
     val planDepth = max(nLevels * 3.0, 4.0)
 
-    val padLeft = 80f
-    val padRight = 80f
-    val padTop = 80f
-    val padBottom = 200f
+    val padLeft = 40f
+    val padRight = 40f
+    val padTop = 40f
+    val padBottom = 180f
     val drawW = (canvasW - padLeft - padRight).coerceAtLeast(10f)
     val drawH = (canvasH - padTop - padBottom).coerceAtLeast(10f)
 
