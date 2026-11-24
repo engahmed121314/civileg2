@@ -2408,4 +2408,14 @@
     <string name="settings_support_title">دعم التطبيق</string>
     <string name="settings_support_message">Civil Engineer Pro مجاني وبدون إعلانات. التبرعات الطوعية تموّل أكواد تصميم واختبارات ورسومات جديدة.</string>
     <string name="settings_support_button">تبرع عبر GitHub Sponsors</string>
+
+    <!-- Shared field validation -->
+    <string name="validation_required">مطلوب: أدخل قيمة</string>
+    <string name="validation_not_number">ليس رقمًا صالحًا</string>
+    <string name="validation_must_be_positive">يجب أن يكون رقمًا أكبر من الصفر</string>
+    <string name="validation_must_not_be_negative">يجب أن يكون صفرًا أو أكثر</string>
+    <string name="validation_must_be_whole">يجب أن يكون عددًا صحيحًا</string>
+    <string name="validation_out_of_range">يجب أن تكون القيمة بين %1$s و %2$s</string>
+    <string name="validation_invalid_combination">هذه القيمة تتعارض مع مدخلات أخرى</string>
+    <string name="validation_summary">صحّح %1$d من الخانات المعلّمة بالأحمر</string>
 </resources>

@@ -59,6 +59,14 @@ import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.domain.validation.FieldKind
+import com.civileg.app.domain.validation.FieldSpec
+import com.civileg.app.domain.validation.FormValidator
+import com.civileg.app.ui.compose.validation.FormErrorSummary
+import com.civileg.app.ui.compose.validation.ValidatedNumberField
+import com.civileg.app.ui.compose.validation.rememberFormValidationState
+import com.civileg.app.ui.compose.validation.scrollItemToCenter
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 
@@ -107,15 +115,19 @@ fun StairScreen(
     var expandedType by remember { mutableStateOf(false) }
     var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
 
-    // Input validation
-    var spanError by remember { mutableStateOf("") }
-    var riserError by remember { mutableStateOf("") }
-    var treadError by remember { mutableStateOf("") }
-
-    // Validation messages (captured in composable scope for use in onClick)
-    val spanRangeMsg = stringResource(R.string.stair_span_range)
-    val riserRangeMsg = stringResource(R.string.stair_riser_range)
-    val treadRangeMsg = stringResource(R.string.stair_tread_range)
+    // Shared field-anchored validation (see ui/compose/validation). No silent defaults.
+    val form = rememberFormValidationState()
+    val listState = rememberLazyListState()
+    // LazyColumn item index that holds each field (fields share rows).
+    val fieldItemIndex = mapOf(
+        "span" to 2, "riser" to 2, "tread" to 3, "deadLoad" to 3,
+        "liveLoad" to 4, "fcu" to 4, "fy" to 5, "stairWidth" to 5
+    )
+    // Any input change makes the shown result stale: drop it and that field's old error.
+    fun touch(id: String) {
+        form.clear(id)
+        viewModel.clearResult()
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -134,6 +146,7 @@ fun StairScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
@@ -162,6 +175,7 @@ fun StairScreen(
                             DropdownMenuItem(
                                 text = { AppText(type.displayName) },
                                 onClick = {
+                                    if (selectedType != type) viewModel.clearResult()
                                     selectedType = type
                                     expandedType = false
                                 }
@@ -173,72 +187,88 @@ fun StairScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(span, stringResource(R.string.stair_horizontal_length), { span = it }, Modifier.weight(1f), spanError)
-                    StairInputField(riser, stringResource(R.string.stair_riser), { riser = it }, Modifier.weight(1f), riserError)
+                    ValidatedNumberField(form, "span", span, stringResource(R.string.stair_horizontal_length), { span = it; touch("span") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "riser", riser, stringResource(R.string.stair_riser), { riser = it; touch("riser") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(tread, stringResource(R.string.stair_tread_mm), { tread = it }, Modifier.weight(1f), treadError)
-                    StairInputField(deadLoad, stringResource(R.string.stair_dead_load_kn_m2), { deadLoad = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "tread", tread, stringResource(R.string.stair_tread_mm), { tread = it; touch("tread") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "deadLoad", deadLoad, stringResource(R.string.stair_dead_load_kn_m2), { deadLoad = it; touch("deadLoad") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(liveLoad, stringResource(R.string.stair_live_load_kn_m2), { liveLoad = it }, Modifier.weight(1f))
-                    StairInputField(fcu, stringResource(R.string.stair_fcu_mpa), { fcu = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "liveLoad", liveLoad, stringResource(R.string.stair_live_load_kn_m2), { liveLoad = it; touch("liveLoad") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "fcu", fcu, stringResource(R.string.stair_fcu_mpa), { fcu = it; touch("fcu") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(fy, stringResource(R.string.stair_fy_mpa), { fy = it }, Modifier.weight(1f))
-                    StairInputField(stairWidth, "Width (mm)", { stairWidth = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "fy", fy, stringResource(R.string.stair_fy_mpa), { fy = it; touch("fy") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "stairWidth", stairWidth, "Width (mm)", { stairWidth = it; touch("stairWidth") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 DesignCodeSelectorRow(
                     selectedCode = selectedCode,
-                    onCodeSelected = { selectedCode = it }
+                    onCodeSelected = { if (selectedCode != it) viewModel.clearResult(); selectedCode = it }
                 )
             }
 
             item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormErrorSummary(form)
                 AppButton(
                     label = stringResource(R.string.stair_design_now),
                     onClick = {
-                        // Validate inputs
-                        spanError = ""; riserError = ""; treadError = ""
-                        val s = span.toDoubleOrNull()
-                        val r = riser.toDoubleOrNull()
-                        val t = tread.toDoubleOrNull()
-                        var valid = true
-                        if (s == null || s < 1.0 || s > 15.0) { spanError = spanRangeMsg; valid = false }
-                        if (r == null || r < 100.0 || r > 200.0) { riserError = riserRangeMsg; valid = false }
-                        if (t == null || t < 200.0 || t > 400.0) { treadError = treadRangeMsg; valid = false }
-                        if (!valid) return@AppButton
-
+                        viewModel.clearResult() // never leave a stale result on screen
+                        // Order = on-screen order. span/riser/tread bounds are the page's
+                        // pre-existing limits (source not verified); the rest are physical only.
+                        val checked = FormValidator.validate(
+                            listOf(
+                                FieldSpec("span", span, FieldKind.POSITIVE, min = 1.0, max = 15.0),
+                                FieldSpec("riser", riser, FieldKind.POSITIVE, min = 100.0, max = 200.0),
+                                FieldSpec("tread", tread, FieldKind.POSITIVE, min = 200.0, max = 400.0),
+                                FieldSpec("deadLoad", deadLoad, FieldKind.NON_NEGATIVE),
+                                FieldSpec("liveLoad", liveLoad, FieldKind.NON_NEGATIVE),
+                                FieldSpec("fcu", fcu, FieldKind.POSITIVE),
+                                FieldSpec("fy", fy, FieldKind.POSITIVE),
+                                FieldSpec("stairWidth", stairWidth, FieldKind.POSITIVE)
+                            )
+                        )
+                        form.apply(checked)
+                        if (!checked.isValid) {
+                            scope.launch {
+                                form.focusFirstInvalid(checked) { id ->
+                                    fieldItemIndex[id]?.let { listState.scrollItemToCenter(it) }
+                                }
+                            }
+                            return@AppButton
+                        }
                         viewModel.calculateStairPro(
                             type = selectedType,
-                            span = s!!,
-                            riser = r!!,
-                            tread = t!!,
-                            deadLoad = deadLoad.toDoubleOrNull() ?: 5.0,
-                            liveLoad = liveLoad.toDoubleOrNull() ?: 4.0,
-                            fcu = fcu.toDoubleOrNull() ?: 25.0,
-                            fy = fy.toDoubleOrNull() ?: 360.0,
+                            span = checked.value("span"),
+                            riser = checked.value("riser"),
+                            tread = checked.value("tread"),
+                            deadLoad = checked.value("deadLoad"),
+                            liveLoad = checked.value("liveLoad"),
+                            fcu = checked.value("fcu"),
+                            fy = checked.value("fy"),
                             preferredDiameter = 12,
                             code = selectedCode,
-                            stairWidthMm = stairWidth.toDoubleOrNull() ?: 1200.0
+                            stairWidthMm = checked.value("stairWidth")
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isLoading,
                     icon = Icons.Default.Calculate
                 )
+                }
             }
 
             result?.let { res ->
@@ -334,7 +364,7 @@ fun StairScreen(
                         BbsGenerator.generateStairBbs(
                             mark = "ST1",
                             result = res,
-                            stairWidthMm = stairWidth.toDoubleOrNull() ?: 1200.0
+                            stairWidthMm = (FormValidator.parseNumber(stairWidth) ?: 1200.0)
                         )
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty()) {
@@ -344,7 +374,7 @@ fun StairScreen(
                     val boqRows = runCatching {
                         BoqEstimator.stairRows(
                             res,
-                            (stairWidth.toDoubleOrNull() ?: 1200.0) / 1000.0,
+                            ((FormValidator.parseNumber(stairWidth) ?: 1200.0)) / 1000.0,
                             "ST1"
                         )
                     }.getOrDefault(emptyList())
@@ -458,7 +488,7 @@ fun StairScreen(
                                 selectedType == CalculatorEngine.StairType.TRIPLE_FLIGHT
                             val landingLen = if (hasLanding) res.tread * 2.0 else 0.0
                             ProfessionalStairDrawing(
-                                stairWidth = stairWidth.toDoubleOrNull() ?: 1200.0,
+                                stairWidth = (FormValidator.parseNumber(stairWidth) ?: 1200.0),
                                 totalHeight = nRisers.toDouble() * res.riser,
                                 totalLength = nRisers.toDouble() * res.tread,
                                 riserHeight = res.riser,
@@ -500,7 +530,7 @@ fun StairScreen(
             ) {
                 Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
                     ProfessionalStairDrawing(
-                        stairWidth = stairWidth.toDoubleOrNull() ?: 1200.0,
+                        stairWidth = (FormValidator.parseNumber(stairWidth) ?: 1200.0),
                         totalHeight = nRisers.toDouble() * res.riser,
                         totalLength = nRisers.toDouble() * res.tread,
                         riserHeight = res.riser,
@@ -974,20 +1004,6 @@ private fun StairFormulasCard() {
             FormulaItem("4. As = Mu / (fy/gamma_s * j * d)")
         }
     }
-}
-
-@Composable
-private fun StairInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier, errorText: String = "") {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { AppText(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        isError = errorText.isNotEmpty(),
-        supportingText = if (errorText.isNotEmpty()) {{ AppText(errorText, color = MaterialTheme.colorScheme.error) }} else null
-    )
 }
 
 @Composable

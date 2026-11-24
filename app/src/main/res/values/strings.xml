@@ -2405,6 +2405,14 @@
     <string name="settings_support_title">Support the app</string>
     <string name="settings_support_message">Civil Engineer Pro is free and ad-free. Voluntary donations fund new design codes, tests and drawings.</string>
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
+
+    <!-- Shared field validation -->
+    <string name="validation_required">Required: enter a value</string>
+    <string name="validation_not_number">Not a valid number</string>
+    <string name="validation_must_be_positive">Must be a number greater than zero</string>
+    <string name="validation_must_not_be_negative">Must be zero or more</string>
+    <string name="validation_must_be_whole">Must be a whole number</string>
+    <string name="validation_out_of_range">Must be between %1$s and %2$s</string>
+    <string name="validation_invalid_combination">This value conflicts with other inputs</string>
+    <string name="validation_summary">Fix %1$d field(s) marked in red</string>
 </resources>
-
-
