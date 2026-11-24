@@ -122,13 +122,15 @@ class WaffleSlabViewModel @Inject constructor(
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val res = _result.value ?: return null
         val input = lastInput ?: return null
+        // No adopted rib flexure steel means no drawing: never draw assumed bars.
+        val ribBars = res.ribDesign?.flexureReinforcement ?: return null
         return com.civileg.app.utils.ElementDxfDrawings.slabSection(
             title = "WAFFLE SLAB",
             spanMm = input.lx,
             thicknessMm = input.ribHeight + input.toppingThickness,
             coverMm = input.clearCover,
-            mainBarDiaMm = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 12.0,
-            mainSpacingMm = res.ribDesign?.flexureReinforcement?.spacing?.toDouble() ?: 150.0
+            mainBarDiaMm = ribBars.diameter.toDouble(),
+            mainSpacingMm = ribBars.spacing.toDouble()
         )
     }
 
