@@ -103,13 +103,18 @@ fi
 
 # Open the real launcher app drawer and resolve the installed label's bounds.
 # No am-start substitute: absence of a visible icon is a diagnostic failure.
+adb shell am force-stop com.google.android.apps.nexuslauncher
 adb shell input keyevent KEYCODE_HOME
-sleep 1
+sleep 5
 adb shell input swipe 540 2100 540 400 500
-sleep 1
+sleep 3
 adb shell uiautomator dump /sdcard/splash-launcher.xml
 adb pull /sdcard/splash-launcher.xml "$OUT/launcher-before-tap.xml"
 LABEL=$("$AAPT" dump badging "$APK" | sed -n "s/^application-label:'\(.*\)'$/\1/p" | head -1)
+if [ -z "$LABEL" ]; then
+  LABEL=$("$AAPT" dump badging "$APK" | sed -n "s/^application: label='\([^']*\)'.*/\1/p" | head -1)
+fi
+if [ -z "$LABEL" ]; then echo "Unable to resolve installed label" >> "$STATUS"; exit 1; fi
 python3 - "$OUT/launcher-before-tap.xml" "$LABEL" > "$OUT/icon-tap-coordinates.txt" <<'PYICON'
 import sys,re,xml.etree.ElementTree as ET
 root=ET.parse(sys.argv[1]).getroot()
