@@ -38,6 +38,7 @@ class SlabDrawingRenderTest {
             distDia = 10.0, distSpacing = 200.0,
             cover = 25.0,
             dropPanelSize = 2000.0,
+            dropPanelThickness = 100.0,
             ribWidth = 100.0, ribSpacing = 600.0,
             columnSize = 400.0,
             spansInMm = spansInMm

@@ -957,6 +957,7 @@ object PdfDrawingGenerator {
         distDia: Double, distSpacing: Double,
         cover: Double = 25.0,
         dropPanelSize: Double = 0.0,
+        dropPanelThickness: Double = 0.0,
         ribWidth: Double = 100.0,
         ribSpacing: Double = 500.0,
         columnSize: Double = 400.0,
@@ -971,7 +972,7 @@ object PdfDrawingGenerator {
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.SOLID ->
                 generateSolidSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover)
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.FLAT ->
-                generateFlatSlabDrawing(spanXmm, spanYmm, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, dropPanelSize, columnSize)
+                generateFlatSlabDrawing(spanXmm, spanYmm, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, dropPanelSize, dropPanelThickness, columnSize)
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK ->
                 generateHordiSlabDrawing(spanXmm, spanYmm, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.WAFFLE ->
@@ -997,7 +998,7 @@ object PdfDrawingGenerator {
         spanX: Double, spanY: Double, thickness: Double,
         mainDia: Double, mainSpacing: Double,
         distDia: Double, distSpacing: Double,
-        cover: Double, dropPanelSize: Double, columnSize: Double
+        cover: Double, dropPanelSize: Double, dropPanelThickness: Double, columnSize: Double
     ): Bitmap {
         val W = 1400; val H = 900
         val (bitmap, canvas) = createCanvas(W, H)
@@ -1016,7 +1017,8 @@ object PdfDrawingGenerator {
         canvas.drawHatch(planL, planT, planW, planH, 22f)
 
         // Drop panels at column locations (4 corners + center if span > 1 bay)
-        val dpSize = (dropPanelSize.toFloat() * scale).coerceAtLeast(40f)
+        val hasDropPanel = dropPanelSize > 0.0
+        val dpSize = if (hasDropPanel) (dropPanelSize.toFloat() * scale).coerceAtLeast(40f) else 0f
         val colSize = (columnSize.toFloat() * scale).coerceAtLeast(15f)
         val dpColor = Color.parseColor("#8A8A8A")
         val colColor = Color.parseColor("#505050")
@@ -1031,8 +1033,10 @@ object PdfDrawingGenerator {
         )
         dropPositions.forEach { (cx, cy) ->
             // Drop panel (lighter shade)
-            canvas.drawRect(cx - dpSize / 2f, cy - dpSize / 2f, cx + dpSize / 2f, cy + dpSize / 2f, fillPaint(dpColor))
-            canvas.drawRect(cx - dpSize / 2f, cy - dpSize / 2f, cx + dpSize / 2f, cy + dpSize / 2f, outlineP)
+            if (hasDropPanel) {
+                canvas.drawRect(cx - dpSize / 2f, cy - dpSize / 2f, cx + dpSize / 2f, cy + dpSize / 2f, fillPaint(dpColor))
+                canvas.drawRect(cx - dpSize / 2f, cy - dpSize / 2f, cx + dpSize / 2f, cy + dpSize / 2f, outlineP)
+            }
             // Column (darker shade, smaller)
             canvas.drawRect(cx - colSize / 2f, cy - colSize / 2f, cx + colSize / 2f, cy + colSize / 2f, fillPaint(colColor))
             canvas.drawRect(cx - colSize / 2f, cy - colSize / 2f, cx + colSize / 2f, cy + colSize / 2f, outlineP)
@@ -1081,11 +1085,13 @@ object PdfDrawingGenerator {
         val secViewW = planW * 0.75f
         val secScale = secViewW / spanX.toFloat()
         val secH = maxOf(thickness.toFloat() * secScale * 4f, 40f)
-        val dpH = maxOf((dropPanelSize.toFloat() * secScale * 4f), 20f)
+        val dpH = if (dropPanelThickness > 0.0) maxOf(dropPanelThickness.toFloat() * secScale * 4f, 20f) else 0f
 
         // Drop panel zone (left + right — represents column strip)
-        canvas.drawRect(secL, secT, secL + 60f, secT + secH + dpH, fillPaint(Color.parseColor("#8A8A8A")))
-        canvas.drawRect(secL + secViewW - 60f, secT, secL + secViewW, secT + secH + dpH, fillPaint(Color.parseColor("#8A8A8A")))
+        if (dpH > 0f) {
+            canvas.drawRect(secL, secT, secL + 60f, secT + secH + dpH, fillPaint(Color.parseColor("#8A8A8A")))
+            canvas.drawRect(secL + secViewW - 60f, secT, secL + secViewW, secT + secH + dpH, fillPaint(Color.parseColor("#8A8A8A")))
+        }
 
         // Slab body
         canvas.drawRect(secL, secT + dpH, secL + secViewW, secT + secH + dpH, fillPaint(CONCRETE))
@@ -1109,7 +1115,7 @@ object PdfDrawingGenerator {
 
         // Dimensions
         canvas.drawHDim(secL, secL + secViewW, secT + secH + dpH + 50f, "${SlabDrawingUnits.mmLabel(spanX)}")
-        canvas.drawVDim(secT, secT + secH + dpH, secL + secViewW + 20f, "t=${thickness.toInt()}mm + DP=${dropPanelSize.toInt()}mm", offset = 25f)
+        canvas.drawVDim(secT, secT + secH + dpH, secL + secViewW + 20f, if (dropPanelThickness > 0.0) "t=${thickness.toInt()}mm + DP=${dropPanelThickness.toInt()}mm" else "t=${thickness.toInt()}mm", offset = 25f)
         canvas.drawTextCentered("SECTION A-A (WITH DROP PANEL)", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
         // ===== TABLE =====
