@@ -97,7 +97,8 @@ fun StairScreen(
     val density = LocalDensity.current
     val config = LocalConfiguration.current
     val screenWidthPx = (config.screenWidthDp * density.density).toInt()
-    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+    // Export a drawing sheet, not a screenshot-shaped phone canvas.
+    val drawingSheetHeightPx = (screenWidthPx * 1.05f).toInt()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -464,10 +465,10 @@ fun StairScreen(
                     val screenW = configuration.screenWidthDp.dp
                     val wRatio = screenW.value / 360f
                     val drawingHeight = when (selectedViewMode) {
-                        1 -> (550 * wRatio).toInt().coerceIn(350, 750)
-                        2 -> (450 * wRatio).toInt().coerceIn(300, 650)
+                        1 -> (310 * wRatio).toInt().coerceIn(250, 650)
+                        2 -> (350 * wRatio).toInt().coerceIn(280, 650)
                         3 -> (400 * wRatio).toInt().coerceIn(250, 550)
-                        else -> (780 * wRatio).toInt().coerceIn(500, 1100)
+                        else -> (380 * wRatio).toInt().coerceIn(340, 850)
                     }
                     InteractiveDrawingScreen(
                         onExportDxf = { viewModel.exportToDxf(context) },
@@ -526,7 +527,7 @@ fun StairScreen(
             ComposeDrawingCaptureUtil.DrawingCaptureArea(
                 captureLayer = pdfCaptureLayer,
                 widthPx = screenWidthPx,
-                heightPx = screenHeightPx
+                heightPx = drawingSheetHeightPx
             ) {
                 Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
                     ProfessionalStairDrawing(
