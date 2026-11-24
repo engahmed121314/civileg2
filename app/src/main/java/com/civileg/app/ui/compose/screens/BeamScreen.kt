@@ -244,20 +244,21 @@ fun BeamScreen(
                 val bbsEntries = runCatching {
                     BbsGenerator.generateBeamBbs("B1", res, res.span * 1000.0)
                 }.getOrDefault(emptyList())
-                if (bbsEntries.isNotEmpty()) {
+                if (res.codeAcceptanceComplete && bbsEntries.isNotEmpty()) {
                     item { BbsTableCard(bbsEntries, title = "Beam Bar Bending Schedule") }
                 }
 
                 val boqRows = runCatching {
                     BoqEstimator.beamRows(res, "B1")
                 }.getOrDefault(emptyList())
-                if (boqRows.isNotEmpty()) {
+                if (res.codeAcceptanceComplete && boqRows.isNotEmpty()) {
                     item { BoqTableCard(boqRows, title = "Beam Bill of Quantities") }
                 }
                 
                 item {
                     val ecoColor = when {
-                        res.utilizationRatio > 1.0 -> Color.Red
+                        !res.isSafe -> Color.Red
+                        !res.codeAcceptanceComplete -> Color(0xFFFF9800)
                         res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
                         res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
                         else -> Color(0xFF2196F3)
@@ -276,14 +277,15 @@ fun BeamScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            if (res.isSafe) Icons.Default.Verified 
+                                            if (res.isSafe && res.codeAcceptanceComplete) Icons.Default.Verified
                                             else Icons.Default.Dangerous, 
                                             contentDescription = null, 
                                             tint = ecoColor
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         AppText(
-                                            if (res.utilizationRatio > 1.0) stringResource(R.string.beam_section_unsafe)
+                                            if (!res.isSafe) stringResource(R.string.beam_section_unsafe)
+                                            else if (!res.codeAcceptanceComplete) "نتيجة أولية: مراجعة اشتراطات الكود غير مكتملة"
                                             else if (res.utilizationRatio > 0.9) stringResource(R.string.design_caution)
                                             else if (res.utilizationRatio > 0.4) stringResource(R.string.beam_section_ideal)
                                             else stringResource(R.string.beam_section_large),
@@ -610,6 +612,17 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
                     AppText(check.name, fontSize = 12.sp)
                     AppText(if (check.isSafe) stringResource(R.string.safe_check) else stringResource(R.string.unsafe_check), color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
+            }
+
+            result.shearCodeReview?.let { review ->
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                AppText("فحوص القص - ${review.basis}", fontWeight = FontWeight.Bold)
+                review.checks.forEach { check ->
+                    AppText("${if(check.passed) "PASS" else "FAIL"}: ${check.name} [${check.clause}]", fontSize = 12.sp,
+                        color = if(check.passed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.error)
+                    if (!check.passed) AppText(check.redesign, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                }
+                if (!result.codeAcceptanceComplete) AppText("هذه النتيجة ليست اعتماداً تنفيذياً. استكمل بيانات الحالة والفحوص الموضحة أدناه.", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
             }
 
             if (result.warnings.isNotEmpty()) {
