@@ -38,6 +38,7 @@ class DrawingSampleUiTest {
     @Test fun stairActualPageAndExportedPdf_sameCalculatedCase() {
         val out = File(context.getExternalFilesDir(null), "drawing-samples/stair").apply { mkdirs() }
         val documents = context.getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS)!!
+        documents.mkdirs()
         val existing = documents.listFiles()?.map { it.name }?.toSet() ?: emptySet()
         rule.onNodeWithText(ar(R.string.nav_design_hub)).performClick()
         scroll(ar(R.string.home_stair))
@@ -46,7 +47,8 @@ class DrawingSampleUiTest {
         // Explicit values, independent of UI defaults.
         for ((id,value) in listOf("span" to "4.0", "riser" to "150", "tread" to "300",
             "deadLoad" to "5.0", "liveLoad" to "4.0", "fcu" to "25", "fy" to "360", "stairWidth" to "1200")) {
-            rule.onNodeWithTag("field_$id").performScrollTo().performTextReplacement(value)
+            rule.onAllNodes(hasScrollAction())[0].performScrollToNode(hasTestTag("field_$id"))
+            rule.onNodeWithTag("field_$id").performTextReplacement(value)
         }
         scroll(ar(R.string.stair_design_now))
         rule.onNodeWithText(ar(R.string.stair_design_now)).performClick()
