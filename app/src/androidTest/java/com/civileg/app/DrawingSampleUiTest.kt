@@ -66,5 +66,11 @@ class DrawingSampleUiTest {
         val pdf = documents.listFiles()!!.filter { it.extension=="pdf" && it.name !in existing }.maxBy { it.lastModified() }
         pdf.copyTo(File(out,"exported-report.pdf"),overwrite=true)
         File(out,"case.txt").writeText("route=stairs\npath=actual MainActivity > Design Hub > Stair > Design > PDF export\nspan_m=4\nriser_mm=150\ntread_mm=300\ndead_kN_m2=5\nlive_kN_m2=4\nfcu_MPa=25\nfy_MPa=360\nwidth_mm=1200\ncode=app initial selected code, visible in report\nstatus=diagnostic sample, calculation/detailing not accepted\nsource_pdf=${pdf.name}\ntimestamp_ms=${System.currentTimeMillis()}\n")
+        // connectedAndroidTest can uninstall the app after tests. Persist a shell-owned
+        // copy outside Android/data before returning, so cleanup cannot remove evidence.
+        val durable = "/sdcard/Download/civileg-drawing-samples/stair"
+        instrumentation.uiAutomation.executeShellCommand("mkdir -p $durable && cp -R ${out.absolutePath}/. $durable/")
+            .use { descriptor -> java.io.FileInputStream(descriptor.fileDescriptor).use { it.readBytes() } }
+
     }
 }
