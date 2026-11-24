@@ -249,6 +249,22 @@ object BoqEstimator {
     }
 
     /** Per-metre-width quantities for a hordi (hollow-block) slab strip. */
+    /** Explicit review quantities, never a full panel or total steel claim. */
+    fun hordiReviewRows(
+        spanMm: Double, totalMm: Double, toppingMm: Double, ribWidthMm: Double,
+        spacingMm: Double, mainBarBodiesWeightKg: Double?, partialPanelBottomWeightKg: Double? = null
+    ): List<BoqRow> = buildList {
+        add(item(1, "Net ribs+topping concrete per 1 m periodic strip; excludes support/cross-rib zones", "m3",
+            HordiReviewTakeoff.concreteM3(spanMm, totalMm, toppingMm, ribWidthMm, spacingMm)))
+        if (partialPanelBottomWeightKg != null) {
+            require(partialPanelBottomWeightKg.isFinite() && partialPanelBottomWeightKg >= 0)
+            add(item(2, "Partial PANEL bottom straight bars incl development; same as partial schedule; NOT same basis as concrete; other steel excluded", "kg", partialPanelBottomWeightKg))
+        } else mainBarBodiesWeightKg?.let {
+            add(item(2, "Main straight bar bodies for ONE RIB ONLY; NOT same basis as concrete; incomplete steel takeoff", "kg", it))
+        }
+        add(item(size + 1, "Soffit plan area per 1 m strip; not a shuttering system takeoff", "m2", spanMm / 1000))
+    }
+
     fun hordiSlabRows(
         spanM: Double,
         totalThicknessM: Double,

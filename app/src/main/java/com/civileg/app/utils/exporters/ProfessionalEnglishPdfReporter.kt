@@ -105,7 +105,8 @@ object ProfessionalEnglishPdfReporter {
         val projectNumber: String = "",
         val date: String = SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date()),
         val revision: String = "Rev. A",
-        val showSignature: Boolean = false
+        val showSignature: Boolean = false,
+        val incompleteReview: Boolean = false
     )
 
     // ==================== Font Helpers (English Only) ====================
@@ -221,7 +222,7 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
 
         // Design Code Badge
-        document.add(Paragraph().add(text("Design Code: $designCode", boldFont, 11f, PRIMARY))
+        document.add(Paragraph().add(text(if (config.incompleteReview) "Selected Reference Basis: $designCode" else "Design Code: $designCode", boldFont, 11f, PRIMARY))
             .setTextAlignment(TextAlignment.CENTER))
 
         // Line separator
@@ -691,10 +692,10 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
-    private fun addBbsSection(document: Document, rows: List<BbsRow>) {
+    private fun addBbsSection(document: Document, rows: List<BbsRow>, incompleteReview: Boolean = false) {
         if (rows.isEmpty()) return
         document.add(AreaBreak())
-        document.add(sectionTitle("6. Bar Bending Schedule"))
+        document.add(sectionTitle(if (incompleteReview) "6. Partial Main-Bar Review Schedule" else "6. Bar Bending Schedule"))
         document.add(separator())
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(12f, 12f, 9f, 9f, 9f, 20f, 14f, 15f)))
@@ -724,12 +725,12 @@ object ProfessionalEnglishPdfReporter {
         }
         document.add(table)
         document.add(Paragraph().add(
-            text(String.format(Locale.US, "Total steel: %.2f kg", totalWeight), createBoldFont(), 9f, PRIMARY)
+            text(String.format(Locale.US, if (incompleteReview) "Partial scheduled main-bar weight only: %.2f kg" else "Total steel: %.2f kg", totalWeight), createBoldFont(), 9f, PRIMARY)
         ).setTextAlignment(TextAlignment.RIGHT))
         document.add(emptyLine())
     }
 
-    private fun addBoqSection(document: Document, rows: List<BoqRow>) {
+    private fun addBoqSection(document: Document, rows: List<BoqRow>, incompleteReview: Boolean = false) {
         if (rows.isEmpty()) return
         document.add(sectionTitle("7. Bill of Quantities"))
         document.add(separator())
@@ -745,7 +746,7 @@ object ProfessionalEnglishPdfReporter {
             table.addCell(dataCell(row.item, 8f, false, bg, TextAlignment.LEFT))
             table.addCell(dataCell(row.description, 8f, false, bg, TextAlignment.LEFT))
             table.addCell(dataCell(row.unit, 8f, false, bg))
-            table.addCell(dataCell(String.format(Locale.US, "%.2f", row.quantity), 8f, false, bg))
+            table.addCell(dataCell(String.format(Locale.US, if (incompleteReview) "%.3f" else "%.2f", row.quantity), 8f, false, bg))
         }
         document.add(table)
         document.add(emptyLine())
@@ -885,31 +886,46 @@ object ProfessionalEnglishPdfReporter {
             addDesignParameters(document, inputs)
 
             // 3. Calculation Methodology
-            addCalculationMethodology(document, designCode, reportType, calculationSteps)
+            if (config.incompleteReview) {
+                document.add(sectionTitle("2. Calculation Scope - Incomplete Review"))
+                document.add(Paragraph("Legacy engine results are not verified to the selected reference edition. No design compliance or construction detailing is issued."))
+            } else {
+                addCalculationMethodology(document, designCode, reportType, calculationSteps)
+            }
 
             // 4. Results
             addResultsSection(document, results)
 
             // 5. Safety Checks
-            addSafetyChecks(document, safetyChecks, isSafe)
+            if (config.incompleteReview) {
+                document.add(sectionTitle("4. Engineering Status: NOT ISSUED"))
+                document.add(Paragraph("Required design, serviceability and detailing checks remain incomplete. Engine PASS/FAIL is not engineering approval."))
+            } else {
+                addSafetyChecks(document, safetyChecks, isSafe)
+            }
 
             // 6. Engineering Drawing
             if (drawingBitmap != null) {
                 document.add(AreaBreak())
             }
-            addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
+            if (config.incompleteReview) {
+                document.add(sectionTitle("5. Construction Drawing: NOT ISSUED"))
+                document.add(Paragraph("No adopted reinforcement geometry has been verified. No substitute drawing is generated."))
+            } else {
+                addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
+            }
 
             // 6. Bar Bending Schedule
-            addBbsSection(document, bbsRows)
+            addBbsSection(document, bbsRows, config.incompleteReview)
 
             // 7. Bill of Quantities
-            addBoqSection(document, boqRows)
+            addBoqSection(document, boqRows, config.incompleteReview)
 
             // 8. Site Photographs (optional)
             addPhotoGallery(document, photos)
 
             // 9. Approval & Signature (optional)
-            if (config.showSignature) {
+            if (config.showSignature && !config.incompleteReview) {
                 addSignatureBlock(document, config)
             }
 
@@ -947,7 +963,8 @@ object ProfessionalEnglishPdfReporter {
         outputPath: String,
         calculationSteps: List<CalculationStep> = emptyList(),
         bbsRows: List<BbsRow> = emptyList(),
-        boqRows: List<BoqRow> = emptyList()
+        boqRows: List<BoqRow> = emptyList(),
+        incompleteReview: Boolean = false
     ): File? {
         val convertedChecks = safetyChecks.map {
             SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference)
@@ -970,7 +987,7 @@ object ProfessionalEnglishPdfReporter {
 
         // Extract design code from inputs if available
         val defaultCode = if (reportType == ReportType.STEEL) "AISC 360-16 / ECP 205-2007" else "ACI 318-19 / ECP 203-2025"
-        val codeStr = inputs["Design Code"]
+        val codeStr = inputs["Selected Reference Basis"] ?: inputs["Design Code"]
             ?: defaultCode
 
         return generateReport(
@@ -986,6 +1003,7 @@ object ProfessionalEnglishPdfReporter {
             calculationSteps = calculationSteps,
             bbsRows = bbsRows,
             boqRows = boqRows,
+            config = ReportConfig(incompleteReview = incompleteReview),
             outputPath = outputPath
         )
     }
@@ -1009,7 +1027,7 @@ object ProfessionalEnglishPdfReporter {
                     page.resources,
                     docEvent.document
                 )
-                val pageNumber = docEvent.document.numberOfPages
+                val pageNumber = docEvent.document.getPageNumber(page)
                 canvas.beginText()
                     .setFontAndSize(font, 8f)
                     .setColor(footerColor, true)
