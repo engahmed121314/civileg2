@@ -126,6 +126,14 @@ class FootingViewModel @Inject constructor(
         }
     }
 
+    /** Drop the current result (inputs changed or a new attempt started). */
+    fun clearResult() {
+        _result.value = null
+        _validationReport.value = null
+        _error.value = null
+        pendingDrawingBitmap = null
+    }
+
     fun saveFooting(projectId: Long, name: String, result: CalculatorEngine.FootingResult) {
         viewModelScope.launch {
             repository.saveFootingDesign(projectId, name, result, lastFcu, lastFy)

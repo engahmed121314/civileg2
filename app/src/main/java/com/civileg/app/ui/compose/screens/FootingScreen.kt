@@ -52,6 +52,15 @@ import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.domain.validation.FieldKind
+import com.civileg.app.domain.validation.FieldSpec
+import com.civileg.app.domain.validation.FormValidator
+import com.civileg.app.ui.compose.validation.FormErrorSummary
+import com.civileg.app.ui.compose.validation.OptionalInputGroup
+import com.civileg.app.ui.compose.validation.ValidatedNumberField
+import com.civileg.app.ui.compose.validation.rememberFormValidationState
+import com.civileg.app.ui.compose.validation.scrollItemToCenter
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 
@@ -120,6 +129,19 @@ fun FootingScreen(
     var workingSpace by remember { mutableStateOf("0.5") }
     var blindingThickness by remember { mutableStateOf("0.1") }
 
+    // Optional boundary limits: blank used to mean "no limit". Now an explicit checkbox decides.
+    var limitLeftOn by remember { mutableStateOf(false) }
+    var limitRightOn by remember { mutableStateOf(false) }
+
+    // Shared field-anchored validation (ui/compose/validation). No silent defaults.
+    val form = rememberFormValidationState()
+    val listState = rememberLazyListState()
+    // Any input change makes the shown result stale: drop it and that field's old error.
+    fun touch(id: String) {
+        form.clear(id)
+        viewModel.clearResult()
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -137,6 +159,7 @@ fun FootingScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
@@ -168,6 +191,7 @@ fun FootingScreen(
                                 DropdownMenuItem(
                                     text = { AppText(type.displayName) },
                                     onClick = {
+                                        if (selectedType != type) { form.clearAll(); viewModel.clearResult() }
                                         selectedType = type
                                         expandedType = false
                                     }
@@ -180,113 +204,164 @@ fun FootingScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FootingInputField(colLength, stringResource(R.string.footing_column_length_mm), { colLength = it }, Modifier.weight(1f))
-                    FootingInputField(colWidth, stringResource(R.string.footing_column_width_mm), { colWidth = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "colLength", colLength, stringResource(R.string.footing_column_length_mm), { colLength = it; touch("colLength") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "colWidth", colWidth, stringResource(R.string.footing_column_width_mm), { colWidth = it; touch("colWidth") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FootingInputField(fcu, stringResource(R.string.footing_fcu_label), { fcu = it }, Modifier.weight(1f))
-                    FootingInputField(fy, stringResource(R.string.footing_fy_label), { fy = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "fcu", fcu, stringResource(R.string.footing_fcu_label), { fcu = it; touch("fcu") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "fy", fy, stringResource(R.string.footing_fy_label), { fy = it; touch("fy") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FootingInputField(axialLoad, stringResource(R.string.footing_pu1_label), { axialLoad = it }, Modifier.weight(1f))
-                    FootingInputField(soilCapacity, stringResource(R.string.footing_soil_label), { soilCapacity = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "axialLoad", axialLoad, stringResource(R.string.footing_pu1_label), { axialLoad = it; touch("axialLoad") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "soilCapacity", soilCapacity, stringResource(R.string.footing_soil_label), { soilCapacity = it; touch("soilCapacity") }, Modifier.weight(1f))
                 }
             }
 
             if (selectedType == CalculatorEngine.FootingType.COMBINED) {
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        FootingInputField(axialLoad2, stringResource(R.string.footing_pu2_label), { axialLoad2 = it }, Modifier.weight(1f))
-                        FootingInputField(colDistance, stringResource(R.string.footing_distance_label), { colDistance = it }, Modifier.weight(1f))
+                        ValidatedNumberField(form, "axialLoad2", axialLoad2, stringResource(R.string.footing_pu2_label), { axialLoad2 = it; touch("axialLoad2") }, Modifier.weight(1f))
+                        ValidatedNumberField(form, "colDistance", colDistance, stringResource(R.string.footing_distance_label), { colDistance = it; touch("colDistance") }, Modifier.weight(1f))
                     }
                 }
             }
 
             item {
                 AppText(stringResource(R.string.footing_boundary_label), fontWeight = FontWeight.Bold)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FootingInputField(maxLeft, stringResource(R.string.footing_max_left_label), { maxLeft = it }, Modifier.weight(1f))
-                    FootingInputField(maxRight, stringResource(R.string.footing_max_right_label), { maxRight = it }, Modifier.weight(1f))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OptionalInputGroup(
+                        label = stringResource(R.string.footing_max_left_label),
+                        checked = limitLeftOn,
+                        onCheckedChange = { limitLeftOn = it; touch("maxLeft") },
+                        testTag = "optional_maxLeft"
+                    ) {
+                        ValidatedNumberField(form, "maxLeft", maxLeft, stringResource(R.string.footing_max_left_label), { maxLeft = it; touch("maxLeft") }, Modifier.fillMaxWidth())
+                    }
+                    OptionalInputGroup(
+                        label = stringResource(R.string.footing_max_right_label),
+                        checked = limitRightOn,
+                        onCheckedChange = { limitRightOn = it; touch("maxRight") },
+                        testTag = "optional_maxRight"
+                    ) {
+                        ValidatedNumberField(form, "maxRight", maxRight, stringResource(R.string.footing_max_right_label), { maxRight = it; touch("maxRight") }, Modifier.fillMaxWidth())
+                    }
                 }
             }
 
             item {
                 AppText(stringResource(R.string.footing_rebar_options), fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FootingInputField(barDiameter, stringResource(R.string.footing_bar_diameter), { barDiameter = it }, Modifier.weight(1f))
-                    FootingInputField(barSpacing, stringResource(R.string.footing_bar_spacing), { barSpacing = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "barDiameter", barDiameter, stringResource(R.string.footing_bar_diameter), { barDiameter = it; touch("barDiameter") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "barSpacing", barSpacing, stringResource(R.string.footing_bar_spacing), { barSpacing = it; touch("barSpacing") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 DesignCodeSelectorRow(
                     selectedCode = selectedCode,
-                    onCodeSelected = { selectedCode = it }
+                    onCodeSelected = { if (selectedCode != it) viewModel.clearResult(); selectedCode = it }
                 )
             }
 
             item {
                 AppText(stringResource(R.string.boq_site_title), fontWeight = FontWeight.Bold)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FootingInputField(excavationDepth, stringResource(R.string.boq_excavation_depth), { excavationDepth = it }, Modifier.weight(1f))
-                    FootingInputField(workingSpace, stringResource(R.string.boq_working_space), { workingSpace = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "excavationDepth", excavationDepth, stringResource(R.string.boq_excavation_depth), { excavationDepth = it; touch("excavationDepth") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "workingSpace", workingSpace, stringResource(R.string.boq_working_space), { workingSpace = it; touch("workingSpace") }, Modifier.weight(1f))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FootingInputField(blindingThickness, stringResource(R.string.boq_blinding_thickness), { blindingThickness = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "blindingThickness", blindingThickness, stringResource(R.string.boq_blinding_thickness), { blindingThickness = it; touch("blindingThickness") }, Modifier.weight(1f))
                 }
             }
 
 
             item {
-                val inputValid = axialLoad.toDoubleOrNull()?.let { it > 0 } == true
-                        && fcu.toDoubleOrNull()?.let { it > 0 } == true
-                        && fy.toDoubleOrNull()?.let { it > 0 } == true
-                        && soilCapacity.toDoubleOrNull()?.let { it > 0 } == true
-                        && colWidth.toDoubleOrNull()?.let { it > 0 } == true
-                        && colLength.toDoubleOrNull()?.let { it > 0 } == true
-                if (!inputValid) {
-                    AppText(
-                        stringResource(R.string.input_invalid_numbers),
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
-                }
+                // LazyColumn item index per field (the combined-only row shifts later rows by one).
+                val shift = if (selectedType == CalculatorEngine.FootingType.COMBINED) 1 else 0
+                val fieldItemIndex = mapOf(
+                    "colLength" to 2, "colWidth" to 2, "fcu" to 3, "fy" to 3,
+                    "axialLoad" to 4, "soilCapacity" to 4, "axialLoad2" to 5, "colDistance" to 5,
+                    "maxLeft" to 5 + shift, "maxRight" to 5 + shift,
+                    "barDiameter" to 6 + shift, "barSpacing" to 6 + shift,
+                    "excavationDepth" to 8 + shift, "workingSpace" to 8 + shift, "blindingThickness" to 8 + shift
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormErrorSummary(form)
                 AppButton(
                     label = stringResource(R.string.footing_design_now),
                     onClick = {
-                        if (!inputValid) return@AppButton
-                        viewModel.excavationDepthM = excavationDepth.toDoubleOrNull() ?: 0.0
-                        viewModel.workingSpaceM = workingSpace.toDoubleOrNull() ?: 0.5
-                        viewModel.blindingThicknessM = blindingThickness.toDoubleOrNull() ?: 0.0
+                        viewModel.clearResult() // never leave a stale result on screen
+                        val combined = selectedType == CalculatorEngine.FootingType.COMBINED
+                        val groups = buildSet {
+                            if (combined) add("combined")
+                            if (limitLeftOn) add("left")
+                            if (limitRightOn) add("right")
+                        }
+                        // Order = on-screen order. Only physical rules (positive / non-negative / whole);
+                        // no code limits are invented here.
+                        val checked = FormValidator.validate(
+                            listOf(
+                                FieldSpec("colLength", colLength, FieldKind.POSITIVE),
+                                FieldSpec("colWidth", colWidth, FieldKind.POSITIVE),
+                                FieldSpec("fcu", fcu, FieldKind.POSITIVE),
+                                FieldSpec("fy", fy, FieldKind.POSITIVE),
+                                FieldSpec("axialLoad", axialLoad, FieldKind.POSITIVE),
+                                FieldSpec("soilCapacity", soilCapacity, FieldKind.POSITIVE),
+                                // Engine runs the combined design only when p2 > 0 and distance > 0.
+                                FieldSpec("axialLoad2", axialLoad2, FieldKind.POSITIVE, group = "combined"),
+                                FieldSpec("colDistance", colDistance, FieldKind.POSITIVE, group = "combined"),
+                                FieldSpec("maxLeft", maxLeft, FieldKind.POSITIVE, group = "left"),
+                                FieldSpec("maxRight", maxRight, FieldKind.POSITIVE, group = "right"),
+                                FieldSpec("barDiameter", barDiameter, FieldKind.POSITIVE_INT),
+                                FieldSpec("barSpacing", barSpacing, FieldKind.POSITIVE),
+                                FieldSpec("excavationDepth", excavationDepth, FieldKind.NON_NEGATIVE),
+                                FieldSpec("workingSpace", workingSpace, FieldKind.NON_NEGATIVE),
+                                FieldSpec("blindingThickness", blindingThickness, FieldKind.NON_NEGATIVE)
+                            ),
+                            activeGroups = groups
+                        )
+                        form.apply(checked)
+                        if (!checked.isValid) {
+                            scope.launch {
+                                form.focusFirstInvalid(checked) { id ->
+                                    fieldItemIndex[id]?.let { listState.scrollItemToCenter(it) }
+                                }
+                            }
+                            return@AppButton
+                        }
+                        viewModel.excavationDepthM = checked.value("excavationDepth")
+                        viewModel.workingSpaceM = checked.value("workingSpace")
+                        viewModel.blindingThicknessM = checked.value("blindingThickness")
                         viewModel.calculateFooting(
                             type = selectedType,
-                            p = axialLoad.toDouble()!!,
-                            fcu = fcu.toDouble()!!,
-                            fy = fy.toDouble()!!,
-                            soil = soilCapacity.toDouble()!!,
-                            colB = colWidth.toDouble()!!,
-                            colT = colLength.toDouble()!!,
+                            p = checked.value("axialLoad"),
+                            fcu = checked.value("fcu"),
+                            fy = checked.value("fy"),
+                            soil = checked.value("soilCapacity"),
+                            colB = checked.value("colWidth"),
+                            colT = checked.value("colLength"),
                             code = selectedCode,
-                            preferredDiameter = barDiameter.toIntOrNull() ?: 16,
-                            preferredSpacing = barSpacing.toDoubleOrNull() ?: 150.0,
-                            p2 = axialLoad2.toDoubleOrNull() ?: 0.0,
-                            distance = (colDistance.toDoubleOrNull() ?: 3.5) * 1000.0,
-                            maxLeft = maxLeft.toDoubleOrNull()?.let { it * 1000.0 },
-                            maxRight = maxRight.toDoubleOrNull()?.let { it * 1000.0 }
+                            preferredDiameter = checked.value("barDiameter").toInt(),
+                            preferredSpacing = checked.value("barSpacing"),
+                            // Not applicable (type != COMBINED): engine ignores them; 0.0 = "not used".
+                            p2 = checked.valueOrNull("axialLoad2") ?: 0.0,
+                            distance = (checked.valueOrNull("colDistance") ?: 0.0) * 1000.0,
+                            maxLeft = checked.valueOrNull("maxLeft")?.let { it * 1000.0 },
+                            maxRight = checked.valueOrNull("maxRight")?.let { it * 1000.0 }
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isLoading && inputValid,
+                    enabled = !isLoading,
                     loading = isLoading,
                     icon = Icons.Default.Calculate
                 )
+                }
             }
 
             result?.let { res ->
@@ -488,12 +563,12 @@ fun FootingScreen(
                         else -> (700 * wRatio).toInt().coerceIn(500, 900)
                     }
                     // Map footing type to English name expected by the drawing
-                    val footingTypeEnglish = footingDrawingTypeName(selectedType)
+                    val footingTypeEnglish = footingDrawingTypeName(res.type)
                     // For combined footings, compute column positions relative to footing left edge
-                    val (col1XPos, col2XPos) = if (selectedType == CalculatorEngine.FootingType.COMBINED) {
+                    val (col1XPos, col2XPos) = if (res.type == CalculatorEngine.FootingType.COMBINED) {
                         combinedColumnPositions(
-                            columnWidthMm = colWidth.toDoubleOrNull() ?: 300.0,
-                            distanceM = colDistance.toDoubleOrNull() ?: 3.5
+                            columnWidthMm = res.column1Size.first,
+                            distanceM = res.distanceBetweenColumns / 1000.0
                         )
                     } else {
                         Pair(0.0, 0.0)
@@ -507,17 +582,17 @@ fun FootingScreen(
                         selectedViewMode = selectedViewMode,
                         onViewModeChanged = { selectedViewMode = it },
                         drawingContent = {
-                            if (selectedType == CalculatorEngine.FootingType.COMBINED) {
+                            if (res.type == CalculatorEngine.FootingType.COMBINED) {
                                 ProfessionalCombinedFootingDrawing(
                                     footingLength = res.length.toDouble(),
                                     footingWidth = res.width.toDouble(),
                                     footingThickness = res.thickness.toDouble(),
                                     col1X = col1XPos,
-                                    col1Width = colWidth.toDoubleOrNull() ?: 300.0,
-                                    col1Depth = colLength.toDoubleOrNull() ?: 600.0,
+                                    col1Width = res.column1Size.first,
+                                    col1Depth = res.column1Size.second,
                                     col2X = col2XPos,
-                                    col2Width = colWidth.toDoubleOrNull() ?: 300.0,
-                                    col2Depth = colLength.toDoubleOrNull() ?: 600.0,
+                                    col2Width = res.column1Size.first,
+                                    col2Depth = res.column1Size.second,
                                     longBottomDia = res.barDiameter.toDouble(),
                                     longBottomCount = res.barsX,
                                     longTopDia = res.barDiameter.toDouble(),
@@ -538,8 +613,8 @@ fun FootingScreen(
                                     footingLengthX = res.length.toDouble(),
                                     footingLengthY = res.width.toDouble(),
                                     footingThickness = res.thickness.toDouble(),
-                                    columnWidth = colWidth.toDoubleOrNull() ?: 300.0,
-                                    columnDepth = colLength.toDoubleOrNull() ?: 600.0,
+                                    columnWidth = res.column1Size.first,
+                                    columnDepth = res.column1Size.second,
                                     rebarXDia = res.barDiameter.toDouble(),
                                     rebarXCount = res.barsX,
                                     rebarYDia = res.barDiameter.toDouble(),
@@ -562,11 +637,11 @@ fun FootingScreen(
         }
         // PDF drawing capture area (invisible, renders at viewMode=0)
         result?.let { res ->
-            val footingTypeEnglish = footingDrawingTypeName(selectedType)
-            val (col1XPos, col2XPos) = if (selectedType == CalculatorEngine.FootingType.COMBINED) {
+            val footingTypeEnglish = footingDrawingTypeName(res.type)
+            val (col1XPos, col2XPos) = if (res.type == CalculatorEngine.FootingType.COMBINED) {
                 combinedColumnPositions(
-                    columnWidthMm = colWidth.toDoubleOrNull() ?: 300.0,
-                    distanceM = colDistance.toDoubleOrNull() ?: 3.5
+                    columnWidthMm = res.column1Size.first,
+                    distanceM = res.distanceBetweenColumns / 1000.0
                 )
             } else {
                 Pair(0.0, 0.0)
@@ -577,17 +652,17 @@ fun FootingScreen(
                 heightPx = screenHeightPx
             ) {
                 Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
-                    if (selectedType == CalculatorEngine.FootingType.COMBINED) {
+                    if (res.type == CalculatorEngine.FootingType.COMBINED) {
                         ProfessionalCombinedFootingDrawing(
                             footingLength = res.length.toDouble(),
                             footingWidth = res.width.toDouble(),
                             footingThickness = res.thickness.toDouble(),
                             col1X = col1XPos,
-                            col1Width = colWidth.toDoubleOrNull() ?: 300.0,
-                            col1Depth = colLength.toDoubleOrNull() ?: 600.0,
+                            col1Width = res.column1Size.first,
+                            col1Depth = res.column1Size.second,
                             col2X = col2XPos,
-                            col2Width = colWidth.toDoubleOrNull() ?: 300.0,
-                            col2Depth = colLength.toDoubleOrNull() ?: 600.0,
+                            col2Width = res.column1Size.first,
+                            col2Depth = res.column1Size.second,
                             longBottomDia = res.barDiameter.toDouble(),
                             longBottomCount = res.barsX,
                             longTopDia = res.barDiameter.toDouble(),
@@ -608,8 +683,8 @@ fun FootingScreen(
                             footingLengthX = res.length.toDouble(),
                             footingLengthY = res.width.toDouble(),
                             footingThickness = res.thickness.toDouble(),
-                            columnWidth = colWidth.toDoubleOrNull() ?: 300.0,
-                            columnDepth = colLength.toDoubleOrNull() ?: 600.0,
+                            columnWidth = res.column1Size.first,
+                            columnDepth = res.column1Size.second,
                             rebarXDia = res.barDiameter.toDouble(),
                             rebarXCount = res.barsX,
                             rebarYDia = res.barDiameter.toDouble(),
@@ -719,18 +794,6 @@ private fun SectionHeader(title: String, iconRes: Int) {
         Spacer(modifier = Modifier.width(8.dp))
         AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
     }
-}
-
-@Composable
-private fun FootingInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { AppText(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp)
-    )
 }
 
 @Composable
