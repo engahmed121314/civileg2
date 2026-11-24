@@ -31,10 +31,20 @@ class ToolboxSampleUiTest {
     }
     private fun rotate(landscape: Boolean) {
         rule.activity.runOnUiThread {
-            rule.activity.requestedOrientation = if (landscape) ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            rule.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
-        val expected = if (landscape) Configuration.ORIENTATION_LANDSCAPE else Configuration.ORIENTATION_PORTRAIT
-        rule.waitUntil(20000) { rule.activity.resources.configuration.orientation == expected }
+        // Rotate the emulator display itself. Resource wrappers can retain a stale
+        // orientation value, so assert the physical screenshot, never fake configuration.
+        assertTrue("Display rotation request rejected", instrumentation.uiAutomation.setRotation(
+            if (landscape) android.app.UiAutomation.ROTATION_FREEZE_90 else android.app.UiAutomation.ROTATION_FREEZE_0))
+        rule.waitUntil(20000) {
+            val bitmap = instrumentation.uiAutomation.takeScreenshot()
+            if (bitmap == null) false else {
+                val matches = (bitmap.width > bitmap.height) == landscape
+                bitmap.recycle()
+                matches
+            }
+        }
         rule.waitForIdle()
     }
     @Test fun toolboxActualRoutes_portraitAndLandscape() {
