@@ -73,10 +73,11 @@ class StairViewModel @Inject constructor(
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("preferredDiameter", preferredDiameter)
+        InputGuard.positive("stairWidthMm", stairWidthMm)
 
         viewModelScope.launch {
             _isLoading.value = true
-            lastStairWidthMm = stairWidthMm.coerceAtLeast(300.0)
+            lastStairWidthMm = stairWidthMm
             pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
                 val res = calculatorEngine.designStaircase(

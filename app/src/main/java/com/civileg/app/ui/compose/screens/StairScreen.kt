@@ -227,13 +227,12 @@ fun StairScreen(
                     label = stringResource(R.string.stair_design_now),
                     onClick = {
                         viewModel.clearResult() // never leave a stale result on screen
-                        // Order = on-screen order. span/riser/tread bounds are the page's
-                        // pre-existing limits (source not verified); the rest are physical only.
+                        // Physical input checks only. Unverified legacy UI cutoffs are not code limits.
                         val checked = FormValidator.validate(
                             listOf(
-                                FieldSpec("span", span, FieldKind.POSITIVE, min = 1.0, max = 15.0),
-                                FieldSpec("riser", riser, FieldKind.POSITIVE, min = 100.0, max = 200.0),
-                                FieldSpec("tread", tread, FieldKind.POSITIVE, min = 200.0, max = 400.0),
+                                FieldSpec("span", span, FieldKind.POSITIVE),
+                                FieldSpec("riser", riser, FieldKind.POSITIVE),
+                                FieldSpec("tread", tread, FieldKind.POSITIVE),
                                 FieldSpec("deadLoad", deadLoad, FieldKind.NON_NEGATIVE),
                                 FieldSpec("liveLoad", liveLoad, FieldKind.NON_NEGATIVE),
                                 FieldSpec("fcu", fcu, FieldKind.POSITIVE),
