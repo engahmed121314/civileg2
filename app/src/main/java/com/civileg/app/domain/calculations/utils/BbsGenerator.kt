@@ -286,9 +286,9 @@ object BbsGenerator {
         InputGuard.positive("mainDiameter", result.reinforcement.diameter)
         InputGuard.positive("mainSpacing", result.reinforcement.spacing)
 
-        val runMm = result.span * 1000.0
-        val nRisers = (runMm / result.tread).toInt().coerceAtLeast(1)
-        val totalRiseMm = nRisers * result.riser
+        val geometry = StairFlightGeometry.from(result.span, result.riser, result.tread)
+        val runMm = geometry.runMm
+        val totalRiseMm = geometry.riseMm
         val inclineMm = sqrt(runMm * runMm + totalRiseMm * totalRiseMm)
         val tailMm = (result.thickness - coverMm).coerceAtLeast(0.0)
 

@@ -2094,9 +2094,10 @@ class CalculatorEngine @Inject constructor(
         InputGuard.positive("fy", fy)
 
         return try {
-            val nTreads = max(1, (span * 1000.0 / tread).roundToInt())
-            val nRisers = nTreads + 1
-            val totalRise = riser * nRisers / 1000.0
+            val geometry = StairFlightGeometry.from(span, riser, tread)
+            val nTreads = geometry.treadCount
+            val nRisers = geometry.riserCount
+            val totalRise = geometry.riseMm / 1000.0
             val defaultThickness = max(span * 1000.0 / 25.0, 120.0).coerceIn(120.0, 300.0)
 
             val input = StaircaseInput(

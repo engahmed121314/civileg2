@@ -12,6 +12,16 @@ class DxfExporterTest {
     private fun count(dxf: String, entity: String): Int =
         Regex("\n0\n$entity\n").findAll(dxf).count()
 
+    @Test fun stairDrawingUsesDistinctTreadAndRiserCounts() {
+        val drawing = ElementDxfDrawings.stairSection(
+            "STAIR", 3900.0, 150.0, 14, 160.0, 25.0, 12.0, 150.0, treadCount = 13
+        )
+        val text = DxfExporter().renderToString(drawing)
+        assertTrue(text.contains("14 risers / 13 treads"))
+        assertTrue(text.contains("3900"))
+        assertTrue(text.contains("2260")) // total rise plus waist
+    }
+
     @Test
     fun beamSection_emitsEntities_insideEntitiesSection() {
         val drawing = ElementDxfDrawings.beamSection(
