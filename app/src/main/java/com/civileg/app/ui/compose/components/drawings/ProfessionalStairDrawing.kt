@@ -234,18 +234,8 @@ fun ProfessionalStairDrawing(
         )
         } // end section/plan views
 
-        if (viewMode == 0) {
-            drawSectionSeparator(
-                y = tableTop - cfg.margin * 0.3f,
-                width = cw,
-                label = "REINFORCEMENT",
-                cfg = cfg
-            )
-        }
-
         // 4. Reinforcement schedule table (bottom)
         if (viewMode == 0 || viewMode == 3) {
-            drawZoneLabel(cfg.margin, tableTop, "REINFORCEMENT", cfg)
         drawReinforcementScheduleTable(
             cw = cw, ch = ch, tableTop = tableTop,
             nRisers = nRisers, nTreads = nTreads,
@@ -261,26 +251,17 @@ fun ProfessionalStairDrawing(
         )
         } // end reinforcement table
 
-        // 5. Title block (always visible)
-        drawTitleBlock(cw, ch, tableTop, nRisers, riserHeight, treadWidth, totalHeight, totalLength, stairType)
+        // One full-width footer. The former fixed-width summary/title blocks
+        // overprinted each other and were clipped on a phone-width canvas.
+        val footerY = ch - cfg.margin * 2.2f
+        drawTextAnnotated("Stair Detail | $codeLabel | NTS", cfg.margin, footerY,
+            DimensionWhite, cfg.annotationTextSmall)
+        resultSummary?.let { summary ->
+            drawTextAnnotated("Implemented checks: ${summary.safetyLabel}; review required",
+                cfg.margin, footerY + cfg.annotationTextSmall * 1.3f,
+                DimensionWhite, cfg.annotationTextSmall)
+        }
 
-        // ── Responsive title block ──
-        drawSheetAnnotations(
-            x = cw - cfg.titleBlockWidth - cfg.margin,
-            y = ch - cfg.titleBlockHeight - cfg.margin,
-            cfg = cfg,
-            summary = resultSummary
-        )
-        drawResponsiveTitleBlock(
-            x = cw - cfg.titleBlockWidth - cfg.margin,
-            y = ch - cfg.titleBlockHeight - cfg.margin,
-            cfg = cfg,
-            projectName = "CivilEG",
-            drawingTitle = "Stair Detail",
-            scale = "NTS",
-            drawingNo = "1",
-            designCode = codeLabel
-        )
     }
 }
 
@@ -328,7 +309,8 @@ private fun DrawScope.drawElevationView(
     // Origin: bottom-left of stair (where first riser meets floor)
     // Reserve 62f at bottom for supports + horizontal length dimension
     val originX = zoneLeft + 50f
-    val originY = zoneBottom - 62f
+    val fittedHeight = totalHeight.toFloat() * scale
+    val originY = zoneTop + (zoneH + fittedHeight) / 2f
 
     // Stair top-right corner (end of last tread at top)
     val stairEndX = originX + nTreads * stepW

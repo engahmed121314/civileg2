@@ -13,6 +13,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +42,7 @@ import com.civileg.app.utils.tools.CalculatorHistory
 fun CalculatorScreen(
     onNavigateBack: () -> Unit = {}
 ) {
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val snackbarHostState = remember { SnackbarHostState() }
     var expression by rememberSaveable { mutableStateOf("") }
     var result by rememberSaveable { mutableStateOf("0") }
@@ -72,20 +75,12 @@ fun CalculatorScreen(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentAlignment = Alignment.TopCenter
         ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = MaterialTheme.dimens.formMaxWidth)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        val displayAndFunctions: @Composable () -> Unit = {
             // Display Area
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(130.dp),
+                    .height(if (landscape) 88.dp else 130.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
             ) {
@@ -190,13 +185,15 @@ fun CalculatorScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
+        }
+        val keypad: @Composable () -> Unit = {
             // Main keypad - 5 rows x 4 columns
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(if (landscape) 2.dp else 6.dp)
             ) {
                 // Row 1: C, ⌫, ^, ÷
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (landscape) 2.dp else 6.dp)) {
                     CalcButton("C", Modifier.weight(1f), Color(0xFFD32F2F)) {
                         expression = ""; result = "0"; isNewCalculation = true
                     }
@@ -211,7 +208,7 @@ fun CalculatorScreen(
                     }
                 }
                 // Row 2: 7, 8, 9, ×
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (landscape) 2.dp else 6.dp)) {
                     CalcButton("7", Modifier.weight(1f)) { appendNumber("7", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton("8", Modifier.weight(1f)) { appendNumber("8", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton("9", Modifier.weight(1f)) { appendNumber("9", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
@@ -220,7 +217,7 @@ fun CalculatorScreen(
                     }
                 }
                 // Row 3: 4, 5, 6, -
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (landscape) 2.dp else 6.dp)) {
                     CalcButton("4", Modifier.weight(1f)) { appendNumber("4", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton("5", Modifier.weight(1f)) { appendNumber("5", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton("6", Modifier.weight(1f)) { appendNumber("6", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
@@ -229,7 +226,7 @@ fun CalculatorScreen(
                     }
                 }
                 // Row 4: 1, 2, 3, +
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (landscape) 2.dp else 6.dp)) {
                     CalcButton("1", Modifier.weight(1f)) { appendNumber("1", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton("2", Modifier.weight(1f)) { appendNumber("2", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton("3", Modifier.weight(1f)) { appendNumber("3", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
@@ -238,7 +235,7 @@ fun CalculatorScreen(
                     }
                 }
                 // Row 5: ±, 0, ., =
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (landscape) 2.dp else 6.dp)) {
                     CalcButton("±", Modifier.weight(1f)) {
                         // Negate the whole expression: -(2+3) is -5. Prepending "-" alone would only negate the first term.
                         if (expression.isNotEmpty()) {
@@ -273,6 +270,19 @@ fun CalculatorScreen(
                         }
                     }
                 }
+            }        }
+        if (landscape) {
+            Row(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(0.45f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) { displayAndFunctions() }
+                Column(Modifier.weight(0.55f).verticalScroll(rememberScrollState())) { keypad() }
+            }
+        } else {
+            Column(Modifier.widthIn(max = MaterialTheme.dimens.formMaxWidth).fillMaxSize()
+                .background(MaterialTheme.colorScheme.background).verticalScroll(rememberScrollState())
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                displayAndFunctions()
+                keypad()
             }
         }
         }

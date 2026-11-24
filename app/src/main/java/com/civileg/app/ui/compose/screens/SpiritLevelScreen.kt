@@ -124,8 +124,9 @@ fun SpiritLevelScreen(onNavigateBack: () -> Unit = {}) {
             val tilt = screenTilt
             val ringColor = MaterialTheme.colorScheme.outline
             val bubbleColor = if (tilt != null && SpiritLevelMath.displayedLevel(tilt)) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary
-            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Canvas(Modifier.fillMaxWidth().aspectRatio(1f)) {
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                val dialSize = minOf(maxWidth, maxHeight)
+                Canvas(Modifier.size(dialSize)) {
                     val c = Offset(size.width / 2f, size.height / 2f)
                     val r = size.minDimension / 2f * 0.95f
                     drawCircle(ringColor, r, c, style = Stroke(3f))
