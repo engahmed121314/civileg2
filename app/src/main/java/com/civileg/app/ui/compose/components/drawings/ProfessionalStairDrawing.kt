@@ -184,20 +184,12 @@ fun ProfessionalStairDrawing(
             else -> 0f
         }
 
-        // ── Combined section indicator ──
-        if (viewMode == 0) {
-            drawCombinedSectionLabel(
-                y = cfg.margin * 0.5f,
-                width = cw,
-                sections = listOf("Elevation", "Section", "Plan", "Reinforcement"),
-                cfg = cfg
-            )
-        }
+        // Each zone owns its own heading. Do not overlay a full-width heading
+        // or separator across the adjacent elevation/section drawings.
 
         // ── Draw zones based on viewMode ──────────────────────────
         // 1. Main elevation view (left)
         if (viewMode == 0 || viewMode == 1) {
-            drawZoneLabel(cfg.margin, cfg.margin * 0.3f, "ELEVATION", cfg)
         drawElevationView(
             zoneLeft = cfg.margin, zoneTop = cfg.margin * 0.5f,
             zoneRight = elevZoneRight - 10f, zoneBottom = tableTop - 16f,
@@ -216,18 +208,8 @@ fun ProfessionalStairDrawing(
         )
         } // end elevation view
 
-        if (viewMode == 0) {
-            drawSectionSeparator(
-                y = rightZoneTop - cfg.margin * 0.3f,
-                width = cw,
-                label = "SECTION & PLAN",
-                cfg = cfg
-            )
-        }
-
         // 2. Cross-section view A-A (right-top) + 3. Plan view (right-bottom)
         if (viewMode == 0 || viewMode == 2) {
-            drawZoneLabel(cfg.margin, rightZoneTop, "CROSS SECTION", cfg)
         val secZoneLeft = if (viewMode == 2) cfg.margin else elevZoneRight + 10f
         drawCrossSectionView(
             zoneLeft = secZoneLeft, zoneTop = rightZoneTop,
