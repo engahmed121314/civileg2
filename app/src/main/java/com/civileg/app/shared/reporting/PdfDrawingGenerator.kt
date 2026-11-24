@@ -1061,8 +1061,8 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${spanX.toInt()} mm (Lx)", offset = 25f)
-        canvas.drawVDim(planT, planT + planH, planL - 25f, "${spanY.toInt()} mm (Ly)", offset = 25f)
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${SlabDrawingUnits.mmLabel(spanX)} (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${SlabDrawingUnits.mmLabel(spanY)} (Ly)", offset = 25f)
         canvas.drawTextCentered("FLAT SLAB PLAN — DROP PANELS", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
@@ -1108,7 +1108,7 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(secL, secL + secViewW, secT + secH + dpH + 50f, "${spanX.toInt()} mm")
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + dpH + 50f, "${SlabDrawingUnits.mmLabel(spanX)}")
         canvas.drawVDim(secT, secT + secH + dpH, secL + secViewW + 20f, "t=${thickness.toInt()}mm + DP=${dropPanelSize.toInt()}mm", offset = 25f)
         canvas.drawTextCentered("SECTION A-A (WITH DROP PANEL)", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
@@ -1207,8 +1207,8 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${spanX.toInt()} mm (Lx)", offset = 25f)
-        canvas.drawVDim(planT, planT + planH, planL - 25f, "${spanY.toInt()} mm (Ly)", offset = 25f)
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${SlabDrawingUnits.mmLabel(spanX)} (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${SlabDrawingUnits.mmLabel(spanY)} (Ly)", offset = 25f)
         canvas.drawTextCentered("HORDI SLAB PLAN — RIBS & VOID BLOCKS", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
@@ -1258,7 +1258,7 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${spanX.toInt()} mm")
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${SlabDrawingUnits.mmLabel(spanX)}")
         canvas.drawVDim(secT, secT + secH, secL + secViewW + 20f, "t=${thickness.toInt()}mm", offset = 25f)
         canvas.drawTextCentered("SECTION A-A — RIBS & BLOCKS", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
@@ -1331,8 +1331,8 @@ object PdfDrawingGenerator {
         canvas.drawRect(planL, planT, planL + planW, planT + planH, outlineP)
 
         // Dimensions
-        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${spanX.toInt()} mm (Lx)", offset = 25f)
-        canvas.drawVDim(planT, planT + planH, planL - 25f, "${spanY.toInt()} mm (Ly)", offset = 25f)
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${SlabDrawingUnits.mmLabel(spanX)} (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${SlabDrawingUnits.mmLabel(spanY)} (Ly)", offset = 25f)
         canvas.drawTextCentered("WAFFLE SLAB PLAN — TWO-WAY RIBS", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
@@ -1370,7 +1370,7 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${spanX.toInt()} mm")
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${SlabDrawingUnits.mmLabel(spanX)}")
         canvas.drawVDim(secT, secT + secH, secL + secViewW + 20f, "t=${thickness.toInt()}mm", offset = 25f)
         canvas.drawTextCentered("SECTION A-A — WAFFLE", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 

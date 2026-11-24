@@ -30,4 +30,10 @@ class SlabDrawingUnitsTest {
         assertThrows(IllegalArgumentException::class.java) { SlabDrawingUnits.spanToMm(-1.0, false) }
         assertThrows(IllegalArgumentException::class.java) { SlabDrawingUnits.spanToMm(Double.NaN, true) }
     }
+
+    @Test
+    fun labelsReadInMillimetresWithoutAnExtraFactor() {
+        assertEquals("6000 mm", SlabDrawingUnits.mmLabel(SlabDrawingUnits.spanToMm(6.0, false)))
+        assertEquals("6000 mm", SlabDrawingUnits.mmLabel(SlabDrawingUnits.spanToMm(6000.0, true)))
+    }
 }

@@ -15,4 +15,7 @@ internal object SlabDrawingUnits {
         require(span.isFinite() && span > 0.0) { "span must be a positive finite number" }
         return if (spanIsMm) span else span * 1000.0
     }
+
+    /** Dimension label for a length in millimetres, for example "6000 mm". */
+    fun mmLabel(valueMm: Double): String = "${valueMm.toInt()} mm"
 }
