@@ -50,7 +50,6 @@ class DrawingSampleUiTest {
             rule.onAllNodes(hasScrollAction())[0].performScrollToNode(hasTestTag("field_$id"))
             rule.onNodeWithTag("field_$id").performTextReplacement(value)
         }
-        rule.onNodeWithTag("field_stairWidth").performImeAction()
         rule.activity.runOnUiThread {
             rule.activity.currentFocus?.let { view ->
                 (rule.activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
