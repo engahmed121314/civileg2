@@ -2443,4 +2443,7 @@
     <string name="calc_err_domain">Math error (outside the function domain)</string>
     <string name="calc_err_overflow">Result too large</string>
     <string name="calc_err_limit">Expression too long or nested too deeply</string>
+    <string name="toolbox_title">Toolbox</string>
+    <string name="toolbox_subtitle">Calculator, converter, ruler and spirit level</string>
+    <string name="building_plan_title">2D Plan</string>
 </resources>

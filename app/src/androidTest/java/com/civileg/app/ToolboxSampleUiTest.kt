@@ -40,8 +40,8 @@ class ToolboxSampleUiTest {
     @Test fun toolboxActualRoutes_portraitAndLandscape() {
         rule.waitForIdle()
         if (rule.onAllNodesWithText(ar(R.string.donation_decline)).fetchSemanticsNodes().isNotEmpty()) click(R.string.donation_decline)
-        val out = File(context.getExternalFilesDir(null), "toolbox-samples").apply { mkdirs() }
-        click(R.string.nav_tools)
+        val out = File(context.filesDir, "toolbox-samples").apply { mkdirs() }
+        click(R.string.toolbox_title)
         for ((id, name) in listOf(R.string.home_calculator to "calculator", R.string.home_unit_converter to "converter", R.string.tool_spirit_level to "level", R.string.tool_ruler to "ruler")) {
             click(id)
             for (landscape in listOf(false, true)) {
@@ -55,14 +55,6 @@ class ToolboxSampleUiTest {
             rule.waitForIdle()
         }
         File(out, "scope.txt").writeText("Actual MainActivity > Tools hub > four tool routes, portrait and landscape. Emulator visual evidence only. Physical ruler accuracy and real device sensor calibration are NOT verified. Scientific evaluator and conversion arithmetic have separate JVM tests.\n")
-        for (file in out.listFiles().orEmpty()) {
-            val pipes = instrumentation.uiAutomation.executeShellCommandRw(
-                "sh -c 'mkdir -p /data/local/tmp/civileg-toolbox-samples && cat > /data/local/tmp/civileg-toolbox-samples/${file.name} && echo TRANSFER_OK'")
-            android.os.ParcelFileDescriptor.AutoCloseOutputStream(pipes[1]).use { sink ->
-                file.inputStream().use { it.copyTo(sink) }
-            }
-            val response = android.os.ParcelFileDescriptor.AutoCloseInputStream(pipes[0]).use { it.readBytes().toString(Charsets.UTF_8) }
-            assertTrue("Toolbox transfer failed: ${file.name}", response.contains("TRANSFER_OK"))
-        }
+        org.junit.Assert.assertTrue("Missing tool screenshots", out.listFiles().orEmpty().count { it.extension == "png" && it.length() > 1000 } == 8)
     }
 }

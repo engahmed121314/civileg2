@@ -2446,4 +2446,7 @@
     <string name="calc_err_domain">خطأ رياضي (خارج مجال الدالة)</string>
     <string name="calc_err_overflow">النتيجة كبيرة جداً</string>
     <string name="calc_err_limit">العبارة طويلة جداً أو متداخلة بعمق</string>
+    <string name="toolbox_title">صندوق الأدوات</string>
+    <string name="toolbox_subtitle">آلة حاسبة ومحول وحدات ومسطرة وميزان مياه</string>
+    <string name="building_plan_title">مخطط 2D</string>
 </resources>

@@ -28,7 +28,7 @@ sealed class AppScreen(val route: String, val titleResId: Int, val iconRes: Int)
     object WaterLevel : AppScreen("water_level", R.string.home_water_level, R.drawable.ic_water)
     object SpiritLevel : AppScreen("spirit_level", R.string.tool_spirit_level, R.drawable.ic_tools)
     object Ruler : AppScreen("ruler", R.string.tool_ruler, R.drawable.ic_tools)
-    object SiteLayout : AppScreen("site_layout", R.string.home_section_tools_title, R.drawable.ic_footing)
+    object SiteLayout : AppScreen("site_layout", R.string.building_plan_title, R.drawable.ic_footing)
     object ProjectSummary : AppScreen("project_summary/{projectId}", R.string.results_summary, R.drawable.ic_calculator)
     object ExecutionLog : AppScreen("execution_log/{projectId}", R.string.nav_inventory, R.drawable.ic_costing)
     object MasterBbs : AppScreen("master_bbs/{projectId}", R.string.nav_inventory, R.drawable.ic_steel)
@@ -45,11 +45,10 @@ sealed class AppScreen(val route: String, val titleResId: Int, val iconRes: Int)
     
     // New Tools
     object RebarTool : AppScreen("rebar_tool", R.string.home_rebar_tool, R.drawable.ic_steel)
-    object QuickTools : AppScreen("quick_tools", R.string.home_quick_tools, R.drawable.ic_calculator)
     object ConcreteMix : AppScreen("concrete_mix", R.string.home_concrete_mix, R.drawable.ic_calculator)
     object QualityEngineer : AppScreen("quality_engineer", R.string.home_quality_engineer, R.drawable.ic_verified)
     object WindLoad : AppScreen("wind_load", R.string.home_wind_load, R.drawable.ic_frame)
-    object BuildingDesigner : AppScreen("building_designer", R.string.home_section_tools_title, R.drawable.ic_design)
+    object BuildingDesigner : AppScreen("building_designer", R.string.building_plan_title, R.drawable.ic_design)
 
     // Structural Analysis — Wall Openings & Soil-Structure
     object WallOpening : AppScreen("wall_opening", R.string.home_wall_opening, R.drawable.ic_wall_opening)

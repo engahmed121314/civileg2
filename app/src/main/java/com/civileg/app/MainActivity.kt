@@ -169,7 +169,7 @@ fun AppNavigation(
     val useNavigationRail = windowSize.widthClass != WindowWidthClass.COMPACT
 
     // Map bottom nav tabs to routes
-    val bottomTabRoutes = listOf("home", "design_hub", "building_designer", "tools_hub", "more_hub")
+    val bottomTabRoutes = listOf("home", "design_hub", "tools_hub", "building_designer", "more_hub")
 
     fun navigateToTab(index: Int) {
         selectedBottomTab = index
@@ -390,9 +390,6 @@ fun AppNavigation(
                 }
                 composable(AppScreen.RebarTool.route) {
                     RebarToolScreen(onNavigateBack = { navController.popBackStack() })
-                }
-                composable(AppScreen.QuickTools.route) {
-                    QuickToolsScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(AppScreen.ConcreteMix.route) {
                     ConcreteMixScreen(onNavigateBack = { navController.popBackStack() })
