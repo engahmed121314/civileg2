@@ -130,8 +130,9 @@ class StairViewModel @Inject constructor(
     /** Standalone DXF sheet for the current stair design (null when no result). */
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val currentResult = _result.value ?: return null
-        val totalHeight = currentResult.span * (currentResult.riser / currentResult.tread)
-        val nRisers = (totalHeight / currentResult.riser).toInt().coerceAtLeast(1)
+        // Same geometry as CalculatorEngine.designStaircase: span in metres, riser and tread in mm.
+        val nTreads = kotlin.math.max(1, kotlin.math.round(currentResult.span * 1000.0 / currentResult.tread).toInt())
+        val nRisers = nTreads + 1
         val pdfCover = when (currentResult.code) {
             DesignCode.ACI -> 38.0
             DesignCode.SBC -> 40.0
@@ -139,7 +140,7 @@ class StairViewModel @Inject constructor(
         }
         return com.civileg.app.utils.ElementDxfDrawings.stairSection(
             title = "STAIR ${currentResult.type.displayName}",
-            runMm = nRisers.toDouble() * currentResult.tread,
+            runMm = nTreads.toDouble() * currentResult.tread,
             riseMm = currentResult.riser,
             steps = nRisers,
             waistThicknessMm = currentResult.thickness,
@@ -174,8 +175,10 @@ class StairViewModel @Inject constructor(
                     val file = java.io.File(directory, fileName)
 
                     // Generate drawing for PDF
-                    val totalHeight = currentResult.span * (currentResult.riser / currentResult.tread)
-                    val nRisers = (totalHeight / currentResult.riser).toInt().coerceAtLeast(1)
+                    // Same geometry as CalculatorEngine.designStaircase: span is in metres, riser and tread in mm.
+                    val nTreads = kotlin.math.max(1, kotlin.math.round(currentResult.span * 1000.0 / currentResult.tread).toInt())
+                    val nRisers = nTreads + 1
+                    val totalHeight = nRisers * currentResult.riser // mm
                     val pdfCover = when(currentResult.code) {
                         DesignCode.ACI -> 38.0
                         DesignCode.SBC -> 40.0
@@ -185,7 +188,7 @@ class StairViewModel @Inject constructor(
                     val drawingBitmap = pendingDrawingBitmap ?: try {
                         PdfDrawingGenerator.generateStairDrawing(
                             totalHeight = totalHeight,
-                            totalLength = nRisers.toDouble() * currentResult.tread,
+                            totalLength = nTreads.toDouble() * currentResult.tread, // mm
                             stairWidth = lastStairWidthMm,
                             riserHeight = currentResult.riser,
                             treadWidth = currentResult.tread,
