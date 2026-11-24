@@ -2,6 +2,7 @@ package com.civileg.app.ui.compose.components.drawings
 
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.calculations.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.BeamShearCodeReview
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -31,12 +32,29 @@ class DrawingSummaryFactoryTest {
 
         assertFalse(summary.isSafe)
         assertEquals("125.0%", summary.utilizationPercent)
-        assertEquals("ACI 318-25", summary.designCodeLabel)
+        assertEquals("Unverified edition", summary.designCodeLabel)
         assertEquals(2, summary.safetyChecks.size)
         assertEquals(1, summary.failedCheckCount)
         assertEquals(2.4, summary.concreteVolume, 0.0)
         assertEquals(180.0, summary.steelWeight, 0.0)
         assertEquals(listOf("note"), summary.codeNotes)
+    }
+
+    @Test
+    fun `beam summary keeps reviewed edition separate from incomplete acceptance`() {
+        val review = BeamShearCodeReview.review(
+            DesignCode.ACI, 25.0, 360.0, 300.0, 600.0, 550.0, 20.0, 8.0, 2, 150.0
+        )
+        assertTrue(review.numericChecksPass)
+        assertFalse(review.codeAcceptanceComplete)
+        val result = CalculatorEngine.BeamResult(
+            isSafe = true, code = DesignCode.ACI, shearCodeReview = review,
+            codeAcceptanceComplete = false, warnings = listOf("Anchorage not verified")
+        )
+        val summary = beamDrawingSummary(result)
+        assertEquals("ACI318M-14", summary.designCodeLabel)
+        assertFalse(summary.isSafe)
+        assertTrue(summary.codeNotes.contains("Anchorage not verified"))
     }
 
     @Test
