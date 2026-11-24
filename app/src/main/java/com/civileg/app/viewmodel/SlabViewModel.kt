@@ -50,14 +50,27 @@ class SlabViewModel @Inject constructor(
 
     // Store actual inputs for PDF export
     private var lastInputs: SlabStoredInputs? = null
+    private val _solvedInputs = MutableLiveData<SlabStoredInputs?>()
+    /** Exactly what the shown result was solved with. Screen drawing/BBS/BOQ read this, never live fields. */
+    val solvedInputs: LiveData<SlabStoredInputs?> = _solvedInputs
 
-    private data class SlabStoredInputs(
+    /** Drop the shown result and its inputs (any edit, toggle or new attempt makes them stale). */
+    fun clearResult() {
+        _result.value = null
+        _validationReport.value = null
+        _error.value = null
+        lastInputs = null
+        _solvedInputs.value = null
+        pendingDrawingBitmap = null
+    }
+
+    data class SlabStoredInputs(
         val lx: Double, val ly: Double, val deadLoad: Double, val liveLoad: Double,
         val fcu: Double, val fy: Double, val ts: Double, val preferredDiameter: Int,
         val code: DesignCode, val type: CalculatorEngine.SlabType,
         val prestressForce: Double, val dropPanelThickness: Double, val columnSize: Double,
-        val openingWidth: Double = 0.0, val openingLength: Double = 0.0,
-        val ribWidth: Double = 100.0, val ribSpacing: Double = 500.0
+        val openingWidth: Double, val openingLength: Double,
+        val ribWidth: Double, val ribSpacing: Double
     )
 
     fun calculateSlabPro(
@@ -71,13 +84,13 @@ class SlabViewModel @Inject constructor(
         preferredDiameter: Int,
         code: DesignCode,
         type: CalculatorEngine.SlabType = CalculatorEngine.SlabType.SOLID,
-        prestressForce: Double = 0.0,
-        dropPanelThickness: Double = 0.0,
-        columnSize: Double = 400.0,
-        openingWidth: Double = 0.0,
-        openingLength: Double = 0.0,
-        ribWidth: Double = 100.0,
-        ribSpacing: Double = 500.0
+        prestressForce: Double,
+        dropPanelThickness: Double,
+        columnSize: Double,
+        openingWidth: Double,
+        openingLength: Double,
+        ribWidth: Double,
+        ribSpacing: Double
     ) {
         InputGuard.positive("lx", lx)
         InputGuard.positive("ly", ly)
@@ -93,7 +106,7 @@ class SlabViewModel @Inject constructor(
             pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
                 // Store inputs for PDF export
-                lastInputs = SlabStoredInputs(
+                val stored = SlabStoredInputs(
                     lx, ly, deadLoad, liveLoad, fcu, fy, ts, preferredDiameter,
                     code, type, prestressForce, dropPanelThickness, columnSize,
                     openingWidth, openingLength, ribWidth, ribSpacing
@@ -115,6 +128,8 @@ class SlabViewModel @Inject constructor(
                 val combinedWarnings = report.warnings + dlReport.warnings
                 _validationReport.value = report.copy(warnings = combinedWarnings)
                 
+                lastInputs = stored
+                _solvedInputs.value = stored
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {
@@ -124,23 +139,6 @@ class SlabViewModel @Inject constructor(
                 _isLoading.value = false
             }
         }
-    }
-
-    fun calculateSlab(
-        spanX: Double, spanY: Double, deadLoad: Double, liveLoad: Double,
-        fcu: Double, fy: Double, thickness: Double, preferredDiameter: Int,
-        type: CalculatorEngine.SlabType = CalculatorEngine.SlabType.SOLID,
-        code: DesignCode = DesignCode.ECP,
-        prestressForce: Double = 0.0,
-        dropPanelThickness: Double = 0.0,
-        columnSize: Double = 400.0
-    ) {
-        calculateSlabPro(
-            lx = spanX, ly = spanY, deadLoad = deadLoad, liveLoad = liveLoad,
-            fcu = fcu, fy = fy, ts = thickness, preferredDiameter = preferredDiameter,
-            code = code, type = type, prestressForce = prestressForce,
-            dropPanelThickness = dropPanelThickness, columnSize = columnSize
-        )
     }
 
     fun saveSlab(projectId: Long, name: String, result: CalculatorEngine.SlabResult) {
@@ -204,9 +202,10 @@ class SlabViewModel @Inject constructor(
                         mainSpacing = res.reinforcementMain.spacing,
                         distDia = res.reinforcementSecondary.diameter.toDouble(),
                         distSpacing = res.reinforcementSecondary.spacing,
-                        dropPanelSize = inputs.dropPanelThickness,
-                        ribWidth = 100.0,
-                        ribSpacing = 500.0,
+                        // Slab screen has no plan-size input: plan size stays absent (0.0), not invented.
+                        dropPanelThickness = inputs.dropPanelThickness,
+                        ribWidth = inputs.ribWidth,
+                        ribSpacing = inputs.ribSpacing,
                         columnSize = inputs.columnSize
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }

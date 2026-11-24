@@ -212,6 +212,7 @@ class FlatSlabViewModel @Inject constructor(
                         distSpacing = res.middleStripBotRebar.spacing.toDouble(),
                         cover = input.clearCover,
                         dropPanelSize = maxOf(input.dropSizeX, input.dropSizeY),
+                        dropPanelThickness = input.dropThickness,
                         columnSize = input.columnWidth
                     )
                 }.getOrNull()

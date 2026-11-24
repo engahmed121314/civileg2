@@ -1,6 +1,12 @@
 package com.civileg.app.ui.compose.screens
 
 import com.civileg.app.ui.responsive.dimens
+import com.civileg.app.ui.compose.validation.FormErrorSummary
+import com.civileg.app.ui.compose.validation.ValidatedNumberField
+import com.civileg.app.ui.compose.validation.rememberFormValidationState
+import com.civileg.app.ui.compose.validation.scrollItemToCenter
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
 
 import kotlin.math.*
 import androidx.compose.foundation.background
@@ -86,6 +92,30 @@ fun ColumnScreen(
     val screenWidthPx = (config.screenWidthDp * density.density).toInt()
     val screenHeightPx = (config.screenHeightDp * density.density).toInt()
 
+    val form = rememberFormValidationState()
+    val listState = rememberLazyListState()
+    // Item index of each field's row. Result items follow the Design button: header 9, economy card 10,
+    // result card 11, options 12, custom-rebar card 13.
+    val fieldItemIndex = mapOf(
+        "width" to 2, "depth" to 2, "fcu" to 3, "fy" to 3,
+        "axialLoad" to 5, "height" to 5, "mx" to 6, "my" to 6,
+        "manualNumBars" to 13, "preferredDiameter" to 13
+    )
+    // The custom-rebar card sits after the conditional BBS / BOQ / biaxial items; the list builder
+    // below records its real index each time it runs.
+    val rebarCardIndex = remember { intArrayOf(13) }
+    // Every failed Design attempt (button, economy/safe, code, load combination, rebar update)
+    // arrives here: show the reasons, scroll the first bad field to the middle and focus it.
+    LaunchedEffect(uiState.validationTick) {
+        val v = uiState.validation
+        if (v != null) {
+            form.apply(v)
+            form.focusFirstInvalid(v) { id ->
+                val idx = if (id == "manualNumBars" || id == "preferredDiameter") rebarCardIndex[0] else fieldItemIndex[id]
+                idx?.let { listState.scrollItemToCenter(it) }
+            }
+        } else form.clearAll()
+    }
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
     val columnDefaultName = stringResource(R.string.column_default_name)
@@ -111,6 +141,7 @@ fun ColumnScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
@@ -149,27 +180,15 @@ fun ColumnScreen(
             
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ColumnInputField(uiState.width, stringResource(R.string.column_width_t_mm), { viewModel.updateInputs(width = it) }, Modifier.weight(1f))
-                    ColumnInputField(uiState.depth, stringResource(R.string.column_depth_t_mm), { viewModel.updateInputs(depth = it) }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "width", uiState.width, stringResource(R.string.column_width_t_mm), { form.clear("width"); viewModel.updateInputs(width = it) }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "depth", uiState.depth, stringResource(R.string.column_depth_t_mm), { form.clear("depth"); viewModel.updateInputs(depth = it) }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ColumnInputField(
-                        uiState.fcu,
-                        stringResource(R.string.column_fcu_label),
-                        { viewModel.updateInputs(fcu = it) },
-                        Modifier.weight(1f),
-                        validate = { v -> v.toDoubleOrNull()?.let { it in 20.0..60.0 } ?: true }
-                    )
-                    ColumnInputField(
-                        uiState.fy,
-                        stringResource(R.string.column_fy_label),
-                        { viewModel.updateInputs(fy = it) },
-                        Modifier.weight(1f),
-                        validate = { v -> v.toDoubleOrNull()?.let { it in 200.0..600.0 } ?: true }
-                    )
+                    ValidatedNumberField(form, "fcu", uiState.fcu, stringResource(R.string.column_fcu_label), { form.clear("fcu"); viewModel.updateInputs(fcu = it) }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "fy", uiState.fy, stringResource(R.string.column_fy_label), { form.clear("fy"); viewModel.updateInputs(fy = it) }, Modifier.weight(1f))
                 }
             }
 
@@ -177,37 +196,15 @@ fun ColumnScreen(
             
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ColumnInputField(
-                        uiState.axialLoad,
-                        stringResource(R.string.column_axial_load_pu),
-                        { viewModel.updateInputs(axialLoad = it) },
-                        Modifier.weight(1f),
-                        validate = { v -> v.isEmpty() || (v.toDoubleOrNull()?.let { it >= 0 } ?: false) }
-                    )
-                    ColumnInputField(
-                        uiState.height,
-                        stringResource(R.string.column_height_label),
-                        { viewModel.updateInputs(height = it) },
-                        Modifier.weight(1f),
-                        validate = { v -> v.toDoubleOrNull()?.let { it in 1.0..15.0 } ?: true }
-                    )
+                    ValidatedNumberField(form, "axialLoad", uiState.axialLoad, stringResource(R.string.column_axial_load_pu), { form.clear("axialLoad"); viewModel.updateInputs(axialLoad = it) }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "height", uiState.height, stringResource(R.string.column_height_label), { form.clear("height"); viewModel.updateInputs(height = it) }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ColumnInputField(
-                        uiState.mx,
-                        "Moment Mx (kN.m)",
-                        { viewModel.updateInputs(mx = it) },
-                        Modifier.weight(1f)
-                    )
-                    ColumnInputField(
-                        uiState.my,
-                        "Moment My (kN.m)",
-                        { viewModel.updateInputs(my = it) },
-                        Modifier.weight(1f)
-                    )
+                    ValidatedNumberField(form, "mx", uiState.mx, "Moment Mx (kN.m)", { form.clear("mx"); viewModel.updateInputs(mx = it) }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "my", uiState.my, "Moment My (kN.m)", { form.clear("my"); viewModel.updateInputs(my = it) }, Modifier.weight(1f))
                 }
             }
 
@@ -234,6 +231,7 @@ fun ColumnScreen(
             }
 
             item {
+                FormErrorSummary(form)
                 AppButton(
                     label = stringResource(R.string.column_design_now),
                     onClick = { viewModel.calculateManual() },
@@ -244,6 +242,7 @@ fun ColumnScreen(
             }
 
             uiState.result?.let { result ->
+                val solvedHeightM = uiState.solvedHeightM ?: return@let
                 item { SectionHeader(stringResource(R.string.column_results_economy), R.drawable.ic_calculator) }
                 
                 item {
@@ -322,7 +321,7 @@ fun ColumnScreen(
                 }
 
                 val boqRows = runCatching {
-                    BoqEstimator.columnRows(result, uiState.height.toDoubleOrNull() ?: 3.0, "C1")
+                    BoqEstimator.columnRows(result, solvedHeightM, "C1")
                 }.getOrDefault(emptyList())
                 if (boqRows.isNotEmpty()) {
                     item { BoqTableCard(boqRows, title = "Column Bill of Quantities") }
@@ -342,6 +341,8 @@ fun ColumnScreen(
                     }
                 }
 
+                rebarCardIndex[0] = 13 + (if (bbsEntries.isNotEmpty()) 1 else 0) +
+                    (if (boqRows.isNotEmpty()) 1 else 0) + (if (result.mx != 0.0 || result.my != 0.0) 1 else 0)
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -380,20 +381,14 @@ fun ColumnScreen(
                             }
                             Spacer(Modifier.height(12.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                ColumnInputField(
-                                    value = if (uiState.autoOptimize && uiState.manualNumBars.isEmpty()) (result.reinforcement.numBars.toString()) else uiState.manualNumBars,
-                                    label = stringResource(R.string.column_num_bars_label),
-                                    onValueChange = { viewModel.updateInputs(manualNumBars = it) },
-                                    modifier = Modifier.weight(1f),
-                                    enabled = true
+                                ValidatedNumberField(
+                                    form, "manualNumBars",
+                                    if (uiState.autoOptimize && uiState.manualNumBars.isEmpty()) result.reinforcement.numBars.toString() else uiState.manualNumBars,
+                                    stringResource(R.string.column_num_bars_label),
+                                    { form.clear("manualNumBars"); viewModel.updateInputs(manualNumBars = it) },
+                                    Modifier.weight(1f)
                                 )
-                                ColumnInputField(
-                                    value = uiState.preferredDiameter,
-                                    label = stringResource(R.string.column_bar_diameter_label),
-                                    onValueChange = { viewModel.updateInputs(preferredDiameter = it) },
-                                    modifier = Modifier.weight(1f),
-                                    enabled = true
-                                )
+                                ValidatedNumberField(form, "preferredDiameter", uiState.preferredDiameter, stringResource(R.string.column_bar_diameter_label), { form.clear("preferredDiameter"); viewModel.updateInputs(preferredDiameter = it) }, Modifier.weight(1f))
                             }
                             if (!uiState.autoOptimize) {
                                 Spacer(Modifier.height(8.dp))
@@ -409,6 +404,10 @@ fun ColumnScreen(
                 }
 
                 item {
+                    Column {
+                    if (uiState.resultIsStale) {
+                        AppText("Rebar edits not applied. The design shown is the last solved one. Press Update before export or save.", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                    }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AppButton(
                             label = stringResource(R.string.pdf_report),
@@ -422,7 +421,7 @@ fun ColumnScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            enabled = !uiState.isExporting,
+                            enabled = !uiState.isExporting && !uiState.resultIsStale,
                             loading = uiState.isExporting,
                             icon = Icons.Default.PictureAsPdf
                         )
@@ -430,11 +429,13 @@ fun ColumnScreen(
                         AppButton(
                             label = stringResource(R.string.save),
                             onClick = { showSaveDialog = true },
+                            enabled = !uiState.resultIsStale,
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.Save,
                             containerOverride = MaterialTheme.colorScheme.secondary,
                             contentOverride = onColorFor(MaterialTheme.colorScheme.secondary)
                         )
+                    }
                     }
                 }
 
@@ -466,11 +467,11 @@ fun ColumnScreen(
                             ProfessionalColumnDrawing(
                                 columnWidth = result.width.toDouble(),
                                 columnDepth = result.depth.toDouble(),
-                                columnHeight = (uiState.height.toDoubleOrNull() ?: 3.0) * 1000.0,
+                                columnHeight = solvedHeightM * 1000.0,
                                 longitudinalBars = generateBarPositions(
                                     result.width.toDouble(), result.depth.toDouble(),
-                                    uiState.manualNumBars.toIntOrNull() ?: result.reinforcement.numBars,
-                                    (uiState.preferredDiameter.toIntOrNull() ?: result.reinforcement.diameter).toDouble(),
+                                    result.reinforcement.numBars,
+                                    result.reinforcement.diameter.toDouble(),
                                     result.columnType.contains("CIRCULAR", ignoreCase = true)
                                 ),
                                 tieDia = result.stirrups.diameter.toDouble(),
@@ -490,6 +491,7 @@ fun ColumnScreen(
         }
         // PDF drawing capture area (invisible, renders at viewMode=0)
         uiState.result?.let { result ->
+            val solvedHeightM = uiState.solvedHeightM ?: return@let
             ComposeDrawingCaptureUtil.DrawingCaptureArea(
                 captureLayer = pdfCaptureLayer,
                 widthPx = screenWidthPx,
@@ -499,11 +501,11 @@ fun ColumnScreen(
                     ProfessionalColumnDrawing(
                         columnWidth = result.width.toDouble(),
                         columnDepth = result.depth.toDouble(),
-                        columnHeight = (uiState.height.toDoubleOrNull() ?: 3.0) * 1000.0,
+                        columnHeight = solvedHeightM * 1000.0,
                         longitudinalBars = generateBarPositions(
                             result.width.toDouble(), result.depth.toDouble(),
-                            uiState.manualNumBars.toIntOrNull() ?: result.reinforcement.numBars,
-                            (uiState.preferredDiameter.toIntOrNull() ?: result.reinforcement.diameter).toDouble(),
+                            result.reinforcement.numBars,
+                            result.reinforcement.diameter.toDouble(),
                             result.columnType.contains("CIRCULAR", ignoreCase = true)
                         ),
                         tieDia = result.stirrups.diameter.toDouble(),
@@ -751,34 +753,6 @@ private fun SectionHeader(title: String, iconRes: Int) {
         Spacer(modifier = Modifier.width(8.dp))
         AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
     }
-}
-
-@Composable
-private fun ColumnInputField(
-    value: String,
-    label: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier,
-    enabled: Boolean = true,
-    validate: (String) -> Boolean = { true }
-) {
-    val isValid = validate(value)
-    val hasValue = value.isNotEmpty()
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { AppText(label, fontSize = 12.sp) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = modifier,
-        enabled = enabled,
-        shape = RoundedCornerShape(12.dp),
-        singleLine = true,
-        isError = hasValue && !isValid,
-        textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-        supportingText = if (hasValue && !isValid) {
-            { AppText(stringResource(R.string.column_validation_positive), color = MaterialTheme.colorScheme.error, fontSize = 11.sp) }
-        } else null
-    )
 }
 
 @Composable

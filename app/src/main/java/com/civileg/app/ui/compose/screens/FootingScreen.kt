@@ -73,6 +73,7 @@ fun FootingScreen(
 ) {
     val context = LocalContext.current
     val result by viewModel.result.observeAsState()
+    val solvedInputs by viewModel.solvedInputs.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
@@ -335,9 +336,6 @@ fun FootingScreen(
                             }
                             return@AppButton
                         }
-                        viewModel.excavationDepthM = checked.value("excavationDepth")
-                        viewModel.workingSpaceM = checked.value("workingSpace")
-                        viewModel.blindingThicknessM = checked.value("blindingThickness")
                         viewModel.calculateFooting(
                             type = selectedType,
                             p = checked.value("axialLoad"),
@@ -353,7 +351,10 @@ fun FootingScreen(
                             p2 = checked.valueOrNull("axialLoad2") ?: 0.0,
                             distance = (checked.valueOrNull("colDistance") ?: 0.0) * 1000.0,
                             maxLeft = checked.valueOrNull("maxLeft")?.let { it * 1000.0 },
-                            maxRight = checked.valueOrNull("maxRight")?.let { it * 1000.0 }
+                            maxRight = checked.valueOrNull("maxRight")?.let { it * 1000.0 },
+                            excavationDepthM = checked.value("excavationDepth"),
+                            workingSpaceM = checked.value("workingSpace"),
+                            blindingThicknessM = checked.value("blindingThickness")
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -464,11 +465,12 @@ fun FootingScreen(
                 }
 
                 item {
-                    val boqRows = remember(res, viewModel.excavationDepthM, viewModel.workingSpaceM, viewModel.blindingThicknessM) {
-                        runCatching {
+                    val solvedIn = solvedInputs
+                    val boqRows = remember(res, solvedIn) {
+                        if (solvedIn == null) emptyList() else runCatching {
                             BoqEstimator.footingRows(
                                 res, "F1",
-                                viewModel.excavationDepthM, viewModel.workingSpaceM, viewModel.blindingThicknessM
+                                solvedIn.excavationDepthM, solvedIn.workingSpaceM, solvedIn.blindingThicknessM
                             )
                         }.getOrDefault(emptyList())
                     }
