@@ -98,4 +98,44 @@ class ECP2020JoistRulesTest {
     @Test(expected = IllegalArgumentException::class) fun `cross rib minimums refuse an unknown main steel area`() {
         ECP2020JoistRules.crossRibMinimums(5250.0, 3.0, 150.0, 250.0, Double.NaN)
     }
+    @Test fun `long term multiplier preserves printed duration points without interpolation`() {
+        assertEquals(1.0, ECP2020JoistServiceability.additionalLongTermMultiplier(3.0, 0.0)!!, 0.0)
+        assertEquals(1.2, ECP2020JoistServiceability.additionalLongTermMultiplier(6.0, 0.0)!!, 0.0)
+        assertEquals(1.4, ECP2020JoistServiceability.additionalLongTermMultiplier(12.0, 0.0)!!, 0.0)
+        assertEquals(2.0, ECP2020JoistServiceability.additionalLongTermMultiplier(60.0, 0.0)!!, 0.0)
+        assertEquals(2.0, ECP2020JoistServiceability.additionalLongTermMultiplier(120.0, 0.0)!!, 0.0)
+        assertNull(ECP2020JoistServiceability.additionalLongTermMultiplier(9.0, 0.0))
+        assertNull(ECP2020JoistServiceability.additionalLongTermMultiplier(59.99, 0.0))
+    }
+    @Test fun `additional long term deflection applies explicit compression ratio to sustained immediate only`() {
+        assertEquals(1.4 / 1.5, ECP2020JoistServiceability.additionalLongTermMultiplier(12.0, 0.01)!!, 1e-10)
+        assertEquals(8.0, ECP2020JoistServiceability.additionalLongTermDeflectionMm(6.0, 60.0, 0.01)!!, 1e-10)
+        assertEquals(0.0, ECP2020JoistServiceability.additionalLongTermDeflectionMm(0.0, 60.0, 0.0)!!, 0.0)
+    }
+    @Test(expected = IllegalArgumentException::class) fun `unknown compression steel ratio cannot default to zero`() {
+        ECP2020JoistServiceability.additionalLongTermMultiplier(60.0, Double.NaN)
+    }
+    @Test(expected = IllegalArgumentException::class) fun `negative sustained immediate deflection is not silently made positive`() {
+        ECP2020JoistServiceability.additionalLongTermDeflectionMm(-1.0, 60.0, 0.0)
+    }
+    @Test fun `primary cracking moment retains Nmm to kNm conversion`() {
+        assertEquals(18.0, ECP2020JoistServiceability.crackingMomentKnM(25.0, 900000000.0, 150.0), 1e-10)
+    }
+    @Test fun `effective inertia follows primary cubic weighting in cracked range only`() {
+        val service = ECP2020JoistServiceability
+        assertEquals(900000000.0, service.crackedRangeEffectiveInertiaMm4(900000000.0, 100000000.0, 18.0, 18.0)!!, 1e-6)
+        assertEquals(200000000.0, service.crackedRangeEffectiveInertiaMm4(900000000.0, 100000000.0, 18.0, 36.0)!!, 1e-6)
+        assertNull(service.crackedRangeEffectiveInertiaMm4(900000000.0, 100000000.0, 18.0, 17.99))
+        assertNull(service.crackedRangeEffectiveInertiaMm4(900000000.0, 100000000.0, 18.0, 0.0))
+    }
+    @Test(expected = IllegalArgumentException::class) fun `cracked inertia cannot exceed primary gross inertia cap`() {
+        ECP2020JoistServiceability.crackedRangeEffectiveInertiaMm4(100.0, 101.0, 18.0, 36.0)
+    }
+    @Test fun `concrete modulus uses primary cube strength formula without ultimate factors`() {
+        assertEquals(22000.0, ECP2020JoistServiceability.concreteElasticModulusMpa(25.0), 1e-9)
+        assertEquals(26400.0, ECP2020JoistServiceability.concreteElasticModulusMpa(36.0), 1e-9)
+    }
+    @Test(expected = IllegalArgumentException::class) fun `elastic modulus stays within bounded reinforced strength envelope`() {
+        ECP2020JoistServiceability.concreteElasticModulusMpa(19.99)
+    }
 }
