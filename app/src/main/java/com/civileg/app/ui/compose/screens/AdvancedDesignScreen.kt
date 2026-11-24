@@ -59,6 +59,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.civileg.app.R
+import com.civileg.app.domain.calculations.DisplayedCheckStatus
+import com.civileg.app.domain.calculations.displayedCheckStatus
 import com.civileg.app.domain.calculations.compositebeam.CompositeBeamDesign
 import com.civileg.app.domain.calculations.compositebeam.CompositeBeamDesignResult
 import com.civileg.app.domain.calculations.compositebeam.CompositeBeamInput
@@ -915,7 +917,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.columnContent(
     }
     item { CalculateButton(onCalculate) }
     result?.let { r ->
-        item { StatusBanner(isSafe = r.reinforcementResult.isSafe) }
+        item {
+            CheckedResultBanner(r.displayedCheckStatus(
+                requiresBiaxial = form.colMx.toDoubleOrNull()?.let { it != 0.0 } == true &&
+                    form.colMy.toDoubleOrNull()?.let { it != 0.0 } == true,
+                requiresPunching = form.colSlab == ConnectedSlabType.FLAT
+            ))
+        }
         item {
             ResultCard("Capacity / القدرة") {
                 ResultRow("Axial capacity", "%.0f kN".format(r.axialCapacity), bold = true)
@@ -1542,7 +1550,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
     }
     item { CalculateButton(onCalculate) }
     result?.let { r ->
-        item { StatusBanner(isSafe = r.flexureResult.isSafe) }
+        item { CheckedResultBanner(r.displayedCheckStatus()) }
         item {
             ResultCard("Flexure / الانحناء") {
                 ResultRow("As required", "%.0f mm²/m".format(r.flexureResult.requiredReinforcement), bold = true)
@@ -1644,6 +1652,28 @@ private fun CalculateButton(onClick: () -> Unit) {
         fontWeight = FontWeight.Bold,
         icon = Icons.Default.Calculate
     )
+}
+
+@Composable
+private fun CheckedResultBanner(status: DisplayedCheckStatus) {
+    val color = when (status) {
+        DisplayedCheckStatus.PASSED -> Color(0xFF2E7D32)
+        DisplayedCheckStatus.FAILED -> Color(0xFFC62828)
+        DisplayedCheckStatus.INCOMPLETE -> Color(0xFFEF6C00)
+    }
+    Card(
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            AppText(stringResource(when (status) {
+                DisplayedCheckStatus.PASSED -> R.string.advanced_returned_checks_passed
+                DisplayedCheckStatus.FAILED -> R.string.advanced_returned_checks_failed
+                DisplayedCheckStatus.INCOMPLETE -> R.string.advanced_returned_checks_incomplete
+            }), color = color, fontWeight = FontWeight.Bold)
+            AppText(stringResource(R.string.advanced_returned_checks_scope))
+        }
+    }
 }
 
 @Composable

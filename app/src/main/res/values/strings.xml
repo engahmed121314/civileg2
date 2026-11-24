@@ -2405,6 +2405,10 @@
     <string name="settings_support_title">Support the app</string>
     <string name="settings_support_message">Civil Engineer Pro is free and ad-free. Voluntary donations fund new design codes, tests and drawings.</string>
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
+    <string name="advanced_returned_checks_passed">Returned checks passed</string>
+    <string name="advanced_returned_checks_failed">A returned check failed</string>
+    <string name="advanced_returned_checks_incomplete">Incomplete: required check missing</string>
+    <string name="advanced_returned_checks_scope">Summary of returned checks only. This does not verify omitted checks or certify the design.</string>
 </resources>
 
 
