@@ -30,6 +30,20 @@ class DrawingSampleUiTest {
         }
         rule.waitForIdle()
     }
+    private fun dismissKnownSystemAnr() {
+        val root = instrumentation.uiAutomation.rootInActiveWindow ?: return
+        val launcher = root.findAccessibilityNodeInfosByText("Pixel Launcher isn't responding").isNotEmpty()
+        val systemUi = root.findAccessibilityNodeInfosByText("System UI isn't responding").isNotEmpty()
+        if (launcher || systemUi) {
+            // Keep System UI alive; never dismiss an ANR attributed to Civil EG.
+            val action = if (systemUi) "Wait" else "Close app"
+            root.findAccessibilityNodeInfosByText(action).firstOrNull()
+                ?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
+            android.os.SystemClock.sleep(1000)
+        }
+        val active = instrumentation.uiAutomation.rootInActiveWindow
+        assertTrue("An ANR still obstructs the sample", active?.findAccessibilityNodeInfosByText("isn't responding").isNullOrEmpty())
+    }
     @Before fun dismissPrompt() {
         rule.waitForIdle()
         if (rule.onAllNodesWithText(ar(R.string.donation_decline)).fetchSemanticsNodes().isNotEmpty())
@@ -62,6 +76,7 @@ class DrawingSampleUiTest {
         rule.onNodeWithText(ar(R.string.stair_design_now)).performClick()
         scroll(ar(R.string.stair_drawing_title))
         rule.onNodeWithText(ar(R.string.stair_drawing_title)).assertIsDisplayed()
+        dismissKnownSystemAnr()
         instrumentation.uiAutomation.takeScreenshot().let { bitmap ->
             assertTrue("Combined drawing screenshot missing", bitmap != null)
             File(out,"design-page-all.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }
@@ -69,18 +84,16 @@ class DrawingSampleUiTest {
         // Focused elevation is readable on the actual phone-sized viewport.
         rule.onNodeWithText(ar(R.string.view_elevation)).performClick()
         rule.waitForIdle()
-        // Remove only the known emulator launcher ANR, never hide an app failure.
-        val root = instrumentation.uiAutomation.rootInActiveWindow
-        if (root?.findAccessibilityNodeInfosByText("Pixel Launcher isn't responding")?.isNotEmpty() == true) {
-            root.findAccessibilityNodeInfosByText("Close app").firstOrNull()
-                ?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
-            android.os.SystemClock.sleep(800)
-        }
+        dismissKnownSystemAnr()
         instrumentation.uiAutomation.takeScreenshot().let { bitmap ->
             assertTrue("Actual Android screen screenshot missing", bitmap != null)
             File(out,"design-page.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }
         }
         scroll(ar(R.string.pdf_report))
+        // The export is real; do not launch an unrelated emulator PDF viewer.
+        val pdfViewer = instrumentation.addMonitor(android.content.IntentFilter(android.content.Intent.ACTION_VIEW).apply {
+            addDataType("application/pdf")
+        }, null, true)
         rule.onNodeWithText(ar(R.string.pdf_report)).performClick()
         fun completedPdf(): File? = documents.listFiles().orEmpty()
             .filter { it.extension == "pdf" && it.name !in existing && it.length() > 1000 }
@@ -96,6 +109,7 @@ class DrawingSampleUiTest {
         rule.waitUntil(90000) { completedPdf() != null }
         val pdf = checkNotNull(completedPdf())
         pdf.copyTo(File(out,"exported-report.pdf"),overwrite=true)
+        instrumentation.removeMonitor(pdfViewer)
         File(out,"case.txt").writeText("route=stairs\npath=actual MainActivity > Design Hub > Stair > Design > PDF export\nspan_m=4\nriser_mm=150\ntread_mm=300\ndead_kN_m2=5\nlive_kN_m2=4\nfcu_MPa=25\nfy_MPa=360\nwidth_mm=1200\ncode=app initial selected code, visible in report\nstatus=diagnostic sample, calculation/detailing not accepted\nsource_pdf=${pdf.name}\ntimestamp_ms=${System.currentTimeMillis()}\n")
         assertTrue("Actual page file missing", File(out, "design-page.png").length() > 1000)
         assertTrue("Actual PDF file missing", File(out, "exported-report.pdf").length() > 1000)

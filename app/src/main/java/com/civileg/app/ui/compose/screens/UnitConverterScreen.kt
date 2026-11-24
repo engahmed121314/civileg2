@@ -1,5 +1,9 @@
 package com.civileg.app.ui.compose.screens
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 fun UnitConverterScreen(
     onNavigateBack: () -> Unit = {}
 ) {
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedCategory by remember { mutableStateOf<UnitConverter.UnitCategory>(UnitConverter.UnitCategory.Length) }
     var inputValue by remember { mutableStateOf("1.0") }
@@ -83,6 +88,7 @@ fun UnitConverterScreen(
                 .widthIn(max = MaterialTheme.dimens.formMaxWidth)
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding, vertical = MaterialTheme.dimens.screenVerticalPadding),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.sectionSpacing)
         ) {
@@ -107,7 +113,7 @@ fun UnitConverterScreen(
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
-                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(modifier = Modifier.padding(if (landscape) 8.dp else 24.dp), verticalArrangement = Arrangement.spacedBy(if (landscape) 0.dp else 16.dp)) {
                     // From Input
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
@@ -123,7 +129,7 @@ fun UnitConverterScreen(
                     }
 
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        IconButton(onClick = {
+                        IconButton(modifier = Modifier.size(if (landscape) 28.dp else 48.dp), onClick = {
                             val temp = fromUnit
                             fromUnit = toUnit
                             toUnit = temp
