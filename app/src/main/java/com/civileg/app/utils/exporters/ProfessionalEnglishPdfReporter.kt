@@ -662,6 +662,8 @@ object ProfessionalEnglishPdfReporter {
         if (safetyChecks.isNotEmpty()) {
             val table = Table(UnitValue.createPercentArray(floatArrayOf(35f, 18f, 18f, 10f, 19f))).useAllAvailableWidth()
 
+            // Keep a short check table together instead of orphaning its last rows.
+            table.setKeepTogether(true)
             // Header Row
             table.addHeaderCell(headerCell("Check"))
             table.addHeaderCell(headerCell("Calculated"))
@@ -691,10 +693,11 @@ object ProfessionalEnglishPdfReporter {
 
                 val statusStr = if (check.passed) "PASS" else "FAIL"
                 val statusClr = if (check.passed) SUCCESS else ERROR
-                table.addCell(dataCell(statusStr, 9f, true, bg).also {
-                    // Color the cell text
-                    it.add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr)).setTextAlignment(TextAlignment.CENTER))
-                })
+                val statusCell = Cell().setPadding(4f)
+                    .add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr))
+                        .setTextAlignment(TextAlignment.CENTER))
+                if (bg != null) statusCell.setBackgroundColor(bg)
+                table.addCell(statusCell)
             }
             document.add(table)
         }
