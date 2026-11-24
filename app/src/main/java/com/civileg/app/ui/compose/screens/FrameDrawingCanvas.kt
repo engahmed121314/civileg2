@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.civileg.app.R
 import com.civileg.app.domain.calculations.SteelFrameDesign
 import com.civileg.app.domain.entities.*
+import com.civileg.app.ui.compose.components.drawings.isDegenerateForDrawing
 import com.civileg.app.ui.compose.components.drawings.drawSteelSectionViews
 import com.civileg.app.viewmodel.DiagramType
 import kotlin.math.*
@@ -124,6 +125,10 @@ fun FrameDrawingCanvas(
                     }
                 }
         ) {
+            // A tiny drawing zone cannot hold labels or truthful geometry. In particular,
+            // drawText derives negative text constraints when a label starts outside it.
+            // Use the shared drawing-layer threshold rather than stretching or crashing.
+            if (isDegenerateForDrawing()) return@Canvas
             when (viewMode) {
                 0 -> drawFrameView(
                     nodes, members, memberLoads, nodalLoads, result, diagramType,
