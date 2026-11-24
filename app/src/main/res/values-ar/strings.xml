@@ -2445,4 +2445,5 @@
     <string name="calc_err_div0">القسمة على صفر</string>
     <string name="calc_err_domain">خطأ رياضي (خارج مجال الدالة)</string>
     <string name="calc_err_overflow">النتيجة كبيرة جداً</string>
+    <string name="calc_err_limit">العبارة طويلة جداً أو متداخلة بعمق</string>
 </resources>

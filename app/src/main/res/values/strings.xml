@@ -2442,4 +2442,5 @@
     <string name="calc_err_div0">Division by zero</string>
     <string name="calc_err_domain">Math error (outside the function domain)</string>
     <string name="calc_err_overflow">Result too large</string>
+    <string name="calc_err_limit">Expression too long or nested too deeply</string>
 </resources>

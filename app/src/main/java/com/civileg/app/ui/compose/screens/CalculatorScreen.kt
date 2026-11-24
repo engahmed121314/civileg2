@@ -33,6 +33,7 @@ import java.util.Locale
 import com.civileg.app.utils.tools.ScientificEvaluator
 import com.civileg.app.utils.tools.ScientificEvaluator.AngleMode
 import com.civileg.app.utils.tools.ScientificEvaluator.ErrorKind
+import com.civileg.app.utils.tools.CalculatorHistory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -175,7 +176,11 @@ fun CalculatorScreen(
                 ScientificFuncButton("√") { appendFunc("sqrt", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("x²") { expression += "^2"; isNewCalculation = false }
                 ScientificFuncButton("π") { appendNumber("π", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("e") { appendNumber("e", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("e") {
+                    // After a digit, "2e3" would read as 2000; insert × so the key always means Euler's number.
+                    val glue = if (!isNewCalculation && expression.lastOrNull()?.let { it.isDigit() || it == '.' } == true) "×e" else "e"
+                    appendNumber(glue, { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false }
+                }
                 ScientificFuncButton("n!") { expression += "!"; isNewCalculation = false }
                 ScientificFuncButton("1/x") { appendFunc("1/", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("|x|") { appendFunc("abs", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
@@ -247,14 +252,15 @@ fun CalculatorScreen(
                     val msgDiv0 = stringResource(R.string.calc_err_div0)
                     val msgDomain = stringResource(R.string.calc_err_domain)
                     val msgOverflow = stringResource(R.string.calc_err_overflow)
+                    val msgLimit = stringResource(R.string.calc_err_limit)
                     CalcButton("=", Modifier.weight(1f), Color(0xFF2E7D32)) {
                         when (val r = ScientificEvaluator.evaluate(expression, angleMode)) {
                             is ScientificEvaluator.Result.Value -> {
                                 val formatted = ScientificEvaluator.format(r.value)
-                                history = history + "$expression = $formatted (${angleMode.name})"
+                                history = CalculatorHistory.append(history, "$expression = $formatted (${angleMode.name})")
                                 result = formatted
-                                // Scientific text such as 1.5e-05 is not parsable as typed, so carry it forward as a product.
-                                expression = if ('e' in formatted) "(" + formatted.replace("e", "×10^") + ")" else formatted
+                                // The evaluator parses exponent form (1.5e-05) directly, so the text is reused as is.
+                                expression = formatted
                                 isNewCalculation = true
                             }
                             is ScientificEvaluator.Result.Error -> result = when (r.kind) {
@@ -262,6 +268,7 @@ fun CalculatorScreen(
                                 ErrorKind.DIVIDE_BY_ZERO -> msgDiv0
                                 ErrorKind.DOMAIN -> msgDomain
                                 ErrorKind.OVERFLOW -> msgOverflow
+                                ErrorKind.LIMIT -> msgLimit
                             }
                         }
                     }

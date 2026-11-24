@@ -106,4 +106,55 @@ class ScientificEvaluatorTest {
         assertEquals("-1.234567891e+20", ScientificEvaluator.format(-1.2345678912e20))
         assertEquals("0.0001", ScientificEvaluator.format(1e-4))
     }
+
+    @Test fun scientificNotationIsParsedAndReusable() {
+        assertEquals(1.5e-5, v("1.5e-05"), 0.0)
+        assertEquals(2000.0, v("2e3"), 0.0)
+        assertEquals(1e10, v("1e+10"), 0.0)
+        assertEquals(3.0e-5, v("1.5E-05×2"), 1e-20)
+        // Not an exponent: no digit after e, so it stays 2 x e.
+        assertEquals(2 * Math.E, v("2e"), 1e-12)
+        assertEquals(2 * Math.E, v("2e^1"), 1e-12)
+        assertEquals(2.0 * Math.exp(1.0), v("2exp(1)"), 1e-12)
+        // Every formatted result parses back to the same displayed text.
+        for (x in listOf(1.5e-5, -1.234567891e20, 1e10, 123456.789, 0.0001, 3e9, -7.5e-12)) {
+            val text = ScientificEvaluator.format(x)
+            assertEquals(text, ScientificEvaluator.format(v(text)))
+        }
+        err("1e999", ErrorKind.OVERFLOW)
+    }
+
+    @Test fun radTangentPoleVersusNearbyAngles() {
+        val rad = AngleMode.RAD
+        err("tan(π/2)", ErrorKind.DOMAIN, rad); err("tan(3π/2)", ErrorKind.DOMAIN, rad)
+        err("tan(-π/2)", ErrorKind.DOMAIN, rad); err("tan(5π/2)", ErrorKind.DOMAIN, rad)
+        // Valid, not a pole: well away, and very near but beyond floating-point resolution of the pole.
+        assertTrue(v("tan(1.57)", rad).isFinite()); assertEquals(Math.tan(1.57), v("tan(1.57)", rad), 0.0)
+        assertTrue(v("tan(1.5707963267)", rad).isFinite())
+        assertEquals(0.0, v("tan(0)", rad), 0.0)
+        assertEquals(1.0, v("tan(π/4)", rad), 1e-12)
+        assertEquals(0.0, v("tan(π)", rad), 1e-12)
+    }
+
+    @Test fun inputLengthAndDepthAreExplicitErrors() {
+        err("1+".repeat(ScientificEvaluator.MAX_INPUT_LENGTH) + "1", ErrorKind.LIMIT)
+        assertTrue(ScientificEvaluator.evaluate("1".repeat(ScientificEvaluator.MAX_INPUT_LENGTH)) !is Result.Error ||
+            (ScientificEvaluator.evaluate("1".repeat(ScientificEvaluator.MAX_INPUT_LENGTH)) as Result.Error).kind != ErrorKind.LIMIT)
+        // Deep nesting inside the length limit must be a LIMIT error, never a StackOverflowError.
+        err("(".repeat(240) + "1" + ")".repeat(240), ErrorKind.LIMIT)
+        err("-".repeat(400) + "1", ErrorKind.LIMIT)
+        err("2" + "^2".repeat(230), ErrorKind.LIMIT)
+        // Reasonable nesting still works.
+        assertEquals(1.0, v("(".repeat(40) + "1" + ")".repeat(40)), 0.0)
+        assertEquals(1.0, v("-".repeat(40) + "1"), 0.0)
+    }
+
+    @Test fun historyIsBoundedKeepingNewest() {
+        var h = emptyList<String>()
+        for (i in 1..(CalculatorHistory.MAX_ENTRIES + 20)) h = CalculatorHistory.append(h, "e$i")
+        assertEquals(CalculatorHistory.MAX_ENTRIES, h.size)
+        assertEquals("e${CalculatorHistory.MAX_ENTRIES + 20}", h.last())
+        assertEquals("e21", h.first())
+        assertEquals(listOf("b", "c"), CalculatorHistory.append(listOf("a", "b"), "c", 2))
+    }
 }

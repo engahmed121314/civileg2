@@ -19,7 +19,7 @@ import kotlin.math.*
  */
 object ScientificEvaluator {
     enum class AngleMode { DEG, RAD, GRAD }
-    enum class ErrorKind { SYNTAX, DIVIDE_BY_ZERO, DOMAIN, OVERFLOW }
+    enum class ErrorKind { SYNTAX, DIVIDE_BY_ZERO, DOMAIN, OVERFLOW, LIMIT }
 
     sealed class Result {
         data class Value(val value: Double) : Result()
@@ -29,9 +29,21 @@ object ScientificEvaluator {
     /** n! is finite in Double only up to 170 (171! > Double.MAX_VALUE). */
     const val MAX_FACTORIAL = 170
 
+    /**
+     * Implementation safety limits (not engineering limits). Longer or deeper input is rejected with
+     * [ErrorKind.LIMIT]; it is never truncated or clamped. Depth counts nested expr()/unary() calls,
+     * so 200 allows roughly 100 nested parentheses, far below the JVM stack limit.
+     */
+    const val MAX_INPUT_LENGTH = 500
+    const val MAX_DEPTH = 200
+
+    /** Number of 2-ulp steps around an odd multiple of pi/2 treated as the RAD tangent pole. */
+    private const val RAD_POLE_ULPS = 2.0
+
     private class Fail(val kind: ErrorKind, val detail: String) : Exception(detail, null, false, false)
 
     fun evaluate(expr: String, angle: AngleMode = AngleMode.DEG): Result = try {
+        if (expr.length > MAX_INPUT_LENGTH) throw Fail(ErrorKind.LIMIT, "expression longer than $MAX_INPUT_LENGTH characters")
         val v = Parser(expr, angle).parseAll()
         if (v.isFinite()) Result.Value(v) else Result.Error(ErrorKind.OVERFLOW, "result is not finite")
     } catch (f: Fail) {
@@ -40,6 +52,11 @@ object ScientificEvaluator {
 
     private class Parser(val s: String, val angle: AngleMode) {
         var pos = 0
+        var depth = 0
+        fun <T> nested(f: () -> T): T {
+            if (++depth > MAX_DEPTH) throw Fail(ErrorKind.LIMIT, "expression nested deeper than $MAX_DEPTH levels")
+            try { return f() } finally { depth-- }
+        }
         fun peek(): Char? = if (pos < s.length) s[pos] else null
         fun skip() { while (peek() == ' ') pos++ }
         fun eat(c: Char): Boolean { skip(); return if (peek() == c) { pos++; true } else false }
@@ -54,7 +71,9 @@ object ScientificEvaluator {
             return v
         }
 
-        fun expr(): Double {
+        fun expr(): Double = nested { exprBody() }
+
+        fun exprBody(): Double {
             var x = term()
             while (true) {
                 x = when {
@@ -88,7 +107,9 @@ object ScientificEvaluator {
             }
         }
 
-        fun unary(): Double {
+        fun unary(): Double = nested { unaryBody() }
+
+        fun unaryBody(): Double {
             if (eat('+')) return unary()
             if (eat('-')) return -unary()
             return power()
@@ -125,9 +146,20 @@ object ScientificEvaluator {
             var dots = 0
             while (peek()?.let { it.isDigit() || it == '.' } == true) { if (peek() == '.') dots++; pos++ }
             if (dots > 1) syntax("malformed number")
-            val text = s.substring(start, pos)
-            if (text == ".") syntax("malformed number")
-            return text.toDouble()
+            if (s.substring(start, pos) == ".") syntax("malformed number")
+            // Exponent form 1.5e-05 / 2E3: only when 'e' is directly followed by [sign] digit. "2e" and "2e^2" stay 2 x e.
+            val c = peek()
+            if (c == 'e' || c == 'E') {
+                var q = pos + 1
+                if (q < s.length && (s[q] == '+' || s[q] == '-')) q++
+                if (q < s.length && s[q].isDigit()) {
+                    while (q < s.length && s[q].isDigit()) q++
+                    pos = q
+                }
+            }
+            val v = s.substring(start, pos).toDouble()
+            if (!v.isFinite()) throw Fail(ErrorKind.OVERFLOW, "number literal is outside the Double range")
+            return v
         }
 
         fun primary(): Double {
@@ -173,6 +205,17 @@ object ScientificEvaluator {
             AngleMode.DEG -> sinA(x + 90.0); AngleMode.GRAD -> sinA(x + 100.0); AngleMode.RAD -> cos(x)
         }
 
+        /**
+         * pi is not representable, so no Double argument is exactly an odd multiple of pi/2. An argument within
+         * [RAD_POLE_ULPS] ulp of one is the Double a user gets by typing that pole (π/2, 3π/2, ...), and is treated
+         * as the pole. Anything farther away, such as 1.57 or 1.5707963267, is a valid angle.
+         */
+        fun isRadPole(x: Double): Boolean {
+            val k = Math.rint(x / PI - 0.5)
+            val pole = (k + 0.5) * PI
+            return abs(x - pole) <= RAD_POLE_ULPS * Math.ulp(max(abs(x), abs(pole)))
+        }
+
         fun apply(name: String, x: Double): Double {
             fun dom(msg: String): Nothing = throw Fail(ErrorKind.DOMAIN, "$name: $msg")
             return when (name) {
@@ -180,7 +223,8 @@ object ScientificEvaluator {
                 "cos" -> cosA(x)
                 "tan" -> {
                     val c = cosA(x)
-                    if (angle != AngleMode.RAD && c == 0.0) dom("undefined at odd multiples of 90°")
+                    if (angle != AngleMode.RAD && c == 0.0) dom("undefined at odd multiples of 90° (DEG) / 100 grad (GRAD)")
+                    if (angle == AngleMode.RAD && isRadPole(x)) dom("undefined at odd multiples of π/2")
                     sinA(x) / c
                 }
                 "asin" -> { if (x < -1.0 || x > 1.0) dom("input must be within [-1, 1]"); fromRad(asin(x)) }
@@ -218,5 +262,15 @@ object ScientificEvaluator {
         val exp = bd.precision() - bd.scale() - 1
         val mant = if (unscaled.length > 1) unscaled[0] + "." + unscaled.substring(1) else unscaled
         return String.format(Locale.ROOT, "%s%se%s%02d", if (bd.signum() < 0) "-" else "", mant, if (exp < 0) "-" else "+", abs(exp))
+    }
+}
+
+/** Persisted calculator history, bounded so saved state cannot grow without limit. */
+object CalculatorHistory {
+    /** Implementation limit for stored lines. The oldest lines are dropped, never the newest. */
+    const val MAX_ENTRIES = 50
+    fun append(history: List<String>, entry: String, max: Int = MAX_ENTRIES): List<String> {
+        require(max >= 1) { "max must be >= 1" }
+        return (history + entry).takeLast(max)
     }
 }
