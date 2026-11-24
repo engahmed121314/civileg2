@@ -50,20 +50,45 @@ class DrawingSampleUiTest {
             rule.onAllNodes(hasScrollAction())[0].performScrollToNode(hasTestTag("field_$id"))
             rule.onNodeWithTag("field_$id").performTextReplacement(value)
         }
+        rule.onNodeWithTag("field_stairWidth").performImeAction()
+        rule.activity.runOnUiThread {
+            rule.activity.currentFocus?.let { view ->
+                (rule.activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+                    .hideSoftInputFromWindow(view.windowToken, 0)
+                view.clearFocus()
+            }
+        }
+        rule.waitForIdle()
         scroll(ar(R.string.stair_design_now))
         rule.onNodeWithText(ar(R.string.stair_design_now)).performClick()
         scroll(ar(R.string.stair_drawing_title))
         rule.onNodeWithText(ar(R.string.stair_drawing_title)).assertIsDisplayed()
+        instrumentation.uiAutomation.takeScreenshot().let { bitmap ->
+            assertTrue("Combined drawing screenshot missing", bitmap != null)
+            File(out,"design-page-all.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }
+        }
+        // Focused elevation is readable on the actual phone-sized viewport.
+        rule.onNodeWithText(ar(R.string.view_elevation)).performClick()
+        rule.waitForIdle()
         instrumentation.uiAutomation.takeScreenshot().let { bitmap ->
             assertTrue("Actual Android screen screenshot missing", bitmap != null)
             File(out,"design-page.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it) }
         }
         scroll(ar(R.string.pdf_report))
         rule.onNodeWithText(ar(R.string.pdf_report)).performClick()
-        rule.waitUntil(60000) {
-            documents.listFiles()?.any { it.extension == "pdf" && it.name !in existing && it.length()>1000 } == true
-        }
-        val pdf = documents.listFiles()!!.filter { it.extension=="pdf" && it.name !in existing }.maxBy { it.lastModified() }
+        fun completedPdf(): File? = documents.listFiles().orEmpty()
+            .filter { it.extension == "pdf" && it.name !in existing && it.length() > 1000 }
+            .sortedByDescending { it.lastModified() }.firstOrNull { file ->
+                runCatching {
+                    val bytes = file.readBytes()
+                    check(bytes.takeLast(1024).toByteArray().toString(Charsets.ISO_8859_1).contains("%%EOF"))
+                    android.graphics.pdf.PdfRenderer(android.os.ParcelFileDescriptor.open(file, android.os.ParcelFileDescriptor.MODE_READ_ONLY)).use {
+                        check(it.pageCount > 0)
+                    }
+                }.isSuccess
+            }
+        rule.waitUntil(90000) { completedPdf() != null }
+        val pdf = checkNotNull(completedPdf())
         pdf.copyTo(File(out,"exported-report.pdf"),overwrite=true)
         File(out,"case.txt").writeText("route=stairs\npath=actual MainActivity > Design Hub > Stair > Design > PDF export\nspan_m=4\nriser_mm=150\ntread_mm=300\ndead_kN_m2=5\nlive_kN_m2=4\nfcu_MPa=25\nfy_MPa=360\nwidth_mm=1200\ncode=app initial selected code, visible in report\nstatus=diagnostic sample, calculation/detailing not accepted\nsource_pdf=${pdf.name}\ntimestamp_ms=${System.currentTimeMillis()}\n")
         assertTrue("Actual page file missing", File(out, "design-page.png").length() > 1000)

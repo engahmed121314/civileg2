@@ -45,12 +45,24 @@ class ToolboxSampleUiTest {
                 matches
             }
         }
+        val expected = if (landscape) Configuration.ORIENTATION_LANDSCAPE else Configuration.ORIENTATION_PORTRAIT
+        rule.waitUntil(20000) { rule.activity.resources.configuration.orientation == expected }
+        rule.waitForIdle()
+        // Surface rotation precedes application relayout. Await real Compose bounds.
+        rule.waitUntil(20000) {
+            val bounds = rule.onRoot().fetchSemanticsNode().boundsInRoot
+            (bounds.width > bounds.height) == landscape
+        }
+        android.os.SystemClock.sleep(600)
         rule.waitForIdle()
     }
     @Test fun toolboxActualRoutes_portraitAndLandscape() {
         rule.waitForIdle()
         if (rule.onAllNodesWithText(ar(R.string.donation_decline)).fetchSemanticsNodes().isNotEmpty()) click(R.string.donation_decline)
         val out = File(context.filesDir, "toolbox-samples").apply { mkdirs() }
+        // A preceding real PDF/DXF export test can leave an Android toast visible.
+        // Wait beyond LENGTH_LONG before collecting unrelated tool evidence.
+        android.os.SystemClock.sleep(5000)
         click(R.string.toolbox_title)
         for ((id, name) in listOf(R.string.home_calculator to "calculator", R.string.home_unit_converter to "converter", R.string.tool_spirit_level to "level", R.string.tool_ruler to "ruler")) {
             click(id)
