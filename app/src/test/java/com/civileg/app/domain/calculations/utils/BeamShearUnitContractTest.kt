@@ -3,13 +3,11 @@ package com.civileg.app.domain.calculations.utils
 import com.civileg.app.domain.entities.DesignCode
 import org.junit.Assert.*
 import org.junit.Test
+import io.mockk.mockk
 
 class BeamShearUnitContractTest {
     @Test fun `wrapper shear capacity uses square millimetres per millimetre and exact link text`() {
-        val field=sun.misc.Unsafe::class.java.getDeclaredField("theUnsafe").apply { isAccessible=true }
-        val unsafe=field.get(null) as sun.misc.Unsafe
-        val settings=unsafe.allocateInstance(com.civileg.app.utils.SettingsManager::class.java) as com.civileg.app.utils.SettingsManager
-        val engine=CalculatorEngine(settings)
+        val engine=CalculatorEngine(mockk(relaxed = true))
         for(code in DesignCode.entries) {
             val r=engine.designBeam(250.0,600.0,5.0,25.0,400.0,15.0,10.0,16,code)
             val d=600.0-(if(code==DesignCode.SBC) 50.0 else 40.0)-r.stirrups.diameter-maxOf(16,r.reinforcementTop.diameter,r.reinforcementBottom.diameter)/2.0
