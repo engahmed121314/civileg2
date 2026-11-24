@@ -57,7 +57,7 @@ class ToolboxSampleUiTest {
         File(out, "scope.txt").writeText("Actual MainActivity > Tools hub > four tool routes, portrait and landscape. Emulator visual evidence only. Physical ruler accuracy and real device sensor calibration are NOT verified. Scientific evaluator and conversion arithmetic have separate JVM tests.\n")
         for (file in out.listFiles().orEmpty()) {
             val pipes = instrumentation.uiAutomation.executeShellCommandRw(
-                "mkdir -p /data/local/tmp/civileg-toolbox-samples && cat > /data/local/tmp/civileg-toolbox-samples/${file.name} && echo TRANSFER_OK")
+                "sh -c 'mkdir -p /data/local/tmp/civileg-toolbox-samples && cat > /data/local/tmp/civileg-toolbox-samples/${file.name} && echo TRANSFER_OK'")
             android.os.ParcelFileDescriptor.AutoCloseOutputStream(pipes[1]).use { sink ->
                 file.inputStream().use { it.copyTo(sink) }
             }

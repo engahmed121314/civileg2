@@ -71,7 +71,7 @@ class DrawingSampleUiTest {
         for (file in out.listFiles().orEmpty()) {
             val destination = "/data/local/tmp/civileg-drawing-samples/stair/${file.name}"
             val pipes = instrumentation.uiAutomation.executeShellCommandRw(
-                "mkdir -p /data/local/tmp/civileg-drawing-samples/stair && cat > $destination && echo TRANSFER_OK")
+                "sh -c 'mkdir -p /data/local/tmp/civileg-drawing-samples/stair && cat > $destination && echo TRANSFER_OK'")
             android.os.ParcelFileDescriptor.AutoCloseOutputStream(pipes[1]).use { sink ->
                 file.inputStream().use { it.copyTo(sink) }
             }
