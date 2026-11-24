@@ -1655,7 +1655,7 @@ private fun CalculateButton(onClick: () -> Unit) {
 }
 
 @Composable
-private fun CheckedResultBanner(status: DisplayedCheckStatus) {
+internal fun CheckedResultBanner(status: DisplayedCheckStatus) {
     val color = when (status) {
         DisplayedCheckStatus.PASSED -> Color(0xFF2E7D32)
         DisplayedCheckStatus.FAILED -> Color(0xFFC62828)

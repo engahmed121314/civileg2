@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.R
@@ -593,15 +594,17 @@ private fun DrawScope.drawCrossSection(
         Pair(columnMembers, beamMembers)
     }
 
-    // Draw column section on left
-    val colCenterX = canvasW * 0.25f
-    val colCenterY = canvasH * 0.5f
-    drawColumnSection(colCenterX, colCenterY, colMs.firstOrNull(), result, textMeasurer, context)
-
-    // Draw beam section on right
-    val beamCenterX = canvasW * 0.75f
-    val beamCenterY = canvasH * 0.5f
-    drawBeamSection(beamCenterX, beamCenterY, bmMs.firstOrNull(), result, textMeasurer, context)
+    // Separate panels reserve room for headings, dimensions and wrapped captions.
+    // Stack on narrow canvases; section aspect ratios and engineering values are unchanged.
+    val stacked = canvasW < 600f
+    val panelW = if (stacked) canvasW else canvasW / 2f
+    val panelH = if (stacked) (canvasH - 60f) / 2f else canvasH - 60f
+    val colCenterX = if (stacked) canvasW / 2f else canvasW * 0.25f
+    val beamCenterX = if (stacked) canvasW / 2f else canvasW * 0.75f
+    val colCenterY = 60f + panelH / 2f
+    val beamCenterY = if (stacked) 60f + panelH * 1.5f else colCenterY
+    drawColumnSection(colCenterX, colCenterY, colMs.firstOrNull(), result, textMeasurer, context, panelW, panelH)
+    drawBeamSection(beamCenterX, beamCenterY, bmMs.firstOrNull(), result, textMeasurer, context, panelW, panelH)
 }
 
 // Draw column cross section with reinforcement — uses ACTUAL member section & design result
@@ -610,7 +613,9 @@ private fun DrawScope.drawColumnSection(
     member: FrameMember?,
     result: FrameAnalysisResult?,
     textMeasurer: TextMeasurer,
-    context: android.content.Context
+    context: android.content.Context,
+    panelWidth: Float = size.width,
+    panelHeight: Float = size.height - 60f
 ) {
     val cs = member?.concreteSection
     val colW = cs?.width?.toInt() ?: 300
@@ -626,17 +631,18 @@ private fun DrawScope.drawColumnSection(
     val stirrupSpacing = designRes?.stirrupSpacing?.takeIf { it > 0 }?.toInt() ?: 150
 
     val maxMm = maxOf(colW, colD)
-    val sectionSize = 220f
+    val sectionSize = min(220f, min(panelWidth - 90f, panelHeight - 110f)).coerceAtLeast(12f)
     val drawW = if (colW >= colD) sectionSize else (colW.toFloat() / colD.toFloat() * sectionSize)
     val drawH = if (colD >= colW) sectionSize else (colD.toFloat() / colW.toFloat() * sectionSize)
     val left = cx - drawW / 2
-    val top = cy - drawH / 2
+    val top = cy - panelHeight / 2f + 58f
 
     // Title
     drawText(
         textMeasurer = textMeasurer,
         text = context.getString(R.string.frame_column_section_label, member?.name?.ifEmpty { context.getString(R.string.column) } ?: context.getString(R.string.column)),
-        topLeft = Offset(cx - 100f, top - 30f),
+        topLeft = Offset(cx - panelWidth / 2f + 12f, cy - panelHeight / 2f + 4f),
+        size = Size((panelWidth - 24f).coerceAtLeast(1f), 32f),
         style = TextStyle(color = Color(0xFF1565C0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
     )
 
@@ -708,22 +714,11 @@ private fun DrawScope.drawColumnSection(
     drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_h_format, colD), dimXRight + 14f, top + drawH / 2 + 6f, dimPaint)
     drawContext.canvas.nativeCanvas.restore()
 
-    val labelPaint = android.graphics.Paint().apply {
-        color = Color(0xFF333333).toArgb(); textSize = 16f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
-    }
-    drawContext.canvas.nativeCanvas.drawText(
-        context.getString(R.string.frame_rebar_column_format, numBars, barDia, tieDia, stirrupSpacing),
-        cx, top + drawH + 35f, labelPaint
-    )
-
+    val caption = context.getString(R.string.frame_rebar_column_format, numBars, barDia, tieDia, stirrupSpacing)
+    drawSectionCaption(caption, cx, top + drawH + 6f, panelWidth, textMeasurer)
     designRes?.let { dr ->
-        val asProvText = context.getString(R.string.frame_provided_req_format, dr.asProvided, dr.asRequired)
-        drawContext.canvas.nativeCanvas.drawText(
-            asProvText,
-            cx, top + drawH + 55f, android.graphics.Paint().apply {
-                color = Color(0xFF666666).toArgb(); textSize = 13f; textAlign = android.graphics.Paint.Align.CENTER
-            }
-        )
+        drawSectionCaption(context.getString(R.string.frame_provided_req_format, dr.asProvided, dr.asRequired),
+            cx, top + drawH + 36f, panelWidth, textMeasurer)
     }
 }
 
@@ -733,7 +728,9 @@ private fun DrawScope.drawBeamSection(
     member: FrameMember?,
     result: FrameAnalysisResult?,
     textMeasurer: TextMeasurer,
-    context: android.content.Context
+    context: android.content.Context,
+    panelWidth: Float = size.width,
+    panelHeight: Float = size.height - 60f
 ) {
     val cs = member?.concreteSection
     val beamW = cs?.width?.toInt() ?: 250
@@ -748,17 +745,18 @@ private fun DrawScope.drawBeamSection(
     val stirrupSpacing = designRes?.stirrupSpacing?.takeIf { it > 0 }?.toInt() ?: 150
 
     val maxMm = maxOf(beamW, beamD)
-    val drawSize = 220f
+    val drawSize = min(220f, min(panelWidth - 90f, panelHeight - 110f)).coerceAtLeast(12f)
     val drawW = (beamW.toFloat() / maxMm.toFloat()) * drawSize
     val drawH = (beamD.toFloat() / maxMm.toFloat()) * drawSize
     val left = cx - drawW / 2
-    val top = cy - drawH / 2
+    val top = cy - panelHeight / 2f + 58f
 
     // Title
     drawText(
         textMeasurer = textMeasurer,
         text = context.getString(R.string.frame_beam_section_label, member?.name?.ifEmpty { context.getString(R.string.beam) } ?: context.getString(R.string.beam)),
-        topLeft = Offset(cx - 100f, top - 30f),
+        topLeft = Offset(cx - panelWidth / 2f + 12f, cy - panelHeight / 2f + 4f),
+        size = Size((panelWidth - 24f).coerceAtLeast(1f), 32f),
         style = TextStyle(color = Color(0xFF1565C0), fontSize = 12.sp, fontWeight = FontWeight.Bold)
     )
 
@@ -831,27 +829,20 @@ private fun DrawScope.drawBeamSection(
     drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_dim_h_format, beamD), dimXRight + 14f, top + drawH / 2 + 6f, dimPaint)
     drawContext.canvas.nativeCanvas.restore()
 
-    val labelPaint = android.graphics.Paint().apply {
-        color = Color(0xFF333333).toArgb(); textSize = 16f; isFakeBoldText = true; textAlign = android.graphics.Paint.Align.CENTER
-    }
-    drawContext.canvas.nativeCanvas.drawText(
-        context.getString(R.string.frame_rebar_beam_bot_top_format, numBarsBottom, barDia, numBarsTop, barDia),
-        cx, top + drawH + 35f, labelPaint
-    )
-    drawContext.canvas.nativeCanvas.drawText(
-        context.getString(R.string.frame_rebar_beam_stirrup_format, stirrupDia, stirrupSpacing),
-        cx, top + drawH + 55f, labelPaint
-    )
-
+    val caption = context.getString(R.string.frame_rebar_beam_bot_top_format, numBarsBottom, barDia, numBarsTop, barDia) +
+        " " + context.getString(R.string.frame_rebar_beam_stirrup_format, stirrupDia, stirrupSpacing)
+    drawSectionCaption(caption, cx, top + drawH + 6f, panelWidth, textMeasurer)
     designRes?.let { dr ->
-        val asProvText = context.getString(R.string.frame_beam_provided_req_mu_format, dr.asProvided, dr.asRequired, dr.maxMoment)
-        drawContext.canvas.nativeCanvas.drawText(
-            asProvText,
-            cx, top + drawH + 75f, android.graphics.Paint().apply {
-                color = Color(0xFF666666).toArgb(); textSize = 13f; textAlign = android.graphics.Paint.Align.CENTER
-            }
-        )
+        drawSectionCaption(context.getString(R.string.frame_beam_provided_req_mu_format, dr.asProvided, dr.asRequired, dr.maxMoment),
+            cx, top + drawH + 36f, panelWidth, textMeasurer)
     }
+}
+
+private fun DrawScope.drawSectionCaption(text: String, cx: Float, y: Float, panelWidth: Float, measurer: TextMeasurer) {
+    val width = (panelWidth - 24f).coerceAtLeast(1f)
+    val layout = measurer.measure(text, style = TextStyle(color = Color(0xFF333333), fontSize = 11.sp),
+        constraints = Constraints(maxWidth = width.toInt().coerceAtLeast(1)))
+    drawText(layout, topLeft = Offset(cx - layout.size.width / 2f, y))
 }
 
 // ============================================================================
@@ -896,9 +887,9 @@ private fun DrawScope.drawPlanView(
     val padLeft = 80f
     val padRight = 80f
     val padTop = 80f
-    val padBottom = 80f
-    val drawW = canvasW - padLeft - padRight
-    val drawH = canvasH - padTop - padBottom
+    val padBottom = 200f
+    val drawW = (canvasW - padLeft - padRight).coerceAtLeast(10f)
+    val drawH = (canvasH - padTop - padBottom).coerceAtLeast(10f)
 
     val sx = drawW / xSpan.toFloat()
     val sy = drawH / planDepth.toFloat()
@@ -998,8 +989,8 @@ private fun DrawScope.drawPlanView(
     val legY = canvasH - 120f
     drawRect(Color(0x22000000), Offset(legX, legY), Size(180f, 100f))
     drawRect(Color(0xFF4A90D9), Offset(legX, legY), Size(180f, 100f), style = Stroke(1f))
-    val legTitle = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 16f; isFakeBoldText = true }
-    val legItem = android.graphics.Paint().apply { color = Color.White.toArgb(); textSize = 14f }
+    val legTitle = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 16f; isFakeBoldText = true }
+    val legItem = android.graphics.Paint().apply { color = Color(0xFF263238).toArgb(); textSize = 14f }
     drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_legend_title), legX + 8f, legY + 20f, legTitle)
     drawRect(Color(0xFFBBDEFB), Offset(legX + 8f, legY + 30f), Size(16f, 12f))
     drawContext.canvas.nativeCanvas.drawText(context.getString(R.string.frame_legend_slab), legX + 32f, legY + 40f, legItem)
