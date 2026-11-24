@@ -4,7 +4,7 @@ set +e
 ./gradlew connectedFreeDebugAndroidTest --no-daemon
 TEST_EXIT=$?
 mkdir -p app/build/drawing-samples
-adb pull /sdcard/Download/civileg-drawing-samples/. app/build/drawing-samples/
+adb pull /data/local/tmp/civileg-drawing-samples/. app/build/drawing-samples/
 PULL_EXIT=$?
 mkdir -p app/build/toolbox-samples
 adb pull /sdcard/Download/civileg-toolbox-samples/. app/build/toolbox-samples/
