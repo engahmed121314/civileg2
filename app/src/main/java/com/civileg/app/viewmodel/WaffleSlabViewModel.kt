@@ -201,18 +201,21 @@ class WaffleSlabViewModel @Inject constructor(
                     )
                 }
 
-                val drawingBitmap = pendingDrawingBitmap ?: runCatching {
-                    com.civileg.app.shared.reporting.PdfDrawingGenerator.generateSlabDrawingByType(
-                        slabType = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.WAFFLE,
-                        spanX = input.lx, spanY = input.ly, spansInMm = true,
-                        thickness = input.ribHeight + input.toppingThickness,
-                        mainDia = res.ribDesign?.flexureReinforcement?.diameter?.toDouble() ?: 12.0,
-                        mainSpacing = res.ribDesign?.flexureReinforcement?.spacing?.toDouble() ?: 150.0,
-                        distDia = 12.0, distSpacing = 200.0,
-                        cover = input.clearCover,
-                        ribWidth = input.ribWidth, ribSpacing = input.ribSpacing
-                    )
-                }.getOrNull()
+                val drawingBitmap = pendingDrawingBitmap ?: res.ribDesign?.flexureReinforcement?.let { ribBars ->
+                    runCatching {
+                        com.civileg.app.shared.reporting.PdfDrawingGenerator.generateSlabDrawingByType(
+                            slabType = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.WAFFLE,
+                            spanX = input.lx, spanY = input.ly, spansInMm = true,
+                            thickness = input.ribHeight + input.toppingThickness,
+                            mainDia = ribBars.diameter.toDouble(),
+                            mainSpacing = ribBars.spacing.toDouble(),
+                            // No top-flange steel is adopted by the engine; 0 renders "not designed".
+                            distDia = 0.0, distSpacing = 0.0,
+                            cover = input.clearCover,
+                            ribWidth = input.ribWidth, ribSpacing = input.ribSpacing
+                        )
+                    }.getOrNull()
+                }
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = input.designCode.displayName

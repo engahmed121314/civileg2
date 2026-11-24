@@ -1267,9 +1267,9 @@ object PdfDrawingGenerator {
             x = 80f, y = H * 0.6f,
             data = listOf(
                 listOf("Mark", "Dia", "Location", "Spacing", "Length"),
-                listOf("R1", "${mainDia.toInt()}", "Rib bottom", "@ ${ribSpacing.toInt()} mm", "${spanX.toInt()}"),
-                listOf("T1", "${distDia.toInt()}", "Slab top", "@ ${distSpacing.toInt()} mm", "${spanY.toInt()}"),
-                listOf("S1", "8", "Rib stirrups", "@ 200 mm", "${spanX.toInt()}")
+                listOf("R1", "${mainDia.toInt()}", "Rib bottom", "ribs @ ${ribSpacing.toInt()} mm", "${spanX.toInt()}"),
+                listOf("T1", if (distDia > 0.0) "${distDia.toInt()}" else "-", "Slab top", if (distDia > 0.0) "@ ${distSpacing.toInt()} mm" else "not designed", "${spanY.toInt()}"),
+                listOf("S1", "-", "Rib stirrups", "not designed", "-")
             )
         )
         drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Hordi Slab Detail")
@@ -1379,9 +1379,9 @@ object PdfDrawingGenerator {
             x = 80f, y = H * 0.6f,
             data = listOf(
                 listOf("Mark", "Dia", "Direction", "Spacing", "Layer"),
-                listOf("RX", "${mainDia.toInt()}", "X-direction", "@ ${ribSpacing.toInt()} mm", "Bottom"),
-                listOf("RY", "${mainDia.toInt()}", "Y-direction", "@ ${ribSpacing.toInt()} mm", "Bottom"),
-                listOf("T", "${distDia.toInt()}", "Top flange", "@ ${distSpacing.toInt()} mm", "Top")
+                listOf("RX", "${mainDia.toInt()}", "X-direction", "ribs @ ${ribSpacing.toInt()} mm", "Bottom"),
+                listOf("RY", "${mainDia.toInt()}", "Y-direction", "ribs @ ${ribSpacing.toInt()} mm", "Bottom"),
+                listOf("T", if (distDia > 0.0) "${distDia.toInt()}" else "-", "Top flange", if (distDia > 0.0) "@ ${distSpacing.toInt()} mm" else "not designed", "Top")
             )
         )
         drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Waffle Slab Detail")
