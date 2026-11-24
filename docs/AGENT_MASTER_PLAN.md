@@ -377,3 +377,35 @@ git ls-files | grep -iE 'google-services|\.tsx?$|Caddyfile|\.env'
 - Jetpack Compose August 2026 release (BOM 2026.08.00 = Compose 1.12; compileSdk 37; AGP ≥ 9.1.1): https://android-developers.googleblog.com/2026/08/jetpack-compose-august-2026-release.html
 - AGP 9.5.0 (October 2026) — seen only as a search-result title on developer.android.com; not opened.
 - Not verified: latest Kotlin/KSP/Hilt/Room versions; whether a Compose BOM newer than 2026.08.00 exists.
+
+
+## 12. نسخة iOS ثانية من CivilEG2 | iOS edition roadmap
+
+**Added:** 2026-11-24, at the owner's request. **Status:** planned, not implemented. This is a separate product workstream from the current Android stabilization batch. Adding this goal does not approve a port, a rewrite, a framework, a merge, spending, or an App Store release. No delivery date is committed.
+
+### 12.1 الهدف وحدود القرار
+
+إضافة نسخة ثانية من تطبيق CivilEG2 تعمل على iOS، مع الحفاظ على نسخة Android وعدم تعطيل تثبيتها أو تغيير نتائج الحسابات لمجرد نقل المنصة. نطاق النسخة الأولى، والأجهزة المدعومة، وطريقة مشاركة الحسابات والبيانات، ومسار التنفيذ تظل قرارات للمراجعة والموافقة قبل البرمجة. لا تعني هذه الإضافة أن نسخة iOS موجودة أو أن جميع وظائف Android قابلة للنقل كما هي.
+
+### 12.2 Current architecture, rechecked for this addition
+
+The current repository is Android-oriented: `settings.gradle.kts` includes `:app` and `:core:calculations`; `app/build.gradle.kts` applies the Android application and Compose plugins. Despite the earlier pure-Kotlin migration proposal, `core/calculations/build.gradle.kts` currently applies `com.android.library`, Kotlin Android and `kotlin-parcelize`, and declares a Firebase Crashlytics dependency. It is not already a verified platform-neutral iOS library. This dated observation does not refresh the older audit metrics or mark its backlog complete.
+
+### 12.3 Investigation and review gates before implementation
+
+| Gate | Planned work | Required evidence / acceptance |
+|---|---|---|
+| IOS-0: agree first-version scope | Inventory Android screens, element types, selected design codes, inputs, outputs, drawings, reports, BOQ, local prices, language and offline behavior. Identify the proposed iOS subset, unsupported cases and later additions. | Owner-reviewed screen × case × code × output matrix, including explicit unsupported/incomplete states; no blanket feature-parity claim. |
+| IOS-1: dependency and reuse audit | Trace Android/JVM dependencies in calculation engines, result models, serialization, file APIs, storage, drawing, PDF/DXF and services. Assess licensing and source/service restrictions. | File-level dependency map and tested evidence for any proposed reusable boundary; migration risks and costs recorded. No assumption that the existing `core` module can compile for iOS. |
+| IOS-2: architecture decision | Compare a native iOS implementation with suitable shared-code approaches against the agreed scope, numerical parity, UI/RTL quality, maintainability and platform dependencies. Include any proposed repository arrangement. | Written options with trade-offs, limitations and a small feasibility proposal. Owner approves the approach and pilot scope before any port or prototype starts; no framework is selected by this roadmap. |
+| IOS-3: approved feasibility pilot | After the separate implementation approval, prove one bounded vertical slice: inputs → calculation result → checks/warnings → drawing/export as applicable. | Reproducible iOS build and run evidence on a named simulator/device configuration; compared numerical fixtures and inspected Arabic/English pixels. Failure remains a finding, not an implied commitment to a rewrite. |
+| IOS-4: incremental implementation | Proceed only in approved slices using the verified engine/result boundary. Define persistence, export/import and any Android-to-iOS transfer separately; do not assume account sync or cloud storage. | Each slice passes cited golden vectors, boundary/invalid-input tests, code-specific parity, returned-check state tests and screen/drawing/export consistency checks. Android regression tests remain passing; no silent engineering-value changes. |
+| IOS-5: iOS acceptance | Agree supported iPhone/iPad and OS scope; test RTL/LTR, Arabic fonts, accessibility, screen sizes, keyboard and units, offline behavior, save/reopen, file sharing and export readability. | Actual simulator/device evidence for the agreed matrix, including negative and incomplete cases. No clipping, misleading global safety status or unsupported feature presented as complete. Known limitations recorded. |
+| IOS-6: distribution readiness | Verify then-current Apple tooling, signing, privacy, third-party service/licensing and distribution requirements using permitted official sources. Identify needed owner accounts, hardware and costs. | Owner-approved release checklist, costs and distribution route. Account setup, paid services, signing assets, beta distribution and App Store submission each require the relevant approval; none is performed by this plan edit. |
+
+### 12.4 Relationship to Android and completion reporting
+
+- Android stabilization and its current review gates continue independently. This roadmap edit changes documentation only, not application code, build configuration, CI or release behavior.
+- The iOS workstream is not counted as completed Android stabilization work. Its progress denominator will be defined from the approved iOS scope, not guessed from Android line counts or reused file counts.
+- Engineering results require independent validation on both platforms. Matching one fixture or obtaining a successful build is not engineering certification or proof of whole-app parity.
+- **Next decision after investigation:** approve the initial iOS scope, architecture and bounded pilot. Until then: roadmap recorded, implementation not started, no merge or release authorized.
