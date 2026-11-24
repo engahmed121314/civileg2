@@ -20,14 +20,10 @@ import kotlinx.coroutines.launch
 class SplashActivity : AppCompatActivity() {
 
     private val isNavigated = java.util.concurrent.atomic.AtomicBoolean(false)
-    // Presentation gate (diagnostic-driven, minimal): navigation now requires
-    // BOTH the consent flow to be complete AND the content root's first draw
-    // DISPATCH to have been observed. OnDrawListener is a draw-dispatch
-    // notification (it fires as the view tree's draw dispatch runs; it is not
-    // "after the root's traversal", and the posted turn that follows is still
-    // not compositor presentation). No completed/presented frame is ever
-    // claimed here - that remains verified by recording pixels. No fixed
-    // dwell, no consent/ad/nav flow change beyond the gate.
+    // Wait for submitted content plus a short dwell. A commit callback is not
+    // compositor proof, so real launch pixels remain the acceptance evidence.
+    private var contentReadyAtMs: Long? = null
+    private var dwellScheduled = false
     private val consentCompleted = java.util.concurrent.atomic.AtomicBoolean(false)
     private val contentDrawObserved = java.util.concurrent.atomic.AtomicBoolean(false)
     private var drawListener: ViewTreeObserver.OnDrawListener? = null
@@ -53,7 +49,7 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         navLog { "onCreate wallClockMs=${System.currentTimeMillis()} sdk=${Build.VERSION.SDK_INT}" }
 
-        // Full-bleed approved Treatment B: artwork extends behind the system
+        // Full-bleed Treatment B: artwork extends behind the system
         // bars. SplashOverlayLayout applies systemBars+displayCutout insets to
         // itself (never to the background) and anchors overlays to the artwork.
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -98,8 +94,12 @@ class SplashActivity : AppCompatActivity() {
                         navLog { "frame-commit callback not registered: observer dead" }
                     } else {
                         val commit = Runnable {
-                            try { frameCommitted.set(true) } catch (_: Throwable) {}
-                            navLog { "frame-commit callback ran (submission evidence of an unspecified frame, not pixel presentation)" }
+                            frameCommitted.set(true)
+                            runOnUiThread {
+                                contentReadyAtMs = SystemClock.elapsedRealtime()
+                                navLog { "frame committed; visible dwell begins" }
+                                maybeNavigateWhenReady()
+                            }
                         }
                         vto.registerFrameCommitCallback(commit)
                         frameCommitCallback = commit
@@ -116,6 +116,14 @@ class SplashActivity : AppCompatActivity() {
                     if (drawListener === this) drawListener = null
                     postedGate = null
                     navLog { "posted gate ran" }
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || !contentRoot.isHardwareAccelerated) {
+                        // Old/software devices have no commit API. Use a following
+                        // animation turn as an explicitly weaker fallback.
+                        contentRoot.postOnAnimation {
+                            contentReadyAtMs = SystemClock.elapsedRealtime()
+                            maybeNavigateWhenReady()
+                        }
+                    }
                     maybeNavigateWhenReady()
                 }
                 postedGate = gate
@@ -125,14 +133,10 @@ class SplashActivity : AppCompatActivity() {
         drawListener = listener
         contentRoot.viewTreeObserver.addOnDrawListener(listener)
 
-        // Failsafe timeout: ensure user is never blocked on splash screen (unblock).
-        // ORIGINAL semantics preserved: after 1500ms it navigates regardless,
-        // so a never-drawn window can never wedge the app behind the starting
-        // window; the gate only makes the NORMAL path wait for the first
-        // observed draw. lifecycleScope cancels at onDestroy, so this never
-        // fires into a destroyed activity.
+        // Bounded no-hang fallback remains, including failed/no-frame starts.
+        // This is a 5-second maximum after content setup, not a claimed visible duration.
         lifecycleScope.launch {
-            delay(1500)
+            delay(5000)
             navLog { "failsafe fired" }
             navigateToMain("failsafe")
         }
@@ -154,7 +158,8 @@ class SplashActivity : AppCompatActivity() {
             }
         } catch (t: Throwable) {
             Log.w("SplashActivity", "Ads consent init skipped safely: ${t.message}")
-            navigateToMain("consent-init-exception")
+            consentCompleted.set(true)
+            maybeNavigateWhenReady()
         }
     }
 
@@ -186,10 +191,20 @@ class SplashActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    // Navigates only when consent completed AND the content root's first draw
-    // was observed. Either side may arrive first; the failsafe bypasses this.
     private fun maybeNavigateWhenReady() {
-        if (consentCompleted.get() && contentDrawObserved.get()) navigateToMain("gate")
+        if (!consentCompleted.get() || isNavigated.get() || isFinishing || isDestroyed) return
+        val readyAt = contentReadyAtMs ?: return
+        val remaining = (600L - (SystemClock.elapsedRealtime() - readyAt)).coerceAtLeast(0L)
+        if (remaining == 0L) {
+            navigateToMain("committed-content-dwell")
+        } else if (!dwellScheduled) {
+            dwellScheduled = true
+            lifecycleScope.launch {
+                delay(remaining)
+                dwellScheduled = false
+                maybeNavigateWhenReady()
+            }
+        }
     }
 
     private fun navigateToMain(reason: String) {
