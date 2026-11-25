@@ -275,15 +275,15 @@ fun HordiSlabScreen(
                     ) {
                         OutlinedTextField(
                             value = when (supportCondition) {
-                                com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED -> "Not specified - deflection NOT assessed"
-                                com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED -> "Simply supported"
-                                com.civileg.app.domain.calculations.base.SlabSupportCondition.ONE_END_CONTINUOUS -> "One end continuous"
-                                com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS -> "Both ends continuous"
-                                com.civileg.app.domain.calculations.base.SlabSupportCondition.CANTILEVER -> "Cantilever"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED -> "غير محدد - لم يتم تقييم الترخيم"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED -> "بسيط الارتكاز"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.ONE_END_CONTINUOUS -> "مستمر من طرف واحد"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS -> "مستمر من الطرفين"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.CANTILEVER -> "كابولي"
                             },
                             onValueChange = {},
                             readOnly = true,
-                            label = { AppText("Support Condition (deflection check)", fontSize = 12.sp) },
+                            label = { AppText("حالة الارتكاز (فحص الترخيم)", fontSize = 12.sp) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = supportExpanded) },
                             modifier = Modifier.fillMaxWidth().menuAnchor(),
                             shape = PremiumDesignSystem.InputShape,
@@ -297,11 +297,11 @@ fun HordiSlabScreen(
                                 DropdownMenuItem(
                                     text = {
                                         AppText(when (option) {
-                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED -> "Not specified - deflection NOT assessed"
-                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED -> "Simply supported"
-                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.ONE_END_CONTINUOUS -> "One end continuous"
-                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS -> "Both ends continuous"
-                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.CANTILEVER -> "Cantilever"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED -> "غير محدد - لم يتم تقييم الترخيم"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED -> "بسيط الارتكاز"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.ONE_END_CONTINUOUS -> "مستمر من طرف واحد"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS -> "مستمر من الطرفين"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.CANTILEVER -> "كابولي"
                                         }, fontSize = 13.sp)
                                     },
                                     onClick = {
@@ -324,13 +324,13 @@ fun HordiSlabScreen(
                     ) {
                         OutlinedTextField(
                             value = when (loadingApplicability) {
-                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED -> "Not declared - deflection NOT assessed"
-                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS -> "Ordinary loading, normalweight concrete, no damage-sensitive elements"
-                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.SENSITIVE_OR_IRREGULAR -> "Sensitive/irregular - detailed calc required"
+                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED -> "غير مُعلن - لم يتم تقييم الترخيم"
+                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS -> "أحمال عادية، خرسانة طبيعية الوزن، بدون عناصر حساسة للتلف"
+                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.SENSITIVE_OR_IRREGULAR -> "عناصر حساسة أو غير منتظمة - يلزم حساب ترخيم تفصيلي"
                             },
                             onValueChange = {},
                             readOnly = true,
-                            label = { AppText("Loading / Supported Elements (deflection check)", fontSize = 12.sp) },
+                            label = { AppText("الأحمال / العناصر المحمولة (فحص الترخيم)", fontSize = 12.sp) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = loadingExpanded) },
                             modifier = Modifier.fillMaxWidth().menuAnchor(),
                             shape = PremiumDesignSystem.InputShape,
@@ -344,9 +344,9 @@ fun HordiSlabScreen(
                                 DropdownMenuItem(
                                     text = {
                                         AppText(when (option) {
-                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED -> "Not declared - deflection NOT assessed"
-                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS -> "Ordinary loading, normalweight concrete, no damage-sensitive elements"
-                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.SENSITIVE_OR_IRREGULAR -> "Sensitive/irregular - detailed calc required"
+                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED -> "غير مُعلن - لم يتم تقييم الترخيم"
+                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS -> "أحمال عادية، خرسانة طبيعية الوزن، بدون عناصر حساسة للتلف"
+                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.SENSITIVE_OR_IRREGULAR -> "عناصر حساسة أو غير منتظمة - يلزم حساب ترخيم تفصيلي"
                                         }, fontSize = 13.sp)
                                     },
                                     onClick = {
