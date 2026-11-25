@@ -6,8 +6,6 @@ pkg, out = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)
 def adb(*a, **k):
     return subprocess.run(["adb", *a], capture_output=True, **k)
-# Pre-confirm the system "Viewing full screen" notice (it is not in the UI dump, so it cannot be tapped away).
-adb("shell", "settings", "put", "secure", "immersive_mode_confirmations", "confirmed")
 def shot(name):
     open(f"{out}/{name}.png", "wb").write(adb("exec-out", "screencap", "-p").stdout)
 def dump(name):
@@ -144,7 +142,12 @@ def stair_codes():
                 scroll_top(1)  # one swipe per try: two at a time skipped past the button
             log.append(("sc_pdf_tap_" + tag, pdf_ok)); time.sleep(4)
             # dismiss the system "Viewing full screen" notice so the viewer pages are visible
-            tap_text(["Got it", "حسنًا", "حسناً"], "sc-pdf-gotit")
+            if not tap_text(["Got it", "حسنًا", "حسناً"], "sc-pdf-gotit"):
+                # the notice is a system overlay missing from the dump: tap where its "Got it" sits (79% x, 27% y)
+                wm = adb("shell", "wm", "size").stdout.decode(errors="ignore")
+                mm = re.search(r"(\d+)x(\d+)", wm)
+                if mm:
+                    adb("shell", "input", "tap", str(int(int(mm.group(1)) * 0.79)), str(int(int(mm.group(2)) * 0.27))); time.sleep(1.5)
             shot("sc-" + tag + "-pdf"); dump("sc-" + tag + "-pdf")
             for k in range(1, 6):
                 adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
