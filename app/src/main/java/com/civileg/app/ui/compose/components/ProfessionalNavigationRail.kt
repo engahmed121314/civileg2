@@ -1,5 +1,8 @@
 package com.civileg.app.ui.compose.components
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,7 +69,8 @@ fun ProfessionalNavigationRail(
     NavigationRail(
         modifier = modifier
             .fillMaxHeight()
-            .width(dimensions.navigationRailWidth),
+            .width(dimensions.navigationRailWidth)
+            .testTag("navigation_rail"),
         containerColor = RailBackground,
         contentColor = PremiumColorsLight.onSurface,
         header = {
@@ -101,6 +105,7 @@ fun ProfessionalNavigationRail(
     ) {
         Spacer(Modifier.height(6.dp))
 
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).testTag("navigation_rail_items"), horizontalAlignment = Alignment.CenterHorizontally) {
         items.forEachIndexed { index, item ->
             val selected = selectedTab == index
             NavigationRailItem(
@@ -149,7 +154,7 @@ fun ProfessionalNavigationRail(
             )
         }
 
-        Spacer(Modifier.weight(1f))
+        }
 
         if (onOpenSettings != null) {
             HorizontalDivider(color = PremiumColorsLight.onSurface.copy(alpha = 0.08f))

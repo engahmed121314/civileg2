@@ -45,6 +45,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -119,7 +120,7 @@ fun ProfessionalBottomNavBar(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier
+        modifier = modifier.testTag("navigation_bar")
             .fillMaxWidth()
             .shadow(
                 elevation = 4.dp,

@@ -129,13 +129,11 @@ class ReachabilityUiTest {
     private data class Nav(val kind: String, val rects: List<Rect>)
 
     private fun nav(): Nav {
-        val labels = listOf(ar(R.string.nav_tools), ar(R.string.nav_more))
-        val rects = labels.mapNotNull { l ->
-            rule.onAllNodesWithText(l, useUnmergedTree = true).fetchSemanticsNodes().maxByOrNull { it.boundsInRoot.top }?.boundsInRoot
+        for ((tag,kind) in listOf("navigation_rail" to "rail","navigation_bar" to "bar")) {
+            val nodes=rule.onAllNodesWithTag(tag,useUnmergedTree=true).fetchSemanticsNodes()
+            if(nodes.isNotEmpty()) return Nav(kind,nodes.map{it.boundsInRoot})
         }
-        if (rects.size < 2) return Nav("not-found", rects)
-        val sameRow = kotlin.math.abs(rects[0].top - rects[1].top) < 4f
-        return Nav(if (sameRow) "bar" else "rail", rects)
+        return Nav("not-found",emptyList())
     }
 
     private fun overlapsNav(r: Rect, nav: Nav) = nav.rects.any { it.overlaps(r) }
@@ -346,6 +344,14 @@ class ReachabilityUiTest {
             for (landscape in listOf(false, true, false)) {
                 rotate(landscape)
                 val n = nav()
+                if(n.kind == "rail") {
+                    for(id in listOf(R.string.nav_home,R.string.nav_design_hub,R.string.toolbox_title,R.string.building_plan_title,R.string.nav_more)) {
+                        val label=ar(id)
+                        rule.onNodeWithTag("navigation_rail_items").performScrollToNode(hasText(label))
+                        rule.onAllNodesWithText(label,useUnmergedTree=true).onLast().assertIsDisplayed()
+                    }
+                }
+                if(n.kind == "not-found") mismatches++
                 if (diagnostics(if (landscape) "home-landscape" else "home-portrait", n, report)) mismatches++
                 shot(if (landscape) "nav-home-landscape" else "nav-home-portrait")
             }
