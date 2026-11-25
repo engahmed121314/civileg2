@@ -99,8 +99,8 @@ object HordiDeemedToSatisfy {
         val factor = 0.4 + fy / 700.0
         val limit = base / factor
         val ratio = spanMm / totalThicknessMm
-        return DeemedToSatisfy(true, ratio <= limit,
-            "l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (declared normalweight concrete; ACI 318M-14 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})")
+        return DeemedToSatisfy(false, ratio <= limit,
+            "APPROXIMATE (not a code acceptance: the beam table is applied to a joist; ACI 318M-14 9.8.1 does not state that): l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (declared normalweight concrete; ACI 318M-14 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})")
     }
 
     /** SBC 304-CR-2018 §9.3.1.1 + Table 9.3.1.1 (minimum depth of nonprestressed
@@ -121,7 +121,7 @@ object HordiDeemedToSatisfy {
         val factor = 0.4 + fy / 700.0
         val limit = base / factor
         val ratio = spanMm / totalThicknessMm
-        return DeemedToSatisfy(true, ratio <= limit,
-            "l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (declared normalweight concrete; SBC 304-CR-2018 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})")
+        return DeemedToSatisfy(false, ratio <= limit,
+            "APPROXIMATE (not a code acceptance: the beam table is applied to a joist; SBC 304-CR-2018 9.8.1 does not state that): l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (declared normalweight concrete; SBC 304-CR-2018 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})")
     }
 }

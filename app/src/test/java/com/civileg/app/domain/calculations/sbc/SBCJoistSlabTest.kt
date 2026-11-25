@@ -235,13 +235,13 @@ class SBCJoistSlabTest {
     fun `Table 9-3-1-1 deemed-to-satisfy failure gates isSafe`() {
         // l/h = 6000/250 = 24 > 16 (simply supported, fy=420) -> fail
         val r = design(span = 6.0)
-        assertTrue(r.serviceabilityAssessed)
+        assertFalse(r.serviceabilityAssessed)
         assertFalse(r.isSafe)
         assertTrue(r.warnings.any { it.contains("Table 9.3.1.1") })
         // both ends continuous: limit 21; l/h = 4000/250 = 16 <= 21 -> pass
         val cont = design(span = 4.0,
             supportCondition = com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS)
-        assertTrue(cont.serviceabilityAssessed)
+        assertFalse(cont.serviceabilityAssessed)
         assertTrue(cont.warnings.none { it.contains("Table 9.3.1.1") })
     }
 
@@ -255,7 +255,7 @@ class SBCJoistSlabTest {
             supportCondition = com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED,
             loadingApplicability = com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS
         )
-        assertTrue(fail.serviceabilityAssessed)
+        assertFalse(fail.serviceabilityAssessed)
         assertFalse(fail.isSafe)
         assertTrue(fail.warnings.any { it.contains("ACI 318M-14 Table 9.3.1.1") })
         val unselected = aci.designHordiSlab(
