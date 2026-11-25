@@ -75,12 +75,37 @@ class ReachabilityUiTest {
         File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }
 
+    /** Independent truth for orientation: the compose root and a real screenshot, not Activity resources. */
+    private fun actualIsLandscape(): Pair<Boolean, String> {
+        val root = rootBounds()
+        val bmp = instrumentation.uiAutomation.takeScreenshot()
+        val shotLandscape = bmp != null && bmp.width > bmp.height
+        val desc = "root=${root.width.toInt()}x${root.height.toInt()}px screenshot=${bmp?.width}x${bmp?.height}"
+        bmp?.recycle()
+        return (root.width > root.height && shotLandscape) to desc
+    }
+
+    /** Rotates and waits until BOTH the compose root and a screenshot confirm the orientation; throws if never reached. */
     private fun rotate(landscape: Boolean) {
         instrumentation.uiAutomation.setRotation(
             if (landscape) UiAutomation.ROTATION_FREEZE_90 else UiAutomation.ROTATION_FREEZE_0)
-        rule.waitForIdle()
-        android.os.SystemClock.sleep(800)
-        rule.waitForIdle()
+        var last = ""
+        val deadline = android.os.SystemClock.uptimeMillis() + 15000
+        while (android.os.SystemClock.uptimeMillis() < deadline) {
+            rule.waitForIdle()
+            val root = rootBounds()
+            val bmp = instrumentation.uiAutomation.takeScreenshot()
+            val confirmed = bmp != null && (if(landscape) root.width > root.height && bmp.width > bmp.height else root.height > root.width && bmp.height > bmp.width)
+            last = "root=${root.width}x${root.height}; screenshot=${bmp?.width}x${bmp?.height}"
+            bmp?.recycle()
+            if (confirmed) {
+                android.os.SystemClock.sleep(500)
+                rule.waitForIdle()
+                return
+            }
+            android.os.SystemClock.sleep(300)
+        }
+        throw AssertionError("requested landscape=$landscape but never achieved: $last")
     }
 
     @Before fun dismissPrompt() {
@@ -204,13 +229,17 @@ class ReachabilityUiTest {
         val res = rule.activity.resources
         val cfg = res.configuration
         val dm = res.displayMetrics
-        val widthDpFromPx = dm.widthPixels / dm.density
-        val expectRail = cfg.screenWidthDp >= 600 // WindowSize.COMPACT_BREAKPOINT_DP
+        val root = rootBounds()
+        val realDensity = dm.density
+        val rootWidthDp = root.width / realDensity
+        val (realLandscape, desc) = actualIsLandscape()
+        val expectRail = rootWidthDp >= 600 // WindowSize.COMPACT_BREAKPOINT_DP, from the real compose root width
         val actualRail = nav.kind == "rail"
         val mismatch = nav.kind != "not-found" && expectRail != actualRail
-        out.append("  [$tag] orientation=${cfg.orientation} screenWidthDp=${cfg.screenWidthDp} screenHeightDp=${cfg.screenHeightDp} ")
-            .append("smallestWidthDp=${cfg.smallestScreenWidthDp} pxWidth=${dm.widthPixels} widthDpFromPx=${"%.0f".format(widthDpFromPx)} ")
-            .append("nav=${nav.kind} expectedRailFromConfig=$expectRail navMismatch=$mismatch\n")
+        val resourcesStale = (cfg.orientation == Configuration.ORIENTATION_LANDSCAPE) != realLandscape
+        out.append("  [$tag] real: $desc landscape=$realLandscape rootWidthDp=${"%.0f".format(rootWidthDp)} | ")
+            .append("activityResources: orientation=${cfg.orientation} screenWidthDp=${cfg.screenWidthDp} screenHeightDp=${cfg.screenHeightDp} pxWidth=${dm.widthPixels} resourcesOrientationDisagreesWithReal=$resourcesStale | ")
+            .append("nav=${nav.kind} expectedRailFromRealWidth=$expectRail navMismatch=$mismatch\n")
         return mismatch
     }
 
