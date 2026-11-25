@@ -1633,7 +1633,14 @@ class CalculatorEngine @Inject constructor(
                     warnings = res.warnings + buildList {
                         add("ASSUMED INPUT: topping thickness is fixed at 50 mm on this screen (not entered by the user). The result is not an engineering acceptance. Use the Hordi slab screen with the real topping.")
                         val clearRibSpacing = ribSpacing - ribWidth
-                        if (clearRibSpacing / 12.0 > 50.0) add("The assumed 50 mm topping is below clear rib spacing/12 = ${"%.1f".format(clearRibSpacing / 12.0)} mm (SBC 304 9.8.2.1.1, applies only if permanent fillers are used; filler type not declared).")
+                        if (domainCode == DesignCode.ECP) {
+                            // ECP 203-2020 §6-2-2-1 (supplied scan): the same rules the dedicated Hordi screen enforces.
+                            if (ribWidth > 0 && ribSpacing > 0 && ts > 50.0) {
+                                com.civileg.app.domain.calculations.ecp.ECP2020JoistRules.geometry(ribWidth, ribSpacing, ts, 50.0)
+                                    .filterNot { it.passed }
+                                    .forEach { add("ECP 203-2020 ${it.clause} NOT MET with the assumed 50 mm topping: ${it.requirement}") }
+                            }
+                        } else if (clearRibSpacing / 12.0 > 50.0) add("The assumed 50 mm topping is below clear rib spacing/12 = ${"%.1f".format(clearRibSpacing / 12.0)} mm (SBC 304 9.8.2.1.1, applies only if permanent fillers are used; filler type not declared).")
                     },
                     codeNotes = res.codeNotes,
                     bondClassAssessed = res.bondClassAssessed,
