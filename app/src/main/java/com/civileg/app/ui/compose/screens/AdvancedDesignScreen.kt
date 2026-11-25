@@ -1563,7 +1563,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
                 ResultRow("Applied", "%.1f kN".format(r.shearCheck.appliedShear))
                 ResultRow("Capacity", "%.1f kN".format(r.shearCheck.shearCapacity), bold = true)
                 ResultRow("Utilization", "%.2f".format(r.shearCheck.utilizationRatio))
-                ResultRow("Safe?", if (r.shearCheck.isSafe) "Yes / نعم" else "No / لا")
+                ResultRow("Check passed?", if (r.shearCheck.isSafe) "Yes / نعم" else "No / لا")
             }
         }
         item {
@@ -1571,7 +1571,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
                 ResultRow("Calculated", "%.2f mm".format(r.deflectionCheck.calculatedDeflection))
                 ResultRow("Allowable", "%.2f mm".format(r.deflectionCheck.allowableDeflection))
                 ResultRow("Ratio", "%.2f".format(r.deflectionCheck.ratio), bold = true)
-                ResultRow("Safe?", if (r.deflectionCheck.isSafe) "Yes / نعم" else "No / لا")
+                ResultRow("Check passed?", if (r.deflectionCheck.isSafe) "Yes / نعم" else "No / لا")
             }
         }
         r.punchingShearCheck?.let { p ->
@@ -1580,7 +1580,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
                     ResultRow("Applied", "%.1f kN".format(p.appliedShear))
                     ResultRow("Capacity", "%.1f kN".format(p.shearCapacity), bold = true)
                     ResultRow("Utilization", "%.2f".format(p.utilizationRatio))
-                    ResultRow("Safe?", if (p.isSafe) "Yes / نعم" else "No / لا")
+                    ResultRow("Check passed?", if (p.isSafe) "Yes / نعم" else "No / لا")
                 }
             }
         }
@@ -1656,7 +1656,7 @@ private fun CalculateButton(onClick: () -> Unit) {
 private fun StatusBanner(isSafe: Boolean, incomplete: Boolean = false) {
     val color = when {
         incomplete -> Color(0xFFEF6C00)
-        isSafe -> Color(0xFF2E7D32)
+        isSafe -> Color(0xFFEF6C00) // passing checks are never shown green: the assessment is not complete
         else -> Color(0xFFC62828)
     }
     Card(
@@ -1670,15 +1670,15 @@ private fun StatusBanner(isSafe: Boolean, incomplete: Boolean = false) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
-                if (isSafe && !incomplete) Icons.Default.CheckCircle else Icons.Default.Warning,
+                Icons.Default.Warning,
                 contentDescription = null,
                 tint = color
             )
             AppText(
                 when {
                     incomplete -> "INCOMPLETE / غير مكتمل"
-                    isSafe -> "SAFE / آمن"
-                    else -> "UNSAFE / غير آمن"
+                    isSafe -> "PRELIMINARY: the checks run passed; assessment not complete / أولي: الفحوص المنفذة اجتازت والتقييم غير مكتمل"
+                    else -> "A check did not pass / أحد الفحوص لم يجتز"
                 },
                 color = color,
                 fontWeight = FontWeight.Bold
