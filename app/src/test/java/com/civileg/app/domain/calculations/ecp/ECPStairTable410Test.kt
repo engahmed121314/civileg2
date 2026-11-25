@@ -30,4 +30,13 @@ class ECPStairTable410Test {
     fun `span above 6 m is outside the table`() {
         assertFalse(run(6.5, 400.0).isSafe)
     }
+
+    @Test
+    fun `not computed deflection is flagged and labelled not assessed`() {
+        val r = ECPStaircase().designStaircase(
+            StaircaseInput(span = 6.5, totalRise = 1.8, stairWidth = 1.2, waistThickness = 400.0, fcu = 25.0, fy = 420.0)
+        )
+        assertFalse(r.deflectionComputed)
+        assertTrue(r.safetyChecks.first { it.name.startsWith("Deflection") }.name.contains("NOT ASSESSED"))
+    }
 }

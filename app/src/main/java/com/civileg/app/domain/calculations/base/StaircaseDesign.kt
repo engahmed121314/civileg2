@@ -126,6 +126,8 @@ data class StaircaseResult(
     val deflection: Double,
     val allowableDeflection: Double,
     val deflectionOk: Boolean,
+    /** false = deflection and allowableDeflection are NOT COMPUTED placeholders (0.0); consumers must not display or compare them. */
+    val deflectionComputed: Boolean = true,
 
     // فحوصات الأمان
     val safetyChecks: List<StairSafetyCheck>,

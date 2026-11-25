@@ -78,3 +78,20 @@ class StairCaseContractAllCodesTest {
         }
     }
 }
+
+class StairDeflectionTable731Test {
+    private fun check(lane: StaircaseDesign, t: Double, fy: Double = 420.0) =
+        lane.designStaircase(StaircaseInput(span = 3.0, totalRise = 1.8, stairWidth = 1.2, waistThickness = t, fcu = 25.0, fy = fy))
+            .safetyChecks.first { it.name.startsWith("Deflection") }
+
+    @Test
+    fun `ACI and SBC use l over 20 divided by the fy factor and flag not computed`() {
+        for (lane in listOf<StaircaseDesign>(ACIStaircase(), SBCStaircase())) {
+            assertEquals(20.0, check(lane, 200.0).limit, 1e-9)
+            assertEquals(20.0 / (0.4 + 360.0 / 700.0), check(lane, 200.0, 360.0).limit, 1e-9)
+            assertTrue(check(lane, 200.0).isSafe)
+            val thin = check(lane, 120.0)
+            assertTrue(!thin.isSafe && thin.name.contains("NOT ASSESSED"))
+        }
+    }
+}

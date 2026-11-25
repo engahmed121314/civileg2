@@ -322,27 +322,30 @@ class ACIStaircase : StaircaseDesign {
         }
 
         // ========== 7. فحص الانحراف ==========
-        // ACI Table 24.2.2: L/d = 16 (simply supported) for floors
-        val basicRatio = 16.0
-        // Modification factor for fy (ACI Table 7.3.1.1)
-        val fyFactor = minOf(1.0, 0.4 + 420.0 / 420.0)  // Grade 420 (60 ksi) default
+        // Source: ACI 318M-14 Table 7.3.1.1 / 7.3.1.1.1 as reproduced in the SBC 304-CR-18 text (ch. 7); the ACI volume itself was not separately re-read.
+        // Table 7.3.1.1 (solid nonprestressed one-way slab, simply supported): minimum h = l/20 for fy = 420 MPa,
+        // multiplied by (0.4 + fy/700) for other fy (7.3.1.1.1). Applied by treating the inclined waist as a solid
+        // one-way slab (analogy, PRELIMINARY); no landing continuity is credited. Deemed-to-satisfy only: when it is
+        // not met the code requires a computed deflection (7.3.2), which is NOT implemented, so the check is
+        // reported as NOT ASSESSED and does not pass.
+        val fyFactor = 0.4 + input.fy / 700.0
         val actualRatio = (span * 1000) / waistThickness
-        val allowableRatio = basicRatio * fyFactor
-        val deflectionRatio = actualRatio / allowableRatio
-
-        val allowableDeflection = (span * 1000) / 240.0  // L/240 for floors
-        val calculatedDeflection = if (deflectionRatio > 1.0) {
-            allowableDeflection * deflectionRatio * 1.2
-        } else {
-            allowableDeflection * 0.7
-        }
-        val deflectionOk = deflectionRatio <= 1.0
+        val allowableRatio = 20.0 / fyFactor
+        val minThicknessMm = span * 1000 / allowableRatio
+        val deflectionOk = actualRatio <= allowableRatio
+        val calculatedDeflection = 0.0     // not computed in this version
+        val allowableDeflection = 0.0      // not computed in this version
 
         safetyChecks.add(StairSafetyCheck(
-            name = "Deflection (Span/Depth)",
+            name = if (deflectionOk) "Deflection (ACI Table 7.3.1.1 l/h, deemed-to-satisfy)"
+                   else "Deflection NOT ASSESSED (computed deflection required)",
             value = actualRatio, limit = allowableRatio, unit = "",
             isSafe = deflectionOk,
-            description = "ACI 318 Table 24.2.2: L/d ≤ ${String.format("%.1f", allowableRatio)}"
+            description = if (deflectionOk) {
+                "ACI 318M-14 Table 7.3.1.1: l/h = ${"%.1f".format(actualRatio)} <= ${"%.1f".format(allowableRatio)} (solid one-way slab analogy, simply supported l/20, fy-modified); deflection computation not required"
+            } else {
+                "NOT ASSESSED: Table 7.3.1.1 is deemed-to-satisfy only. l/h = ${"%.1f".format(actualRatio)} > ${"%.1f".format(allowableRatio)}; h of at least ${"%.0f".format(minThicknessMm)} mm meets the table, otherwise a computed deflection (7.3.2) is required and is not implemented. Not a computed failure"
+            }
         ))
 
         // ========== 8. فحوصات هندسية (IBC) ==========
@@ -403,6 +406,7 @@ class ACIStaircase : StaircaseDesign {
             deflection = calculatedDeflection,
             allowableDeflection = allowableDeflection,
             deflectionOk = deflectionOk,
+            deflectionComputed = false,
             safetyChecks = safetyChecks,
             codeNotes = codeNotes,
             analysisStatus = analysisStatus,

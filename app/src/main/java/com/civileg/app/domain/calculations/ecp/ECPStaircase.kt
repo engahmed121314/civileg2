@@ -348,15 +348,16 @@ class ECPStaircase : StaircaseDesign {
         val allowableDeflection = 0.0      // not computed in this version
 
         safetyChecks.add(StairSafetyCheck(
-            name = "Deflection (ECP Table 4-10 L/t, deemed-to-satisfy)",
+            name = if (deflectionOk) "Deflection (ECP Table 4-10 L/t, deemed-to-satisfy)"
+                   else "Deflection NOT ASSESSED (computed deflection required)",
             value = actualRatio, limit = allowableRatio, unit = "",
             isSafe = deflectionOk,
             description = if (!spanWithinTable) {
-                "Table 4-10 applies to spans up to 6 m; computed deflection (ECP 4-3-1-1) is required and not implemented"
+                "NOT ASSESSED: span over 6 m is outside Table 4-10 applicability; a computed deflection (ECP 4-3-1-1) is required and is not implemented. Not a demonstrated failure, not a pass"
             } else if (deflectionOk) {
                 "ECP 203-2020 Table 4-10: Ln/t = ${"%.1f".format(actualRatio)} <= ${"%.1f".format(allowableRatio)} (solid slab, simply supported 25 x (0.40+fy/700)); deflection computation not required"
             } else {
-                "ECP 203-2020 Table 4-10: Ln/t = ${"%.1f".format(actualRatio)} > ${"%.1f".format(allowableRatio)}; deflection NOT demonstrated. Waist of at least ${"%.0f".format(minThicknessMm)} mm meets the table, or a computed deflection (ECP 4-3-1-1) is required and is not implemented in this version"
+                "NOT ASSESSED: Table 4-10 is deemed-to-satisfy only. Ln/t = ${"%.1f".format(actualRatio)} > ${"%.1f".format(allowableRatio)}, so deflection is NOT demonstrated (not a computed failure). Waist of at least ${"%.0f".format(minThicknessMm)} mm meets the table, or a computed deflection (ECP 4-3-1-1) is required and is not implemented in this version"
             }
         ))
         codeNotes.add("Deflection: ECP 203-2020 Table 4-10 (p. 4-64) deemed-to-satisfy only; no computed deflection is reported")
@@ -416,6 +417,7 @@ class ECPStaircase : StaircaseDesign {
             deflection = calculatedDeflection,
             allowableDeflection = allowableDeflection,
             deflectionOk = deflectionOk,
+            deflectionComputed = false,
             safetyChecks = safetyChecks,
             codeNotes = codeNotes,
             analysisStatus = analysisStatus,

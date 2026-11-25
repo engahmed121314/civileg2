@@ -197,9 +197,9 @@ class ACIStaircaseTest {
     // ══════════════════════════════════════════════════════════════════════
 
     @Test
-    fun designStaircase_validInputs_allowableDeflectionPositive() {
+    fun designStaircase_deflectionIsFlaggedNotComputed() {
         val result = stair.designStaircase(typicalInput())
-        assertTrue("Allowable deflection must be positive", result.allowableDeflection > 0)
+        assertTrue("Deflection is deemed-to-satisfy only; not computed", !result.deflectionComputed)
     }
 
     @Test
