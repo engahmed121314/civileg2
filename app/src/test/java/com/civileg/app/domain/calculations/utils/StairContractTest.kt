@@ -8,11 +8,15 @@ import org.junit.Test
 
 class StairContractTest {
     // This path does not consult SettingsManager; isolate the production wrapper from Android storage.
-    private fun engine(): CalculatorEngine {
-        val field = sun.misc.Unsafe::class.java.getDeclaredField("theUnsafe")
-        field.isAccessible = true
-        return (field.get(null) as sun.misc.Unsafe).allocateInstance(CalculatorEngine::class.java) as CalculatorEngine
-    }
+ private fun engine(): CalculatorEngine {
+  // No SettingsManager field is used by the path under test. Avoid a compile-time
+  // dependency on JDK-internal packages that Android's unit-test bootclasspath hides.
+  val type=Class.forName("sun.misc.Unsafe")
+  val field=type.getDeclaredField("theUnsafe").apply { isAccessible=true }
+  return type.getMethod("allocateInstance",Class::class.java)
+   .invoke(field.get(null),CalculatorEngine::class.java) as CalculatorEngine
+ }
+
     private fun design(type: CalculatorEngine.StairType = CalculatorEngine.StairType.SINGLE_FLIGHT,
                        width: Double = 1400.0,
                        support: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
