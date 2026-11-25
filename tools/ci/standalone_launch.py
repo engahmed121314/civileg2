@@ -114,9 +114,9 @@ def frame_block():
     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
     tap_text(["التصميم"], "fr-d-design", exact=True); scroll_top(3)
     ok = False
-    for _ in range(5):
+    for _ in range(10):
         if tap_text(["تحليل الإطارات"], "fr-find"): ok = True; break
-        scroll_up(2)
+        scroll_up(1)
     log.append(("frame_open", ok)); time.sleep(3); shot("frame-open"); dump("frame-open")
     log.append(("frame_hint_expand", tap_text(["إظهار تلميح الأداة"], "fr-hint"))); time.sleep(1); shot("frame-hint-open"); dump("frame-hint-open")
     log.append(("frame_hint_collapse", tap_text(["اضغط للإخفاء"], "fr-hint2"))); time.sleep(1); shot("frame-hint-closed")
