@@ -255,6 +255,12 @@ class FlatSlabViewModel @Inject constructor(
         }
     }
 
+    /** Surface an input problem found by the screen; no result is shown and nothing is calculated. */
+    fun reportInputError(message: String) {
+        _result.value = null
+        _error.value = message
+    }
+
     fun clearResult() {
         _result.value = null
         _error.value = null

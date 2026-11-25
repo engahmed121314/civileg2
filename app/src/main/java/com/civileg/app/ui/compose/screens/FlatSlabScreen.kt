@@ -290,21 +290,36 @@ item {
                         label = stringResource(R.string.fs_design_button),
                         onClick = {
                             viewModel.clearResult()
+                            // Blank or non-numeric fields are rejected, never replaced by a default value.
+                            fun num(v: String): Double? = v.trim().toDoubleOrNull()?.takeIf { it.isFinite() }
+                            val nLx = num(lx); val nLy = num(ly); val nT = num(slabThickness)
+                            val nCw = num(columnWidth); val nCd = num(columnDepth)
+                            val nFcu = num(fcu); val nFy = num(fy); val nLive = num(liveLoad)
+                            val nFin = num(floorFinish); val nCover = num(clearCover)
+                            val nDropT = if (showDropInputs) num(dropThickness) else 0.0
+                            val nDropX = if (showDropInputs) num(dropSizeX) else 0.0
+                            val nDropY = if (showDropInputs) num(dropSizeY) else 0.0
+                            val positives = listOf(nLx, nLy, nT, nCw, nCd, nFcu, nFy, nCover)
+                            val nonNegatives = listOf(nLive, nFin, nDropT, nDropX, nDropY)
+                            if (positives.any { it == null || it <= 0.0 } || nonNegatives.any { it == null || it < 0.0 }) {
+                                viewModel.reportInputError("Check the inputs: every field must be a number (dimensions, strengths and cover greater than zero) / تأكد من إدخال أرقام صحيحة في كل الحقول")
+                                return@AppButton
+                            }
                             viewModel.calculateFlatSlab(
                                 panelType = panelType, designMethod = designMethod,
-                                lx = (lx.toDoubleOrNull() ?: 0.0) * 1000.0,
-                                ly = (ly.toDoubleOrNull() ?: 0.0) * 1000.0,
-                                slabThickness = slabThickness.toDoubleOrNull() ?: 250.0,
-                                dropThickness = if (showDropInputs) (dropThickness.toDoubleOrNull() ?: 0.0) else 0.0,
-                                dropSizeX = if (showDropInputs) (dropSizeX.toDoubleOrNull() ?: 0.0) else 0.0,
-                                dropSizeY = if (showDropInputs) (dropSizeY.toDoubleOrNull() ?: 0.0) else 0.0,
-                                columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
-                                columnDepth = columnDepth.toDoubleOrNull() ?: 400.0,
-                                fcu = fcu.toDoubleOrNull() ?: 30.0,
-                                fy = fy.toDoubleOrNull() ?: 400.0,
-                                liveLoad = liveLoad.toDoubleOrNull() ?: 3.0,
-                                floorFinish = floorFinish.toDoubleOrNull() ?: 2.0,
-                                numberOfFloors = 10, clearCover = clearCover.toDoubleOrNull() ?: 25.0,
+                                lx = nLx!! * 1000.0,
+                                ly = nLy!! * 1000.0,
+                                slabThickness = nT!!,
+                                dropThickness = nDropT!!,
+                                dropSizeX = nDropX!!,
+                                dropSizeY = nDropY!!,
+                                columnWidth = nCw!!,
+                                columnDepth = nCd!!,
+                                fcu = nFcu!!,
+                                fy = nFy!!,
+                                liveLoad = nLive!!,
+                                floorFinish = nFin!!,
+                                numberOfFloors = 10, clearCover = nCover!!,
                                 storyHeight = 3.0, designCode = designCode
                             )
                         },
