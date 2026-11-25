@@ -40,6 +40,12 @@ internal object ConnectionDemandInput {
     private fun nonNegative(raw: String): Double? = number(raw)?.takeIf { it >= 0.0 }
     private fun positive(raw: String): Double? = number(raw)?.takeIf { it > 0.0 }
 
+    /** Positive number from a text field, or null when the field is blank, invalid or not above zero. */
+    fun positiveOrNull(raw: String): Double? = positive(raw)
+
+    /** Whole number of 1 or more from a text field, or null. */
+    fun countOrNull(raw: String): Int? = raw.trim().toIntOrNull()?.takeIf { it >= 1 }
+
     /** Returns the first problem found, or null when every input that applies is valid. */
     fun problem(
         boltActive: Boolean,
@@ -64,9 +70,12 @@ internal object ConnectionDemandInput {
                 if (positive(boltDiameter) == null) return ConnectionInputProblem.BOLT_DIAMETER
                 val n = boltCount.trim().toIntOrNull()
                 if (n == null || n < 1) return ConnectionInputProblem.BOLT_COUNT
-                if (positive(plateThickness) == null) return ConnectionInputProblem.PLATE_THICKNESS
                 if (positive(fuPlate) == null) return ConnectionInputProblem.FU_PLATE
             }
+        }
+        // The plate thickness feeds the bolt bearing check and the weld minimum and maximum size check.
+        if (((boltActive && boltGeometryShown) || weldActive) && positive(plateThickness) == null) {
+            return ConnectionInputProblem.PLATE_THICKNESS
         }
         if (weldActive) {
             if (positive(weldForce) == null) return ConnectionInputProblem.WELD_FORCE

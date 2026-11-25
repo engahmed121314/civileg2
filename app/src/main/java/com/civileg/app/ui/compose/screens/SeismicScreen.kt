@@ -948,43 +948,48 @@ fun SeismicScreen(
 }
 
 @Composable
-fun SeismicStabilityCard(res: SeismicBaseShearResult, totalHeight: Double) {
-    // Prefer the engine's equivalent-SDOF drift estimate; fall back to a heuristic if unavailable.
-    val hasEngineDrift = res.maxStoryDrift > 0.0
-    val drift = if (hasEngineDrift) res.maxStoryDrift / 1000.0 else 0.005 * (totalHeight / 5.0)
-    val limit = if (hasEngineDrift) res.allowableDrift / 1000.0 else 0.020 * (totalHeight / 5.0)
-    val isSafe = if (hasEngineDrift) res.driftIsSafe else drift <= limit
+fun SeismicStabilityCard(res: SeismicBaseShearResult, @Suppress("UNUSED_PARAMETER") totalHeight: Double) {
+    // Only the engine's equivalent-SDOF drift estimate is shown. When the engine did not compute one, the card says
+    // so. It used to invent a drift and a limit from the building height, which no code supplies.
+    val assessed = res.driftAssessed
+    val drift = res.maxStoryDrift / 1000.0
+    val limit = res.allowableDrift / 1000.0
+    val isSafe = assessed && res.driftIsSafe
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            AppText("Building Stability & Story Drift", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            AppText(stringResource(R.string.seismic_stability_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                AppText("Max Story Drift (\u0394)", style = MaterialTheme.typography.bodySmall)
-                AppText("${String.format(java.util.Locale.US, "%.1f", drift * 1000)} mm", fontWeight = FontWeight.Bold)
-            }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                AppText("Allowable Limit", style = MaterialTheme.typography.bodySmall)
-                AppText("${String.format(java.util.Locale.US, "%.1f", limit * 1000)} mm", color = MaterialTheme.colorScheme.secondary)
-            }
-            
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-            
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (isSafe) Icons.Default.VerifiedUser else Icons.Default.ReportProblem,
-                    contentDescription = null,
-                    tint = if (isSafe) Color(0xFF2E7D32) else Color.Red
-                )
-                Spacer(Modifier.width(8.dp))
-                AppText(
-                    if (isSafe) "Drift Requirements Passed" else "Drift Limit Exceeded - Check Stiffness",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                )
+            if (!assessed) {
+                AppText(stringResource(R.string.seismic_drift_not_computed), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            } else {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    AppText(stringResource(R.string.seismic_max_story_drift), style = MaterialTheme.typography.bodySmall)
+                    AppText("${String.format(java.util.Locale.US, "%.1f", drift * 1000)} mm", fontWeight = FontWeight.Bold)
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    AppText(stringResource(R.string.seismic_allowable_drift), style = MaterialTheme.typography.bodySmall)
+                    AppText("${String.format(java.util.Locale.US, "%.1f", limit * 1000)} mm", color = MaterialTheme.colorScheme.secondary)
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (isSafe) Icons.Default.VerifiedUser else Icons.Default.ReportProblem,
+                        contentDescription = null,
+                        tint = if (isSafe) Color(0xFF2E7D32) else Color.Red
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    AppText(
+                        if (isSafe) stringResource(R.string.seismic_drift_passed) else stringResource(R.string.seismic_drift_exceeded),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
             }
         }
     }

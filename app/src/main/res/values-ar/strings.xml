@@ -2462,4 +2462,10 @@
     <string name="steel_err_fu_plate">أدخل مقاومة شد الصفيحة Fu (أكبر من الصفر) قبل التصميم.</string>
     <string name="steel_err_weld_size">أدخل مقاس اللحام (أكبر من الصفر) قبل تصميم اللحام.</string>
     <string name="steel_err_weld_length">أدخل طول اللحام (أكبر من الصفر) قبل تصميم اللحام.</string>
+    <string name="seismic_stability_title">استقرار المبنى والإزاحة الطابقية</string>
+    <string name="seismic_drift_not_computed">لم تُحسب الإزاحة الطابقية لهذه النتيجة، فلا يوجد فحص للإزاحة.</string>
+    <string name="seismic_max_story_drift">أقصى إزاحة طابقية (Δ)</string>
+    <string name="seismic_allowable_drift">الحد المسموح</string>
+    <string name="seismic_drift_passed">تحقق شرط الإزاحة</string>
+    <string name="seismic_drift_exceeded">تجاوزت الإزاحة الحد المسموح - راجع الجساءة</string>
 </resources>

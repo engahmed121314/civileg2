@@ -1230,6 +1230,10 @@ fun WeldDesignTab(viewModel: SteelViewModel) {
     var selectedElectrode by remember { mutableStateOf(ElectrodeType.E70XX) }
     var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     var capacity by remember { mutableStateOf(0.0) }
+    // The size and length the shown capacity was computed from, so the PDF cannot use later edits or defaults.
+    var calcWeldSize by remember { mutableStateOf(0.0) }
+    var calcWeldLength by remember { mutableStateOf(0.0) }
+    var quickWeldProblem by remember { mutableStateOf<ConnectionInputProblem?>(null) }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { SteelModuleSectionHeader(stringResource(R.string.steel_weld_design_header), R.drawable.ic_frame) }
@@ -1274,15 +1278,26 @@ fun WeldDesignTab(viewModel: SteelViewModel) {
             AppButton(
                 label = stringResource(R.string.steel_calculate_capacity),
                 onClick = {
-                    capacity = viewModel.calculateWeldCapacity(
-                        weldSize.toDoubleOrNull() ?: 6.0,
-                        weldLength.toDoubleOrNull() ?: 200.0,
-                        selectedElectrode,
-                        selectedCode
-                    )
+                    val sz = ConnectionDemandInput.positiveOrNull(weldSize)
+                    val ln = ConnectionDemandInput.positiveOrNull(weldLength)
+                    quickWeldProblem = when {
+                        sz == null -> ConnectionInputProblem.WELD_SIZE
+                        ln == null -> ConnectionInputProblem.WELD_LENGTH
+                        else -> null
+                    }
+                    if (sz != null && ln != null) {
+                        calcWeldSize = sz
+                        calcWeldLength = ln
+                        capacity = viewModel.calculateWeldCapacity(sz, ln, selectedElectrode, selectedCode)
+                    } else {
+                        capacity = 0.0  // no result for a connection the user did not describe
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             )
+            quickWeldProblem?.let { problem ->
+                AppText(stringResource(problem.messageRes()), color = MaterialTheme.colorScheme.error, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            }
         }
 
         if (capacity > 0) {
@@ -1297,7 +1312,7 @@ fun WeldDesignTab(viewModel: SteelViewModel) {
             item {
                 AppButton(
                     label = stringResource(R.string.pdf_report),
-                    onClick = { viewModel.exportWeldToPdf(context, weldSize.toDoubleOrNull() ?: 6.0, weldLength.toDoubleOrNull() ?: 200.0, selectedElectrode, selectedCode, capacity) },
+                    onClick = { viewModel.exportWeldToPdf(context, calcWeldSize, calcWeldLength, selectedElectrode, selectedCode, capacity) },
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.Default.PictureAsPdf,
                     containerOverride = MaterialTheme.colorScheme.secondary,
@@ -1318,6 +1333,9 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
     var selectedBoltGrade by remember { mutableStateOf(BoltGrade.GRADE_8_8) }
     var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     var capacity by remember { mutableStateOf(0.0) }
+    var calcBoltDia by remember { mutableStateOf(0.0) }
+    var calcBoltCount by remember { mutableStateOf(0) }
+    var quickBoltProblem by remember { mutableStateOf<ConnectionInputProblem?>(null) }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { SteelModuleSectionHeader(stringResource(R.string.steel_bolt_design_header), R.drawable.ic_frame) }
@@ -1362,15 +1380,26 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
             AppButton(
                 label = stringResource(R.string.steel_calculate_capacity),
                 onClick = {
-                    capacity = viewModel.calculateBoltCapacity(
-                        boltDia.toDoubleOrNull() ?: 20.0,
-                        selectedBoltGrade,
-                        boltCount.toIntOrNull() ?: 4,
-                        selectedCode
-                    )
+                    val d = ConnectionDemandInput.positiveOrNull(boltDia)
+                    val n = ConnectionDemandInput.countOrNull(boltCount)
+                    quickBoltProblem = when {
+                        d == null -> ConnectionInputProblem.BOLT_DIAMETER
+                        n == null -> ConnectionInputProblem.BOLT_COUNT
+                        else -> null
+                    }
+                    if (d != null && n != null) {
+                        calcBoltDia = d
+                        calcBoltCount = n
+                        capacity = viewModel.calculateBoltCapacity(d, selectedBoltGrade, n, selectedCode)
+                    } else {
+                        capacity = 0.0  // no result for a connection the user did not describe
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             )
+            quickBoltProblem?.let { problem ->
+                AppText(stringResource(problem.messageRes()), color = MaterialTheme.colorScheme.error, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            }
         }
 
         if (capacity > 0) {
@@ -1385,7 +1414,7 @@ fun BoltDesignTab(viewModel: SteelViewModel) {
             item {
                 AppButton(
                     label = stringResource(R.string.pdf_report),
-                    onClick = { viewModel.exportBoltToPdf(context, boltDia.toDoubleOrNull() ?: 20.0, selectedBoltGrade, boltCount.toIntOrNull() ?: 4, selectedCode, capacity) },
+                    onClick = { viewModel.exportBoltToPdf(context, calcBoltDia, selectedBoltGrade, calcBoltCount, selectedCode, capacity) },
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.Default.PictureAsPdf,
                     containerOverride = MaterialTheme.colorScheme.secondary,
@@ -1470,7 +1499,8 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
             }
         }
 
-        if (connectionType < 3) {
+        // Slip-critical (4) designs bolts too, so its bolt fields must be on screen and validated.
+        if (connectionType < 3 || connectionType == 4) {
             item {
                 Card(elevation = CardDefaults.cardElevation(2.dp)) {
                     Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1617,6 +1647,11 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                             SteelInputField(weldLength, stringResource(R.string.steel_weld_length_hint), { weldLength = it }, Modifier.weight(1f))
                         }
                         SteelInputField(appliedWeldForce, stringResource(R.string.steel_applied_force_hint), { appliedWeldForce = it }, Modifier.fillMaxWidth())
+                        // The weld design checks minimum and maximum fillet size against the plate thickness. A weld-only
+                        // type has no bolt card, so the field is shown here. Types with a bolt card show it there.
+                        if (connectionType == 3) {
+                            SteelInputField(plateThickness, stringResource(R.string.steel_plate_thickness_hint), { plateThickness = it }, Modifier.fillMaxWidth())
+                        }
 
                         AppText(stringResource(R.string.steel_electrode_type), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         ExposedDropdownMenuBox(
@@ -1657,7 +1692,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                     val weldActive = connectionType >= 2
                     val demandProblem = ConnectionDemandInput.problem(
                         boltActive = boltActive,
-                        boltGeometryShown = connectionType < 3,
+                        boltGeometryShown = boltActive,
                         tensionShown = connectionType != 0,
                         weldActive = weldActive,
                         shear = appliedShear,
@@ -1686,15 +1721,15 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                             else -> BoltConnectionType.BEARING
                         }
                         boltResult = designer.designBoltedConnection(
-                            boltDiameter = if (connectionType < 3) boltDiameter.trim().replace(',', '.').toDouble() else boltDiameter.toDoubleOrNull() ?: 20.0,
+                            boltDiameter = boltDiameter.trim().replace(',', '.').toDouble(),
                             boltGrade = selectedBoltGrade,
-                            numberOfBolts = if (connectionType < 3) numBolts.trim().toInt() else numBolts.toIntOrNull() ?: 4,
+                            numberOfBolts = numBolts.trim().toInt(),
                             boltPattern = selectedPattern,
                             boltConnectionType = connType,
                             appliedShear = appliedShear.trim().replace(',', '.').toDouble(),
                             appliedTension = if (connectionType != 0) appliedTension.trim().replace(',', '.').toDouble() else 0.0,
-                            plateThickness = if (connectionType < 3) plateThickness.trim().replace(',', '.').toDouble() else plateThickness.toDoubleOrNull() ?: 10.0,
-                            fuPlate = if (connectionType < 3) fuPlate.trim().replace(',', '.').toDouble() else fuPlate.toDoubleOrNull() ?: 400.0,
+                            plateThickness = plateThickness.trim().replace(',', '.').toDouble(),
+                            fuPlate = fuPlate.trim().replace(',', '.').toDouble(),
                             isDoubleShear = isDoubleShear,
                             edgeDistance = edgeDistance.toDoubleOrNull(),
                             spacing = boltSpacing.toDoubleOrNull(),
@@ -1709,7 +1744,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                             weldLength = weldLength.trim().replace(',', '.').toDouble(),
                             electrodeType = selectedElectrode,
                             appliedForce = appliedWeldForce.trim().replace(',', '.').toDouble(),
-                            plateThickness = plateThickness.trim().replace(',', '.').toDoubleOrNull() ?: 10.0
+                            plateThickness = plateThickness.trim().replace(',', '.').toDouble()
                         )
                     }
                 },

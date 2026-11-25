@@ -40,4 +40,22 @@ class ConnectionDemandInputTest {
     @Test fun hiddenBoltGeometryIsNotRequired() = assertNull(p(geom = false, d = "", n = "", pt = "", fu = ""))
     @Test fun inactiveWeldIgnoresItsFields() = assertNull(p(weld = false, f = "", ws = "", wl = ""))
     @Test fun commaDecimalIsAccepted() = assertNull(p(v = "12,5", d = "22,5"))
+
+    @Test fun weldOnlyNeedsPlateThickness() {
+        assertEquals(P.PLATE_THICKNESS, p(bolt = false, geom = false, weld = true, pt = ""))
+        assertNull(p(bolt = false, geom = false, weld = true))
+    }
+    @Test fun slipCriticalValidatesItsBoltFields() {
+        // type 4: bolt active and its geometry card is now shown
+        assertEquals(P.BOLT_DIAMETER, p(bolt = true, geom = true, tension = true, d = ""))
+        assertEquals(P.FU_PLATE, p(bolt = true, geom = true, tension = true, fu = "0"))
+    }
+    @Test fun quickToolParsers() {
+        assertNull(ConnectionDemandInput.positiveOrNull(""))
+        assertNull(ConnectionDemandInput.positiveOrNull("0"))
+        assertEquals(6.5, ConnectionDemandInput.positiveOrNull("6,5")!!, 1e-9)
+        assertNull(ConnectionDemandInput.countOrNull("0"))
+        assertNull(ConnectionDemandInput.countOrNull("2.5"))
+        assertEquals(4, ConnectionDemandInput.countOrNull(" 4 "))
+    }
 }
