@@ -146,6 +146,24 @@ def stair_codes():
                 adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
                 shot("sc-" + tag + "-pdf-" + str(k))
     open(f"{out}/sc-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
+def stair_invalid():
+    """Re-open Stair, set the flight width to 0 (invalid) and press design; capture the field error and whether a result appears."""
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+    tap_text(["التصميم"], "inv-design", exact=True); scroll_top(3)
+    ok = False
+    for _ in range(5):
+        if tap_text(["السلالم"], "inv-find"): ok = True; break
+        scroll_up(2)
+    log.append(("inv_open", ok)); time.sleep(2); scroll_top(4)
+    log.append(("inv_edit_width_0", edit_field("1200", "0", "inv-edit"))); time.sleep(1); shot("inv-field")
+    for _ in range(6):
+        if tap_text(["تصميم السلم الآن"], "inv-calc"): log.append(("inv_calc", True)); break
+        scroll_up(2)
+    else: log.append(("inv_calc", False))
+    time.sleep(3); shot("inv-after-calc"); dump("inv-after-calc")
+    for k in range(2):
+        scroll_up(2); shot(f"inv-res-{k}"); dump(f"inv-res-{k}")
+    scroll_top(6); shot("inv-top"); dump("inv-top")
 def frame_block():
     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
     tap_text(["التصميم"], "fr-d-design", exact=True); scroll_top(3)
@@ -176,6 +194,7 @@ if os.path.exists("tools/ci/STAIR_ONLY"):
         stair_unsupported()
         stair_codes()
         frame_block()
+        stair_invalid()
     except Exception as e:
         log.append(("stair_exception", repr(e)))
     open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
