@@ -37,8 +37,10 @@ fun columnDrawingSummary(result: CalculatorEngine.ColumnResult): DrawingResultSu
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
-        codeNotes = result.codeNotes,
-        designCodeLabel = result.code.version,
+        codeNotes = (if (result.isSafe && !result.capacityModelValidated)
+            listOf("PRELIMINARY - NOT FULLY CHECKED / نتيجة أولية لم يكتمل التحقق منها: moment capacity not validated for the actual bar positions / لم تُراجع قدرة العزم على مواضع الأسياخ الفعلية")
+            else emptyList()) + result.codeNotes,
+        designCodeLabel = result.code.version + (if (result.isSafe && !result.capacityModelValidated) " (preliminary)" else ""),
         axialLoadRatio = if (result.axialCapacity > 0.0) result.appliedAxial / result.axialCapacity else 0.0
     )
 

@@ -198,7 +198,10 @@ class CalculatorEngine @Inject constructor(
         val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
         val warnings: List<String> = emptyList(),
         val codeNotes: List<String> = emptyList()
-    ) : Parcelable
+    ) : Parcelable {
+        /** The moment capacity is validated only for a 2-layer (4-bar rectangular) layout; see the code note. */
+        val capacityModelValidated: Boolean get() = columnType == "RECTANGULAR" && reinforcement.numBars <= 4
+    }
 
     enum class FootingType(val displayNameAr: String, val displayNameEn: String) {
         ISOLATED("منفصلة", "Isolated"),

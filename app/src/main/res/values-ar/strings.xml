@@ -1168,6 +1168,7 @@
     <string name="view_perspective">منظور ثلاثي الأبعاد</string>
     <string name="column_name_hint">اسم العمود</string>
     <string name="column_section_safe">القطاع آمن</string>
+    <string name="column_preliminary_label">نتيجة أولية: لم يكتمل التحقق من قدرة العزم لتوزيع الأسياخ الفعلي</string>
     <string name="column_section_unsafe_label">حالة غير آمنة</string>
     <string name="column_provided_reinforcement">التسليح الموفر</string>
     <string name="column_reinforcement_ratio">نسبة التسليح</string>
