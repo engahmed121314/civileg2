@@ -79,4 +79,5 @@ log.append(("calc_solved", press_calc("d-calc2"))); time.sleep(3); shot("beam-so
 scroll_top(6)
 log.append(("edit_after_solve", edit_field("600", "650", "d-w2"))); time.sleep(1)
 scroll_up(4); shot("beam-after-edit"); dump("beam-after-edit")
+scroll_up(6); shot("beam-after-edit-bottom"); dump("beam-after-edit-bottom")
 open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log))
