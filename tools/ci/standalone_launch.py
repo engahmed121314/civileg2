@@ -141,10 +141,14 @@ def stair_codes():
                 if tap_text(["تقرير PDF", "PDF"], "sc-pdf-find"): pdf_ok = True; break
                 scroll_top(2)
             log.append(("sc_pdf_tap_" + tag, pdf_ok)); time.sleep(4)
+            # dismiss the system "Viewing full screen" notice so the viewer pages are visible
+            tap_text(["Got it", "حسنًا", "حسناً"], "sc-pdf-gotit")
             shot("sc-" + tag + "-pdf"); dump("sc-" + tag + "-pdf")
             for k in range(1, 6):
                 adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
                 shot("sc-" + tag + "-pdf-" + str(k))
+            adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)  # leave the PDF viewer
+            shot("sc-" + tag + "-pdf-closed")
     open(f"{out}/sc-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
 def stair_invalid():
     """Re-open Stair, set the flight width to 0 (invalid) and press design; capture the field error and whether a result appears."""
