@@ -148,7 +148,13 @@ class StairViewModel @Inject constructor(
             waistThicknessMm = currentResult.thickness,
             coverMm = pdfCover,
             barDiaMm = currentResult.reinforcement.diameter.toDouble(),
-            barSpacingMm = currentResult.reinforcement.spacing
+            barSpacingMm = currentResult.reinforcement.spacing,
+            reviewNotes = listOf(
+                "REVIEW ONLY - NOT A FABRICATION DETAIL",
+                currentResult.documentaryBasisLabel,
+                "Final steel / cutting lengths / support anchorage unavailable",
+                currentResult.barMaterialClassification
+            )
         )
     }
 
@@ -213,6 +219,7 @@ class StairViewModel @Inject constructor(
                         "Thickness" to "${currentResult.thickness} mm",
                         "f'cu" to "${currentResult.fcu} MPa",
                         "fy" to "${currentResult.fy} MPa",
+                        "Bar material classification" to currentResult.barMaterialClassification,
                         "Factored Load wu" to "${String.format("%.2f", currentResult.wu)} kN/m²",
                         "Support condition" to currentResult.supportCondition.name,
                         "Landing length" to (currentResult.landingLengthMm?.let { "$it mm" } ?: "Not declared"),
