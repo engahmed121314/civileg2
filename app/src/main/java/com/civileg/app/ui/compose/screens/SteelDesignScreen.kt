@@ -1420,6 +1420,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
     var expandedElectrode by remember { mutableStateOf(false) }
     var selectedElectrode by remember { mutableStateOf(ElectrodeType.E70XX) }
     var appliedWeldForce by remember { mutableStateOf("100") }
+    var connectionDemandError by remember { mutableStateOf<String?>(null) }
 
     var plateThickness by remember { mutableStateOf("10") }
     var fuPlate by remember { mutableStateOf("400") }
@@ -1652,8 +1653,25 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
             AppButton(
                 label = stringResource(R.string.steel_design_connection),
                 onClick = {
+                    val boltActive = connectionType < 3 || connectionType == 4
+                    val weldActive = connectionType >= 2
+                    val demandProblem = ConnectionDemandInput.error(
+                        boltActive = boltActive,
+                        tensionShown = connectionType != 0,
+                        weldActive = weldActive,
+                        shear = appliedShear,
+                        tension = appliedTension,
+                        weldForce = appliedWeldForce
+                    )
+                    connectionDemandError = demandProblem
+                    if (demandProblem != null) {
+                        // Drop earlier results so a stale pass cannot sit next to a field that is now invalid.
+                        boltResult = null
+                        weldResult = null
+                        return@AppButton
+                    }
                     val designer = SteelConnectionDesign()
-                    if (connectionType < 3 || connectionType == 4) {
+                    if (boltActive) {
                         val connType = when (connectionType) {
                             0 -> BoltConnectionType.BEARING
                             1 -> BoltConnectionType.COMBINED
@@ -1666,8 +1684,8 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                             numberOfBolts = numBolts.toIntOrNull() ?: 4,
                             boltPattern = selectedPattern,
                             boltConnectionType = connType,
-                            appliedShear = appliedShear.toDoubleOrNull() ?: 0.0,
-                            appliedTension = appliedTension.toDoubleOrNull() ?: 0.0,
+                            appliedShear = appliedShear.trim().replace(',', '.').toDouble(),
+                            appliedTension = if (connectionType != 0) appliedTension.trim().replace(',', '.').toDouble() else 0.0,
                             plateThickness = plateThickness.toDoubleOrNull() ?: 10.0,
                             fuPlate = fuPlate.toDoubleOrNull() ?: 400.0,
                             isDoubleShear = isDoubleShear,
@@ -1683,7 +1701,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                             weldSize = weldSize.toDoubleOrNull() ?: 6.0,
                             weldLength = weldLength.toDoubleOrNull() ?: 200.0,
                             electrodeType = selectedElectrode,
-                            appliedForce = appliedWeldForce.toDoubleOrNull() ?: 100.0,
+                            appliedForce = appliedWeldForce.trim().replace(',', '.').toDouble(),
                             plateThickness = plateThickness.toDoubleOrNull() ?: 10.0
                         )
                     }
@@ -1691,6 +1709,9 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.Default.Engineering
             )
+            connectionDemandError?.let { msg ->
+                AppText(msg, color = MaterialTheme.colorScheme.error, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            }
         }
 
         boltResult?.let { res ->
