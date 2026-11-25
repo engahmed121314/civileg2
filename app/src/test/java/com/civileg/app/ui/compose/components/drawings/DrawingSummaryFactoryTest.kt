@@ -125,6 +125,7 @@ class DrawingSummaryFactoryTest {
             cost = 0.0,
             code = DesignCode.ECP,
             utilizationRatio = 0.55,
+            flexureRatio = 0.55, flexureRatioBasis = "K/K_bal",
             safetyChecks = listOf(check("Flexure", 30.0, 45.0, true))
         )
 
@@ -133,6 +134,11 @@ class DrawingSummaryFactoryTest {
         assertTrue(summary.isSafe)
         assertEquals(com.civileg.app.domain.entities.DesignCode.ECP.version, summary.designCodeLabel)
         assertEquals("55.0%", summary.utilizationPercent)
+        assertEquals("FLEXURE K/K_bal: 55%", summary.utilizationText)
         assertEquals(0, summary.failedCheckCount)
+        // No measured flexure ratio: the legacy clamped scalar must not reach the strip.
+        val none = stairDrawingSummary(result.copy(flexureRatio = null, flexureRatioBasis = ""))
+        assertEquals("FLEXURE: n/a", none.utilizationText)
+        assertEquals(0.0, none.utilizationRatio, 0.0)
     }
 }
