@@ -1340,7 +1340,7 @@ private fun DrawScope.drawReinforcementSchedule(
         size = Size(tableW, rowH)
     )
 
-    val mainBarLength = span + 2 * developmentLength
+    // Cutting length pending a qualified anchorage/shape contract.
     val row1Data = arrayOf(
         "T1",
         "Ø${mainRebarDia.toInt()}",
@@ -1375,8 +1375,7 @@ private fun DrawScope.drawReinforcementSchedule(
     } else {
         ((span / stirrupSpacing) + 1).toInt()
     }
-    val stirrupCutLength = 2 * (beamWidth + beamDepth) - 8 * cover + 2 * 10 * stirrupDia  // 10d hooks per ECP 203
-    val stirrupLength = stirrupCutLength
+    // Stirrup bend allowances and hook lengths are not qualified here.
     val row2Data = arrayOf(
         "S1",
         "Ø${stirrupDia.toInt()}",
@@ -1409,7 +1408,7 @@ private fun DrawScope.drawReinforcementSchedule(
             topLeft = Offset(tableLeft, row3Y),
             size = Size(tableW, rowH)
         )
-        val topBarLength = if (isContinuous) span * 0.25 else span * 0.15
+        // No arbitrary fraction-of-span cutting length.
         val row3Data = arrayOf(
             "T2",
             "Ø${topRebarDia.toInt()}",
