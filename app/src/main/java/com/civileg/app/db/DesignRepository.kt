@@ -161,14 +161,13 @@ class DesignRepository @Inject constructor(
             put("finalSteelKg", JSONObject.NULL)
             put("fabricationScheduleAvailable", false)
         }.toString()
-        saveGeneralDesign(projectId, DesignType.STAIRCASE, name, result.isSafe && result.codeAcceptanceComplete, result.flexureRatio ?: 0.0, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
+        saveGeneralDesign(projectId, DesignType.STAIRCASE, name, result.isSafe && result.codeAcceptanceComplete, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
         
         val stair = Stair(
             projectId = projectId, thickness = result.thickness, load = result.wu, fcu = result.fcu, fy = result.fy,
             reinforcement = result.reinforcement.barString,
             concreteVolume = result.concreteVolume, steelWeight = result.steelWeight, cost = result.cost,
-            // 0.0 = no assessed flexure row; the legacy clamped scalar is not stored as measured data
-            utilizationRatio = result.flexureRatio ?: 0.0
+            utilizationRatio = result.utilizationRatio
         )
         stairDao.insertStair(stair)
     }
