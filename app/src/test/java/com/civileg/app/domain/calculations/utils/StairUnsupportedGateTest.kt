@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.utils
 
 import com.civileg.app.domain.calculations.base.StairAnalysisStatus
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.utils.StairResultGate
 import io.mockk.mockk
 import org.junit.Assert.assertFalse
@@ -14,7 +15,8 @@ class StairUnsupportedGateTest {
 
     private fun design(type: CalculatorEngine.StairType) = engine.designStaircase(
         type = type, span = 4.0, riser = 150.0, tread = 300.0,
-        deadLoad = 5.0, liveLoad = 4.0, fcu = 25.0, fy = 360.0
+        deadLoad = 5.0, liveLoad = 4.0, fcu = 25.0, fy = 360.0,
+        preferredDiameter = 12, code = DesignCode.ECP
     )
 
     @Test
