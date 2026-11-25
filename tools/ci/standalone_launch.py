@@ -202,10 +202,13 @@ def frame_block():
     log.append(("frame_view_tab", tap_text(["العرض والنتائج"], "fr-viewtab"))); time.sleep(3); shot("frame-view-BMD"); dump("frame-view-BMD")
     for t in ("SFD", "AFD"):
         log.append(("frame_view_" + t, tap_text([t], "fr-view-" + t, exact=True))); time.sleep(2); shot("frame-view-" + t)
+def restart_app():
+    adb("shell", "am", "force-stop", pkg); time.sleep(2)
+    adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"); time.sleep(8)
 def pile_block():
     """Pile screen: default inputs, design, status card sweep, PDF request; exported PDFs are pulled afterwards."""
     try:
-        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+        restart_app()
         tap_text(["التصميم"], "pile-tab", exact=True); scroll_top(3)
         ok = False
         for _ in range(6):
@@ -233,6 +236,8 @@ def pull_exported_pdfs():
     ls = adb("shell", "run-as", pkg, "find", ".", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
     ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf").stdout.decode("utf8", "ignore")
     open(f"{out}/pdf-files.txt", "w").write(ls)
+    for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("/sdcard/")][:4]:
+        subprocess.run(["adb", "pull", pth, f"{out}/exported-" + os.path.basename(pth)], capture_output=True)
     for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:4]:
         d = adb("shell", "run-as", pkg, "cat", pth).stdout
         open(f"{out}/exported-" + os.path.basename(pth), "wb").write(d)
@@ -241,7 +246,9 @@ if os.path.exists("tools/ci/STAIR_ONLY"):
         stair_block()
         stair_unsupported()
         stair_codes()
+        restart_app()
         frame_block()
+        restart_app()
         stair_invalid()
         pile_block()
     except Exception as e:
