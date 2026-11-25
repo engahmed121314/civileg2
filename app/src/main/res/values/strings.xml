@@ -2460,9 +2460,11 @@
     <string name="steel_err_weld_size">Enter the weld size (above zero) before designing the weld.</string>
     <string name="steel_err_weld_length">Enter the weld length (above zero) before designing the weld.</string>
     <string name="seismic_stability_title">Building Stability &amp; Story Drift</string>
-    <string name="seismic_drift_not_computed">Story drift was not computed for this result, so there is no drift check.</string>
-    <string name="seismic_max_story_drift">Max story drift (Δ)</string>
-    <string name="seismic_allowable_drift">Allowable limit</string>
+    <string name="seismic_drift_not_computed">Story drift was not computed for this result.</string>
+    <string name="seismic_max_story_drift">Indicative drift estimate (Δ)</string>
+    <string name="seismic_allowable_drift">Reference limit (unverified)</string>
     <string name="seismic_drift_passed">Drift requirement passed</string>
     <string name="seismic_drift_exceeded">Drift limit exceeded - check stiffness</string>
+    <string name="seismic_drift_unverified">Preliminary estimate only. The drift value comes from an equivalent single-degree-of-freedom approximation and the limit is an unverified reference, not a code drift check. No pass or fail is stated.</string>
+    <string name="seismic_drift_above_reference">The estimate is above this reference. A full structural analysis is needed.</string>
 </resources>

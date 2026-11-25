@@ -96,9 +96,9 @@ fun ProfessionalSeismicDrawing(
 
         // ── Layout zones (viewMode-aware) ────────────────────────
         val margin = cfg.margin
-        val elevH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * 0.32f; else -> h * 0.10f }
-        val specH = when (viewMode) { 2 -> h * 0.50f; 0 -> h * 0.18f; else -> h * 0.10f }
-        val barChartH = when (viewMode) { 3 -> h * 0.40f; 0 -> h * 0.18f; else -> 0f }
+        val elevH = when (viewMode) { 1 -> h * 0.82f; 0 -> h * 0.27f; else -> h * 0.10f }
+        val specH = when (viewMode) { 2 -> h * 0.50f; 0 -> h * 0.13f; else -> h * 0.10f }
+        val barChartH = when (viewMode) { 3 -> h * 0.40f; 0 -> h * 0.13f; else -> 0f }
         val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * cfg.tableHeightFraction; else -> h * 0.10f }
 
         val elevTop = h * 0.05f
@@ -254,8 +254,8 @@ fun ProfessionalSeismicDrawing(
             drawTextAnnotated("Design", dpX + 8f, dpY + 3f, spectrumColor, cfg.annotationTextSmall)
 
             // Cs value
-            drawTextAnnotated("Cs=${String.format("%.3f", csMax)}", plotRight - 60f, plotTop + 10f, spectrumColor, cfg.valueLabelTextSize)
-            drawTextAnnotated("Ts=${String.format("%.2f", ts)}s", plotLeft + plotW * (ts / maxT) + 4f, plotBottom + 14f, dimColor, cfg.annotationTextSmall)
+            drawTextAnnotated("Cs=${String.format(java.util.Locale.US, "%.3f", csMax)}", plotRight - 60f, plotTop + 10f, spectrumColor, cfg.valueLabelTextSize)
+            drawTextAnnotated("Ts=${String.format(java.util.Locale.US, "%.2f", ts)}s", plotLeft + plotW * (ts / maxT) + 4f, plotBottom + 14f, dimColor, cfg.annotationTextSmall)
 
             // Grid lines
             for (gi in 1..4) {
@@ -318,32 +318,36 @@ fun ProfessionalSeismicDrawing(
         // ══════════════════════════════════════════════════════════
         if (viewMode == 0 || viewMode == 3) {
             val tblLeft = margin
-            val tblWidth = w - 2 * margin
-
-            val headers = listOf("Parameter", "Value", "Unit")
-            val colWidths = listOf(tblWidth * 0.40f, tblWidth * cfg.planHeightFraction, tblWidth * cfg.tableHeightFraction)
+            // Keep the table clear of the title block / result strip at the bottom-right.
+            val tblWidth = (w - cfg.titleBlockWidth - 3 * margin).coerceAtLeast(w * 0.45f)
+            val headers = listOf("Parameter", "Value")
+            val colWidths = listOf(tblWidth * 0.55f, tblWidth * 0.45f)
+            val loc = java.util.Locale.US
             val rows = listOf(
-                listOf("Base Shear Vb", "${safeBaseShear.toInt()}", "kN"),
-                listOf("Total Weight W", "${safeWeight.toInt()}", "kN"),
-                listOf("Zone Factor Z", "${String.format("%.2f", zoneFactor)}", "—"),
-                listOf("Soil Factor S", "${String.format("%.2f", soilFactor)}", "—"),
-                listOf("Importance I", "${String.format("%.2f", importanceFactor)}", "—"),
-                listOf("Response Mod. R", "${String.format("%.1f", responseModFactor)}", "—"),
-                listOf("Building Height", "${safeHeight.toInt()}", "m"),
-                listOf("Number of Floors", "$safeNumFloors", "—")
+                listOf("Base Shear Vb", "${safeBaseShear.toInt()} kN"),
+                listOf("Total Weight W", "${safeWeight.toInt()} kN"),
+                listOf("Zone Factor Z", String.format(loc, "%.2f", zoneFactor)),
+                listOf("Soil Factor S", String.format(loc, "%.2f", soilFactor)),
+                listOf("Importance I", String.format(loc, "%.2f", importanceFactor)),
+                listOf("Response Mod. R", String.format(loc, "%.1f", responseModFactor)),
+                listOf("Building Height", "${safeHeight.toInt()} m"),
+                listOf("Number of Floors", "$safeNumFloors")
             )
+            // Fit the rows into the space left below the table top instead of overflowing.
+            val availH = (h - margin - tblTop - cfg.tableHeaderHeight).coerceAtLeast(rows.size * 8f)
+            val fitRowH = minOf(cfg.tableRowHeight, availH / rows.size)
 
             drawReinforcementTable(
                 x = tblLeft, y = tblTop,
                 colWidths = colWidths,
                 headers = headers,
                 rows = rows,
-                rowHeight = cfg.tableRowHeight,
+                rowHeight = fitRowH,
                 headerHeight = cfg.tableHeaderHeight,
                 headerBg = tableHeaderBg,
                 altRowBg = Color(0x1AFFFFFF),
                 textColor = textColor,
-                textSize = cfg.dimTextSize
+                textSize = minOf(cfg.dimTextSize, fitRowH * 0.7f)
             )
         } // end results table
 

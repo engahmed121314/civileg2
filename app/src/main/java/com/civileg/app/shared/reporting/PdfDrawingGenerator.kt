@@ -3362,7 +3362,7 @@ object PdfDrawingGenerator {
         )
 
         // ===== STATUS BADGE =====
-        val statusColor = if (isSafe) Color.parseColor("#2ECC71") else SECONDARY_RED
+        val statusColor = if (isSafe) Color.parseColor("#F39C12") else SECONDARY_RED
         // The drawing only knows the drift flag. It must not claim the building is SAFE.
         val statusText = if (isSafe) "PRELIMINARY" else "REVIEW"
         canvas.drawText(statusText, W - 190f, 50f, textPaint(statusColor, 28f, true))

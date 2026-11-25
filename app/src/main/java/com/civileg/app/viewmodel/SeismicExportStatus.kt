@@ -4,22 +4,27 @@ import com.civileg.app.domain.calculations.base.SeismicBaseShearResult
 import com.civileg.app.domain.entities.GenericSafetyCheck
 
 /**
- * What a seismic export may say. The tool computes base shear and an equivalent-SDOF drift estimate. It
- * does not check the whole building, so the report is PRELIMINARY unless the drift check failed. A failed
- * drift check is always kept as a failure. A drift check that was never computed is not a pass.
+ * What a seismic export may say. The engines compute base shear and an equivalent-SDOF drift ESTIMATE
+ * (ECPSeismic, SBCSeismic, ACISeismic). That estimate and its 0.005h reference are not a verified code
+ * drift model, so the export never claims a drift pass or a drift failure. The report is always
+ * PRELIMINARY, and the archived flag is never a pass.
  */
 internal object SeismicExportStatus {
-    fun driftFailed(r: SeismicBaseShearResult): Boolean = r.driftAssessed && !r.driftIsSafe
+    /** Never a verified failure: the drift limit is not a verified code check. */
+    @Suppress("UNUSED_PARAMETER")
+    fun driftFailed(r: SeismicBaseShearResult): Boolean = false
 
-    /** Overall flag for the report: false only for a known failure, with pending set for every other case. */
-    fun isSafe(r: SeismicBaseShearResult): Boolean = !driftFailed(r)
+    @Suppress("UNUSED_PARAMETER")
+    fun isSafe(r: SeismicBaseShearResult): Boolean = true
 
-    fun assessmentPending(r: SeismicBaseShearResult): Boolean = !driftFailed(r)
+    @Suppress("UNUSED_PARAMETER")
+    fun assessmentPending(r: SeismicBaseShearResult): Boolean = true
 
-    /** The flag stored with an archived design: true only when drift was computed and passed. */
-    fun archivedIsSafe(r: SeismicBaseShearResult): Boolean = r.driftAssessed && r.driftIsSafe && r.warnings.isEmpty()
+    /** An archived design is never stored as a verified pass. */
+    @Suppress("UNUSED_PARAMETER")
+    fun archivedIsSafe(r: SeismicBaseShearResult): Boolean = false
 
-    fun checks(r: SeismicBaseShearResult): List<GenericSafetyCheck> =
-        if (!r.driftAssessed) emptyList()
-        else listOf(GenericSafetyCheck("Story drift", r.maxStoryDrift, r.allowableDrift, "mm", r.driftIsSafe))
+    /** No drift pass/fail row. The estimate is shown as an indicative number only, never as a check. */
+    @Suppress("UNUSED_PARAMETER")
+    fun checks(r: SeismicBaseShearResult): List<GenericSafetyCheck> = emptyList()
 }

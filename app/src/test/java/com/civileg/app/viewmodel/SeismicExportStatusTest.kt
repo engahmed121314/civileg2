@@ -1,7 +1,6 @@
 package com.civileg.app.viewmodel
 
 import com.civileg.app.domain.calculations.base.SeismicBaseShearResult
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,24 +20,13 @@ class SeismicExportStatusTest {
         assertFalse(SeismicExportStatus.archivedIsSafe(x))
     }
 
-    @Test fun computedAndPassedIsStillPreliminary() {
-        val x = r(12.0, 20.0, true)
-        assertTrue(x.driftAssessed)
-        assertTrue(SeismicExportStatus.assessmentPending(x))
-        assertTrue(SeismicExportStatus.checks(x).single().passed)
-        assertTrue(SeismicExportStatus.archivedIsSafe(x))
+    @Test fun estimatedDriftIsNeverAPassOrAFailure() {
+        for (x in listOf(r(12.0, 20.0, true), r(30.0, 20.0, false))) {
+            assertTrue(x.driftAssessed)
+            assertTrue(SeismicExportStatus.assessmentPending(x))
+            assertFalse(SeismicExportStatus.driftFailed(x))
+            assertTrue(SeismicExportStatus.checks(x).isEmpty())
+            assertFalse(SeismicExportStatus.archivedIsSafe(x))
+        }
     }
-
-    @Test fun computedAndFailedStaysAFailure() {
-        val x = r(30.0, 20.0, false)
-        assertTrue(SeismicExportStatus.driftFailed(x))
-        assertFalse(SeismicExportStatus.isSafe(x))
-        assertFalse(SeismicExportStatus.assessmentPending(x))
-        val c = SeismicExportStatus.checks(x).single()
-        assertFalse(c.passed)
-        assertEquals(30.0, c.calculated, 1e-9)
-        assertFalse(SeismicExportStatus.archivedIsSafe(x))
-    }
-
-    @Test fun warningsBlockTheArchivedPass() = assertFalse(SeismicExportStatus.archivedIsSafe(r(12.0, 20.0, true, listOf("w"))))
 }

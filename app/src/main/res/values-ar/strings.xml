@@ -822,7 +822,7 @@
     <string name="sw_boundary_element">العناصر الطرفية (Boundary)</string>
     <string name="sw_stability">الاستقرار</string>
     <string name="sw_h_t_ratio">نسبة H/t</string>
-    <string name="sw_limit">الحد المسموح</string>
+    <string name="sw_limit">الحد المرجعي (غير موثّق)</string>
     <string name="sw_quantities_story">كميات الدور الواحد</string>
     <string name="sw_wall_drawing">رسم الحائط</string>
     <string name="sw_export_pdf">تصدير تقرير PDF</string>
@@ -2464,8 +2464,10 @@
     <string name="steel_err_weld_length">أدخل طول اللحام (أكبر من الصفر) قبل تصميم اللحام.</string>
     <string name="seismic_stability_title">استقرار المبنى والإزاحة الطابقية</string>
     <string name="seismic_drift_not_computed">لم تُحسب الإزاحة الطابقية لهذه النتيجة، فلا يوجد فحص للإزاحة.</string>
-    <string name="seismic_max_story_drift">أقصى إزاحة طابقية (Δ)</string>
-    <string name="seismic_allowable_drift">الحد المسموح</string>
+    <string name="seismic_max_story_drift">تقدير إرشادي للإزاحة الطابقية (Δ)</string>
+    <string name="seismic_allowable_drift">الحد المرجعي (غير موثّق)</string>
     <string name="seismic_drift_passed">تحقق شرط الإزاحة</string>
     <string name="seismic_drift_exceeded">تجاوزت الإزاحة الحد المسموح - راجع الجساءة</string>
+    <string name="seismic_drift_unverified">تقدير أولي فقط. قيمة الإزاحة ناتجة عن تقريب نظام أحادي درجة الحرية المكافئ، والحد المذكور مرجع غير موثّق وليس فحص إزاحة وفق الكود. لا يُذكر نجاح أو فشل.</string>
+    <string name="seismic_drift_above_reference">التقدير أعلى من هذا الحد المرجعي. يلزم تحليل إنشائي كامل.</string>
 </resources>

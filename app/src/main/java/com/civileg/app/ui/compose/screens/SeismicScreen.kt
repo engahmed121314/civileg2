@@ -915,7 +915,7 @@ fun SeismicScreen(
                                 storyDrift = res.baseShearResult.maxStoryDrift,
                                 timePeriod = res.fundamentalPeriod,
                                 spectralAcceleration = res.spectralAccel,
-                                isSafe = res.baseShearResult.driftIsSafe,
+                                isSafe = com.civileg.app.viewmodel.SeismicExportStatus.archivedIsSafe(res.baseShearResult),
                                 code = when (res.code) {
                                     DesignCode.ECP -> DesignCode.ECP
                                     DesignCode.ACI -> DesignCode.ACI
@@ -954,7 +954,7 @@ fun SeismicStabilityCard(res: SeismicBaseShearResult, @Suppress("UNUSED_PARAMETE
     val assessed = res.driftAssessed
     val drift = res.maxStoryDrift / 1000.0
     val limit = res.allowableDrift / 1000.0
-    val isSafe = assessed && res.driftIsSafe
+    val aboveReference = assessed && res.maxStoryDrift > res.allowableDrift
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -979,16 +979,21 @@ fun SeismicStabilityCard(res: SeismicBaseShearResult, @Suppress("UNUSED_PARAMETE
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        if (isSafe) Icons.Default.VerifiedUser else Icons.Default.ReportProblem,
+                        Icons.Default.ReportProblem,
                         contentDescription = null,
-                        tint = if (isSafe) Color(0xFF2E7D32) else Color.Red
+                        tint = Color(0xFFF9A825)
                     )
                     Spacer(Modifier.width(8.dp))
-                    AppText(
-                        if (isSafe) stringResource(R.string.seismic_drift_passed) else stringResource(R.string.seismic_drift_exceeded),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    )
+                    Column {
+                        AppText(
+                            stringResource(R.string.seismic_drift_unverified),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                        if (aboveReference) {
+                            AppText(stringResource(R.string.seismic_drift_above_reference), fontSize = 12.sp)
+                        }
+                    }
                 }
             }
         }
