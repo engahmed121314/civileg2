@@ -81,13 +81,15 @@ fun AppButton(
     val container = containerOverride ?: style.containerColor(scheme)
     val content = contentOverride ?: style.contentColor(scheme)
     val baseStyle = MaterialTheme.typography.labelLarge
-    val textStyle = if (fontSize == TextUnit.Unspecified) baseStyle else baseStyle.copy(fontSize = fontSize)
+    val sizedStyle = if (fontSize == TextUnit.Unspecified) baseStyle else baseStyle.copy(fontSize = fontSize)
+    val textStyle = sizedStyle.copy(fontWeight = fontWeight ?: sizedStyle.fontWeight)
+    val fullLabel = com.civileg.app.ui.theme.arabicUiText(label)
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
 
     BoxWithConstraints(modifier = modifier) {
         val chrome = 32.dp + if (icon != null) 28.dp else 0.dp
-        val measured = measurer.measure(text = label, style = textStyle, maxLines = 1)
+        val measured = measurer.measure(text = fullLabel, style = textStyle, maxLines = 1)
         val measuredWidth = if (measured.size.width > 0) {
             measured.size.width
         } else {
@@ -97,7 +99,8 @@ fun AppButton(
         val fits = !constraints.hasBoundedWidth || with(density) {
             measuredWidth <= (maxWidth - chrome).roundToPx()
         }
-        val shown = if (fits || labelShort == null) label else labelShort
+        val shown = if (fits || labelShort == null) fullLabel
+            else com.civileg.app.ui.theme.arabicUiText(labelShort)
 
         Button(
             onClick = onClick,
