@@ -413,6 +413,7 @@ fun StairScreen(
                             AppText(res.documentaryBasisLabel)
                             AppText(res.barMaterialClassification)
                             AppText("Top and landing reinforcement are not designed / تسليح البسطة والحديد العلوي غير مصممين")
+                            if (designUsable) {
                             ResultRow(stringResource(R.string.stair_slab_thickness), "${res.thickness.toInt()} mm")
                             ResultRow(stringResource(R.string.stair_main_reinforcement), res.reinforcement.barString)
                             ResultRow(stringResource(R.string.stair_distribution_reinforcement), res.distributionReinforcement.barString)
@@ -421,6 +422,7 @@ fun StairScreen(
                             AppText("Final steel and fabrication BBS unavailable: anchorage, bends, laps, top and landing steel unresolved")
                             ResultRow("Net flight steel only", "${"%.1f".format(res.steelWeight)} kg")
                             ResultRow("Partial material cost, not procurement total", "${"%.2f".format(res.cost)}")
+                            }
                         }
                     }
                 }
