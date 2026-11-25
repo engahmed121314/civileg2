@@ -120,12 +120,12 @@ def stair_codes():
         scroll_up(2)
     log.append(("sc_open", ok)); time.sleep(2)
     for label, tag in (("American Code", "ACI"), ("Saudi Code", "SBC")):
-        scroll_top(3)
+        scroll_top(8)
         picked = False
-        for _ in range(5):
+        for _ in range(6):
             if tap_text([label], "sc-pick-" + tag): picked = True; break
             if _ % 2 == 0: scroll_up(1)
-            else: scroll_top(3)
+            else: scroll_top(8)
         log.append(("sc_pick_" + tag, picked)); time.sleep(1); shot("sc-" + tag + "-picked")
         for _ in range(6):
             if tap_text(["تصميم السلم الآن"], "sc-calc-" + tag): log.append(("sc_calc_" + tag, True)); break
@@ -134,6 +134,10 @@ def stair_codes():
         time.sleep(3)
         for k in range(4):
             scroll_up(2); shot(f"sc-{tag}-res-{k}"); dump(f"sc-{tag}-res-{k}")
+        # Stair PDF export request for this lane (evidence of the export path, then dismiss)
+        if tag == "SBC":
+            pdf_ok = tap_text(["تقرير PDF", "PDF"], "sc-pdf-find"); log.append(("sc_pdf_tap_" + tag, pdf_ok)); time.sleep(4)
+            shot("sc-" + tag + "-pdf"); dump("sc-" + tag + "-pdf")
     open(f"{out}/sc-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
 def frame_block():
     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
