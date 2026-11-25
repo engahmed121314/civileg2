@@ -93,8 +93,10 @@ object HordiDeemedToSatisfy {
             SlabSupportCondition.CANTILEVER -> 8.0
             SlabSupportCondition.UNSPECIFIED -> return DeemedToSatisfy(false, true, "unreachable: gated above")
         }
-        val factor = 0.4 + fy / 700.0 // ACI 318M-14 9.3.1.1.1
-        val limit = base * factor
+        // 9.3.1.1.1 multiplies the minimum DEPTH h = l/base by (0.4 + fy/700), so the allowed l/h is base / factor.
+        // (ECP Eq. 4-81 is the opposite: it multiplies the allowed Ln/t itself.)
+        val factor = 0.4 + fy / 700.0
+        val limit = base / factor
         val ratio = spanMm / totalThicknessMm
         return DeemedToSatisfy(true, ratio <= limit,
             "l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (ACI 318M-14 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})")
@@ -114,8 +116,9 @@ object HordiDeemedToSatisfy {
             SlabSupportCondition.CANTILEVER -> 8.0
             SlabSupportCondition.UNSPECIFIED -> return DeemedToSatisfy(false, true, "unreachable: gated above")
         }
-        val factor = 0.4 + fy / 700.0 // SBC 304 9.3.1.1.1
-        val limit = base * factor
+        // 9.3.1.1.1 multiplies the minimum DEPTH h = l/base by (0.4 + fy/700), so the allowed l/h is base / factor.
+        val factor = 0.4 + fy / 700.0
+        val limit = base / factor
         val ratio = spanMm / totalThicknessMm
         return DeemedToSatisfy(true, ratio <= limit,
             "l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (SBC 304-CR-2018 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})")
