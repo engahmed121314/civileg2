@@ -31,7 +31,9 @@ data class DrawingResultSummary(
     val axialLoadRatio: Double = 0.0,       // P_u / φP_n for columns (should be ≤ 1.0)
     val crackWidth: Double = 0.0,           // mm (serviceability check)
     val codeAcceptanceComplete: Boolean = true,
-    val formworkArea: Double = 0.0          // m² (for BOQ/costing)
+    val formworkArea: Double = 0.0,         // m² (for BOQ/costing)
+    /** When set, the drawing strip shows this instead of the generic "UTIL" percentage (a single named check, or n/a). */
+    val utilizationText: String? = null
 ) {
     /** Formatted utilization percentage, e.g. "65.3%" */
     val utilizationPercent: String get() = "%.1f%%".format(utilizationRatio * 100.0)

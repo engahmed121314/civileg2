@@ -136,4 +136,11 @@ class StairFlexureRatioTest {
             if (r != null) assertEquals(n, row.value / row.limit, r.ratio, 1e-12)
         }
     }
+
+    @Test
+    fun `drawing strip names the flexure check or says n-a and never prints a generic UTIL`() {
+        assertEquals("FLEXURE: n/a", com.civileg.app.ui.compose.components.drawings.stairFlexureStripText(null, ""))
+        assertEquals("FLEXURE rho/rho_max: 29%", com.civileg.app.ui.compose.components.drawings.stairFlexureStripText(0.29, "rho/rho_max"))
+        assertEquals("FLEXURE K/K_bal: 123%", com.civileg.app.ui.compose.components.drawings.stairFlexureStripText(1.23, "K/K_bal"))
+    }
 }

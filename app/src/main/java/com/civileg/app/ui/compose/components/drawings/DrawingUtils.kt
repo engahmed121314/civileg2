@@ -1464,7 +1464,7 @@ fun DrawScope.drawResultSummaryStrip(
     val status = if (!summary.codeAcceptanceComplete) "UNVERIFIED" else if (summary.isSafe) "SAFE" else "UNSAFE"
     drawTextAnnotated("STATUS: $status", x + pad, y + small * 1.05f, statusColor, small, bold = true)
     drawTextAnnotated(
-        "UTIL: ${summary.utilizationPercent}",
+        summary.utilizationText ?: "UTIL: ${summary.utilizationPercent}",
         x + width * 0.32f, y + small * 1.05f, color, small
     )
     if (summary.designCodeLabel.isNotBlank()) {

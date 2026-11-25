@@ -93,12 +93,17 @@ fun stairDrawingSummary(result: CalculatorEngine.StairResult): DrawingResultSumm
         isSafe = result.isSafe,
         codeAcceptanceComplete = result.codeAcceptanceComplete,
         codeNotes = result.qualificationNotes,
-        utilizationRatio = result.utilizationRatio,
+        utilizationRatio = result.flexureRatio ?: 0.0,
+        utilizationText = stairFlexureStripText(result.flexureRatio, result.flexureRatioBasis),
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
         designCodeLabel = result.code.version
     )
+
+/** Drawing-strip text for the stair: one named flexure check, or n/a. Never a generic utilization. */
+fun stairFlexureStripText(ratio: Double?, basis: String): String =
+    if (ratio == null) "FLEXURE: n/a" else "FLEXURE $basis: ${"%.0f".format(ratio * 100.0)}%"
 
 fun tankDrawingSummary(result: CalculatorEngine.TankResult): DrawingResultSummary =
     DrawingResultSummary(
