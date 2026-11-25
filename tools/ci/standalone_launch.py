@@ -121,7 +121,11 @@ def stair_codes():
     log.append(("sc_open", ok)); time.sleep(2)
     for label, tag in (("American Code", "ACI"), ("Saudi Code", "SBC")):
         scroll_top(3)
-        log.append(("sc_pick_" + tag, tap_text([label], "sc-pick-" + tag))); time.sleep(1); shot("sc-" + tag + "-picked")
+        picked = False
+        for _ in range(5):
+            if tap_text([label], "sc-pick-" + tag): picked = True; break
+            scroll_up(1)
+        log.append(("sc_pick_" + tag, picked)); time.sleep(1); shot("sc-" + tag + "-picked")
         for _ in range(6):
             if tap_text(["تصميم السلم الآن"], "sc-calc-" + tag): log.append(("sc_calc_" + tag, True)); break
             scroll_up(2)
