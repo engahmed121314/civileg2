@@ -82,4 +82,14 @@ class StaleResultViewModelTest {
         assertNull(vm.result.value)
         org.junit.Assert.assertEquals("bad input", vm.error.value)
     }
+
+    @Test
+    fun `strap footing input error drops the result and shows the message`() {
+        val vm = StrapFootingViewModel(repo, engine())
+        vm.calculate(1200.0, 1800.0, 5000.0, 300.0, 600.0, 300.0, 700.0, 150.0, 25.0, 360.0, DesignCode.ECP, 18, 400.0)
+        assertNotNull(vm.result.value)
+        vm.reportInputError("bad input")
+        assertNull(vm.result.value)
+        org.junit.Assert.assertEquals("bad input", vm.error.value)
+    }
 }

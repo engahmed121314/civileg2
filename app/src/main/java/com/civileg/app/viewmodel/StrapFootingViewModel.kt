@@ -48,6 +48,12 @@ class StrapFootingViewModel @Inject constructor(
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
 
+    /** Surface an input problem found by the screen; no result is shown and nothing is calculated. */
+    fun reportInputError(message: String) {
+        _result.value = null
+        _error.value = message
+    }
+
     /** Drop the shown result (an input changed or the last attempt failed). */
     fun clearResult() {
         _result.value = null

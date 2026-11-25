@@ -187,20 +187,23 @@ fun StrapFootingScreen(
                 AppButton(
                     label = stringResource(R.string.calculate),
                     onClick = {
+                        viewModel.clearResult()
+                        // Blank or non-numeric fields are rejected, never replaced by a default value.
+                        fun num(v: String): Double? = v.trim().toDoubleOrNull()?.takeIf { it.isFinite() && it > 0.0 }
+                        val nC1 = num(col1Load); val nC2 = num(col2Load); val nDist = num(distance)
+                        val nW1 = num(col1W); val nD1 = num(col1D); val nW2 = num(col2W); val nD2 = num(col2D)
+                        val nSoil = num(soil); val nFcu = num(fcu); val nFy = num(fy)
+                        val nStrap = num(strapWidth); val nCover = num(cover)
+                        val nBar = barDia.trim().toIntOrNull()?.takeIf { it > 0 }
+                        if (listOf(nC1, nC2, nDist, nW1, nD1, nW2, nD2, nSoil, nFcu, nFy, nStrap, nCover).any { it == null } || nBar == null) {
+                            viewModel.reportInputError("Check the inputs: every field must be a number greater than zero / تأكد من إدخال أرقام أكبر من الصفر في كل الحقول")
+                            return@AppButton
+                        }
                         viewModel.calculate(
-                            col1Load.toDoubleOrNull() ?: 0.0,
-                            col2Load.toDoubleOrNull() ?: 0.0,
-                            (distance.toDoubleOrNull() ?: 0.0) * 1000.0,
-                            col1W.toDoubleOrNull() ?: 0.0,
-                            col1D.toDoubleOrNull() ?: 0.0,
-                            col2W.toDoubleOrNull() ?: 0.0,
-                            col2D.toDoubleOrNull() ?: 0.0,
-                            soil.toDoubleOrNull() ?: 0.0,
-                            fcu.toDoubleOrNull() ?: 0.0,
-                            fy.toDoubleOrNull() ?: 0.0,
-                            selectedCode,
-                            barDia.toIntOrNull() ?: 18,
-                            strapWidth.toDoubleOrNull() ?: 400.0
+                            nC1!!, nC2!!, nDist!! * 1000.0,
+                            nW1!!, nD1!!, nW2!!, nD2!!,
+                            nSoil!!, nFcu!!, nFy!!,
+                            selectedCode, nBar, nStrap!!
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
