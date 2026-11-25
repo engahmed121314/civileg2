@@ -53,4 +53,13 @@ class PileQualificationTest {
             assertFalse("$rel ECP 203/7-2", Regex("ECP 203/7-2|ECP 203 Clause 7-2").containsMatchIn(t))
         }
     }
+
+    @Test
+    fun `failed pile screen text is a failed estimate and not a categorical unsafe verdict`() {
+        val f = java.io.File("src/main/java/com/civileg/app/ui/compose/screens/PileFoundationScreen.kt")
+        if (!f.exists()) return
+        val t = f.readText()
+        assertTrue(t.contains("CHECK FAILED (approximate estimate)"))
+        assertFalse(t.contains("PileStatus.CHECKS_FAILED -> stringResource(R.string.pile_unsafe)"))
+    }
 }

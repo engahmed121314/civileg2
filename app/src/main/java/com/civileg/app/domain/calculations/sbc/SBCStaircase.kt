@@ -245,6 +245,18 @@ class SBCStaircase : StaircaseDesign {
         val mainRebar = selectBars(astRequired)
         val mainRebarArea = parseBarArea(mainRebar)
         val rhoProvided = mainRebarArea / (b * d)
+        run {
+            val ag = b * waistThickness
+            val providedRatioAg = mainRebarArea / ag
+            val tableRatio = if (input.fy < 420.0) 0.0020 else max(0.0018 * 420.0 / input.fy, 0.0014)
+            safetyChecks.add(StairSafetyCheck(
+                name = "Minimum main steel NOT ASSESSED: SBC 304-CR-2018 Table 7.6.1.1 (one-way slab) not established for stair flights; engine floor uses 0.0020 x b x d for every fy",
+                value = providedRatioAg, limit = tableRatio, unit = "",
+                isSafe = false,
+                notAssessed = true,
+                description = "NOT ASSESSED. Table 7.6.1.1 gives As,min = 0.0020 Ag for deformed bars with fy < 420 MPa and max(0.0018 x 420 / fy, 0.0014) Ag for fy >= 420 MPa. This engine applies 0.0020 x b x d (effective depth, not gross area) for every fy, and the table's applicability to a stair waist slab is not established here. Provided ${"%.3f".format(providedRatioAg * 100)}% of b x h; table ratio for this fy ${"%.3f".format(tableRatio * 100)}% (informational, not a compliance result)"
+            ))
+        }
 
         // حديد التوزيع = 20% من الرئيسي
         val distAreaRequired = 0.2 * mainRebarArea

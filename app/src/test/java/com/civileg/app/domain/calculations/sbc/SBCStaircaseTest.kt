@@ -244,4 +244,15 @@ class SBCStaircaseTest {
         val deflectionCheck = result.safetyChecks.find { it.name.contains("Deflection") }
         assertNotNull("Should have deflection check", deflectionCheck)
     }
+
+    @Test
+    fun `SBC minimum main steel is not assessed for every fy, never a pass`() {
+        for (fy in listOf(300.0, 420.0, 500.0)) {
+            val result = engine.designStaircase(StaircaseInput(span = 3.0, totalRise = 2.1, stairWidth = 1.2, waistThickness = 200.0, fcu = 25.0, fy = fy))
+            val row = result.safetyChecks.single { it.name.startsWith("Minimum main steel NOT ASSESSED") }
+            assertTrue("fy=$fy", row.notAssessed)
+            assertFalse("fy=$fy", row.isSafe)
+            assertTrue(row.description.contains("Table 7.6.1.1") && row.description.contains("not established"))
+        }
+    }
 }

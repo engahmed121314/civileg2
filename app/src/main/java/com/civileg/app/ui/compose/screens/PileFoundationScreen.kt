@@ -651,7 +651,7 @@ fun PileFoundationScreen(
                                             when (pileStatus) {
                                                 com.civileg.app.domain.PileStatus.ACCEPTED -> stringResource(R.string.pile_safe)
                                                 com.civileg.app.domain.PileStatus.PRELIMINARY -> "PRELIMINARY: estimates pass, not a code-accepted design"
-                                                com.civileg.app.domain.PileStatus.CHECKS_FAILED -> stringResource(R.string.pile_unsafe)
+                                                com.civileg.app.domain.PileStatus.CHECKS_FAILED -> "CHECK FAILED (approximate estimate): resolve inputs and soil data; not a final engineering verdict"
                                             },
                                             fontWeight = FontWeight.Bold,
                                             color = statusColor
