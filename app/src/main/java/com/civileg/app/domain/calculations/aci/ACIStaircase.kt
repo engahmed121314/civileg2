@@ -322,7 +322,7 @@ class ACIStaircase : StaircaseDesign {
         }
 
         // ========== 7. فحص الانحراف ==========
-        // Source: ACI 318M-14 Table 7.3.1.1 and 7.3.1.1.1 (reference-volume-1, printed p.138), cross-checked against SBC 304-CR-18 ch. 7.
+        // Source: ACI 318M-14 Table 7.3.1.1 and 7.3.1.1.1 (reference-volume-1: table on printed p.137, PDF 146; clause 7.3.1.1.1 on printed p.138, PDF 147), cross-checked against SBC 304-CR-18 ch. 7.
         // Table 7.3.1.1 (solid nonprestressed one-way slab, simply supported): minimum h = l/20 for fy = 420 MPa,
         // multiplied by (0.4 + fy/700) for other fy (7.3.1.1.1). Applied by treating the inclined waist as a solid
         // one-way slab (analogy, PRELIMINARY); no landing continuity is credited. Deemed-to-satisfy only: when it is
