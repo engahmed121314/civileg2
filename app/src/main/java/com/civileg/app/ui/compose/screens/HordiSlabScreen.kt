@@ -325,7 +325,7 @@ fun HordiSlabScreen(
                         OutlinedTextField(
                             value = when (loadingApplicability) {
                                 com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED -> "Not declared - deflection NOT assessed"
-                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS -> "Ordinary loading, no damage-sensitive elements"
+                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS -> "Ordinary loading, normalweight concrete, no damage-sensitive elements"
                                 com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.SENSITIVE_OR_IRREGULAR -> "Sensitive/irregular - detailed calc required"
                             },
                             onValueChange = {},
@@ -345,7 +345,7 @@ fun HordiSlabScreen(
                                     text = {
                                         AppText(when (option) {
                                             com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED -> "Not declared - deflection NOT assessed"
-                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS -> "Ordinary loading, no damage-sensitive elements"
+                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS -> "Ordinary loading, normalweight concrete, no damage-sensitive elements"
                                             com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.SENSITIVE_OR_IRREGULAR -> "Sensitive/irregular - detailed calc required"
                                         }, fontSize = 13.sp)
                                     },

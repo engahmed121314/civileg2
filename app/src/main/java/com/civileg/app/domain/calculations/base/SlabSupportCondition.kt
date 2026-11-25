@@ -18,7 +18,8 @@ enum class SlabSupportCondition {
  * members supporting/attached to construction likely to be damaged by large
  * deflections. UNDECLARED (default) means applicability is unknown and the
  * deemed check MUST NOT run — a standing caveat note is not a substitute for
- * the user's declaration. */
+ * the user's declaration. ORDINARY_NO_SENSITIVE_ELEMENTS also declares normalweight
+ * concrete: the tables are for normalweight concrete (lightweight modifiers are not implemented). */
 enum class DeflectionLoadingApplicability {
     UNDECLARED, ORDINARY_NO_SENSITIVE_ELEMENTS, SENSITIVE_OR_IRREGULAR
 }
@@ -76,7 +77,7 @@ object HordiDeemedToSatisfy {
         val limit = base * factor
         val ratio = spanMm / totalThicknessMm
         return DeemedToSatisfy(true, ratio <= limit,
-            "Ln/t = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (ECP 203-2020 Table 4-10 ribbed slabs, ${label(cond)}, Eq. 4-81 factor ${String.format("%.3f", factor)})")
+            "Ln/t = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (declared normalweight concrete; ECP 203-2020 Table 4-10 ribbed slabs, ${label(cond)}, Eq. 4-81 factor ${String.format("%.3f", factor)})")
     }
 
     /** ACI 318M-14 §9.3.1.1 + Table 9.3.1.1 (minimum depth of nonprestressed
@@ -99,7 +100,7 @@ object HordiDeemedToSatisfy {
         val limit = base / factor
         val ratio = spanMm / totalThicknessMm
         return DeemedToSatisfy(true, ratio <= limit,
-            "l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (ACI 318M-14 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})")
+            "l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (declared normalweight concrete; ACI 318M-14 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})")
     }
 
     /** SBC 304-CR-2018 §9.3.1.1 + Table 9.3.1.1 (minimum depth of nonprestressed
@@ -121,6 +122,6 @@ object HordiDeemedToSatisfy {
         val limit = base / factor
         val ratio = spanMm / totalThicknessMm
         return DeemedToSatisfy(true, ratio <= limit,
-            "l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (SBC 304-CR-2018 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})")
+            "l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (declared normalweight concrete; SBC 304-CR-2018 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})")
     }
 }

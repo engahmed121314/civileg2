@@ -89,10 +89,16 @@ class ECPColumn : ColumnDesign {
         val concreteStress = 0.35 * fcu
         val steelStress = 0.67 * minOf(fy, 420.0)
         
-        // Initial As estimate from axial only
+        // Eq. 4-12-a domain: e <= max(0.05 t, 20 mm) (equals e_min here). Outside it the formula
+        // does not apply: no axial estimate, no axial capacity ratio, and no pass.
+        val inEq412Domain = eccentricity <= minEccentricity + 1e-9
+        // Initial As estimate from axial only (only inside the Eq. 4-12-a domain)
         val numerator = Pu - concreteStress * Ag
         val denominator = steelStress - concreteStress
-        var requiredSteelArea = if (abs(denominator) > 0.1) numerator / denominator else 0.0
+        var requiredSteelArea = if (inEq412Domain && abs(denominator) > 0.1) numerator / denominator else 0.0
+        if (!inEq412Domain) {
+            warnings.add("OUTSIDE FORMULA DOMAIN: e=${"%.1f".format(eccentricity)} mm exceeds max(0.05t, 20 mm)=${"%.1f".format(minEccentricity)} mm. ECP 203-2020 Eq. 4-12-a does not apply; axial capacity and required steel not computed (minimum steel shown only). Design by full P-M check.")
+        }
         InputGuard.finite("requiredSteelArea", requiredSteelArea)
         if (requiredSteelArea < 0) {
             requiredSteelArea = 0.0
@@ -143,12 +149,12 @@ class ECPColumn : ColumnDesign {
         
         // Axial capacity as fallback
         val capacity = calculateAxialCapacity(fcu, fy, width, depth, astProvided, loadCombination)
-        val axialUtilization = if (capacity > 0) axialLoad / capacity else 2.0
+        val axialUtilization = if (!inEq412Domain) 0.0 else if (capacity > 0) axialLoad / capacity else 2.0
         InputGuard.finite("axialUtilization", axialUtilization)
         
         // Overall safety: P-M interaction AND axial capacity AND reinforcement limits
-        val isSafe = pmSafe && axialUtilization <= 1.0 && requiredSteelArea <= maxSteel
-        val utilizationRatio = if (capacity > 0) axialLoad / capacity else 2.0
+        val isSafe = inEq412Domain && pmSafe && axialUtilization <= 1.0 && requiredSteelArea <= maxSteel
+        val utilizationRatio = axialUtilization
         
         // ملاحظات الكود
         codeNotes.add(CodeReference.ECP.COLUMN_AXIAL)

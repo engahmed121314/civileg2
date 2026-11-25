@@ -67,3 +67,23 @@ class ECPColumnTest {
         assertTrue("Ties spacing <= max", result.tiesSpacing <= column.getMaxSpacing())
     }
 }
+
+class ECPColumnEq412DomainTest {
+    private val column = ECPColumn()
+
+    @org.junit.Test
+    fun `eccentricity above max 0_05t and 20 mm is outside Eq 4-12-a and never passes`() {
+        // 300x300: e_min = max(20, 15) = 20 mm. Pu 500 kN, M 50 kN.m -> e = 100 mm.
+        val r = column.calculateReinforcement(25.0, 420.0, 300.0, 300.0, 500.0, 50.0, 0.0,
+            com.civileg.app.domain.calculations.base.LoadCombination.DEAD_LIVE)
+        org.junit.Assert.assertFalse(r.isSafe)
+        org.junit.Assert.assertTrue(r.warnings.any { it.contains("OUTSIDE FORMULA DOMAIN") })
+    }
+
+    @org.junit.Test
+    fun `small eccentricity inside domain has no domain warning`() {
+        val r = column.calculateReinforcement(25.0, 420.0, 300.0, 300.0, 300.0, 3.0, 0.0,
+            com.civileg.app.domain.calculations.base.LoadCombination.DEAD_LIVE)
+        org.junit.Assert.assertTrue(r.warnings.none { it.contains("OUTSIDE FORMULA DOMAIN") })
+    }
+}
