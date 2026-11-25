@@ -10,7 +10,7 @@ import kotlin.math.*
  *
  * SBC 304 يعتمد على ACI 318 مع تعديلات سعودية محددة:
  * - معاملات تحميل: 1.2D + 1.6L (SBC 304)
- * - نسبة التسليح الأدنى أعلى: ρmin = 0.002 × b × d (المناخ الحار)
+ * - ρmin = 0.0020 (SBC 304-CR-2018 Table 7.6.1.1 for fy < 420); not a climate-based rule
  * - غطاء خرساني أكبر: 40mm داخلي، 65mm خارجي (بيئة مالحة/تآكل)
  * - في المناطق الساحلية: زيادة الغطاء 10mm، مراعاة أسياك مطليمة بالإيبوكسي
  * - فحص زلزالي إضافي إن وجد
@@ -36,7 +36,7 @@ class SBCStaircase : StaircaseDesign {
         private const val MIN_GOING = 279.0        // mm (11")
         private const val COMFORT_2R_PLUS_G_MIN = 580.0  // mm
         private const val COMFORT_2R_PLUS_G_MAX = 640.0  // mm
-        private const val SBC_MIN_STEEL_RATIO = 0.002  // ρmin = 0.002 (أعلى من ACI بسبب المناخ)
+        private const val SBC_MIN_STEEL_RATIO = 0.002  // 0.0020 = SBC 304-CR-2018 Table 7.6.1.1 (fy < 420); not a climate rule
         private const val E_S = 200000.0
     }
 
@@ -136,7 +136,7 @@ class SBCStaircase : StaircaseDesign {
 
         codeNotes.add("f'c = 0.8 × fcu = ${String.format("%.1f", fc)} MPa (SBC/ACI conversion)")
         codeNotes.add("β₁ = ${String.format("%.2f", beta1)}")
-        codeNotes.add("SBC cover = ${cover.toInt()}mm (interior, exceeds ACI for hot climate)")
+        codeNotes.add("Cover = ${cover.toInt()}mm is a practical assumption, not a verified code value")
 
         safetyChecks.add(StairSafetyCheck(
             name = "Waist Thickness",
@@ -223,14 +223,14 @@ class SBCStaircase : StaircaseDesign {
 
         var astRequired = rho * b * d
 
-        // SBC 304: الحد الأدنى أعلى - 0.002 × b × d (مناخ حار)
+        // Table 7.6.1.1 value 0.0020 (fy < 420), applied to b*d
         val minSteelRatio = SBC_MIN_STEEL_RATIO
         val minSteelArea = minSteelRatio * b * d
 
         if (astRequired < minSteelArea) {
             astRequired = minSteelArea
             codeNotes.add("SBC minimum steel applied: ${String.format("%.0f", minSteelArea)} mm²/m (0.002 × b × d)")
-            codeNotes.add("SBC 304: Higher ρmin for hot/arid climate durability")
+            codeNotes.add("Minimum steel ratio 0.0020 is the SBC 304-CR-2018 Table 7.6.1.1 value for deformed bars with fy < 420 MPa (one-way slab analogy); the engine applies it to b*d, not gross area, and does not use the fy >= 420 expression")
         }
 
         safetyChecks.add(StairSafetyCheck(
@@ -362,18 +362,18 @@ class SBCStaircase : StaircaseDesign {
 
         // ========== 9. SBC-specific: ملاحظات البيئة المالحة ==========
         codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
-        codeNotes.add("SBC 304: Section 9 (Flexure)")
-        codeNotes.add("SBC 304: Section 11 (Shear)")
-        codeNotes.add("SBC 304: Section 7.7 (Cover requirements)")
-        codeNotes.add("SBC 304: Higher ρmin = 0.002 for hot/arid climate durability")
-        codeNotes.add("Note: For coastal areas, increase cover to ${COVER_COASTAL.toInt()}mm")
-        codeNotes.add("Note: Epoxy-coated bars recommended in corrosive environments per SBC 304")
-        codeNotes.add("Note: Seismic provisions (SBC 304 Section 21) may require additional checks")
+        codeNotes.add("Flexure rows: implemented engine check, edition clause not verified for stairs")
+        codeNotes.add("Shear rows: implemented engine check, edition clause not verified for stairs")
+        codeNotes.add("Cover: practical assumption, edition clause not verified")
+        codeNotes.add("Minimum steel ratio 0.0020: see Table 7.6.1.1 note above; no climate-based rule is supplied in the reference")
+        codeNotes.add("Cover for aggressive environments: not assessed; no coastal cover value is taken from the supplied reference")
+        codeNotes.add("Corrosion protection measures are not assessed")
+        codeNotes.add("Seismic detailing is not assessed")
 
         // ========== 10. فحص زلزالي أساسي ==========
         // SBC 304 البند 21: فحص بسيط للنسب الزلزالية
         if (input.stairWidth < 1000.0) {
-            codeNotes.add("SBC 304 Seismic: Stair width < 1.0m may need special detailing")
+            codeNotes.add("Seismic detailing for narrow stairs is not assessed")
         }
 
         return StaircaseResult(

@@ -140,20 +140,12 @@ class SBCStaircaseTest {
     // ══════════════════════════════════════════════════════════════════════
 
     @Test
-    fun `SBC staircase uses higher min steel ratio for hot climate`() {
+    fun `SBC min steel ratio is the Table 7_6_1_1 value and notes carry no climate rule`() {
         val result = engine.designStaircase(typicalInput())
-        // SBC 304: ρmin = 0.002 (higher than ACI for hot/arid climate)
-        assertTrue("Min steel ratio should be 0.002 for hot climate",
-            result.minSteelRatio >= 0.002)
-    }
-
-    @Test
-    fun `SBC code notes reference hot climate`() {
-        val result = engine.designStaircase(typicalInput())
-        val hasClimateNote = result.codeNotes.any {
-            it.contains("مناخ") || it.contains("climate") || it.contains("SBC")
-        }
-        assertTrue("Should reference climate/SBC considerations", hasClimateNote)
+        assertTrue("0.0020 for fy < 420", result.minSteelRatio >= 0.002)
+        val notes = result.codeNotes.joinToString(" | ")
+        assertTrue(notes, !notes.contains("hot/arid") && !notes.contains("hot climate") && !notes.contains("Section 7.7") && !notes.contains("Section 21"))
+        assertTrue(notes, notes.contains("Table 7.6.1.1"))
     }
 
     @Test
