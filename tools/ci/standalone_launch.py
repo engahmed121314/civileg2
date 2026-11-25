@@ -22,11 +22,14 @@ def nodes(x):
         m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", n.get("bounds") or "")
         if m: res.append((t, [int(v) for v in m.groups()]))
     return res
-def tap_text(words, name):
+def tap_text(words, name, exact=False):
     for _ in range(3):
         x = dump(name)
-        for t, b in nodes(x):
-            if any(w in t for w in words):
+        ns = nodes(x)
+        if exact: ns = sorted(ns, key=lambda nb: -nb[1][1])  # bottom-most first (tab bar)
+        for t, b in ns:
+            lab = t.split("|")[0].strip()
+            if (lab in words) if exact else any(w in t for w in words):
                 adb("shell", "input", "tap", str((b[0]+b[2])//2), str((b[1]+b[3])//2))
                 time.sleep(2); return True
         time.sleep(1)
@@ -38,7 +41,7 @@ while time.time() - t0 < 14:
     shot(f"splash-{i:02d}-{time.time()-t0:04.1f}s"); i += 1
 time.sleep(4); shot("home"); dump("home")
 log = []
-log.append(("design_tab", tap_text(["التصميم"], "d-design"))); shot("design")
+log.append(("design_tab", tap_text(["التصميم"], "d-design", exact=True))); shot("design")
 log.append(("beam_card", tap_text(["كمر"], "d-beam"))); shot("beam-open"); dump("beam-open")
 def scroll_up(n=3):
     for _ in range(n):
@@ -59,7 +62,7 @@ def edit_field(current, new, name):
     return False
 def press_calc(name):
     for _ in range(2):
-        if tap_text(["تحليل وحساب", "احسب", "Calculate"], name): return True
+        if tap_text(["تصميم الكمرة الآن", "تحليل وحساب", "احسب", "Calculate"], name): return True
         scroll_up(2)
     return False
 # 1) blank width
