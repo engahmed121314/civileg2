@@ -461,11 +461,14 @@ fun BeamScreen(
                         res.code == currentInputs.code &&
                         res.supportType == currentInputs.support
                     ) {
+                        val diagram = com.civileg.app.domain.calculations.utils.BeamUdlDiagram.samples(res.span,res.appliedShear,res.supportType)
                         MomentShearForceDiagram(
                             span = currentInputs.span,
                             supportType = res.supportType.name,
                             deadLoad = currentInputs.deadLoad,
                             liveLoad = currentInputs.liveLoad,
+                            momentValues = diagram.map { (it.xM/res.span).toFloat() to it.momentKnM.toFloat() },
+                            shearValues = diagram.map { (it.xM/res.span).toFloat() to it.shearKn.toFloat() },
                             appliedMoment = res.appliedMoment,
                             appliedShear = res.appliedShear,
                             designCode = currentInputs.code,
