@@ -1010,7 +1010,7 @@ object ProfessionalEnglishPdfReporter {
         }
 
         // Extract design code from inputs if available
-        val defaultCode = if (reportType == ReportType.STEEL) "AISC 360-16 / ECP 205-2007" else "ACI 318-19 / ECP 203-2025"
+        val defaultCode = "Not specified (code edition not verified)"
         val codeStr = inputs["Selected Reference Basis"] ?: inputs["Design Code"]
             ?: defaultCode
 

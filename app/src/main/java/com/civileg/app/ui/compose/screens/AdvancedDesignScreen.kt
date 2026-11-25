@@ -915,7 +915,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.columnContent(
     }
     item { CalculateButton(onCalculate) }
     result?.let { r ->
-        item { StatusBanner(isSafe = r.reinforcementResult.isSafe) }
+        item {
+            ResultCard("Status / الحالة") {
+                ResultRow("Overall", "PRELIMINARY - NOT FULLY CHECKED / نتيجة أولية: لم يكتمل التحقق", bold = true)
+                ResultRow("Reinforcement check", if (r.reinforcementResult.isSafe) "Passes engine check / يجتاز فحص المحرك" else "Fails engine check / لا يجتاز فحص المحرك")
+                ResultRow("Note", "Moment capacity is not validated for the actual bar positions / لم تُراجع قدرة العزم على مواضع الأسياخ الفعلية")
+            }
+        }
         item {
             ResultCard("Capacity / القدرة") {
                 ResultRow("Axial capacity", "%.0f kN".format(r.axialCapacity), bold = true)
