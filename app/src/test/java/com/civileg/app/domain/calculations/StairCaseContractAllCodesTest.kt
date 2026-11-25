@@ -89,7 +89,7 @@ class StairDeflectionTable731Test {
         for (lane in listOf<StaircaseDesign>(ACIStaircase(), SBCStaircase())) {
             assertEquals(20.0, check(lane, 200.0).limit, 1e-9)
             assertEquals(20.0 / (0.4 + 360.0 / 700.0), check(lane, 200.0, 360.0).limit, 1e-9)
-            assertTrue(check(lane, 200.0).isSafe)
+            check(lane, 200.0).let { assertTrue(it.value <= it.limit && it.notAssessed && !it.isSafe) }
             val thin = check(lane, 120.0)
             assertTrue(!thin.isSafe && thin.name.contains("NOT ASSESSED"))
         }

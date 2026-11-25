@@ -23,7 +23,7 @@ class ECPStairTable410Test {
     @Test
     fun `thin waist fails and is not passed by an ungrounded modification factor`() {
         assertFalse(run(6.0, 100.0).isSafe)
-        assertTrue(run(3.0, 200.0).isSafe)
+        run(3.0, 200.0).let { assertTrue(it.value <= it.limit && it.notAssessed && !it.isSafe) }
     }
 
     @Test

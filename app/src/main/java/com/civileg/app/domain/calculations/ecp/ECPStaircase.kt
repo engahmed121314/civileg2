@@ -218,7 +218,8 @@ class ECPStaircase : StaircaseDesign {
         safetyChecks.add(StairSafetyCheck(
             name = "Case model support",
             value = if (caseSupported) 1.0 else 0.0, limit = 1.0, unit = "",
-            isSafe = caseSupported,
+            isSafe = analysisStatus == StairAnalysisStatus.CASE_MODEL_IMPLEMENTED,
+            notAssessed = analysisStatus != StairAnalysisStatus.CASE_MODEL_IMPLEMENTED,
             description = if (caseSupported) "Implemented analysis model for this stair case" else "No implemented analysis model for ${input.stairType} — result is not a verified design for this case"
         ))
         val momentCoefficient = if (continuousOverLanding) 1.0 / 10.0 else 1.0 / 8.0
@@ -356,18 +357,17 @@ class ECPStaircase : StaircaseDesign {
         val allowableDeflection = 0.0      // not computed in this version
 
         safetyChecks.add(StairSafetyCheck(
-            name = if (deflectionOk) "Deflection (ECP Table 4-10 L/t, met by the adopted waist; not a computed deflection)"
-                   else "Deflection NOT ASSESSED (computed deflection required)",
+            name = "Deflection NOT ASSESSED: ECP Table 4-10 L/t deemed-to-satisfy applicability unverified (no computed deflection)",
             value = actualRatio, limit = allowableRatio, unit = "",
-            isSafe = deflectionOk,
+            isSafe = false,
+            notAssessed = true,
             description = if (!spanWithinTable) {
                 "NOT ASSESSED: span over 6 m is outside Table 4-10 applicability; a computed deflection (ECP 4-3-1-1) is required and is not implemented. Not a demonstrated failure, not a pass"
             } else if (deflectionOk) {
-                "ECP 203-2020 Table 4-10: Ln/t = ${"%.1f".format(actualRatio)} <= ${"%.1f".format(allowableRatio)} (solid slab, simply supported 25 x (0.40+fy/700)); deflection computation not required"
+                "NOT ASSESSED: Table 4-10 conditions of use are not verified for this stair. ECP 203-2020 Table 4-10: Ln/t = ${"%.1f".format(actualRatio)} <= ${"%.1f".format(allowableRatio)} (solid slab, simply supported 25 x (0.40+fy/700)); the adopted waist meets the table value only, no computed deflection"
             } else {
                 "NOT ASSESSED: Table 4-10 is deemed-to-satisfy only. Ln/t = ${"%.1f".format(actualRatio)} > ${"%.1f".format(allowableRatio)}, so deflection is NOT demonstrated (not a computed failure). Waist of at least ${"%.0f".format(minThicknessMm)} mm meets the table, or a computed deflection (ECP 4-3-1-1) is required and is not implemented in this version"
             }
-            ,notAssessed = !deflectionOk
         ))
         // ECP 203-2020 Ch.6 p.6-5 (one-way solid slabs): in any case t >= L/30 simply supported (L/35, L/40 continuous).
         // Slab analogy (preliminary); the span entered is used as L, not the code effective span (clear + t or 1.05 clear).

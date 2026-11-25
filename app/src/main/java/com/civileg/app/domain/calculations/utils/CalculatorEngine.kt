@@ -11,6 +11,7 @@ import com.civileg.app.domain.calculations.aci.SteelWindEngine
 import com.civileg.app.domain.calculations.base.RetainingWallInput
 import com.civileg.app.domain.calculations.base.StairSupportCondition
 import com.civileg.app.domain.calculations.base.StairAnalysisStatus
+import com.civileg.app.domain.calculations.base.StairCheckKind
 import com.civileg.app.domain.calculations.base.StaircaseInput
 import com.civileg.app.domain.calculations.base.SeismicZone
 import com.civileg.app.domain.calculations.base.SoilType
@@ -2287,7 +2288,10 @@ class CalculatorEngine @Inject constructor(
                 CalculationStep(
                     stepNumber = 6, title = "Implemented Checks (not code acceptance)",
                     formula = "Flexure · shear · deflection",
-                    formulaWithValues = "${result.safetyChecks.count { it.isSafe }}/${result.safetyChecks.size} checks passed, ${result.safetyChecks.count { !it.isSafe && !it.notAssessed }} failed, ${result.safetyChecks.count { it.notAssessed }} not assessed",
+                    formulaWithValues = result.safetyChecks.groupBy { it.kind }.toSortedMap().entries.joinToString("; ") { (k, v) ->
+                        (when (k) { StairCheckKind.CODE -> "Code checks"; StairCheckKind.GEOMETRY -> "Geometry limits"; StairCheckKind.ASSUMPTION -> "Assumption/model flags" }) +
+                            ": ${v.count { it.isSafe }}/${v.size} passed, ${v.count { !it.isSafe && !it.notAssessed }} failed, ${v.count { it.notAssessed }} not assessed"
+                    },
                     result = if (result.safetyChecks.any { !it.isSafe && !it.notAssessed }) "Checks fail"
                              else if (result.safetyChecks.any { it.notAssessed }) "Not assessed items remain; acceptance incomplete"
                              else if (result.isSafe) "Checks pass; acceptance incomplete" else "Checks fail", unit = "",
@@ -2309,7 +2313,7 @@ class CalculatorEngine @Inject constructor(
                 cost = cost,
                 code = code,
                 safetyChecks = result.safetyChecks.map {
-                    DesignSafetyCheck(name = it.name, value = it.value, limit = it.limit, unit = it.unit, isSafe = it.isSafe, notAssessed = it.notAssessed)
+                    DesignSafetyCheck(name = it.displayName, value = it.value, limit = it.limit, unit = it.unit, isSafe = it.isSafe, notAssessed = it.notAssessed)
                 },
                 utilizationRatio = utilization,
                 mu = result.maxMoment,

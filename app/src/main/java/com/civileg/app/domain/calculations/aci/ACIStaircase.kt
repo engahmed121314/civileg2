@@ -180,7 +180,8 @@ class ACIStaircase : StaircaseDesign {
         safetyChecks.add(StairSafetyCheck(
             name = "Case model support",
             value = if (caseSupported) 1.0 else 0.0, limit = 1.0, unit = "",
-            isSafe = caseSupported,
+            isSafe = analysisStatus == StairAnalysisStatus.CASE_MODEL_IMPLEMENTED,
+            notAssessed = analysisStatus != StairAnalysisStatus.CASE_MODEL_IMPLEMENTED,
             description = if (caseSupported) "Analysis model available for this stair case (see status for verification level)" else "No implemented analysis model for ${input.stairType}"
         ))
         if (input.stairType == StairType.DOG_LEG) {
@@ -249,7 +250,7 @@ class ACIStaircase : StaircaseDesign {
             name = "Flexure (ρ ≤ ρ_max_tc)",
             value = rho, limit = rhoMaxTc, unit = "",
             isSafe = flexureSolutionExists && rho <= rhoMaxTc,
-            description = "ACI 318 Section 9.3.3.1 (tension-controlled)"
+            description = "ACI 318M-14 7.3.3.1 (nonprestressed slabs: epsilon_t >= 0.004). The limit used is the stricter epsilon_t = 0.005 (c/d <= 0.375). 9.3.3.1 applies to beams, not slabs"
         ))
 
         // اختيار حديد رئيسي (مقاسات أمريكية: 12, 16, 19, 22, 25 mm)
@@ -280,10 +281,16 @@ class ACIStaircase : StaircaseDesign {
 
         val shearSafe = (Vu / 1000.0) <= maxShearCapacity
         safetyChecks.add(StairSafetyCheck(
-            name = "Shear Capacity",
+            name = "Shear section limit (22.5.1.2)",
             value = adjustedShear, limit = maxShearCapacity, unit = "kN/m",
             isSafe = shearSafe,
-            description = "ACI 318 Section 22.5.1.2"
+            description = "ACI 318M-14 22.5.1.2: upper limit on the section size, Vu <= phi(Vc + 0.66 sqrt(fc') b d). It is not the shear strength check; see the next row"
+        ))
+        safetyChecks.add(StairSafetyCheck(
+            name = "Shear Vu <= phi*Vc (no stirrups)",
+            value = adjustedShear, limit = phiVc, unit = "kN/m",
+            isSafe = (Vu / 1000.0) <= phiVc,
+            description = "ACI 318M-14 22.5.5.1(a): Vc = 0.17 lambda sqrt(fc') b d, lambda = 1.0; slab flight without stirrups. Fails when stirrups would be needed (not designed for a slab flight)"
         ))
 
         val requiredStirrups: String
@@ -343,16 +350,15 @@ class ACIStaircase : StaircaseDesign {
         val allowableDeflection = 0.0      // not computed in this version
 
         safetyChecks.add(StairSafetyCheck(
-            name = if (deflectionOk) "Deflection (ACI Table 7.3.1.1 l/h, met by the adopted waist; not a computed deflection)"
-                   else "Deflection NOT ASSESSED (computed deflection required)",
+            name = "Deflection NOT ASSESSED: ACI Table 7.3.1.1 l/h deemed-to-satisfy applicability unverified (no computed deflection)",
             value = actualRatio, limit = allowableRatio, unit = "",
-            isSafe = deflectionOk,
+            isSafe = false,
+            notAssessed = true,
             description = if (deflectionOk) {
-                "ACI 318M-14 Table 7.3.1.1: l/h = ${"%.1f".format(actualRatio)} <= ${"%.1f".format(allowableRatio)} (solid one-way slab analogy, simply supported l/20, fy-modified); deflection computation not required"
+                "NOT ASSESSED: table applicability (no partitions or other construction likely to be damaged by deflection) is not verified. ACI 318M-14 Table 7.3.1.1: l/h = ${"%.1f".format(actualRatio)} <= ${"%.1f".format(allowableRatio)} (solid one-way slab analogy, simply supported l/20, fy-modified); the adopted waist meets the table value only, no computed deflection"
             } else {
                 "NOT ASSESSED: Table 7.3.1.1 is deemed-to-satisfy only. l/h = ${"%.1f".format(actualRatio)} > ${"%.1f".format(allowableRatio)}; h of at least ${"%.0f".format(minThicknessMm)} mm meets the table, otherwise a computed deflection (7.3.2) is required and is not implemented. Not a computed failure"
             }
-            ,notAssessed = !deflectionOk
         ))
 
         // ========== 8. فحوصات هندسية (IBC) ==========

@@ -81,8 +81,29 @@ data class StairSafetyCheck(
     val isSafe: Boolean,
     val description: String = "",
     /** true = the check could not be assessed (e.g. outside a deemed-to-satisfy table); isSafe stays false, but this is not a computed failure. */
-    val notAssessed: Boolean = false
-)
+    val notAssessed: Boolean = false,
+    /** What the row is: a code strength/serviceability check, a geometric limit from another document, or a model/practical assumption flag. */
+    val kind: StairCheckKind = StairCheckKind.fromName(name)
+) {
+    /** Name shown on screen, drawing strip and PDF: non-code rows carry their kind so they never read as a code pass. */
+    val displayName: String get() = kind.prefix + name
+}
+
+enum class StairCheckKind(val prefix: String) {
+    CODE(""),
+    /** Geometric limits (IBC 1011.5, comfort rule) taken from documents other than the design code of the lane. */
+    GEOMETRY("Geometry limit: "),
+    /** Practical minimums, model availability flags and slab analogies: not code strength checks. */
+    ASSUMPTION("Assumption/model flag: ");
+
+    companion object {
+        fun fromName(name: String): StairCheckKind = when {
+            name.startsWith("2R + G") || name.startsWith("Riser") || name.startsWith("Going") -> GEOMETRY
+            name.startsWith("Waist Thickness") || name.startsWith("Case model support") || name.startsWith("Waist >=") -> ASSUMPTION
+            else -> CODE
+        }
+    }
+}
 
 /**
  * نتيجة تصميم السلم الشاملة
