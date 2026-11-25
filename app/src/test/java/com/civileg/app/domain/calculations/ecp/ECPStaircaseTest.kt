@@ -245,4 +245,15 @@ class ECPStaircaseTest {
         val deflectionCheck = result.safetyChecks.find { it.name.contains("Deflection") }
         assertNotNull("Should have deflection check", deflectionCheck)
     }
+
+    @Test
+    fun `ECP minimum main steel is not assessed for mild and high-strength input, never a pass`() {
+        for (fy in listOf(240.0, 360.0, 400.0)) {
+            val result = stair.designStaircase(defaultInput(fy = fy))
+            val row = result.safetyChecks.single { it.name.startsWith("Minimum main steel NOT ASSESSED") }
+            assertTrue("fy=$fy must be not assessed", row.notAssessed)
+            assertFalse("fy=$fy must not pass", row.isSafe)
+            assertTrue(row.description.contains("0.25%") && row.description.contains("0.15%"))
+        }
+    }
 }

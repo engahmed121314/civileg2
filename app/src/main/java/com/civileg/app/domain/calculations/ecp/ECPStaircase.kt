@@ -253,13 +253,15 @@ class ECPStaircase : StaircaseDesign {
         val fs = input.fy / GAMMA_S
         var astRequired = if (fs > 0 && leverArm > 0) Mu / (fs * leverArm) else 0.0
 
-        // الحد الأدنى للتسليح: 0.15% من b×d للبلاطات (ECP 203)
+        // Legacy app floor (beam-style 0.26*sqrt(fcu)/fy and 0.13% of b x d). It is NOT the ECP 203-2020 6-2-1-2 slab
+        // rule (0.6/fy, or 0.25% of Ac for mild steel / 0.15% for high-strength steel). Because the steel class is not an
+        // input and the OR relationship is not resolved, the clause check is reported NOT ASSESSED below.
         val minSteelRatio = 0.0013
         val minSteelArea = max(0.26 * sqrt(input.fcu) / input.fy * b * d, 0.0013 * b * d)
 
         if (astRequired < minSteelArea) {
             astRequired = minSteelArea
-            codeNotes.add("Minimum steel applied: ${String.format("%.0f", minSteelArea)} mm²/m (0.15% of b×d)")
+            codeNotes.add("Minimum steel applied: ${String.format("%.0f", minSteelArea)} mm²/m (legacy app floor 0.13% of b×d, not the ECP 6-2-1-2 slab rule)")
         }
 
         safetyChecks.add(StairSafetyCheck(
@@ -272,6 +274,17 @@ class ECPStaircase : StaircaseDesign {
         // اختيار حديد رئيسي (مقاسات مترية)
         val mainRebar = selectBars(astRequired)
         val mainRebarArea = parseBarArea(mainRebar)
+        run {
+            val ac = b * waistThickness
+            val providedRatioAc = mainRebarArea / ac
+            safetyChecks.add(StairSafetyCheck(
+                name = "Minimum main steel NOT ASSESSED: ECP 203-2020 6-2-1-2 needs steel class (mild/high-strength), not an input",
+                value = providedRatioAc, limit = 0.0015, unit = "",
+                isSafe = false,
+                notAssessed = true,
+                description = "NOT ASSESSED. ECP 203-2020 6-2-1-2 (p.6-7) item 1: main steel ratio not less than 0.6/fy of the effective concrete area, or the equivalent 0.25% of the actual area Ac for mild steel / 0.15% for high-strength steel. The steel class is not an app input and the clause's alternatives are not resolved here. Provided ${"%.3f".format(providedRatioAc * 100)}% of b x h; 0.6/fy = ${"%.3f".format(0.6 / input.fy * 100)}%; candidate limits 0.25% (mild) and 0.15% (high-strength). Limit field shows the lower candidate only"
+            ))
+        }
         val rho = mainRebarArea / (b * d)
 
         // حديد التوزيع = 20% من الرئيسي (ECP 203)
