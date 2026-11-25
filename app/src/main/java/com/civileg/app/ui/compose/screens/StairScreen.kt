@@ -1056,8 +1056,6 @@ private fun StairFormulasCard(result:CalculatorEngine.StairResult) {
                     FormulaItem("${step.stepNumber}. ${step.formula}")
                     AppText(step.formulaWithValues,style=MaterialTheme.typography.bodySmall)
                 }
-                AppText("Main: %.0f mm2/m; dia %d mm at %.0f mm".format(java.util.Locale.US,result.reinforcement.diameter*result.reinforcement.diameter*kotlin.math.PI/4*1000/result.reinforcement.spacing,result.reinforcement.diameter,result.reinforcement.spacing),style=MaterialTheme.typography.bodySmall)
-                AppText("Distribution: dia %d mm at %.0f mm".format(java.util.Locale.US,result.distributionReinforcement.diameter,result.distributionReinforcement.spacing),style=MaterialTheme.typography.bodySmall)
             }
         }
     }

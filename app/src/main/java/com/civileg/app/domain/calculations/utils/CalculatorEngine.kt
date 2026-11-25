@@ -2174,37 +2174,37 @@ class CalculatorEngine @Inject constructor(
             val steps = listOf(
                 CalculationStep(
                     stepNumber = 1, title = "Geometry",
-                    formula = "n = L/tread; total rise = riser·(n+1)",
+                    formula = "nt = round(1000*span/tread); nr = nt+1; rise = nr*riser",
                     formulaWithValues = "${nRisers} risers × ${"%.0f".format(riser)} mm, ${nTreads} treads × ${"%.0f".format(tread)} mm",
                     result = "Total rise ${"%.2f".format(totalRise)}", unit = "m",
                     codeReference = ref
                 ),
                 CalculationStep(
                     stepNumber = 2, title = "Factored Load",
-                    formula = "wu = γD·DL + γL·LL (per m width)",
-                    formulaWithValues = "wu = ${"%.2f".format(result.horizontalLoad)} kN/m",
-                    result = "${"%.2f".format(result.horizontalLoad)}", unit = "kN/m",
+                    formula = if(code == DesignCode.ECP) "wu = 1.4*DL/cos(theta) + 1.6*LL" else "wu = 1.2*DL/cos(theta) + 1.6*LL",
+                    formulaWithValues = "wu = ${"%.2f".format(result.horizontalLoad)} kN/m2",
+                    result = "${"%.2f".format(result.horizontalLoad)}", unit = "kN/m2",
                     codeReference = ref
                 ),
                 CalculationStep(
                     stepNumber = 3, title = "Design Moment",
-                    formula = "Mu = wu·L²/8",
+                    formula = "Mu = wu*L^2*coefficient; coefficient = " + "%.4f".format(java.util.Locale.US,result.maxMoment/(result.horizontalLoad*span*span)),
                     formulaWithValues = "Mu = ${"%.1f".format(result.maxMoment)} kN·m/m",
                     result = "${"%.1f".format(result.maxMoment)}", unit = "kN·m/m",
                     codeReference = ref
                 ),
                 CalculationStep(
                     stepNumber = 4, title = "Main Steel",
-                    formula = "As = Mu / (0.87fy·j·d)",
-                    formulaWithValues = "As = ${"%.0f".format(result.mainRebarArea)} mm²/m → ${mainBar.barString}",
+                    formula = if(code == DesignCode.ECP) "K = Mu/(fcu*b*d^2); As,req = Mu/((fy/1.15)*z), with minimum" else "Rn = Mu/(0.9*b*d^2); As,req = rho*b*d, with minimum",
+                    formulaWithValues = "As,provided = ${"%.0f".format(java.util.Locale.US,result.mainRebarArea)} mm2/m; dia ${mainBar.diameter} mm at ${"%.0f".format(java.util.Locale.US,mainBar.spacing)} mm",
                     result = mainBar.barString, unit = "",
                     codeReference = ref, isPass = result.isSafe,
                     status = if (result.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
                 ),
                 CalculationStep(
                     stepNumber = 5, title = "Distribution Steel",
-                    formula = "As,dist = ρmin·b·h",
-                    formulaWithValues = "As = ${"%.0f".format(result.distributionRebarArea)} mm²/m → ${distBar.barString}",
+                    formula = if(code == DesignCode.ECP) "As,dist = max(0.20*As,main; 0.0015*b*h)" else "As,dist = max(0.20*As,main; 0.0018*b*h)",
+                    formulaWithValues = "As,dist,provided = ${"%.0f".format(java.util.Locale.US,result.distributionRebarArea)} mm2/m; dia ${distBar.diameter} mm at ${"%.0f".format(java.util.Locale.US,distBar.spacing)} mm",
                     result = distBar.barString, unit = "",
                     codeReference = ref
                 ),
@@ -2505,7 +2505,7 @@ class CalculatorEngine @Inject constructor(
             ),
             CalculationStep(
                 stepNumber = 3, title = "Stem Steel",
-                formula = "As = Mu / (0.87fy·j·d)",
+                formula = if(code == DesignCode.ECP) "K = Mu/(fcu*b*d^2); As,req = Mu/((fy/1.15)*z), with minimum" else "Rn = Mu/(0.9*b*d^2); As,req = rho*b*d, with minimum",
                 formulaWithValues = "As = ${"%.0f".format(res.stemMainRebarArea)} mm²/m → ${res.stemMainRebar}",
                 result = res.stemMainRebar, unit = "mm²/m",
                 codeReference = ref
