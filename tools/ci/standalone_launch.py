@@ -138,6 +138,9 @@ def stair_codes():
         if tag == "SBC":
             pdf_ok = tap_text(["تقرير PDF", "PDF"], "sc-pdf-find"); log.append(("sc_pdf_tap_" + tag, pdf_ok)); time.sleep(4)
             shot("sc-" + tag + "-pdf"); dump("sc-" + tag + "-pdf")
+            for k in range(1, 6):
+                adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
+                shot("sc-" + tag + "-pdf-" + str(k))
     open(f"{out}/sc-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
 def frame_block():
     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)

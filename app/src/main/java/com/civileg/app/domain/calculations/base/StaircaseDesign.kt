@@ -89,6 +89,9 @@ data class StairSafetyCheck(
     val displayName: String get() = kind.prefix + name
 }
 
+/** Main-steel step state: follows the flexure strength row only, never the overall result (which stays not-a-pass while any row is NOT ASSESSED). */
+fun mainSteelStepPass(checks: List<StairSafetyCheck>): Boolean? = checks.firstOrNull { it.name.startsWith("Flexure") }?.isSafe
+
 enum class StairCheckKind(val prefix: String) {
     CODE(""),
     /** Geometric limits (IBC 1011.5, comfort rule) taken from documents other than the design code of the lane. */

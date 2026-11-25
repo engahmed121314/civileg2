@@ -12,6 +12,7 @@ import com.civileg.app.domain.calculations.base.RetainingWallInput
 import com.civileg.app.domain.calculations.base.StairSupportCondition
 import com.civileg.app.domain.calculations.base.StairAnalysisStatus
 import com.civileg.app.domain.calculations.base.StairCheckKind
+import com.civileg.app.domain.calculations.base.mainSteelStepPass
 import com.civileg.app.domain.calculations.base.StaircaseInput
 import com.civileg.app.domain.calculations.base.SeismicZone
 import com.civileg.app.domain.calculations.base.SoilType
@@ -2275,8 +2276,15 @@ class CalculatorEngine @Inject constructor(
                     formula = if(code == DesignCode.ECP) "K = Mu/(fcu*b*d^2); As,req = Mu/((fy/1.15)*z), with minimum" else "Rn = Mu/(0.9*b*d^2); As,req = rho*b*d, with minimum",
                     formulaWithValues = "As,provided = ${"%.0f".format(java.util.Locale.US,result.mainRebarArea)} mm2/m; dia ${mainBar.diameter} mm at ${"%.0f".format(java.util.Locale.US,mainBar.spacing)} mm",
                     result = mainBar.barString, unit = "",
-                    codeReference = ref, isPass = result.isSafe,
-                    status = if (result.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                    codeReference = ref,
+                    // The step reflects the flexure strength row only. The overall result is not a pass while any row is
+                    // NOT ASSESSED, and that must not paint main steel as a failed design.
+                    isPass = mainSteelStepPass(result.safetyChecks) == true,
+                    status = when (mainSteelStepPass(result.safetyChecks)) {
+                        true -> StepStatus.CHECK_PASS
+                        false -> StepStatus.CHECK_FAIL
+                        null -> StepStatus.WARNING
+                    }
                 ),
                 CalculationStep(
                     stepNumber = 5, title = "Distribution Steel",

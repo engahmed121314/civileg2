@@ -10,6 +10,9 @@ import com.civileg.app.domain.calculations.ecp.ECPStaircase
 import com.civileg.app.domain.calculations.sbc.SBCStaircase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import com.civileg.app.domain.calculations.base.StairSafetyCheck
+import com.civileg.app.domain.calculations.base.mainSteelStepPass
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -70,5 +73,15 @@ class StairCheckSemanticsTest {
             assertFalse(name, r.safetyChecks.all { it.isSafe })
             assertTrue(name, r.safetyChecks.any { it.notAssessed })
         }
+    }
+
+    @Test
+    fun `main steel step follows flexure not the overall not-assessed result`() {
+        val flexOk = StairSafetyCheck(name = "Flexure (K <= K_bal)", value = 0.1, limit = 0.2, unit = "", isSafe = true, description = "")
+        val defl = StairSafetyCheck(name = "Deflection NOT ASSESSED: x", value = 1.0, limit = 2.0, unit = "", isSafe = false, notAssessed = true, description = "")
+        assertEquals(true, mainSteelStepPass(listOf(flexOk, defl)))
+        val flexBad = flexOk.copy(isSafe = false)
+        assertEquals(false, mainSteelStepPass(listOf(flexBad, defl)))
+        assertNull(mainSteelStepPass(listOf(defl)))
     }
 }
