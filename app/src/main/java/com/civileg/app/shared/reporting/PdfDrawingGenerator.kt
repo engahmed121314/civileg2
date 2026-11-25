@@ -3138,7 +3138,7 @@ object PdfDrawingGenerator {
 
                 // Floor label
                 canvas.drawBilingualText(
-                    "F${ff.floorIndex}: ${"%.1f".format(ff.lateralForce)} kN",
+                    "F${ff.floorIndex}: ${"%.1f".format(java.util.Locale.US, ff.lateralForce)} kN",
                     arrowEndX + 8f, arrowY + 5f,
                     DIM_TEXT, 13f
                 )
@@ -3164,13 +3164,13 @@ object PdfDrawingGenerator {
             close()
         }, fillPaint(SECONDARY_RED))
         canvas.drawBilingualText(
-            t("V = ${"%.1f".format(baseShear)} kN", "V = ${"%.1f".format(baseShear)} kN"),
+            t("V = ${"%.1f".format(java.util.Locale.US, baseShear)} kN", "V = ${"%.1f".format(java.util.Locale.US, baseShear)} kN"),
             bsStartX - 5f, baseY - 30f,
             SECONDARY_RED, 16f, true
         )
 
         // Elevation dimensions
-        canvas.drawVDim(elevT, baseY, elevL + elevW + 25f, "H = ${"%.1f".format(totalHeight)} m", offset = 25f)
+        canvas.drawVDim(elevT, baseY, elevL + elevW + 25f, "H = ${"%.1f".format(java.util.Locale.US, totalHeight)} m", offset = 25f)
 
         // Title
         canvas.drawTextCentered(
@@ -3234,7 +3234,7 @@ object PdfDrawingGenerator {
 
                 // Value label above bar
                 canvas.drawBilingualText(
-                    "${"%.0f".format(ff.lateralForce)}",
+                    "${"%.0f".format(java.util.Locale.US, ff.lateralForce)}",
                     barX + barW / 2f, barTop - 8f,
                     DIM_TEXT, 12f, true,
                     align = android.graphics.Paint.Align.CENTER
@@ -3250,7 +3250,7 @@ object PdfDrawingGenerator {
             }
 
             // Y-axis max value
-            canvas.drawText("${"%.0f".format(maxF)}", axisOriginX - 30f, axisMaxY + 8f, textPaint(DIM_TEXT, 12f))
+            canvas.drawText("${"%.0f".format(java.util.Locale.US, maxF)}", axisOriginX - 30f, axisMaxY + 8f, textPaint(DIM_TEXT, 12f))
             canvas.drawText("0", axisOriginX - 20f, axisOriginY + 5f, textPaint(DIM_TEXT, 12f))
         } else {
             // Empty state
@@ -3333,7 +3333,7 @@ object PdfDrawingGenerator {
             }
             canvas.drawLine(tPx, spOriginY, tPx, spMaxY, dashP)
             canvas.drawBilingualText(
-                "T₁ = ${"%.3f".format(fundamentalPeriod)} s",
+                "T₁ = ${"%.3f".format(java.util.Locale.US, fundamentalPeriod)} s",
                 tPx + 5f, spMaxY + 15f,
                 DIM_LINE, 12f
             )
@@ -3342,15 +3342,15 @@ object PdfDrawingGenerator {
             val saY = spOriginY - (spectralAccel / maxSa).toFloat() * spDrawH
             canvas.drawCircle(tPx, saY, 5f, fillPaint(SECONDARY_RED))
             canvas.drawBilingualText(
-                "Sa = ${"%.3f".format(spectralAccel)} g",
+                "Sa = ${"%.3f".format(java.util.Locale.US, spectralAccel)} g",
                 tPx + 8f, saY - 8f,
                 SECONDARY_RED, 12f, true
             )
 
             // Axis labels
             canvas.drawText("0", spOriginX - 15f, spOriginY + 5f, textPaint(DIM_TEXT, 12f))
-            canvas.drawText("${"%.2f".format(maxT)}", spMaxX - 25f, spOriginY + 18f, textPaint(DIM_TEXT, 12f))
-            canvas.drawText("${"%.2f".format(maxSa)}", spOriginX - 35f, spMaxY + 8f, textPaint(DIM_TEXT, 12f))
+            canvas.drawText("${"%.2f".format(java.util.Locale.US, maxT)}", spMaxX - 25f, spOriginY + 18f, textPaint(DIM_TEXT, 12f))
+            canvas.drawText("${"%.2f".format(java.util.Locale.US, maxSa)}", spOriginX - 35f, spMaxY + 8f, textPaint(DIM_TEXT, 12f))
             canvas.drawText("0", spOriginX - 15f, spOriginY + 5f, textPaint(DIM_TEXT, 12f))
         }
 
