@@ -12,14 +12,14 @@ object ECP2020JoistRules {
 
     data class GeometryCheck(val clause: String, val requirement: String, val passed: Boolean)
 
-    /** §6-2-2-1, doc6-15 / supplied PDF248. Dimensions in mm. */
+    /** Supplied ECP 203-2020 scan PDF p.248 (printed clause number not confirmed). Dimensions in mm. */
     fun geometry(webWidth: Double, ribSpacing: Double, depth: Double, topping: Double): List<GeometryCheck> {
         require(listOf(webWidth, ribSpacing, depth, topping).all { it.isFinite() && it > 0 })
         val clear = ribSpacing - webWidth
         return listOf(
-            GeometryCheck("6-2-2-1", "Clear block width must be positive and at most 700 mm", clear > 0 && clear <= 700),
-            GeometryCheck("6-2-2-1", "Rib width must be at least max(100 mm, total depth / 3)", webWidth >= max(100.0, depth / 3)),
-            GeometryCheck("6-2-2-1", "Topping must be at least max(50 mm, clear block width / 10) and less than total depth", topping >= max(50.0, clear / 10) && topping < depth)
+            GeometryCheck("ECP 203-2020 supplied scan PDF p.248 (clause number not confirmed)", "Clear block width must be positive and at most 700 mm", clear > 0 && clear <= 700),
+            GeometryCheck("ECP 203-2020 supplied scan PDF p.248 (clause number not confirmed)", "Rib width must be at least max(100 mm, total depth / 3)", webWidth >= max(100.0, depth / 3)),
+            GeometryCheck("ECP 203-2020 supplied scan PDF p.248 (clause number not confirmed)", "Topping must be at least max(50 mm, clear block width / 10) and less than total depth", topping >= max(50.0, clear / 10) && topping < depth)
         )
     }
 

@@ -197,7 +197,7 @@ private fun RebarSubstitutionTab() {
                 QRow("Provided area (mm²)", "%.1f".format(r.providedAreaMm2))
                 QRow("Area difference (mm²)", "%.1f".format(r.areaDifferenceMm2))
                 QRow("Change (%)", "%.2f".format(r.percentageChange))
-                QRow("Safe", if (r.isSafe) "YES" else "NO")
+                QRow("Area check", if (r.isSafe) "Passes (preliminary)" else "Fails")
             }
         }
     }
