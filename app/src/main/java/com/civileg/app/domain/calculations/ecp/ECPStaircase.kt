@@ -369,6 +369,15 @@ class ECPStaircase : StaircaseDesign {
             }
             ,notAssessed = !deflectionOk
         ))
+        // ECP 203-2020 Ch.6 p.6-5 (one-way solid slabs): in any case t >= L/30 simply supported (L/35, L/40 continuous).
+        // Slab analogy (preliminary); the span entered is used as L, not the code effective span (clear + t or 1.05 clear).
+        val tMinSlabMm = span * 1000.0 / 30.0
+        safetyChecks.add(StairSafetyCheck(
+            name = "Waist >= L/30 (ECP Ch.6 one-way slab minimum, analogy)",
+            value = waistThickness, limit = tMinSlabMm, unit = "mm",
+            isSafe = waistThickness >= tMinSlabMm,
+            description = "ECP 203-2020 Ch.6 p.6-5: t >= L/30 for simply supported one-way slabs; stair waist treated as a slab (PRELIMINARY); entered span, not the code effective span"
+        ))
         codeNotes.add("Deflection: ECP 203-2020 Table 4-10 (p. 4-64) deemed-to-satisfy only; no computed deflection is reported")
 
         // ========== 8. فحوصات هندسية ==========
