@@ -1171,6 +1171,7 @@
     <string name="column_name_hint">اسم العمود</string>
     <string name="column_section_safe">القطاع آمن</string>
     <string name="column_preliminary_label">نتيجة أولية: لم يكتمل التحقق من قدرة العزم لتوزيع الأسياخ الفعلي</string>
+    <string name="column_axial_not_assessed_label">لم يتم التقييم: اللامركزية خارج نطاق معادلة الحمل المحوري 4-12-أ في الكود المصري 203-2020</string>
     <string name="column_section_unsafe_label">حالة غير آمنة</string>
     <string name="column_provided_reinforcement">التسليح الموفر</string>
     <string name="column_reinforcement_ratio">نسبة التسليح</string>

@@ -1176,6 +1176,7 @@
     <string name="column_name_hint">Column Name</string>
     <string name="column_section_safe">Section is Safe</string>
     <string name="column_preliminary_label">Preliminary: moment capacity not fully checked for the actual bar layout</string>
+    <string name="column_axial_not_assessed_label">Not assessed: eccentricity is outside the ECP 203-2020 Eq. 4-12-a axial formula domain</string>
     <string name="column_section_unsafe_label">Unsafe Status</string>
     <string name="column_provided_reinforcement">Provided Reinforcement</string>
     <string name="column_reinforcement_ratio">Reinforcement Ratio</string>

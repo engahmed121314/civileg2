@@ -200,8 +200,15 @@ class CalculatorEngine @Inject constructor(
         val codeNotes: List<String> = emptyList(),
         /** False until the moment-capacity model is checked against hand cases for the selected code edition
          *  and the actual bar positions. While false, no consumer may present isSafe as a confirmed safe result. */
-        val assessmentComplete: Boolean = false
+        val assessmentComplete: Boolean = false,
+        /** False when the axial formula's own domain does not cover the case (ECP 203-2020 Eq. 4-12-a needs
+         *  e <= max(0.05t, 20 mm)). Then axialCapacity is 0 only as a placeholder and must be shown as "not assessed". */
+        val axialAssessed: Boolean = true
     ) : Parcelable {
+        /** Text for any consumer that prints the axial capacity. */
+        val axialCapacityLabel: String get() =
+            if (axialAssessed) "%.1f kN".format(java.util.Locale.US, axialCapacity)
+            else "Not assessed (outside ECP 203-2020 Eq. 4-12-a domain)"
         /** The only value screens, exports, drawings and saved records may call "safe". */
         val confirmedSafe: Boolean get() = isSafe && assessmentComplete
         /** Informational: 2 bars per face, where the half-steel-per-face model has the same geometry. Not a validation. */
@@ -1014,7 +1021,11 @@ class CalculatorEngine @Inject constructor(
         // ── Axial capacity (kN). For circular columns the engine uses b×h, so pass an
         // equivalent depth that reproduces πD²/4 instead of D².
         val axialDepth = if (isCircular) width * PI / 4.0 else depth
-        val axialCapacity = engine.calculateAxialCapacity(
+        // ECP 203-2020 Eq. 4-12-a only covers e <= max(0.05t, 20 mm): outside it the axial capacity is NOT ASSESSED.
+        val ecpEccentricityMm = if (puDesign > 0) sqrt(designMx * designMx + designMy * designMy) * 1e3 / puDesign else 0.0
+        val ecpEccentricityLimitMm = max(20.0, 0.05 * max(width, depth))
+        val axialAssessed = !(domainCode == DesignCode.ECP && ecpEccentricityMm > ecpEccentricityLimitMm + 1e-9)
+        val axialCapacity = if (!axialAssessed) 0.0 else engine.calculateAxialCapacity(
             fcu = fcu, fy = fy, width = width, depth = axialDepth,
             reinforcementArea = res.astProvided, loadCombination = LoadCombination.DEAD_LIVE
         )
@@ -1047,7 +1058,7 @@ class CalculatorEngine @Inject constructor(
         val maxReinforcement = engine.getMaxReinforcementRatio() * grossArea
         val ratioSafe = res.astProvided >= minReinforcement - 1e-6 &&
             res.astProvided <= maxReinforcement + 1e-6
-        val axialSafe = puDesign <= axialCapacity + 1e-6
+        val axialSafe = axialAssessed && puDesign <= axialCapacity + 1e-6
 
         val concreteVolume = grossArea * clearHeight / 1e9
         val cover = if (domainCode == DesignCode.SBC) 50.0 else 40.0
@@ -1069,6 +1080,7 @@ class CalculatorEngine @Inject constructor(
             if (isSlender) {
                 add("Slender column (λ=${"%.1f".format(slenderness)} > ${"%.0f".format(slendernessLimit)}): moments magnified by δ=${"%.2f".format(momentMagnifier)}")
             }
+            if (!axialAssessed) add("AXIAL CAPACITY NOT ASSESSED: e=${"%.1f".format(ecpEccentricityMm)} mm exceeds max(0.05t, 20 mm)=${"%.1f".format(ecpEccentricityLimitMm)} mm, outside ECP 203-2020 Eq. 4-12-a. Use a full P-M interaction check.")
             if (!momentReview.assessed) add("Moment capacity unavailable: interaction check not assessed, no passing result")
             if (!momentSafe) add("Biaxial moment demand exceeds the section capacity — increase the section or reinforcement")
             if (!ratioSafe) add("Reinforcement ratio ${"%.2f".format(reinforcementPercent)}% is outside the code limits")
@@ -1088,7 +1100,7 @@ class CalculatorEngine @Inject constructor(
                 weightKg = tieWeight
             ),
             safetyChecks = listOf(
-                DesignSafetyCheck("Axial Capacity", puDesign, axialCapacity, "kN", axialSafe),
+                DesignSafetyCheck(if (axialAssessed) "Axial Capacity" else "Axial Capacity (not assessed)", puDesign, axialCapacity, "kN", axialSafe),
                 DesignSafetyCheck("Biaxial Moment", biaxialUtilization * 100.0, 100.0, "%", momentSafe),
                 DesignSafetyCheck("Reinforcement Ratio", reinforcementPercent,
                     engine.getMaxReinforcementRatio() * 100.0, "%", ratioSafe),
@@ -1115,12 +1127,13 @@ class CalculatorEngine @Inject constructor(
             maxReinforcementArea = maxReinforcement,
             reinforcementRatio = reinforcementPercent,
             momentCapacity = minOf(mxCapacity, myCapacity),
-            utilizationRatio = maxOf(biaxialUtilization, if (axialCapacity > 0) puDesign / axialCapacity else 2.0),
+            utilizationRatio = if (!axialAssessed) biaxialUtilization else maxOf(biaxialUtilization, if (axialCapacity > 0) puDesign / axialCapacity else 2.0),
             isDuctile = isSafe && ratioSafe,
             // ACI 18.7.5.5 / SBC 304-21: max(6db, 450mm) in seismic zones.
             confinementLength = if (isSeismic) max(6.0 * res.barDiameter, 450.0)
                 else max(6.0 * res.barDiameter, 300.0),
             warnings = warnings,
+            axialAssessed = axialAssessed,
             codeNotes = res.codeNotes + "Limitation: the moment capacity is a simplified strain-compatibility check that places half of the steel on each face. It does not use the real bar positions, so it can overestimate capacity for layouts with many intermediate bars. Treat the safe/unsafe label as a screening result, not a final interaction check.",
             calculationSteps = columnSteps(
                 code, pu, puDesign, selfWeightKn, designMx, designMy, fcu, fy, res,

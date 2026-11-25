@@ -633,6 +633,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
                 val preliminary = result.isSafe && !result.assessmentComplete
                 AppText(
                     when {
+                        !result.axialAssessed -> stringResource(R.string.column_axial_not_assessed_label)
                         preliminary -> stringResource(R.string.column_preliminary_label)
                         result.isSafe -> stringResource(R.string.column_section_safe)
                         else -> stringResource(R.string.column_section_unsafe_label)
@@ -644,7 +645,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
             
             ResultDataRow("Applied Pu", "${String.format("%.1f", result.appliedAxial)} kN")
-            ResultDataRow("Axial Capacity", "${String.format("%.1f", result.axialCapacity)} kN")
+            ResultDataRow("Axial Capacity", result.axialCapacityLabel)
             if (result.isSlender) {
                 ResultDataRow("Slenderness", "${String.format("%.1f", result.slenderness)} (Slender)")
             } else {

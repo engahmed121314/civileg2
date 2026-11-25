@@ -420,7 +420,7 @@ class ColumnViewModel @Inject constructor(
                     "Load Combination" to snap.loadCombination.name
                 )
                 val resultsMap = mutableMapOf(
-                    "Axial Capacity" to "${String.format("%.1f", res.axialCapacity)} kN",
+                    "Axial Capacity" to res.axialCapacityLabel,
                     "Reinforcement" to res.reinforcement.barString,
                     "Stirrups" to res.stirrups.description,
                     "Slenderness Ratio" to String.format("%.1f", res.slenderness),
