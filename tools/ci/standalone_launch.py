@@ -202,6 +202,26 @@ def frame_block():
     log.append(("frame_view_tab", tap_text(["العرض والنتائج"], "fr-viewtab"))); time.sleep(3); shot("frame-view-BMD"); dump("frame-view-BMD")
     for t in ("SFD", "AFD"):
         log.append(("frame_view_" + t, tap_text([t], "fr-view-" + t, exact=True))); time.sleep(2); shot("frame-view-" + t)
+def stale_block(label, prefix, calc_words, calc_exact, field, newval):
+    """Open a page, solve with default inputs, edit one input, and prove the old result disappears."""
+    try:
+        restart_app()
+        open_from_design(label, prefix)
+        scroll_top(4)
+        ok = False
+        for _ in range(8):
+            if tap_text(calc_words, prefix + "-calc-find", exact=calc_exact): ok = True; break
+            scroll_up(2)
+        log.append((prefix + "_calc", ok)); time.sleep(5)
+        shot(prefix + "-solved"); dump(prefix + "-solved")
+        scroll_top(6)
+        log.append((prefix + "_edit", edit_field(field, newval, prefix + "-edit"))); time.sleep(1.5)
+        shot(prefix + "-edited-top")
+        scroll_up(4); time.sleep(1)
+        shot(prefix + "-edited"); dump(prefix + "-edited")
+        scroll_up(4); shot(prefix + "-edited-2"); dump(prefix + "-edited-2")
+    except Exception as e:
+        log.append((prefix + "_stale_exception", repr(e)))
 def restart_app():
     adb("shell", "am", "force-stop", pkg); time.sleep(2)
     adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"); time.sleep(8)
@@ -251,6 +271,10 @@ if os.path.exists("tools/ci/STAIR_ONLY"):
         restart_app()
         stair_invalid()
         pile_block()
+        stale_block("الخزانات", "tank", ["تصميم الخزان الآن"], False, "50.0", "60.0")
+        stale_block("حوائط السند", "rw", ["تحليل"], True, "4.0", "5.0")
+        stale_block("القواعد الشداد", "strap", ["تحليل وحساب"], False, "1200", "1300")
+        stale_block("البلاطات المسطحة", "fs", ["تصميم بلاطة مسطحة"], False, "6.0", "6.5")
     except Exception as e:
         log.append(("stair_exception", repr(e)))
     pull_exported_pdfs()
