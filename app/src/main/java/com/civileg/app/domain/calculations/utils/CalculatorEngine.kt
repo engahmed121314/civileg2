@@ -270,7 +270,14 @@ class CalculatorEngine @Inject constructor(
         val dropPanelWidth: Double = 0.0,
         val dropPanelThick: Double = 0.0,
         val punchingStressAtDrop: Double = 0.0,
-        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
+        val warnings: List<String> = emptyList(),
+        val codeNotes: List<String> = emptyList(),
+        /** Machine-readable material qualification carried through the generic
+         * result and its persistence. Default FALSE (fail-closed): old saved
+         * results and non-assessing branches read as unassessed, never as
+         * qualified. Separate from the numeric flexure/shear checks. */
+        val bondClassAssessed: Boolean = false
     ) : Parcelable
 
     @Parcelize
@@ -1566,7 +1573,10 @@ class CalculatorEngine @Inject constructor(
                     reinforcementMain = ReinforcementBar(spacing = res.barSpacing, diameter = res.barDiameter.toInt()),
                     momentX = muRib, utilizationRatio = res.utilizationRatio,
                     concreteVolume = concreteVol, steelWeight = steelW, cost = costVal,
-                    safetyChecks = listOf(DesignSafetyCheck("Flexure", res.requiredReinforcement, res.providedReinforcement, "mm²", res.isSafe))
+                    safetyChecks = listOf(DesignSafetyCheck("Engine aggregate verdict (flexure + shear + adoption + material)", res.requiredReinforcement, res.providedReinforcement, "mm²", res.isSafe)),
+                    warnings = res.warnings,
+                    codeNotes = res.codeNotes,
+                    bondClassAssessed = res.bondClassAssessed
                 )
             }
 

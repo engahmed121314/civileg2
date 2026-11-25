@@ -69,6 +69,8 @@ fun HordiSlabScreen(
     var loadCombination by remember { mutableStateOf(LoadCombination.DEAD_LIVE) }
     var loadCombinationExpanded by remember { mutableStateOf(false) }
     var cover by remember { mutableStateOf("") }
+    var barBondClass by remember { mutableStateOf(com.civileg.app.domain.calculations.base.BarBondClass.UNKNOWN) }
+    var bondClassExpanded by remember { mutableStateOf(false) }
     var detailDraft by remember { mutableStateOf(com.civileg.app.domain.calculations.utils.JoistDetailDraft()) }
 
     val result by viewModel.result.observeAsState()
@@ -208,6 +210,52 @@ fun HordiSlabScreen(
                     )
                 }
 
+                // Bar surface/bond classification. UNKNOWN keeps the result a
+                // conservative estimate (isSafe=false); a declared surface is
+                // required for case-qualified acceptance.
+                item {
+                    ExposedDropdownMenuBox(
+                        expanded = bondClassExpanded,
+                        onExpandedChange = { bondClassExpanded = !bondClassExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = when (barBondClass) {
+                                com.civileg.app.domain.calculations.base.BarBondClass.DEFORMED -> "Deformed (ribbed) bars"
+                                com.civileg.app.domain.calculations.base.BarBondClass.PLAIN -> "Plain (smooth) bars"
+                                com.civileg.app.domain.calculations.base.BarBondClass.UNKNOWN -> "Unknown — estimate only"
+                            },
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { AppText("Bar Surface / Bond Class", fontSize = 12.sp) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = bondClassExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            shape = PremiumDesignSystem.InputShape,
+                            singleLine = true
+                        )
+                        ExposedDropdownMenu(
+                            expanded = bondClassExpanded,
+                            onDismissRequest = { bondClassExpanded = false }
+                        ) {
+                            com.civileg.app.domain.calculations.base.BarBondClass.values().forEach { option ->
+                                DropdownMenuItem(
+                                    text = {
+                                        AppText(when (option) {
+                                            com.civileg.app.domain.calculations.base.BarBondClass.DEFORMED -> "Deformed (ribbed) bars"
+                                            com.civileg.app.domain.calculations.base.BarBondClass.PLAIN -> "Plain (smooth) bars"
+                                            com.civileg.app.domain.calculations.base.BarBondClass.UNKNOWN -> "Unknown — estimate only"
+                                        }, fontSize = 13.sp)
+                                    },
+                                    onClick = {
+                                        viewModel.clearResult()
+                                        barBondClass = option
+                                        bondClassExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Load Combination Dropdown
                 item {
                     ExposedDropdownMenuBox(
@@ -267,6 +315,7 @@ fun HordiSlabScreen(
                                 loadCombination = loadCombination,
                                 designCode = designCode,
                                 coverMm = cover.toDoubleOrNull() ?: Double.NaN,
+                                barBondClass = barBondClass,
                                 detailCase = detailDraft.toCase(
                                     span.toDoubleOrNull() ?: Double.NaN,
                                     designMoment.toDoubleOrNull() ?: Double.NaN,
@@ -385,7 +434,11 @@ fun HordiSlabScreen(
                                 "Shear Capacity" to String.format("%.1f kN", res.shearCapacity),
                                 "Min Thickness" to String.format("%.0f mm", res.minThickness),
                                 "Utilization" to String.format("%.1f%%", res.utilizationRatio * 100),
-                                "Engine Check (unverified)" to if (res.isSafe) "PASS - method not verified" else "FAIL"
+                                "Engine Check (unverified)" to when {
+                                    !res.bondClassAssessed -> "ESTIMATE ONLY - bar surface undeclared, cannot be accepted"
+                                    res.isSafe -> "PASS - method not verified"
+                                    else -> "FAIL"
+                                }
                             ),
                             icon = Icons.Default.Shield,
                             accentColor = Color(0xFFE53935)

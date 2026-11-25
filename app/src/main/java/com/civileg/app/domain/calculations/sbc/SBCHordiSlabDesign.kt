@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.calculations.base.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
@@ -60,7 +61,8 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         loadCombination: LoadCombination,
         coverMm: Double,
         linkDiaMm: Double,
-        mainBarDiaMm: Double
+        mainBarDiaMm: Double,
+        barBondClass: BarBondClass
     ): SlabDesignResult {
         // ── InputGuard (ADR-010) — SBC 304-2024 ──
         InputGuard.positive("fcu", fcu)
@@ -98,14 +100,19 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         val fcDesign = fc / GAMMA_C
         val fsDesign = fy / GAMMA_S
 
-        val cover = when (loadCombination) {
+        val codeCover = when (loadCombination) {
             LoadCombination.DEAD_LIVE_EARTHQUAKE, LoadCombination.DEAD_EARTHQUAKE -> COVER_SEISMIC
             else -> COVER_INTERIOR
         }
+        // Input contract: the caller-supplied cover drives the geometry. The
+        // §7.7 interior/seismic value is a reported minimum, not a substitute.
+        if (coverMm < codeCover) {
+            warnings.add("Supplied cover ${coverMm.toInt()} mm is below the SBC 304 §7.7 ${if (codeCover == COVER_SEISMIC) "seismic" else "interior"} minimum ${codeCover.toInt()} mm — geometry uses the supplied cover; increase cover")
+        }
 
-        // Effective depth
+        // Effective depth from the caller-supplied cover and main-bar diameter
         val ribHeight = totalThickness - toppingThickness
-        val d = ribHeight - cover - 10.0  // deduct cover + half bar dia
+        val d = ribHeight - coverMm - mainBarDiaMm / 2.0
         val b = ribWidth
 
         // ══════════════════════════════════════════════════════════════════
@@ -184,7 +191,7 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         // ══════════════════════════════════════════════════════════════════
         // 6. Topping Design (SBC 304-6.4.3)
         // ══════════════════════════════════════════════════════════════════
-        val toppingD = toppingThickness - 20.0 - 4.0  // cover + half bar
+        val toppingD = toppingThickness - coverMm - 4.0  // caller cover + half of assumed 8 mm mesh bar
         val toppingMinAs = MIN_REIN_RATIO * 1000.0 * toppingD  // mm²/m
         val toppingBarDia = 8.0  // typical topping mesh
         val toppingBarArea = PI * toppingBarDia * toppingBarDia / 4.0
@@ -203,7 +210,7 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         codeNotes.add("Topping: Ø${toppingBarDia.toInt()} @ ${toppingSpacing.toInt()}mm mesh")
         codeNotes.add("ρ = ${String.format("%.4f", rhoFinal)}, ρ_min = ${String.format("%.4f", rhoMin)}, ρ_bal = ${String.format("%.4f", rhoBal)}")
         codeNotes.add("Vc = ${String.format("%.1f", Vc)} kN, φVc = ${String.format("%.1f", phiVc)} kN")
-        codeNotes.add("Cover = ${cover.toInt()}mm (${if (isSeismic) "seismic" else "interior"} per SBC 304 §7.7)")
+        codeNotes.add("Cover = ${coverMm.toInt()}mm (caller input; SBC 304 §7.7 ${if (isSeismic) "seismic" else "interior"} minimum ${codeCover.toInt()}mm${if (coverMm < codeCover) " — BELOW MINIMUM" else " satisfied"})")
 
         if (isSeismic) {
             codeNotes.add("SBC 304-21: Seismic provisions applied")
@@ -219,7 +226,8 @@ class SBCHordiSlabDesign : HordiSlabDesign {
             isSafe = discriminant > 0 && isShearSafe && rhoFinal <= rhoBal * 1.5,
             utilizationRatio = if (RnBal > 0) Rn / RnBal else 2.0,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            bondClassAssessed = false // bar surface/bond not assessed by this engine
         )
     }
 }

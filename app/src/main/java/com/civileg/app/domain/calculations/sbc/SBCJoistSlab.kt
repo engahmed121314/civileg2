@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.calculations.base.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
@@ -73,7 +74,8 @@ class SBCJoistSlab : HordiSlabDesign {
         loadCombination: LoadCombination,
         coverMm: Double,
         linkDiaMm: Double,
-        mainBarDiaMm: Double
+        mainBarDiaMm: Double,
+        barBondClass: BarBondClass
     ): SlabDesignResult {
         // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
         InputGuard.positive("fcu", fcu)
@@ -93,7 +95,7 @@ class SBCJoistSlab : HordiSlabDesign {
         val fc = fcu / GAMMA_C          // fcd = fcu / γc  (SBC 304-4.2.2)
         val fsd = fy / GAMMA_S          // fsd = fy  / γs  (SBC 304-4.2.2)
         val d = totalThickness - MIN_COVER - HALF_BAR_DIA  // effective depth
-        codeNotes.add("Effective-depth convention fixed: d = t − ${MIN_COVER.toInt()} (cover) − ${HALF_BAR_DIA.toInt()} (half bar); caller coverMm=${coverMm.toInt()}/linkDiaMm=${linkDiaMm.toInt()}/mainBarDiaMm=${mainBarDiaMm.toInt()} accepted but not yet threaded into SBC geometry")
+        codeNotes.add("Effective-depth convention fixed: d = t − ${MIN_COVER.toInt()} (cover) − ${HALF_BAR_DIA.toInt()} (half bar); caller coverMm=${coverMm.toInt()}/linkDiaMm=${linkDiaMm.toInt()}/mainBarDiaMm=${mainBarDiaMm.toInt()} accepted, not threaded. NOTE: this engine is NOT the live factory SBC path — CalculationFactory returns SBCHordiSlabDesign")
         val ribDepth = totalThickness - toppingThickness
         val hf = toppingThickness       // flange (topping) thickness
 
@@ -246,7 +248,8 @@ class SBCJoistSlab : HordiSlabDesign {
             isSafe = isSafe,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            bondClassAssessed = false // bar surface/bond not assessed by this engine
         )
     }
 

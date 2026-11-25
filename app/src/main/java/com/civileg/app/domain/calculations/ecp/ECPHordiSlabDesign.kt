@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.calculations.base.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.SlabDesignResult
@@ -53,7 +54,8 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         loadCombination: LoadCombination,
         coverMm: Double,
         linkDiaMm: Double,
-        mainBarDiaMm: Double
+        mainBarDiaMm: Double,
+        barBondClass: BarBondClass
     ): SlabDesignResult {
         // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("fcu", fcu)
@@ -76,9 +78,18 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         codeNotes.add("${ECP2020JoistRules.EDITION} limit-state rib estimate; γc=$GAMMA_C, γs=$GAMMA_S embedded, no φ factors")
         codeNotes.add("Geometry inputs: cover ${coverMm.toInt()} mm to link outside, ${linkDiaMm.toInt()} mm link, ${mainBarDiaMm.toInt()} mm main bars — caller inputs or interface defaults, not code minima")
 
-        // Bond class inferred from fy only (interface carries no bar-type input).
-        val deformed = fy > 240.0
-        codeNotes.add("Bar bond class inferred from fy = ${fy.toInt()} N/mm² (${if (deformed) "high-bond deformed" else "mild plain"}) — inferred, not an input")
+        // Bar surface/bond classification is an explicit input. fy alone does
+        // not establish it; UNKNOWN takes the conservative Eq. 4-9 plain-bar
+        // floor and is reported as an ESTIMATE, never as acceptance.
+        val deformed = when (barBondClass) {
+            BarBondClass.DEFORMED -> true
+            BarBondClass.PLAIN -> false
+            BarBondClass.UNKNOWN -> false // conservative envelope
+        }
+        when (barBondClass) {
+            BarBondClass.UNKNOWN -> codeNotes.add("ESTIMATE, not acceptance: bar surface/bond UNKNOWN — Eq. 4-9 applies the conservative plain-bar floor (0.25%) for fy = ${fy.toInt()} N/mm²; declare barBondClass to qualify")
+            else -> codeNotes.add("Bar surface declared by caller: $barBondClass — Eq. 4-9 ${if (deformed) "deformed-bar" else "plain-bar"} floor applied")
+        }
 
         // Effective depth to the main-bar centre inside the link.
         val d = totalThickness - coverMm - linkDiaMm - mainBarDiaMm / 2.0
@@ -181,7 +192,13 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         val shearUtilization = if (vc > 0) designShear / vc else Double.POSITIVE_INFINITY
         val areaUtilization = if (asProvided > 0) asRequired / asProvided else Double.POSITIVE_INFINITY
         val utilizationRatio = maxOf(shearUtilization, areaUtilization, if (flexureSafe) 0.0 else 2.0)
-        val isSafe = flexureSafe && shearSafe && areaSufficient
+        // UNKNOWN bond class is an unassessed material input: it gates isSafe
+        // (machine-readable), not just the notes — an estimate cannot be accepted.
+        val bondAssessed = barBondClass != BarBondClass.UNKNOWN
+        if (!bondAssessed) {
+            warnings.add("Bar surface/bond class UNKNOWN — result is a conservative estimate and cannot be accepted; declare barBondClass to qualify")
+        }
+        val isSafe = flexureSafe && shearSafe && areaSufficient && bondAssessed
 
         if (!areaSufficient) warnings.add("Adopted main bars provide less than the calculated required steel area")
         codeNotes.add("Estimate scope: positive-moment rectangular-web rib section + concrete-only shear. Anchorage, T-flange credit, negative moment, serviceability and adopted detailing are outside this estimate — see ECP2020JoistCaseReview for declared cases.")
@@ -196,7 +213,8 @@ class ECPHordiSlabDesign : HordiSlabDesign {
             isSafe = isSafe,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            bondClassAssessed = bondAssessed
         )
     }
 }

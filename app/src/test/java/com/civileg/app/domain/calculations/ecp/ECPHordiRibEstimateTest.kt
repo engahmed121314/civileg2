@@ -16,11 +16,16 @@ import kotlin.math.sqrt
  */
 class ECPHordiRibEstimateTest {
 
-    private fun design(t: Double = 250.0, topping: Double = 50.0, moment: Double, shear: Double = 5.0) =
+    private fun design(
+        t: Double = 250.0, topping: Double = 50.0, moment: Double, shear: Double = 5.0,
+        bondClass: com.civileg.app.domain.calculations.base.BarBondClass =
+            com.civileg.app.domain.calculations.base.BarBondClass.UNKNOWN
+    ) =
         ECPHordiSlabDesign().designHordiSlab(
             fcu = 30.0, fy = 400.0, ribWidth = 150.0, ribSpacing = 600.0,
             totalThickness = t, toppingThickness = topping, span = 6000.0,
-            designMoment = moment, designShear = shear, loadCombination = LoadCombination.DEAD_LIVE
+            designMoment = moment, designShear = shear, loadCombination = LoadCombination.DEAD_LIVE,
+            barBondClass = bondClass
         )
 
     @Test
@@ -30,12 +35,14 @@ class ECPHordiRibEstimateTest {
         // Eq 4-9: μ-eq 97.51 < calc; floor 0.0018·150·250 = 67.5 → AsReq = 144.86
         // bars: ceil(144.86/113.097) = 2 → 226.19 mm²
         // Vc = 0.16·√20·150·211/1000 = 22.65 kN (concrete-only, eligible: 250 ≤ 250)
-        val r = design(moment = 10.0)
+        val r = design(moment = 10.0,
+            bondClass = com.civileg.app.domain.calculations.base.BarBondClass.DEFORMED)
         assertEquals(144.86, r.requiredReinforcement, 0.5)
         assertEquals(226.19, r.providedReinforcement, 0.01)
         assertEquals(22.649, r.shearCapacity, 0.01)
         assertEquals(12.0, r.barDiameter, 0.0)
         assertTrue(r.isSafe)
+        assertTrue(r.bondClassAssessed)
         assertEquals(144.86 / 226.19, r.utilizationRatio, 0.01)
     }
 
@@ -107,13 +114,34 @@ class ECPHordiRibEstimateTest {
     }
 
     @Test
-    fun `minimum steel Eq 4-9 governs very small moments`() {
-        // M = 1 kN·m: capped asCalc = 14.3 < min; Eq 4-9 min(1.3·14.3, 97.5)=18.6
-        // vs floor 0.0018·150·250 = 67.5 → AsReq = 67.5, 1 bar suffices → but
-        // adoption takes ceil(67.5/113.1) = 1 bar
+    fun `minimum steel Eq 4-9 governs very small moments with conservative UNKNOWN bond floor`() {
+        // M = 1 kN·m: capped asCalc = 14.3 < min; Eq 4-9 min(1.3·14.3, 97.5)=18.6.
+        // Default barBondClass = UNKNOWN → conservative plain-bar floor
+        // 0.0025·150·250 = 93.75 (not the deformed 67.5) → AsReq = 93.75, 1 bar.
+        // Regression (lead): UNKNOWN is unassessed — isSafe MUST be false and
+        // bondClassAssessed false even though every numeric check passed.
         val r = design(moment = 1.0)
-        assertEquals(67.5, r.requiredReinforcement, 0.5)
+        assertEquals(93.75, r.requiredReinforcement, 0.5)
         assertEquals(113.10, r.providedReinforcement, 0.01)
+        assertFalse(r.isSafe)
+        assertFalse(r.bondClassAssessed)
+        assertTrue(r.warnings.any { it.contains("cannot be accepted") })
+        assertTrue(r.codeNotes.any { it.contains("ESTIMATE, not acceptance") })
+    }
+
+    @Test
+    fun `declared DEFORMED bond class applies the deformed Eq 4-9 floor explicitly`() {
+        // Same case with an explicit declaration: floor 0.0018·150·250 = 67.5.
+        val r = ECPHordiSlabDesign().designHordiSlab(
+            fcu = 30.0, fy = 400.0, ribWidth = 150.0, ribSpacing = 600.0,
+            totalThickness = 250.0, toppingThickness = 50.0, span = 6000.0,
+            designMoment = 1.0, designShear = 5.0, loadCombination = LoadCombination.DEAD_LIVE,
+            barBondClass = com.civileg.app.domain.calculations.base.BarBondClass.DEFORMED
+        )
+        assertEquals(67.5, r.requiredReinforcement, 0.5)
         assertTrue(r.isSafe)
+        assertTrue(r.bondClassAssessed)
+        assertTrue(r.codeNotes.any { it.contains("declared by caller") })
+        assertFalse(r.codeNotes.any { it.contains("ESTIMATE, not acceptance") })
     }
 }

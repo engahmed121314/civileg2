@@ -178,11 +178,12 @@ class SBCJoistSlabTest {
         val ecpResult = run(ecp, 600.0)
 
         // Per-code shear formats with their own hand-computed expectations:
-        // SBC 0.25·√(fcu/γc)·bw·d·φ with d=220 (cover20+halfBar10); ACI 0.17·√(0.8fcu)·bw·d
-        // with d=225 and φ·1.1 joist factor; ECP Eq.4-29 concrete-only 0.16·√(fcu/γc)·bw·d
-        // with NO φ factor and d=211 from declared adoptions (cover25+link8+bar12/2).
+        // SBC 0.25·√(fcu/γc)·bw·d·φ with d=220 (fixed cover20+halfBar10, non-live engine);
+        // ACI 0.17·√(0.8fcu)·bw·d with d=250−25−6=219 (caller cover+bar radius) and φ·1.1
+        // joist factor; ECP Eq.4-29 concrete-only 0.16·√(fcu/γc)·bw·d with NO φ factor
+        // and d=211 from interface defaults (cover25+link8+bar12/2).
         assertEquals(0.25 * sqrt(30.0 / 1.5) * 150.0 * 220.0 / 1000.0 * 0.75, sbcResult.shearCapacity, 1e-9)
-        assertEquals(0.17 * sqrt(30.0 * 0.8) * 150.0 * 225.0 / 1000.0 * 0.75 * 1.1, aciResult.shearCapacity, 1e-9)
+        assertEquals(0.17 * sqrt(30.0 * 0.8) * 150.0 * 219.0 / 1000.0 * 0.75 * 1.1, aciResult.shearCapacity, 1e-9)
         assertEquals(0.16 * sqrt(30.0 / 1.5) * 150.0 * 211.0 / 1000.0, ecpResult.shearCapacity, 1e-9)
         assertTrue("SBC shear=${sbcResult.shearCapacity}, ACI shear=${aciResult.shearCapacity}",
             sbcResult.shearCapacity > aciResult.shearCapacity)

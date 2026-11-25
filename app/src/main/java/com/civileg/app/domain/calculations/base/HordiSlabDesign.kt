@@ -2,10 +2,21 @@ package com.civileg.app.domain.calculations.base
 
 import com.civileg.app.domain.entities.*
 
+/** Bar surface/bond classification. fy alone does not establish it; when the
+ * caller cannot declare it, pass UNKNOWN — engines must take the conservative
+ * envelope and report it as an estimate, never as acceptance. */
+enum class BarBondClass { DEFORMED, PLAIN, UNKNOWN }
+
 /**
  * Interface for Hordi/Ribbed/Joist Slab design.
  */
 interface HordiSlabDesign {
+    companion object {
+        const val DEFAULT_COVER_MM = 25.0
+        const val DEFAULT_LINK_DIA_MM = 8.0
+        const val DEFAULT_MAIN_BAR_DIA_MM = 12.0
+    }
+
     fun designHordiSlab(
         fcu: Double,
         fy: Double,
@@ -17,8 +28,9 @@ interface HordiSlabDesign {
         designMoment: Double,       // kN.m/rib
         designShear: Double,        // kN/rib
         loadCombination: LoadCombination,
-        coverMm: Double = 25.0,     // concrete cover to link outside, mm
-        linkDiaMm: Double = 8.0,    // link/stirrup diameter, mm
-        mainBarDiaMm: Double = 12.0 // main bar diameter, mm
+        coverMm: Double = DEFAULT_COVER_MM,     // concrete cover to link outside, mm
+        linkDiaMm: Double = DEFAULT_LINK_DIA_MM,    // link/stirrup diameter, mm
+        mainBarDiaMm: Double = DEFAULT_MAIN_BAR_DIA_MM, // main bar diameter, mm
+        barBondClass: BarBondClass = BarBondClass.UNKNOWN
     ): SlabDesignResult
 }

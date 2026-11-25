@@ -76,6 +76,7 @@ class HordiSlabViewModel @Inject constructor(
         loadCombination: LoadCombination,
         designCode: String = "ECP",
         coverMm: Double = 25.0,
+        barBondClass: com.civileg.app.domain.calculations.base.BarBondClass = com.civileg.app.domain.calculations.base.BarBondClass.UNKNOWN,
         detailCase: com.civileg.app.domain.calculations.utils.JoistDetailCase = com.civileg.app.domain.calculations.utils.JoistDetailCase()
     ) {
         clearResult()
@@ -130,7 +131,8 @@ class HordiSlabViewModel @Inject constructor(
                     designMoment = designMoment,
                     designShear = designShear,
                     loadCombination = loadCombination,
-                    coverMm = coverMm
+                    coverMm = coverMm,
+                    barBondClass = barBondClass
                 )
                 val frozenResult = result.copy(warnings = result.warnings.toList(), codeNotes = result.codeNotes.toList())
                 if (calculatedCase.complete(ticket, input, frozenResult)) _result.value = frozenResult

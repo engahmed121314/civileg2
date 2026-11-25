@@ -123,7 +123,14 @@ data class SlabDesignResult(
     val isSafe: Boolean,
     val utilizationRatio: Double,
     val warnings: List<String> = emptyList(),
-    val codeNotes: List<String> = emptyList()
+    val codeNotes: List<String> = emptyList(),
+    /** Machine-readable qualification: false when an input material property
+     * (bar surface/bond class) was not declared and the result rests on a
+     * conservative estimate. A false value blocks engineering acceptance even
+     * when every numeric check passed. Default FALSE (fail-closed): an engine
+     * that omits this field has NOT assessed bond class and must not read as
+     * assessed; engines that evaluate it set the value explicitly. */
+    val bondClassAssessed: Boolean = false
 ) : Parcelable
 
 @Parcelize
