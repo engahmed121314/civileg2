@@ -733,7 +733,7 @@ fun SeismicScreen(
                                                 baseShear = res.baseShearResult.baseShear,
                                                 fundamentalPeriod = res.fundamentalPeriod,
                                                 spectralAccel = res.spectralAccel,
-                                                isSafe = res.baseShearResult.driftIsSafe
+                                                isSafe = com.civileg.app.viewmodel.SeismicExportStatus.isSafe(res.baseShearResult)
                                             )
                                         } catch (e: Exception) {
                                             android.util.Log.e("SeismicScreen", "Drawing gen failed", e)
@@ -747,10 +747,11 @@ fun SeismicScreen(
                                             designType = "Seismic Analysis — ${selectedCode.displayName}",
                                             inputs = details,
                                             results = emptyMap(),
-                                            safetyChecks = emptyList(),
-                                            isSafe = res.baseShearResult.driftIsSafe,
+                                            safetyChecks = com.civileg.app.viewmodel.SeismicExportStatus.checks(res.baseShearResult),
+                                            isSafe = com.civileg.app.viewmodel.SeismicExportStatus.isSafe(res.baseShearResult),
                                             drawingBitmap = drawingBitmap,
-                                            fileName = "Seismic_Report_${System.currentTimeMillis()}"
+                                            fileName = "Seismic_Report_${System.currentTimeMillis()}",
+                                            assessmentPending = com.civileg.app.viewmodel.SeismicExportStatus.assessmentPending(res.baseShearResult)
                                         )
                                         if (filePath == null) {
                                             android.widget.Toast.makeText(context, labelError, android.widget.Toast.LENGTH_LONG).show()

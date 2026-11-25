@@ -1420,7 +1420,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
     var expandedElectrode by remember { mutableStateOf(false) }
     var selectedElectrode by remember { mutableStateOf(ElectrodeType.E70XX) }
     var appliedWeldForce by remember { mutableStateOf("100") }
-    var connectionDemandError by remember { mutableStateOf<String?>(null) }
+    var connectionDemandError by remember { mutableStateOf<ConnectionInputProblem?>(null) }
 
     var plateThickness by remember { mutableStateOf("10") }
     var fuPlate by remember { mutableStateOf("400") }
@@ -1655,13 +1655,20 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                 onClick = {
                     val boltActive = connectionType < 3 || connectionType == 4
                     val weldActive = connectionType >= 2
-                    val demandProblem = ConnectionDemandInput.error(
+                    val demandProblem = ConnectionDemandInput.problem(
                         boltActive = boltActive,
+                        boltGeometryShown = connectionType < 3,
                         tensionShown = connectionType != 0,
                         weldActive = weldActive,
                         shear = appliedShear,
                         tension = appliedTension,
-                        weldForce = appliedWeldForce
+                        weldForce = appliedWeldForce,
+                        boltDiameter = boltDiameter,
+                        boltCount = numBolts,
+                        plateThickness = plateThickness,
+                        fuPlate = fuPlate,
+                        weldSize = weldSize,
+                        weldLength = weldLength
                     )
                     connectionDemandError = demandProblem
                     if (demandProblem != null) {
@@ -1679,15 +1686,15 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                             else -> BoltConnectionType.BEARING
                         }
                         boltResult = designer.designBoltedConnection(
-                            boltDiameter = boltDiameter.toDoubleOrNull() ?: 20.0,
+                            boltDiameter = if (connectionType < 3) boltDiameter.trim().replace(',', '.').toDouble() else boltDiameter.toDoubleOrNull() ?: 20.0,
                             boltGrade = selectedBoltGrade,
-                            numberOfBolts = numBolts.toIntOrNull() ?: 4,
+                            numberOfBolts = if (connectionType < 3) numBolts.trim().toInt() else numBolts.toIntOrNull() ?: 4,
                             boltPattern = selectedPattern,
                             boltConnectionType = connType,
                             appliedShear = appliedShear.trim().replace(',', '.').toDouble(),
                             appliedTension = if (connectionType != 0) appliedTension.trim().replace(',', '.').toDouble() else 0.0,
-                            plateThickness = plateThickness.toDoubleOrNull() ?: 10.0,
-                            fuPlate = fuPlate.toDoubleOrNull() ?: 400.0,
+                            plateThickness = if (connectionType < 3) plateThickness.trim().replace(',', '.').toDouble() else plateThickness.toDoubleOrNull() ?: 10.0,
+                            fuPlate = if (connectionType < 3) fuPlate.trim().replace(',', '.').toDouble() else fuPlate.toDoubleOrNull() ?: 400.0,
                             isDoubleShear = isDoubleShear,
                             edgeDistance = edgeDistance.toDoubleOrNull(),
                             spacing = boltSpacing.toDoubleOrNull(),
@@ -1698,19 +1705,19 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                     if (connectionType >= 2) {
                         weldResult = designer.designWeldedConnection(
                             weldType = WeldType.FILLET,
-                            weldSize = weldSize.toDoubleOrNull() ?: 6.0,
-                            weldLength = weldLength.toDoubleOrNull() ?: 200.0,
+                            weldSize = weldSize.trim().replace(',', '.').toDouble(),
+                            weldLength = weldLength.trim().replace(',', '.').toDouble(),
                             electrodeType = selectedElectrode,
                             appliedForce = appliedWeldForce.trim().replace(',', '.').toDouble(),
-                            plateThickness = plateThickness.toDoubleOrNull() ?: 10.0
+                            plateThickness = plateThickness.trim().replace(',', '.').toDoubleOrNull() ?: 10.0
                         )
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.Default.Engineering
             )
-            connectionDemandError?.let { msg ->
-                AppText(msg, color = MaterialTheme.colorScheme.error, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            connectionDemandError?.let { problem ->
+                AppText(stringResource(problem.messageRes()), color = MaterialTheme.colorScheme.error, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
             }
         }
 

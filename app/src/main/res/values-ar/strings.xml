@@ -2452,4 +2452,14 @@
     <string name="toolbox_title">صندوق الأدوات</string>
     <string name="toolbox_subtitle">آلة حاسبة ومحول وحدات ومسطرة وميزان مياه</string>
     <string name="building_plan_title">مخطط 2D</string>
+    <string name="steel_err_bolt_shear">أدخل قوة القص المؤثرة Vu (صفر أو أكثر) قبل تصميم الوصلة المسمارية.</string>
+    <string name="steel_err_bolt_tension">أدخل قوة الشد المؤثرة Tu (صفر أو أكثر) قبل تصميم الوصلة المسمارية.</string>
+    <string name="steel_err_bolt_zero_load">حمل المسامير المؤثر يساوي صفرًا فلا يوجد ما يُفحص. أدخل Vu أو Tu أكبر من الصفر.</string>
+    <string name="steel_err_weld_force">أدخل قوة اللحام المؤثرة (أكبر من الصفر) قبل تصميم اللحام.</string>
+    <string name="steel_err_bolt_diameter">أدخل قطر المسمار (أكبر من الصفر) قبل التصميم.</string>
+    <string name="steel_err_bolt_count">أدخل عدد المسامير (عدد صحيح 1 أو أكثر) قبل التصميم.</string>
+    <string name="steel_err_plate_thickness">أدخل سمك الصفيحة (أكبر من الصفر) قبل التصميم.</string>
+    <string name="steel_err_fu_plate">أدخل مقاومة شد الصفيحة Fu (أكبر من الصفر) قبل التصميم.</string>
+    <string name="steel_err_weld_size">أدخل مقاس اللحام (أكبر من الصفر) قبل تصميم اللحام.</string>
+    <string name="steel_err_weld_length">أدخل طول اللحام (أكبر من الصفر) قبل تصميم اللحام.</string>
 </resources>

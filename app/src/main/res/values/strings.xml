@@ -2449,4 +2449,14 @@
     <string name="toolbox_title">Toolbox</string>
     <string name="toolbox_subtitle">Calculator, converter, ruler and spirit level</string>
     <string name="building_plan_title">2D Plan</string>
+    <string name="steel_err_bolt_shear">Enter the applied shear Vu (0 or more) before designing the bolted connection.</string>
+    <string name="steel_err_bolt_tension">Enter the applied tension Tu (0 or more) before designing the bolted connection.</string>
+    <string name="steel_err_bolt_zero_load">The applied bolt load is zero, so there is nothing to check. Enter Vu or Tu above zero.</string>
+    <string name="steel_err_weld_force">Enter the applied weld force (above zero) before designing the weld.</string>
+    <string name="steel_err_bolt_diameter">Enter the bolt diameter (above zero) before designing.</string>
+    <string name="steel_err_bolt_count">Enter the number of bolts (a whole number, 1 or more) before designing.</string>
+    <string name="steel_err_plate_thickness">Enter the plate thickness (above zero) before designing.</string>
+    <string name="steel_err_fu_plate">Enter the plate tensile strength Fu (above zero) before designing.</string>
+    <string name="steel_err_weld_size">Enter the weld size (above zero) before designing the weld.</string>
+    <string name="steel_err_weld_length">Enter the weld length (above zero) before designing the weld.</string>
 </resources>

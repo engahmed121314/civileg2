@@ -215,7 +215,7 @@ class SeismicViewModel @Inject constructor(
                     "Response Modification R" to "${"%.1f".format(res.responseModification)}",
                     "Code Reference" to res.codeReference
                 )
-                val safetyChecks = emptyList<GenericSafetyCheck>()
+                val safetyChecks = SeismicExportStatus.checks(res)
 
                 val drawingBitmap = pendingDrawingBitmap ?: try {
                     val fundPeriod = state.spectrumValues.maxByOrNull { it.spectralAcceleration }?.period ?: 0.0
@@ -246,8 +246,9 @@ class SeismicViewModel @Inject constructor(
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
-                    // Was a hard-coded true: the report said SAFE even when the drift check failed.
-                    isSafe = res.driftIsSafe && res.warnings.isEmpty(),
+                    // Was a hard-coded true. Now a failed drift check stays a failure and anything else is preliminary.
+                    isSafe = SeismicExportStatus.isSafe(res),
+                    assessmentPending = SeismicExportStatus.assessmentPending(res),
                     drawingBitmap = drawingBitmap,
                     drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
@@ -278,7 +279,7 @@ class SeismicViewModel @Inject constructor(
             repository.saveSeismicDesign(projectId, name, com.civileg.app.domain.calculations.utils.CalculatorEngine.SeismicResult(
                 baseShear = res.baseShear,
                 storyDrift = res.maxStoryDrift,  // mm — equivalent-SDOF drift estimate
-                isSafe = res.driftIsSafe && res.warnings.isEmpty(),
+                isSafe = SeismicExportStatus.archivedIsSafe(res),
                 code = engineCode,
                 zone = res.zoneFactor,
                 importance = res.importanceFactor,
