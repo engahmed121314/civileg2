@@ -335,8 +335,12 @@ fun StairScreen(
                 
                 if (designUsable) {
                 item {
+                    // The ratio is one flexure check. While code acceptance is incomplete it must not read as an
+                    // approved/ideal section: show the preliminary caution state unless that check itself exceeds 1.0.
+                    val acceptanceIncomplete = !res.codeAcceptanceComplete
                     val ecoColor = when {
                         res.utilizationRatio > 1.0 -> Color.Red
+                        acceptanceIncomplete -> Color(0xFFEF6C00)
                         res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
                         res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
                         else -> Color(0xFF2196F3)
@@ -355,14 +359,16 @@ fun StairScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            if (res.utilizationRatio <= 1.0) Icons.Default.Verified
-                                            else Icons.Default.Dangerous,
+                                            if (res.utilizationRatio > 1.0) Icons.Default.Dangerous
+                                            else if (acceptanceIncomplete) Icons.Default.Warning
+                                            else Icons.Default.Verified,
                                             contentDescription = null,
                                             tint = ecoColor
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         AppText(
                                             if (res.utilizationRatio > 1.0) stringResource(R.string.tank_design_unsafe)
+                                            else if (acceptanceIncomplete) stringResource(R.string.design_caution)
                                             else if (res.utilizationRatio > 0.9) stringResource(R.string.design_caution)
                                             else if (res.utilizationRatio > 0.4) stringResource(R.string.beam_section_ideal)
                                             else stringResource(R.string.tank_section_large),

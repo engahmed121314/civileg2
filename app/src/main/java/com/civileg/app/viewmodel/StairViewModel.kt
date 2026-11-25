@@ -242,7 +242,7 @@ class StairViewModel @Inject constructor(
                         "Concrete Volume" to "${String.format("%.3f", currentResult.concreteVolume)} m³",
                         "Net flight steel only (not final)" to "${String.format("%.1f", currentResult.steelWeight)} kg",
                         "Quantity qualification" to "Final steel/BBS unavailable: excludes anchorage, bends, laps, top and landing steel",
-                        "Utilization" to "${(currentResult.utilizationRatio * 100).toInt()}%"
+                        "Flexure ratio rho/rho_max (one check, not an overall utilization)" to "${(currentResult.utilizationRatio * 100).toInt()}%"
                     )
                     val safetyChecks = currentResult.safetyChecks.map { chk ->
                         GenericSafetyCheck(
