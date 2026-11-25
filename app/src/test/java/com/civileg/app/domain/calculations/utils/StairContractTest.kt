@@ -24,6 +24,20 @@ class StairContractTest {
         type, 4.0, 150.0, 300.0, 5.0, 4.0, 25.0, 360.0, 12,
         DesignCode.ECP, width, support, landing, landing, landing)
 
+    @Test fun traceUsesSelectedEngineFormsAndAreaLoadUnits() {
+        for (code in DesignCode.entries) {
+            val r = engine().designStaircase(CalculatorEngine.StairType.SINGLE_FLIGHT,
+                4.0,150.0,300.0,5.0,4.0,25.0,360.0,12,code,1400.0,
+                StairSupportCondition.SIMPLY_SUPPORTED)
+            assertEquals("kN/m2",r.calculationSteps[1].unit)
+            assertTrue(r.calculationSteps[3].formula.contains(if(code==DesignCode.ECP) "fy/1.15" else "0.9*b*d^2"))
+            assertTrue(r.calculationSteps[3].formulaWithValues.contains("mm2/m; dia"))
+            assertTrue(r.calculationSteps[4].formula.contains("0.20*As,main"))
+            assertTrue(r.calculationSteps[2].formula.contains("0.1250"))
+            assertFalse(r.codeAcceptanceComplete)
+        }
+    }
+
     @Test fun cantileverDoesNotIssueSingleFlightFallback() {
         val result = design(type = CalculatorEngine.StairType.CANTILEVER)
         assertFalse(result.isSafe)
