@@ -1051,9 +1051,13 @@ private fun StairFormulasCard(result:CalculatorEngine.StairResult) {
     Card(modifier=Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f))) {
         Column(modifier=Modifier.padding(12.dp)) {
             AppText("Applied calculation trace only. Selected-reference coverage incomplete.")
-            result.calculationSteps.forEach { step ->
-                FormulaItem("${step.stepNumber}. ${step.formula}")
-                AppText(step.formulaWithValues,style=MaterialTheme.typography.bodySmall)
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr) {
+                result.calculationSteps.forEach { step ->
+                    FormulaItem("${step.stepNumber}. ${step.formula}")
+                    AppText(step.formulaWithValues,style=MaterialTheme.typography.bodySmall)
+                }
+                AppText("Main: %.0f mm2/m; dia %d mm at %.0f mm".format(java.util.Locale.US,result.reinforcement.diameter*result.reinforcement.diameter*kotlin.math.PI/4*1000/result.reinforcement.spacing,result.reinforcement.diameter,result.reinforcement.spacing),style=MaterialTheme.typography.bodySmall)
+                AppText("Distribution: dia %d mm at %.0f mm".format(java.util.Locale.US,result.distributionReinforcement.diameter,result.distributionReinforcement.spacing),style=MaterialTheme.typography.bodySmall)
             }
         }
     }
