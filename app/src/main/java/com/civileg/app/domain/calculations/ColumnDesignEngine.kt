@@ -348,7 +348,7 @@ object ColumnDesignEngine {
         val barCount = (asProv.second / barArea).roundToInt()
         val mainWt = barCount * (H / 1000.0) * (preferredDia.toDouble().pow(2) / 162.0)
         val totalWt = (mainWt + tieWeight) * 1.05
-        codeNotes.add(when(code) { DesignCode.ECP -> "ECP 203-2025"; DesignCode.ACI -> "ACI 318-25"; else -> "SBC 304-2024" })
+        codeNotes.add(when(code) { DesignCode.ECP -> "ECP 203 (edition not verified)"; DesignCode.ACI -> "ACI 318 (edition not verified)"; else -> "SBC 304 (edition not verified)" })
 
         steps_s.add(CalculationStep(
             stepNum, "Verification & Summary",

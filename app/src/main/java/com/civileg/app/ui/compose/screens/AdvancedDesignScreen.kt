@@ -760,7 +760,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.beamContent(
         CodeChips(
             options = DesignCode.entries,
             selected = form.beamCode,
-            label = { it.version },
+            label = { it.name },
             onSelected = { form.beamCode = it }
         )
         Spacer(Modifier.height(8.dp))
@@ -851,7 +851,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.columnContent(
         CodeChips(
             options = DesignCode.entries,
             selected = form.colCode,
-            label = { it.version },
+            label = { it.name },
             onSelected = { form.colCode = it }
         )
     }
@@ -1410,7 +1410,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
         CodeChips(
             options = DesignCode.entries,
             selected = form.slabCode,
-            label = { it.version },
+            label = { it.name },
             onSelected = { form.slabCode = it }
         )
         Spacer(Modifier.height(8.dp))

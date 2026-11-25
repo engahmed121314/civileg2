@@ -105,10 +105,10 @@ class DrawingSummaryFactoryTest {
         val slabSummary = slabDrawingSummary(slab)
 
         assertTrue(footingSummary.isSafe)
-        assertEquals("ECP 203-2025", footingSummary.designCodeLabel)
+        assertEquals(com.civileg.app.domain.entities.DesignCode.ECP.version, footingSummary.designCodeLabel)
         assertEquals(0, footingSummary.failedCheckCount)
         assertTrue(slabSummary.isSafe)
-        assertEquals("SBC 304-2024", slabSummary.designCodeLabel)
+        assertEquals(com.civileg.app.domain.entities.DesignCode.SBC.version, slabSummary.designCodeLabel)
         assertEquals(1, slabSummary.safetyChecks.size)
     }
 
@@ -131,7 +131,7 @@ class DrawingSummaryFactoryTest {
         val summary = stairDrawingSummary(result)
 
         assertTrue(summary.isSafe)
-        assertEquals("ECP 203-2025", summary.designCodeLabel)
+        assertEquals(com.civileg.app.domain.entities.DesignCode.ECP.version, summary.designCodeLabel)
         assertEquals("55.0%", summary.utilizationPercent)
         assertEquals(0, summary.failedCheckCount)
     }
