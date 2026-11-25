@@ -4,9 +4,14 @@ import org.junit.Assert.*
 import org.junit.Test
 class ColumnActivePathTest {
  private fun engine(): CalculatorEngine {
-  val f=sun.misc.Unsafe::class.java.getDeclaredField("theUnsafe");f.isAccessible=true
-  return (f.get(null) as sun.misc.Unsafe).allocateInstance(CalculatorEngine::class.java) as CalculatorEngine
+  // No SettingsManager field is used by the path under test. Avoid a compile-time
+  // dependency on JDK-internal packages that Android's unit-test bootclasspath hides.
+  val type=Class.forName("sun.misc.Unsafe")
+  val field=type.getDeclaredField("theUnsafe").apply { isAccessible=true }
+  return type.getMethod("allocateInstance",Class::class.java)
+   .invoke(field.get(null),CalculatorEngine::class.java) as CalculatorEngine
  }
+
  @Test fun unavailableCapacityWithDemandDoesNotPass() {
   for(c in listOf(0.0,Double.NaN,Double.POSITIVE_INFINITY,-1.0)) {
    val r=ColumnMomentReview.assess(10.0,0.0,c,100.0)
