@@ -854,6 +854,15 @@ private fun DrawScope.drawDevelopmentAndLap(
     mainRebarDia: Double,
     cover: Double = 40.0
 ) {
+    // 0 = not computed (no grounded formula for this code/basis): draw no length geometry, only the status.
+    if (developmentLength <= 0.0 || lapLength <= 0.0) {
+        drawTextAnnotated(
+            text = "La / Lap: not computed",
+            x = beamLeft, y = beamBottom + 112f,
+            color = DevLengthColor, size = 22f
+        )
+        return
+    }
     val laPx = developmentLength.toFloat() * scale
     val lapPx = lapLength.toFloat() * scale
     val barR = max((mainRebarDia / 2f) * scale, 3.0).toFloat()
