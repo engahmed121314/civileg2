@@ -221,7 +221,13 @@ class BbsGeneratorTest {
 
     @Test
     fun `optimizeCutting should return valid optimization results`() {
-        val entries = BbsGenerator.generateBeamBbs("B1", validBeamResult())
+        // Beam BBS is not issued (unverified anchorage/hook lengths), so use explicit entries.
+        val entries = listOf(
+            BbsEntry(memberMark = "B1", barMark = "01", diameter = 16, shapeCode = 0, count = 4,
+                lengthA = 5000.0, totalLengthPerBar = 5000.0, totalWeightKg = 31.6),
+            BbsEntry(memberMark = "B1", barMark = "02", diameter = 12, shapeCode = 0, count = 2,
+                lengthA = 4000.0, totalLengthPerBar = 4000.0, totalWeightKg = 7.1)
+        )
         val result = BbsGenerator.optimizeCutting(entries, stockLength = 12000.0)
         assertNotNull("Result should not be null", result)
         assertTrue("Result should mention stock bars", result.contains("stock bars") || result.contains("Optimization"))
@@ -270,24 +276,22 @@ class BbsGeneratorTest {
     @Test
     fun `combineProjectBbs should combine multiple element lists`() {
         val beamEntries = BbsGenerator.generateBeamBbs("B1", validBeamResult())
+        assertTrue("Beam BBS is not issued", beamEntries.isEmpty())
         val colEntries = BbsGenerator.generateColumnBbs("C1", validColumnResult())
         val combined = BbsGenerator.combineProjectBbs(listOf(beamEntries, colEntries))
-        assertTrue("Combined list should have entries", combined.isNotEmpty())
-        // Beam and column have different diameters/shapeCodes, so they should not merge
-        assertTrue("Should have at least 4 entries (2 beam + 2 column)", combined.size >= 4)
+        assertTrue("Combined list should have the column entries", combined.isNotEmpty())
+        assertTrue("Should have at least 2 column entries", combined.size >= 2)
     }
 
     @Test
     fun `combineProjectBbs should deduplicate identical entries`() {
-        val beam1 = BbsGenerator.generateBeamBbs("B1", validBeamResult())
-        val beam2 = BbsGenerator.generateBeamBbs("B2", validBeamResult())
-        val combined = BbsGenerator.combineProjectBbs(listOf(beam1, beam2))
-        // Both beams have same diameter/shapeCode/lengthA/lengthB, so they should merge
-        // Original: 2 entries per beam × 2 beams = 4, but deduped should be ≤ 4
+        val col1 = BbsGenerator.generateColumnBbs("C1", validColumnResult())
+        val col2 = BbsGenerator.generateColumnBbs("C2", validColumnResult())
+        val combined = BbsGenerator.combineProjectBbs(listOf(col1, col2))
         assertTrue("Combined should have entries", combined.isNotEmpty())
-        // The main bars and stirrups should be merged since geometry is identical
-        assertTrue("Deduped entries should be fewer than raw total",
-            combined.size <= beam1.size + beam2.size)
+        // Identical geometry merges, so the total can only shrink
+        assertTrue("Deduped entries should not exceed the raw total",
+            combined.size <= col1.size + col2.size)
     }
 
     @Test
