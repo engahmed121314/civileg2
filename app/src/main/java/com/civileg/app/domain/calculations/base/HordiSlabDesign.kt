@@ -16,6 +16,9 @@ interface HordiSlabDesign {
         span: Double,               // mm
         designMoment: Double,       // kN.m/rib
         designShear: Double,        // kN/rib
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        coverMm: Double = 25.0,     // concrete cover to link outside, mm
+        linkDiaMm: Double = 8.0,    // link/stirrup diameter, mm
+        mainBarDiaMm: Double = 12.0 // main bar diameter, mm
     ): SlabDesignResult
 }

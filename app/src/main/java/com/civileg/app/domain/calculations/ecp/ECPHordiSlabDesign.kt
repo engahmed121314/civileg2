@@ -20,11 +20,14 @@ import kotlin.math.sqrt
  *  - Minimum steel: §4-2-1-2-ج Eq. 4-9 via ECP2020JoistRules (doc 4-9).
  *  - Shear: §4-2-2-1 concrete-only basis Eq. 4-29 (doc 4-18) through
  *    ECP2020JoistRules, gated by the shallow-rib exception §4-2-2-1-6-د-2
- *    (doc 4-22): web reinforcement design is NOT implemented here; ribs outside
- *    the exception cannot be qualified by this engine.
+ *    (doc 4-22). The exception only waives the link requirement when eligible;
+ *    the code does not prohibit links. Shear reinforcement DESIGN is outside
+ *    this engine's scope, so ribs outside the exception or beyond the
+ *    concrete-only capacity cannot be qualified here.
  *
- * Engine ADOPTIONS (declared, not code minima): cover to link outside 25 mm,
- * 8 mm link, 12 mm main bars. Effective depth d = t − cover − link − bar/2.
+ * Geometry inputs (caller-supplied or interface defaults 25/8/12, not code
+ * minima): cover to link outside, link diameter, main bar diameter.
+ * Effective depth d = t − cover − link − bar/2.
  * Bond class is inferred from fy (≤240 mild) because the interface carries no
  * bar-type input; aggregate-dependent bar spacing is unchecked.
  * The per-case grounded review (ECP2020JoistCaseReview) owns declared
@@ -35,9 +38,6 @@ class ECPHordiSlabDesign : HordiSlabDesign {
     companion object {
         private const val GAMMA_C = 1.5
         private const val GAMMA_S = 1.15
-        private const val ADOPTED_COVER_MM = 25.0
-        private const val ADOPTED_LINK_MM = 8.0
-        private const val ADOPTED_BAR_MM = 12.0
     }
 
     override fun designHordiSlab(
@@ -50,7 +50,10 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        coverMm: Double,
+        linkDiaMm: Double,
+        mainBarDiaMm: Double
     ): SlabDesignResult {
         // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("fcu", fcu)
@@ -64,18 +67,21 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         InputGuard.require(toppingThickness < totalThickness, "Topping must be thinner than total slab thickness")
         InputGuard.positive("span", span)
         InputGuard.notNull("loadCombination", loadCombination)
+        InputGuard.positive("coverMm", coverMm)
+        InputGuard.positive("linkDiaMm", linkDiaMm)
+        InputGuard.positive("mainBarDiaMm", mainBarDiaMm)
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         codeNotes.add("${ECP2020JoistRules.EDITION} limit-state rib estimate; γc=$GAMMA_C, γs=$GAMMA_S embedded, no φ factors")
-        codeNotes.add("Engine adoptions: cover ${ADOPTED_COVER_MM.toInt()} mm to link outside, ${ADOPTED_LINK_MM.toInt()} mm link, ${ADOPTED_BAR_MM.toInt()} mm main bars — adoptions, not code minima")
+        codeNotes.add("Geometry inputs: cover ${coverMm.toInt()} mm to link outside, ${linkDiaMm.toInt()} mm link, ${mainBarDiaMm.toInt()} mm main bars — caller inputs or interface defaults, not code minima")
 
         // Bond class inferred from fy only (interface carries no bar-type input).
         val deformed = fy > 240.0
         codeNotes.add("Bar bond class inferred from fy = ${fy.toInt()} N/mm² (${if (deformed) "high-bond deformed" else "mild plain"}) — inferred, not an input")
 
-        // Effective depth to the adopted bar centre inside the adopted link.
-        val d = totalThickness - ADOPTED_COVER_MM - ADOPTED_LINK_MM - ADOPTED_BAR_MM / 2.0
+        // Effective depth to the main-bar centre inside the link.
+        val d = totalThickness - coverMm - linkDiaMm - mainBarDiaMm / 2.0
         InputGuard.positive("effectiveDepth(t - cover - link - bar/2)", d)
 
         val fc = fcu / GAMMA_C
@@ -122,7 +128,7 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         }
 
         // ── Discrete bar adoption — no silent count cap ──
-        val barArea = PI * ADOPTED_BAR_MM * ADOPTED_BAR_MM / 4.0
+        val barArea = PI * mainBarDiaMm * mainBarDiaMm / 4.0
         val nBars: Int
         val asProvided: Double
         if (asRequired.isFinite()) {
@@ -133,13 +139,24 @@ class ECPHordiSlabDesign : HordiSlabDesign {
             asProvided = 0.0
         }
 
+        // ── Adopted-layout ductility — Table 4-1 re-evaluated on asProvided ──
+        // Discrete bar rounding raises As above the required area; a required
+        // area just under the c/d limit can round up across it (lead review).
+        if (flexureSafe && asRequired.isFinite() && asProvided > 0.0) {
+            val cOverDAdopted = asProvided * fyd / blockK / (0.8 * d)
+            if (cOverDAdopted > cMaxOverD) {
+                flexureSafe = false
+                warnings.add("Adopted layout $nBars × ${mainBarDiaMm.toInt()} mm raises c/d to ${String.format("%.3f", cOverDAdopted)} > $cMaxOverD (ECP 203-2020 Table 4-1) although the required area passed — enlarge rib; compression reinforcement not modelled")
+            }
+        }
+
         // ── One-layer bar fit inside the adopted link — §7-3-3-1 bar-diameter term only ──
         if (asRequired.isFinite() && flexureSafe) {
-            val insideWidth = ribWidth - 2.0 * (ADOPTED_COVER_MM + ADOPTED_LINK_MM)
-            val requiredWidth = nBars * ADOPTED_BAR_MM + (nBars - 1) * ADOPTED_BAR_MM
+            val insideWidth = ribWidth - 2.0 * (coverMm + linkDiaMm)
+            val requiredWidth = nBars * mainBarDiaMm + (nBars - 1) * mainBarDiaMm
             if (requiredWidth > insideWidth) {
                 flexureSafe = false
-                warnings.add("$nBars × ${ADOPTED_BAR_MM.toInt()} mm bars need ${String.format("%.0f", requiredWidth)} mm > ${String.format("%.0f", insideWidth)} mm inside a ${ribWidth.toInt()} mm rib (clear spacing ≥ bar dia, §7-3-3-1) — multi-layer detailing not modelled")
+                warnings.add("$nBars × ${mainBarDiaMm.toInt()} mm bars need ${String.format("%.0f", requiredWidth)} mm > ${String.format("%.0f", insideWidth)} mm inside a ${ribWidth.toInt()} mm rib (clear spacing ≥ bar dia, §7-3-3-1) — multi-layer detailing not modelled")
             } else {
                 codeNotes.add("One-layer bar fit checked against clear spacing ≥ bar dia only (§7-3-3-1); the 1.5×aggregate term is unchecked (no aggregate input)")
             }
@@ -151,10 +168,10 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         var shearSafe = true
         if (!concreteOnlyEligible) {
             shearSafe = false
-            warnings.add("Rib depth ${totalThickness.toInt()} mm exceeds the concrete-only exception of §4-2-2-1-6-د-2 (max(250, 2.5×topping, bw/2)); web reinforcement design is NOT implemented in this engine — the rib cannot be qualified here")
+            warnings.add("Rib depth ${totalThickness.toInt()} mm exceeds the concrete-only exception of §4-2-2-1-6-د-2 (max(250, 2.5×topping, bw/2)); the exception only waives links when eligible — the code does not prohibit them, but shear reinforcement design is outside this engine's scope, so the rib cannot be qualified here")
         } else if (designShear > vc) {
             shearSafe = false
-            warnings.add("Shear demand ${String.format("%.1f", designShear)} kN exceeds the concrete-only capacity ${String.format("%.1f", vc)} kN (Eq. 4-29) and links are not permitted under §4-2-2-1-6-د-2 — enlarge rib")
+            warnings.add("Shear demand ${String.format("%.1f", designShear)} kN exceeds the concrete-only capacity ${String.format("%.1f", vc)} kN (Eq. 4-29); §4-2-2-1-6-د-2 does not prohibit links, but designing them is outside this engine's scope — enlarge rib")
         } else {
             codeNotes.add("Concrete-only shear basis (Eq. 4-29) under §4-2-2-1-6-د-2 shallow-rib exception")
         }
@@ -172,7 +189,7 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         return SlabDesignResult(
             requiredReinforcement = if (asRequired.isFinite()) asRequired else Double.POSITIVE_INFINITY,
             providedReinforcement = asProvided,
-            barDiameter = ADOPTED_BAR_MM,
+            barDiameter = mainBarDiaMm,
             barSpacing = ribSpacing,
             minThickness = totalThickness,
             shearCapacity = vc,

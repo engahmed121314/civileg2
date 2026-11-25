@@ -10,7 +10,7 @@ import kotlin.math.sqrt
 /**
  * Hand-computed numeric reference for the ECP 203-2020 hordi rib estimate.
  * Values derived from the printed equations (Eq. 4-1/4-2, Eq. 4-9, Eq. 4-29,
- * Table 4-1) for the declared engine adoptions (cover 25, link 8, bar 12):
+ * Table 4-1) for the interface geometry defaults (cover 25, link 8, bar 12):
  * d = t − 39 mm, blockK = 0.67·(fcu/γc)·b, fyd = fy/γs.
  * Arithmetic checks only — not engineering acceptance.
  */
@@ -80,6 +80,30 @@ class ECPHordiRibEstimateTest {
         assertEquals(144.86, r.requiredReinforcement, 0.5)
         assertTrue(r.codeNotes.any { it.contains("ECP 203-2020") })
         assertFalse(r.codeNotes.any { it.contains("2025") })
+    }
+
+    @Test
+    fun `adopted layout ductility regression - bar round-up crosses Table 4-1`() {
+        // M = 24.54 kN·m: asCalc = 399.97 → c/d(required) = 0.410 ≤ 0.42 passes;
+        // adoption rounds up to 4φ12 = 452.39 mm² → c/d(adopted) = 0.464 > 0.42.
+        // The adopted layout must fail even though the required area passed.
+        val r = design(moment = 24.54)
+        assertFalse(r.isSafe)
+        assertTrue(r.warnings.any { it.contains("Adopted layout") && it.contains("Table 4-1") })
+    }
+
+    @Test
+    fun `user cover propagates into effective depth`() {
+        // coverMm = 35 → d = 250 − 35 − 8 − 6 = 201 (vs default 211)
+        // disc = (2010·201)² − 2·2010·1e7 → asCalc = 153.13 mm²
+        val r = ECPHordiSlabDesign().designHordiSlab(
+            fcu = 30.0, fy = 400.0, ribWidth = 150.0, ribSpacing = 600.0,
+            totalThickness = 250.0, toppingThickness = 50.0, span = 6000.0,
+            designMoment = 10.0, designShear = 5.0, loadCombination = LoadCombination.DEAD_LIVE,
+            coverMm = 35.0
+        )
+        assertEquals(153.13, r.requiredReinforcement, 0.5)
+        assertTrue(r.codeNotes.any { it.contains("cover 35") })
     }
 
     @Test

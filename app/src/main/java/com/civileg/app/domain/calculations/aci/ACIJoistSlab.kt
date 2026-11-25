@@ -20,7 +20,10 @@ class ACIJoistSlab : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        coverMm: Double,
+        linkDiaMm: Double,
+        mainBarDiaMm: Double
     ): SlabDesignResult {
         // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
         InputGuard.positive("fcu", fcu)
@@ -66,7 +69,8 @@ class ACIJoistSlab : HordiSlabDesign {
             minThickness = h,
             shearCapacity = phiVc,
             isSafe = isSafe,
-            utilizationRatio = if (phiVc > 0) designShear / phiVc else 0.0
+            utilizationRatio = if (phiVc > 0) designShear / phiVc else 0.0,
+            codeNotes = listOf("Effective depth fixed at h - 25 mm; caller coverMm=${coverMm.toInt()}/linkDiaMm=${linkDiaMm.toInt()}/mainBarDiaMm=${mainBarDiaMm.toInt()} accepted but not yet threaded into ACI geometry")
         )
     }
 }

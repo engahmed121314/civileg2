@@ -70,7 +70,10 @@ class SBCJoistSlab : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        coverMm: Double,
+        linkDiaMm: Double,
+        mainBarDiaMm: Double
     ): SlabDesignResult {
         // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
         InputGuard.positive("fcu", fcu)
@@ -90,6 +93,7 @@ class SBCJoistSlab : HordiSlabDesign {
         val fc = fcu / GAMMA_C          // fcd = fcu / γc  (SBC 304-4.2.2)
         val fsd = fy / GAMMA_S          // fsd = fy  / γs  (SBC 304-4.2.2)
         val d = totalThickness - MIN_COVER - HALF_BAR_DIA  // effective depth
+        codeNotes.add("Effective-depth convention fixed: d = t − ${MIN_COVER.toInt()} (cover) − ${HALF_BAR_DIA.toInt()} (half bar); caller coverMm=${coverMm.toInt()}/linkDiaMm=${linkDiaMm.toInt()}/mainBarDiaMm=${mainBarDiaMm.toInt()} accepted but not yet threaded into SBC geometry")
         val ribDepth = totalThickness - toppingThickness
         val hf = toppingThickness       // flange (topping) thickness
 

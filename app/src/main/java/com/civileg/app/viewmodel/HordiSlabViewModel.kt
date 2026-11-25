@@ -129,7 +129,8 @@ class HordiSlabViewModel @Inject constructor(
                     span = span,
                     designMoment = designMoment,
                     designShear = designShear,
-                    loadCombination = loadCombination
+                    loadCombination = loadCombination,
+                    coverMm = coverMm
                 )
                 val frozenResult = result.copy(warnings = result.warnings.toList(), codeNotes = result.codeNotes.toList())
                 if (calculatedCase.complete(ticket, input, frozenResult)) _result.value = frozenResult
