@@ -315,6 +315,22 @@ fun StairScreen(
 
             result?.let { res ->
                 item { SectionHeader(stringResource(R.string.stair_results), R.drawable.ic_calculator) }
+
+                if (res.analysisStatus == com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE) {
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFDECEA)),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                AppText(
+                                    "No analysis model for this stair case. The numbers below are a single-flight fallback and are NOT a design for this case. Saving, PDF and quantities are disabled. / لا يوجد نموذج تحليل لهذه الحالة. الأرقام أدناه تقدير لسلم بمسار واحد وليست تصميمًا لهذه الحالة، والحفظ وPDF والكميات معطّلة.",
+                                    color = Color(0xFFC62828), fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
                 
                 item {
                     val ecoColor = when {
@@ -416,7 +432,7 @@ fun StairScreen(
                             stairWidthMm = res.stairWidthMm
                         )
                     }.getOrDefault(emptyList())
-                    if (bbsEntries.isNotEmpty()) {
+                    if (bbsEntries.isNotEmpty() && res.analysisStatus != com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE) {
                         item { BbsTableCard(bbsEntries, title = "Stair Bar Bending Schedule") }
                     }
 
@@ -428,7 +444,7 @@ fun StairScreen(
                         )
                     }.getOrDefault(emptyList())
                     if (boqRows.isNotEmpty()) {
-                        item { BoqTableCard(boqRows, title = "Stair Bill of Quantities") }
+                        if (res.analysisStatus != com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE) item { BoqTableCard(boqRows, title = "Stair Bill of Quantities") }
                     }
                 }
 
@@ -486,7 +502,7 @@ fun StairScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            enabled = !isExporting,
+                            enabled = !isExporting && res.analysisStatus != com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE,
                             loading = isExporting,
                             icon = Icons.Default.PictureAsPdf
                         )
@@ -494,6 +510,7 @@ fun StairScreen(
                         AppButton(
                             label = stringResource(R.string.save),
                             onClick = { showSaveDialog = true },
+                            enabled = res.analysisStatus != com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE,
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.Save,
                             containerOverride = MaterialTheme.colorScheme.secondary,

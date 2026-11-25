@@ -250,7 +250,6 @@ fun FrameAnalysisScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
@@ -262,7 +261,7 @@ fun FrameAnalysisScreen(
                                 onClick = { viewModel.setDiagramType(type) },
                                 label = {
                                     AppText(
-                                        text = type.localizedLabel,
+                                        text = type.name,
                                         fontSize = 12.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         maxLines = 1,
@@ -277,7 +276,7 @@ fun FrameAnalysisScreen(
                                     },
                                     selectedLabelColor = Color.White
                                 ),
-                                modifier = Modifier.padding(horizontal = 4.dp)
+                                modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
                             )
                         }
                     }
