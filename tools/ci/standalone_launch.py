@@ -66,6 +66,35 @@ def press_calc(name):
         if tap_text(["تصميم الكمرة الآن", "تحليل وحساب", "احسب", "Calculate"], name): return True
         scroll_up(2)
     return False
+
+# Stair: open from the Design tab, design with the defaults, open the drawing's reinforcement tab
+def stair_block():
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+    ok = False
+    log.append(("stair_design_tab", tap_text(["التصميم"], "stair-d-design", exact=True)))
+    scroll_top(3)
+    for _ in range(5):
+        if tap_text(["السلالم"], "stair-find"): ok = True; break
+        scroll_up(2)
+    log.append(("stair_open", ok)); time.sleep(2); shot("stair-open")
+    for _ in range(6):
+        if tap_text(["تصميم السلم الآن"], "stair-calc-find"): log.append(("stair_calc", True)); break
+        scroll_up(2)
+    else: log.append(("stair_calc", False))
+    time.sleep(3)
+    for k in range(4):
+        scroll_up(2); shot(f"stair-res-{k}"); dump(f"stair-res-{k}")
+    log.append(("stair_reinf_tab", tap_text(["تسليح"], "stair-reinf-tab", exact=True))); time.sleep(2)
+    shot("stair-reinf-0"); dump("stair-reinf-0")
+    scroll_up(1); shot("stair-reinf-1")
+    for t in ("واجهة", "قطاع"):
+        log.append(("stair_tab_" + t, tap_text([t], "stair-tab-" + t, exact=True))); time.sleep(2); shot("stair-tab-" + t)
+if os.path.exists("tools/ci/STAIR_ONLY"):
+    try:
+        stair_block()
+    except Exception as e:
+        log.append(("stair_exception", repr(e)))
+    open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
 # 1) blank width
 log.append(("clear_width", edit_field("250", "", "d-w0"))); shot("beam-width-blank")
 scroll_up(4); shot("beam-after-scroll")

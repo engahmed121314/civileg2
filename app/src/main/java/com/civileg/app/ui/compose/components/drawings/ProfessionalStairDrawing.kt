@@ -191,10 +191,14 @@ fun ProfessionalStairDrawing(
 
         // ── Draw zones based on viewMode ──────────────────────────
         // 1. Main elevation view (left)
-        if (viewMode == 0 || viewMode == 1) {
+        // Reinforcement-only tab: the net-flight review text is placed at the top, so the elevation
+        // (with the adopted bars) is drawn below it instead of leaving the sheet blank.
+        val reinfElevation = viewMode == 3 && quantityReview != null
+        if (viewMode == 0 || viewMode == 1 || reinfElevation) {
         drawElevationView(
-            zoneLeft = cfg.margin, zoneTop = cfg.margin * 0.5f,
-            zoneRight = elevZoneRight - 10f, zoneBottom = tableTop - 16f,
+            zoneLeft = cfg.margin, zoneTop = if (reinfElevation) ch * 0.34f else cfg.margin * 0.5f,
+            zoneRight = (if (reinfElevation) cw else elevZoneRight) - 10f,
+            zoneBottom = if (reinfElevation) ch * 0.94f else tableTop - 16f,
             cw = cw, ch = ch,
             nRisers = nRisers, nTreads = nTreads,
             riserHeight = riserHeight, treadWidth = treadWidth,
