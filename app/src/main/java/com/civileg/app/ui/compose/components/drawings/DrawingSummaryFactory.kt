@@ -32,7 +32,8 @@ fun beamDrawingSummary(result: CalculatorEngine.BeamResult): DrawingResultSummar
 
 fun columnDrawingSummary(result: CalculatorEngine.ColumnResult): DrawingResultSummary =
     DrawingResultSummary(
-        isSafe = result.confirmedSafe,
+        isSafe = result.isSafe,
+        codeAcceptanceComplete = result.assessmentComplete,
         utilizationRatio = result.utilizationRatio,
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,

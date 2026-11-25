@@ -248,7 +248,8 @@ class ExportManager(private val context: Context) {
         outputPath: String,
         openPdfOnComplete: Boolean = false,
         incompleteReview: Boolean = false,
-        includeDiagnosticDrawing: Boolean = false
+        includeDiagnosticDrawing: Boolean = false,
+        assessmentPending: Boolean = false
     ): ExportBundle {
         val pdfFile = try {
             ProfessionalEnglishPdfReporter.generateReportLegacy(
@@ -265,6 +266,7 @@ class ExportManager(private val context: Context) {
                 boqRows = boqRows,
                 incompleteReview = incompleteReview,
                 includeDiagnosticDrawing=includeDiagnosticDrawing,
+                assessmentPending = assessmentPending,
                 bbsRows = bbsEntries.map { entry ->
                     ProfessionalEnglishPdfReporter.BbsRow(
                         memberMark = entry.memberMark,

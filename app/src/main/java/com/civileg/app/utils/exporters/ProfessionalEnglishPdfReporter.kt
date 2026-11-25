@@ -107,7 +107,9 @@ object ProfessionalEnglishPdfReporter {
         val revision: String = "Rev. A",
         val showSignature: Boolean = false,
         val incompleteReview: Boolean = false,
-        val includeDiagnosticDrawing: Boolean = false
+        val includeDiagnosticDrawing: Boolean = false,
+        /** Component checks are shown, but the overall verdict is "not confirmed" (neither SAFE nor UNSAFE). */
+        val assessmentPending: Boolean = false
     )
 
     // ==================== Font Helpers (English Only) ====================
@@ -646,13 +648,13 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
-    private fun addSafetyChecks(document: Document, safetyChecks: List<SafetyCheck>, isSafe: Boolean) {
+    private fun addSafetyChecks(document: Document, safetyChecks: List<SafetyCheck>, isSafe: Boolean, assessmentPending: Boolean = false) {
         document.add(sectionTitle("4. Safety Verification"))
         document.add(separator())
 
         // Status Banner
-        val statusText = if (isSafe) "STATUS: SAFE - Design Complies with Code" else "STATUS: UNSAFE - Design Review Required"
-        val statusColor = if (isSafe) SUCCESS else ERROR
+        val statusText = if (assessmentPending) "STATUS: PRELIMINARY - NOT FULLY CHECKED. The overall result is not confirmed; individual checks below are shown as calculated." else if (isSafe) "STATUS: SAFE - Design Complies with Code" else "STATUS: UNSAFE - Design Review Required"
+        val statusColor = if (assessmentPending) SECONDARY else if (isSafe) SUCCESS else ERROR
         val banner = Paragraph().add(text(statusText, createBoldFont(), 11f, statusColor))
             .setTextAlignment(TextAlignment.CENTER)
             .setPadding(8f)
@@ -915,7 +917,7 @@ object ProfessionalEnglishPdfReporter {
                 document.add(sectionTitle("4. Engineering Status: NOT ISSUED"))
                 document.add(Paragraph("Required design, serviceability and detailing checks remain incomplete. Engine PASS/FAIL is not engineering approval."))
             } else {
-                addSafetyChecks(document, safetyChecks, isSafe)
+                addSafetyChecks(document, safetyChecks, isSafe, config.assessmentPending)
             }
 
             // 6. Engineering Drawing
@@ -985,7 +987,8 @@ object ProfessionalEnglishPdfReporter {
         bbsRows: List<BbsRow> = emptyList(),
         boqRows: List<BoqRow> = emptyList(),
         incompleteReview: Boolean = false,
-        includeDiagnosticDrawing: Boolean = false
+        includeDiagnosticDrawing: Boolean = false,
+        assessmentPending: Boolean = false
     ): File? {
         val convertedChecks = safetyChecks.map {
             SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference)
@@ -1024,7 +1027,7 @@ object ProfessionalEnglishPdfReporter {
             calculationSteps = calculationSteps,
             bbsRows = bbsRows,
             boqRows = boqRows,
-            config = ReportConfig(incompleteReview = incompleteReview, includeDiagnosticDrawing=includeDiagnosticDrawing),
+            config = ReportConfig(incompleteReview = incompleteReview, includeDiagnosticDrawing=includeDiagnosticDrawing, assessmentPending = assessmentPending),
             outputPath = outputPath
         )
     }

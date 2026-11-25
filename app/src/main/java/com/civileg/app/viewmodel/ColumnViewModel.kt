@@ -454,7 +454,8 @@ class ColumnViewModel @Inject constructor(
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
-                    isSafe = res.confirmedSafe,
+                    isSafe = res.isSafe,
+                    assessmentPending = !res.assessmentComplete,
                     calculationSteps = res.calculationSteps,
                     bbsEntries = runCatching {
                         com.civileg.app.domain.calculations.utils.BbsGenerator.generateColumnBbs("C1", res, h * 1000.0)
