@@ -2417,7 +2417,7 @@ fun SteelStructureAndBOMTab(
                     SteelFrameVisualizer(
                         inputs = lastInputs,
                         result = finalResult,
-                        memberUtilization = if (finalResult != null) finalResult.totalWeight / 20000.0 else 0.0,
+                        memberUtilization = null, // no per-member utilization is produced by the warehouse analysis; do not fabricate one from weight
                         isSafe = finalResult?.safetyStatus ?: true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -2443,8 +2443,8 @@ fun SteelStructureAndBOMTab(
                     val sectionName = finalResult?.mainFrame?.columnSection?.sectionName ?: "HEB 300"
                     SteelShopDrawingPreview(
                         sectionName = sectionName,
-                        memberLengthMm = lastInputs?.span ?: 20.0 * 1000.0,
-                        utilizationRatio = if (finalResult != null) finalResult.totalWeight / 20000.0 else 0.0,
+                        memberLengthMm = (lastInputs?.span ?: 20.0) * 1000.0, // span is stored in metres
+                        utilizationRatio = null, // unavailable: warehouse analysis has no per-member ratio
                         isSafe = finalResult?.safetyStatus ?: true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -2586,7 +2586,7 @@ private fun Color.toArgbInt(): Int {
 fun SteelFrameVisualizer(
     inputs: SteelWarehouseInputs?,
     result: SteelWarehouseAnalysisResult?,
-    memberUtilization: Double = 0.0,
+    memberUtilization: Double? = null, // null = unavailable (never shown as 0%)
     isSafe: Boolean = true,
     modifier: Modifier = Modifier
 ) {
@@ -2735,16 +2735,16 @@ fun SteelFrameVisualizer(
 
                 // Utilization indicator
                 drawRoundRect(
-                    if (memberUtilization <= 1.0) Color(0xFF2E7D32).copy(alpha = 0.2f) else Color.Red.copy(alpha = 0.2f),
+                    if (memberUtilization == null) Color.Gray.copy(alpha = 0.2f) else if (memberUtilization <= 1.0) Color(0xFF2E7D32).copy(alpha = 0.2f) else Color.Red.copy(alpha = 0.2f),
                     Offset(16f, h - 40f),
                     Size(120f, 20f),
                     cornerRadius = CornerRadius(10f)
                 )
                 drawText(
-                    text = "Utilization: ${(memberUtilization * 100).toInt()}%",
+                    text = if (memberUtilization != null) "Utilization: ${(memberUtilization * 100).toInt()}%" else "Utilization: unavailable",
                     offset = Offset(24f, h - 26f),
                     fontSize = 12f,
-                    color = if (memberUtilization <= 1.0) Color(0xFF2E7D32) else Color.Red
+                    color = if (memberUtilization == null) Color.Gray else if (memberUtilization <= 1.0) Color(0xFF2E7D32) else Color.Red
                 )
             }
         }
@@ -2910,47 +2910,17 @@ fun SteelBOMTable(
     result: SteelWarehouseAnalysisResult?,
     modifier: Modifier = Modifier
 ) {
-    val inputs = inputs ?: SteelWarehouseInputs(
-        span = 20.0, length = 60.0, eaveHeight = 6.0, ridgeHeight = 9.0,
-        baySpacing = 6.0, slope = 0.17, deadLoad = 0.25, liveLoad = 0.60, windLoad = 150.0
-    )
-    val result = result ?: SteelWarehouseAnalysisResult(
-        totalWeight = 12500.0,
-        weightPerM2 = 105.0,
-        safetyStatus = true,
-        mainFrame = MainFrameResult(
-            columnSection = SteelSectionType.ISection(h = 300.0, bf = 300.0, tf = 15.0, tw = 10.0, grade = SteelGrade.ST37, customName = "HEB 300"),
-            rafterSection = SteelSectionType.ISection(h = 300.0, bf = 150.0, tf = 10.7, tw = 7.1, grade = SteelGrade.ST37, customName = "IPE 300"),
-            maxMoment = 0.0,
-            maxShear = 0.0,
-            maxAxial = 0.0,
-            maxDeflection = 0.0,
-            allowableDeflection = 0.0,
-            isSafe = true,
-            basePlateThickness = 25.0,
-            basePlateBoltsCount = 4
-        ),
-        secondaryMembers = SecondaryMembersResult(
-            purlinSection = SteelSectionType.ISection(h = 140.0, bf = 73.0, tf = 6.8, tw = 4.9, grade = SteelGrade.ST37, customName = "IPE 140"),
-            girtSection = SteelSectionType.ISection(h = 120.0, bf = 64.0, tf = 6.2, tw = 4.7, grade = SteelGrade.ST37, customName = "IPE 120"),
-            bracingSection = SteelSectionType.ISection(h = 50.0, bf = 50.0, tf = 5.0, tw = 5.0, grade = SteelGrade.ST37, customName = "L 50x5"),
-            purlinCount = 10,
-            isSafe = true
-        ),
-        connections = emptyList(),
-        totalCladdingArea = 1000.0,
-        resultsByCode = "ECP",
-        recommendations = emptyList(),
-        materialTakeoff = emptyMap(),
-        calculationTrace = emptyList()
-    )
-
-    val totalWeight = result.totalWeight
-    val columnsWeight = totalWeight * 0.35
-    val raftersWeight = totalWeight * 0.30
-    val purlinsWeight = totalWeight * 0.20
-    val girtsWeight = totalWeight * 0.10
-    val platesWeight = totalWeight * 0.05
+    // No placeholder inputs or result: without a real analysis there is no BOM.
+    if (inputs == null || result == null) {
+        AppText(
+            "Bill of materials unavailable: run the warehouse analysis first.",
+            color = MaterialTheme.colorScheme.error,
+            modifier = modifier.fillMaxWidth().padding(12.dp)
+        )
+        return
+    }
+    // SteelWarehouseAnalysisResult.totalWeight is in tons.
+    val totalWeightKg = result.totalWeight * 1000.0
 
     Column(modifier = modifier.fillMaxWidth()) {
         AppText(stringResource(R.string.steel_bill_of_materials), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
@@ -2977,35 +2947,35 @@ fun SteelBOMTable(
             BOMRow(
                 item = stringResource(R.string.steel_bom_columns),
                 quantity = "${(inputs.length / inputs.baySpacing).toInt() + 1}",
-                weight = "${String.format("%.1f", columnsWeight)} kg",
+                weight = "not itemised",
                 section = result.mainFrame.columnSection.sectionName
             )
 
             BOMRow(
                 item = stringResource(R.string.steel_bom_rafters),
                 quantity = "${(inputs.length / inputs.baySpacing).toInt() + 1}",
-                weight = "${String.format("%.1f", raftersWeight)} kg",
+                weight = "not itemised",
                 section = result.mainFrame.rafterSection.sectionName
             )
 
             BOMRow(
                 item = stringResource(R.string.steel_bom_purlins),
                 quantity = "${(inputs.span / 1.5).toInt() * ((inputs.length / inputs.baySpacing).toInt() + 1)}",
-                weight = "${String.format("%.1f", purlinsWeight)} kg",
+                weight = "not itemised",
                 section = result.secondaryMembers.purlinSection.sectionName
             )
 
             BOMRow(
                 item = stringResource(R.string.steel_bom_girts),
                 quantity = "${(inputs.eaveHeight / 1.5).toInt() * 2 * ((inputs.length / inputs.baySpacing).toInt() + 1)}",
-                weight = "${String.format("%.1f", girtsWeight)} kg",
+                weight = "not itemised",
                 section = result.secondaryMembers.girtSection.sectionName
             )
 
             BOMRow(
                 item = stringResource(R.string.steel_bom_plates),
                 quantity = "${result.mainFrame.basePlateBoltsCount * 4}",
-                weight = "${String.format("%.1f", platesWeight)} kg",
+                weight = "not itemised",
                 section = "${result.mainFrame.basePlateThickness.toInt()} mm"
             )
 
@@ -3017,7 +2987,7 @@ fun SteelBOMTable(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AppText(stringResource(R.string.steel_bom_total), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
-                AppText("${String.format("%.1f", totalWeight)} kg", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color(0xFF1E3A8A))
+                AppText("${String.format("%.1f", totalWeightKg)} kg", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = Color(0xFF1E3A8A))
             }
         }
     }
@@ -3164,7 +3134,7 @@ fun SteelMomentFrameAnalyzer(
 fun SteelShopDrawingPreview(
     sectionName: String,
     memberLengthMm: Double,
-    utilizationRatio: Double,
+    utilizationRatio: Double?, // null = unavailable
     isSafe: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -3209,7 +3179,7 @@ fun SteelShopDrawingPreview(
                 // Title block
                 drawRoundRect(Color(0xFF0F172A), Offset(16f, h - 40f), Size(w - 32f, 24f), cornerRadius = CornerRadius(4f))
                 drawText(text = "SHOP DRAWING - $sectionName", offset = Offset(24f, h - 26f), fontSize = 11f, color = Color.White)
-                drawText(text = "Utilization: ${(utilizationRatio * 100).toInt()}%", offset = Offset(w - 120f, h - 26f), fontSize = 11f, color = if (isSafe) Color(0xFF2E7D32) else Color.Red)
+                drawText(text = if (utilizationRatio != null) "Utilization: ${(utilizationRatio * 100).toInt()}%" else "Utilization: unavailable", offset = Offset(w - 120f, h - 26f), fontSize = 11f, color = if (utilizationRatio == null) Color.Gray else if (isSafe) Color(0xFF2E7D32) else Color.Red)
             }
         }
 
