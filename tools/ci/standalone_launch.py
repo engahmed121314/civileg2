@@ -125,6 +125,9 @@ def frame_block():
     log.append(("frame_templates", tap_text(["Templates"], "fr-templates"))); time.sleep(1)
     log.append(("frame_portal", tap_text(["إطار بوابة بسيط"], "fr-portal"))); time.sleep(2); shot("frame-portal"); dump("frame-portal")
     log.append(("frame_solve", tap_text(["تحليل"], "fr-solve", exact=True))); time.sleep(5); shot("frame-solved"); dump("frame-solved")
+    time.sleep(5); shot("frame-solved-late"); dump("frame-solved-late")
+    log.append(("frame_results_tab", tap_text(["النتائج"], "fr-results", exact=True))); time.sleep(3); shot("frame-results"); dump("frame-results")
+    log.append(("frame_back_draw", tap_text(["الرسم"], "fr-draw", exact=True))); time.sleep(2)
     for t in ("SFD", "AFD", "BMD"):
         log.append(("frame_diag_" + t, tap_text([t], "fr-diag-" + t, exact=True))); time.sleep(2); shot("frame-diag-" + t)
     log.append(("frame_hint_expand2", tap_text(["إظهار تلميح الأداة"], "fr-hint3"))); time.sleep(1); shot("frame-portal-hint")
