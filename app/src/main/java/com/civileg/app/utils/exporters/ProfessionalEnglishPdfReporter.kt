@@ -711,7 +711,7 @@ object ProfessionalEnglishPdfReporter {
     private fun addBbsSection(document: Document, rows: List<BbsRow>, incompleteReview: Boolean = false) {
         if (rows.isEmpty()) return
         document.add(AreaBreak())
-        document.add(sectionTitle(if (incompleteReview) "6. Partial Main-Bar Review Schedule" else "6. Bar Bending Schedule"))
+        document.add(sectionTitle(if (incompleteReview) "6. Partial Bar Review Schedule" else "6. Bar Bending Schedule"))
         document.add(separator())
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(12f, 12f, 9f, 9f, 9f, 20f, 14f, 15f)))
@@ -741,7 +741,7 @@ object ProfessionalEnglishPdfReporter {
         }
         document.add(table)
         document.add(Paragraph().add(
-            text(String.format(Locale.US, if (incompleteReview) "Partial scheduled main-bar weight only: %.2f kg" else "Total steel: %.2f kg", totalWeight), createBoldFont(), 9f, PRIMARY)
+            text(String.format(Locale.US, if (incompleteReview) "Partial weight of the listed bars only (includes laps, hooks and ties where listed; not reconciled with the net BOQ steel): %.2f kg" else "Total steel: %.2f kg", totalWeight), createBoldFont(), 9f, PRIMARY)
         ).setTextAlignment(TextAlignment.RIGHT))
         document.add(emptyLine())
     }
