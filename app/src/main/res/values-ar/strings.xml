@@ -1128,6 +1128,8 @@
     <string name="beam_rebar_selection">اختيار حديد التسليح</string>
     <string name="beam_design_now">تصميم الكمرة الآن</string>
     <string name="beam_results_economy">تحقق الاقتصاد</string>
+    <string name="beam_bbs_unavailable_title">جدول تفريد الحديد غير مُصدَر</string>
+    <string name="beam_bbs_unavailable_body">أطوال القطع تعتمد على اشتراطات الخطاطيف والتثبيت والوصلات والتكسيح في إصدار الكود المختار، وهذه الاشتراطات لم يتم التحقق منها بعد، لذلك لا تُعرض أطوال قطع ولا أوزان حديد، ويخلو الرسم وملف PDF من الجدول. أعداد الأسياخ وأقطارها وتباعد الكانات أعلاه لا تتأثر.</string>
     <string name="beam_section_unsafe">القطاع غير آمن</string>
     <string name="beam_section_ideal">قطاع مثالي</string>
     <string name="beam_section_large">متحفظ (كبير)</string>

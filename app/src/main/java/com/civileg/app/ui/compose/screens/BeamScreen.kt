@@ -270,11 +270,24 @@ fun BeamScreen(
             result?.let { res ->
                 item { SectionHeader(stringResource(R.string.beam_results_economy), R.drawable.ic_calculator) }
 
-                val bbsEntries = runCatching {
-                    BbsGenerator.generateBeamBbs("B1", res, res.span * 1000.0)
-                }.getOrDefault(emptyList())
-                if (res.codeAcceptanceComplete && bbsEntries.isNotEmpty()) {
-                    item { BbsTableCard(bbsEntries, title = "Beam Bar Bending Schedule") }
+                // No bar bending schedule: cutting lengths have no verified code basis (see BbsGenerator).
+                if (res.codeAcceptanceComplete) {
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                AppText(stringResource(R.string.beam_bbs_unavailable_title), fontWeight = FontWeight.Bold)
+                                AppText(
+                                    stringResource(R.string.beam_bbs_unavailable_body),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
                 }
 
                 val boqRows = runCatching {

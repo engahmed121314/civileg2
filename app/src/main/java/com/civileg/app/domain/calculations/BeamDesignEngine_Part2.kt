@@ -427,19 +427,18 @@ object BeamDesignEnginePart2 {
         val fs = when(code) { DesignCode.ECP -> fy / 1.15 else -> fy }
         val Ld = (fs * dia.toDouble()) / (4.0 * fbd)
         val LdMin = max(Ld, 350.0) // ECP minimum
-        val provided = span * 1000.0 / 3.0 // assume L/3 available (simplified)
+        // Available anchorage is not computed. A span/3 stand-in was used before and produced a fake pass/fail.
+        val provided = 0.0 // 0.0 = not computed
         val lapLength = 1.3 * LdMin // 30% extra for lapping
 
         val step = CalculationStep(
-            1, "Development & Lap Length",
-            codeReference = when(code) { DesignCode.ECP -> "ECP 203 §4-2-5" else -> "ACI 318 §25.4" },
-            formula = when(code) {
-                DesignCode.ECP -> "Ld = (fy/γs × Ø) / (4 × fbd)\nfbd = 0.3√f'cu"
-                else -> "Ld = (fy × db) / (4 × fbd)"
-            },
-            formulaWithValues = "fbd = 0.3×√$fcu = ${String.format("%.2f", fbd)} MPa\nLd = ($fs × $dia) / (4 × ${String.format("%.2f", fbd)}) = ${String.format("%.0f", Ld)} mm\nLd,min = ${String.format("%.0f", LdMin)} mm\nLap = 1.3 × ${String.format("%.0f", LdMin)} = ${String.format("%.0f", lapLength)} mm",
-            result = "Ld = ${String.format("%.0f", LdMin)} mm, Lap = ${String.format("%.0f", lapLength)} mm",
-            unit = "mm"
+            1, "Development & Lap Length (PRELIMINARY, basis not verified)",
+            codeReference = "Basis not verified against ECP 203-2020 / ACI 318M-14 / SBC 304-CR-2018",
+            formula = "Ld = (fs x db) / (4 x fbd), Ld,min and lap factor are implementation values, not verified code values",
+            formulaWithValues = "fbd = ${String.format("%.2f", fbd)} MPa (implementation value)\nLd = ($fs x $dia) / (4 x ${String.format("%.2f", fbd)}) = ${String.format("%.0f", Ld)} mm\nLd,used = ${String.format("%.0f", LdMin)} mm (implementation minimum 350 mm)\nLap = 1.3 x Ld,used = ${String.format("%.0f", lapLength)} mm (implementation factor)",
+            result = "Ld = ${String.format("%.0f", LdMin)} mm, Lap = ${String.format("%.0f", lapLength)} mm (preliminary, not code-checked; available anchorage not evaluated)",
+            unit = "mm",
+            status = com.civileg.app.domain.entities.StepStatus.WARNING
         )
 
         return DevLengthResult(LdMin, provided, fbd, lapLength, step)

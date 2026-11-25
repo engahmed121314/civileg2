@@ -1132,6 +1132,8 @@
     <string name="beam_rebar_selection">Rebar Selection</string>
     <string name="beam_design_now">Design Beam Now</string>
     <string name="beam_results_economy">Economy Check</string>
+    <string name="beam_bbs_unavailable_title">Bar bending schedule not issued</string>
+    <string name="beam_bbs_unavailable_body">Cutting lengths depend on hook, anchorage, lap and bend rules of the selected code edition. Those rules are not verified yet, so no cutting lengths or bar weights are shown, and the drawing and PDF omit the schedule. Bar counts, diameters and stirrup spacing above are unaffected.</string>
     <string name="beam_section_unsafe">Section is Unsafe</string>
     <string name="beam_section_ideal">Ideal Section</string>
     <string name="beam_section_large">Conservative (Large)</string>

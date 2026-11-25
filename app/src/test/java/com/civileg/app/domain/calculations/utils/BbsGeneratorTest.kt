@@ -114,15 +114,10 @@ class BbsGeneratorTest {
     // ─── generateBeamBbs ─────────────────────────────────────────────────
 
     @Test
-    fun `generateBeamBbs should produce entries for valid input`() {
+    fun `generateBeamBbs issues no schedule because cutting lengths have no verified basis`() {
         val entries = BbsGenerator.generateBeamBbs("B1", validBeamResult())
-        assertTrue("Should produce at least 2 entries (main + stirrups)", entries.size >= 2)
-        assertEquals("First entry memberMark should be B1", "B1", entries[0].memberMark)
-        assertEquals("Main bar mark should be 01", "01", entries[0].barMark)
-        assertTrue("Main bar totalLengthPerBar should be positive", entries[0].totalLengthPerBar > 0)
-        assertTrue("Main bar totalWeightKg should be positive", entries[0].totalWeightKg > 0)
-        assertEquals("Stirrup entry shapeCode should be 51", 51, entries[1].shapeCode)
-        assertTrue("Stirrup count should be positive", entries[1].count > 0)
+        assertTrue("No beam schedule may be issued without a verified hook/anchorage/lap basis", entries.isEmpty())
+        assertTrue(BbsGenerator.BEAM_BBS_UNAVAILABLE_REASON.contains("no verified code basis"))
     }
 
     @Test(expected = IllegalArgumentException::class)
@@ -143,14 +138,13 @@ class BbsGeneratorTest {
     }
 
     @Test
-    fun `generateBeamBbs main bar length includes hooks`() {
-        val beam = validBeamResult()
-        val entries = BbsGenerator.generateBeamBbs("B1", beam, storyHeight_mm = 3000.0)
-        // spanMm = 3000.0, hookLen = 2 * 9 * diameter = 2 * 9 * 16 = 288
-        // mainBarLen = 3000.0 + 288 = 3288.0
-        val expectedMainLen = 3000.0 + 2 * 9 * beam.reinforcementBottom.diameter
-        assertEquals("Main bar length should include 9φ hooks at both ends",
-            expectedMainLen, entries[0].totalLengthPerBar, 1e-6)
+    fun `generateBeamBbs still rejects invalid input before returning empty`() {
+        val bad = validBeamResult().copy(width = 0.0)
+        try {
+            BbsGenerator.generateBeamBbs("B1", bad)
+            fail("expected IllegalArgumentException for zero width")
+        } catch (_: IllegalArgumentException) {
+        }
     }
 
     // ─── generateColumnBbs ───────────────────────────────────────────────

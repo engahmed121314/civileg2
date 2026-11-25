@@ -243,6 +243,7 @@ object BeamDesignEngine {
         allWarnings.addAll(shearResult.warnings)
         if (deflResult.longTerm > deflResult.allowable) allWarnings.add("Deflection exceeds allowable limit")
         if (crackResult.calculated > crackResult.allowable) allWarnings.add("Crack width exceeds ${crackResult.allowable} mm")
+        allWarnings.add("Development, lap and hook lengths are preliminary and not code-checked; no anchorage adequacy check was performed")
 
         val isSafe = safetyChecks.all { it.isSafe }
         val flexUtil = mu / max(MR, 0.001)
@@ -332,7 +333,7 @@ object BeamDesignEngine {
             effectiveModularRatio = alphaE, neutralAxisRatio = if (d > 0) flexureResult.neutralAxisDepth / d else 0.0,
             developmentLengthRequired = devResult.required, developmentLengthProvided = devResult.provided,
             bondStress = devResult.fbd, lapLength = devResult.lapLength,
-            developmentIsSafe = devResult.required <= devResult.provided,
+            developmentIsSafe = false, // no verified development check was performed
             isSafe = isSafe, utilizationRatio = overallUtil,
             flexureUtilization = flexUtil, shearUtilization = shearUtil,
             concreteVolume = vol, steelWeight = totalSteel,
