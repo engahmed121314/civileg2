@@ -1003,6 +1003,11 @@ class CalculatorEngine @Inject constructor(
             manualNotes.clear()
             manualNotes.add("Checked the user's bar layout: ${manualCount}Ø${preferredDiameter} (As = ${"%.0f".format(area)} mm²); required area from demand = ${"%.0f".format(r.astRequired)} mm².")
             if (area < r.astRequired) { warn.add("Manual bars: provided steel ${"%.0f".format(area)} mm² is less than the ${"%.0f".format(r.astRequired)} mm² required for the applied load and moments."); safe = false }
+            // No safe conclusion for a user layout: the moment capacity below treats the steel as two
+            // equal face layers (ignores intermediate bars), spacing minima and edition constants are
+            // not verified per code. The numbers are shown; the verdict stays "not confirmed".
+            warn.add("INCOMPLETE: manual-layout check issued for information only. Moment capacity assumes two equal steel layers (not your actual bar positions) and the spacing minimum is not verified for this code edition. No safe conclusion is given.")
+            safe = false
             return r.copy(astProvided = area, barDiameter = dia, numberOfBars = manualCount,
                 spacing = if (manualCount > 0) perimeter / manualCount else r.spacing,
                 warnings = warn, isSafe = safe, codeNotes = r.codeNotes + manualNotes)

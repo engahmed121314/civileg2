@@ -32,6 +32,8 @@ class ColumnActivePathTest {
      clearHeight=1000.0,autoOptimize=false,manualNumBars=8,preferredDiameter=20)
    assertEquals(8,r.reinforcement.numBars); assertEquals(20,r.reinforcement.diameter)
    assertEquals(8*Math.PI*400.0/4.0,r.reinforcementArea,1e-6)
+   assertFalse("manual layout must never be declared safe",r.isSafe)
+   assertTrue(r.warnings.any{it.startsWith("INCOMPLETE")})
   }
  }
  @Test fun tooFewManualBarsAreRejectedAndWeakLayoutIsUnsafe() {
