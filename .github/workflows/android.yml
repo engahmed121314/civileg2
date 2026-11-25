@@ -139,6 +139,13 @@ jobs:
       # per-test-JVM Maven Central fetch that intermittently fails CI with
       # MavenArtifactFetcher IOExceptions. The sha1 is verified so a truncated
       # or poisoned download fails loudly instead of corrupting the test run.
+      # Cache the verified jars so a Maven Central 429 on one runner cannot fail later runs.
+      - name: Cache Robolectric android-all jars
+        uses: actions/cache@v4
+        with:
+          path: .robolectric-deps
+          key: robolectric-android-all-14-10818077-15-12650502-i7
+
       - name: Provision Robolectric android-all jar
         timeout-minutes: 10
         run: |
@@ -153,6 +160,10 @@ jobs:
             SHA1="${entry##* }"
             JAR="$DIR/android-all-instrumented-$V.jar"
             TMP="$JAR.part"
+            if [ -f "$JAR" ] && printf '%s  %s\n' "$SHA1" "$JAR" | sha1sum -c -; then
+              echo "Using cached verified $JAR"
+              continue
+            fi
             downloaded=false
             for host in repo1.maven.org repo.maven.apache.org; do
               URL="https://$host/maven2/org/robolectric/android-all-instrumented/$V/android-all-instrumented-$V.jar"
