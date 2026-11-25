@@ -57,7 +57,8 @@ def edit_field(current, new, name):
             adb("shell", "input", "keyevent", "KEYCODE_MOVE_END")
             for _ in range(12): adb("shell", "input", "keyevent", "KEYCODE_DEL")
             if new: adb("shell", "input", "text", new)
-            adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(0.8)
+            if b"mInputShown=true" in adb("shell", "dumpsys", "input_method").stdout:
+                adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(0.8)
             return True
     return False
 def press_calc(name):

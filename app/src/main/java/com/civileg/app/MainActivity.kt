@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -171,6 +172,16 @@ fun AppNavigation(
     // Map bottom nav tabs to routes
     val bottomTabRoutes = listOf("home", "design_hub", "tools_hub", "building_designer", "more_hub")
 
+    // Keep the selected tab in step with the destination actually shown. Writing it from inside
+    // the Home composable body let Home reset it to 0 while the Design tab was opening.
+    val currentBackEntry by navController.currentBackStackEntryAsState()
+    val currentRouteName = currentBackEntry?.destination?.route
+    LaunchedEffect(currentRouteName) {
+        val tab = bottomTabRoutes.indexOf(currentRouteName)
+        if (tab >= 0) selectedBottomTab = tab
+        else if (currentRouteName == AppScreen.SteelDesign.route) selectedBottomTab = 2
+    }
+
     fun navigateToTab(index: Int) {
         selectedBottomTab = index
         val route = bottomTabRoutes[index]
@@ -264,7 +275,6 @@ fun AppNavigation(
                         ) {
                 // ═══ MAIN TABS ═══
                 composable(AppScreen.Home.route) {
-                    selectedBottomTab = 0
                     HomeScreen(
                         onNavigateTo = { route -> navController.navigate(route) },
                         onShowSettings = { navController.navigate(AppScreen.Settings.route) }
@@ -281,7 +291,6 @@ fun AppNavigation(
 
                 // ═══ STEEL (Tab 2) ═══
                 composable(AppScreen.SteelDesign.route) {
-                    selectedBottomTab = 2
                     SteelDesignScreen(onNavigateBack = { navController.popBackStack() })
                 }
 
