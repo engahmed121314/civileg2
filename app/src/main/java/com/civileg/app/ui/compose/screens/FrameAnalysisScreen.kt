@@ -704,8 +704,8 @@ private fun DrawingTab(
                     AppText("${stringResource(R.string.frame_tab_nodes)}: ${nodes.size}  |  ${stringResource(R.string.frame_tab_members)}: ${members.size}", fontSize = 11.sp, color = Color.Gray)
                     if (result?.hasResults == true) {
                         AppText(
-                            "${stringResource(R.string.safe)} ✓  |  ${stringResource(R.string.frame_tab_loads)}: ${memberLoads.size + nodalLoads.size}",
-                            fontSize = 11.sp, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold
+                            stringResource(R.string.frame_info_solved, memberLoads.size + nodalLoads.size),
+                            fontSize = 11.sp, color = Color(0xFF1565C0), fontWeight = FontWeight.Bold
                         )
                     }
                 }

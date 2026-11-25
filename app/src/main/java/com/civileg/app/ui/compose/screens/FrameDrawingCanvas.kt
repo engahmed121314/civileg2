@@ -216,25 +216,25 @@ private fun DrawScope.drawFrameView(
         val labelX = midX + cos(angle + PI / 2) * labelOffset
         val labelY = midY + sin(angle + PI / 2) * labelOffset
 
-        if (member.name.isNotEmpty()) {
-            drawText(
-                textMeasurer = textMeasurer,
-                text = member.name,
-                topLeft = Offset((labelX - 20).toFloat(), (labelY - 8).toFloat()),
-                style = TextStyle(
-                    color = if (isSelected) Color(0xFF1565C0) else Color.DarkGray,
-                    fontSize = 12.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                )
-            )
-        }
-
-        drawText(
-            textMeasurer = textMeasurer,
-            text = context.getString(R.string.frame_member_id_format, member.id),
-            topLeft = Offset((labelX - 8).toFloat(), (labelY + 4).toFloat()),
-            style = TextStyle(color = Color.Gray, fontSize = 9.sp)
+        // Labels are measured unconstrained (no per-character wrapping at the canvas edge), kept inside the
+        // canvas, and stacked: the id sits below the name using the measured height so they never overlap.
+        val nameStyle = TextStyle(
+            color = if (isSelected) Color(0xFF1565C0) else Color.DarkGray,
+            fontSize = 12.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
+        val idStyle = TextStyle(color = Color.Gray, fontSize = 9.sp)
+        val idText = context.getString(R.string.frame_member_id_format, member.id)
+        val nameLayout = if (member.name.isNotEmpty()) textMeasurer.measure(member.name, nameStyle, softWrap = false) else null
+        val idLayout = textMeasurer.measure(idText, idStyle, softWrap = false)
+        val blockW = maxOf(nameLayout?.size?.width ?: 0, idLayout.size.width).toFloat()
+        val blockX = (labelX.toFloat() - blockW / 2f).coerceIn(2f, (size.width - blockW - 2f).coerceAtLeast(2f))
+        var yy = (labelY.toFloat() - 8f).coerceIn(2f, (size.height - 2f).coerceAtLeast(2f))
+        if (nameLayout != null) {
+            drawText(textLayoutResult = nameLayout, topLeft = Offset(blockX, yy))
+            yy += nameLayout.size.height
+        }
+        drawText(textLayoutResult = idLayout, topLeft = Offset(blockX, yy))
     }
 
     // === Draw Member Loads (UDL arrows) ===
