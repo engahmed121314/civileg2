@@ -153,12 +153,12 @@ fun ProfessionalBeamDrawing(
         // ── Layout zones (vertical) ────────────────────────────────────
         val elevationFrac = when (viewMode) {
             1 -> 0.88f  // Elevation-only: use most of the height
-            0 -> 0.40f  // All: normal split
+            0 -> 0.22f  // All: normal split
             else -> 0.08f // Other modes: minimal
         }
         val sectionFrac = when (viewMode) {
             2 -> 0.88f  // Section-only: use most of the height
-            0 -> 0.16f  // All: normal split
+            0 -> 0.34f  // All: normal split
             else -> 0.08f // Other modes: minimal
         }
         val mainBottom = ch * elevationFrac
@@ -166,7 +166,7 @@ fun ProfessionalBeamDrawing(
         val sectionZoneBottom = ch * (elevationFrac + 0.04f + sectionFrac)
 
         // Main beam drawing area — responsive margins from config
-        val sideMargin = cfg.margin * 1.5f  // Responsive: phone=45, tablet=52.5, large=60
+        val sideMargin = max(105f, cfg.margin * 2.5f)  // Responsive: phone=45, tablet=52.5, large=60
         val mainLeft = sideMargin
         val mainRight = cw - sideMargin
         val mainTop = cfg.headerHeight  // Responsive: phone=40, tablet=48
@@ -585,11 +585,11 @@ private fun DrawScope.drawCutawayReinforcement(
 
     // "CUT" labels
     drawTextAnnotated(
-        text = "CUT", x = cutLeft + 2f, y = beamTop - 4f,
+        text = "CUT", x = cutLeft + 2f, y = beamTop - 70f,
         color = ExtensionGray, size = 22f
     )
     drawTextAnnotated(
-        text = "CUT", x = cutRight - 30f, y = beamTop - 4f,
+        text = "CUT", x = cutRight - 30f, y = beamTop - 70f,
         color = ExtensionGray, size = 22f
     )
 
@@ -765,12 +765,12 @@ private fun DrawScope.drawCutawayReinforcement(
             // Zone label
             drawTextAnnotated(
                 text = zone.name,
-                x = zoneStart + 5f, y = beamTop - 35f,
+                x = zoneStart + 5f, y = beamTop - 42f,
                 color = ExtensionGray, size = 18f
             )
             drawTextAnnotated(
                 text = zone.description,
-                x = zoneStart + 5f, y = beamTop - 15f,
+                x = zoneStart + 5f, y = beamTop - 22f,
                 color = StirrupPurple, size = 20f
             )
         }
@@ -903,7 +903,7 @@ private fun DrawScope.drawDevelopmentAndLap(
     )
     // Label
     drawTextAnnotated(
-        text = "La = ${developmentLength.roundToInt()} mm",
+        text = "La: unverified",
         x = laEndX - 10f, y = bracketY + 22f,
         color = DevLengthColor, size = 22f
     )
@@ -936,7 +936,7 @@ private fun DrawScope.drawDevelopmentAndLap(
     )
 
     // Lap dimension bracket (below beam)
-    val lapBracketY = beamBottom + 40f
+    val lapBracketY = beamBottom + 100f
     drawLine(
         color = LapSpliceColor,
         start = Offset(lapZoneStart, lapBracketY),
@@ -962,8 +962,8 @@ private fun DrawScope.drawDevelopmentAndLap(
 
     // Label
     drawTextAnnotated(
-        text = "Lap = ${lapLength.roundToInt()} mm",
-        x = lapZoneStart + 5f, y = lapBracketY + 20f,
+        text = "Lap: unverified",
+        x = beamRight - 180f, y = lapBracketY + 20f,
         color = LapSpliceColor, size = 22f
     )
 }
@@ -993,7 +993,7 @@ private fun DrawScope.drawDimensionLines(
     val arrowSize = 8f
 
     // --- Overall SPAN dimension (bottom) ---
-    val spanY = beamBottom + 60f
+    val spanY = beamBottom + 155f
     drawLine(
         color = DimensionWhite,
         start = Offset(beamLeft, spanY),
@@ -1074,7 +1074,7 @@ private fun DrawScope.drawDimensionLines(
     // --- Section label (b × h) near depth dimension ---
     drawTextAnnotated(
         text = "${beamWidth.toInt()}×${beamDepth.toInt()}",
-        x = beamRight + 60f, y = beamTop + beamDrawH / 2f + 6f,
+        x = beamLeft + 8f, y = beamTop - 60f,
         color = DimensionWhite, size = 24f
     )
 
@@ -1165,8 +1165,8 @@ private fun DrawScope.drawSectionInset(
     zones: List<StirrupZone> = emptyList()
 ) {
     // Inset position and size — centered in dedicated zone below elevation
-    val insetW = min(200f, cw * 0.28f)
-    val insetH = min(zoneBottom - zoneTop - 16f, 220f)
+    val insetW = min(420f, cw * 0.52f)
+    val insetH = min(zoneBottom - zoneTop - 16f, 480f)
     val insetLeft = (cw - insetW) / 2f
     val insetTop = zoneTop + 8f
 
@@ -1288,8 +1288,8 @@ private fun DrawScope.drawReinforcementSchedule(
     val tableLeft = 16f
     val tableTop = if (tableZoneTop > 0f) tableZoneTop + 8f else ch * 0.66f
     val tableW = cw - 32f
-    val rowH = 26f
-    val headerH = 30f
+    val rowH = 40f
+    val headerH = 42f
     val colWidths = floatArrayOf(
         tableW * 0.14f,  // Mark
         tableW * 0.16f,  // Diameter
@@ -1300,7 +1300,7 @@ private fun DrawScope.drawReinforcementSchedule(
 
     // Table title
     drawTextAnnotated(
-        text = "REINFORCEMENT SCHEDULE",
+        text = "REINFORCEMENT REVIEW - NOT FOR CONSTRUCTION",
         x = tableLeft, y = tableTop - 8f,
         color = DimensionWhite, size = 22f
     )
@@ -1313,7 +1313,7 @@ private fun DrawScope.drawReinforcementSchedule(
     )
 
     // Header texts
-    val headers = arrayOf("Mark", "Dia.", "No.", "Length", "Spacing")
+    val headers = arrayOf("Mark", "Dia.", "No.", "Cut length", "Spacing")
     var cx = tableLeft
     for (i in headers.indices) {
         drawTextAnnotated(
@@ -1345,14 +1345,14 @@ private fun DrawScope.drawReinforcementSchedule(
         "T1",
         "Ø${mainRebarDia.toInt()}",
         "${mainRebarCount}",
-        "${mainBarLength.toInt()} mm",
+        "Pending",
         "—"
     )
     cx = tableLeft
     for (i in row1Data.indices) {
         drawTextAnnotated(
             text = row1Data[i], x = cx + 6f, y = row1Y + rowH / 2f + 5f,
-            color = RebarBlue, size = 16f
+            color = RebarBlue, size = 20f
         )
         cx += colWidths[i]
     }
@@ -1381,14 +1381,14 @@ private fun DrawScope.drawReinforcementSchedule(
         "S1",
         "Ø${stirrupDia.toInt()}",
         "${stirrupCount}",
-        "${stirrupLength.toInt()} mm",
+        "Pending",
         "@ ${stirrupSpacing.toInt()} mm"
     )
     cx = tableLeft
     for (i in row2Data.indices) {
         drawTextAnnotated(
             text = row2Data[i], x = cx + 6f, y = row2Y + rowH / 2f + 5f,
-            color = StirrupPurple, size = 16f
+            color = StirrupPurple, size = 20f
         )
         cx += colWidths[i]
     }
@@ -1414,7 +1414,7 @@ private fun DrawScope.drawReinforcementSchedule(
             "T2",
             "Ø${topRebarDia.toInt()}",
             "${topRebarCount}",
-            "${topBarLength.toInt()} mm",
+            "Pending",
             "—"
         )
         cx = tableLeft
