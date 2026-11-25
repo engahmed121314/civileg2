@@ -2915,7 +2915,7 @@ object PdfDrawingGenerator {
         )
 
         // Status badge
-        val statusColor = if (isSafe) Color.parseColor("#2ECC71") else SECONDARY_RED
+        val statusColor = if (isSafe) Color.parseColor("#EF6C00") else SECONDARY_RED
         // The fallback drawing only knows the flexure/shear pass flag. It does not know that bar
         // layout, anchorage, deflection and cracking are unchecked, so it must not claim SAFE.
         val statusText = if (isSafe) "PRELIMINARY" else "CHECK FAILED"
