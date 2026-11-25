@@ -2916,9 +2916,11 @@ object PdfDrawingGenerator {
 
         // Status badge
         val statusColor = if (isSafe) Color.parseColor("#2ECC71") else SECONDARY_RED
-        val statusText = if (isSafe) "SAFE" else "UNSAFE"
-        canvas.drawText(statusText, W - 130f, 480f, textPaint(statusColor, 24f, true))
-        canvas.drawText("UR: ${"%.0f".format(if (maxMoment > 0) 0.0 else 0.0)}%", W - 140f, 500f, textPaint(DIM_TEXT, 14f))
+        // The fallback drawing only knows the flexure/shear pass flag. It does not know that bar
+        // layout, anchorage, deflection and cracking are unchecked, so it must not claim SAFE.
+        val statusText = if (isSafe) "PRELIMINARY" else "CHECK FAILED"
+        canvas.drawText(statusText, W - 160f, 480f, textPaint(statusColor, 20f, true))
+        canvas.drawText("Not for construction", W - 160f, 500f, textPaint(DIM_TEXT, 14f))
 
         // ============ PART 2: BENDING MOMENT DIAGRAM ============
         val bmdTop = 580f
