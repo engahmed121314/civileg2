@@ -20,6 +20,7 @@ import android.graphics.Bitmap
 import com.civileg.app.domain.entities.GenericSafetyCheck
 import com.civileg.app.domain.calculations.InputGuard
 import javax.inject.Inject
+import com.civileg.app.domain.calculations.base.StairSupportCondition
 
 @HiltViewModel
 class StairViewModel @Inject constructor(
@@ -49,10 +50,6 @@ class StairViewModel @Inject constructor(
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
 
-    /** Flight width (mm) captured with the last calculation; used by the fallback drawing. */
-    @Volatile
-    private var lastStairWidthMm: Double = 1200.0
-
     fun calculateStairPro(
         type: CalculatorEngine.StairType,
         span: Double,
@@ -64,7 +61,9 @@ class StairViewModel @Inject constructor(
         fy: Double,
         preferredDiameter: Int,
         code: DesignCode,
-        stairWidthMm: Double = 1200.0
+        stairWidthMm: Double = 1200.0,
+        supportCondition: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
+        landingLengthMm: Double? = null, landingWidthMm: Double? = null, landingThicknessMm: Double? = null
     ) {
         InputGuard.positive("span", span)
         InputGuard.positive("riser", riser)
@@ -78,7 +77,6 @@ class StairViewModel @Inject constructor(
 
         viewModelScope.launch {
             _isLoading.value = true
-            lastStairWidthMm = stairWidthMm
             pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
                 val res = calculatorEngine.designStaircase(
@@ -91,7 +89,10 @@ class StairViewModel @Inject constructor(
                     fcu = fcu,
                     fy = fy,
                     preferredDiameter = preferredDiameter,
-                    code = code
+                    code = code,
+                    stairWidthMm = stairWidthMm,
+                    supportCondition = supportCondition, landingLengthMm = landingLengthMm,
+                    landingWidthMm = landingWidthMm, landingThicknessMm = landingThicknessMm
                 )
                 
                 // Validate result for engineering consistency
@@ -139,7 +140,7 @@ class StairViewModel @Inject constructor(
             else -> 25.0
         }
         return com.civileg.app.utils.ElementDxfDrawings.stairSection(
-            title = "STAIR ${currentResult.type.displayName}",
+            title = "STAIR ${currentResult.type.displayNameEn}",
             runMm = geometry.runMm,
             riseMm = currentResult.riser,
             steps = geometry.riserCount,
@@ -147,7 +148,13 @@ class StairViewModel @Inject constructor(
             waistThicknessMm = currentResult.thickness,
             coverMm = pdfCover,
             barDiaMm = currentResult.reinforcement.diameter.toDouble(),
-            barSpacingMm = currentResult.reinforcement.spacing
+            barSpacingMm = currentResult.reinforcement.spacing,
+            reviewNotes = listOf(
+                "REVIEW ONLY - NOT A FABRICATION DETAIL",
+                currentResult.documentaryBasisLabel,
+                "Final steel / cutting lengths / support anchorage unavailable",
+                currentResult.barMaterialClassification
+            )
         )
     }
 
@@ -184,11 +191,12 @@ class StairViewModel @Inject constructor(
                         else -> 25.0
                     }
                     // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                    val hasCapturedScreenDrawing = pendingDrawingBitmap != null
                     val drawingBitmap = pendingDrawingBitmap ?: try {
                         PdfDrawingGenerator.generateStairDrawing(
                             totalHeight = geometry.riseMm,
                             totalLength = geometry.runMm, // mm
-                            stairWidth = lastStairWidthMm,
+                            stairWidth = currentResult.stairWidthMm,
                             riserHeight = currentResult.riser,
                             treadWidth = currentResult.tread,
                             slabThickness = currentResult.thickness,
@@ -201,28 +209,36 @@ class StairViewModel @Inject constructor(
                     } catch (e: Exception) { e.printStackTrace(); null }
                     pendingDrawingBitmap = null  // consume after use
 
-                    val codeName = when(currentResult.code) {
-                        DesignCode.ACI -> "ACI 318"
-                        DesignCode.SBC -> "SBC 304"
-                        else -> "ECP 203"
-                    }
+                    val codeName = currentResult.documentaryBasisLabel
+
                     val inputsMap = mapOf(
-                        "Stair Type" to currentResult.type.displayName,
+                        "Stair Type" to currentResult.type.displayNameEn,
                         "Span" to "${currentResult.span} m",
+                        "Width" to "${currentResult.stairWidthMm} mm",
                         "Riser" to "${currentResult.riser} mm",
                         "Tread" to "${currentResult.tread} mm",
                         "Thickness" to "${currentResult.thickness} mm",
                         "f'cu" to "${currentResult.fcu} MPa",
                         "fy" to "${currentResult.fy} MPa",
+                        "Bar material classification" to currentResult.barMaterialClassification,
                         "Factored Load wu" to "${String.format("%.2f", currentResult.wu)} kN/m²",
+                        "Support condition" to currentResult.supportCondition.name,
+                        "Landing length" to (currentResult.landingLengthMm?.let { "$it mm" } ?: "Not declared"),
+                        "Landing width" to (currentResult.landingWidthMm?.let { "$it mm" } ?: "Not declared"),
+                        "Landing thickness" to (currentResult.landingThicknessMm?.let { "$it mm" } ?: "Not declared"),
                         "Design Code" to codeName
                     )
                     val resultsMap = mapOf(
+                        "Analysis status" to currentResult.analysisStatus.name,
+                        "Code acceptance" to "INCOMPLETE: not an accepted construction design",
+                        "Qualification notes" to currentResult.qualificationNotes.joinToString("; "),
+                        "Top / landing steel" to "Not designed",
                         "Moment Mu" to "${String.format("%.2f", currentResult.mu)} kN.m",
                         "Main Reinforcement" to currentResult.reinforcement.barString,
                         "Distribution" to currentResult.distributionReinforcement.barString,
                         "Concrete Volume" to "${String.format("%.3f", currentResult.concreteVolume)} m³",
-                        "Steel Weight" to "${String.format("%.1f", currentResult.steelWeight)} kg",
+                        "Net flight steel only (not final)" to "${String.format("%.1f", currentResult.steelWeight)} kg",
+                        "Quantity qualification" to "Final steel/BBS unavailable: excludes anchorage, bends, laps, top and landing steel",
                         "Utilization" to "${(currentResult.utilizationRatio * 100).toInt()}%"
                     )
                     val safetyChecks = currentResult.safetyChecks.map { chk ->
@@ -234,19 +250,21 @@ class StairViewModel @Inject constructor(
 
                     // Professional English PDF Report — English only, no Arabic encoding issues
                     val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
-                        titleAr = "تقرير تصميم سلم - ${currentResult.type.displayName}",
-                        titleEn = "Stair Design Report — ${currentResult.type.displayName}",
+                        titleAr = "تقرير تصميم سلم - ${currentResult.type.displayNameEn}",
+                        titleEn = "Stair Design Report — ${currentResult.type.displayNameEn}",
                         subtitle = "Code: $codeName  •  Span=${currentResult.span}m",
-                        designType = "Stair (${currentResult.type.displayName})",
+                        designType = "Stair (${currentResult.type.displayNameEn})",
                         inputs = inputsMap,
                         results = resultsMap,
                         safetyChecks = safetyChecks,
-                        isSafe = currentResult.isSafe,
+                        isSafe = currentResult.isSafe && currentResult.codeAcceptanceComplete,
+                        incompleteReview = !currentResult.codeAcceptanceComplete,
+                        includeDiagnosticDrawing = hasCapturedScreenDrawing,
                         calculationSteps = currentResult.calculationSteps,
                         bbsEntries = runCatching {
-                            BbsGenerator.generateStairBbs("ST1", currentResult, lastStairWidthMm)
+                            BbsGenerator.generateStairBbs("ST1", currentResult, currentResult.stairWidthMm)
                         }.getOrDefault(emptyList()),
-                        boqRows = BoqEstimator.stairRows(currentResult, lastStairWidthMm / 1000.0, "ST1"),
+                        boqRows = BoqEstimator.stairRows(currentResult, currentResult.stairWidthMm / 1000.0, "ST1"),
                         drawingBitmap = drawingBitmap,
                         drawing = buildDxfDrawing(),
                         outputPath = file.absolutePath

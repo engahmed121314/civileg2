@@ -45,6 +45,17 @@ class ECPStaircase : StaircaseDesign {
         val safetyChecks = mutableListOf<StairSafetyCheck>()
         val codeNotes = mutableListOf<String>()
 
+        // Landing/restraint qualification (lead review 2026-11-24): a landing
+        // establishes restraint only when ALL its dimensions are supplied and
+        // finite-positive; null, zero, negative or NaN length/width/thickness
+        // never qualify, and dimensions alone do not establish restraint
+        // without a declared CONTINUOUS_OVER_LANDING support.
+        fun finitePositive(v: Double?): Boolean = v != null && v.isFinite() && v > 0.0
+        val landingSupplied = finitePositive(input.landingLengthMm) &&
+            finitePositive(input.landingWidthMm) && finitePositive(input.landingThicknessMm)
+        val continuousOverLanding = input.stairType == StairType.DOG_LEG &&
+            input.supportCondition == StairSupportCondition.CONTINUOUS_OVER_LANDING && landingSupplied
+
         // ========== 1. التصميم الهندسي ==========
         var numRisers: Int
         var numTreads: Int
@@ -131,7 +142,9 @@ class ECPStaircase : StaircaseDesign {
         // ECP 203-2025 §6-2: Waist slab span/depth check
         // For stair slabs: L/d ≤ 26 for continuous, 20 for simply supported
         val waistSpanDepthRatio = (input.span * 1000) / dEffective
-        val waistAllowableRatio = if (input.stairType == StairType.DOG_LEG) 26.0 else 20.0
+        // Restraint-dependent L/d: 26 applies only to the verified continuous-
+        // over-landing model; the simply-supported fallback keeps 20.
+        val waistAllowableRatio = if (continuousOverLanding) 26.0 else 20.0
         safetyChecks.add(StairSafetyCheck(
             name = "Waist Span/Depth",
             value = waistSpanDepthRatio, limit = waistAllowableRatio, unit = "",
@@ -150,18 +163,69 @@ class ECPStaircase : StaircaseDesign {
         codeNotes.add("Factored load on slope = ${String.format("%.2f", factoredOnSlope)} kN/m²")
 
         // ========== 4. التحليل الإنشائي ==========
+        // Explicit case analysis model — the coefficient and support contract
+        // must travel with the result so a named UI case can never masquerade
+        // as a verified design (lead case ledger, 2026-11-24).
         val span = input.span
-        val momentCoefficient = if (input.stairType == StairType.DOG_LEG) 1.0 / 10.0 else 1.0 / 8.0
+        val caseSupported: Boolean
+        val analysisStatus: StairAnalysisStatus
+        when (input.stairType) {
+            StairType.STRAIGHT -> {
+                caseSupported = true
+                if (input.supportCondition == StairSupportCondition.SIMPLY_SUPPORTED) {
+                    analysisStatus = StairAnalysisStatus.CASE_MODEL_IMPLEMENTED
+                    codeNotes.add("Case model: single flight — one-way inclined slab strip (1 m), simply supported, M = wL²/8, V = wL/2 on the horizontal projection")
+                } else {
+                    // Declared support not modeled (UNSPECIFIED or continuity): the
+                    // wL²/8 numbers are conservative, not a verified model of the
+                    // declared support.
+                    analysisStatus = StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED
+                    codeNotes.add("Case model: single flight analyzed simply supported (M = wL²/8); declared support ${input.supportCondition} is not modeled — conservative result, restraint unverified")
+                }
+            }
+            StairType.DOG_LEG -> {
+                caseSupported = true
+                if (continuousOverLanding) {
+                    analysisStatus = StairAnalysisStatus.CASE_MODEL_IMPLEMENTED
+                    codeNotes.add("Case model: double flight — M = wL²/10 per flight, continuity over the supplied landing (${input.landingLengthMm?.toInt()} mm × ${input.landingThicknessMm?.toInt()} mm) restrains the flight (analysis-model adoption, not an ECP equation)")
+                    codeNotes.add("Negative-moment (top) steel over the landing is not separately computed (flightTopRebar empty) — explicit detailing gap")
+                } else {
+                    // No assumed restraint: support/landing UNSPECIFIED, or
+                    // continuity declared without usable landing dimensions →
+                    // conservative simply-supported per-flight model.
+                    analysisStatus = StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED
+                    if (input.supportCondition == StairSupportCondition.CONTINUOUS_OVER_LANDING) {
+                        codeNotes.add("WARNING: CONTINUOUS_OVER_LANDING declared but landing dimensions are missing or not finite-positive (L/W/t) — restraint NOT verified; conservative simply-supported per-flight M = wL²/8 used")
+                    } else {
+                        codeNotes.add("Case model: double flight with UNSPECIFIED support/landing — no restraint assumed; conservative simply-supported per-flight M = wL²/8. Supply supportCondition=CONTINUOUS_OVER_LANDING with landing dimensions for the wL²/10 model")
+                    }
+                }
+                codeNotes.add("The landing slab itself is NOT designed by this engine (landingRebar empty)")
+            }
+            else -> {
+                // OPEN_WELL / SPIRAL: no three-flight, open-well or radial/torsion
+                // model is implemented. Falling back to wL²/8 would present an
+                // unverified design as if it covered the named case — refuse.
+                caseSupported = false
+                analysisStatus = StairAnalysisStatus.UNSUPPORTED_CASE
+                codeNotes.add("WARNING: no implemented analysis model for ${input.stairType} (three-flight/open-well/radial-torsion not implemented). Numbers below follow a single-flight wL²/8 fallback and are NOT a verified design for this case")
+            }
+        }
+        safetyChecks.add(StairSafetyCheck(
+            name = "Case model support",
+            value = if (caseSupported) 1.0 else 0.0, limit = 1.0, unit = "",
+            isSafe = caseSupported,
+            description = if (caseSupported) "Implemented analysis model for this stair case" else "No implemented analysis model for ${input.stairType} — result is not a verified design for this case"
+        ))
+        val momentCoefficient = if (continuousOverLanding) 1.0 / 10.0 else 1.0 / 8.0
         val adjustedMoment = horizontalLoad * span * span * momentCoefficient
         val adjustedShear = horizontalLoad * span / 2.0
         val reactionA = adjustedShear
         val reactionB = adjustedShear
 
-        if (input.stairType == StairType.DOG_LEG) {
-            codeNotes.add("Dog-leg stair: landing provides partial fixity, M = wL²/10")
-        }
         codeNotes.add("Design moment M = ${String.format("%.2f", adjustedMoment)} kN.m/m")
         codeNotes.add("Design shear V = ${String.format("%.2f", adjustedShear)} kN/m")
+        codeNotes.add("Design is per 1 m strip; quantities and distribution steel scale with actual stair width W = ${input.stairWidth} m")
 
         // ========== 5. تصميم الانحناء (K-method) ==========
         val b = 1000.0
@@ -217,7 +281,7 @@ class ECPStaircase : StaircaseDesign {
 
         // ========== 6. تصميم القص ==========
         val Vu = adjustedShear * 1000.0
-        val qcu = 0.24 * sqrt(input.fcu / GAMMA_C)  // ECP 203 §4-3-1-2
+        val qcu = 0.16 * sqrt(input.fcu / GAMMA_C)  // ECP 203-2020 §4-2-2-1-3, Eq. 4-29 (no web reinforcement)
         val concreteShearCapacity = qcu * b * d / 1000.0
         val maxShearStress = 0.7 * sqrt(input.fcu / GAMMA_C)  // ECP 203
         val maxShearCapacity = maxShearStress * b * d / 1000.0
@@ -227,30 +291,45 @@ class ECPStaircase : StaircaseDesign {
             name = "Shear Capacity",
             value = adjustedShear, limit = maxShearCapacity, unit = "kN/m",
             isSafe = shearSafe,
-            description = "ECP 203 Section 4-3-1-2"
+            description = "ECP 203-2020 §4-2-2-1, Eq. 4-27 (max shear stress)"
         ))
 
         val requiredStirrups: String
         val stirrupDiameter: Double
         val stirrupSpacing: Double
 
+        // §4-2-2-1-6-د-1 (scan doc 4-22): footings and slabs IN GENERAL — which
+        // covers the stair waist slab — are designed on a CONCRETE-ONLY shear
+        // basis per Eq. 4-29, and their thickness is set on that basis. Web
+        // reinforcement (links) is NOT a permitted shear path for the waist:
+        // when Vu exceeds the Eq. 4-29 capacity the compliant response is a
+        // thicker waist, not links. (The Eq. 4-30/4-33 linked regime applies to
+        // beams, not to slabs.)
         if ((Vu / 1000.0) <= concreteShearCapacity) {
-            requiredStirrups = "None (concrete capacity sufficient)"
+            requiredStirrups = "None (links not permitted in slabs, §4-2-2-1-6-د-1)"
             stirrupDiameter = 0.0
             stirrupSpacing = 0.0
-            codeNotes.add("Vc = ${String.format("%.2f", concreteShearCapacity)} kN/m ≥ Vu = ${String.format("%.2f", adjustedShear)} kN/m")
-            codeNotes.add("No shear reinforcement required per ECP 203")
+            codeNotes.add("Vc = ${String.format("%.2f", concreteShearCapacity)} kN/m ≥ Vu = ${String.format("%.2f", adjustedShear)} kN/m (Eq. 4-29, concrete-only basis)")
+            codeNotes.add("No shear reinforcement: §4-2-2-1-6-د-1 requires slabs to be designed on a concrete-only shear basis")
+            safetyChecks.add(StairSafetyCheck(
+                name = "Shear (concrete-only, Eq. 4-29)",
+                value = adjustedShear, limit = concreteShearCapacity, unit = "kN/m",
+                isSafe = true,
+                description = "ECP 203-2020 §4-2-2-1-3/§4-2-2-1-6-د-1: slabs designed on concrete-only shear basis"
+            ))
         } else {
-            val excessShear = (Vu / 1000.0 - concreteShearCapacity) * 1000.0
-            val asvRequired = excessShear / (fs * d) * 1000.0
-            val minAvs = 0.0015 * b * 1000.0
-            val asvFinal = max(asvRequired, minAvs)
-
-            stirrupDiameter = 8.0
-            val stirrupArea = 2 * PI * stirrupDiameter * stirrupDiameter / 4.0
-            stirrupSpacing = (stirrupArea * 1000.0 / asvFinal).coerceIn(50.0, 200.0)
-            requiredStirrups = "Ø${stirrupDiameter.toInt()} @ ${stirrupSpacing.toInt()} mm c/c"
-            codeNotes.add("Shear reinforcement required: $requiredStirrups")
+            // Vu > Eq. 4-29 concrete capacity: links are NOT permitted — the waist
+            // is inadequate and must be thickened. Result is unsafe.
+            requiredStirrups = "None (waist inadequate — increase thickness)"
+            stirrupDiameter = 0.0
+            stirrupSpacing = 0.0
+            codeNotes.add("WARNING: Vu = ${String.format("%.2f", adjustedShear)} kN/m > Vc = ${String.format("%.2f", concreteShearCapacity)} kN/m (Eq. 4-29). Links are not permitted in slabs (§4-2-2-1-6-د-1) — increase waist thickness")
+            safetyChecks.add(StairSafetyCheck(
+                name = "Shear (concrete-only, Eq. 4-29)",
+                value = adjustedShear, limit = concreteShearCapacity, unit = "kN/m",
+                isSafe = false,
+                description = "ECP 203-2020 §4-2-2-1-3/§4-2-2-1-6-د-1: Vu exceeds concrete-only capacity — increase waist thickness (links not permitted in slabs)"
+            ))
         }
 
         // ========== 7. فحص الانحراف ==========
@@ -339,7 +418,13 @@ class ECPStaircase : StaircaseDesign {
             allowableDeflection = allowableDeflection,
             deflectionOk = deflectionOk,
             safetyChecks = safetyChecks,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            analysisStatus = analysisStatus,
+            analysisSpanM = span,
+            adoptedRunMm = numTreads * goingMm,
+            flightBottomRebar = mainRebar,
+            flightTopRebar = "",
+            landingRebar = ""
         )
     }
 

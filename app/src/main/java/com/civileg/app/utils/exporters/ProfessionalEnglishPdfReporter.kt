@@ -106,7 +106,8 @@ object ProfessionalEnglishPdfReporter {
         val date: String = SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date()),
         val revision: String = "Rev. A",
         val showSignature: Boolean = false,
-        val incompleteReview: Boolean = false
+        val incompleteReview: Boolean = false,
+        val includeDiagnosticDrawing: Boolean = false
     )
 
     // ==================== Font Helpers (English Only) ====================
@@ -744,8 +745,8 @@ object ProfessionalEnglishPdfReporter {
 
     private fun addBoqSection(document: Document, rows: List<BoqRow>, incompleteReview: Boolean = false) {
         if (rows.isEmpty()) return
-        document.add(sectionTitle("7. Bill of Quantities"))
-        document.add(separator())
+        document.add(sectionTitle("7. Bill of Quantities").setKeepWithNext(true))
+        document.add(separator().setKeepWithNext(true))
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(10f, 55f, 15f, 20f))).useAllAvailableWidth()
         table.addHeaderCell(headerCell("Item"))
@@ -764,8 +765,8 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
-    private fun addDrawingSection(document: Document, bitmap: Bitmap?, title: String) {
-        document.add(sectionTitle("5. Engineering Drawing"))
+    private fun addDrawingSection(document: Document, bitmap: Bitmap?, title: String, diagnostic: Boolean = false) {
+        document.add(sectionTitle(if(diagnostic) "Captured Screen Review" else "5. Engineering Drawing"))
         document.add(separator())
 
         if (bitmap == null) {
@@ -923,7 +924,11 @@ object ProfessionalEnglishPdfReporter {
             }
             if (config.incompleteReview) {
                 document.add(sectionTitle("5. Construction Drawing: NOT ISSUED"))
-                document.add(Paragraph("No adopted reinforcement geometry has been verified. No substitute drawing is generated."))
+                document.add(Paragraph("No adopted reinforcement geometry has been verified. No construction design is issued."))
+                if(config.includeDiagnosticDrawing && drawingBitmap != null) {
+                    document.add(Paragraph("Captured screen review only. Unverified geometry and reinforcement, not for fabrication or construction."))
+                    addDrawingSection(document,drawingBitmap,"Captured screen review - NOT FOR CONSTRUCTION",diagnostic=true)
+                }
             } else {
                 addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
             }
@@ -931,6 +936,8 @@ object ProfessionalEnglishPdfReporter {
             // 6. Bar Bending Schedule
             addBbsSection(document, bbsRows, config.incompleteReview)
 
+            // Keep the diagnostic capture and quantity table as separate readable pages.
+            if(config.includeDiagnosticDrawing && drawingBitmap != null && boqRows.isNotEmpty()) document.add(AreaBreak())
             // 7. Bill of Quantities
             addBoqSection(document, boqRows, config.incompleteReview)
 
@@ -977,7 +984,8 @@ object ProfessionalEnglishPdfReporter {
         calculationSteps: List<CalculationStep> = emptyList(),
         bbsRows: List<BbsRow> = emptyList(),
         boqRows: List<BoqRow> = emptyList(),
-        incompleteReview: Boolean = false
+        incompleteReview: Boolean = false,
+        includeDiagnosticDrawing: Boolean = false
     ): File? {
         val convertedChecks = safetyChecks.map {
             SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference)
@@ -1016,7 +1024,7 @@ object ProfessionalEnglishPdfReporter {
             calculationSteps = calculationSteps,
             bbsRows = bbsRows,
             boqRows = boqRows,
-            config = ReportConfig(incompleteReview = incompleteReview),
+            config = ReportConfig(incompleteReview = incompleteReview, includeDiagnosticDrawing=includeDiagnosticDrawing),
             outputPath = outputPath
         )
     }

@@ -85,6 +85,8 @@ fun flatSlabDrawingSummary(result: com.civileg.app.domain.FlatSlabResult): Drawi
 fun stairDrawingSummary(result: CalculatorEngine.StairResult): DrawingResultSummary =
     DrawingResultSummary(
         isSafe = result.isSafe,
+        codeAcceptanceComplete = result.codeAcceptanceComplete,
+        codeNotes = result.qualificationNotes,
         utilizationRatio = result.utilizationRatio,
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,

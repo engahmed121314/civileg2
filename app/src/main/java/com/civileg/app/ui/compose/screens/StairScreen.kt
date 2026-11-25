@@ -3,6 +3,7 @@ package com.civileg.app.ui.compose.screens
 import com.civileg.app.ui.responsive.dimens
 
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.calculations.base.StairSupportCondition
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -114,6 +115,11 @@ fun StairScreen(
     var deadLoad by remember { mutableStateOf("5.0") }
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("360") }
+    var supportCondition by remember { mutableStateOf(StairSupportCondition.UNSPECIFIED) }
+    var landingDeclared by remember { mutableStateOf(false) }
+    var landingLength by remember { mutableStateOf("") }
+    var landingWidth by remember { mutableStateOf("") }
+    var landingThickness by remember { mutableStateOf("") }
     var expandedType by remember { mutableStateOf(false) }
     var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
 
@@ -123,7 +129,8 @@ fun StairScreen(
     // LazyColumn item index that holds each field (fields share rows).
     val fieldItemIndex = mapOf(
         "span" to 2, "riser" to 2, "tread" to 3, "deadLoad" to 3,
-        "liveLoad" to 4, "fcu" to 4, "fy" to 5, "stairWidth" to 5
+        "liveLoad" to 4, "fcu" to 4, "fy" to 5, "stairWidth" to 5,
+        "landingLength" to 6, "landingWidth" to 6, "landingThickness" to 6
     )
     // Any input change makes the shown result stale: drop it and that field's old error.
     fun touch(id: String) {
@@ -216,6 +223,32 @@ fun StairScreen(
             }
 
             item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AppText("Support condition / حالة الارتكاز")
+                    StairSupportCondition.values().forEach { condition ->
+                        FilterChip(
+                            selected = supportCondition == condition,
+                            onClick = { supportCondition = condition; viewModel.clearResult() },
+                            label = { AppText(when (condition) {
+                                StairSupportCondition.UNSPECIFIED -> "Not declared / غير محدد"
+                                StairSupportCondition.SIMPLY_SUPPORTED -> "Simply supported / بسيط الارتكاز"
+                                StairSupportCondition.CONTINUOUS_OVER_LANDING -> "Continuous over landing / مستمر فوق البسطة"
+                            }) }
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = landingDeclared, onCheckedChange = { landingDeclared = it; viewModel.clearResult() })
+                        AppText("Declare landing dimensions / تحديد أبعاد البسطة")
+                    }
+                    if (landingDeclared) {
+                        ValidatedNumberField(form, "landingLength", landingLength, "Landing length (mm)", { landingLength = it; touch("landingLength") })
+                        ValidatedNumberField(form, "landingWidth", landingWidth, "Landing width (mm)", { landingWidth = it; touch("landingWidth") })
+                        ValidatedNumberField(form, "landingThickness", landingThickness, "Landing thickness (mm)", { landingThickness = it; touch("landingThickness") })
+                    }
+                }
+            }
+
+            item {
                 DesignCodeSelectorRow(
                     selectedCode = selectedCode,
                     onCodeSelected = { if (selectedCode != it) viewModel.clearResult(); selectedCode = it }
@@ -240,7 +273,11 @@ fun StairScreen(
                                 FieldSpec("fcu", fcu, FieldKind.POSITIVE),
                                 FieldSpec("fy", fy, FieldKind.POSITIVE),
                                 FieldSpec("stairWidth", stairWidth, FieldKind.POSITIVE)
-                            )
+                            ) + if (landingDeclared) listOf(
+                                FieldSpec("landingLength", landingLength, FieldKind.POSITIVE),
+                                FieldSpec("landingWidth", landingWidth, FieldKind.POSITIVE),
+                                FieldSpec("landingThickness", landingThickness, FieldKind.POSITIVE)
+                            ) else emptyList()
                         )
                         form.apply(checked)
                         if (!checked.isValid) {
@@ -262,7 +299,11 @@ fun StairScreen(
                             fy = checked.value("fy"),
                             preferredDiameter = 12,
                             code = selectedCode,
-                            stairWidthMm = checked.value("stairWidth")
+                            stairWidthMm = checked.value("stairWidth"),
+                            supportCondition = supportCondition,
+                            landingLengthMm = if (landingDeclared) checked.value("landingLength") else null,
+                            landingWidthMm = if (landingDeclared) checked.value("landingWidth") else null,
+                            landingThicknessMm = if (landingDeclared) checked.value("landingThickness") else null
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -347,13 +388,20 @@ fun StairScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
+                            AppText("Code acceptance incomplete / قبول التصميم غير مكتمل", color = MaterialTheme.colorScheme.error)
+                            ResultRow("Analysis status", res.analysisStatus.name)
+                            ResultRow("Support", res.supportCondition.name)
+                            AppText(res.documentaryBasisLabel)
+                            AppText(res.barMaterialClassification)
+                            AppText("Top and landing reinforcement are not designed / تسليح البسطة والحديد العلوي غير مصممين")
                             ResultRow(stringResource(R.string.stair_slab_thickness), "${res.thickness.toInt()} mm")
                             ResultRow(stringResource(R.string.stair_main_reinforcement), res.reinforcement.barString)
                             ResultRow(stringResource(R.string.stair_distribution_reinforcement), res.distributionReinforcement.barString)
                             ResultRow("Mu", "${"%.1f".format(res.mu)} kN.m")
                             ResultRow("Concrete Volume", "${"%.3f".format(res.concreteVolume)} m³")
-                            ResultRow("Steel Weight", "${"%.1f".format(res.steelWeight)} kg")
-                            ResultRow("Cost", "${"%.2f".format(res.cost)}")
+                            AppText("Final steel and fabrication BBS unavailable: anchorage, bends, laps, top and landing steel unresolved")
+                            ResultRow("Net flight steel only", "${"%.1f".format(res.steelWeight)} kg")
+                            ResultRow("Partial material cost, not procurement total", "${"%.2f".format(res.cost)}")
                         }
                     }
                 }
@@ -365,7 +413,7 @@ fun StairScreen(
                         BbsGenerator.generateStairBbs(
                             mark = "ST1",
                             result = res,
-                            stairWidthMm = (FormValidator.parseNumber(stairWidth) ?: 1200.0)
+                            stairWidthMm = res.stairWidthMm
                         )
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty()) {
@@ -375,7 +423,7 @@ fun StairScreen(
                     val boqRows = runCatching {
                         BoqEstimator.stairRows(
                             res,
-                            ((FormValidator.parseNumber(stairWidth) ?: 1200.0)) / 1000.0,
+                            (res.stairWidthMm) / 1000.0,
                             "ST1"
                         )
                     }.getOrDefault(emptyList())
@@ -456,7 +504,7 @@ fun StairScreen(
 
                 item {
                     AppText(stringResource(R.string.stair_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    StairFormulasCard()
+                    StairFormulasCard(res)
                 }
 
                 item {
@@ -480,23 +528,21 @@ fun StairScreen(
                         onViewModeChanged = { selectedViewMode = it },
                         drawingContent = {
                             val geometry = StairFlightGeometry.from(res.span, res.riser, res.tread)
-                            val codeAwareCover = when (selectedCode) {
+                            val codeAwareCover = when (res.code) {
                                 DesignCode.ACI -> 38.0
                                 DesignCode.SBC -> 40.0
                                 else -> 25.0
                             }
-                            val hasLanding = selectedType == CalculatorEngine.StairType.DOUBLE_FLIGHT ||
-                                selectedType == CalculatorEngine.StairType.TRIPLE_FLIGHT
-                            val landingLen = if (hasLanding) res.tread * 2.0 else 0.0
+                            val landingLen = res.landingLengthMm ?: 0.0
                             ProfessionalStairDrawing(
-                                stairWidth = (FormValidator.parseNumber(stairWidth) ?: 1200.0),
+                                stairWidth = res.stairWidthMm,
                                 totalHeight = geometry.riseMm,
                                 totalLength = geometry.runMm,
                                 riserHeight = res.riser,
                                 treadWidth = res.tread,
                                 slabThickness = res.thickness,
                                 landingLength = landingLen,
-                                landingThickness = res.thickness,
+                                landingThickness = res.landingThicknessMm ?: 0.0,
                                 mainRebarDia = res.reinforcement.diameter.toDouble(),
                                 mainRebarSpacing = res.reinforcement.spacing,
                                 distributionDia = res.distributionReinforcement.diameter.toDouble(),
@@ -504,6 +550,8 @@ fun StairScreen(
                                 cover = codeAwareCover,
                                 stairType = res.type.displayName,
                                 viewMode = selectedViewMode,
+                                quantityReview = res.quantityReview,
+                                documentaryBasisLabel = res.documentaryBasisLabel,
                                 resultSummary = stairDrawingSummary(res),
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -516,14 +564,12 @@ fun StairScreen(
         // PDF drawing capture area (invisible, renders at viewMode=0)
         result?.let { res ->
             val geometry = StairFlightGeometry.from(res.span, res.riser, res.tread)
-            val codeAwareCover = when (selectedCode) {
+            val codeAwareCover = when (res.code) {
                 DesignCode.ACI -> 38.0
                 DesignCode.SBC -> 40.0
                 else -> 25.0
             }
-            val hasLanding = selectedType == CalculatorEngine.StairType.DOUBLE_FLIGHT ||
-                selectedType == CalculatorEngine.StairType.TRIPLE_FLIGHT
-            val landingLen = if (hasLanding) res.tread * 2.0 else 0.0
+            val landingLen = res.landingLengthMm ?: 0.0
             ComposeDrawingCaptureUtil.DrawingCaptureArea(
                 captureLayer = pdfCaptureLayer,
                 widthPx = screenWidthPx,
@@ -531,14 +577,14 @@ fun StairScreen(
             ) {
                 Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
                     ProfessionalStairDrawing(
-                        stairWidth = (FormValidator.parseNumber(stairWidth) ?: 1200.0),
+                        stairWidth = res.stairWidthMm,
                         totalHeight = geometry.riseMm,
                         totalLength = geometry.runMm,
                         riserHeight = res.riser,
                         treadWidth = res.tread,
                         slabThickness = res.thickness,
                         landingLength = landingLen,
-                        landingThickness = res.thickness,
+                        landingThickness = res.landingThicknessMm ?: 0.0,
                         mainRebarDia = res.reinforcement.diameter.toDouble(),
                         mainRebarSpacing = res.reinforcement.spacing,
                         distributionDia = res.distributionReinforcement.diameter.toDouble(),
@@ -546,7 +592,9 @@ fun StairScreen(
                         cover = codeAwareCover,
                         stairType = res.type.displayName,
                         viewMode = 0,
-                        resultSummary = stairDrawingSummary(res),
+                        quantityReview = res.quantityReview,
+                                documentaryBasisLabel = res.documentaryBasisLabel,
+                                resultSummary = stairDrawingSummary(res),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -980,7 +1028,10 @@ private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifie
                 textAlign = android.graphics.Paint.Align.RIGHT
                 isFakeBoldText = true
             }
-            if (res.isSafe) {
+            if (!res.codeAcceptanceComplete) {
+                safePaint.color = android.graphics.Color.parseColor("#B26A00")
+                drawContext.canvas.nativeCanvas.drawText("UNVERIFIED", size.width - 10f, size.height - 3f, safePaint)
+            } else if (res.isSafe) {
                 safePaint.color = android.graphics.Color.parseColor("#2E7D32")
                 drawContext.canvas.nativeCanvas.drawText(
                     "SAFE", size.width - 10f, size.height - 3f, safePaint
@@ -996,13 +1047,16 @@ private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifie
 }
 
 @Composable
-private fun StairFormulasCard() {
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            FormulaItem("1. Wu = 1.4 * DL + 1.6 * LL")
-            FormulaItem("2. ts = L / 25 (Simple) or L / 20 (Cantilever)")
-            FormulaItem("3. Mu = Wu * L² / 8")
-            FormulaItem("4. As = Mu / (fy/gamma_s * j * d)")
+private fun StairFormulasCard(result:CalculatorEngine.StairResult) {
+    Card(modifier=Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f))) {
+        Column(modifier=Modifier.padding(12.dp)) {
+            AppText("Applied calculation trace only. Selected-reference coverage incomplete.")
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr) {
+                result.calculationSteps.forEach { step ->
+                    FormulaItem("${step.stepNumber}. ${step.formula}")
+                    AppText(step.formulaWithValues,style=MaterialTheme.typography.bodySmall)
+                }
+            }
         }
     }
 }

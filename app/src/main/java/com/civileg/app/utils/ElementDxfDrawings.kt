@@ -294,7 +294,8 @@ object ElementDxfDrawings {
         coverMm: Double,
         barDiaMm: Double,
         barSpacingMm: Double,
-        treadCount: Int = steps
+        treadCount: Int = steps,
+        reviewNotes: List<String> = emptyList()
     ): DxfDrawable = DxfDrawable { ex ->
         require(steps > 0 && treadCount > 0 && (steps == treadCount || steps == treadCount + 1))
         val totalRise = riseMm * steps
@@ -317,7 +318,7 @@ object ElementDxfDrawings {
             d += barSpacingMm.coerceAtLeast(50.0)
         }
         dimensionOutline(ex, runMm, totalRise + waistThicknessMm)
-        ex.notes(title, runMm, totalRise + waistThicknessMm, "$steps risers / $treadCount treads", "MAIN Ø${fmt(barDiaMm)} @ ${fmt(barSpacingMm)}")
+        ex.notes(title, runMm, totalRise + waistThicknessMm, "$steps risers / $treadCount treads", "MAIN Ø${fmt(barDiaMm)} @ ${fmt(barSpacingMm)}", reviewNotes)
     }
 
     /** Rectangular tank section: base slab, walls and reinforcement. */

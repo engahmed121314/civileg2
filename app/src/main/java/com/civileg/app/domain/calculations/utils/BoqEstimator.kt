@@ -88,7 +88,7 @@ object BoqEstimator {
         val inclinedLengthM = sqrt(runM * runM + riseM * riseM)
         return listOf(
             item(1, "Concrete - $mark", "m3", result.concreteVolume),
-            item(2, "Reinforcement steel - $mark", "kg", result.steelWeight),
+            item(2, "Net flight steel only - $mark (excludes anchorage, bends, laps, top and landing steel)", "kg", result.quantityReview?.netFlightSteelKg ?: result.steelWeight),
             item(3, "Formwork - $mark (inclined soffit)", "m2", inclinedLengthM * widthM)
         )
     }

@@ -167,7 +167,9 @@ class SBCStaircase : StaircaseDesign {
         val Rn = if (denominator > 0) Mu / denominator else 0.0
 
         val m = if (fc > 0) input.fy / (0.85 * fc) else 0.0
-        val rho = if (m > 0 && (1 - 2 * m * Rn / input.fy) >= 0) {
+        val flexureDiscriminant = 1 - 2 * m * Rn / input.fy
+        val flexureSolutionExists = m > 0 && d > 0 && flexureDiscriminant.isFinite() && flexureDiscriminant >= 0
+        val rho = if (flexureSolutionExists) {
             (1 - sqrt(1 - 2 * m * Rn / input.fy)) / m
         } else {
             0.0
@@ -196,11 +198,12 @@ class SBCStaircase : StaircaseDesign {
         safetyChecks.add(StairSafetyCheck(
             name = "Flexure (ρ ≤ ρ_max_tc)",
             value = rho, limit = rhoMaxTc, unit = "",
-            isSafe = rho <= rhoMaxTc,
+            isSafe = flexureSolutionExists && rho <= rhoMaxTc,
             description = "SBC 304-2024 Section 9.3.3.1"
         ))
 
         // اختيار حديد رئيسي
+        if (!flexureSolutionExists) codeNotes.add("No singly reinforced flexural solution: demand exceeds the implemented section model; minimum steel is not a valid design for this demand")
         val mainRebar = selectBars(astRequired)
         val mainRebarArea = parseBarArea(mainRebar)
         val rhoProvided = mainRebarArea / (b * d)

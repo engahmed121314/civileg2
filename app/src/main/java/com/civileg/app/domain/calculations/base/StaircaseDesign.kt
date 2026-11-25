@@ -13,6 +13,39 @@ enum class StairType(val displayName: String) {
 }
 
 /**
+ * Support/continuity contract for a stair flight.
+ * UNSPECIFIED is the honest default: no restraint may be ASSUMED from it.
+ */
+enum class StairSupportCondition {
+    /** Flight on two simple supports (waist only). Conservative per-flight model. */
+    SIMPLY_SUPPORTED,
+    /** Flight continuous over an intermediate landing that restrains it. Only
+     *  valid when landing geometry is explicitly supplied. */
+    CONTINUOUS_OVER_LANDING,
+    /** No support information: engines must use the conservative model and mark
+     *  the restraint assumption unverified. */
+    UNSPECIFIED
+}
+
+/**
+ * Status of the analysis model behind a result — travels with the result so a
+ * UI case name can never masquerade as a verified design.
+ */
+enum class StairAnalysisStatus {
+    /**
+     * The implemented analysis model matches the declared case and the supplied
+     * support inputs. NOT complete case qualification: unimplemented detailing
+     * (e.g. landing slab steel, top steel over a landing) is reported separately
+     * via the empty result fields and code notes.
+     */
+    CASE_MODEL_IMPLEMENTED,
+    /** Conservative fallback used because support/landing inputs were UNSPECIFIED. */
+    CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED,
+    /** No implemented model for the named case; numbers are not a verified design. */
+    UNSUPPORTED_CASE
+}
+
+/**
  * بيانات الإدخال لتصميم السلم
  */
 data class StaircaseInput(
@@ -26,7 +59,15 @@ data class StaircaseInput(
     val deadLoad: Double = 6.0,  // kN/m² - self-weight + finishes
     val liveLoad: Double = 4.0,  // kN/m² - variable load
     val riserCount: Int = 0,     // 0 = auto-calculate
-    val going: Double = 0.0      // 0 = auto-calculate
+    val going: Double = 0.0,     // 0 = auto-calculate
+
+    // ── Case contract (2026-11-24, lead/specialty coordination) ──
+    // UNSPECIFIED default: engines must NOT assume landing restraint from it.
+    val supportCondition: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
+    // Landing geometry — required to claim CONTINUOUS_OVER_LANDING for DOG_LEG.
+    val landingLengthMm: Double? = null,
+    val landingWidthMm: Double? = null,
+    val landingThicknessMm: Double? = null
 )
 
 /**
@@ -88,7 +129,18 @@ data class StaircaseResult(
 
     // فحوصات الأمان
     val safetyChecks: List<StairSafetyCheck>,
-    val codeNotes: List<String>
+    val codeNotes: List<String>,
+
+    // ── Case contract results (2026-11-24) ──
+    // No silent implemented-model claim: a lane that has not adapted to the
+    // case contract must default to UNSUPPORTED_CASE (ACI/SBC lanes pending).
+    val analysisStatus: StairAnalysisStatus = StairAnalysisStatus.UNSUPPORTED_CASE,
+    val analysisSpanM: Double = 0.0,        // span actually used in analysis
+    val adoptedRunMm: Double = 0.0,         // discrete adopted run (treads × going)
+    // Separated reinforcement outputs. Empty string = not designed.
+    val flightBottomRebar: String = "",     // defaults mirror legacy mainRebar
+    val flightTopRebar: String = "",        // top/negative-moment steel (continuity)
+    val landingRebar: String = ""           // landing slab steel; empty = not designed
 )
 
 /**
