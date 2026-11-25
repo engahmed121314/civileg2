@@ -583,8 +583,9 @@ fun StairScreen(
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
-        // PDF drawing capture area (invisible, renders at viewMode=0)
-        result?.let { res ->
+        // PDF drawing capture area (invisible, renders at viewMode=0). Never composed for a case with no design:
+        // a cantilever result has slab thickness 0 and ProfessionalStairDrawing rejects it, which crashed the app.
+        result?.takeIf { com.civileg.app.utils.StairResultGate.isDesignUsable(it.analysisStatus) }?.let { res ->
             val geometry = StairFlightGeometry.from(res.span, res.riser, res.tread)
             val codeAwareCover = when (res.code) {
                 DesignCode.ACI -> 38.0
