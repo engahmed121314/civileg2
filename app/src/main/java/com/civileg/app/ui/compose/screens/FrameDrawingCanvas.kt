@@ -212,7 +212,10 @@ private fun DrawScope.drawFrameView(
         val midX = (p1.x + p2.x) / 2
         val midY = (p1.y + p2.y) / 2
         val angle = atan2(p2.y - p1.y, p2.x - p1.x)
-        val labelOffset = 15.dp.toPx()
+        // A member carrying a load shows its load arrows and value on the +normal side (about 33 px); push the
+        // name block clear of them so the load value and the member name never overlap.
+        val hasLoad = memberLoads.any { it.memberId == member.id }
+        val labelOffset = if (hasLoad) 15.dp.toPx() + 38f else 15.dp.toPx()
         val labelX = midX + cos(angle + PI / 2) * labelOffset
         val labelY = midY + sin(angle + PI / 2) * labelOffset
 
@@ -1395,7 +1398,9 @@ private fun DrawScope.drawDiagrams(
 
         val maxPt = points.maxByOrNull { abs(it.value) }
         if (maxPt != null && abs(maxPt.value) > 0.01) {
-            val tMax = if (memberLength > 0) (maxPt.x / memberLength).toFloat() else 0.5f
+            val tMaxRaw = if (memberLength > 0) (maxPt.x / memberLength).toFloat() else 0.5f
+            // Keep the annotation off the end nodes (node markers/ids sit there): slide it inward along the member.
+            val tMax = tMaxRaw.coerceIn(0.18f, 0.82f)
             val offsetMax = maxPt.value * diagramScale
             val annX = p1.x + dx * L * tMax + nx * offsetMax.toFloat()
             val annY = p1.y + dy * L * tMax + ny * offsetMax.toFloat()
