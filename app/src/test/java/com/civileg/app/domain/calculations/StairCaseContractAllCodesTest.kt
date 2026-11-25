@@ -1,0 +1,74 @@
+package com.civileg.app.domain.calculations
+
+import com.civileg.app.domain.calculations.aci.ACIStaircase
+import com.civileg.app.domain.calculations.base.StairAnalysisStatus
+import com.civileg.app.domain.calculations.base.StairSupportCondition
+import com.civileg.app.domain.calculations.base.StairType
+import com.civileg.app.domain.calculations.base.StaircaseDesign
+import com.civileg.app.domain.calculations.base.StaircaseInput
+import com.civileg.app.domain.calculations.ecp.ECPStaircase
+import com.civileg.app.domain.calculations.sbc.SBCStaircase
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/** The stair case/support contract must be honoured identically by the ECP, ACI and SBC lanes. */
+class StairCaseContractAllCodesTest {
+
+    private val lanes: Map<String, StaircaseDesign> = mapOf(
+        "ECP" to ECPStaircase(), "ACI" to ACIStaircase(), "SBC" to SBCStaircase()
+    )
+
+    private fun input(
+        type: StairType = StairType.STRAIGHT,
+        support: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
+        landing: Boolean = false
+    ) = StaircaseInput(
+        stairType = type, span = 3.0, totalRise = 1.8, stairWidth = 1.2, waistThickness = 200.0,
+        fcu = 25.0, fy = 400.0, supportCondition = support,
+        landingLengthMm = if (landing) 1200.0 else null,
+        landingWidthMm = if (landing) 1200.0 else null,
+        landingThicknessMm = if (landing) 150.0 else null
+    )
+
+    @Test
+    fun `straight flight status follows the declared support in every lane`() {
+        for ((name, lane) in lanes) {
+            assertEquals(name, StairAnalysisStatus.CASE_MODEL_IMPLEMENTED,
+                lane.designStaircase(input(support = StairSupportCondition.SIMPLY_SUPPORTED)).analysisStatus)
+            assertEquals(name, StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED,
+                lane.designStaircase(input()).analysisStatus)
+        }
+    }
+
+    @Test
+    fun `dog leg only credits landing restraint when declared with landing dimensions`() {
+        for ((name, lane) in lanes) {
+            val straight = lane.designStaircase(input())
+            val unspecified = lane.designStaircase(input(StairType.DOG_LEG))
+            val noDims = lane.designStaircase(input(StairType.DOG_LEG, StairSupportCondition.CONTINUOUS_OVER_LANDING))
+            val continuous = lane.designStaircase(input(StairType.DOG_LEG, StairSupportCondition.CONTINUOUS_OVER_LANDING, landing = true))
+            assertEquals(name, StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED, unspecified.analysisStatus)
+            assertEquals(name, StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED, noDims.analysisStatus)
+            assertEquals(name, StairAnalysisStatus.CASE_MODEL_IMPLEMENTED, continuous.analysisStatus)
+            // No assumed restraint: unverified cases use the same moment as the simply supported flight.
+            assertEquals(name, straight.maxMoment, unspecified.maxMoment, 1e-9)
+            assertEquals(name, straight.maxMoment, noDims.maxMoment, 1e-9)
+            assertEquals(name, straight.maxMoment * 0.8, continuous.maxMoment, straight.maxMoment * 1e-6)
+            assertEquals(name, "", continuous.flightTopRebar)
+            assertEquals(name, "", continuous.landingRebar)
+        }
+    }
+
+    @Test
+    fun `open well and spiral are unsupported in every lane and never a passing case model`() {
+        for ((name, lane) in lanes) {
+            for (t in listOf(StairType.OPEN_WELL, StairType.SPIRAL)) {
+                val r = lane.designStaircase(input(t, StairSupportCondition.SIMPLY_SUPPORTED))
+                assertEquals("$name $t", StairAnalysisStatus.UNSUPPORTED_CASE, r.analysisStatus)
+                assertTrue("$name $t must fail the case check", r.safetyChecks.any { it.name == "Case model support" && !it.isSafe })
+                assertTrue("$name $t must not be safe", !r.isSafe)
+            }
+        }
+    }
+}

@@ -148,15 +148,47 @@ class ACIStaircase : StaircaseDesign {
 
         // ========== 4. التحليل الإنشائي ==========
         val span = input.span
-        val momentCoefficient = if (input.stairType == StairType.DOG_LEG) 1.0 / 10.0 else 1.0 / 8.0
+        // Case contract (same derivation as the ECP lane): a restraint is only credited when the user declared
+        // CONTINUOUS_OVER_LANDING AND supplied finite positive landing dimensions. Otherwise the conservative
+        // simply supported wL²/8 is used and the result says so; it is never reported as an implemented model.
+        fun finitePositive(v: Double?): Boolean = v != null && v.isFinite() && v > 0.0
+        val landingSupplied = finitePositive(input.landingLengthMm) &&
+            finitePositive(input.landingWidthMm) && finitePositive(input.landingThicknessMm)
+        val continuousOverLanding = input.stairType == StairType.DOG_LEG &&
+            input.supportCondition == StairSupportCondition.CONTINUOUS_OVER_LANDING && landingSupplied
+        val caseSupported = input.stairType == StairType.STRAIGHT || input.stairType == StairType.DOG_LEG
+        val analysisStatus = when {
+            !caseSupported -> StairAnalysisStatus.UNSUPPORTED_CASE
+            input.stairType == StairType.STRAIGHT && input.supportCondition == StairSupportCondition.SIMPLY_SUPPORTED ->
+                StairAnalysisStatus.CASE_MODEL_IMPLEMENTED
+            input.stairType == StairType.DOG_LEG && continuousOverLanding -> StairAnalysisStatus.CASE_MODEL_IMPLEMENTED
+            else -> StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED
+        }
+        when (analysisStatus) {
+            StairAnalysisStatus.CASE_MODEL_IMPLEMENTED -> codeNotes.add(
+                if (continuousOverLanding) "Case model: double flight, M = wL²/10 per flight, continuity over the supplied landing"
+                else "Case model: single flight, simply supported one-way inclined strip, M = wL²/8"
+            )
+            StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED -> codeNotes.add(
+                "Case model: analyzed simply supported (M = wL²/8); declared support ${input.supportCondition} / landing is not modeled, restraint NOT verified"
+            )
+            else -> codeNotes.add("WARNING: no implemented analysis model for ${input.stairType}; not a verified design for this case")
+        }
+        safetyChecks.add(StairSafetyCheck(
+            name = "Case model support",
+            value = if (caseSupported) 1.0 else 0.0, limit = 1.0, unit = "",
+            isSafe = caseSupported,
+            description = if (caseSupported) "Implemented analysis model for this stair case" else "No implemented analysis model for ${input.stairType}"
+        ))
+        if (input.stairType == StairType.DOG_LEG) {
+            codeNotes.add("The landing slab itself and the top steel over the landing are NOT designed by this engine")
+        }
+        val momentCoefficient = if (continuousOverLanding) 1.0 / 10.0 else 1.0 / 8.0
         val adjustedMoment = horizontalLoad * span * span * momentCoefficient
         val adjustedShear = horizontalLoad * span / 2.0
         val reactionA = adjustedShear
         val reactionB = adjustedShear
 
-        if (input.stairType == StairType.DOG_LEG) {
-            codeNotes.add("Dog-leg stair: landing provides partial fixity, M = wL²/10")
-        }
         codeNotes.add("Design moment Mu = ${String.format("%.2f", adjustedMoment)} kN.m/m")
         codeNotes.add("Design shear Vu = ${String.format("%.2f", adjustedShear)} kN/m")
 
@@ -375,7 +407,13 @@ class ACIStaircase : StaircaseDesign {
             allowableDeflection = allowableDeflection,
             deflectionOk = deflectionOk,
             safetyChecks = safetyChecks,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            analysisStatus = analysisStatus,
+            analysisSpanM = span,
+            adoptedRunMm = numTreads * goingMm,
+            flightBottomRebar = mainRebar,
+            flightTopRebar = "",
+            landingRebar = ""
         )
     }
 
