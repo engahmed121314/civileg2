@@ -131,7 +131,20 @@ def pdf_try(prefix):
         scroll_up(2)
     time.sleep(5); shot(prefix + "-pdf-after"); dump(prefix + "-pdf-after")
     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); shot(prefix + "-pdf-back")
+def fill_cover(prefix):
+    scroll_top(8)
+    for _ in range(8):
+        if tap_text(["Actual cover"], prefix + "-cover-find"):
+            adb("shell", "input", "keyevent", "KEYCODE_MOVE_END")
+            for _ in range(6): adb("shell", "input", "keyevent", "KEYCODE_DEL")
+            adb("shell", "input", "text", "30")
+            if b"mInputShown=true" in adb("shell", "dumpsys", "input_method").stdout:
+                adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(0.8)
+            shot(prefix + "-cover-filled"); log.append((prefix + "_cover", True)); return
+        scroll_up(1)
+    log.append((prefix + "_cover", False))
 def calc_hordi(prefix):
+    fill_cover(prefix)
     scroll_up(12)
     ok = tap_text(["تصميم البلاطة"], prefix + "-calc-find"); log.append((prefix + "_calc", ok)); time.sleep(3)
     sweep(prefix + "-res", 5)
