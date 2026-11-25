@@ -17,6 +17,16 @@ class DesignNumberFormatTest {
             assertFalse(p.contains("2147483647") || p.contains("Infinity") || p.contains("NaN"))
         }
     }
+    @Test fun legitimateOverCapacityRatiosStayVisibleNumbers() {
+        assertEquals("150%", DesignNumberFormat.percent(1.5))
+        assertEquals("1200%", DesignNumberFormat.percent(12.0))
+        assertEquals("21474836%", DesignNumberFormat.percent(214748.3647))
+        assertEquals(1f, DesignNumberFormat.progress(1.5), 0f)
+    }
+    @Test fun sentinelValuesAreNotAcceptance() {
+        assertFalse(DesignNumberFormat.percent(Double.POSITIVE_INFINITY).contains("%") && DesignNumberFormat.percent(Double.POSITIVE_INFINITY).matches(Regex("[0-9.]+%")))
+        assertEquals(DesignNumberFormat.NOT_DETERMINED, DesignNumberFormat.areaMm2(Double.POSITIVE_INFINITY))
+    }
     @Test fun progressIsClamped() {
         assertEquals(1f, DesignNumberFormat.progress(Double.POSITIVE_INFINITY), 0f)
         assertEquals(1f, DesignNumberFormat.progress(2.5), 0f)
