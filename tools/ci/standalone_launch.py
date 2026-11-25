@@ -202,6 +202,40 @@ def frame_block():
     log.append(("frame_view_tab", tap_text(["العرض والنتائج"], "fr-viewtab"))); time.sleep(3); shot("frame-view-BMD"); dump("frame-view-BMD")
     for t in ("SFD", "AFD"):
         log.append(("frame_view_" + t, tap_text([t], "fr-view-" + t, exact=True))); time.sleep(2); shot("frame-view-" + t)
+def pile_block():
+    """Pile screen: default inputs, design, status card sweep, PDF request; exported PDFs are pulled afterwards."""
+    try:
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+        tap_text(["التصميم"], "pile-tab", exact=True); scroll_top(3)
+        ok = False
+        for _ in range(6):
+            if tap_text(["الخوازيق"], "pile-find"): ok = True; break
+            scroll_up(2)
+        log.append(("pile_open", ok)); time.sleep(2)
+        shot("pile-open"); dump("pile-open")
+        for _ in range(8):
+            if tap_text(["تصميم الأساسات العميقة"], "pile-calc-find"): log.append(("pile_calc", True)); break
+            scroll_up(2)
+        else: log.append(("pile_calc", False))
+        time.sleep(4)
+        for k in range(5):
+            shot(f"pile-res-{k}"); dump(f"pile-res-{k}"); scroll_up(2)
+        pdf_ok = False
+        for _ in range(10):
+            if tap_text(["PDF"], "pile-pdf-find"): pdf_ok = True; break
+            scroll_top(1)
+        log.append(("pile_pdf_tap", pdf_ok)); time.sleep(6)
+        shot("pile-pdf-after"); dump("pile-pdf-after")
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+    except Exception as e:
+        log.append(("pile_exception", repr(e)))
+def pull_exported_pdfs():
+    ls = adb("shell", "run-as", pkg, "find", ".", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
+    ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf").stdout.decode("utf8", "ignore")
+    open(f"{out}/pdf-files.txt", "w").write(ls)
+    for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:4]:
+        d = adb("shell", "run-as", pkg, "cat", pth).stdout
+        open(f"{out}/exported-" + os.path.basename(pth), "wb").write(d)
 if os.path.exists("tools/ci/STAIR_ONLY"):
     try:
         stair_block()
@@ -209,8 +243,10 @@ if os.path.exists("tools/ci/STAIR_ONLY"):
         stair_codes()
         frame_block()
         stair_invalid()
+        pile_block()
     except Exception as e:
         log.append(("stair_exception", repr(e)))
+    pull_exported_pdfs()
     open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
 # 1) blank width
 log.append(("clear_width", edit_field("250", "", "d-w0"))); shot("beam-width-blank")
@@ -295,24 +331,8 @@ try:
     open_from_design("بلاطة هوردي", "hordi-reopen")
 except Exception as e:
     log.append(("hordi_exception", repr(e)))
-# 7) Pile foundation: default inputs, design, status card + PDF (exported PDF is pulled below with the other files)
-try:
-    open_from_design("الخوازيق", "pile")
-    for _ in range(8):
-        if tap_text(["تصميم الأساسات العميقة"], "pile-calc-find"): log.append(("pile_calc", True)); break
-        scroll_up(2)
-    else: log.append(("pile_calc", False))
-    time.sleep(4)
-    sweep("pile-res", 5)
-    pdf_ok = False
-    for _ in range(10):
-        if tap_text(["PDF"], "pile-pdf-find"): pdf_ok = True; break
-        scroll_top(1)
-    log.append(("pile_pdf_tap", pdf_ok)); time.sleep(6)
-    shot("pile-pdf-after"); dump("pile-pdf-after")
-    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
-except Exception as e:
-    log.append(("pile_exception", repr(e)))
+# 7) Pile foundation step
+pile_block()
 # files the app wrote (debug build: run-as works)
 ls = adb("shell", "run-as", pkg, "find", ".", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
 ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf").stdout.decode("utf8", "ignore")
