@@ -35,4 +35,13 @@ class ColumnActivePathTest {
    }catch(e:IllegalArgumentException){assertTrue(e.message!!.contains("Manual column reinforcement"))}
   }
  }
+ @Test fun incompleteAssessmentIsNeverConfirmedSafe() {
+  for(code in DesignCode.values()) {
+   val r=engine().designColumn(400.0,400.0,500.0,10.0,10.0,30.0,400.0,code,clearHeight=3000.0)
+   assertFalse("assessment is not complete for any layout yet",r.assessmentComplete)
+   assertFalse(r.confirmedSafe)
+  }
+  val big=engine().designColumn(300.0,300.0,3000.0,0.0,0.0,25.0,400.0,DesignCode.ECP,clearHeight=3000.0)
+  assertFalse(big.confirmedSafe)
+ }
 }

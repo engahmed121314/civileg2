@@ -435,6 +435,9 @@ class ColumnViewModel @Inject constructor(
                         resultsMap["Tie Distribution Zone ${i+1}"] = "${zone.name}: ${zone.description} [${String.format("%.1f", (zone.endLocation-zone.startLocation)/1000.0)}m]"
                     }
                 }
+                if (!res.assessmentComplete) {
+                    resultsMap["Assessment status"] = "PRELIMINARY - NOT FULLY CHECKED: moment capacity is not validated for the actual bar positions. No safe conclusion is given."
+                }
                 val safetyChecks = res.safetyChecks.map { chk ->
                     GenericSafetyCheck(
                         name = chk.name, calculated = chk.value,
@@ -451,7 +454,7 @@ class ColumnViewModel @Inject constructor(
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
-                    isSafe = res.isSafe,
+                    isSafe = res.confirmedSafe,
                     calculationSteps = res.calculationSteps,
                     bbsEntries = runCatching {
                         com.civileg.app.domain.calculations.utils.BbsGenerator.generateColumnBbs("C1", res, h * 1000.0)

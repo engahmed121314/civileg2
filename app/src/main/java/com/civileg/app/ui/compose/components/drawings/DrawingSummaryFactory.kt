@@ -32,15 +32,15 @@ fun beamDrawingSummary(result: CalculatorEngine.BeamResult): DrawingResultSummar
 
 fun columnDrawingSummary(result: CalculatorEngine.ColumnResult): DrawingResultSummary =
     DrawingResultSummary(
-        isSafe = result.isSafe,
+        isSafe = result.confirmedSafe,
         utilizationRatio = result.utilizationRatio,
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
-        codeNotes = (if (result.isSafe && !result.capacityModelValidated)
+        codeNotes = (if (result.isSafe && !result.assessmentComplete)
             listOf("PRELIMINARY - NOT FULLY CHECKED / نتيجة أولية لم يكتمل التحقق منها: moment capacity not validated for the actual bar positions / لم تُراجع قدرة العزم على مواضع الأسياخ الفعلية")
             else emptyList()) + result.codeNotes,
-        designCodeLabel = result.code.version + (if (result.isSafe && !result.capacityModelValidated) " (preliminary)" else ""),
+        designCodeLabel = result.code.version + (if (result.isSafe && !result.assessmentComplete) " (preliminary)" else ""),
         axialLoadRatio = if (result.axialCapacity > 0.0) result.appliedAxial / result.axialCapacity else 0.0
     )
 

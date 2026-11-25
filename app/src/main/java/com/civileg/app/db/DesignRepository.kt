@@ -74,7 +74,7 @@ class DesignRepository @Inject constructor(
             put("width", result.width)
             put("depth", result.depth)
         }.toString()
-        saveGeneralDesign(projectId, DesignType.COLUMN, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
+        saveGeneralDesign(projectId, DesignType.COLUMN, name, result.confirmedSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
         
         val column = ColumnEntity(
             projectId = projectId, load = result.pu, fcu = fcu, fy = fy,

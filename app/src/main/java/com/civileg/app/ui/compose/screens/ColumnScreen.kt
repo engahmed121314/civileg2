@@ -625,12 +625,12 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    if (result.isSafe && result.capacityModelValidated) Icons.Default.CheckCircle else Icons.Default.Warning,
+                    if (result.confirmedSafe) Icons.Default.CheckCircle else Icons.Default.Warning,
                     contentDescription = null,
-                    tint = if (result.isSafe && result.capacityModelValidated) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    tint = if (result.confirmedSafe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                val preliminary = result.isSafe && !result.capacityModelValidated
+                val preliminary = result.isSafe && !result.assessmentComplete
                 AppText(
                     when {
                         preliminary -> stringResource(R.string.column_preliminary_label)
@@ -638,7 +638,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
                         else -> stringResource(R.string.column_section_unsafe_label)
                     },
                     fontWeight = FontWeight.Bold,
-                    color = if (result.isSafe && !preliminary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    color = if (result.confirmedSafe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))

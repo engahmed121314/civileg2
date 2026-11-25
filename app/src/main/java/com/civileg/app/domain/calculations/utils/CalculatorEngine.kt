@@ -197,10 +197,15 @@ class CalculatorEngine @Inject constructor(
         val confinementLength: Double = 0.0,
         val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
         val warnings: List<String> = emptyList(),
-        val codeNotes: List<String> = emptyList()
+        val codeNotes: List<String> = emptyList(),
+        /** False until the moment-capacity model is checked against hand cases for the selected code edition
+         *  and the actual bar positions. While false, no consumer may present isSafe as a confirmed safe result. */
+        val assessmentComplete: Boolean = false
     ) : Parcelable {
-        /** The moment capacity is validated only for a 2-layer (4-bar rectangular) layout; see the code note. */
-        val capacityModelValidated: Boolean get() = columnType == "RECTANGULAR" && reinforcement.numBars <= 4
+        /** The only value screens, exports, drawings and saved records may call "safe". */
+        val confirmedSafe: Boolean get() = isSafe && assessmentComplete
+        /** Informational: 2 bars per face, where the half-steel-per-face model has the same geometry. Not a validation. */
+        val layoutModelApplicable: Boolean get() = columnType == "RECTANGULAR" && reinforcement.numBars <= 4
     }
 
     enum class FootingType(val displayNameAr: String, val displayNameEn: String) {
