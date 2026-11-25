@@ -27,7 +27,10 @@ enum class DeflectionLoadingApplicability {
 /** Result of a deemed-to-satisfy span/depth deflection check.
  * assessed=false means no check was performed (table inapplicable or inputs
  * undeclared); safe is meaningless unless assessed is true. */
-data class DeemedToSatisfy(val assessed: Boolean, val safe: Boolean, val summary: String)
+data class DeemedToSatisfy(val assessed: Boolean, val safe: Boolean, val summary: String, val computed: Boolean = assessed) {
+    /** A ratio was actually evaluated (code-grounded or approximate). Approximate results keep their honest pass/fail but are never "assessed". */
+    val evaluated: Boolean get() = assessed || computed
+}
 
 /** Code-grounded deemed-to-satisfy deflection limits for one-way ribbed (hordi) slabs.
  * Values are used verbatim from the cited tables; no formula is inferred.
@@ -100,7 +103,7 @@ object HordiDeemedToSatisfy {
         val limit = base / factor
         val ratio = spanMm / totalThicknessMm
         return DeemedToSatisfy(false, ratio <= limit,
-            "APPROXIMATE (not a code acceptance: the beam table is applied to a joist; ACI 318M-14 9.8.1 does not state that): l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (declared normalweight concrete; ACI 318M-14 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})")
+            "APPROXIMATE (not a code acceptance: the beam table is applied to a joist; ACI 318M-14 9.8.1 does not state that): l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (declared normalweight concrete; ACI 318M-14 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})", computed = true)
     }
 
     /** SBC 304-CR-2018 §9.3.1.1 + Table 9.3.1.1 (minimum depth of nonprestressed
@@ -122,6 +125,6 @@ object HordiDeemedToSatisfy {
         val limit = base / factor
         val ratio = spanMm / totalThicknessMm
         return DeemedToSatisfy(false, ratio <= limit,
-            "APPROXIMATE (not a code acceptance: the beam table is applied to a joist; SBC 304-CR-2018 9.8.1 does not state that): l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (declared normalweight concrete; SBC 304-CR-2018 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})")
+            "APPROXIMATE (not a code acceptance: the beam table is applied to a joist; SBC 304-CR-2018 9.8.1 does not state that): l/h = ${String.format("%.1f", ratio)} vs limit ${String.format("%.1f", limit)} (declared normalweight concrete; SBC 304-CR-2018 Table 9.3.1.1, ${label(cond)}, 9.3.1.1.1 factor ${String.format("%.3f", factor)})", computed = true)
     }
 }

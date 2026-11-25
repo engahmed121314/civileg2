@@ -72,7 +72,7 @@ class ACIJoistSlab : HordiSlabDesign {
         val serv = HordiDeemedToSatisfy.aci(span, h, fy, supportCondition, loadingApplicability)
         val servNotes = mutableListOf<String>()
         val servWarnings = mutableListOf<String>()
-        if (!serv.assessed) {
+        if (!serv.evaluated) {
             servNotes.add("ACI 318M-14: " + serv.summary)
         } else if (!serv.safe) {
             servWarnings.add("Deflection deemed-to-satisfy FAILED: " + serv.summary + " — increase depth or satisfy ACI 318M-14 9.3.2 calculated deflection limits")
@@ -80,7 +80,7 @@ class ACIJoistSlab : HordiSlabDesign {
             servNotes.add("Deflection deemed-to-satisfy PASS: " + serv.summary)
         }
 
-        val isSafe = isGeometrySafe && designShear <= phiVc && (!serv.assessed || serv.safe)
+        val isSafe = isGeometrySafe && designShear <= phiVc && (!serv.evaluated || serv.safe)
 
         return SlabDesignResult(
             requiredReinforcement = astRequired,
