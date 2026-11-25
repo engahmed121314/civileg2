@@ -545,7 +545,7 @@ fun HordiSlabScreen(
                                     res.isSafe -> "PASS - method not verified"
                                     else -> "FAIL"
                                 },
-                                "Serviceability (deflection)" to if (res.serviceabilityAssessed) "assessed" else "NOT ASSESSED - no deflection check",
+                                "Serviceability (deflection)" to if (res.serviceabilityAssessed) "assessed" else "NOT ASSESSED - no code-grounded deflection check (see notes)",
                                 "Engineering acceptance" to if (res.engineeringAcceptance) "ACCEPTED" else "NO - qualification incomplete"
                             ),
                             icon = Icons.Default.Shield,
