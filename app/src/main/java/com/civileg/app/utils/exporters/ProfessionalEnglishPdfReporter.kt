@@ -106,7 +106,8 @@ object ProfessionalEnglishPdfReporter {
         val date: String = SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date()),
         val revision: String = "Rev. A",
         val showSignature: Boolean = false,
-        val incompleteReview: Boolean = false
+        val incompleteReview: Boolean = false,
+        val includeDiagnosticDrawing: Boolean = false
     )
 
     // ==================== Font Helpers (English Only) ====================
@@ -923,7 +924,11 @@ object ProfessionalEnglishPdfReporter {
             }
             if (config.incompleteReview) {
                 document.add(sectionTitle("5. Construction Drawing: NOT ISSUED"))
-                document.add(Paragraph("No adopted reinforcement geometry has been verified. No substitute drawing is generated."))
+                document.add(Paragraph("No adopted reinforcement geometry has been verified. No construction design is issued."))
+                if(config.includeDiagnosticDrawing && drawingBitmap != null) {
+                    document.add(Paragraph("Captured screen review only. Unverified geometry and reinforcement, not for fabrication or construction."))
+                    addDrawingSection(document,drawingBitmap,"Captured screen review - NOT FOR CONSTRUCTION")
+                }
             } else {
                 addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
             }
@@ -977,7 +982,8 @@ object ProfessionalEnglishPdfReporter {
         calculationSteps: List<CalculationStep> = emptyList(),
         bbsRows: List<BbsRow> = emptyList(),
         boqRows: List<BoqRow> = emptyList(),
-        incompleteReview: Boolean = false
+        incompleteReview: Boolean = false,
+        includeDiagnosticDrawing: Boolean = false
     ): File? {
         val convertedChecks = safetyChecks.map {
             SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference)
@@ -1016,7 +1022,7 @@ object ProfessionalEnglishPdfReporter {
             calculationSteps = calculationSteps,
             bbsRows = bbsRows,
             boqRows = boqRows,
-            config = ReportConfig(incompleteReview = incompleteReview),
+            config = ReportConfig(incompleteReview = incompleteReview, includeDiagnosticDrawing=includeDiagnosticDrawing),
             outputPath = outputPath
         )
     }

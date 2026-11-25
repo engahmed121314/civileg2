@@ -504,7 +504,7 @@ fun StairScreen(
 
                 item {
                     AppText(stringResource(R.string.stair_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    StairFormulasCard()
+                    StairFormulasCard(res)
                 }
 
                 item {
@@ -1047,13 +1047,14 @@ private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifie
 }
 
 @Composable
-private fun StairFormulasCard() {
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            FormulaItem("1. Wu = 1.4 * DL + 1.6 * LL")
-            FormulaItem("2. ts = L / 25 (Simple) or L / 20 (Cantilever)")
-            FormulaItem("3. Mu = Wu * L² / 8")
-            FormulaItem("4. As = Mu / (fy/gamma_s * j * d)")
+private fun StairFormulasCard(result:CalculatorEngine.StairResult) {
+    Card(modifier=Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f))) {
+        Column(modifier=Modifier.padding(12.dp)) {
+            AppText("Applied calculation trace only. Selected-reference coverage incomplete.")
+            result.calculationSteps.forEach { step ->
+                FormulaItem("${step.stepNumber}. ${step.formula}")
+                AppText(step.formulaWithValues,style=MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }

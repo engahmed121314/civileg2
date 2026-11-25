@@ -2254,7 +2254,10 @@ class CalculatorEngine @Inject constructor(
                 codeAcceptanceComplete = false,
                 quantityReview = quantityReview,
                 documentaryBasisLabel = ref,
-                qualificationNotes = quantityReview.qualifications + result.codeNotes + "Complete stair detailing acceptance is not implemented" +
+                qualificationNotes = quantityReview.qualifications +
+                    result.codeNotes.filterNot { Regex("(?:ECP|ACI|SBC)[^;]*20(?:19|21|24|25)").containsMatchIn(it) } +
+                    "Legacy edition-specific citations omitted, not verified against supplied reference" +
+                    "Complete stair detailing acceptance is not implemented" +
                     if (type == StairType.CANTILEVER) listOf("Cantilever model is not implemented; single-flight fallback is not valid for this case") else emptyList()
             )
         } catch (e: Exception) {

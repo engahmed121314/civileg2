@@ -191,6 +191,7 @@ class StairViewModel @Inject constructor(
                         else -> 25.0
                     }
                     // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
+                    val hasCapturedScreenDrawing = pendingDrawingBitmap != null
                     val drawingBitmap = pendingDrawingBitmap ?: try {
                         PdfDrawingGenerator.generateStairDrawing(
                             totalHeight = geometry.riseMm,
@@ -258,6 +259,7 @@ class StairViewModel @Inject constructor(
                         safetyChecks = safetyChecks,
                         isSafe = currentResult.isSafe && currentResult.codeAcceptanceComplete,
                         incompleteReview = !currentResult.codeAcceptanceComplete,
+                        includeDiagnosticDrawing = hasCapturedScreenDrawing,
                         calculationSteps = currentResult.calculationSteps,
                         bbsEntries = runCatching {
                             BbsGenerator.generateStairBbs("ST1", currentResult, currentResult.stairWidthMm)
