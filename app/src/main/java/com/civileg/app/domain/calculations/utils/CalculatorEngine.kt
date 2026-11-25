@@ -1634,7 +1634,7 @@ class CalculatorEngine @Inject constructor(
                         add("ASSUMED INPUT: topping thickness is fixed at 50 mm on this screen (not entered by the user). The result is not an engineering acceptance. Use the Hordi slab screen with the real topping.")
                         val clearRibSpacing = ribSpacing - ribWidth
                         if (domainCode == DesignCode.ECP) {
-                            // ECP 203-2020 supplied scan PDF p.248: the same rules the dedicated Hordi screen enforces.
+                            // ECP 203-2020 6-2-2-1 (printed p. 6-15): the same rules the dedicated Hordi screen enforces.
                             if (ribWidth > 0 && ribSpacing > 0 && ts > 50.0) {
                                 com.civileg.app.domain.calculations.ecp.ECP2020JoistRules.geometry(ribWidth, ribSpacing, ts, 50.0)
                                     .filterNot { it.passed }
