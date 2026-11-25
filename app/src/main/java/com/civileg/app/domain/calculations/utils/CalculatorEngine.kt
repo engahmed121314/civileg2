@@ -134,7 +134,7 @@ class CalculatorEngine @Inject constructor(
     }
 
     @Parcelize
-    data class DesignSafetyCheck(val name: String, val value: Double, val limit: Double, val unit: String, val isSafe: Boolean) : Parcelable
+    data class DesignSafetyCheck(val name: String, val value: Double, val limit: Double, val unit: String, val isSafe: Boolean, val notAssessed: Boolean = false) : Parcelable
 
     @Parcelize
     data class BOQSummary(val concreteM3: Double, val steelKg: Double, val totalCost: Double, val currency: String = "USD") : Parcelable
@@ -2190,7 +2190,20 @@ class CalculatorEngine @Inject constructor(
             val nTreads = geometry.treadCount
             val nRisers = geometry.riserCount
             val totalRise = geometry.riseMm / 1000.0
-            val defaultThickness = max(span * 1000.0 / 25.0, 120.0).coerceIn(120.0, 300.0)
+            // Adopted waist thickness (the app has no thickness input). Sized so the code's deemed-to-satisfy
+            // span/thickness table is met (ECP Table 4-10: Ln/t <= 25*(0.40+fy/700); ACI/SBC Table 7.3.1.1:
+            // h >= l/20 * (0.4+fy/700)), rounded up to 10 mm, and never below the lane's own minimum waist.
+            // No upper clamp: a thicker result is reported as is.
+            val requiredWaistMm = when (code) {
+                DesignCode.ECP -> span * 1000.0 / (25.0 * (0.40 + fy / 700.0))
+                DesignCode.ACI, DesignCode.SBC -> span * 1000.0 / 20.0 * (0.4 + fy / 700.0)
+            }
+            val laneMinWaistMm = when (code) {
+                DesignCode.ECP -> com.civileg.app.domain.calculations.ecp.ECPStaircase.MIN_WAIST
+                DesignCode.ACI -> com.civileg.app.domain.calculations.aci.ACIStaircase.MIN_WAIST
+                DesignCode.SBC -> com.civileg.app.domain.calculations.sbc.SBCStaircase.MIN_WAIST
+            }
+            val defaultThickness = max(kotlin.math.ceil(requiredWaistMm / 10.0) * 10.0, laneMinWaistMm)
 
             val input = StaircaseInput(
                 stairType = type.toDomain(),
@@ -2274,10 +2287,14 @@ class CalculatorEngine @Inject constructor(
                 CalculationStep(
                     stepNumber = 6, title = "Implemented Checks (not code acceptance)",
                     formula = "Flexure · shear · deflection",
-                    formulaWithValues = "${result.safetyChecks.count { it.isSafe }}/${result.safetyChecks.size} checks passed",
-                    result = if (result.isSafe) "Checks pass; acceptance incomplete" else "Checks fail", unit = "",
+                    formulaWithValues = "${result.safetyChecks.count { it.isSafe }}/${result.safetyChecks.size} checks passed, ${result.safetyChecks.count { !it.isSafe && !it.notAssessed }} failed, ${result.safetyChecks.count { it.notAssessed }} not assessed",
+                    result = if (result.safetyChecks.any { !it.isSafe && !it.notAssessed }) "Checks fail"
+                             else if (result.safetyChecks.any { it.notAssessed }) "Not assessed items remain; acceptance incomplete"
+                             else if (result.isSafe) "Checks pass; acceptance incomplete" else "Checks fail", unit = "",
                     codeReference = ref, isPass = result.isSafe,
-                    status = if (result.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                    status = if (result.safetyChecks.any { !it.isSafe && !it.notAssessed }) StepStatus.CHECK_FAIL
+                             else if (result.safetyChecks.any { it.notAssessed }) StepStatus.WARNING
+                             else if (result.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
                 )
             )
 
@@ -2292,7 +2309,7 @@ class CalculatorEngine @Inject constructor(
                 cost = cost,
                 code = code,
                 safetyChecks = result.safetyChecks.map {
-                    DesignSafetyCheck(name = it.name, value = it.value, limit = it.limit, unit = it.unit, isSafe = it.isSafe)
+                    DesignSafetyCheck(name = it.name, value = it.value, limit = it.limit, unit = it.unit, isSafe = it.isSafe, notAssessed = it.notAssessed)
                 },
                 utilizationRatio = utilization,
                 mu = result.maxMoment,

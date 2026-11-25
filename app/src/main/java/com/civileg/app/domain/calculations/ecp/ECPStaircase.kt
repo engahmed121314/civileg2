@@ -25,7 +25,7 @@ class ECPStaircase : StaircaseDesign {
         private const val GAMMA_Q = 1.6       // معامل حمل الحي
         private const val COVER_INTERIOR = 25.0  // mm - غطاء داخلي
         private const val COVER_EXTERIOR = 35.0  // mm - غطاء خارجي
-        private const val MIN_WAIST = 120.0     // mm - أقل سماكة للبلاطة
+        const val MIN_WAIST = 120.0     // mm - أقل سماكة للبلاطة
         private const val MAX_RISER = 180.0     // mm - أقصى ارتفاع درجة
         private const val MIN_GOING = 250.0     // mm - أقل عرض درجة
         private const val COMFORT_2R_PLUS_G_MIN = 550.0  // mm
@@ -130,12 +130,20 @@ class ECPStaircase : StaircaseDesign {
 
         // ========== 2. سماكة البلاطة ==========
         // ECP 203 §6-2: Minimum waist slab thickness for stair
-        val waistThickness = max(input.waistThickness, MIN_WAIST)
+        // No silent clamp: the supplied thickness is analysed as given; below the minimum the
+        // "Waist Thickness" check fails. A non-positive thickness is rejected with a field-specific message.
+        require(input.waistThickness.isFinite() && input.waistThickness > 0.0) {
+            "waistThickness must be a positive thickness in mm (was ${input.waistThickness})"
+        }
+        val waistThickness = input.waistThickness
         val cover = COVER_INTERIOR
         val stirrupEstimate = 8.0
         val effectiveDepth = waistThickness - cover - stirrupEstimate / 2 - 6.0
         // Guard: effective depth must be positive for meaningful calculations
-        val dEffective = effectiveDepth.coerceAtLeast(30.0)
+        require(effectiveDepth > 0.0) {
+            "waistThickness ${"%.0f".format(waistThickness)} mm leaves no effective depth after cover and bar allowance"
+        }
+        val dEffective = effectiveDepth
 
         safetyChecks.add(StairSafetyCheck(
             name = "Waist Thickness",
@@ -359,6 +367,7 @@ class ECPStaircase : StaircaseDesign {
             } else {
                 "NOT ASSESSED: Table 4-10 is deemed-to-satisfy only. Ln/t = ${"%.1f".format(actualRatio)} > ${"%.1f".format(allowableRatio)}, so deflection is NOT demonstrated (not a computed failure). Waist of at least ${"%.0f".format(minThicknessMm)} mm meets the table, or a computed deflection (ECP 4-3-1-1) is required and is not implemented in this version"
             }
+            ,notAssessed = !deflectionOk
         ))
         codeNotes.add("Deflection: ECP 203-2020 Table 4-10 (p. 4-64) deemed-to-satisfy only; no computed deflection is reported")
 

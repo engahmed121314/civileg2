@@ -79,7 +79,9 @@ data class StairSafetyCheck(
     val limit: Double,
     val unit: String,
     val isSafe: Boolean,
-    val description: String = ""
+    val description: String = "",
+    /** true = the check could not be assessed (e.g. outside a deemed-to-satisfy table); isSafe stays false, but this is not a computed failure. */
+    val notAssessed: Boolean = false
 )
 
 /**

@@ -39,4 +39,24 @@ class ECPStairTable410Test {
         assertFalse(r.deflectionComputed)
         assertTrue(r.safetyChecks.first { it.name.startsWith("Deflection") }.name.contains("NOT ASSESSED"))
     }
+
+    @Test
+    fun `thin waist is analysed as given and never silently clamped`() {
+        val r = ECPStaircase().designStaircase(
+            StaircaseInput(span = 3.0, totalRise = 1.8, stairWidth = 1.2, waistThickness = 100.0, fcu = 25.0, fy = 420.0)
+        )
+        val w = r.safetyChecks.first { it.name == "Waist Thickness" }
+        assertEquals(100.0, w.value, 1e-9)
+        assertFalse(w.isSafe)
+        val d = r.safetyChecks.first { it.name.startsWith("Deflection") }
+        assertEquals(30.0, d.value, 1e-9)
+        assertTrue(d.notAssessed)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `non-positive thickness is rejected with a field message`() {
+        ECPStaircase().designStaircase(
+            StaircaseInput(span = 3.0, totalRise = 1.8, stairWidth = 1.2, waistThickness = 0.0, fcu = 25.0, fy = 420.0)
+        )
+    }
 }

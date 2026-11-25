@@ -31,7 +31,7 @@ class SBCStaircase : StaircaseDesign {
         private const val COVER_INTERIOR = 40.0   // mm - SBC (أعلى من ACI)
         private const val COVER_EXTERIOR = 65.0   // mm - بيئة مالحة
         private const val COVER_COASTAL = 75.0    // mm - مناطق ساحلية
-        private const val MIN_WAIST = 130.0        // mm (SBC أقل سماكة أعلى)
+        const val MIN_WAIST = 130.0        // mm (SBC أقل سماكة أعلى)
         private const val MAX_RISER = 178.0        // mm (7")
         private const val MIN_GOING = 279.0        // mm (11")
         private const val COMFORT_2R_PLUS_G_MIN = 580.0  // mm
@@ -117,10 +117,18 @@ class SBCStaircase : StaircaseDesign {
         codeNotes.add(CodeReference.SBC.STAIRCASE_DEFLECTION)
 
         // ========== 2. مقاومة الخرسانة (SBC) ==========
-        val waistThickness = max(input.waistThickness, MIN_WAIST)
+        // No silent clamp: the supplied thickness is analysed as given; below the minimum the
+        // "Waist Thickness" check fails. A non-positive thickness is rejected with a field-specific message.
+        require(input.waistThickness.isFinite() && input.waistThickness > 0.0) {
+            "waistThickness must be a positive thickness in mm (was ${input.waistThickness})"
+        }
+        val waistThickness = input.waistThickness
         val cover = COVER_INTERIOR // SBC: 40mm interior
         val stirrupEstimate = 10.0
         val effectiveDepth = waistThickness - cover - stirrupEstimate / 2 - 6.0
+        require(effectiveDepth > 0.0) {
+            "waistThickness ${"%.0f".format(waistThickness)} mm leaves no effective depth after cover and bar allowance"
+        }
 
         // SBC 304 follows ACI 318: f'c = 0.8 × fcu (cube-to-cylinder conversion)
         val fc = 0.8 * input.fcu
@@ -323,6 +331,7 @@ class SBCStaircase : StaircaseDesign {
             } else {
                 "NOT ASSESSED: Table 7.3.1.1 is deemed-to-satisfy only. l/h = ${"%.1f".format(actualRatio)} > ${"%.1f".format(allowableRatio)}; h of at least ${"%.0f".format(minThicknessMm)} mm meets the table, otherwise a computed deflection (7.3.2) is required and is not implemented. Not a computed failure"
             }
+            ,notAssessed = !deflectionOk
         ))
 
         // ========== 8. فحوصات هندسية ==========

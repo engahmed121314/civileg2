@@ -474,8 +474,8 @@ fun StairScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         AppText(
-                                            if (check.isSafe) "✓" else "✗",
-                                            color = if (check.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828),
+                                            if (check.isSafe) "✓" else if (check.notAssessed) "?" else "✗",
+                                            color = if (check.isSafe) Color(0xFF2E7D32) else if (check.notAssessed) Color(0xFFEF6C00) else Color(0xFFC62828),
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 14.sp
                                         )
@@ -485,7 +485,7 @@ fun StairScreen(
                                             "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red
+                                            color = if (check.isSafe) Color(0xFF2E7D32) else if (check.notAssessed) Color(0xFFEF6C00) else Color.Red
                                         )
                                     }
                                 }
