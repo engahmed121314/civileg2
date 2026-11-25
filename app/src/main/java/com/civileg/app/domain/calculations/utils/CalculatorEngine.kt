@@ -1113,7 +1113,7 @@ class CalculatorEngine @Inject constructor(
             confinementLength = if (isSeismic) max(6.0 * res.barDiameter, 450.0)
                 else max(6.0 * res.barDiameter, 300.0),
             warnings = warnings,
-            codeNotes = res.codeNotes,
+            codeNotes = res.codeNotes + "Limitation: the moment capacity is a simplified strain-compatibility check that places half of the steel on each face. It does not use the real bar positions, so it can overestimate capacity for layouts with many intermediate bars. Treat the safe/unsafe label as a screening result, not a final interaction check.",
             calculationSteps = columnSteps(
                 code, pu, puDesign, selfWeightKn, designMx, designMy, fcu, fy, res,
                 width, depth, clearHeight, slenderness, slendernessLimit,
