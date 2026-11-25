@@ -247,11 +247,9 @@ fun ProfessionalStairDrawing(
                 y += textSize * 1.6f
             }
             line("NET FLIGHT REVIEW ONLY, NOT CUTTING LENGTHS")
-            line("Main: ${quantityReview.main.count} x dia ${quantityReview.main.diameterMm}")
-            line("Net segment ${quantityReview.main.netFlightLengthMm.toInt()} mm")
-            line("Distribution: ${quantityReview.distribution.count} x dia ${quantityReview.distribution.diameterMm}")
-            line("Net segment ${quantityReview.distribution.netFlightLengthMm.toInt()} mm")
-            line("Excludes support ends, bends, laps, top and landing bars")
+            line("Main: ${quantityReview.main.count} x dia ${quantityReview.main.diameterMm}, net ${quantityReview.main.netFlightLengthMm.toInt()} mm")
+            line("Dist: ${quantityReview.distribution.count} x dia ${quantityReview.distribution.diameterMm}, net ${quantityReview.distribution.netFlightLengthMm.toInt()} mm")
+            line("No support ends / bends / laps / top / landing bars")
             line("FINAL STEEL / FABRICATION BBS NOT AVAILABLE")
         } else drawReinforcementScheduleTable(
             cw = cw, ch = ch, tableTop = tableTop,
@@ -271,7 +269,8 @@ fun ProfessionalStairDrawing(
         // One full-width footer. The former fixed-width summary/title blocks
         // overprinted each other and were clipped on a phone-width canvas.
         val footerY = ch - cfg.margin * 2.2f
-        drawTextAnnotated("Stair Detail | $codeLabel | NTS", cfg.margin, footerY,
+        val sheetBasis = if (documentaryBasisLabel != null) documentaryBasisLabel.substringAfter("Reference supplied: ").substringBefore(';') + " | REVIEW ONLY" else codeLabel
+        drawTextAnnotated("Stair | $sheetBasis | NTS", cfg.margin, footerY,
             DimensionWhite, cfg.annotationTextSmall)
         resultSummary?.let { summary ->
             drawTextAnnotated("Implemented checks: ${summary.safetyLabel}; review required",
