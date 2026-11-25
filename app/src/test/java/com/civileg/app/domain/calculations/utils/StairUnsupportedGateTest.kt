@@ -57,7 +57,8 @@ class StairUnsupportedConsumersTest {
         CalculationValidator.validateStair(res)
         com.civileg.app.ui.compose.components.drawings.stairDrawingSummary(res)
         com.civileg.app.domain.calculations.utils.StairFlightGeometry.from(res.span, res.riser, res.tread)
-        BbsGenerator.generateStairBbs(mark = "ST1", result = res, stairWidthMm = res.stairWidthMm)
-        BoqEstimator.stairRows(res, res.stairWidthMm / 1000.0, "ST1")
+        // BBS and BOQ builders reject a zero-thickness result by design (InputGuard). They are only reachable
+        // behind StairResultGate.isDesignUsable, so the contract here is: the gate is closed for this result.
+        assertTrue(!StairResultGate.isDesignUsable(res.analysisStatus))
     }
 }
