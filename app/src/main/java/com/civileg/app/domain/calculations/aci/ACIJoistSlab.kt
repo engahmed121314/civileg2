@@ -53,7 +53,7 @@ class ACIJoistSlab : HordiSlabDesign {
         // ACI 9.8.1.1 to 9.8.1.3 Limits
         val isGeometrySafe = bw >= 100.0 && 
                              (h - hf) <= 3.5 * bw &&
-                             (ribSpacing - bw) <= 762.0
+                             (ribSpacing - bw) <= 750.0 // ACI 318M-14 9.8.1.4: clear spacing <= 750 mm (was 762.0, imperial 30in)
 
         // Flexure Design
         val phi = 0.9

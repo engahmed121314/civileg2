@@ -96,6 +96,12 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         if (ribSpacing > MAX_RIB_SPACING) {
             warnings.add("SBC 304-6.4: تباعد الضلوع ${ribSpacing}مم > ${MAX_RIB_SPACING}مم (الحد الأقصى)")
         }
+        // SBC 304-CR-2018 9.8.1.3: rib overall depth <= 3.5 x minimum rib width; 9.8.1.8 routes
+        // construction outside 9.8.1.1-4 to slab-and-beam design, so this stays a warning and the
+        // Table 9.3.1.1 deemed l/h check below still governs as beams.
+        if (totalThickness - toppingThickness > 3.5 * ribWidth) {
+            warnings.add("SBC 304 9.8.1.3: عمق الضلع (${totalThickness - toppingThickness}مم) > 3.5 × عرض الضلع (${3.5 * ribWidth}مم) — يُعامل كبلاطات وجسور وفق 9.8.1.8")
+        }
 
         // ══════════════════════════════════════════════════════════════════
         // 2. Material Properties (SBC 304)
