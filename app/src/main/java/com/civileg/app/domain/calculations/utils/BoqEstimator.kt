@@ -26,7 +26,7 @@ object BoqEstimator {
         val formwork = result.span * (2 * result.depth + result.width) / 1000.0
         return listOf(
             item(1, "Concrete - $mark", "m3", result.concreteVolume),
-            item(2, "Reinforcement steel (net bar length, excl. hooks, anchorage, laps, bends) - $mark", "kg", result.steelWeight),
+            item(2, "Reinforcement steel (rough estimate, not for procurement: no hooks, anchorage, laps or bends; uniform stirrups; full-span top steel) - $mark", "kg", result.steelWeight),
             item(3, "Formwork - $mark (sides + soffit)", "m2", formwork)
         )
     }

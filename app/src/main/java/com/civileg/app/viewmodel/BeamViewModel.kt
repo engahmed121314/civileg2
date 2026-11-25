@@ -276,7 +276,7 @@ class BeamViewModel @Inject constructor(
                     "Allowable Deflection" to "${String.format("%.2f", res.allowableDeflection)} mm",
                     "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
-                    "Steel Weight (net bar length, excl. hooks, anchorage, laps, bends)" to "${String.format("%.1f", res.steelWeight)} kg",
+                    "Steel Weight (rough estimate, not for procurement: no hooks, anchorage, laps or bends; uniform stirrups; full-span top steel)" to "${String.format("%.1f", res.steelWeight)} kg",
                     "Bar Bending Schedule" to com.civileg.app.domain.calculations.utils.BbsGenerator.BEAM_BBS_UNAVAILABLE_REASON
                 )
                 
