@@ -93,7 +93,11 @@ class StairUnsupportedConsumersTest {
 
     @Test
     fun `supported single flight still builds BBS and BOQ`() {
-        val ok = design(CalculatorEngine.StairType.SINGLE_FLIGHT)
+        val ok = engine.designStaircase(
+            type = CalculatorEngine.StairType.SINGLE_FLIGHT, span = 4.0, riser = 150.0, tread = 300.0,
+            deadLoad = 5.0, liveLoad = 4.0, fcu = 25.0, fy = 360.0,
+            preferredDiameter = 12, code = DesignCode.ECP
+        )
         BbsGenerator.generateStairBbs(mark = "ST1", result = ok, stairWidthMm = 1200.0)
         assertTrue(BoqEstimator.stairRows(ok, 1.2, "ST1").isNotEmpty())
     }
