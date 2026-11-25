@@ -106,7 +106,7 @@ fun AppText(
     }
 
     Text(
-        text = text,
+        text = com.civileg.app.ui.theme.arabicUiText(text),
         modifier = modifier,
         color = effectiveColor,
         fontSize = fontSize,
