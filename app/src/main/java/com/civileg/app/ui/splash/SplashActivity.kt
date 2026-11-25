@@ -40,6 +40,7 @@ class SplashActivity : AppCompatActivity() {
     // Message construction happens INSIDE the guard (lazy lambda), so a
     // formatting/state-read failure can never escape into real paths.
     private inline fun navLog(msg: () -> String) {
+        if (!com.civileg.app.BuildConfig.DEBUG) return
         try {
             Log.i("SplashNav", "t=${SystemClock.elapsedRealtime()} thread=${Thread.currentThread().name} ${msg()}")
         } catch (_: Throwable) {}
