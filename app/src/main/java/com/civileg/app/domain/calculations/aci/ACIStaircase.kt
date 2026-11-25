@@ -171,7 +171,9 @@ class ACIStaircase : StaircaseDesign {
 
         // ρ from Rn: ρ = (1 - √(1 - 2mRn/fy)) / m, where m = fy/(0.85×fc')
         val m = if (fc > 0) input.fy / (0.85 * fc) else 0.0
-        val rho = if (m > 0 && (1 - 2 * m * Rn / input.fy) >= 0) {
+        val flexureDiscriminant = 1 - 2 * m * Rn / input.fy
+        val flexureSolutionExists = m > 0 && d > 0 && flexureDiscriminant.isFinite() && flexureDiscriminant >= 0
+        val rho = if (flexureSolutionExists) {
             (1 - sqrt(1 - 2 * m * Rn / input.fy)) / m
         } else {
             0.0
@@ -211,11 +213,12 @@ class ACIStaircase : StaircaseDesign {
         safetyChecks.add(StairSafetyCheck(
             name = "Flexure (ρ ≤ ρ_max_tc)",
             value = rho, limit = rhoMaxTc, unit = "",
-            isSafe = rho <= rhoMaxTc,
+            isSafe = flexureSolutionExists && rho <= rhoMaxTc,
             description = "ACI 318-25 Section 9.3.3.1 (tension-controlled)"
         ))
 
         // اختيار حديد رئيسي (مقاسات أمريكية: 12, 16, 19, 22, 25 mm)
+        if (!flexureSolutionExists) codeNotes.add("No singly reinforced flexural solution: demand exceeds the implemented section model; minimum steel is not a valid design for this demand")
         val mainRebar = selectBars(astRequired)
         val mainRebarArea = parseBarArea(mainRebar)
         val rhoProvided = mainRebarArea / (b * d)

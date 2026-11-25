@@ -38,6 +38,18 @@ class StairContractTest {
         }
     }
 
+    @Test fun invalidFlexuralRootCannotPassAsZeroRequiredRatio() {
+        for (designer in listOf(com.civileg.app.domain.calculations.aci.ACIStaircase(),com.civileg.app.domain.calculations.sbc.SBCStaircase())) {
+            val result=designer.designStaircase(com.civileg.app.domain.calculations.base.StaircaseInput(
+                stairType=com.civileg.app.domain.calculations.base.StairType.STRAIGHT,
+                span=8.0,totalRise=3.0,stairWidth=1.2,waistThickness=120.0,
+                fcu=25.0,fy=400.0,deadLoad=1000.0,liveLoad=500.0))
+            assertFalse(result.safetyChecks.first { it.name.startsWith("Flexure") }.isSafe)
+            assertFalse(result.isSafe)
+            assertTrue(result.codeNotes.any { it.contains("No singly reinforced") })
+        }
+    }
+
     @Test fun cantileverDoesNotIssueSingleFlightFallback() {
         val result = design(type = CalculatorEngine.StairType.CANTILEVER)
         assertFalse(result.isSafe)
