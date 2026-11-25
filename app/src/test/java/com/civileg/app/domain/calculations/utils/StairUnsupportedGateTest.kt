@@ -42,3 +42,22 @@ class StairUnsupportedGateTest {
         }
     }
 }
+
+/** Consumers that run after a cantilever result exists must not throw (they run during composition). */
+class StairUnsupportedConsumersTest {
+    private val engine = CalculatorEngine(mockk(relaxed = true))
+
+    @Test
+    fun `cantilever result can be validated and summarised without throwing`() {
+        val res = engine.designStaircase(
+            type = CalculatorEngine.StairType.CANTILEVER, span = 4.0, riser = 150.0, tread = 300.0,
+            deadLoad = 5.0, liveLoad = 4.0, fcu = 25.0, fy = 360.0,
+            preferredDiameter = 12, code = DesignCode.ECP
+        )
+        CalculationValidator.validateStair(res)
+        com.civileg.app.ui.compose.components.drawings.stairDrawingSummary(res)
+        com.civileg.app.domain.calculations.utils.StairFlightGeometry.from(res.span, res.riser, res.tread)
+        BbsGenerator.generateStairBbs(mark = "ST1", result = res, stairWidthMm = res.stairWidthMm)
+        BoqEstimator.stairRows(res, res.stairWidthMm / 1000.0, "ST1")
+    }
+}

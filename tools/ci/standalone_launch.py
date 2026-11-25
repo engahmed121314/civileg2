@@ -105,6 +105,9 @@ def stair_unsupported():
         scroll_up(2)
     else: log.append(("su_calc", False))
     time.sleep(3)
+    shot("su-after-calc")
+    open(f"{out}/su-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
+    open(f"{out}/su-app-log.txt", "wb").write(adb("logcat", "-d", "-t", "4000", "-s", "AndroidRuntime:E", "ActivityManager:I", "DEBUG:I").stdout)
     for k in range(3):
         scroll_up(2); shot(f"su-res-{k}"); dump(f"su-res-{k}")
 def frame_block():
