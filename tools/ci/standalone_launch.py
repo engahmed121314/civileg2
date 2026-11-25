@@ -110,6 +110,26 @@ def stair_unsupported():
     open(f"{out}/su-app-log.txt", "wb").write(adb("logcat", "-d", "-t", "4000", "-s", "AndroidRuntime:E", "ActivityManager:I", "DEBUG:I").stdout)
     for k in range(3):
         scroll_up(2); shot(f"su-res-{k}"); dump(f"su-res-{k}")
+def stair_codes():
+    """Open Stair again and design the default flight under the American and then the Saudi code."""
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+    tap_text(["التصميم"], "sc-design", exact=True); scroll_top(3)
+    ok = False
+    for _ in range(5):
+        if tap_text(["السلالم"], "sc-find"): ok = True; break
+        scroll_up(2)
+    log.append(("sc_open", ok)); time.sleep(2)
+    for label, tag in (("American Code", "ACI"), ("Saudi Code", "SBC")):
+        scroll_top(3)
+        log.append(("sc_pick_" + tag, tap_text([label], "sc-pick-" + tag))); time.sleep(1); shot("sc-" + tag + "-picked")
+        for _ in range(6):
+            if tap_text(["تصميم السلم الآن"], "sc-calc-" + tag): log.append(("sc_calc_" + tag, True)); break
+            scroll_up(2)
+        else: log.append(("sc_calc_" + tag, False))
+        time.sleep(3)
+        for k in range(4):
+            scroll_up(2); shot(f"sc-{tag}-res-{k}"); dump(f"sc-{tag}-res-{k}")
+    open(f"{out}/sc-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
 def frame_block():
     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
     tap_text(["التصميم"], "fr-d-design", exact=True); scroll_top(3)
@@ -138,6 +158,7 @@ if os.path.exists("tools/ci/STAIR_ONLY"):
     try:
         stair_block()
         stair_unsupported()
+        stair_codes()
         frame_block()
     except Exception as e:
         log.append(("stair_exception", repr(e)))
