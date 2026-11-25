@@ -421,14 +421,14 @@ fun BeamScreen(
                                 stirrupSpacing = res.stirrups.spacing.toDouble(),
                                 cover = 50.0,
                                 developmentLength = {
-                                    val fcuVal = FormValidator.parseNumber(fcu) ?: error("Solved beam material snapshot unavailable")
-                                    val fyVal = FormValidator.parseNumber(fy) ?: error("Solved beam material snapshot unavailable")
+                                    val fcuVal = viewModel.solvedFcu
+                                    val fyVal = viewModel.solvedFy
                                     val db = res.reinforcementBottom.diameter.toDouble()
                                     (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
                                 }(),
                                 lapLength = {
-                                    val fcuVal = FormValidator.parseNumber(fcu) ?: error("Solved beam material snapshot unavailable")
-                                    val fyVal = FormValidator.parseNumber(fy) ?: error("Solved beam material snapshot unavailable")
+                                    val fcuVal = viewModel.solvedFcu
+                                    val fyVal = viewModel.solvedFy
                                     val db = res.reinforcementBottom.diameter.toDouble()
                                     val ld = (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
                                     1.3 * ld
@@ -449,9 +449,9 @@ fun BeamScreen(
 
                 item {
                     val currentInputs = BeamDiagramInputSnapshot(
-                        span = span.toDoubleOrNull() ?: 5.0,
-                        deadLoad = deadLoad.toDoubleOrNull() ?: 0.0,
-                        liveLoad = liveLoad.toDoubleOrNull() ?: 0.0,
+                        span = FormValidator.parseNumber(span) ?: Double.NaN,
+                        deadLoad = FormValidator.parseNumber(deadLoad) ?: Double.NaN,
+                        liveLoad = FormValidator.parseNumber(liveLoad) ?: Double.NaN,
                         code = selectedCode,
                         support = selectedSupport
                     )
@@ -493,14 +493,14 @@ fun BeamScreen(
                         stirrupSpacing = res.stirrups.spacing.toDouble(),
                         cover = 50.0,
                         developmentLength = {
-                            val fcuVal = FormValidator.parseNumber(fcu) ?: error("Solved beam material snapshot unavailable")
-                            val fyVal = FormValidator.parseNumber(fy) ?: error("Solved beam material snapshot unavailable")
+                            val fcuVal = viewModel.solvedFcu
+                            val fyVal = viewModel.solvedFy
                             val db = res.reinforcementBottom.diameter.toDouble()
                             (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
                         }(),
                         lapLength = {
-                            val fcuVal = FormValidator.parseNumber(fcu) ?: error("Solved beam material snapshot unavailable")
-                            val fyVal = FormValidator.parseNumber(fy) ?: error("Solved beam material snapshot unavailable")
+                            val fcuVal = viewModel.solvedFcu
+                            val fyVal = viewModel.solvedFy
                             val db = res.reinforcementBottom.diameter.toDouble()
                             val ld = (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
                             1.3 * ld

@@ -54,6 +54,9 @@ class BeamViewModel @Inject constructor(
     private var lastLiveLoad: Double = 10.0
     private var lastFcu: Double = 25.0
     private var lastFy: Double = 360.0
+    val solvedFcu: Double get() = lastFcu
+    val solvedFy: Double get() = lastFy
+
     private var lastSupportType: CalculatorEngine.SupportType = CalculatorEngine.SupportType.HINGED_HINGED
 
     fun clearResult() {
