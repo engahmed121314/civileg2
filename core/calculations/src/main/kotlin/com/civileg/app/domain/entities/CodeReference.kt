@@ -97,7 +97,7 @@ object CodeReference {
         const val SHEAR_WALL_FLEXURE = "ECP 203: Section 8-3 (Shear Walls — In-Plane Flexure) (clause not verified)"
     }
     
-    // === الكود الأمريكي ACI 318-25 ===
+    // === الكود الأمريكي ACI 318 ===
     object ACI {
         // الأعمدة
         const val COLUMN_AXIAL = "ACI 318: Chapter 10 (clause not verified)"
@@ -188,8 +188,8 @@ object CodeReference {
         const val SHEAR_WALL_FLEXURE = "ACI 318: Chapter 11 (Walls — In-Plane Forces) (clause not verified)"
     }
     
-    // === الكود السعودي SBC 304-2024 ===
-    // Chapter structure verified against the official SBC 304-2024 table of contents,
+    // === الكود السعودي SBC 304 ===
+    // Chapter structure verified against the official SBC 304 table of contents,
     // which follows ACI 318-14: Ch.7 One-Way Slabs, Ch.8 Two-Way Slabs, Ch.9 Beams,
     // Ch.10 Columns, Ch.11 Walls, Ch.12 Diaphragms, Ch.13 Foundations, Ch.15 Joints,
     // Ch.18 Earthquake-Resistant Structures, Ch.22 Sectional Strength,

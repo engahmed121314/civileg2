@@ -263,9 +263,9 @@ object BeamDesignEngine {
         val codeNotesList = mutableListOf<String>()
         codeNotesList.addAll(flexureResult.codeNotes)
         codeNotesList.addAll(shearResult.codeNotes)
-        if (code == DesignCode.ECP) codeNotesList.add("Design per ECP 203-2025")
-        else if (code == DesignCode.ACI) codeNotesList.add("Design per ACI 318-25")
-        else codeNotesList.add("Design per SBC 304-2024")
+        if (code == DesignCode.ECP) codeNotesList.add("Design per ECP 203")
+        else if (code == DesignCode.ACI) codeNotesList.add("Design per ACI 318")
+        else codeNotesList.add("Design per SBC 304")
 
         return BeamDesignResult(
             beamWidth = b, beamDepth = h, span = span, clearSpan = clearSpan,

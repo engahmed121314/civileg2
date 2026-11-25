@@ -249,7 +249,7 @@ class ACIBeam : BeamDesign {
             SupportCondition.CANTILEVER -> 8.0
         }
 
-        // [FIX] ACI 318-25 Table 24.2.2 footnote: multiply by (0.4 + fy/700)
+        // [FIX] ACI 318 Table 24.2.2 footnote: multiply by (0.4 + fy/700)
         // when fy ≠ 420 MPa. reinforcementRatio carries fy when caller passes it
         // as fy-value directly; fall back to DEFAULT_FY when ≤ 0.
         // Bug was: fyFactor = 0.4 + DEFAULT_FY/DEFAULT_FY = 1.4, then min(1.0, 1.4) = 1.0 always.
@@ -320,10 +320,10 @@ class ACIBeam : BeamDesign {
     }
 
     /**
-     * تصميم كمرة مضاعفة التسليح (Doubly-Reinforced Beam) حسب ACI 318-25
+     * تصميم كمرة مضاعفة التسليح (Doubly-Reinforced Beam) حسب ACI 318
      * يُستخدم عندما Rn > Rn_bal (المقطع يحتاج حديد ضغط)
      *
-     * ACI 318-25 طريقة Rn-ρ:
+     * ACI 318 طريقة Rn-ρ:
      * - Rn = Mu / (φ × b × d²)
      * - ρ_bal = 0.85β₁(fc'/fy) × 600/(600+fy)
      * - Rn_bal = ρ_bal × fy × (1 - 0.5×ρ_bal×fy/(0.85×fc'))
@@ -456,7 +456,7 @@ class ACIBeam : BeamDesign {
         notes.add("Neutral axis depth c = ${"%.1f".format(neutralAxisDepth)} mm")
         notes.add("φ = $PHI_FLEXURE for tension-controlled sections")
         notes.add(CodeReference.ACI.BEAM_FLEXURE)
-        notes.add("ACI 318-25: Section 9.3.3.2 (Doubly reinforced)")
+        notes.add("ACI 318: Section 9.3.3.2 (Doubly reinforced)")
         
         return DoublyReinforcedResult(
             needsCompressionSteel = true,

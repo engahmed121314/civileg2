@@ -73,7 +73,7 @@ class ECPColumn : ColumnDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
-        // تصميم العزم المحوري — ECP 203-2025 §4-2-3
+        // تصميم العزم المحوري — ECP 203 §4-2-3
         // Use P-M interaction diagram for proper combined axial-flexural check
         // Apply minimum eccentricity per ECP 203 §4-2-3: e_min = max(20mm, b/20, h/20)
         val minEccentricity = maxOf(20.0, width / 20.0, depth / 20.0)
@@ -112,7 +112,7 @@ class ECPColumn : ColumnDesign {
             // Simple approach: scale As by moment demand ratio
             val momentFactor = max(1.0, 1.0 + designMoment / (Pu * 0.1 * h).coerceAtLeast(1.0))
             requiredSteelArea *= momentFactor
-            codeNotes.add("ECP 203-2025: P-M interaction design with e=${"%.1f".format(designEccentricity)}mm, moment factor ${"%.2f".format(momentFactor)}")
+            codeNotes.add("ECP 203: P-M interaction design with e=${"%.1f".format(designEccentricity)}mm, moment factor ${"%.2f".format(momentFactor)}")
         }
         
         // تطبيق حدود التسليح
@@ -184,7 +184,7 @@ class ECPColumn : ColumnDesign {
     }
 
     /**
-     * Slenderness ratio check per ECP 203-2025 §4-2-3
+     * Slenderness ratio check per ECP 203 §4-2-3
      * λ = K × L / r, where r = sqrt(I/Ag) ≈ 0.3h for rectangular columns
      * Short column: λ ≤ 15 (braced) or λ ≤ 10 (unbraced)
      * Long column: λ > threshold → moment magnification required
@@ -205,13 +205,13 @@ class ECPColumn : ColumnDesign {
         InputGuard.positive("width", width)
         InputGuard.positive("depth", depth)
 
-        // ECP 203-2025 §4-2-3: Radius of gyration for rectangular section
+        // ECP 203 §4-2-3: Radius of gyration for rectangular section
         // r = h / √12 ≈ 0.289h (for buckling about depth axis)
         val r = depth / sqrt(12.0)
         val slendernessRatio = effectiveLength / r.coerceAtLeast(1.0)
         InputGuard.finite("slendernessRatio", slendernessRatio)
 
-        // ECP 203-2025 §4-2-3: Threshold slenderness
+        // ECP 203 §4-2-3: Threshold slenderness
         val threshold = if (isBraced) 15.0 else 10.0
         val isShort = slendernessRatio <= threshold
 
@@ -229,7 +229,7 @@ class ECPColumn : ColumnDesign {
     }
 
     /**
-     * Moment magnification factor for slender columns per ECP 203-2025 §4-2-3
+     * Moment magnification factor for slender columns per ECP 203 §4-2-3
      * δ = 1 / (1 - Pu/Pcr) where Pcr = π²EI/(KL)²
      *
      * @param Pu factored axial load (kN)
@@ -251,7 +251,7 @@ class ECPColumn : ColumnDesign {
         InputGuard.positive("effectiveLength", effectiveLength)
         InputGuard.positive("fcu", fcu)
 
-        // ECP 203-2025 §4-2-3: EI ≈ 0.4 × Ec × Ig + Es × Is
+        // ECP 203 §4-2-3: EI ≈ 0.4 × Ec × Ig + Es × Is
         // Simplified: EI ≈ 0.4 × (4400√fcu) × (b×h³/12) + Es × [Ast/2 × (d-d')²/2]
         val Ec = 4400.0 * sqrt(fcu)  // MPa per ECP 203
         val Ig = width * depth.pow(3) / 12.0  // mm⁴
@@ -279,7 +279,7 @@ class ECPColumn : ColumnDesign {
     }
 
     /**
-     * Generate interaction diagram points per ECP 203-2025 §4-2-3
+     * Generate interaction diagram points per ECP 203 §4-2-3
      * Returns list of (Mu, Pu) points for the interaction curve
      *
      * @param fcu concrete cube strength (MPa)
@@ -311,7 +311,7 @@ class ECPColumn : ColumnDesign {
         val fc = 0.67 * fcu / GAMMA_C
         val points = mutableListOf<Pair<Double, Double>>()
 
-        // ECP 203-2025 §4-2-3: Vary neutral axis depth from 0 to h
+        // ECP 203 §4-2-3: Vary neutral axis depth from 0 to h
         for (i in 0..numPoints) {
             val c = (i.toDouble() / numPoints) * depth * 1.2  // Go slightly beyond h for pure tension
             val a = min(0.8 * c, depth)  // Whitney stress block, β₁=0.8 for ECP
@@ -345,7 +345,7 @@ class ECPColumn : ColumnDesign {
     }
 
     override fun getMinReinforcementRatio(): Double = 0.008  // 0.8%
-    override fun getMaxReinforcementRatio(): Double = 0.08   // 8% per ECP 203-2025 Section 4-2-3 (4% typical, 6% at splices, 8% max)
+    override fun getMaxReinforcementRatio(): Double = 0.08   // 8% per ECP 203 Section 4-2-3 (4% typical, 6% at splices, 8% max)
     override fun getMinSpacing(): Double = 100.0
     override fun getMaxSpacing(): Double = 300.0
     override fun getMinCover(): Double = 40.0
@@ -460,7 +460,7 @@ class ECPColumn : ColumnDesign {
 
     /**
      * Check if (Pu, Mu) point lies inside the P-M interaction diagram
-     * ECP 203-2025 §4-2-3: Use interaction diagram for combined axial-flexural design
+     * ECP 203 §4-2-3: Use interaction diagram for combined axial-flexural design
      */
     private fun checkPMInteraction(
         Pu: Double,  // kN

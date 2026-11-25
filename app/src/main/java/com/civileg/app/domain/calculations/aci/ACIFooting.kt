@@ -157,7 +157,7 @@ class ACIFooting : FootingDesign {
             200.0
         }
 
-        codeNotes.add("ACI 318-25: Isolated Footing Design")
+        codeNotes.add("ACI 318: Isolated Footing Design")
         codeNotes.add(CodeReference.ACI.FOOTING_BEARING)
         codeNotes.add(CodeReference.ACI.FOOTING_SHEAR_PUNCHING)
         codeNotes.add(CodeReference.ACI.FOOTING_REINFORCEMENT)
@@ -265,7 +265,7 @@ class ACIFooting : FootingDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
-        // ACI 318-25 طريقة Rn-ρ (التعادل)
+        // ACI 318 طريقة Rn-ρ (التعادل)
         val Mu = designMoment * 1e6  // N.mm/m
         val b = 1000.0  // mm/م
         val d = effectiveDepth

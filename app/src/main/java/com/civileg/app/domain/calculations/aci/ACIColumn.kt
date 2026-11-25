@@ -206,7 +206,7 @@ class ACIColumn : ColumnDesign {
         val steelCapacity = fy * Ast
         val nominalCapacity = concreteCapacity + steelCapacity
         
-        // ACI 318-25 §22.4.2.2: Pn,max = 0.80*Po for tied, 0.85*Po for spiral (حد اللامركزية الدنيا)
+        // ACI 318 §22.4.2.2: Pn,max = 0.80*Po for tied, 0.85*Po for spiral (حد اللامركزية الدنيا)
         // ثم φPn,max = φ * Pn,max
         val alpha = 0.80 // tied column limit
         val phi = PHI_TIED
@@ -414,7 +414,7 @@ class ACIColumn : ColumnDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
-        // ACI 318-25: Simplified reinforcement calculation
+        // ACI 318: Simplified reinforcement calculation
         // fc' = 0.8 × fcu (cube to cylinder)
         val fc_prime = 0.8 * fcu
         val phi = 0.65
@@ -551,10 +551,10 @@ class ACIColumn : ColumnDesign {
     override fun getMaxSpacing(): Double = 300.0
     override fun getMinCover(): Double = 40.0
 
-    // ── Shear Design per ACI 318-25 §22.5 ─────────────────────────────────────
+    // ── Shear Design per ACI 318 §22.5 ─────────────────────────────────────
 
     /**
-     * Column shear reinforcement design — ACI 318-25 §22.5
+     * Column shear reinforcement design — ACI 318 §22.5
      * @param Vu     factored shear force (kN)
      * @param width  column width b (mm)
      * @param depth  column depth h (mm)
@@ -593,7 +593,7 @@ class ACIColumn : ColumnDesign {
             (Vu - phiVc) * 1000.0 / (phi * fy * d)  // mm²/mm
         } else 0.0
 
-        // Max spacing per ACI 318-25 §25.7.2.2: min(b/4, 6×db, 150mm)
+        // Max spacing per ACI 318 §25.7.2.2: min(b/4, 6×db, 150mm)
         val maxSpacing = minOf(min(width, depth) / 4.0, 6.0 * longitudinalBarDia, 150.0)
 
         // Min Asv per ACI 22.5.10.1: Av,min = 0.062√f'c × b×s / fy  (but not less than 0.35×b×s/fy)
@@ -630,7 +630,7 @@ class ACIColumn : ColumnDesign {
         val totalCapacity = phiVc + if (needsStirrups) phi * fy * providedAsvPerS * d / 1000.0 else 0.0
         val utilizationRatio = if (totalCapacity > 0) Vu / totalCapacity else 2.0
 
-        codeNotes.add("ACI 318-25 §22.5: Column Shear Design")
+        codeNotes.add("ACI 318 §22.5: Column Shear Design")
         codeNotes.add("f'c = 0.8×fcu = ${String.format("%.0f", fc)} MPa")
         codeNotes.add("Vc = 0.17√f'c·b·d = ${String.format("%.1f", Vc)} kN")
         codeNotes.add(CodeReference.ACI.COLUMN_TIES)
