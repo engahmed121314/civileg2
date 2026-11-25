@@ -1405,12 +1405,20 @@ private fun DrawScope.drawDiagrams(
                     DiagramType.SFD, DiagramType.AFD -> context.getString(R.string.frame_unit_kn)
                 }
                 val label = "${abs(maxPt.value).formatValue(2)} $unit"
-                drawText(
-                    textMeasurer = textMeasurer,
+                // Measured unwrapped and clamped inside the canvas so a label at the right edge neither wraps
+                // one character per line nor clips; pushed outward along the diagram side to clear the member name.
+                val layout = textMeasurer.measure(
                     text = label,
-                    topLeft = Offset(annX + 4, annY - 14),
-                    style = TextStyle(color = diagramColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    style = TextStyle(color = diagramColor, fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                    softWrap = false,
+                    maxLines = 1
                 )
+                val side = if (offsetMax >= 0.0) 1f else -1f
+                val rawX = annX + nx * side * 6f + 4f
+                val rawY = annY + ny * side * 6f - layout.size.height / 2f
+                val lx = rawX.coerceIn(2f, (size.width - layout.size.width - 2f).coerceAtLeast(2f))
+                val ly = rawY.coerceIn(2f, (size.height - layout.size.height - 2f).coerceAtLeast(2f))
+                drawText(textLayoutResult = layout, topLeft = Offset(lx, ly))
             }
         }
     }

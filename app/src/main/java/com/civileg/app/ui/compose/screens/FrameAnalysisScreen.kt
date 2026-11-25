@@ -91,6 +91,8 @@ fun FrameAnalysisScreen(
     val designNotice by viewModel.designNotice.observeAsState()
     val modelLoadVersion by viewModel.modelLoadVersion.observeAsState(0)
     val diagramType by viewModel.activeDiagramType.observeAsState(DiagramType.BMD)
+    // Hoisted so the BMD/SFD/AFD chips are shown only where diagrams are actually drawn (view tab).
+    var editorMode by rememberSaveable { mutableIntStateOf(0) }
     val selectedMemberId by viewModel.selectedMemberId.observeAsState()
     val concreteResults by viewModel.concreteResults.observeAsState(emptyList())
     val steelResults by viewModel.steelResults.observeAsState(emptyList())
@@ -241,7 +243,7 @@ fun FrameAnalysisScreen(
         },
         bottomBar = {
             // Diagram type selector (shown on Drawing tab when results exist)
-            if (result?.hasResults == true && selectedTab == 0) {
+            if (result?.hasResults == true && selectedTab == 0 && editorMode == 1) {
                 Surface(
                     tonalElevation = 6.dp,
                     shadowElevation = 6.dp,
@@ -306,7 +308,8 @@ fun FrameAnalysisScreen(
                 when (selectedTab) {
                     0 -> DrawingTab(
                         modifier = Modifier.fillMaxSize(),
-                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, modelLoadVersion, viewModel
+                        nodes, members, memberLoads, nodalLoads, result, diagramType, selectedMemberId, modelLoadVersion, viewModel,
+                        editorMode = editorMode, onEditorModeChange = { editorMode = it }
                     )
                     1 -> NodesTab(nodes, members, viewModel)
                     2 -> MembersTab(nodes, members, settingsVal, viewModel)
@@ -531,10 +534,11 @@ private fun DrawingTab(
     diagramType: DiagramType,
     selectedMemberId: Int?,
     modelLoadVersion: Int,
-    viewModel: FrameAnalysisViewModel
+    viewModel: FrameAnalysisViewModel,
+    editorMode: Int,
+    onEditorModeChange: (Int) -> Unit
 ) {
     var viewMode by remember { mutableIntStateOf(0) }
-    var editorMode by rememberSaveable { mutableIntStateOf(0) }
     val slabs by viewModel.slabs.observeAsState(emptyList())
     // FIX: Sync local viewMode with ViewModel so it survives tab switches
     val vmViewMode by viewModel.drawingViewMode.observeAsState(0)
@@ -558,7 +562,7 @@ private fun DrawingTab(
             ) {
                 FilterChip(
                     selected = editorMode == 0,
-                    onClick = { editorMode = 0 },
+                    onClick = { onEditorModeChange(0) },
                     label = { AppText(stringResource(R.string.frame_modeler_tab), fontSize = 12.sp) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = Color(0xFF1565C0),
@@ -568,7 +572,7 @@ private fun DrawingTab(
                 Spacer(modifier = Modifier.width(6.dp))
                 FilterChip(
                     selected = editorMode == 1,
-                    onClick = { editorMode = 1 },
+                    onClick = { onEditorModeChange(1) },
                     label = { AppText(stringResource(R.string.frame_modeler_view_tab), fontSize = 12.sp) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = Color(0xFF1565C0),
