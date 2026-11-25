@@ -908,7 +908,7 @@
     <string name="steel_max_shear">أقصى قص</string>
     <string name="steel_max_axial">أقصى حمل محوري</string>
     <string name="steel_deflection">أقصى ترخيم</string>
-    <string name="steel_safety_analysis_safe">حالة التحليل: آمن ✓</string>
+    <string name="steel_safety_analysis_safe">التحليل: الفحوص المنفذة اجتازت (أولي)</string>
     <string name="steel_safety_analysis_unsafe">حالة التحليل: فشل ✗</string>
     <string name="steel_structural_perspective">المنظور الإنشائي</string>
     <string name="steel_front_view">واجهة أمامية</string>
@@ -1454,7 +1454,7 @@
     <string name="steel_block_shear_cap">قدرة قص البلوك</string>
     <string name="steel_block_shear_capacity">سعة قص البلوك</string>
     <string name="steel_block_shear_utilization">نسبة استغلال قص البلوك</string>
-    <string name="steel_weld_result_safe">اللحام آمن</string>
+    <string name="steel_weld_result_safe">فحص اللحام اجتاز (أولي)</string>
     <string name="steel_weld_result_fail">فشل اللحام</string>
     
     <!-- تصميم الوصلات - تسميات إضافية -->
@@ -1676,8 +1676,8 @@
     <string name="steel_ll_knm2">حمل حي L.L (kN/m²)</string>
     <string name="steel_wind_kmh">رياح (km/h)</string>
     <string name="steel_max_deflection">أقصى انحراف</string>
-    <string name="steel_status_safe">آمن ✓</string>
-    <string name="steel_status_unsafe">غير آمن ✗</string>
+    <string name="steel_status_safe">اجتاز الفحص (أولي)</string>
+    <string name="steel_status_unsafe">لم يجتز الفحص ✗</string>
 
     <!-- ExecutionLogScreen migrated strings -->
     <string name="exec_inspection_format">تفتيش: %s</string>

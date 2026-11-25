@@ -232,7 +232,7 @@ class SteelViewModel @Inject constructor(
                 "Pu = ${String.format("%.1f", stored.inputs.axialLoad)} kN / ${String.format("%.1f", res.axialCapacity)} kN",
                 "Mu = ${String.format("%.1f", stored.inputs.moment)} kN.m / ${String.format("%.1f", res.flexuralCapacity)} kN.m",
                 "Vu = ${String.format("%.1f", stored.inputs.shear)} kN / ${String.format("%.1f", res.shearCapacity)} kN",
-                "Utilization = ${(res.utilizationRatio * 100).toInt()}% - ${if (res.isSafe) "SAFE" else "UNSAFE"}"
+                "Utilization = ${(res.utilizationRatio * 100).toInt()}% - ${if (res.isSafe) "CHECK PASSES (PRELIMINARY)" else "CHECK FAILS"}"
             )
         )
     }
@@ -338,7 +338,7 @@ class SteelViewModel @Inject constructor(
                     "Moment Capacity" to "${String.format("%.2f", res.flexuralCapacity)} kN.m",
                     "Shear Capacity" to "${String.format("%.2f", res.shearCapacity)} kN",
                     "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
-                    "Status" to if (res.isSafe) "SAFE" else "UNSAFE"
+                    "Status" to if (res.isSafe) "CHECK PASSES (PRELIMINARY)" else "CHECK FAILS"
                 )
                 val memberTypeLabel = when (stored.memberType) {
                     com.civileg.app.domain.entities.SteelMemberType.COLUMN -> "Column"
@@ -588,7 +588,7 @@ class SteelViewModel @Inject constructor(
                     "Plate Thickness" to "${String.format("%.1f", result.plateThickness)} mm",
                     "Anchor Bolt Dia" to "${result.anchorBolts.boltDiameter} mm",
                     "Number of Bolts" to "${result.anchorBolts.numberOfBolts}",
-                    "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
+                    "Status" to if (result.isSafe) "CHECK PASSES (PRELIMINARY)" else "CHECK FAILS"
                 )
                 val safetyChecks = listOf(
                     GenericSafetyCheck("Base Plate", 0.0, 1.0, "-", result.isSafe)

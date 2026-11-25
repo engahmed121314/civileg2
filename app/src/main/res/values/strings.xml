@@ -535,8 +535,8 @@
     <string name="save_design_in_project">Save in Project Vault</string>
     <string name="select_project">Select Project</string>
     <string name="no_projects_available">No Projects Available</string>
-    <string name="safe_check">SAFE ✓</string>
-    <string name="unsafe_check">UNSAFE ✗</string>
+    <string name="safe_check">Check passes (PRELIMINARY)</string>
+    <string name="unsafe_check">Check fails ✗</string>
     <string name="safety_checks">Safety Checks</string>
     <string name="status">Status</string>
     <string name="type">Type</string>
@@ -911,7 +911,7 @@
     <string name="steel_max_shear">Max Shear</string>
     <string name="steel_max_axial">Max Axial</string>
     <string name="steel_deflection">Max Deflection</string>
-    <string name="steel_safety_analysis_safe">ANALYSIS STATUS: SAFE ✓</string>
+    <string name="steel_safety_analysis_safe">ANALYSIS: checks run pass (PRELIMINARY)</string>
     <string name="steel_safety_analysis_unsafe">ANALYSIS STATUS: FAIL ✗</string>
     <string name="steel_structural_perspective">Structural Perspective</string>
     <string name="steel_front_view">Front Elevation</string>
@@ -1452,7 +1452,7 @@
     <string name="steel_block_shear_cap">Block Shear Cap.</string>
     <string name="steel_block_shear_capacity">Block Shear Capacity</string>
     <string name="steel_block_shear_utilization">Block Shear Utilization</string>
-    <string name="steel_weld_result_safe">Weld Safe</string>
+    <string name="steel_weld_result_safe">Weld check passes (PRELIMINARY)</string>
     <string name="steel_weld_result_fail">Weld Failed</string>
     
     <!-- Connection Design - Additional Labels -->
@@ -1772,8 +1772,8 @@
     <string name="steel_ll_knm2">L.L (kN/m²)</string>
     <string name="steel_wind_kmh">Wind (km/h)</string>
     <string name="steel_max_deflection">Max Deflection</string>
-    <string name="steel_status_safe">SAFE ✓</string>
-    <string name="steel_status_unsafe">UNSAFE ✗</string>
+    <string name="steel_status_safe">Check passes (PRELIMINARY)</string>
+    <string name="steel_status_unsafe">Check fails ✗</string>
 
     <!-- ExecutionLogScreen migrated strings -->
     <string name="exec_inspection_format">Inspection: %s</string>

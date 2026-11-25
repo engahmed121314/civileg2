@@ -1763,7 +1763,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                         AppText(stringResource(R.string.steel_bolted_results), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
                         ResultRow(stringResource(R.string.steel_total_capacity), "${String.format("%.1f", res.controllingCapacity)} kN")
                         ResultRow(stringResource(R.string.steel_utilization_ratio), "${(res.utilizationRatio * 100).toInt()}%")
-                        AppText(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
+                        AppText(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFFEF6C00) else Color.Red)
 
                         // Detailed individual checks
                         Spacer(modifier = Modifier.height(8.dp))
@@ -1841,7 +1841,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                         AppText(stringResource(R.string.steel_welded_results), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         ResultRow(stringResource(R.string.steel_total_capacity), "${String.format("%.1f", res.capacity)} kN")
                         ResultRow(stringResource(R.string.steel_utilization_ratio), "${(res.utilizationRatio * 100).toInt()}%")
-                        AppText(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red)
+                        AppText(if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe), fontWeight = FontWeight.Bold, color = if (res.isSafe) Color(0xFFEF6C00) else Color.Red)
 
                         // Detailed weld checks
                         Spacer(modifier = Modifier.height(8.dp))
@@ -2164,7 +2164,7 @@ private fun BasePlateConcentricResultCard(
     dc: String,
     selectedCode: DesignCode
 ) {
-    val urColor = if (res.utilizationRatio <= 1.0) Color(0xFF2E7D32) else Color.Red
+    val urColor = if (res.utilizationRatio <= 1.0) Color(0xFFEF6C00) else Color.Red
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
         modifier = Modifier.fillMaxWidth()
@@ -2231,7 +2231,7 @@ private fun BasePlateEccentricResultCard(
     dc: String,
     selectedCode: DesignCode
 ) {
-    val urColor = if (res.utilizationRatio <= 1.0) Color(0xFF2E7D32) else Color.Red
+    val urColor = if (res.utilizationRatio <= 1.0) Color(0xFFEF6C00) else Color.Red
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
         modifier = Modifier.fillMaxWidth()
@@ -2311,7 +2311,7 @@ private fun BasePlatePocketResultCard(
     dc: String,
     selectedCode: DesignCode
 ) {
-    val urColor = if (res.utilizationRatio <= 1.0) Color(0xFF2E7D32) else Color.Red
+    val urColor = if (res.utilizationRatio <= 1.0) Color(0xFFEF6C00) else Color.Red
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
         modifier = Modifier.fillMaxWidth()
@@ -2631,7 +2631,7 @@ fun SteelFrameVisualizer(
                 val heightPx = ((inputs.eaveHeight * 25.0).toFloat()).coerceIn(80f, h - 100f)
                 val ridgePx = heightPx + (spanPx / 2f * inputs.slope.toFloat() * 25f).coerceAtLeast(0f)
 
-                val urColor = if (isSafe) Color(0xFF2E7D32) else Color.Red
+                val urColor = if (isSafe) Color(0xFFEF6C00) else Color.Red
 
                 when (viewMode) {
                     0 -> { // Front Elevation
@@ -2893,7 +2893,7 @@ private fun ConnectionDetailPanel(
                 if (isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isSafe) Color(0xFF2E7D32) else Color.Red
+                color = if (isSafe) Color(0xFFEF6C00) else Color.Red
             )
         }
     }
@@ -3184,7 +3184,7 @@ fun SteelShopDrawingPreview(
                 val cy = h / 2f
 
                 // Member profile (I-section schematic)
-                val urColor = if (isSafe) Color(0xFF2E7D32) else Color.Red
+                val urColor = if (isSafe) Color(0xFFEF6C00) else Color.Red
 
                 // Top flange
                 drawRect(urColor, Offset(cx - 90f, cy - 100f), Size(180f, 12f))
