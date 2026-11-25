@@ -1630,11 +1630,16 @@ class CalculatorEngine @Inject constructor(
                     momentX = muRib, utilizationRatio = res.utilizationRatio,
                     concreteVolume = concreteVol, steelWeight = steelW, cost = costVal,
                     safetyChecks = listOf(DesignSafetyCheck("Engine aggregate verdict (flexure + shear + adoption + material)", res.requiredReinforcement, res.providedReinforcement, "mm²", res.isSafe)),
-                    warnings = res.warnings,
+                    warnings = res.warnings + buildList {
+                        add("ASSUMED INPUT: topping thickness is fixed at 50 mm on this screen (not entered by the user). The result is not an engineering acceptance. Use the Hordi slab screen with the real topping.")
+                        val clearRibSpacing = ribSpacing - ribWidth
+                        if (clearRibSpacing / 12.0 > 50.0) add("The assumed 50 mm topping is below clear rib spacing/12 = ${"%.1f".format(clearRibSpacing / 12.0)} mm (SBC 304 9.8.2.1.1, applies only if permanent fillers are used; filler type not declared).")
+                    },
                     codeNotes = res.codeNotes,
                     bondClassAssessed = res.bondClassAssessed,
                     barBondClass = res.barBondClass,
-                    serviceabilityAssessed = res.serviceabilityAssessed
+                    // Topping is assumed, so no qualification can be complete on this path.
+                    serviceabilityAssessed = false
                 )
             }
 
