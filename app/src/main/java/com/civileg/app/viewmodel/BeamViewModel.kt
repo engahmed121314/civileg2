@@ -154,7 +154,7 @@ class BeamViewModel @Inject constructor(
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val res = _result.value ?: return null
         if (!res.codeAcceptanceComplete) return null
-        return com.civileg.app.utils.ElementDxfDrawings.beamSection(
+        val section = com.civileg.app.utils.ElementDxfDrawings.beamSection(
             title = "BEAM ${lastSupportType.displayName}",
             widthMm = res.width.toDouble(),
             depthMm = res.depth.toDouble(),
@@ -164,6 +164,12 @@ class BeamViewModel @Inject constructor(
             stirrupDiaMm = res.stirrups.diameter.toDouble(),
             stirrupSpacingMm = res.stirrups.spacing.toDouble()
         )
+        // The beam BBS is not issued (no verified cutting-length basis); say so inside the DXF itself.
+        return com.civileg.app.utils.DxfDrawable { exporter ->
+            section.exportToDxf(exporter)
+            exporter.addText(0.0, -2500.0, "BAR BENDING SCHEDULE NOT ISSUED - cutting lengths (hooks, anchorage, laps, bends) have no verified code basis", 120.0, "0_BBS_TABLE")
+            exporter.addText(0.0, -2750.0, "Section shows bar counts, diameters and stirrup spacing only. Not a complete reinforcement detail.", 100.0, "0_BBS_TABLE")
+        }
     }
 
     /** Export just the CAD drawing (no PDF) for the current design. */
