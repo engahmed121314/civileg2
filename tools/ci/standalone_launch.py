@@ -139,9 +139,9 @@ def stair_codes():
         # Stair PDF export request for this lane (evidence of the export path, then dismiss)
         if tag == "SBC":
             pdf_ok = False
-            for _ in range(8):
+            for _ in range(14):
                 if tap_text(["تقرير PDF", "PDF"], "sc-pdf-find"): pdf_ok = True; break
-                scroll_top(2)
+                scroll_top(1)  # one swipe per try: two at a time skipped past the button
             log.append(("sc_pdf_tap_" + tag, pdf_ok)); time.sleep(4)
             # dismiss the system "Viewing full screen" notice so the viewer pages are visible
             tap_text(["Got it", "حسنًا", "حسناً"], "sc-pdf-gotit")
