@@ -53,8 +53,13 @@ class ECPStaircase : StaircaseDesign {
         fun finitePositive(v: Double?): Boolean = v != null && v.isFinite() && v > 0.0
         val landingSupplied = finitePositive(input.landingLengthMm) &&
             finitePositive(input.landingWidthMm) && finitePositive(input.landingThicknessMm)
-        val continuousOverLanding = input.stairType == StairType.DOG_LEG &&
+        val continuityDeclared = input.stairType == StairType.DOG_LEG &&
             input.supportCondition == StairSupportCondition.CONTINUOUS_OVER_LANDING && landingSupplied
+        // No landing restraint is credited: no located clause in the supplied ECP 203-2020 (scan contents pages
+        // 8-23 list no stair/landing heading) grounds the wL²/10 coefficient or an L/d of 26 for a flight over a
+        // landing, and declared continuity plus landing dimensions does not establish it. Kept as a named switch so
+        // a grounded clause can enable it with its own tests.
+        val continuousOverLanding = false
 
         // ========== 1. التصميم الهندسي ==========
         var numRisers: Int
@@ -194,10 +199,12 @@ class ECPStaircase : StaircaseDesign {
                     // continuity declared without usable landing dimensions →
                     // conservative simply-supported per-flight model.
                     analysisStatus = StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED
-                    if (input.supportCondition == StairSupportCondition.CONTINUOUS_OVER_LANDING) {
-                        codeNotes.add("WARNING: CONTINUOUS_OVER_LANDING declared but landing dimensions are missing or not finite-positive (L/W/t) — restraint NOT verified; conservative simply-supported per-flight M = wL²/8 used")
+                    if (continuityDeclared) {
+                        codeNotes.add("Declared CONTINUOUS_OVER_LANDING with landing dimensions is NOT credited: no grounded restraint coefficient or L/d for this case; per-flight M = wL²/8 and L/d 20 used as an unverified preliminary model. Landing slab and top steel over the landing are not designed")
+                    } else if (input.supportCondition == StairSupportCondition.CONTINUOUS_OVER_LANDING) {
+                        codeNotes.add("WARNING: CONTINUOUS_OVER_LANDING declared but landing dimensions are missing or not finite-positive (L/W/t) — restraint NOT verified; per-flight M = wL²/8 used as an unverified preliminary model")
                     } else {
-                        codeNotes.add("Case model: double flight with UNSPECIFIED support/landing — no restraint assumed; conservative simply-supported per-flight M = wL²/8. Supply supportCondition=CONTINUOUS_OVER_LANDING with landing dimensions for the wL²/10 model")
+                        codeNotes.add("Case model: double flight with UNSPECIFIED support/landing — no restraint assumed; conservative simply-supported per-flight M = wL²/8.")
                     }
                 }
                 codeNotes.add("The landing slab itself is NOT designed by this engine (landingRebar empty)")

@@ -42,9 +42,8 @@ class StairCaseContractAllCodesTest {
     }
 
     @Test
-    fun `ACI and SBC never credit an ungrounded landing restraint`() {
-        for (name in listOf("ACI", "SBC")) {
-            val lane = lanes.getValue(name)
+    fun `no lane credits an ungrounded landing restraint`() {
+        for ((name, lane) in lanes) {
             val straight = lane.designStaircase(input())
             for (r in listOf(
                 lane.designStaircase(input(StairType.DOG_LEG)),
@@ -55,8 +54,15 @@ class StairCaseContractAllCodesTest {
                 assertEquals(name, straight.maxMoment, r.maxMoment, 1e-9)
                 assertEquals(name, "", r.flightTopRebar)
                 assertEquals(name, "", r.landingRebar)
-                assertTrue(name, r.codeNotes.any { it.contains("NOT credited") })
             }
+        }
+    }
+
+    @Test
+    fun `declared continuity with landing dimensions is reported as not credited`() {
+        for ((name, lane) in lanes) {
+            val r = lane.designStaircase(input(StairType.DOG_LEG, StairSupportCondition.CONTINUOUS_OVER_LANDING, landing = true))
+            assertTrue(name, r.codeNotes.any { it.contains("NOT credited") })
         }
     }
 
