@@ -167,6 +167,8 @@ except Exception as e:
 ls = adb("shell", "run-as", pkg, "find", ".", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
 ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf").stdout.decode("utf8", "ignore")
 open(f"{out}/pdf-files.txt", "w").write(ls)
+for p in [l.strip() for l in ls.splitlines() if l.strip().startswith("/sdcard")][:4]:
+    adb("pull", p, f"{out}/exported-" + os.path.basename(p))
 for p in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:4]:
     d = adb("shell", "run-as", pkg, "cat", p).stdout
     open(f"{out}/exported-" + os.path.basename(p), "wb").write(d)
