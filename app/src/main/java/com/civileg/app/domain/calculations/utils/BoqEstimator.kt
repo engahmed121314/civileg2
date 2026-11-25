@@ -169,7 +169,7 @@ object BoqEstimator {
         val cap = result.capResult
         val rows = mutableListOf(
             item(1, "Concrete - $mark (piles + cap)", "m3", pileConcrete + cap.concreteVolume),
-            item(2, "Reinforcement steel - $mark", "kg", pileSteel + cap.steelWeight),
+            item(2, "Reinforcement steel - $mark (net pile longitudinal + cap only; excludes ties, laps, hooks and development; not a bar schedule total)", "kg", pileSteel + cap.steelWeight),
             item(3, "Formwork - $mark (pile shafts)", "m2", n * Math.PI * d * pileLengthMm / 1_000_000.0),
             item(4, "Formwork - cap sides", "m2", 2 * (cap.capWidth + cap.capLength) * cap.capThickness / 1_000_000.0)
         )
