@@ -54,7 +54,17 @@ class BeamViewModel @Inject constructor(
     private var lastLiveLoad: Double = 10.0
     private var lastFcu: Double = 25.0
     private var lastFy: Double = 360.0
+    val solvedFcu: Double get() = lastFcu
+    val solvedFy: Double get() = lastFy
+
     private var lastSupportType: CalculatorEngine.SupportType = CalculatorEngine.SupportType.HINGED_HINGED
+
+    fun clearResult() {
+        _result.value = null
+        _validationReport.value = null
+        _error.value = null
+        pendingDrawingBitmap = null
+    }
 
     fun calculateBeamPro(
         width: Double,
@@ -199,24 +209,12 @@ class BeamViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = java.io.File(directory, fileName)
 
-                // Generate moment/shear point arrays for PDF diagrams
-                // Simply supported beam with UDL: M(x) = w*x*(L-x)/2, V(x) = w*(L/2-x)
-                val L = lastSpan // span in meters
-                val maxM = res.appliedMoment  // kN.m
-                val maxV = res.appliedShear    // kN
-                // Derive UDL from max moment: M_max = w*L²/8 → w = 8*M_max/L²
-                val wUDL = if (L > 0) 8.0 * maxM / (L * L) else 0.0
-                val numPoints = 21
-                val momentPoints = (0..numPoints).map { i ->
-                    val x = L * i / numPoints
-                    val m = wUDL * x * (L - x) / 2.0
-                    Pair(x, m)
-                }
-                val shearPoints = (0..numPoints).map { i ->
-                    val x = L * i / numPoints
-                    val v = wUDL * (L / 2.0 - x)
-                    Pair(x, v)
-                }
+                // Same solved-case UDL equilibrium samples as the design screen.
+                val maxM = res.appliedMoment
+                val maxV = res.appliedShear
+                val diagram = com.civileg.app.domain.calculations.utils.BeamUdlDiagram.samples(res.span,res.appliedShear,res.supportType)
+                val momentPoints = diagram.map { it.xM to it.momentKnM }
+                val shearPoints = diagram.map { it.xM to it.shearKn }
 
                 // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
                 val drawingBitmap = pendingDrawingBitmap ?: try {

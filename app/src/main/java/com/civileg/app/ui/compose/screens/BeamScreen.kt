@@ -57,6 +57,11 @@ import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
+import com.civileg.app.domain.validation.FieldSpec
+import com.civileg.app.domain.validation.FieldKind
+import com.civileg.app.domain.validation.FormValidator
+import com.civileg.app.ui.compose.validation.*
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 private data class BeamDiagramInputSnapshot(
     val span: Double,
@@ -114,6 +119,14 @@ fun BeamScreen(
     var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     var calculatedDiagramInputs by remember { mutableStateOf<BeamDiagramInputSnapshot?>(null) }
 
+    val form = rememberFormValidationState()
+    val listState = rememberLazyListState()
+    val fieldRows = mapOf("width" to 2,"height" to 2,"span" to 3,"deadLoad" to 4,"liveLoad" to 4,"fcu" to 6,"fy" to 6,"barDiameter" to 7)
+    fun touch(id: String) {
+        form.clear(id)
+        calculatedDiagramInputs = null
+        viewModel.clearResult()
+    }
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -129,6 +142,7 @@ fun BeamScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
@@ -158,6 +172,7 @@ fun BeamScreen(
                                 text = { AppText(type.displayName) },
                                 onClick = {
                                     selectedSupport = type
+                                    touch("support")
                                     expandedSupport = false
                                 }
                             )
@@ -168,49 +183,63 @@ fun BeamScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeamInputField(width, stringResource(R.string.column_width_t_mm), { width = it }, Modifier.weight(1f))
-                    BeamInputField(height, stringResource(R.string.beam_depth_h_mm), { height = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "width", width, stringResource(R.string.column_width_t_mm), { width = it; touch("width") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "height", height, stringResource(R.string.beam_depth_h_mm), { height = it; touch("height") }, Modifier.weight(1f))
                 }
             }
 
             item {
-                BeamInputField(span, stringResource(R.string.beam_effective_length), { span = it }, Modifier.fillMaxWidth())
+                ValidatedNumberField(form, "span", span, stringResource(R.string.beam_effective_length), { span = it; touch("span") }, Modifier.fillMaxWidth())
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeamInputField(deadLoad, stringResource(R.string.beam_dead_load_kn_m), { deadLoad = it }, Modifier.weight(1f))
-                    BeamInputField(liveLoad, stringResource(R.string.beam_live_load_kn_m), { liveLoad = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "deadLoad", deadLoad, stringResource(R.string.beam_dead_load_kn_m), { deadLoad = it; touch("deadLoad") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "liveLoad", liveLoad, stringResource(R.string.beam_live_load_kn_m), { liveLoad = it; touch("liveLoad") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 DesignCodeSelectorRow(
                     selectedCode = selectedCode,
-                    onCodeSelected = { selectedCode = it }
+                    onCodeSelected = { selectedCode = it; touch("code") }
                 )
             }
 
             item {
                 AppText(stringResource(R.string.beam_material_props), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeamInputField(fcu, stringResource(R.string.beam_fcu_mpa), { fcu = it }, Modifier.weight(1f))
-                    BeamInputField(fy, stringResource(R.string.beam_fy_mpa), { fy = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "fcu", fcu, stringResource(R.string.beam_fcu_mpa), { fcu = it; touch("fcu") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "fy", fy, stringResource(R.string.beam_fy_mpa), { fy = it; touch("fy") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 AppText(stringResource(R.string.beam_rebar_selection), fontWeight = FontWeight.Bold)
-                BeamInputField(barDiameter, stringResource(R.string.column_bar_diameter_label), { barDiameter = it }, Modifier.fillMaxWidth())
+                ValidatedNumberField(form, "barDiameter", barDiameter, stringResource(R.string.column_bar_diameter_label), { barDiameter = it; touch("barDiameter") }, Modifier.fillMaxWidth())
             }
 
+            item { FormErrorSummary(form) }
             item {
                 AppButton(
                     label = stringResource(R.string.beam_design_now),
                     onClick = {
-                        val spanValue = span.toDoubleOrNull() ?: 5.0
-                        val deadLoadValue = deadLoad.toDoubleOrNull() ?: 0.0
-                        val liveLoadValue = liveLoad.toDoubleOrNull() ?: 0.0
+                        viewModel.clearResult()
+                        calculatedDiagramInputs = null
+                        val checked = FormValidator.validate(listOf(
+                            FieldSpec("width",width,FieldKind.POSITIVE),FieldSpec("height",height,FieldKind.POSITIVE),
+                            FieldSpec("span",span,FieldKind.POSITIVE),FieldSpec("deadLoad",deadLoad,FieldKind.NON_NEGATIVE),
+                            FieldSpec("liveLoad",liveLoad,FieldKind.NON_NEGATIVE),FieldSpec("fcu",fcu,FieldKind.POSITIVE),
+                            FieldSpec("fy",fy,FieldKind.POSITIVE),FieldSpec("barDiameter",barDiameter,FieldKind.POSITIVE_INT)
+                        ))
+                        form.apply(checked)
+                        if (!checked.isValid) {
+                            scope.launch { form.focusFirstInvalid(checked) { id -> fieldRows[id]?.let { listState.scrollItemToCenter(it) } } }
+                            return@AppButton
+                        }
+                        val spanValue = checked.value("span")
+                        val deadLoadValue = checked.value("deadLoad")
+                        val liveLoadValue = checked.value("liveLoad")
                         calculatedDiagramInputs = BeamDiagramInputSnapshot(
                             spanValue,
                             deadLoadValue,
@@ -219,14 +248,14 @@ fun BeamScreen(
                             selectedSupport
                         )
                         viewModel.calculateBeamPro(
-                            width.toDoubleOrNull() ?: 250.0,
-                            height.toDoubleOrNull() ?: 600.0,
+                            checked.value("width"),
+                            checked.value("height"),
                             spanValue,
                             deadLoadValue,
                             liveLoadValue,
-                            fcu.toDoubleOrNull() ?: 25.0,
-                            fy.toDoubleOrNull() ?: 360.0,
-                            barDiameter.toIntOrNull() ?: 16,
+                            checked.value("fcu"),
+                            checked.value("fy"),
+                            checked.value("barDiameter").toInt(),
                             selectedCode,
                             selectedSupport
                         )
@@ -385,21 +414,21 @@ fun BeamScreen(
                             ProfessionalBeamDrawing(
                                 beamWidth = res.width.toDouble(),
                                 beamDepth = res.depth.toDouble(),
-                                span = (span.toDoubleOrNull() ?: 5.0) * 1000.0,
+                                span = res.span * 1000.0,
                                 mainRebarDia = res.reinforcementBottom.diameter.toDouble(),
                                 mainRebarCount = res.reinforcementBottom.numBars,
                                 stirrupDia = res.stirrups.diameter.toDouble(),
                                 stirrupSpacing = res.stirrups.spacing.toDouble(),
                                 cover = 50.0,
                                 developmentLength = {
-                                    val fcuVal = fcu.toDoubleOrNull() ?: 25.0
-                                    val fyVal = fy.toDoubleOrNull() ?: 360.0
+                                    val fcuVal = viewModel.solvedFcu
+                                    val fyVal = viewModel.solvedFy
                                     val db = res.reinforcementBottom.diameter.toDouble()
                                     (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
                                 }(),
                                 lapLength = {
-                                    val fcuVal = fcu.toDoubleOrNull() ?: 25.0
-                                    val fyVal = fy.toDoubleOrNull() ?: 360.0
+                                    val fcuVal = viewModel.solvedFcu
+                                    val fyVal = viewModel.solvedFy
                                     val db = res.reinforcementBottom.diameter.toDouble()
                                     val ld = (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
                                     1.3 * ld
@@ -420,9 +449,9 @@ fun BeamScreen(
 
                 item {
                     val currentInputs = BeamDiagramInputSnapshot(
-                        span = span.toDoubleOrNull() ?: 5.0,
-                        deadLoad = deadLoad.toDoubleOrNull() ?: 0.0,
-                        liveLoad = liveLoad.toDoubleOrNull() ?: 0.0,
+                        span = FormValidator.parseNumber(span) ?: Double.NaN,
+                        deadLoad = FormValidator.parseNumber(deadLoad) ?: Double.NaN,
+                        liveLoad = FormValidator.parseNumber(liveLoad) ?: Double.NaN,
                         code = selectedCode,
                         support = selectedSupport
                     )
@@ -432,11 +461,14 @@ fun BeamScreen(
                         res.code == currentInputs.code &&
                         res.supportType == currentInputs.support
                     ) {
+                        val diagram = com.civileg.app.domain.calculations.utils.BeamUdlDiagram.samples(res.span,res.appliedShear,res.supportType)
                         MomentShearForceDiagram(
                             span = currentInputs.span,
                             supportType = res.supportType.name,
                             deadLoad = currentInputs.deadLoad,
                             liveLoad = currentInputs.liveLoad,
+                            momentValues = diagram.map { (it.xM/res.span).toFloat() to it.momentKnM.toFloat() },
+                            shearValues = diagram.map { (it.xM/res.span).toFloat() to it.shearKn.toFloat() },
                             appliedMoment = res.appliedMoment,
                             appliedShear = res.appliedShear,
                             designCode = currentInputs.code,
@@ -457,21 +489,21 @@ fun BeamScreen(
                     ProfessionalBeamDrawing(
                         beamWidth = res.width.toDouble(),
                         beamDepth = res.depth.toDouble(),
-                        span = (span.toDoubleOrNull() ?: 5.0) * 1000.0,
+                        span = res.span * 1000.0,
                         mainRebarDia = res.reinforcementBottom.diameter.toDouble(),
                         mainRebarCount = res.reinforcementBottom.numBars,
                         stirrupDia = res.stirrups.diameter.toDouble(),
                         stirrupSpacing = res.stirrups.spacing.toDouble(),
                         cover = 50.0,
                         developmentLength = {
-                            val fcuVal = fcu.toDoubleOrNull() ?: 25.0
-                            val fyVal = fy.toDoubleOrNull() ?: 360.0
+                            val fcuVal = viewModel.solvedFcu
+                            val fyVal = viewModel.solvedFy
                             val db = res.reinforcementBottom.diameter.toDouble()
                             (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
                         }(),
                         lapLength = {
-                            val fcuVal = fcu.toDoubleOrNull() ?: 25.0
-                            val fyVal = fy.toDoubleOrNull() ?: 360.0
+                            val fcuVal = viewModel.solvedFcu
+                            val fyVal = viewModel.solvedFy
                             val db = res.reinforcementBottom.diameter.toDouble()
                             val ld = (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
                             1.3 * ld
