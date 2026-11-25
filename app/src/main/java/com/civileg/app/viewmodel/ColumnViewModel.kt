@@ -322,7 +322,7 @@ class ColumnViewModel @Inject constructor(
                 val combinedWarnings = report.warnings + dlReport.warnings
                 _uiState.update { it.copy(result = res, validationReport = report.copy(warnings = combinedWarnings), errors = emptyList(), validation = null, snapshot = snap) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(errors = listOf(e.message ?: "Error")) }
+                _uiState.update { it.copy(result = null, snapshot = null, validationReport = null, errors = listOf(e.message ?: "Error")) }
                 _errorMessage.value = "Column calculation error / خطأ في حساب العمود: ${e.message}"
             }
         }
