@@ -153,12 +153,12 @@ try:
     calc_hordi("hordi-ecp")
     scroll_top(8); sweep("hordi-ecp-top", 1)
     pdf_try("hordi-ecp")
-    scroll_top(8)
+    scroll_top(30)
     log.append(("hordi_saudi", tap_text(["SBC 304-CR-2018"], "hordi-saudi-find"))); time.sleep(1)
-    calc_hordi("hordi-sbc")
-    scroll_top(8)
+    shot("hordi-sbc-chip"); calc_hordi("hordi-sbc")
+    scroll_top(30)
     log.append(("hordi_american", tap_text(["ACI 318M-14"], "hordi-aci-find"))); time.sleep(1)
-    calc_hordi("hordi-aci")
+    shot("hordi-aci-chip"); calc_hordi("hordi-aci")
     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
     open_from_design("بلاطة هوردي", "hordi-reopen")
 except Exception as e:
@@ -170,4 +170,12 @@ open(f"{out}/pdf-files.txt", "w").write(ls)
 for p in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:4]:
     d = adb("shell", "run-as", pkg, "cat", p).stdout
     open(f"{out}/exported-" + os.path.basename(p), "wb").write(d)
+
+# 7) 2D tab: open it, capture screens, scroll, try quantities
+try:
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+    log.append(("plan2d_tab", tap_text(["مخطط 2D"], "plan2d-tab", exact=True))); time.sleep(3)
+    sweep("plan2d", 6)
+except Exception as e:
+    log.append(("plan2d_exception", repr(e)))
 open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log))
