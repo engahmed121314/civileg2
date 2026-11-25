@@ -247,7 +247,7 @@ class StairViewModel @Inject constructor(
                     val safetyChecks = currentResult.safetyChecks.map { chk ->
                         GenericSafetyCheck(
                             name = chk.name, calculated = chk.value,
-                            limit = chk.limit, unit = chk.unit, passed = chk.isSafe
+                            limit = chk.limit, unit = chk.unit, passed = chk.isSafe, notAssessed = chk.notAssessed
                         )
                     }
 

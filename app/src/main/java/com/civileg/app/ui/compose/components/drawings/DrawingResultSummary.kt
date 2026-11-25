@@ -40,7 +40,8 @@ data class DrawingResultSummary(
     val safetyLabel: String get() = if (!codeAcceptanceComplete) "UNVERIFIED" else if (isSafe) "PASS" else "FAIL"
 
     /** Number of failed safety checks */
-    val failedCheckCount: Int get() = safetyChecks.count { !it.passed }
+    val failedCheckCount: Int get() = safetyChecks.count { !it.passed && !it.notAssessed }
+    val notAssessedCheckCount: Int get() = safetyChecks.count { it.notAssessed }
 
     /** Formatted punching shear status */
     val punchingShearStatus: String get() = when {

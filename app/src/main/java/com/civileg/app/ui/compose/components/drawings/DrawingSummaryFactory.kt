@@ -13,7 +13,8 @@ fun CalculatorEngine.DesignSafetyCheck.asDrawingCheck(): GenericSafetyCheck =
         calculated = value,
         limit = limit,
         unit = unit,
-        passed = isSafe
+        passed = isSafe,
+        notAssessed = notAssessed
     )
 
 private fun List<CalculatorEngine.DesignSafetyCheck>.asDrawingChecks(): List<GenericSafetyCheck> =

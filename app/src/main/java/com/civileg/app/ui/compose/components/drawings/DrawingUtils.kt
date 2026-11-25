@@ -1475,8 +1475,10 @@ fun DrawScope.drawResultSummaryStrip(
     }
 
     val total = summary.safetyChecks.size
-    val passed = total - summary.failedCheckCount
-    val checks = if (total == 0) "CHECKS: N/A" else "CHECKS: $passed/$total PASS"
+    val passed = total - summary.failedCheckCount - summary.notAssessedCheckCount
+    val checks = if (total == 0) "CHECKS: N/A"
+        else if (summary.notAssessedCheckCount > 0) "CHECKS: $passed/$total PASS, ${summary.notAssessedCheckCount} NOT ASSESSED"
+        else "CHECKS: $passed/$total PASS"
     drawTextAnnotated(checks, x + pad, y + rowHeight + small * 1.05f, color, small)
     drawTextAnnotated(
         "CONC: %.2f m3".format(summary.concreteVolume),

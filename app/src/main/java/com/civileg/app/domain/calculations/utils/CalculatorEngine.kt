@@ -2251,7 +2251,7 @@ class CalculatorEngine @Inject constructor(
                 CalculationStep(
                     stepNumber = 1, title = "Geometry",
                     formula = "nt = round(1000*span/tread); nr = nt+1; rise = nr*riser",
-                    formulaWithValues = "${nRisers} risers × ${"%.0f".format(riser)} mm, ${nTreads} treads × ${"%.0f".format(tread)} mm",
+                    formulaWithValues = "${nRisers} risers × ${"%.0f".format(riser)} mm, ${nTreads} treads × ${"%.0f".format(tread)} mm; waist h = ${"%.0f".format(defaultThickness)} mm ADOPTED by the app (not a user input)",
                     result = "Total rise ${"%.2f".format(totalRise)}", unit = "m",
                     codeReference = ref
                 ),
@@ -2338,6 +2338,9 @@ class CalculatorEngine @Inject constructor(
                     result.codeNotes.filterNot { Regex("(?:ECP|ACI|SBC)[^;]*20(?:19|21|24|25)").containsMatchIn(it) } +
                     "Legacy edition-specific citations omitted, not verified against supplied reference" +
                     "Complete stair detailing acceptance is not implemented" +
+                    ("Waist thickness ${"%.0f".format(defaultThickness)} mm is a calculated design choice by the app, not a user input: " +
+                        "smallest 10 mm multiple meeting the deemed-to-satisfy span/thickness table (${if (code == DesignCode.ECP) "ECP 203-2020 Table 4-10, solid slab, simply supported" else "ACI 318M-14 / SBC 304-CR-18 Table 7.3.1.1, simply supported"}; slab analogy, preliminary), " +
+                        "not below the lane minimum ${"%.0f".format(laneMinWaistMm)} mm, which is a practical assumption and not a code check") +
                     if (type == StairType.CANTILEVER) listOf("Cantilever model is not implemented; single-flight fallback is not valid for this case") else emptyList()
             )
         } catch (e: Exception) {

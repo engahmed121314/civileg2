@@ -70,7 +70,8 @@ object ProfessionalEnglishPdfReporter {
         val limit: Double,
         val unit: String,
         val passed: Boolean,
-        val reference: String? = null
+        val reference: String? = null,
+        val notAssessed: Boolean = false
     )
 
     data class BbsRow(
@@ -694,8 +695,8 @@ object ProfessionalEnglishPdfReporter {
 
                 table.addCell(dataCell(check.unit, 8f, false, bg))
 
-                val statusStr = if (check.passed) "PASS" else "FAIL"
-                val statusClr = if (check.passed) SUCCESS else ERROR
+                val statusStr = if (check.passed) "PASS" else if (check.notAssessed) "NOT ASSESSED" else "FAIL"
+                val statusClr = if (check.passed) SUCCESS else if (check.notAssessed) WARNING else ERROR
                 val statusCell = Cell().setPadding(4f)
                     .add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr))
                         .setTextAlignment(TextAlignment.CENTER))
@@ -991,7 +992,7 @@ object ProfessionalEnglishPdfReporter {
         assessmentPending: Boolean = false
     ): File? {
         val convertedChecks = safetyChecks.map {
-            SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference)
+            SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference, it.notAssessed)
         }
 
         // Determine report type from designType string
