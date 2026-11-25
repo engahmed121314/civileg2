@@ -123,4 +123,37 @@ scroll_top(6)
 log.append(("weld_tab", tap_text(["وصلة لحام"], "steel-weld-find"))); time.sleep(1.5)
 shot("steel-weld-0"); dump("steel-weld-0")
 calc_connection("steel-weld")
+
+# 6) Hordi slab: ECP default, then Saudi and American selectors, each calculated; then real PDF exports and a reopen check
+def pdf_try(prefix):
+    for _ in range(6):
+        if tap_text(["PDF"], prefix + "-pdf-find"): break
+        scroll_up(2)
+    time.sleep(5); shot(prefix + "-pdf-after"); dump(prefix + "-pdf-after")
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); shot(prefix + "-pdf-back")
+def calc_hordi(prefix):
+    scroll_top(8)
+    ok = tap_text(["تصميم البلاطة"], prefix + "-calc-find"); log.append((prefix + "_calc", ok)); time.sleep(3)
+    sweep(prefix + "-res", 5)
+try:
+    open_from_design("بلاطة هوردي", "hordi")
+    calc_hordi("hordi-ecp")
+    pdf_try("hordi-ecp")
+    scroll_top(8)
+    log.append(("hordi_saudi", tap_text(["Saudi Code", "الكود السعودي"], "hordi-saudi-find"))); time.sleep(1)
+    calc_hordi("hordi-sbc")
+    scroll_top(8)
+    log.append(("hordi_american", tap_text(["American Code", "الكود الأمريكي"], "hordi-aci-find"))); time.sleep(1)
+    calc_hordi("hordi-aci")
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+    open_from_design("بلاطة هوردي", "hordi-reopen")
+except Exception as e:
+    log.append(("hordi_exception", repr(e)))
+# files the app wrote (debug build: run-as works)
+ls = adb("shell", "run-as", pkg, "find", ".", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
+ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf").stdout.decode("utf8", "ignore")
+open(f"{out}/pdf-files.txt", "w").write(ls)
+for p in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:4]:
+    d = adb("shell", "run-as", pkg, "cat", p).stdout
+    open(f"{out}/exported-" + os.path.basename(p), "wb").write(d)
 open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log))
