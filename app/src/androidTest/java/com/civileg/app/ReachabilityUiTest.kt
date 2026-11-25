@@ -48,7 +48,7 @@ class ReachabilityUiTest {
 
     private fun scroll(text: String) {
         rule.waitUntil(20000) {
-            runCatching { rule.onAllNodes(hasScrollAction())[0].performScrollToNode(hasText(text)) }
+            runCatching { rule.onAllNodes(hasScrollAction() and outsideNavigation)[0].performScrollToNode(hasText(text)) }
             rule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
         }
         rule.waitForIdle()
@@ -117,6 +117,10 @@ class ReachabilityUiTest {
     // ---------------------------------------------------------------- geometry helpers
 
     private val verticalScroller = SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)
+    private val outsideNavigation = hasTestTag("navigation_rail").not() and
+        hasTestTag("navigation_bar").not() and
+        hasAnyAncestor(hasTestTag("navigation_rail") or hasTestTag("navigation_bar")).not()
+    private val pageVerticalScroller = verticalScroller and outsideNavigation
     private val isTab = SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab)
 
     private fun SemanticsNode.inside(outer: Rect, tol: Float = 1f) =
@@ -139,8 +143,9 @@ class ReachabilityUiTest {
     private fun overlapsNav(r: Rect, nav: Nav) = nav.rects.any { it.overlaps(r) }
 
     private fun firstVerticalScroller(): SemanticsNode? {
-        val nodes = rule.onAllNodes(verticalScroller).fetchSemanticsNodes()
-        // largest area is the page's own list; small ones are dropdowns / nested panels
+        val nodes = rule.onAllNodes(pageVerticalScroller).fetchSemanticsNodes()
+        // Exclude actual navigation descendants before selecting the page list.
+        // A canvas page may have no vertical page scroller at all.
         return nodes.maxByOrNull { it.boundsInRoot.width * it.boundsInRoot.height }
     }
 
@@ -152,7 +157,7 @@ class ReachabilityUiTest {
     private fun swipeUpOnPageScroller() {
         val before = firstVerticalScroller() ?: return
         val h = before.boundsInRoot.height
-        rule.onAllNodes(verticalScroller).filter(SemanticsMatcher("largest scroller") {
+        rule.onAllNodes(pageVerticalScroller).filter(SemanticsMatcher("largest scroller") {
             it.boundsInRoot == before.boundsInRoot
         }).onFirst().performTouchInput {
             swipe(start = androidx.compose.ui.geometry.Offset(centerX, h * 0.8f), end = androidx.compose.ui.geometry.Offset(centerX, h * 0.2f), durationMillis = 250)
@@ -177,8 +182,8 @@ class ReachabilityUiTest {
     /** Brings the primary action into the scroller: semantic scroll first, then swipes if that did not do it. */
     private fun bringPrimaryIntoView(label: String): SemanticsNode? {
         val matcher = hasText(label) and hasClickAction()
-        rule.onAllNodes(verticalScroller).fetchSemanticsNodes().indices.forEach { i ->
-            runCatching { rule.onAllNodes(verticalScroller)[i].performScrollToNode(matcher) }
+        rule.onAllNodes(pageVerticalScroller).fetchSemanticsNodes().indices.forEach { i ->
+            runCatching { rule.onAllNodes(pageVerticalScroller)[i].performScrollToNode(matcher) }
         }
         rule.waitForIdle()
         var tries = 0
@@ -345,10 +350,17 @@ class ReachabilityUiTest {
                 rotate(landscape)
                 val n = nav()
                 if(n.kind == "rail") {
-                    for(id in listOf(R.string.nav_home,R.string.nav_design_hub,R.string.toolbox_title,R.string.building_plan_title,R.string.nav_more)) {
-                        val label=ar(id)
-                        rule.onNodeWithTag("navigation_rail_items").performScrollToNode(hasText(label))
-                        rule.onAllNodesWithText(label,useUnmergedTree=true).onLast().assertIsDisplayed()
+                    for(index in 0..4) {
+                        val itemTag = "navigation_rail_item_$index"
+                        rule.onNodeWithTag("navigation_rail_items").performScrollToNode(hasTestTag(itemTag))
+                        rule.waitForIdle()
+                        val item = rule.onNodeWithTag(itemTag)
+                        val bounds = item.fetchSemanticsNode().boundsInRoot
+                        val viewport = rule.onNodeWithTag("navigation_rail_items").fetchSemanticsNode().boundsInRoot
+                        report.append("  [home-landscape] item=$index bounds=$bounds viewport=$viewport\n")
+                        shot("nav-home-landscape-item-$index")
+                        item.assertIsDisplayed()
+                        assertTrue("Rail item $index clipped: $bounds outside $viewport", item.fetchSemanticsNode().inside(viewport))
                     }
                 }
                 if(n.kind == "not-found") mismatches++

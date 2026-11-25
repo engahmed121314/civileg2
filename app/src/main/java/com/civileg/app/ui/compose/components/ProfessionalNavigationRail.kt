@@ -109,6 +109,7 @@ fun ProfessionalNavigationRail(
         items.forEachIndexed { index, item ->
             val selected = selectedTab == index
             NavigationRailItem(
+                modifier = Modifier.testTag("navigation_rail_item_$index"),
                 selected = selected,
                 onClick = { onTabSelected(index) },
                 icon = {
