@@ -18,7 +18,7 @@ import kotlin.math.*
  * - أقل سماكة للـ topping: 50 مم (SBC) مقابل 38 مم (ACI) — للمناخ الحار
  * - أقل عرض للضلع: 100 مم (SBC) في المناطق الزلزالية
  * - تباعد أقصى للأسياخ مختلف: min(3d, 450mm) مع تعديل زلزالي min(2d, 250mm)
- * - نسبة تسليح أدنى أعلى: ρmin = 0.002 في المناطق الحارة (SBC)
+ * - نسبة تسليح أدنى: 0.002 قيمة محرك قديمة؛ لا يوجد في نص SBC 304 المرجعي قاعدة مناخية لها (انظر الجدول 7.6.1.1 لبلاطات اتجاه واحد)
  * - غطاء خرساني أكبر: 40 مم داخلي، 65 مم خارجي/ساحلي
  *
  * المراجع:
@@ -43,7 +43,7 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         private const val MIN_RIB_WIDTH = 100.0        // mm — SBC 304 §6.4
         private const val MIN_TOPPING = 50.0            // mm — SBC (أعلى من ACI بسبب المناخ الحار)
         private const val MAX_RIB_SPACING = 700.0       // mm
-        private const val MIN_REIN_RATIO = 0.002        // SBC 304 (أعلى من ACI بسبب المناخ)
+        private const val MIN_REIN_RATIO = 0.002        // legacy engine value; not a climate rule in the supplied SBC 304 text (cf. Table 7.6.1.1, fy < 420); applicability to hordi ribs unverified
         private const val COVER_INTERIOR = 40.0         // mm — SBC 304 §7.7
         private const val COVER_CORROSIVE = 65.0        // mm — المناطق الساحلية
         private const val COVER_SEISMIC = 50.0          // mm — المناطق الزلزالية
@@ -153,7 +153,7 @@ class SBCHordiSlabDesign : HordiSlabDesign {
             rhoBal * 0.9  // fallback to near-balanced
         }
 
-        // SBC 304 minimum reinforcement (higher for hot climate)
+        // Legacy minimum reinforcement; the supplied SBC 304 text has no climate basis for 0.002 and its applicability to this member is unverified
         val rhoMin = max(MIN_REIN_RATIO, 0.25 * sqrt(fc) / fy)
         val rhoFinal = max(rho, rhoMin)
         val asRequired = rhoFinal * b * d
