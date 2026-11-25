@@ -79,8 +79,8 @@ class CodeReferenceTest {
                 CodeReference.SBC.COMBINED_FOOTING.contains("13.")
         )
         assertTrue(
-            "seismic is Ch.18",
-            CodeReference.SBC.SEISMIC_BASE_SHEAR.contains("18")
+            "seismic reference must not claim an edition or chapter that was not supplied",
+            !CodeReference.SBC.SEISMIC_BASE_SHEAR.contains("2024") && CodeReference.SBC.SEISMIC_BASE_SHEAR.contains("not supplied")
         )
         assertTrue(
             "cover is Ch.20 (not Ch.7 one-way slabs)",

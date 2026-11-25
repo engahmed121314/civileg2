@@ -57,7 +57,8 @@ fun ProfessionalSeismicDrawing(
     InputGuard.positive("responseModFactor", responseModFactor)
 
     // ── Code-reference annotation ──────────────────────────────────────────
-    val codeLabel = designCode.version
+    // The seismic method is not tied to a supplied seismic code, so the sheet must not claim an edition.
+    val codeLabel = "indicative, code source not confirmed"
     // ── Responsive config ──────────────────────────────────────────────────
     val cfg = drawingDimensionsConfig()
 
@@ -101,7 +102,7 @@ fun ProfessionalSeismicDrawing(
         val barChartH = when (viewMode) { 3 -> h * 0.40f; 0 -> h * 0.13f; else -> 0f }
         val tableH = when (viewMode) { 3 -> h * 0.88f; 0 -> h * cfg.tableHeightFraction; else -> h * 0.10f }
 
-        val elevTop = h * 0.05f
+        val elevTop = maxOf(h * 0.05f, cfg.headerHeight + cfg.dimTextSize * 3.2f)
         val elevBottom = elevTop + elevH
         val specTop = elevBottom + h * 0.02f
         val specBottom = specTop + specH

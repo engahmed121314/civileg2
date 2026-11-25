@@ -34,8 +34,8 @@ object CodeReference {
         const val FOOTING_REINFORCEMENT = "ECP 203-2025: Section 7-4"
         
         // الزلازل
-        const val SEISMIC_BASE_SHEAR = "ECP 203-2025: Appendix B"
-        const val SEISMIC_RESPONSE_SPECTRUM = "ECP 203-2025: Section B-2"
+        const val SEISMIC_BASE_SHEAR = "Seismic method: governing seismic code not supplied, indicative only"
+        const val SEISMIC_RESPONSE_SPECTRUM = "Seismic method: governing seismic code not supplied, indicative only"
         
         // الحوائط (السند والقِص)
         const val RW_LATERAL_EARTH = "ECP 203-2025: Section 8-1 (Lateral Earth Pressure)"
@@ -125,8 +125,8 @@ object CodeReference {
         const val FOOTING_REINFORCEMENT = "ACI 318-25: Section 13.3"
         
         // الزلازل
-        const val SEISMIC_BASE_SHEAR = "ACI 318-25: Chapter 18"
-        const val SEISMIC_RESPONSE_SPECTRUM = "ACI 318-25: Section 18.2"
+        const val SEISMIC_BASE_SHEAR = "Seismic method: governing seismic code not supplied, indicative only"
+        const val SEISMIC_RESPONSE_SPECTRUM = "Seismic method: governing seismic code not supplied, indicative only"
         
         // الحوائط (السند والقِص)
         const val RW_LATERAL_EARTH = "ACI 318-25: Section 13.2 (Walls)"
@@ -221,8 +221,8 @@ object CodeReference {
         const val FOOTING_REINFORCEMENT = "SBC 304-2024: Section 13.3 (Foundations)"
         
         // الزلازل
-        const val SEISMIC_BASE_SHEAR = "SBC 304-2024: Section 18 (Earthquake-Resistant Structures)"
-        const val SEISMIC_RESPONSE_SPECTRUM = "SBC 304-2024: Section 18.2"
+        const val SEISMIC_BASE_SHEAR = "Seismic method: governing seismic code not supplied, indicative only"
+        const val SEISMIC_RESPONSE_SPECTRUM = "Seismic method: governing seismic code not supplied, indicative only"
         
         // الحوائط (السند والقِص)
         const val RW_LATERAL_EARTH = "SBC 304-2024: Section 11.5 (Walls — Lateral Earth)"

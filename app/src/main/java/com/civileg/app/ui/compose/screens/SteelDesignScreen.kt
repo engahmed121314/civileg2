@@ -1460,7 +1460,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
     var boltResult by remember { mutableStateOf<BoltDesignResult?>(null) }
     var weldResult by remember { mutableStateOf<WeldDesignResult?>(null) }
 
-    LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(modifier = Modifier.padding(16.dp), contentPadding = PaddingValues(bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { SteelModuleSectionHeader(stringResource(R.string.steel_connection_design), R.drawable.ic_frame) }
 
         item {
@@ -1489,7 +1489,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                         connTypes.forEachIndexed { idx, name ->
                             FilterChip(
                                 selected = connectionType == idx,
-                                onClick = { connectionType = idx; boltResult = null; weldResult = null },
+                                onClick = { connectionType = idx; boltResult = null; weldResult = null; connectionDemandError = null },
                                 label = { AppText(name, fontSize = 11.sp) },
                                 modifier = Modifier.padding(end = 4.dp, bottom = 4.dp)
                             )
