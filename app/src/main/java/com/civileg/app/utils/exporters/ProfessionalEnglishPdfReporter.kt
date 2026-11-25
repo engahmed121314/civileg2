@@ -936,6 +936,8 @@ object ProfessionalEnglishPdfReporter {
             // 6. Bar Bending Schedule
             addBbsSection(document, bbsRows, config.incompleteReview)
 
+            // Keep the diagnostic capture and quantity table as separate readable pages.
+            if(config.includeDiagnosticDrawing && drawingBitmap != null && boqRows.isNotEmpty()) document.add(AreaBreak())
             // 7. Bill of Quantities
             addBoqSection(document, boqRows, config.incompleteReview)
 
