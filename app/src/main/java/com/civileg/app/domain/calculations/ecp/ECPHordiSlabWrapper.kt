@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.domain.entities.*
 
@@ -17,7 +18,11 @@ class ECPHordiSlabWrapper : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        coverMm: Double,
+        linkDiaMm: Double,
+        mainBarDiaMm: Double,
+        barBondClass: BarBondClass
     ): SlabDesignResult {
         // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("fcu", fcu)
@@ -31,7 +36,8 @@ class ECPHordiSlabWrapper : HordiSlabDesign {
         // Previously returned zeros with isSafe=true — a silent wrong-answer bug
         return engine.designHordiSlab(
             fcu, fy, ribWidth, ribSpacing, totalThickness,
-            toppingThickness, span, designMoment, designShear, loadCombination
+            toppingThickness, span, designMoment, designShear, loadCombination,
+            coverMm, linkDiaMm, mainBarDiaMm, barBondClass
         )
     }
 }

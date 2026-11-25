@@ -177,19 +177,28 @@ class SBCJoistSlabTest {
         val aciResult = run(aci, 600.0)
         val ecpResult = run(ecp, 600.0)
 
-        // 0.25 (SBC) vs 0.24 (ECP) shear coefficient, same fc/d/bw/phi.
-        assertEquals(0.25 / 0.24, sbcResult.shearCapacity / ecpResult.shearCapacity, 1e-9)
-        assertTrue(aciResult.shearCapacity < ecpResult.shearCapacity)
+        // Per-code shear formats with their own hand-computed expectations:
+        // SBC 0.25·√(fcu/γc)·bw·d·φ with d=220 (fixed cover20+halfBar10, non-live engine);
+        // ACI 0.17·√(0.8fcu)·bw·d with d=250−25−6=219 (caller cover+bar radius) and φ·1.1
+        // joist factor; ECP Eq.4-29 concrete-only 0.16·√(fcu/γc)·bw·d with NO φ factor
+        // and d=211 from interface defaults (cover25+link8+bar12/2).
+        assertEquals(0.25 * sqrt(30.0 / 1.5) * 150.0 * 220.0 / 1000.0 * 0.75, sbcResult.shearCapacity, 1e-9)
+        assertEquals(0.17 * sqrt(30.0 * 0.8) * 150.0 * 219.0 / 1000.0 * 0.75 * 1.1, aciResult.shearCapacity, 1e-9)
+        assertEquals(0.16 * sqrt(30.0 / 1.5) * 150.0 * 211.0 / 1000.0, ecpResult.shearCapacity, 1e-9)
         assertTrue("SBC shear=${sbcResult.shearCapacity}, ACI shear=${aciResult.shearCapacity}",
             sbcResult.shearCapacity > aciResult.shearCapacity)
 
-        // Different flexural widths: ECP rib only, SBC effective flange, ACI full spacing.
-        assertTrue(ecpResult.requiredReinforcement > sbcResult.requiredReinforcement)
+        // Different flexural widths: ECP web-only estimate (no flange credit) cannot
+        // solve this demand on a 150 mm rib and must say so; SBC effective flange and
+        // ACI full-spacing estimates stay finite with SBC > ACI.
+        assertTrue(ecpResult.requiredReinforcement.isInfinite())
+        assertFalse(ecpResult.isSafe)
+        assertTrue(ecpResult.warnings.any { it.contains("Flexure") })
         assertTrue(sbcResult.requiredReinforcement > aciResult.requiredReinforcement)
 
         // Geometry characterization: SBC rejects 750 mm clear spacing, while
-        // ACI accepts it. The legacy ECP engine has no spacing check here;
-        // its four-bar cap independently leaves this flexural demand unsafe.
+        // ACI accepts it. The ECP estimate reports the unsolvable web-only
+        // flexure demand explicitly (infinite required area, zero provided).
         // The separate ECP2020 validator covers verified geometry boundaries.
         val sbcWide = run(sbc, 900.0)
         val aciWide = run(aci, 900.0)

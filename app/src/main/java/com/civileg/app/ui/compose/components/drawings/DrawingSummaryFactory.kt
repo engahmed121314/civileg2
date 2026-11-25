@@ -54,7 +54,7 @@ fun footingDrawingSummary(result: CalculatorEngine.FootingResult): DrawingResult
 
 fun slabDrawingSummary(result: CalculatorEngine.SlabResult): DrawingResultSummary =
     DrawingResultSummary(
-        isSafe = result.isSafe,
+        isSafe = if(result.type == CalculatorEngine.SlabType.HOLLOW_BLOCK) result.engineeringAcceptance else result.isSafe,
         utilizationRatio = result.utilizationRatio,
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,

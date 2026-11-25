@@ -155,6 +155,7 @@ class SlabViewModel @Inject constructor(
     /** Standalone DXF sheet for the current slab design (null when no result). */
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val res = _result.value ?: return null
+        if(res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK && !res.engineeringAcceptance) return null
         val inputs = lastInputs ?: return null
         return com.civileg.app.utils.ElementDxfDrawings.slabSection(
             title = "SLAB ${inputs.type.displayName}",
@@ -179,6 +180,11 @@ class SlabViewModel @Inject constructor(
 
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val res = _result.value ?: return
+        if(res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK && !res.engineeringAcceptance) {
+            _error.value = "Hordi construction export unavailable: material, serviceability and detailing qualification incomplete."
+            onComplete(null)
+            return
+        }
         val inputs = lastInputs ?: return
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }

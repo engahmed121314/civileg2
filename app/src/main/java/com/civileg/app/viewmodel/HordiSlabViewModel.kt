@@ -76,6 +76,7 @@ class HordiSlabViewModel @Inject constructor(
         loadCombination: LoadCombination,
         designCode: String = "ECP",
         coverMm: Double = 25.0,
+        barBondClass: com.civileg.app.domain.entities.BarBondClass = com.civileg.app.domain.entities.BarBondClass.UNKNOWN,
         detailCase: com.civileg.app.domain.calculations.utils.JoistDetailCase = com.civileg.app.domain.calculations.utils.JoistDetailCase()
     ) {
         clearResult()
@@ -102,7 +103,7 @@ class HordiSlabViewModel @Inject constructor(
                     fcu = fcu, fy = fy, ribWidth = ribWidth, ribSpacing = ribSpacing,
                     totalThickness = totalThickness, toppingThickness = toppingThickness,
                     span = span, designMoment = designMoment, designShear = designShear,
-                    loadCombination = loadCombination, designCode = designCode, coverMm = coverMm, detailCase = detailCase
+                    loadCombination = loadCombination, designCode = designCode, coverMm = coverMm, barBondClass = barBondClass, detailCase = detailCase
                 )
 
                 if (input.referenceBasis == com.civileg.app.domain.calculations.utils.RcReferenceBasis.ECP_2020) {
@@ -129,7 +130,9 @@ class HordiSlabViewModel @Inject constructor(
                     span = span,
                     designMoment = designMoment,
                     designShear = designShear,
-                    loadCombination = loadCombination
+                    loadCombination = loadCombination,
+                    coverMm = coverMm,
+                    barBondClass = barBondClass
                 )
                 val frozenResult = result.copy(warnings = result.warnings.toList(), codeNotes = result.codeNotes.toList())
                 if (calculatedCase.complete(ticket, input, frozenResult)) _result.value = frozenResult
@@ -404,6 +407,7 @@ class HordiSlabViewModel @Inject constructor(
         val loadCombination: LoadCombination,
         val designCode: String,
         val coverMm: Double = 25.0,
+        val barBondClass: com.civileg.app.domain.entities.BarBondClass = com.civileg.app.domain.entities.BarBondClass.UNKNOWN,
         val detailCase: com.civileg.app.domain.calculations.utils.JoistDetailCase = com.civileg.app.domain.calculations.utils.JoistDetailCase(),
         val referenceBasis: com.civileg.app.domain.calculations.utils.RcReferenceBasis =
             com.civileg.app.domain.calculations.utils.RcReferenceBasis.forCode(designCode)

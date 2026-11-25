@@ -124,7 +124,7 @@ class DesignRepository @Inject constructor(
             put("load", result.totalLoad)
             put("type", result.type.toString())
         }.toString()
-        saveGeneralDesign(projectId, DesignType.SLAB, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
+        saveGeneralDesign(projectId, DesignType.SLAB, name, if(result.type == CalculatorEngine.SlabType.HOLLOW_BLOCK) result.engineeringAcceptance else result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
         
         val slab = Slab(
             projectId = projectId, type = result.type.toString(), spanX = spanX, spanY = spanY,
