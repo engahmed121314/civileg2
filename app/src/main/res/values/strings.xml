@@ -1561,6 +1561,8 @@
     <string name="converter_moment">Moment</string>
     <string name="converter_input_value">Input Value</string>
     <string name="converter_result">Result</string>
+    <string name="converter_invalid_number">Enter a valid number</string>
+    <string name="converter_result_out_of_range">Result is too large to represent</string>
 
     <!-- Water Level -->
     <string name="water_level_tool">Level Tool Pro</string>
@@ -2415,4 +2417,33 @@
     <string name="validation_out_of_range">Must be between %1$s and %2$s</string>
     <string name="validation_invalid_combination">This value conflicts with other inputs</string>
     <string name="validation_summary">Fix %1$d field(s) marked in red</string>
+    <string name="tool_spirit_level">Spirit Level</string>
+    <string name="tool_spirit_level_sub">Phone sensor level (flat, face up)</string>
+    <string name="tool_ruler">Ruler</string>
+    <string name="tool_ruler_sub">mm and cm, calibrate with a bank card</string>
+    <string name="level_sensor_unavailable">This device has no gravity or accelerometer sensor, so the spirit level is unavailable.</string>
+    <string name="level_face_up_hint">Lay the phone flat, screen facing up.</string>
+    <string name="level_sensor_unreliable">The device reports its sensor as unreliable. Readings may be wrong.</string>
+    <string name="level_readout">X: %1$s°  Y: %2$s°  (%3$s%%, %4$s%%)</string>
+    <string name="level_waiting">Waiting for sensor data…</string>
+    <string name="level_zero_none">Zero: factory sensor (not zeroed)</string>
+    <string name="level_zero_set">Zero: user-set on a surface you treat as level</string>
+    <string name="level_set_zero">Set zero here</string>
+    <string name="level_reset_zero">Reset zero</string>
+    <string name="level_note">Accuracy depends on this device\'s sensor calibration. Zero the phone on a surface you know is level and check it by turning the phone 180°. This is not the survey Water Level (RL/HI) tool.</string>
+    <string name="ruler_calibrated">Calibrated with a card reference</string>
+    <string name="ruler_uncalibrated">Not calibrated: uses the device-reported screen density, which is not accurate on every device</string>
+    <string name="ruler_calibrate">Calibrate</string>
+    <string name="ruler_reset">Reset calibration</string>
+    <string name="ruler_save">Save</string>
+    <string name="ruler_cancel">Cancel</string>
+    <string name="ruler_calibrate_help">Lay a bank card (ID-1, 85.60 mm long) along the screen from the top edge of the ruler. Drag the rectangle until its length equals the card length, then save.</string>
+    <string name="calc_err_syntax">Syntax error</string>
+    <string name="calc_err_div0">Division by zero</string>
+    <string name="calc_err_domain">Math error (outside the function domain)</string>
+    <string name="calc_err_overflow">Result too large</string>
+    <string name="calc_err_limit">Expression too long or nested too deeply</string>
+    <string name="toolbox_title">Toolbox</string>
+    <string name="toolbox_subtitle">Calculator, converter, ruler and spirit level</string>
+    <string name="building_plan_title">2D Plan</string>
 </resources>

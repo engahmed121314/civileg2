@@ -80,7 +80,9 @@ object LocaleHelper {
         val locale = Locale(lang)
         Locale.setDefault(locale)
 
-        val config = Configuration(base.resources.configuration)
+        // Override locale only. Copying the entire display configuration freezes
+        // orientation/screen dimensions when MainActivity handles configChanges.
+        val config = Configuration()
         config.setLocale(locale)
         config.setLayoutDirection(locale)
 

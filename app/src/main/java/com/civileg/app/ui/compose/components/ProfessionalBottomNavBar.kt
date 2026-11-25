@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Architecture
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Home
@@ -90,8 +91,8 @@ data class BottomNavItem(
 private val bottomNavItems = listOf(
     BottomNavItem(R.string.nav_home,      Icons.Default.Home,      "home"),
     BottomNavItem(R.string.nav_design_hub, Icons.Default.AccountBalance, "design"),
-    BottomNavItem(R.string.home_section_tools_title, Icons.Default.Build, "building_designer"),
-    BottomNavItem(R.string.nav_tools,    Icons.Default.Calculate, "tools"),
+    BottomNavItem(R.string.toolbox_title, Icons.Default.Build, "tools"),
+    BottomNavItem(R.string.building_plan_title, Icons.Default.Architecture, "building_designer"),
     BottomNavItem(R.string.nav_more,     Icons.Default.MoreHoriz,  "more")
 )
 

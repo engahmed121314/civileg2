@@ -11,7 +11,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -29,18 +32,24 @@ import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import java.util.Locale
+import com.civileg.app.utils.tools.ScientificEvaluator
+import com.civileg.app.utils.tools.ScientificEvaluator.AngleMode
+import com.civileg.app.utils.tools.ScientificEvaluator.ErrorKind
+import com.civileg.app.utils.tools.CalculatorHistory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalculatorScreen(
     onNavigateBack: () -> Unit = {}
 ) {
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val snackbarHostState = remember { SnackbarHostState() }
-    var expression by remember { mutableStateOf("") }
-    var result by remember { mutableStateOf("0") }
-    var history by remember { mutableStateOf(listOf<String>()) }
-    var isNewCalculation by remember { mutableStateOf(true) }
-    var showHistory by remember { mutableStateOf(false) }
+    var expression by rememberSaveable { mutableStateOf("") }
+    var result by rememberSaveable { mutableStateOf("0") }
+    var history by rememberSaveable { mutableStateOf(listOf<String>()) }
+    var isNewCalculation by rememberSaveable { mutableStateOf(true) }
+    var showHistory by rememberSaveable { mutableStateOf(false) }
+    var angleMode by rememberSaveable { mutableStateOf(AngleMode.DEG) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -66,20 +75,12 @@ fun CalculatorScreen(
             modifier = Modifier.fillMaxSize().padding(padding),
             contentAlignment = Alignment.TopCenter
         ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = MaterialTheme.dimens.formMaxWidth)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        val displayAndFunctions: @Composable () -> Unit = {
             // Display Area
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(130.dp),
+                    .height(if (landscape) 88.dp else 130.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
             ) {
@@ -151,15 +152,30 @@ fun CalculatorScreen(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                ScientificFuncButton(angleMode.name) {
+                    angleMode = when (angleMode) { AngleMode.DEG -> AngleMode.RAD; AngleMode.RAD -> AngleMode.GRAD; AngleMode.GRAD -> AngleMode.DEG }
+                }
                 ScientificFuncButton("sin") { appendFunc("sin", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("cos") { appendFunc("cos", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("tan") { appendFunc("tan", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("asin") { appendFunc("asin", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("acos") { appendFunc("acos", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("atan") { appendFunc("atan", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("sinh") { appendFunc("sinh", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("cosh") { appendFunc("cosh", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("tanh") { appendFunc("tanh", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("∛") { appendFunc("cbrt", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("eˣ") { appendFunc("exp", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("log") { appendFunc("log", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("ln") { appendFunc("ln", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("√") { appendFunc("√", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("√") { appendFunc("sqrt", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("x²") { expression += "^2"; isNewCalculation = false }
                 ScientificFuncButton("π") { appendNumber("π", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
-                ScientificFuncButton("e") { appendNumber("e", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
+                ScientificFuncButton("e") {
+                    // After a digit, "2e3" would read as 2000; insert × so the key always means Euler's number.
+                    val glue = if (!isNewCalculation && expression.lastOrNull()?.let { it.isDigit() || it == '.' } == true) "×e" else "e"
+                    appendNumber(glue, { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false }
+                }
                 ScientificFuncButton("n!") { expression += "!"; isNewCalculation = false }
                 ScientificFuncButton("1/x") { appendFunc("1/", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                 ScientificFuncButton("|x|") { appendFunc("abs", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
@@ -169,13 +185,15 @@ fun CalculatorScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
 
+        }
+        val keypad: @Composable () -> Unit = {
             // Main keypad - 5 rows x 4 columns
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(if (landscape) 2.dp else 6.dp)
             ) {
                 // Row 1: C, ⌫, ^, ÷
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (landscape) 2.dp else 6.dp)) {
                     CalcButton("C", Modifier.weight(1f), Color(0xFFD32F2F)) {
                         expression = ""; result = "0"; isNewCalculation = true
                     }
@@ -190,7 +208,7 @@ fun CalculatorScreen(
                     }
                 }
                 // Row 2: 7, 8, 9, ×
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (landscape) 2.dp else 6.dp)) {
                     CalcButton("7", Modifier.weight(1f)) { appendNumber("7", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton("8", Modifier.weight(1f)) { appendNumber("8", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton("9", Modifier.weight(1f)) { appendNumber("9", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
@@ -199,7 +217,7 @@ fun CalculatorScreen(
                     }
                 }
                 // Row 3: 4, 5, 6, -
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (landscape) 2.dp else 6.dp)) {
                     CalcButton("4", Modifier.weight(1f)) { appendNumber("4", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton("5", Modifier.weight(1f)) { appendNumber("5", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton("6", Modifier.weight(1f)) { appendNumber("6", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
@@ -208,7 +226,7 @@ fun CalculatorScreen(
                     }
                 }
                 // Row 4: 1, 2, 3, +
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (landscape) 2.dp else 6.dp)) {
                     CalcButton("1", Modifier.weight(1f)) { appendNumber("1", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton("2", Modifier.weight(1f)) { appendNumber("2", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton("3", Modifier.weight(1f)) { appendNumber("3", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
@@ -217,29 +235,54 @@ fun CalculatorScreen(
                     }
                 }
                 // Row 5: ±, 0, ., =
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (landscape) 2.dp else 6.dp)) {
                     CalcButton("±", Modifier.weight(1f)) {
+                        // Negate the whole expression: -(2+3) is -5. Prepending "-" alone would only negate the first term.
                         if (expression.isNotEmpty()) {
-                            if (expression.startsWith("-")) expression = expression.drop(1)
-                            else expression = "-$expression"
+                            expression = if (expression.startsWith("-(") && expression.endsWith(")")) expression.drop(2).dropLast(1)
+                            else "-($expression)"
                         }
                     }
                     CalcButton("0", Modifier.weight(1f)) { appendNumber("0", { expression }, { isNewCalculation }) { expression = it; isNewCalculation = false } }
                     CalcButton(".", Modifier.weight(1f)) { expression += "."; isNewCalculation = false }
-                    val calcErrorMsg = stringResource(R.string.error)
+                    val msgSyntax = stringResource(R.string.calc_err_syntax)
+                    val msgDiv0 = stringResource(R.string.calc_err_div0)
+                    val msgDomain = stringResource(R.string.calc_err_domain)
+                    val msgOverflow = stringResource(R.string.calc_err_overflow)
+                    val msgLimit = stringResource(R.string.calc_err_limit)
                     CalcButton("=", Modifier.weight(1f), Color(0xFF2E7D32)) {
-                        try {
-                            val evalResult = evaluateExpression(expression)
-                            val formatted = formatResult(evalResult, calcErrorMsg)
-                            history = history + "$expression = $formatted"
-                            result = formatted
-                            expression = formatted
-                            isNewCalculation = true
-                        } catch (e: Exception) {
-                            result = calcErrorMsg
+                        when (val r = ScientificEvaluator.evaluate(expression, angleMode)) {
+                            is ScientificEvaluator.Result.Value -> {
+                                val formatted = ScientificEvaluator.format(r.value)
+                                history = CalculatorHistory.append(history, "$expression = $formatted (${angleMode.name})")
+                                result = formatted
+                                // The evaluator parses exponent form (1.5e-05) directly, so the text is reused as is.
+                                expression = formatted
+                                isNewCalculation = true
+                            }
+                            is ScientificEvaluator.Result.Error -> result = when (r.kind) {
+                                ErrorKind.SYNTAX -> msgSyntax
+                                ErrorKind.DIVIDE_BY_ZERO -> msgDiv0
+                                ErrorKind.DOMAIN -> msgDomain
+                                ErrorKind.OVERFLOW -> msgOverflow
+                                ErrorKind.LIMIT -> msgLimit
+                            }
                         }
                     }
                 }
+            }        }
+        if (landscape) {
+            Row(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(0.45f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) { displayAndFunctions() }
+                Column(Modifier.weight(0.55f).verticalScroll(rememberScrollState())) { keypad() }
+            }
+        } else {
+            Column(Modifier.widthIn(max = MaterialTheme.dimens.formMaxWidth).fillMaxSize()
+                .background(MaterialTheme.colorScheme.background).verticalScroll(rememberScrollState())
+                .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                displayAndFunctions()
+                keypad()
             }
         }
         }
@@ -312,110 +355,5 @@ private fun appendFunc(
         setExpr("$func(")
     } else {
         setExpr(expr + "$func(")
-    }
-}
-
-private fun evaluateExpression(expr: String): Double {
-    val sanitized = expr
-        .replace("×", "*")
-        .replace("÷", "/")
-        .replace("π", PI.toString())
-        .replace("e", E.toString())
-
-    return object : Any() {
-        var pos = -1
-        var ch = 0
-
-        fun nextChar() {
-            ch = if (++pos < sanitized.length) sanitized[pos].toInt() else -1
-        }
-
-        fun eat(charToEat: Int): Boolean {
-            while (ch == ' '.toInt()) nextChar()
-            if (ch == charToEat) {
-                nextChar()
-                return true
-            }
-            return false
-        }
-
-        fun parse(): Double {
-            nextChar()
-            val x = parseExpression()
-            if (pos < sanitized.length) throw RuntimeException("Unexpected: " + ch.toChar())
-            return x
-        }
-
-        fun parseExpression(): Double {
-            var x = parseTerm()
-            while (true) {
-                if (eat('+'.toInt())) x += parseTerm() // addition
-                else if (eat('-'.toInt())) x -= parseTerm() // subtraction
-                else return x
-            }
-        }
-
-        fun parseTerm(): Double {
-            var x = parseFactor()
-            while (true) {
-                if (eat('*'.toInt())) x *= parseFactor() // multiplication
-                else if (eat('/'.toInt())) x /= parseFactor() // division
-                else return x
-            }
-        }
-
-        fun parseFactor(): Double {
-            if (eat('+'.toInt())) return parseFactor()
-            if (eat('-'.toInt())) return -parseFactor()
-
-            var x: Double
-            val startPos = pos
-            if (eat('('.toInt())) {
-                x = parseExpression()
-                eat(')'.toInt())
-            } else if ((ch >= '0'.toInt() && ch <= '9'.toInt()) || ch == '.'.toInt()) {
-                while ((ch >= '0'.toInt() && ch <= '9'.toInt()) || ch == '.'.toInt()) nextChar()
-                x = sanitized.substring(startPos, pos).toDouble()
-            } else if (ch >= 'a'.toInt() && ch <= 'z'.toInt()) {
-                while (ch >= 'a'.toInt() && ch <= 'z'.toInt()) nextChar()
-                val func = sanitized.substring(startPos, pos)
-                if (eat('('.toInt())) {
-                    x = parseExpression()
-                    eat(')'.toInt())
-                } else {
-                    x = parseFactor()
-                }
-                x = when (func) {
-                    "sin" -> sin(Math.toRadians(x))
-                    "cos" -> cos(Math.toRadians(x))
-                    "tan" -> tan(Math.toRadians(x))
-                    "log" -> log10(x)
-                    "ln" -> ln(x)
-                    "sqrt", "√" -> sqrt(x)
-                    "abs" -> abs(x)
-                    else -> throw RuntimeException("Unknown function: $func")
-                }
-            } else {
-                throw RuntimeException("Unexpected: " + ch.toChar())
-            }
-
-            if (eat('^'.toInt())) x = x.pow(parseFactor()) // exponentiation
-            if (eat('!'.toInt())) {
-                var fact = 1.0
-                for (i in 1..x.toInt()) fact *= i.toDouble()
-                x = fact
-            }
-
-            return x
-        }
-    }.parse()
-}
-
-private fun formatResult(value: Double, errorMsg: String): String {
-    if (!value.isFinite()) return errorMsg
-    return if (value == value.toInt().toDouble()) {
-        value.toInt().toString()
-    } else {
-        String.format(Locale.US, "%.6f", value).trimEnd('0').trimEnd('.')
     }
 }

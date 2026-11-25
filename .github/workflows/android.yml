@@ -293,6 +293,15 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
 
+      - name: Upload actual toolbox portrait and rotation samples
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: actual-toolbox-samples
+          path: app/build/toolbox-samples/
+          retention-days: 14
+          if-no-files-found: warn
+
       - name: Upload instrumentation results
         if: always()
         uses: actions/upload-artifact@v4
