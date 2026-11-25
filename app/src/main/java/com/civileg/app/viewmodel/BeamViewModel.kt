@@ -56,6 +56,13 @@ class BeamViewModel @Inject constructor(
     private var lastFy: Double = 360.0
     private var lastSupportType: CalculatorEngine.SupportType = CalculatorEngine.SupportType.HINGED_HINGED
 
+    fun clearResult() {
+        _result.value = null
+        _validationReport.value = null
+        _error.value = null
+        pendingDrawingBitmap = null
+    }
+
     fun calculateBeamPro(
         width: Double,
         height: Double,
