@@ -6,6 +6,8 @@ pkg, out = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)
 def adb(*a, **k):
     return subprocess.run(["adb", *a], capture_output=True, **k)
+# Pre-confirm the system "Viewing full screen" notice (it is not in the UI dump, so it cannot be tapped away).
+adb("shell", "settings", "put", "secure", "immersive_mode_confirmations", "confirmed")
 def shot(name):
     open(f"{out}/{name}.png", "wb").write(adb("exec-out", "screencap", "-p").stdout)
 def dump(name):
@@ -147,6 +149,11 @@ def stair_codes():
             for k in range(1, 6):
                 adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
                 shot("sc-" + tag + "-pdf-" + str(k))
+            # Best effort: pull the generated PDF itself for text extraction
+            fl = adb("shell", "find", "/sdcard", "/data/user/0/" + pkg, "-name", "Stair_Report*.pdf").stdout.decode(errors="ignore").split()
+            for k2, fp in enumerate(fl[:2]):
+                open(f"{out}/stair-report-{k2}.pdf", "wb").write(adb("exec-out", "run-as", pkg, "cat", fp).stdout if fp.startswith("/data") else adb("exec-out", "cat", fp).stdout)
+            open(f"{out}/stair-report-paths.txt", "w").write("\n".join(fl))
             adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)  # leave the PDF viewer
             shot("sc-" + tag + "-pdf-closed")
     open(f"{out}/sc-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
