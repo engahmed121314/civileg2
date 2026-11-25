@@ -314,9 +314,10 @@ fun StairScreen(
             }
 
             result?.let { res ->
+                val designUsable = com.civileg.app.utils.StairResultGate.isDesignUsable(res.analysisStatus)
                 item { SectionHeader(stringResource(R.string.stair_results), R.drawable.ic_calculator) }
 
-                if (res.analysisStatus == com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE) {
+                if (!designUsable) {
                     item {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFFDECEA)),
@@ -324,7 +325,7 @@ fun StairScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 AppText(
-                                    "No analysis model for this stair case. The numbers below are a single-flight fallback and are NOT a design for this case. Saving, PDF and quantities are disabled. / لا يوجد نموذج تحليل لهذه الحالة. الأرقام أدناه تقدير لسلم بمسار واحد وليست تصميمًا لهذه الحالة، والحفظ وPDF والكميات معطّلة.",
+                                    "No analysis model for this stair case. This is NOT a design for this case and no results are shown. Results, drawing, quantities, saving and PDF are not offered. / لا يوجد نموذج تحليل لهذه الحالة. هذه ليست تصميمًا لهذه الحالة ولا تُعرض نتائج، والنتائج والرسم والكميات والحفظ وPDF غير متاحة.",
                                     color = Color(0xFFC62828), fontWeight = FontWeight.Bold
                                 )
                             }
@@ -332,6 +333,7 @@ fun StairScreen(
                     }
                 }
                 
+                if (designUsable) {
                 item {
                     val ecoColor = when {
                         res.utilizationRatio > 1.0 -> Color.Red
@@ -397,6 +399,7 @@ fun StairScreen(
                         }
                     }
                 }
+                }
 
                 item {
                     Card(
@@ -422,6 +425,7 @@ fun StairScreen(
                     }
                 }
 
+                if (designUsable) {
                 if (res.calculationSteps.isNotEmpty()) {
                     item { CalculationStepsCard(res.calculationSteps, title = "Stair Calculation Steps") }
 
@@ -574,6 +578,7 @@ fun StairScreen(
                             )
                         }
                     )
+                }
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }

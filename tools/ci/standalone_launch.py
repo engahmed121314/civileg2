@@ -89,6 +89,24 @@ def stair_block():
     scroll_up(1); shot("stair-reinf-1")
     for t in ("واجهة", "قطاع"):
         log.append(("stair_tab_" + t, tap_text([t], "stair-tab-" + t, exact=True))); time.sleep(2); shot("stair-tab-" + t)
+def stair_unsupported():
+    """Re-open Stair, pick the cantilever type (not implemented) and design; capture what is offered."""
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+    tap_text(["التصميم"], "su-design", exact=True); scroll_top(3)
+    ok = False
+    for _ in range(5):
+        if tap_text(["السلالم"], "su-find"): ok = True; break
+        scroll_up(2)
+    log.append(("su_open", ok)); time.sleep(2)
+    log.append(("su_type_menu", tap_text(["قلبة واحدة", "Single Flight"], "su-type"))); time.sleep(1); shot("su-menu")
+    log.append(("su_pick_cantilever", tap_text(["درج كابولي", "Cantilever"], "su-pick"))); time.sleep(1); shot("su-picked")
+    for _ in range(6):
+        if tap_text(["تصميم السلم الآن"], "su-calc-find"): log.append(("su_calc", True)); break
+        scroll_up(2)
+    else: log.append(("su_calc", False))
+    time.sleep(3)
+    for k in range(3):
+        scroll_up(2); shot(f"su-res-{k}"); dump(f"su-res-{k}")
 def frame_block():
     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
     tap_text(["التصميم"], "fr-d-design", exact=True); scroll_top(3)
@@ -106,6 +124,7 @@ def frame_block():
 if os.path.exists("tools/ci/STAIR_ONLY"):
     try:
         stair_block()
+        stair_unsupported()
         frame_block()
     except Exception as e:
         log.append(("stair_exception", repr(e)))

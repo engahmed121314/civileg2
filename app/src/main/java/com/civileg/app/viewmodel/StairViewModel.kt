@@ -124,6 +124,7 @@ class StairViewModel @Inject constructor(
     }
 
     fun saveStair(projectId: Long, name: String, result: CalculatorEngine.StairResult) {
+        if (!com.civileg.app.utils.StairResultGate.isDesignUsable(result.analysisStatus)) return
         viewModelScope.launch {
             repository.saveStairDesign(projectId, name, result)
         }
@@ -132,6 +133,7 @@ class StairViewModel @Inject constructor(
     /** Standalone DXF sheet for the current stair design (null when no result). */
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val currentResult = _result.value ?: return null
+        if (!com.civileg.app.utils.StairResultGate.isDesignUsable(currentResult.analysisStatus)) return null
         // Same geometry as CalculatorEngine.designStaircase: span in metres, riser and tread in mm.
         val geometry = StairFlightGeometry.from(currentResult.span, currentResult.riser, currentResult.tread)
         val pdfCover = when (currentResult.code) {
@@ -171,6 +173,7 @@ class StairViewModel @Inject constructor(
 
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val currentResult = _result.value ?: return
+        if (!com.civileg.app.utils.StairResultGate.isDesignUsable(currentResult.analysisStatus)) { onComplete(null); return }
         viewModelScope.launch {
             _isExporting.value = true
             try {
