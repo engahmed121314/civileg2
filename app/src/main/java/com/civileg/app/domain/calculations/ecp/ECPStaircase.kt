@@ -356,7 +356,7 @@ class ECPStaircase : StaircaseDesign {
         val allowableDeflection = 0.0      // not computed in this version
 
         safetyChecks.add(StairSafetyCheck(
-            name = if (deflectionOk) "Deflection (ECP Table 4-10 L/t, deemed-to-satisfy)"
+            name = if (deflectionOk) "Deflection (ECP Table 4-10 L/t, met by the adopted waist; not a computed deflection)"
                    else "Deflection NOT ASSESSED (computed deflection required)",
             value = actualRatio, limit = allowableRatio, unit = "",
             isSafe = deflectionOk,

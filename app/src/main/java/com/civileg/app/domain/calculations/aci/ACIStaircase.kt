@@ -11,7 +11,6 @@ import kotlin.math.*
  * المراجع:
  * - ACI 318 Chapter 9 (Flexure - One-way slabs)
  * - ACI 318 Chapter 22 (Shear)
- * - ACI 318 Table 24.2.2 (Deflection)
  * - ACI 318 Table 24.4.3.2 (Shrinkage and temperature reinforcement)
  * - IBC Section 1011 (Geometric requirements)
  * - ASCE 7 (Stair loads: Live 4.8 kN/m² = 100 psf)
@@ -22,7 +21,6 @@ import kotlin.math.*
  * - Reduction φ = 0.9 (flexure), φ = 0.75 (shear)
  * - Rn-ρ method instead of K-method
  * - Minimum steel ratio based on fy (Table 24.4.3.2)
- * - Deflection: L/240 for floors
  */
 class ACIStaircase : StaircaseDesign {
 
@@ -345,7 +343,7 @@ class ACIStaircase : StaircaseDesign {
         val allowableDeflection = 0.0      // not computed in this version
 
         safetyChecks.add(StairSafetyCheck(
-            name = if (deflectionOk) "Deflection (ACI Table 7.3.1.1 l/h, deemed-to-satisfy)"
+            name = if (deflectionOk) "Deflection (ACI Table 7.3.1.1 l/h, met by the adopted waist; not a computed deflection)"
                    else "Deflection NOT ASSESSED (computed deflection required)",
             value = actualRatio, limit = allowableRatio, unit = "",
             isSafe = deflectionOk,
@@ -381,7 +379,7 @@ class ACIStaircase : StaircaseDesign {
         codeNotes.add(CodeReference.ACI.SLAB_ONE_WAY)
         codeNotes.add("ACI 318: Chapter 9 (Flexure - one-way slab)")
         codeNotes.add("ACI 318: Chapter 22 (Shear)")
-        codeNotes.add("ACI 318: Table 24.2.2 (Deflection L/240)")
+        codeNotes.add("ACI 318M-14 Table 7.3.1.1 deflection is deemed-to-satisfy only when no partitions or other construction likely to be damaged by deflection is supported; that condition is not verified, and no computed deflection is reported")
         codeNotes.add("IBC Section 1011 (Stair geometry requirements)")
         codeNotes.add("f'c = 0.8 × fcu (cube to cylinder conversion)")
         codeNotes.add("φ = $PHI_FLEXURE flexure, φ = $PHI_SHEAR shear")

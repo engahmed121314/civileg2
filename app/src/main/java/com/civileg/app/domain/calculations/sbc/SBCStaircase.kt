@@ -322,7 +322,7 @@ class SBCStaircase : StaircaseDesign {
         val allowableDeflection = 0.0      // not computed in this version
 
         safetyChecks.add(StairSafetyCheck(
-            name = if (deflectionOk) "Deflection (SBC Table 7.3.1.1 l/h, deemed-to-satisfy)"
+            name = if (deflectionOk) "Deflection (SBC Table 7.3.1.1 l/h, met by the adopted waist; not a computed deflection)"
                    else "Deflection NOT ASSESSED (computed deflection required)",
             value = actualRatio, limit = allowableRatio, unit = "",
             isSafe = deflectionOk,
