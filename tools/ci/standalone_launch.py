@@ -80,4 +80,21 @@ scroll_top(6)
 log.append(("edit_after_solve", edit_field("600", "650", "d-w2"))); time.sleep(1)
 scroll_up(4); shot("beam-after-edit"); dump("beam-after-edit")
 scroll_up(6); shot("beam-after-edit-bottom"); dump("beam-after-edit-bottom")
+
+# 4) steel and seismic screens: capture the first screens and a scrolled sweep
+def sweep(prefix, n=5):
+    for k in range(n):
+        shot(f"{prefix}-{k}"); dump(f"{prefix}-{k}")
+        scroll_up(2)
+def open_from_design(label, prefix):
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+    tap_text(["التصميم"], f"{prefix}-tab", exact=True); scroll_top(3)
+    ok = False
+    for _ in range(4):
+        if tap_text([label], f"{prefix}-find"): ok = True; break
+        scroll_up(2)
+    log.append((prefix + "_open", ok)); time.sleep(2)
+    sweep(prefix)
+open_from_design("المنشآت المعدنية", "steel")
+open_from_design("الزلازل", "seismic")
 open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log))
