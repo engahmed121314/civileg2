@@ -952,13 +952,8 @@ class CalculatorEngine @Inject constructor(
         InputGuard.nonNegative("my", my)
         InputGuard.positive("clearHeight", clearHeight)
 
-        require(autoOptimize || manualNumBars != null) { "Manual column reinforcement needs a bar count." }
-        val manualCount = if (autoOptimize) null else manualNumBars
-        if (manualCount != null) {
-            require(manualCount >= (if (isCircular) 6 else 4)) {
-                "Manual column reinforcement: at least ${if (isCircular) 6 else 4} longitudinal bars are required."
-            }
-            require(preferredDiameter in 10..40) { "Manual column reinforcement: bar diameter must be 10 to 40 mm." }
+        require(autoOptimize && manualNumBars == null) {
+            "Manual column reinforcement is not implemented on this calculation path. No automatic result may be issued as a manual-bar check."
         }
         val domainCode = code
         val engine = CalculationFactory.getColumnDesign(domainCode)
@@ -983,35 +978,11 @@ class CalculatorEngine @Inject constructor(
         // First pass with the un-magnified moments.
         var designMx = mx
         var designMy = my
-        val manualNotes = mutableListOf<String>()
-        fun withManual(r: com.civileg.app.domain.entities.ReinforcementResult): com.civileg.app.domain.entities.ReinforcementResult {
-            if (manualCount == null) return r
-            val dia = preferredDiameter.toDouble()
-            val area = manualCount * PI * dia * dia / 4.0
-            val cov = if (domainCode == DesignCode.SBC) 50.0 else 40.0
-            val tie = r.tiesDiameter
-            val perimeter = if (isCircular) PI * (width - 2.0 * cov - 2.0 * tie - dia)
-                else 2.0 * ((width - 2.0 * cov - 2.0 * tie - dia) + (depth - 2.0 * cov - 2.0 * tie - dia))
-            val clear = perimeter / manualCount - dia
-            val minClear = max(40.0, 1.5 * dia)
-            val warn = r.warnings.toMutableList()
-            var safe = r.isSafe
-            if (clear < minClear - 1e-6) {
-                warn.add("Manual bars: clear spacing ${"%.0f".format(clear)} mm is below the ${"%.0f".format(minClear)} mm minimum (40 mm or 1.5 bar diameter); the layout does not fit.")
-                safe = false
-            }
-            manualNotes.clear()
-            manualNotes.add("Checked the user's bar layout: ${manualCount}Ø${preferredDiameter} (As = ${"%.0f".format(area)} mm²); required area from demand = ${"%.0f".format(r.astRequired)} mm².")
-            if (area < r.astRequired) { warn.add("Manual bars: provided steel ${"%.0f".format(area)} mm² is less than the ${"%.0f".format(r.astRequired)} mm² required for the applied load and moments."); safe = false }
-            return r.copy(astProvided = area, barDiameter = dia, numberOfBars = manualCount,
-                spacing = if (manualCount > 0) perimeter / manualCount else r.spacing,
-                warnings = warn, isSafe = safe, codeNotes = r.codeNotes + manualNotes)
-        }
-        var res = withManual(engine.calculateReinforcement(
+        var res = engine.calculateReinforcement(
             fcu = fcu, fy = fy, width = width, depth = depth,
             axialLoad = puDesign, momentX = designMx, momentY = designMy,
             loadCombination = LoadCombination.DEAD_LIVE
-        ))
+        )
 
         // ── Second-order moment magnification (δ = 1/(1 − Pu/Pcr), capped at 2.5) ──
         var momentMagnifier = 1.0
@@ -1024,11 +995,11 @@ class CalculatorEngine @Inject constructor(
             if (momentMagnifier > 1.0) {
                 designMx *= momentMagnifier
                 designMy *= momentMagnifier
-                res = withManual(engine.calculateReinforcement(
+                res = engine.calculateReinforcement(
                     fcu = fcu, fy = fy, width = width, depth = depth,
                     axialLoad = puDesign, momentX = designMx, momentY = designMy,
                     loadCombination = LoadCombination.DEAD_LIVE
-                ))
+                )
             }
         }
 

@@ -26,20 +26,13 @@ class ColumnActivePathTest {
   assertFalse(ColumnMomentReview.assess(80.0,80.0,100.0,100.0).passed)
   assertTrue(ColumnMomentReview.assess(50.0,50.0,100.0,100.0).passed)
  }
- @Test fun manualBarsAreCheckedAsEntered() {
-  for(code in DesignCode.values()) {
-   val r=engine().designColumn(400.0,400.0,1000.0,10.0,10.0,30.0,400.0,code,
-     clearHeight=1000.0,autoOptimize=false,manualNumBars=8,preferredDiameter=20)
-   assertEquals(8,r.reinforcement.numBars); assertEquals(20,r.reinforcement.diameter)
-   assertEquals(8*Math.PI*400.0/4.0,r.reinforcementArea,1e-6)
+ @Test fun manualBarsNeverSilentlyBecomeAutomaticBars() {
+  for(code in DesignCode.values()) for(n in listOf(4,8,20)) {
+   try {
+    engine().designColumn(400.0,400.0,1000.0,10.0,10.0,30.0,400.0,code,
+      clearHeight=1000.0,autoOptimize=false,manualNumBars=n,preferredDiameter=20)
+    fail("Unsupported manual fixed layout issued automatic design")
+   }catch(e:IllegalArgumentException){assertTrue(e.message!!.contains("Manual column reinforcement"))}
   }
- }
- @Test fun tooFewManualBarsAreRejectedAndWeakLayoutIsUnsafe() {
-  try{ engine().designColumn(400.0,400.0,1000.0,10.0,10.0,30.0,400.0,DesignCode.ECP,
-     clearHeight=1000.0,autoOptimize=false,manualNumBars=3,preferredDiameter=20); fail("3 bars accepted")
-  }catch(e:IllegalArgumentException){assertTrue(e.message!!.contains("at least"))}
-  val weak=engine().designColumn(300.0,300.0,3000.0,0.0,0.0,25.0,400.0,DesignCode.ECP,
-     clearHeight=3000.0,autoOptimize=false,manualNumBars=4,preferredDiameter=12)
-  assertFalse(weak.isSafe)
  }
 }
