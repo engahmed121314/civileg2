@@ -295,6 +295,24 @@ try:
     open_from_design("بلاطة هوردي", "hordi-reopen")
 except Exception as e:
     log.append(("hordi_exception", repr(e)))
+# 7) Pile foundation: default inputs, design, status card + PDF (exported PDF is pulled below with the other files)
+try:
+    open_from_design("الخوازيق", "pile")
+    for _ in range(8):
+        if tap_text(["تصميم الأساسات العميقة"], "pile-calc-find"): log.append(("pile_calc", True)); break
+        scroll_up(2)
+    else: log.append(("pile_calc", False))
+    time.sleep(4)
+    sweep("pile-res", 5)
+    pdf_ok = False
+    for _ in range(10):
+        if tap_text(["PDF"], "pile-pdf-find"): pdf_ok = True; break
+        scroll_top(1)
+    log.append(("pile_pdf_tap", pdf_ok)); time.sleep(6)
+    shot("pile-pdf-after"); dump("pile-pdf-after")
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+except Exception as e:
+    log.append(("pile_exception", repr(e)))
 # files the app wrote (debug build: run-as works)
 ls = adb("shell", "run-as", pkg, "find", ".", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
 ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf").stdout.decode("utf8", "ignore")
