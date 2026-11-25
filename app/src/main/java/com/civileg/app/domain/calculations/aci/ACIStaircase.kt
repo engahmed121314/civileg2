@@ -148,29 +148,26 @@ class ACIStaircase : StaircaseDesign {
 
         // ========== 4. التحليل الإنشائي ==========
         val span = input.span
-        // Case contract (same derivation as the ECP lane): a restraint is only credited when the user declared
-        // CONTINUOUS_OVER_LANDING AND supplied finite positive landing dimensions. Otherwise the conservative
-        // simply supported wL²/8 is used and the result says so; it is never reported as an implemented model.
-        fun finitePositive(v: Double?): Boolean = v != null && v.isFinite() && v > 0.0
-        val landingSupplied = finitePositive(input.landingLengthMm) &&
-            finitePositive(input.landingWidthMm) && finitePositive(input.landingThicknessMm)
-        val continuousOverLanding = input.stairType == StairType.DOG_LEG &&
-            input.supportCondition == StairSupportCondition.CONTINUOUS_OVER_LANDING && landingSupplied
+        // Case contract. No landing restraint is credited in this lane: a declared CONTINUOUS_OVER_LANDING with
+        // landing dimensions does not by itself justify a reduced moment coefficient, and no supplied code text
+        // for this lane grounds one (ACI 318M-14 Table 6.5.2 approximate coefficients are for continuous beams and
+        // one-way slabs with two or more spans, not a stair flight over a landing). The conservative simply
+        // supported wL²/8 is therefore used and the result is marked as an unverified model, never as implemented.
         val caseSupported = input.stairType == StairType.STRAIGHT || input.stairType == StairType.DOG_LEG
         val analysisStatus = when {
             !caseSupported -> StairAnalysisStatus.UNSUPPORTED_CASE
             input.stairType == StairType.STRAIGHT && input.supportCondition == StairSupportCondition.SIMPLY_SUPPORTED ->
                 StairAnalysisStatus.CASE_MODEL_IMPLEMENTED
-            input.stairType == StairType.DOG_LEG && continuousOverLanding -> StairAnalysisStatus.CASE_MODEL_IMPLEMENTED
             else -> StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED
         }
         when (analysisStatus) {
             StairAnalysisStatus.CASE_MODEL_IMPLEMENTED -> codeNotes.add(
-                if (continuousOverLanding) "Case model: double flight, M = wL²/10 per flight, continuity over the supplied landing"
-                else "Case model: single flight, simply supported one-way inclined strip, M = wL²/8"
+                "Case model: single flight, simply supported one-way inclined strip, M = wL²/8 on the horizontal projection"
             )
             StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED -> codeNotes.add(
-                "Case model: analyzed simply supported (M = wL²/8); declared support ${input.supportCondition} / landing is not modeled, restraint NOT verified"
+                "Case model: analyzed simply supported (M = wL²/8). Declared support ${input.supportCondition}" +
+                    (if (input.stairType == StairType.DOG_LEG) " and landing continuity" else "") +
+                    " is NOT credited: no grounded restraint coefficient for this lane. Preliminary, restraint not verified"
             )
             else -> codeNotes.add("WARNING: no implemented analysis model for ${input.stairType}; not a verified design for this case")
         }
@@ -178,12 +175,12 @@ class ACIStaircase : StaircaseDesign {
             name = "Case model support",
             value = if (caseSupported) 1.0 else 0.0, limit = 1.0, unit = "",
             isSafe = caseSupported,
-            description = if (caseSupported) "Implemented analysis model for this stair case" else "No implemented analysis model for ${input.stairType}"
+            description = if (caseSupported) "Analysis model available for this stair case (see status for verification level)" else "No implemented analysis model for ${input.stairType}"
         ))
         if (input.stairType == StairType.DOG_LEG) {
             codeNotes.add("The landing slab itself and the top steel over the landing are NOT designed by this engine")
         }
-        val momentCoefficient = if (continuousOverLanding) 1.0 / 10.0 else 1.0 / 8.0
+        val momentCoefficient = 1.0 / 8.0
         val adjustedMoment = horizontalLoad * span * span * momentCoefficient
         val adjustedShear = horizontalLoad * span / 2.0
         val reactionA = adjustedShear

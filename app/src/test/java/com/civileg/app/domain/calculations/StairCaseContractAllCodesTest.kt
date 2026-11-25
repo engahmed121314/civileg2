@@ -42,21 +42,21 @@ class StairCaseContractAllCodesTest {
     }
 
     @Test
-    fun `dog leg only credits landing restraint when declared with landing dimensions`() {
-        for ((name, lane) in lanes) {
+    fun `ACI and SBC never credit an ungrounded landing restraint`() {
+        for (name in listOf("ACI", "SBC")) {
+            val lane = lanes.getValue(name)
             val straight = lane.designStaircase(input())
-            val unspecified = lane.designStaircase(input(StairType.DOG_LEG))
-            val noDims = lane.designStaircase(input(StairType.DOG_LEG, StairSupportCondition.CONTINUOUS_OVER_LANDING))
-            val continuous = lane.designStaircase(input(StairType.DOG_LEG, StairSupportCondition.CONTINUOUS_OVER_LANDING, landing = true))
-            assertEquals(name, StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED, unspecified.analysisStatus)
-            assertEquals(name, StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED, noDims.analysisStatus)
-            assertEquals(name, StairAnalysisStatus.CASE_MODEL_IMPLEMENTED, continuous.analysisStatus)
-            // No assumed restraint: unverified cases use the same moment as the simply supported flight.
-            assertEquals(name, straight.maxMoment, unspecified.maxMoment, 1e-9)
-            assertEquals(name, straight.maxMoment, noDims.maxMoment, 1e-9)
-            assertEquals(name, straight.maxMoment * 0.8, continuous.maxMoment, straight.maxMoment * 1e-6)
-            assertEquals(name, "", continuous.flightTopRebar)
-            assertEquals(name, "", continuous.landingRebar)
+            for (r in listOf(
+                lane.designStaircase(input(StairType.DOG_LEG)),
+                lane.designStaircase(input(StairType.DOG_LEG, StairSupportCondition.CONTINUOUS_OVER_LANDING)),
+                lane.designStaircase(input(StairType.DOG_LEG, StairSupportCondition.CONTINUOUS_OVER_LANDING, landing = true))
+            )) {
+                assertEquals(name, StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED, r.analysisStatus)
+                assertEquals(name, straight.maxMoment, r.maxMoment, 1e-9)
+                assertEquals(name, "", r.flightTopRebar)
+                assertEquals(name, "", r.landingRebar)
+                assertTrue(name, r.codeNotes.any { it.contains("NOT credited") })
+            }
         }
     }
 
