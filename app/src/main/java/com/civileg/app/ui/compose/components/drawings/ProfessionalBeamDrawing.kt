@@ -585,11 +585,11 @@ private fun DrawScope.drawCutawayReinforcement(
 
     // "CUT" labels
     drawTextAnnotated(
-        text = "CUT", x = cutLeft + 2f, y = beamTop - 70f,
+        text = "", x = cutLeft + 2f, y = beamTop - 70f,
         color = ExtensionGray, size = 22f
     )
     drawTextAnnotated(
-        text = "CUT", x = cutRight - 30f, y = beamTop - 70f,
+        text = "", x = cutRight - 30f, y = beamTop - 70f,
         color = ExtensionGray, size = 22f
     )
 
@@ -810,7 +810,7 @@ private fun DrawScope.drawCutawayReinforcement(
 
     // --- Rebar label inside cutaway ---
     val labelX = cutLeft + (cutRight - cutLeft) / 2f - 40f
-    val labelY = beamBottom - coverPx - mainBarClamped - 18f
+    val labelY = beamBottom + 44f
     drawTextAnnotated(
         text = "${mainRebarCount}Ø${mainRebarDia.toInt()}",
         x = labelX, y = labelY,
@@ -818,7 +818,7 @@ private fun DrawScope.drawCutawayReinforcement(
     )
 
     if (hasTopSteel && topRebarCount > 0) {
-        val topLabelY = beamTop + coverPx + max(topRebarDia / 2f * scale, 2.5).toFloat() + 22f
+        val topLabelY = beamBottom + 72f
         drawTextAnnotated(
             text = "${topRebarCount}Ø${topRebarDia.toInt()}",
             x = labelX, y = topLabelY,
@@ -904,7 +904,7 @@ private fun DrawScope.drawDevelopmentAndLap(
     // Label
     drawTextAnnotated(
         text = "La: unverified",
-        x = laEndX - 10f, y = bracketY + 22f,
+        x = beamLeft, y = beamBottom + 112f,
         color = DevLengthColor, size = 22f
     )
 
