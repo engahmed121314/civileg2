@@ -1756,7 +1756,9 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                                     grade = res.boltGrade,
                                     count = res.numberOfBolts,
                                     code = selectedCode,
-                                    capacity = res.controllingCapacity
+                                    capacity = res.controllingCapacity,
+                                    utilizationRatio = res.utilizationRatio,
+                                    designIsSafe = res.isSafe
                                 )
                             },
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -1822,7 +1824,9 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                                     length = res.weldLength,
                                     electrode = res.electrodeType,
                                     code = selectedCode,
-                                    capacity = res.capacity
+                                    capacity = res.capacity,
+                                    utilizationRatio = res.utilizationRatio,
+                                    designIsSafe = res.isSafe
                                 )
                             },
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),

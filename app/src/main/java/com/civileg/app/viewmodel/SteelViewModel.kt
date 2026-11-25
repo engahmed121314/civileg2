@@ -444,7 +444,12 @@ class SteelViewModel @Inject constructor(
         return calculatorEngine.calculateBoltCapacity(diameter, grade, count, code)
     }
 
-    fun exportWeldToPdf(context: Context, size: Double, length: Double, electrode: ElectrodeType, code: DesignCode, capacity: Double) {
+    /**
+     * [utilizationRatio] and [designIsSafe] come from a full design run that had a real applied force.
+     * When they are null the export is a capacity-only report: no demand was supplied, so nothing
+     * is assessed and the report must not say SAFE.
+     */
+    fun exportWeldToPdf(context: Context, size: Double, length: Double, electrode: ElectrodeType, code: DesignCode, capacity: Double, utilizationRatio: Double? = null, designIsSafe: Boolean? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val fileName = "Weld_Report_${System.currentTimeMillis()}.pdf"
@@ -458,11 +463,9 @@ class SteelViewModel @Inject constructor(
                 )
                 val resultsMap = mapOf(
                     "Total Capacity" to "${String.format("%.1f", capacity)} kN",
-                    "Status" to if (capacity > 0) "SAFE" else "UNSAFE"
+                    "Status" to ConnectionExportStatus.statusText(utilizationRatio, designIsSafe)
                 )
-                val safetyChecks = listOf(
-                    GenericSafetyCheck("Weld Capacity", 0.0, capacity, "kN", capacity > 0)
-                )
+                val safetyChecks = ConnectionExportStatus.checks("Weld Capacity", capacity, utilizationRatio, designIsSafe)
 
                 val exported = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم وصلة ملحومة",
@@ -472,7 +475,8 @@ class SteelViewModel @Inject constructor(
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
-                    isSafe = capacity > 0,
+                    isSafe = ConnectionExportStatus.isSafe(utilizationRatio, designIsSafe),
+                    assessmentPending = !ConnectionExportStatus.isAssessed(utilizationRatio, designIsSafe),
                     drawingBitmap = null,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.generic(
                         title = "WELDED CONNECTION",
@@ -497,7 +501,7 @@ class SteelViewModel @Inject constructor(
         }
     }
 
-    fun exportBoltToPdf(context: Context, dia: Double, grade: BoltGrade, count: Int, code: DesignCode, capacity: Double) {
+    fun exportBoltToPdf(context: Context, dia: Double, grade: BoltGrade, count: Int, code: DesignCode, capacity: Double, utilizationRatio: Double? = null, designIsSafe: Boolean? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val fileName = "Bolt_Report_${System.currentTimeMillis()}.pdf"
@@ -511,11 +515,9 @@ class SteelViewModel @Inject constructor(
                 )
                 val resultsMap = mapOf(
                     "Total Capacity" to "${String.format("%.1f", capacity)} kN",
-                    "Status" to if (capacity > 0) "SAFE" else "UNSAFE"
+                    "Status" to ConnectionExportStatus.statusText(utilizationRatio, designIsSafe)
                 )
-                val safetyChecks = listOf(
-                    GenericSafetyCheck("Bolt Capacity", 0.0, capacity, "kN", capacity > 0)
-                )
+                val safetyChecks = ConnectionExportStatus.checks("Bolt Capacity", capacity, utilizationRatio, designIsSafe)
 
                 val exported = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم وصلة مسمارية",
@@ -525,7 +527,8 @@ class SteelViewModel @Inject constructor(
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
-                    isSafe = capacity > 0,
+                    isSafe = ConnectionExportStatus.isSafe(utilizationRatio, designIsSafe),
+                    assessmentPending = !ConnectionExportStatus.isAssessed(utilizationRatio, designIsSafe),
                     drawingBitmap = null,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.generic(
                         title = "BOLTED CONNECTION",

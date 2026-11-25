@@ -733,7 +733,7 @@ fun SeismicScreen(
                                                 baseShear = res.baseShearResult.baseShear,
                                                 fundamentalPeriod = res.fundamentalPeriod,
                                                 spectralAccel = res.spectralAccel,
-                                                isSafe = res.baseShearResult.baseShear > 0
+                                                isSafe = res.baseShearResult.driftIsSafe
                                             )
                                         } catch (e: Exception) {
                                             android.util.Log.e("SeismicScreen", "Drawing gen failed", e)
@@ -748,7 +748,7 @@ fun SeismicScreen(
                                             inputs = details,
                                             results = emptyMap(),
                                             safetyChecks = emptyList(),
-                                            isSafe = res.baseShearResult.baseShear > 0,
+                                            isSafe = res.baseShearResult.driftIsSafe,
                                             drawingBitmap = drawingBitmap,
                                             fileName = "Seismic_Report_${System.currentTimeMillis()}"
                                         )

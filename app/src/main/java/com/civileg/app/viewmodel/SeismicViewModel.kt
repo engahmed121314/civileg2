@@ -246,7 +246,8 @@ class SeismicViewModel @Inject constructor(
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
-                    isSafe = true,
+                    // Was a hard-coded true: the report said SAFE even when the drift check failed.
+                    isSafe = res.driftIsSafe && res.warnings.isEmpty(),
                     drawingBitmap = drawingBitmap,
                     drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath
