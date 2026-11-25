@@ -34,12 +34,45 @@ def tap_text(words, name):
 adb("shell", "pm", "clear", pkg)
 adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1")
 t0 = time.time(); i = 0
-while time.time() - t0 < 9:
+while time.time() - t0 < 14:
     shot(f"splash-{i:02d}-{time.time()-t0:04.1f}s"); i += 1
 time.sleep(4); shot("home"); dump("home")
 log = []
 log.append(("design_tab", tap_text(["التصميم"], "d-design"))); shot("design")
 log.append(("beam_card", tap_text(["كمر"], "d-beam"))); shot("beam-open"); dump("beam-open")
-log.append(("calc", tap_text(["احسب", "حساب", "Calculate"], "d-calc"))); time.sleep(2)
-shot("beam-blank-calc"); dump("beam-blank-calc")
+def scroll_up(n=3):
+    for _ in range(n):
+        adb("shell", "input", "swipe", "540", "1900", "540", "700", "300"); time.sleep(0.6)
+def scroll_top(n=4):
+    for _ in range(n):
+        adb("shell", "input", "swipe", "540", "700", "540", "1900", "300"); time.sleep(0.4)
+def edit_field(current, new, name):
+    """Tap the EditText whose text equals `current`, clear it, type `new`."""
+    for t, b in nodes(dump(name)):
+        if t == current + "|" and b[3] - b[1] > 100:
+            adb("shell", "input", "tap", str((b[0]+b[2])//2), str((b[1]+b[3])//2)); time.sleep(0.8)
+            adb("shell", "input", "keyevent", "KEYCODE_MOVE_END")
+            for _ in range(12): adb("shell", "input", "keyevent", "KEYCODE_DEL")
+            if new: adb("shell", "input", "text", new)
+            adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(0.8)
+            return True
+    return False
+def press_calc(name):
+    for _ in range(2):
+        if tap_text(["تحليل وحساب", "احسب", "Calculate"], name): return True
+        scroll_up(2)
+    return False
+# 1) blank width
+log.append(("clear_width", edit_field("250", "", "d-w0"))); shot("beam-width-blank")
+scroll_up(4); shot("beam-after-scroll")
+log.append(("calc_blank", press_calc("d-calc1"))); time.sleep(2); shot("beam-blank-calc"); dump("beam-blank-calc")
+# 2) fill width and solve
+scroll_top()
+log.append(("type_width", edit_field("", "250", "d-w1")))
+scroll_up(4)
+log.append(("calc_solved", press_calc("d-calc2"))); time.sleep(3); shot("beam-solved-1"); scroll_up(3); shot("beam-solved-2"); dump("beam-solved-2")
+# 3) edit an input after solving: result must be invalidated
+scroll_top(6)
+log.append(("edit_after_solve", edit_field("600", "650", "d-w2"))); time.sleep(1)
+scroll_up(4); shot("beam-after-edit"); dump("beam-after-edit")
 open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log))
