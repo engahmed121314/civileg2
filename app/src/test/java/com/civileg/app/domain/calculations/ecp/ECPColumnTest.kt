@@ -19,13 +19,9 @@ class ECPColumnTest {
             loadCombination = LoadCombination.DEAD_LIVE
         )
         
-        // Manual calculation for verification (ECP 203-2020)
-        val Ag = 300.0 * 300.0 // 90000 mm²
-        val Ast = 1200.0
-        val concreteStress = 0.67 * 25.0 / 1.5 // 11.167 MPa
-        val steelStress = 420.0 / 1.15 // 365.22 MPa
-        val nominalCapacity = 0.8 * (concreteStress * (Ag - Ast) + steelStress * Ast)
-        val expected = nominalCapacity / 1000.0 // kN
+        // Hand case, ECP 203-2020 Eq. [4-12-a]:
+        // 0.35*25*(90000-1200) + 0.67*420*1200 = 777000 + 337680 = 1114680 N
+        val expected = 1114.68 // kN
         
         assertEquals(expected, capacity, 0.1)
     }

@@ -35,16 +35,11 @@ class ECPColumn : ColumnDesign {
         val Ag = width * depth                          // مساحة المقطع الكلية (mm²)
         val Ast = reinforcementArea.coerceAtMost(Ag * 0.08) // ECP 203 §4-2-3: حد أقصى 8%
         
-        // مقاومة الخرسانة: 0.67 * fcu / γc
-        val concreteStress = 0.67 * fcu / GAMMA_C
-        // مقاومة الحديد: fy / γs
-        val steelStress = fy / GAMMA_S
-        
-        // القدرة المحورية: Pu = α × [0.67×fcu/γc × (Ag-Ast) + fy/γs × Ast]
-        // ECP 203-2025 §4-2-3: α = 0.8 for tied columns
-        val concreteCapacity = concreteStress * (Ag - Ast)
-        val steelCapacity = steelStress * Ast
-        val designCapacity = ALPHA * (concreteCapacity + steelCapacity)
+        // ECP 203-2020 Eq. [4-12-a] (tied columns, small eccentricity e <= max(0.05t, 20 mm)):
+        // Pu = 0.35 fcu (Ac - Asc) + 0.67 fy Asc, fy not above 420 N/mm2.
+        // Pure-axial capacity only; it does not cover columns with larger eccentricity.
+        val fyEff = minOf(fy, 420.0)
+        val designCapacity = 0.35 * fcu * (Ag - Ast) + 0.67 * fyEff * Ast
         InputGuard.finite("axialCapacity", designCapacity / 1000.0)
         
         // التحويل من نيوتن إلى كيلو نيوتن
@@ -90,11 +85,12 @@ class ECPColumn : ColumnDesign {
         }
         
         // طريقة مبسطة لحساب التسليح (لأعمدة قصيرة) — P-M interaction
-        val concreteStress = 0.67 * fcu / GAMMA_C
-        val steelStress = fy / GAMMA_S
+        // Eq. [4-12-a] coefficients (fy capped at 420 N/mm2)
+        val concreteStress = 0.35 * fcu
+        val steelStress = 0.67 * minOf(fy, 420.0)
         
         // Initial As estimate from axial only
-        val numerator = Pu / ALPHA - concreteStress * Ag
+        val numerator = Pu - concreteStress * Ag
         val denominator = steelStress - concreteStress
         var requiredSteelArea = if (abs(denominator) > 0.1) numerator / denominator else 0.0
         InputGuard.finite("requiredSteelArea", requiredSteelArea)
