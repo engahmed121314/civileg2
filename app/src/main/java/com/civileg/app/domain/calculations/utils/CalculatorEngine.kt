@@ -914,6 +914,9 @@ class CalculatorEngine @Inject constructor(
         InputGuard.nonNegative("my", my)
         InputGuard.positive("clearHeight", clearHeight)
 
+        require(autoOptimize && manualNumBars == null) {
+            "Manual column reinforcement is not implemented on this calculation path. No automatic result may be issued as a manual-bar check."
+        }
         val domainCode = code
         val engine = CalculationFactory.getColumnDesign(domainCode)
 
@@ -988,10 +991,9 @@ class CalculatorEngine @Inject constructor(
         )
 
         // Bresler load-contour check for biaxial bending.
-        val biaxialUtilization = if (mxCapacity > 0 && myCapacity > 0) {
-            (designMx / mxCapacity).pow(1.5) + (designMy / myCapacity).pow(1.5)
-        } else 0.0
-        val momentSafe = biaxialUtilization <= 1.0 + 1e-9
+        val momentReview = ColumnMomentReview.assess(designMx,designMy,mxCapacity,myCapacity)
+        val biaxialUtilization = momentReview.utilization
+        val momentSafe = momentReview.passed
 
         val reinforcementRatio = res.astProvided / grossArea            // fraction
         val reinforcementPercent = reinforcementRatio * 100.0            // %
@@ -1021,6 +1023,7 @@ class CalculatorEngine @Inject constructor(
             if (isSlender) {
                 add("Slender column (λ=${"%.1f".format(slenderness)} > ${"%.0f".format(slendernessLimit)}): moments magnified by δ=${"%.2f".format(momentMagnifier)}")
             }
+            if (!momentReview.assessed) add("Moment capacity unavailable: interaction check not assessed, no passing result")
             if (!momentSafe) add("Biaxial moment demand exceeds the section capacity — increase the section or reinforcement")
             if (!ratioSafe) add("Reinforcement ratio ${"%.2f".format(reinforcementPercent)}% is outside the code limits")
         }).distinct()
