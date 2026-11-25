@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,11 +75,11 @@ fun HordiSlabScreen(
     // UNSPECIFIED: no support system presumed (simply-supported would be
     // UNconservative against a cantilever); the deemed deflection check does
     // not run until the user selects the actual condition.
-    var supportCondition by remember { mutableStateOf(com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED) }
+    var supportCondition by rememberSaveable { mutableStateOf(com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED) }
     var supportExpanded by remember { mutableStateOf(false) }
     // UNDECLARED: the deemed check also requires the user's declaration that
     // loading is ordinary and no deflection-sensitive elements are supported.
-    var loadingApplicability by remember { mutableStateOf(com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED) }
+    var loadingApplicability by rememberSaveable { mutableStateOf(com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED) }
     var loadingExpanded by remember { mutableStateOf(false) }
     var detailDraft by remember { mutableStateOf(com.civileg.app.domain.calculations.utils.JoistDetailDraft()) }
 
