@@ -231,7 +231,15 @@ private fun DrawScope.drawFrameView(
         val nameLayout = if (member.name.isNotEmpty()) textMeasurer.measure(member.name, nameStyle, softWrap = false) else null
         val idLayout = textMeasurer.measure(idText, idStyle, softWrap = false)
         val blockW = maxOf(nameLayout?.size?.width ?: 0, idLayout.size.width).toFloat()
-        val blockX = (labelX.toFloat() - blockW / 2f).coerceIn(2f, (size.width - blockW - 2f).coerceAtLeast(2f))
+        // Anchor the block on the side of the member it was pushed to, so a vertical member's name sits beside
+        // the member instead of centred on top of it.
+        val nxName = cos(angle + PI / 2).toFloat()
+        val anchoredX = when {
+            nxName > 0.3f -> labelX.toFloat() - 6f
+            nxName < -0.3f -> labelX.toFloat() - blockW + 6f
+            else -> labelX.toFloat() - blockW / 2f
+        }
+        val blockX = anchoredX.coerceIn(2f, (size.width - blockW - 2f).coerceAtLeast(2f))
         var yy = (labelY.toFloat() - 8f).coerceIn(2f, (size.height - 2f).coerceAtLeast(2f))
         if (nameLayout != null) {
             drawText(textLayoutResult = nameLayout, topLeft = Offset(blockX, yy))
@@ -1419,8 +1427,21 @@ private fun DrawScope.drawDiagrams(
                     maxLines = 1
                 )
                 val side = if (offsetMax >= 0.0) 1f else -1f
-                val rawX = annX + nx * side * 6f + 4f
-                val rawY = annY + ny * side * 6f - layout.size.height / 2f
+                // Place the label outside the diagram on its own side so it never sits on the fill or the member.
+                val sx = nx * side
+                val sy = ny * side
+                val ax = annX + sx * 6f
+                val ay = annY + sy * 6f
+                val rawX = when {
+                    sx > 0.3f -> ax
+                    sx < -0.3f -> ax - layout.size.width
+                    else -> ax - layout.size.width / 2f
+                }
+                val rawY = when {
+                    sy > 0.3f -> ay
+                    sy < -0.3f -> ay - layout.size.height
+                    else -> ay - layout.size.height / 2f
+                }
                 val lx = rawX.coerceIn(2f, (size.width - layout.size.width - 2f).coerceAtLeast(2f))
                 val ly = rawY.coerceIn(2f, (size.height - layout.size.height - 2f).coerceAtLeast(2f))
                 drawText(textLayoutResult = layout, topLeft = Offset(lx, ly))
