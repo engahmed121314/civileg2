@@ -131,6 +131,9 @@ def frame_block():
     for t in ("SFD", "AFD", "BMD"):
         log.append(("frame_diag_" + t, tap_text([t], "fr-diag-" + t, exact=True))); time.sleep(2); shot("frame-diag-" + t)
     log.append(("frame_hint_expand2", tap_text(["إظهار تلميح الأداة"], "fr-hint3"))); time.sleep(1); shot("frame-portal-hint")
+    log.append(("frame_view_tab", tap_text(["العرض والنتائج"], "fr-viewtab"))); time.sleep(3); shot("frame-view-BMD"); dump("frame-view-BMD")
+    for t in ("SFD", "AFD"):
+        log.append(("frame_view_" + t, tap_text([t], "fr-view-" + t, exact=True))); time.sleep(2); shot("frame-view-" + t)
 if os.path.exists("tools/ci/STAIR_ONLY"):
     try:
         stair_block()
