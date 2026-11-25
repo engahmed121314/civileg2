@@ -77,6 +77,8 @@ class HordiSlabViewModel @Inject constructor(
         designCode: String = "ECP",
         coverMm: Double = 25.0,
         barBondClass: com.civileg.app.domain.entities.BarBondClass = com.civileg.app.domain.entities.BarBondClass.UNKNOWN,
+        supportCondition: com.civileg.app.domain.calculations.base.SlabSupportCondition =
+            com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED,
         detailCase: com.civileg.app.domain.calculations.utils.JoistDetailCase = com.civileg.app.domain.calculations.utils.JoistDetailCase()
     ) {
         clearResult()
@@ -103,7 +105,7 @@ class HordiSlabViewModel @Inject constructor(
                     fcu = fcu, fy = fy, ribWidth = ribWidth, ribSpacing = ribSpacing,
                     totalThickness = totalThickness, toppingThickness = toppingThickness,
                     span = span, designMoment = designMoment, designShear = designShear,
-                    loadCombination = loadCombination, designCode = designCode, coverMm = coverMm, barBondClass = barBondClass, detailCase = detailCase
+                    loadCombination = loadCombination, designCode = designCode, coverMm = coverMm, barBondClass = barBondClass, supportCondition = supportCondition, detailCase = detailCase
                 )
 
                 if (input.referenceBasis == com.civileg.app.domain.calculations.utils.RcReferenceBasis.ECP_2020) {
@@ -132,7 +134,8 @@ class HordiSlabViewModel @Inject constructor(
                     designShear = designShear,
                     loadCombination = loadCombination,
                     coverMm = coverMm,
-                    barBondClass = barBondClass
+                    barBondClass = barBondClass,
+                    supportCondition = supportCondition
                 )
                 val frozenResult = result.copy(warnings = result.warnings.toList(), codeNotes = result.codeNotes.toList())
                 if (calculatedCase.complete(ticket, input, frozenResult)) _result.value = frozenResult
@@ -408,6 +411,8 @@ class HordiSlabViewModel @Inject constructor(
         val designCode: String,
         val coverMm: Double = 25.0,
         val barBondClass: com.civileg.app.domain.entities.BarBondClass = com.civileg.app.domain.entities.BarBondClass.UNKNOWN,
+        val supportCondition: com.civileg.app.domain.calculations.base.SlabSupportCondition =
+            com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED,
         val detailCase: com.civileg.app.domain.calculations.utils.JoistDetailCase = com.civileg.app.domain.calculations.utils.JoistDetailCase(),
         val referenceBasis: com.civileg.app.domain.calculations.utils.RcReferenceBasis =
             com.civileg.app.domain.calculations.utils.RcReferenceBasis.forCode(designCode)

@@ -3,6 +3,8 @@ package com.civileg.app.domain.calculations.sbc
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
+import com.civileg.app.domain.calculations.base.HordiDeemedToSatisfy
+import com.civileg.app.domain.calculations.base.SlabSupportCondition
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
@@ -75,7 +77,8 @@ class SBCJoistSlab : HordiSlabDesign {
         coverMm: Double,
         linkDiaMm: Double,
         mainBarDiaMm: Double,
-        barBondClass: BarBondClass
+        barBondClass: BarBondClass,
+        supportCondition: SlabSupportCondition
     ): SlabDesignResult {
         // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
         InputGuard.positive("fcu", fcu)
@@ -226,7 +229,16 @@ class SBCJoistSlab : HordiSlabDesign {
             warnings.add("SBC 304-4.3: Design shear ${String.format("%.1f", designShear)} kN exceeds capacity ${String.format("%.1f", Vc)} kN")
         }
 
-        val isSafe = isGeometrySafe && isShearSafe && rho <= rhoMax
+        // ── Serviceability — Table 9.3.1.1 deemed-to-satisfy l/h (joist per §9.8.1) ──
+        // NB: this engine's span arrives in METERS (see beff line below) — convert to mm.
+        val serv = HordiDeemedToSatisfy.sbc(span * 1000.0, totalThickness, fy, supportCondition)
+        if (!serv.safe) {
+            warnings.add("Deflection deemed-to-satisfy FAILED: ${serv.summary} — increase depth or satisfy the calculated deflection limits of SBC 304 9.3.2")
+        } else {
+            codeNotes.add("Deflection deemed-to-satisfy PASS: ${serv.summary}")
+            codeNotes.add("Table 9.3.1.1 scope: pass assumes no deflection-sensitive attached construction (9.3.1.1)")
+        }
+        val isSafe = isGeometrySafe && isShearSafe && rho <= rhoMax && serv.safe
         val utilizationRatio = if (Vc > 0) designShear / Vc else 2.0
 
         // ── Code notes ──
@@ -251,7 +263,7 @@ class SBCJoistSlab : HordiSlabDesign {
             codeNotes = codeNotes,
             bondClassAssessed = false, // bar surface/bond not assessed by this engine
             barBondClass = barBondClass, // caller selection carried for traceability, NOT assessed
-            serviceabilityAssessed = false // no deflection check in this engine
+            serviceabilityAssessed = serv.assessed // Table 9.3.1.1 deemed-to-satisfy performed
         )
     }
 

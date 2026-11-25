@@ -3,6 +3,8 @@ package com.civileg.app.domain.calculations.sbc
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
+import com.civileg.app.domain.calculations.base.HordiDeemedToSatisfy
+import com.civileg.app.domain.calculations.base.SlabSupportCondition
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
@@ -62,9 +64,10 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         coverMm: Double,
         linkDiaMm: Double,
         mainBarDiaMm: Double,
-        barBondClass: BarBondClass
+        barBondClass: BarBondClass,
+        supportCondition: SlabSupportCondition
     ): SlabDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304-CR-2018 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("ribWidth", ribWidth)
@@ -202,7 +205,16 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         // 7. Code Notes & Results
         // ══════════════════════════════════════════════════════════════════
         codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
-        codeNotes.add("SBC 304-2024 §6.4: Hordi Slab Design (independent SBC implementation)")
+        codeNotes.add("SBC 304-CR-2018 §6.4: Hordi Slab Design (independent SBC implementation)")
+
+        // ── Serviceability — Table 9.3.1.1 deemed-to-satisfy l/h (joist per §9.8.1) ──
+        val serv = HordiDeemedToSatisfy.sbc(span, totalThickness, fy, supportCondition)
+        if (!serv.safe) {
+            warnings.add("Deflection deemed-to-satisfy FAILED: ${serv.summary} — increase depth or satisfy the calculated deflection limits of SBC 304 9.3.2")
+        } else {
+            codeNotes.add("Deflection deemed-to-satisfy PASS: ${serv.summary}")
+            codeNotes.add("Table 9.3.1.1 scope: pass assumes the member does not support or attach to partitions/construction likely to be damaged by large deflections (9.3.1.1)")
+        }
         codeNotes.add("f'c = 0.8 × fcu = ${String.format("%.1f", fc)} MPa (SBC 304/ACI conversion)")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S, φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")
         codeNotes.add("Rib: ${ribWidth.toInt()}×${ribHeight.toInt()}mm, d=${String.format("%.0f", d)}mm")
@@ -223,13 +235,13 @@ class SBCHordiSlabDesign : HordiSlabDesign {
             barSpacing = if (numBars > 1) ribWidth / (numBars - 1) else ribWidth,
             minThickness = totalThickness,
             shearCapacity = Vc,
-            isSafe = discriminant > 0 && isShearSafe && rhoFinal <= rhoBal * 1.5,
+            isSafe = discriminant > 0 && isShearSafe && rhoFinal <= rhoBal * 1.5 && serv.safe,
             utilizationRatio = if (RnBal > 0) Rn / RnBal else 2.0,
             warnings = warnings,
             codeNotes = codeNotes,
             bondClassAssessed = false, // bar surface/bond not assessed by this engine
             barBondClass = barBondClass, // caller selection carried for traceability, NOT assessed
-            serviceabilityAssessed = false // no deflection check in this engine
+            serviceabilityAssessed = serv.assessed // Table 9.3.1.1 deemed-to-satisfy performed
         )
     }
 }

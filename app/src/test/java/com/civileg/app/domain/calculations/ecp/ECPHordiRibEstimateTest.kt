@@ -18,14 +18,20 @@ class ECPHordiRibEstimateTest {
 
     private fun design(
         t: Double = 250.0, topping: Double = 50.0, moment: Double, shear: Double = 5.0,
+        // span never enters the flexure/shear arithmetic; 4500 keeps Ln/t = 18 <=
+        // 19.43 (Table 4-10 ribbed, simply supported, Eq. 4-81 factor 0.97143 for
+        // fy=400) so the flexure-focused tests stay on the passing side.
+        span: Double = 4500.0,
+        support: com.civileg.app.domain.calculations.base.SlabSupportCondition =
+            com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED,
         bondClass: com.civileg.app.domain.entities.BarBondClass =
             com.civileg.app.domain.entities.BarBondClass.UNKNOWN
     ) =
         ECPHordiSlabDesign().designHordiSlab(
             fcu = 30.0, fy = 400.0, ribWidth = 150.0, ribSpacing = 600.0,
-            totalThickness = t, toppingThickness = topping, span = 6000.0,
+            totalThickness = t, toppingThickness = topping, span = span,
             designMoment = moment, designShear = shear, loadCombination = LoadCombination.DEAD_LIVE,
-            barBondClass = bondClass
+            barBondClass = bondClass, supportCondition = support
         )
 
     @Test
@@ -44,8 +50,10 @@ class ECPHordiRibEstimateTest {
         assertTrue(r.isSafe)
         assertTrue(r.bondClassAssessed)
         assertEquals(com.civileg.app.domain.entities.BarBondClass.DEFORMED, r.barBondClass)
-        assertFalse(r.serviceabilityAssessed)
-        assertFalse(r.engineeringAcceptance) // serviceability unassessed: never accepted
+        // span 4500/250 = 18 <= 20x0.97143 = 19.43: deemed-to-satisfy PASS (Table 4-10)
+        assertTrue(r.serviceabilityAssessed)
+        assertTrue(r.codeNotes.any { it.contains("Table 4-10") })
+        assertTrue(r.engineeringAcceptance) // all three dimensions now qualified
         assertEquals(144.86 / 226.19, r.utilizationRatio, 0.01)
     }
 
@@ -108,9 +116,10 @@ class ECPHordiRibEstimateTest {
         // disc = (2010·201)² − 2·2010·1e7 → asCalc = 153.13 mm²
         val r = ECPHordiSlabDesign().designHordiSlab(
             fcu = 30.0, fy = 400.0, ribWidth = 150.0, ribSpacing = 600.0,
-            totalThickness = 250.0, toppingThickness = 50.0, span = 6000.0,
+            totalThickness = 250.0, toppingThickness = 50.0, span = 4500.0,
             designMoment = 10.0, designShear = 5.0, loadCombination = LoadCombination.DEAD_LIVE,
-            coverMm = 35.0
+            coverMm = 35.0,
+            supportCondition = com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED
         )
         assertEquals(153.13, r.requiredReinforcement, 0.5)
         assertTrue(r.codeNotes.any { it.contains("cover 35") })
@@ -139,16 +148,56 @@ class ECPHordiRibEstimateTest {
         // Same case with an explicit declaration: floor 0.0018·150·250 = 67.5.
         val r = ECPHordiSlabDesign().designHordiSlab(
             fcu = 30.0, fy = 400.0, ribWidth = 150.0, ribSpacing = 600.0,
-            totalThickness = 250.0, toppingThickness = 50.0, span = 6000.0,
+            totalThickness = 250.0, toppingThickness = 50.0, span = 4500.0,
             designMoment = 1.0, designShear = 5.0, loadCombination = LoadCombination.DEAD_LIVE,
-            barBondClass = com.civileg.app.domain.entities.BarBondClass.DEFORMED
+            barBondClass = com.civileg.app.domain.entities.BarBondClass.DEFORMED,
+            supportCondition = com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED
         )
         assertEquals(67.5, r.requiredReinforcement, 0.5)
         assertTrue(r.isSafe)
         assertTrue(r.bondClassAssessed)
         assertEquals(com.civileg.app.domain.entities.BarBondClass.DEFORMED, r.barBondClass)
-        assertFalse(r.engineeringAcceptance) // declared bond still not acceptance: serviceability open
+        assertTrue(r.serviceabilityAssessed)
+        assertTrue(r.engineeringAcceptance) // declared bond + passing deemed-to-satisfy
         assertTrue(r.codeNotes.any { it.contains("declared by caller") })
         assertFalse(r.codeNotes.any { it.contains("ESTIMATE, not acceptance") })
+    }
+
+    @Test
+    fun `Table 4-10 deemed-to-satisfy failure gates isSafe`() {
+        // span 6000/250 = 24 > 20x(0.4+400/700) = 19.43 (ribbed, simply supported)
+        val r = design(moment = 10.0, span = 6000.0,
+            bondClass = com.civileg.app.domain.entities.BarBondClass.DEFORMED)
+        assertTrue(r.serviceabilityAssessed)
+        assertFalse(r.isSafe)
+        assertFalse(r.engineeringAcceptance)
+        assertTrue(r.warnings.any { it.contains("Table 4-10") })
+    }
+
+    @Test
+    fun `span beyond Table 4-10 applicability is explicit non-assessment not a pass`() {
+        // span 6500 > 6000 cap: deemed-to-satisfy inapplicable; detailed calc required
+        val r = design(moment = 10.0, span = 6500.0,
+            bondClass = com.civileg.app.domain.entities.BarBondClass.DEFORMED)
+        assertFalse(r.serviceabilityAssessed)
+        assertFalse(r.engineeringAcceptance)
+        assertTrue(r.isSafe) // flexure/shear/bond pass; serviceability is open, not failed
+        assertTrue(r.codeNotes.any { it.contains("detailed deflection") })
+    }
+
+    @Test
+    fun `cantilever deemed limit uses the 8 base ratio`() {
+        // cantilever: base 8; 2000/250 = 8.0 > 8x0.97143 = 7.77 -> fail
+        val r = design(moment = 10.0, span = 2000.0,
+            support = com.civileg.app.domain.calculations.base.SlabSupportCondition.CANTILEVER,
+            bondClass = com.civileg.app.domain.entities.BarBondClass.DEFORMED)
+        assertTrue(r.serviceabilityAssessed)
+        assertFalse(r.isSafe)
+        assertTrue(r.warnings.any { it.contains("Table 4-10") })
+        // 2100 mm cantilever exceeds the 2 m applicability cap -> not assessed
+        val beyond = design(moment = 10.0, span = 2100.0,
+            support = com.civileg.app.domain.calculations.base.SlabSupportCondition.CANTILEVER,
+            bondClass = com.civileg.app.domain.entities.BarBondClass.DEFORMED)
+        assertFalse(beyond.serviceabilityAssessed)
     }
 }

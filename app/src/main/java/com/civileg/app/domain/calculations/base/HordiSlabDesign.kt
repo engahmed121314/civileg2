@@ -27,6 +27,10 @@ interface HordiSlabDesign {
         coverMm: Double = DEFAULT_COVER_MM,     // concrete cover to link outside, mm
         linkDiaMm: Double = DEFAULT_LINK_DIA_MM,    // link/stirrup diameter, mm
         mainBarDiaMm: Double = DEFAULT_MAIN_BAR_DIA_MM, // main bar diameter, mm
-        barBondClass: BarBondClass = BarBondClass.UNKNOWN
+        barBondClass: BarBondClass = BarBondClass.UNKNOWN,
+        // End support/continuity for the deemed-to-satisfy deflection check
+        // (ECP Table 4-10 / SBC Table 9.3.1.1). Default is the most
+        // conservative case; a SIMPLY_SUPPORTED pass implies every other case.
+        supportCondition: SlabSupportCondition = SlabSupportCondition.SIMPLY_SUPPORTED
     ): SlabDesignResult
 }

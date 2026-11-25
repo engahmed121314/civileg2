@@ -3,6 +3,8 @@ package com.civileg.app.domain.calculations.ecp
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
+import com.civileg.app.domain.calculations.base.HordiDeemedToSatisfy
+import com.civileg.app.domain.calculations.base.SlabSupportCondition
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.SlabDesignResult
 import kotlin.math.ceil
@@ -55,7 +57,8 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         coverMm: Double,
         linkDiaMm: Double,
         mainBarDiaMm: Double,
-        barBondClass: BarBondClass
+        barBondClass: BarBondClass,
+        supportCondition: SlabSupportCondition
     ): SlabDesignResult {
         // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("fcu", fcu)
@@ -198,11 +201,22 @@ class ECPHordiSlabDesign : HordiSlabDesign {
         if (!bondAssessed) {
             warnings.add("Bar surface/bond class UNKNOWN — result is a conservative estimate and cannot be accepted; declare barBondClass to qualify")
         }
-        val isSafe = flexureSafe && shearSafe && areaSufficient && bondAssessed
+        // ── Serviceability — Table 4-10 deemed-to-satisfy Ln/t (ribbed slabs) ──
+        val serv = HordiDeemedToSatisfy.ecp(span, totalThickness, fy, supportCondition)
+        if (!serv.assessed) {
+            codeNotes.add(serv.summary)
+        } else if (!serv.safe) {
+            warnings.add("Deflection deemed-to-satisfy FAILED: ${serv.summary} — increase depth or verify by detailed deflection calculation (§4-4-9)")
+        } else {
+            codeNotes.add("Deflection deemed-to-satisfy PASS: ${serv.summary}")
+            codeNotes.add("Table 4-10 note (ج): pass assumes the slab does not support elements susceptible to deflection damage")
+        }
+
+        val isSafe = flexureSafe && shearSafe && areaSufficient && bondAssessed && (!serv.assessed || serv.safe)
 
         if (!areaSufficient) warnings.add("Adopted main bars provide less than the calculated required steel area")
-        codeNotes.add("Estimate scope: positive-moment rectangular-web rib section + concrete-only shear. Anchorage, T-flange credit, negative moment, serviceability and adopted detailing are outside this estimate — see ECP2020JoistCaseReview for declared cases.")
-        codeNotes.add("Deflection/serviceability NOT assessed — explicit absence, not a pass (serviceabilityAssessed=false)")
+        codeNotes.add("Estimate scope: positive-moment rectangular-web rib section + concrete-only shear. Anchorage, T-flange credit, negative moment and adopted detailing are outside this estimate — see ECP2020JoistCaseReview for declared cases.")
+        if (!serv.assessed) codeNotes.add("Deflection/serviceability NOT assessed — explicit absence, not a pass (serviceabilityAssessed=false)")
 
         return SlabDesignResult(
             requiredReinforcement = if (asRequired.isFinite()) asRequired else Double.POSITIVE_INFINITY,
@@ -217,7 +231,7 @@ class ECPHordiSlabDesign : HordiSlabDesign {
             codeNotes = codeNotes,
             bondClassAssessed = bondAssessed,
             barBondClass = barBondClass,
-            serviceabilityAssessed = false
+            serviceabilityAssessed = serv.assessed
         )
     }
 }

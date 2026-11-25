@@ -3,6 +3,8 @@ package com.civileg.app.domain.calculations.aci
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
+import com.civileg.app.domain.calculations.base.HordiDeemedToSatisfy
+import com.civileg.app.domain.calculations.base.SlabSupportCondition
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
@@ -25,7 +27,8 @@ class ACIJoistSlab : HordiSlabDesign {
         coverMm: Double,
         linkDiaMm: Double,
         mainBarDiaMm: Double,
-        barBondClass: BarBondClass
+        barBondClass: BarBondClass,
+        supportCondition: SlabSupportCondition
     ): SlabDesignResult {
         // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
         InputGuard.positive("fcu", fcu)
@@ -75,7 +78,7 @@ class ACIJoistSlab : HordiSlabDesign {
             codeNotes = listOf("Effective depth d = h - coverMm - mainBarDiaMm/2 = h - ${(coverMm + mainBarDiaMm / 2.0).toInt()} mm (caller inputs; previously fixed h - 25); linkDiaMm=${linkDiaMm.toInt()} accepted, not used in this effective-depth convention"),
             bondClassAssessed = false, // bar surface/bond not assessed by this engine
             barBondClass = barBondClass, // caller selection carried for traceability, NOT assessed
-            serviceabilityAssessed = false // no deflection check in this engine
+            serviceabilityAssessed = false // no deflection check: ACI 318M-14 table values not applied without its verified text on hand; supportCondition recorded but not used
         )
     }
 }

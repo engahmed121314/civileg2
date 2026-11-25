@@ -71,6 +71,10 @@ fun HordiSlabScreen(
     var cover by remember { mutableStateOf("") }
     var barBondClass by remember { mutableStateOf(com.civileg.app.domain.entities.BarBondClass.UNKNOWN) }
     var bondClassExpanded by remember { mutableStateOf(false) }
+    // Default SIMPLY_SUPPORTED is the most conservative deemed-to-satisfy case
+    // (ECP Table 4-10 / SBC Table 9.3.1.1); the user sees and can change it.
+    var supportCondition by remember { mutableStateOf(com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED) }
+    var supportExpanded by remember { mutableStateOf(false) }
     var detailDraft by remember { mutableStateOf(com.civileg.app.domain.calculations.utils.JoistDetailDraft()) }
 
     val result by viewModel.result.observeAsState()
@@ -256,6 +260,53 @@ fun HordiSlabScreen(
                     }
                 }
 
+                // Support/continuity condition — drives the deemed-to-satisfy
+                // deflection check (ECP Table 4-10 / SBC Table 9.3.1.1).
+                item {
+                    ExposedDropdownMenuBox(
+                        expanded = supportExpanded,
+                        onExpandedChange = { supportExpanded = !supportExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = when (supportCondition) {
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED -> "Simply supported"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.ONE_END_CONTINUOUS -> "One end continuous"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS -> "Both ends continuous"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.CANTILEVER -> "Cantilever"
+                            },
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { AppText("Support Condition (deflection check)", fontSize = 12.sp) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = supportExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            shape = PremiumDesignSystem.InputShape,
+                            singleLine = true
+                        )
+                        ExposedDropdownMenu(
+                            expanded = supportExpanded,
+                            onDismissRequest = { supportExpanded = false }
+                        ) {
+                            com.civileg.app.domain.calculations.base.SlabSupportCondition.values().forEach { option ->
+                                DropdownMenuItem(
+                                    text = {
+                                        AppText(when (option) {
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED -> "Simply supported"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.ONE_END_CONTINUOUS -> "One end continuous"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS -> "Both ends continuous"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.CANTILEVER -> "Cantilever"
+                                        }, fontSize = 13.sp)
+                                    },
+                                    onClick = {
+                                        viewModel.clearResult()
+                                        supportCondition = option
+                                        supportExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Load Combination Dropdown
                 item {
                     ExposedDropdownMenuBox(
@@ -316,6 +367,7 @@ fun HordiSlabScreen(
                                 designCode = designCode,
                                 coverMm = cover.toDoubleOrNull() ?: Double.NaN,
                                 barBondClass = barBondClass,
+                                supportCondition = supportCondition,
                                 detailCase = detailDraft.toCase(
                                     span.toDoubleOrNull() ?: Double.NaN,
                                     designMoment.toDoubleOrNull() ?: Double.NaN,
