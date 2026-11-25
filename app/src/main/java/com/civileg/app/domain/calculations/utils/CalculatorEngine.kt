@@ -9,6 +9,8 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.aci.AISCSteelDesignEngine
 import com.civileg.app.domain.calculations.aci.SteelWindEngine
 import com.civileg.app.domain.calculations.base.RetainingWallInput
+import com.civileg.app.domain.calculations.base.StairSupportCondition
+import com.civileg.app.domain.calculations.base.StairAnalysisStatus
 import com.civileg.app.domain.calculations.base.StaircaseInput
 import com.civileg.app.domain.calculations.base.SeismicZone
 import com.civileg.app.domain.calculations.base.SoilType
@@ -289,7 +291,22 @@ class CalculatorEngine @Inject constructor(
         val fcu: Double = 25.0,
         val fy: Double = 400.0,
         val suggestions: List<String> = emptyList(),
-        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
+        val stairWidthMm: Double = 1200.0,
+        val supportCondition: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
+        val landingLengthMm: Double? = null,
+        val landingWidthMm: Double? = null,
+        val landingThicknessMm: Double? = null,
+        val analysisStatus: StairAnalysisStatus = StairAnalysisStatus.UNSUPPORTED_CASE,
+        val analysisSpanM: Double = 0.0,
+        val adoptedRunMm: Double = 0.0,
+        val flightTopRebar: String = "",
+        val landingRebar: String = "",
+        val codeAcceptanceComplete: Boolean = false,
+        val qualificationNotes: List<String> = emptyList(),
+        val quantityReview: StairQuantityReview? = null,
+        val barMaterialClassification: String = "UNDECLARED: fy alone does not identify bar surface/grade",
+        val documentaryBasisLabel: String = "Edition verification incomplete"
     ) : Parcelable
 
     @Parcelize
@@ -2086,13 +2103,25 @@ class CalculatorEngine @Inject constructor(
 
     private fun barAreaMm2(diameter: Double): Double = Math.PI / 4.0 * diameter * diameter
 
-    fun designStaircase(type: StairType, span: Double, riser: Double, tread: Double, deadLoad: Double, liveLoad: Double, fcu: Double, fy: Double, preferredDiameter: Int, code: DesignCode): StairResult {
+    fun designStaircase(type: StairType, span: Double, riser: Double, tread: Double, deadLoad: Double, liveLoad: Double, fcu: Double, fy: Double, preferredDiameter: Int, code: DesignCode, stairWidthMm: Double = 1200.0,
+        supportCondition: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
+        landingLengthMm: Double? = null, landingWidthMm: Double? = null, landingThicknessMm: Double? = null
+    ): StairResult {
+        InputGuard.positive("stairWidthMm", stairWidthMm)
         InputGuard.positive("span", span)
         InputGuard.positive("riser", riser)
         InputGuard.positive("tread", tread)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
 
+        if (type == StairType.CANTILEVER) return StairResult(
+            type = type, thickness = 0.0, reinforcement = ReinforcementBar(),
+            distributionReinforcement = ReinforcementBar(), isSafe = false,
+            concreteVolume = 0.0, steelWeight = 0.0, cost = 0.0, code = code,
+            span = span, riser = riser, tread = tread, stairWidthMm = stairWidthMm,
+            supportCondition = supportCondition,
+            qualificationNotes = listOf("Cantilever stair model is not implemented; no design issued")
+        )
         return try {
             val geometry = StairFlightGeometry.from(span, riser, tread)
             val nTreads = geometry.treadCount
@@ -2104,14 +2133,18 @@ class CalculatorEngine @Inject constructor(
                 stairType = type.toDomain(),
                 span = span,
                 totalRise = totalRise,
-                stairWidth = 1.2,
+                stairWidth = stairWidthMm / 1000.0,
                 waistThickness = defaultThickness,
                 fcu = fcu,
                 fy = fy,
                 deadLoad = deadLoad,
                 liveLoad = liveLoad,
                 riserCount = nRisers,
-                going = tread
+                going = tread,
+                supportCondition = supportCondition,
+                landingLengthMm = landingLengthMm,
+                landingWidthMm = landingWidthMm,
+                landingThicknessMm = landingThicknessMm
             )
 
             val result = CalculationFactory.getStaircaseDesign(code).designStaircase(input)
@@ -2123,12 +2156,21 @@ class CalculatorEngine @Inject constructor(
                 it.name.contains("Flexure", ignoreCase = true) || it.name.contains("K ", ignoreCase = true)
             }?.let { if (it.limit > 0) (it.value / it.limit).coerceIn(0.1, 1.5) else 0.7 } ?: 0.7
 
-            val concreteVolume = result.inclinedLength * 1.2 * defaultThickness / 1000.0
-            val steelWeight = (result.inclinedLength + 0.6) * result.mainRebarArea * 7850.0 / 1e6 +
-                (result.distributionRebarArea / 1000.0) * 1.2 * 7850.0 / 1e6
+            val concreteVolume = result.inclinedLength * (stairWidthMm / 1000.0) * defaultThickness / 1000.0
+            val quantityReview = StairQuantityReviewer.review(
+                stairWidthMm, geometry.runMm, geometry.riseMm,
+                when (code) { DesignCode.ACI -> 38.0; DesignCode.SBC -> 40.0; else -> 25.0 },
+                mainBar.diameter, mainBar.spacing, distBar.diameter, distBar.spacing
+            )
+            // Compatibility scalar is explicitly a partial net-flight quantity, never final steel.
+            val steelWeight = quantityReview.netFlightSteelKg
             val cost = concreteVolume * 120.0 + steelWeight * 1.5
 
-            val ref = codeNoteRef(code)
+            val ref = when (code) {
+                DesignCode.ECP -> "Reference supplied: ECP 203-2020; equation coverage incomplete"
+                DesignCode.ACI -> "Reference supplied: ACI 318M-14; equation coverage incomplete"
+                DesignCode.SBC -> "Reference supplied: SBC 304-CR-2018; equation coverage incomplete"
+            }
             val steps = listOf(
                 CalculationStep(
                     stepNumber = 1, title = "Geometry",
@@ -2167,10 +2209,10 @@ class CalculatorEngine @Inject constructor(
                     codeReference = ref
                 ),
                 CalculationStep(
-                    stepNumber = 6, title = "Safety Checks",
+                    stepNumber = 6, title = "Implemented Checks (not code acceptance)",
                     formula = "Flexure · shear · deflection",
                     formulaWithValues = "${result.safetyChecks.count { it.isSafe }}/${result.safetyChecks.size} checks passed",
-                    result = if (result.isSafe) "SAFE" else "UNSAFE", unit = "",
+                    result = if (result.isSafe) "Checks pass; acceptance incomplete" else "Checks fail", unit = "",
                     codeReference = ref, isPass = result.isSafe,
                     status = if (result.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
                 )
@@ -2181,7 +2223,7 @@ class CalculatorEngine @Inject constructor(
                 thickness = defaultThickness,
                 reinforcement = mainBar,
                 distributionReinforcement = distBar,
-                isSafe = result.isSafe,
+                isSafe = result.isSafe, // Implemented checks only; acceptance remains separate.
                 concreteVolume = concreteVolume,
                 steelWeight = steelWeight,
                 cost = cost,
@@ -2198,11 +2240,26 @@ class CalculatorEngine @Inject constructor(
                 fcu = fcu,
                 fy = fy,
                 suggestions = result.safetyChecks.filterNot { it.isSafe }.map { it.description },
-                calculationSteps = steps
+                calculationSteps = steps,
+                stairWidthMm = stairWidthMm,
+                supportCondition = supportCondition,
+                landingLengthMm = landingLengthMm,
+                landingWidthMm = landingWidthMm,
+                landingThicknessMm = landingThicknessMm,
+                analysisStatus = if (type == StairType.CANTILEVER) StairAnalysisStatus.UNSUPPORTED_CASE else result.analysisStatus,
+                analysisSpanM = result.analysisSpanM,
+                adoptedRunMm = result.adoptedRunMm,
+                flightTopRebar = result.flightTopRebar,
+                landingRebar = result.landingRebar,
+                codeAcceptanceComplete = false,
+                quantityReview = quantityReview,
+                documentaryBasisLabel = ref,
+                qualificationNotes = quantityReview.qualifications + result.codeNotes + "Complete stair detailing acceptance is not implemented" +
+                    if (type == StairType.CANTILEVER) listOf("Cantilever model is not implemented; single-flight fallback is not valid for this case") else emptyList()
             )
         } catch (e: Exception) {
             // ADR-010: لا تُرجع isSafe=true عند الفشل — loud failure, no silent safe
-            StairResult(type = type, thickness = 150.0, reinforcement = ReinforcementBar(), distributionReinforcement = ReinforcementBar(), isSafe = false, concreteVolume = 0.0, steelWeight = 0.0, cost = 0.0, code = code, riser = riser, tread = tread,
+            StairResult(type = type, thickness = 150.0, reinforcement = ReinforcementBar(), distributionReinforcement = ReinforcementBar(), isSafe = false, concreteVolume = 0.0, steelWeight = 0.0, cost = 0.0, code = code, riser = riser, tread = tread, stairWidthMm = stairWidthMm,
                 suggestions = listOf("Calculation failed: ${e.message?.take(200) ?: "Unknown error"} / فشل الحساب"))
         }
     }

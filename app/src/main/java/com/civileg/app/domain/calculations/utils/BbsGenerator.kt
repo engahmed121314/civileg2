@@ -277,6 +277,9 @@ object BbsGenerator {
         stairWidthMm: Double,
         coverMm: Double = 25.0
     ): List<BbsEntry> {
+        // A net flight review has no approved cutting geometry. Never convert it
+        // into straight bars with invented hooks/tails or a final fabrication BBS.
+        if (result.quantityReview?.fabricationScheduleAvailable == false) return emptyList()
         InputGuard.notBlank("memberMark", mark)
         InputGuard.positive("stairWidth", stairWidthMm)
         InputGuard.positive("span", result.span)

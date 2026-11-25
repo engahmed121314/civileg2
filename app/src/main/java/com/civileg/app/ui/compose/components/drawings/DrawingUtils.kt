@@ -1454,14 +1454,14 @@ fun DrawScope.drawResultSummaryStrip(
     val small = cfg.annotationTextSmall
     val rowHeight = small * 1.35f
     val height = rowHeight * 2f
-    val statusColor = if (summary.isSafe) DrawingColorDefaults.SafeGreen else DrawingColorDefaults.UnsafeRed
+    val statusColor = if (!summary.codeAcceptanceComplete) DrawingColorDefaults.UnsafeRed else if (summary.isSafe) DrawingColorDefaults.SafeGreen else DrawingColorDefaults.UnsafeRed
     val pad = small * 0.4f
 
     drawRect(Color(0x22FFFFFF), Offset(x, y), Size(width, height))
     drawRect(borderColor, Offset(x, y), Size(width, height), style = Stroke(cfg.strokeTable))
     drawLine(borderColor, Offset(x, y + rowHeight), Offset(x + width, y + rowHeight), cfg.strokeDefault)
 
-    val status = if (summary.isSafe) "SAFE" else "UNSAFE"
+    val status = if (!summary.codeAcceptanceComplete) "UNVERIFIED" else if (summary.isSafe) "SAFE" else "UNSAFE"
     drawTextAnnotated("STATUS: $status", x + pad, y + small * 1.05f, statusColor, small, bold = true)
     drawTextAnnotated(
         "UTIL: ${summary.utilizationPercent}",

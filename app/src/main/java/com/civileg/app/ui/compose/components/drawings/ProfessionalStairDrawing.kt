@@ -109,6 +109,8 @@ fun ProfessionalStairDrawing(
     cover: Double = 25.0,         // mm
     numberOfRisers: Int = 0,      // calculated from totalHeight/riserHeight if 0
     stairType: String = "Straight Stair", // stair type label shown in the drawing title
+    quantityReview: com.civileg.app.domain.calculations.utils.StairQuantityReview? = null,
+    documentaryBasisLabel: String? = null,
     viewMode: Int = 0,
     designCode: DesignCode = DesignCode.ECP,
     resultSummary: DrawingResultSummary? = null,
@@ -129,7 +131,7 @@ fun ProfessionalStairDrawing(
     // ECP 203-2020: stair waist slab per ECP, load per ECP 201
     // ACI 318-19:  Chapter 7 — one-way slabs (stair waist slab)
     // SBC 304-2018: adopts ACI provisions with SBC live load factors
-    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    val codeLabel = documentaryBasisLabel ?: designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
     // ── Responsive config ──────────────────────────────────────────────────
     val cfg = drawingDimensionsConfig()
 
@@ -236,7 +238,22 @@ fun ProfessionalStairDrawing(
 
         // 4. Reinforcement schedule table (bottom)
         if (viewMode == 0 || viewMode == 3) {
-        drawReinforcementScheduleTable(
+        if (quantityReview != null) {
+            val left = cfg.margin
+            val textSize = cfg.annotationTextSmall
+            var y = tableTop + textSize
+            fun line(value: String) {
+                drawTextAnnotated(value, left, y, DimensionWhite, textSize)
+                y += textSize * 1.6f
+            }
+            line("NET FLIGHT REVIEW ONLY, NOT CUTTING LENGTHS")
+            line("Main: ${quantityReview.main.count} x dia ${quantityReview.main.diameterMm}")
+            line("Net segment ${quantityReview.main.netFlightLengthMm.toInt()} mm")
+            line("Distribution: ${quantityReview.distribution.count} x dia ${quantityReview.distribution.diameterMm}")
+            line("Net segment ${quantityReview.distribution.netFlightLengthMm.toInt()} mm")
+            line("Excludes support ends, bends, laps, top and landing bars")
+            line("FINAL STEEL / FABRICATION BBS NOT AVAILABLE")
+        } else drawReinforcementScheduleTable(
             cw = cw, ch = ch, tableTop = tableTop,
             nRisers = nRisers, nTreads = nTreads,
             totalLength = totalLength, totalHeight = totalHeight,

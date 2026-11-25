@@ -147,8 +147,19 @@ class DesignRepository @Inject constructor(
             put("thickness", result.thickness)
             put("wu", result.wu)
             put("type", result.type.toString())
+            put("stairWidthMm", result.stairWidthMm)
+            put("supportCondition", result.supportCondition.name)
+            put("landingLengthMm", result.landingLengthMm ?: JSONObject.NULL)
+            put("landingWidthMm", result.landingWidthMm ?: JSONObject.NULL)
+            put("landingThicknessMm", result.landingThicknessMm ?: JSONObject.NULL)
+            put("analysisStatus", result.analysisStatus.name)
+            put("codeAcceptanceComplete", result.codeAcceptanceComplete)
+            put("qualificationNotes", org.json.JSONArray(result.qualificationNotes))
+            put("quantityScope", "NET_FLIGHT_ONLY_NOT_FINAL")
+            put("finalSteelKg", JSONObject.NULL)
+            put("fabricationScheduleAvailable", false)
         }.toString()
-        saveGeneralDesign(projectId, DesignType.STAIRCASE, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
+        saveGeneralDesign(projectId, DesignType.STAIRCASE, name, result.isSafe && result.codeAcceptanceComplete, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
         
         val stair = Stair(
             projectId = projectId, thickness = result.thickness, load = result.wu, fcu = result.fcu, fy = result.fy,
