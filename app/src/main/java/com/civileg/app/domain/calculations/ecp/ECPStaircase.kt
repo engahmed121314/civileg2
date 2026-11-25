@@ -144,18 +144,7 @@ class ECPStaircase : StaircaseDesign {
             description = "Minimum waist thickness per ECP 203 §6-2"
         ))
 
-        // ECP 203 §6-2: Waist slab span/depth check
-        // For stair slabs: L/d ≤ 26 for continuous, 20 for simply supported
-        val waistSpanDepthRatio = (input.span * 1000) / dEffective
-        // Restraint-dependent L/d: 26 applies only to the verified continuous-
-        // over-landing model; the simply-supported fallback keeps 20.
-        val waistAllowableRatio = if (continuousOverLanding) 26.0 else 20.0
-        safetyChecks.add(StairSafetyCheck(
-            name = "Waist Span/Depth",
-            value = waistSpanDepthRatio, limit = waistAllowableRatio, unit = "",
-            isSafe = waistSpanDepthRatio <= waistAllowableRatio,
-            description = "ECP 203 §6-3: L/d ≤ ${"%.0f".format(waistAllowableRatio)} for waist slab"
-        ))
+        // Span/thickness is assessed once, in section 7, against ECP 203-2020 Table 4-10.
 
         // ========== 3. الأحمال ==========
         // w_horiz = 1.4×dead/cos(θ) + 1.6×live (مُسقط أفقياً)
@@ -340,30 +329,37 @@ class ECPStaircase : StaircaseDesign {
         }
 
         // ========== 7. فحص الانحراف ==========
-        // ECP 203 §6-3: Span/depth ratio approach for stair slab deflection
-        val basicRatio = 20.0
-        val rhoPercent = (rho * 100).coerceAtLeast(0.15)
-        // ECP 203 §6-3-1: MF = 0.55 + 477/(fy×ρ%), capped at 2.5
-        val modificationFactor = (0.55 + 477.0 / (input.fy * rhoPercent)).coerceIn(1.0, 2.5)
-        val allowableRatio = basicRatio * modificationFactor
-        val actualRatio = (span * 1000) / dEffective
-        val deflectionRatio = actualRatio / allowableRatio
-
-        val allowableDeflection = (span * 1000) / 250.0
-        val calculatedDeflection = if (deflectionRatio > 1.0) {
-            allowableDeflection * deflectionRatio * 1.2
-        } else {
-            allowableDeflection * deflectionRatio * 0.7
-        }
-        InputGuard.finite("calculatedDeflection", calculatedDeflection)
-        val deflectionOk = deflectionRatio <= 1.0
+        // ECP 203-2020 §4-3-1-3-1 and Table 4-10 (p. 4-64): deflection computation may be skipped for one-way
+        // slabs of span <= 6 m when Ln/t does not exceed the tabulated value: solid slab 25 simply supported,
+        // 28 continuous one end, 31 continuous both ends, 10 cantilever; for fy other than 420 N/mm2 the value is
+        // multiplied by (0.40 + fy/700) (Eq. 4-81). Applied here by treating the inclined waist as a solid one-way
+        // slab (an analogy: the supplied contents list no stair-specific clause). No landing continuity is credited,
+        // so the simply supported value is used. If the limit is not met the code requires a computed deflection
+        // (Ie, Eq. 4-70 to 4-73, limit per §4-3-1-2); that computation is NOT implemented, so the check fails
+        // instead of being passed by an ungrounded modification factor.
+        val table410SimplySupportedSolid = 25.0
+        val fyFactor = 0.40 + input.fy / 700.0
+        val allowableRatio = table410SimplySupportedSolid * fyFactor
+        val actualRatio = (span * 1000) / waistThickness
+        val spanWithinTable = span <= 6.0
+        val deflectionOk = spanWithinTable && actualRatio <= allowableRatio
+        val minThicknessMm = span * 1000 / allowableRatio
+        val calculatedDeflection = 0.0     // not computed in this version
+        val allowableDeflection = 0.0      // not computed in this version
 
         safetyChecks.add(StairSafetyCheck(
-            name = "Deflection (Span/Depth)",
+            name = "Deflection (ECP Table 4-10 L/t, deemed-to-satisfy)",
             value = actualRatio, limit = allowableRatio, unit = "",
             isSafe = deflectionOk,
-            description = "ECP 203 Section 6-3: L/d ≤ ${String.format("%.1f", allowableRatio)}"
+            description = if (!spanWithinTable) {
+                "Table 4-10 applies to spans up to 6 m; computed deflection (ECP 4-3-1-1) is required and not implemented"
+            } else if (deflectionOk) {
+                "ECP 203-2020 Table 4-10: Ln/t = ${"%.1f".format(actualRatio)} <= ${"%.1f".format(allowableRatio)} (solid slab, simply supported 25 x (0.40+fy/700)); deflection computation not required"
+            } else {
+                "ECP 203-2020 Table 4-10: Ln/t = ${"%.1f".format(actualRatio)} > ${"%.1f".format(allowableRatio)}; deflection NOT demonstrated. Waist of at least ${"%.0f".format(minThicknessMm)} mm meets the table, or a computed deflection (ECP 4-3-1-1) is required and is not implemented in this version"
+            }
         ))
+        codeNotes.add("Deflection: ECP 203-2020 Table 4-10 (p. 4-64) deemed-to-satisfy only; no computed deflection is reported")
 
         // ========== 8. فحوصات هندسية ==========
         safetyChecks.add(StairSafetyCheck(
@@ -389,11 +385,7 @@ class ECPStaircase : StaircaseDesign {
         codeNotes.add(CodeReference.ECP.SLAB_ONE_WAY)
         codeNotes.add("ECP 203: Section 4-2 (Flexure design of waist slab)")
         codeNotes.add("ECP 203: Section 6-2 (Slab reinforcement rules)")
-        codeNotes.add("ECP 203: Section 6-3 (Deflection limits L/250)")
         codeNotes.add("ECP 201-2012: Staircase live load = 4.0 kN/m²")
-        if (waistSpanDepthRatio > waistAllowableRatio) {
-            codeNotes.add("WARNING: Waist slab L/d = ${"%.1f".format(waistSpanDepthRatio)} exceeds ${"%.0f".format(waistAllowableRatio)} — increase thickness")
-        }
 
         return StaircaseResult(
             isSafe = safetyChecks.all { it.isSafe },
