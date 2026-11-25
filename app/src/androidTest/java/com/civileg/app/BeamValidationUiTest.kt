@@ -33,7 +33,10 @@ class BeamValidationUiTest {
   rule.onNodeWithText(ar(R.string.beam_results_economy)).assertDoesNotExist()
   rule.onNodeWithTag("field_width").performTextReplacement("٢٥٠")
   reveal(hasText(ar(R.string.beam_design_now)));rule.onNodeWithText(ar(R.string.beam_design_now)).performClick()
-  rule.waitUntil(20000){rule.onAllNodesWithText(ar(R.string.beam_results_economy)).fetchSemanticsNodes().isNotEmpty()}
+  rule.waitUntil(20000){
+   runCatching {rule.onAllNodes(hasScrollAction())[0].performScrollToNode(hasText(ar(R.string.beam_results_economy)))}
+   rule.onAllNodesWithText(ar(R.string.beam_results_economy)).fetchSemanticsNodes().isNotEmpty()
+  }
   // Capture the actual calculated Beam page; this does not confer code acceptance.
   rule.activity.runOnUiThread {
    rule.activity.currentFocus?.let { view ->
