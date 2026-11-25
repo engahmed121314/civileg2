@@ -124,7 +124,8 @@ def stair_codes():
         picked = False
         for _ in range(5):
             if tap_text([label], "sc-pick-" + tag): picked = True; break
-            scroll_up(1)
+            if _ % 2 == 0: scroll_up(1)
+            else: scroll_top(3)
         log.append(("sc_pick_" + tag, picked)); time.sleep(1); shot("sc-" + tag + "-picked")
         for _ in range(6):
             if tap_text(["تصميم السلم الآن"], "sc-calc-" + tag): log.append(("sc_calc_" + tag, True)); break

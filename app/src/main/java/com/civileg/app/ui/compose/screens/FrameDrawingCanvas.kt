@@ -233,11 +233,18 @@ private fun DrawScope.drawFrameView(
         val blockW = maxOf(nameLayout?.size?.width ?: 0, idLayout.size.width).toFloat()
         // Anchor the block on the side of the member it was pushed to, so a vertical member's name sits beside
         // the member instead of centred on top of it.
+        fun anchorFor(lx: Float, nxs: Float): Float = when {
+            nxs > 0.3f -> lx - 6f
+            nxs < -0.3f -> lx - blockW + 6f
+            else -> lx - blockW / 2f
+        }
         val nxName = cos(angle + PI / 2).toFloat()
-        val anchoredX = when {
-            nxName > 0.3f -> labelX.toFloat() - 6f
-            nxName < -0.3f -> labelX.toFloat() - blockW + 6f
-            else -> labelX.toFloat() - blockW / 2f
+        var anchoredX = anchorFor(labelX.toFloat(), nxName)
+        if (anchoredX < 2f || anchoredX + blockW > size.width - 2f) {
+            // The outer side would leave the canvas: mirror the block to the other side of the member.
+            val mirroredLx = 2f * midX.toFloat() - labelX.toFloat()
+            val alt = anchorFor(mirroredLx, -nxName)
+            if (alt >= 2f && alt + blockW <= size.width - 2f) anchoredX = alt
         }
         val blockX = anchoredX.coerceIn(2f, (size.width - blockW - 2f).coerceAtLeast(2f))
         var yy = (labelY.toFloat() - 8f).coerceIn(2f, (size.height - 2f).coerceAtLeast(2f))
@@ -1432,10 +1439,20 @@ private fun DrawScope.drawDiagrams(
                 val sy = ny * side
                 val ax = annX + sx * 6f
                 val ay = annY + sy * 6f
-                val rawX = when {
+                var rawX = when {
                     sx > 0.3f -> ax
                     sx < -0.3f -> ax - layout.size.width
                     else -> ax - layout.size.width / 2f
+                }
+                if (rawX < 2f || rawX + layout.size.width > size.width - 2f) {
+                    // Outer side leaves the canvas: put the label on the inner side of the diagram instead.
+                    val ax2 = annX - sx * 6f
+                    val alt = when {
+                        sx > 0.3f -> ax2 - layout.size.width
+                        sx < -0.3f -> ax2
+                        else -> rawX
+                    }
+                    if (alt >= 2f && alt + layout.size.width <= size.width - 2f) rawX = alt
                 }
                 val rawY = when {
                     sy > 0.3f -> ay
