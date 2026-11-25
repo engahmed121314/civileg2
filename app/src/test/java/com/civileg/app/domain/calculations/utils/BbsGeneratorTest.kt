@@ -369,7 +369,8 @@ class BbsGeneratorTest {
             code = DesignCode.ECP,
             span = 3.0,
             tread = 300.0,
-            riser = 175.0
+            riser = 175.0,
+            analysisStatus = com.civileg.app.domain.calculations.base.StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED
         )
 
         val entries = BbsGenerator.generateStairBbs("ST1", result, stairWidthMm = 1200.0)

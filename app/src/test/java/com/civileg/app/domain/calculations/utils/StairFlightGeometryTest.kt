@@ -17,7 +17,8 @@ class StairFlightGeometryTest {
             thickness = 160.0,
             reinforcement = CalculatorEngine.ReinforcementBar(diameter = 12, spacing = 150.0),
             distributionReinforcement = CalculatorEngine.ReinforcementBar(diameter = 8, spacing = 200.0),
-            code = com.civileg.app.domain.entities.DesignCode.ECP, isSafe = false, concreteVolume = 0.0, steelWeight = 0.0, cost = 0.0
+            code = com.civileg.app.domain.entities.DesignCode.ECP, isSafe = false, concreteVolume = 0.0, steelWeight = 0.0, cost = 0.0,
+            analysisStatus = com.civileg.app.domain.calculations.base.StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED
         )
         val inclineMm = kotlin.math.hypot(3900.0, 2100.0)
         assertEquals(inclineMm, BbsGenerator.generateStairBbs("ST1", r, 1200.0).first().lengthA, 1e-6)
