@@ -51,8 +51,27 @@ data class PileDesignResult(
     val utilizationRatio: Double,
     val warnings: List<String> = emptyList(),
     val codeNotes: List<String> = emptyList(),
-    val calculationSteps: List<com.civileg.app.domain.entities.CalculationStep> = emptyList()
+    val calculationSteps: List<com.civileg.app.domain.entities.CalculationStep> = emptyList(),
+    /** Never true yet: capacity/group/settlement/lateral/negative-friction rows are geotechnical estimates and the cap/pile-steel rules are not verified clause by clause. */
+    val codeAcceptanceComplete: Boolean = false,
+    val qualificationNotes: List<String> = PileQualification.NOTES
 )
+
+enum class PileStatus { CHECKS_FAILED, PRELIMINARY, ACCEPTED }
+
+object PileQualification {
+    val NOTES: List<String> = listOf(
+        "PRELIMINARY: single-pile capacity (alpha/beta, Nc, Nq), group efficiency, settlement, lateral (Broms) and negative skin friction are geotechnical estimates from engine formulas. They are not checks taken from the selected concrete code. A geotechnical report and an independent check are required.",
+        "Pile cap and pile reinforcement rules are not verified clause by clause against the selected edition. The result is not a code-accepted pile design."
+    )
+
+    /** A failed estimate stays failed. Passing estimates are only ever PRELIMINARY until acceptance is complete. */
+    fun status(isSafe: Boolean, codeAcceptanceComplete: Boolean): PileStatus = when {
+        !isSafe -> PileStatus.CHECKS_FAILED
+        !codeAcceptanceComplete -> PileStatus.PRELIMINARY
+        else -> PileStatus.ACCEPTED
+    }
+}
 
 /**
  * Reinforcement design result for a single pile.

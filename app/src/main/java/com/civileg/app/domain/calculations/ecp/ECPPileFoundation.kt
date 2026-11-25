@@ -19,7 +19,7 @@ import kotlin.math.*
  *  - Pile structural reinforcement design
  *
  * References:
- *  - ECP 203 Clause 7-2 (Pile Foundations)
+ *  - ECP 203 (clause unverified) (Pile Foundations)
  *  - ECP 203 Clause 4-3-2 (Punching Shear)
  *  - Meyerhof (1951, 1956) bearing capacity & settlement
  *  - Broms (1964) lateral load analysis
@@ -278,7 +278,7 @@ class ECPPileFoundation : PileFoundationDesign {
         // For layered soil, integrate cu(z) over length
         val shaftResistance = alpha * cu * perimeter * L  // kN
 
-        // End bearing: 9*cu for deep foundations (ECP 203/7-2)
+        // End bearing: 9*cu for deep foundations (ECP 203 (clause unverified))
         val embedmentFactor = kotlin.math.min(input.embedmentDepth / (5.0 * D), 1.0)
         val endBearing = Nc * cu * area * embedmentFactor  // kN
 
@@ -287,7 +287,7 @@ class ECPPileFoundation : PileFoundationDesign {
 
     /**
      * Sand capacity: beta-method for shaft, Nq*sigma_v' for end bearing.
-     * Uses effective stress analysis per ECP 203/7-2.
+     * Uses effective stress analysis per ECP 203 (clause unverified).
      */
     private fun calculateSandCapacity(
         input: PileInput,
@@ -347,7 +347,7 @@ class ECPPileFoundation : PileFoundationDesign {
 
     /**
      * Rock capacity: based on rock quality and embedment.
-     * Uses simplified approach per ECP 203/7-2.
+     * Uses simplified approach per ECP 203 (clause unverified).
      */
     private fun calculateRockCapacity(
         input: PileInput,
@@ -368,7 +368,7 @@ class ECPPileFoundation : PileFoundationDesign {
     }
 
     // ══════════════════════════════════════════════════════════
-    // PILE CAP DESIGN (ECP 203 Clause 7-2-4)
+    // PILE CAP DESIGN (ECP 203 (clause unverified))
     // ══════════════════════════════════════════════════════════
 
     override fun designPileCap(input: PileCapInput): PileCapResult {
@@ -402,7 +402,7 @@ class ECPPileFoundation : PileFoundationDesign {
             else -> ((nCols - 1) * spacing + Dp + 2 * edgeDist)
         }.let { ceil(it / 50.0) * 50.0 }
 
-        // 2. Cap thickness: max(spacing/3, 400mm) per ECP 203/7-2-4
+        // 2. Cap thickness: max(spacing/3, 400mm) per ECP 203 (clause unverified)
         val minThickness = kotlin.math.max(spacing / 3.0, 400.0)
         val capThickness = ceil(minThickness / 50.0) * 50.0
         val d = capThickness - input.cover - 10.0  // effective depth
@@ -900,7 +900,7 @@ class ECPPileFoundation : PileFoundationDesign {
             input.gammaSoil * wtDepth + gammaSub * (midDepth - wtDepth)
         }
 
-        // Negative skin friction per ECP 203/7-2-3
+        // Negative skin friction per ECP 203 (clause unverified)
         // K * sigma_v' * tan(delta)
         // K = 0.5 to 1.0 (use 0.7 typical for bored, 1.0 for driven)
         val K = when (input.pileType) {
@@ -988,7 +988,7 @@ class ECPPileFoundation : PileFoundationDesign {
         val nBars = kotlin.math.max(6, ceil(asFinal / barArea).toInt())
         val asProvided = nBars * barArea
 
-        // Ties/spirals (ECP 203 Clause 7-2-3-2)
+        // Ties/spirals (ECP 203 (clause unverified))
         // Ties diameter >= max(6mm, longitudinal/4)
         val tiesDia = kotlin.math.max(8.0, barDia / 4).toInt().coerceAtLeast(8)
         // Ties spacing <= min(16*barDia, 48*tiesDia, 0.75*D)
