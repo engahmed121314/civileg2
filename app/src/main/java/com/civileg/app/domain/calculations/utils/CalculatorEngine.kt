@@ -1099,8 +1099,9 @@ class CalculatorEngine @Inject constructor(
                 spacing = tieSpacing,
                 weightKg = tieWeight
             ),
-            safetyChecks = listOf(
-                DesignSafetyCheck(if (axialAssessed) "Axial Capacity" else "Axial Capacity (not assessed)", puDesign, axialCapacity, "kN", axialSafe),
+            safetyChecks = listOfNotNull(
+                // No row at all when not assessed: a fabricated pass/fail row would be a verdict.
+                if (axialAssessed) DesignSafetyCheck("Axial Capacity", puDesign, axialCapacity, "kN", axialSafe) else null,
                 DesignSafetyCheck("Biaxial Moment", biaxialUtilization * 100.0, 100.0, "%", momentSafe),
                 DesignSafetyCheck("Reinforcement Ratio", reinforcementPercent,
                     engine.getMaxReinforcementRatio() * 100.0, "%", ratioSafe),

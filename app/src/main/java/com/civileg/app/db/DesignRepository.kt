@@ -73,6 +73,8 @@ class DesignRepository @Inject constructor(
             put("load", result.pu)
             put("width", result.width)
             put("depth", result.depth)
+            put("axialAssessed", result.axialAssessed)
+            if (result.axialAssessed) put("axialCapacity", result.axialCapacity)
         }.toString()
         saveGeneralDesign(projectId, DesignType.COLUMN, name, result.confirmedSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
         

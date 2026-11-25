@@ -435,6 +435,9 @@ class ColumnViewModel @Inject constructor(
                         resultsMap["Tie Distribution Zone ${i+1}"] = "${zone.name}: ${zone.description} [${String.format("%.1f", (zone.endLocation-zone.startLocation)/1000.0)}m]"
                     }
                 }
+                if (!res.axialAssessed) {
+                    resultsMap["Axial capacity status"] = "NOT ASSESSED: eccentricity is outside the ECP 203-2020 Eq. 4-12-a domain. No axial result and no safe conclusion is given."
+                }
                 if (!res.assessmentComplete) {
                     resultsMap["Assessment status"] = "PRELIMINARY - NOT FULLY CHECKED: moment capacity is not validated for the actual bar positions. No safe conclusion is given."
                 }
