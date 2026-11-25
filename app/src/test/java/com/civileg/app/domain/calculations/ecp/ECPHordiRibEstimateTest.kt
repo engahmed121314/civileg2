@@ -18,8 +18,8 @@ class ECPHordiRibEstimateTest {
 
     private fun design(
         t: Double = 250.0, topping: Double = 50.0, moment: Double, shear: Double = 5.0,
-        bondClass: com.civileg.app.domain.calculations.base.BarBondClass =
-            com.civileg.app.domain.calculations.base.BarBondClass.UNKNOWN
+        bondClass: com.civileg.app.domain.entities.BarBondClass =
+            com.civileg.app.domain.entities.BarBondClass.UNKNOWN
     ) =
         ECPHordiSlabDesign().designHordiSlab(
             fcu = 30.0, fy = 400.0, ribWidth = 150.0, ribSpacing = 600.0,
@@ -36,13 +36,16 @@ class ECPHordiRibEstimateTest {
         // bars: ceil(144.86/113.097) = 2 → 226.19 mm²
         // Vc = 0.16·√20·150·211/1000 = 22.65 kN (concrete-only, eligible: 250 ≤ 250)
         val r = design(moment = 10.0,
-            bondClass = com.civileg.app.domain.calculations.base.BarBondClass.DEFORMED)
+            bondClass = com.civileg.app.domain.entities.BarBondClass.DEFORMED)
         assertEquals(144.86, r.requiredReinforcement, 0.5)
         assertEquals(226.19, r.providedReinforcement, 0.01)
         assertEquals(22.649, r.shearCapacity, 0.01)
         assertEquals(12.0, r.barDiameter, 0.0)
         assertTrue(r.isSafe)
         assertTrue(r.bondClassAssessed)
+        assertEquals(com.civileg.app.domain.entities.BarBondClass.DEFORMED, r.barBondClass)
+        assertFalse(r.serviceabilityAssessed)
+        assertFalse(r.engineeringAcceptance) // serviceability unassessed: never accepted
         assertEquals(144.86 / 226.19, r.utilizationRatio, 0.01)
     }
 
@@ -125,6 +128,8 @@ class ECPHordiRibEstimateTest {
         assertEquals(113.10, r.providedReinforcement, 0.01)
         assertFalse(r.isSafe)
         assertFalse(r.bondClassAssessed)
+        assertEquals(com.civileg.app.domain.entities.BarBondClass.UNKNOWN, r.barBondClass)
+        assertFalse(r.engineeringAcceptance)
         assertTrue(r.warnings.any { it.contains("cannot be accepted") })
         assertTrue(r.codeNotes.any { it.contains("ESTIMATE, not acceptance") })
     }
@@ -136,11 +141,13 @@ class ECPHordiRibEstimateTest {
             fcu = 30.0, fy = 400.0, ribWidth = 150.0, ribSpacing = 600.0,
             totalThickness = 250.0, toppingThickness = 50.0, span = 6000.0,
             designMoment = 1.0, designShear = 5.0, loadCombination = LoadCombination.DEAD_LIVE,
-            barBondClass = com.civileg.app.domain.calculations.base.BarBondClass.DEFORMED
+            barBondClass = com.civileg.app.domain.entities.BarBondClass.DEFORMED
         )
         assertEquals(67.5, r.requiredReinforcement, 0.5)
         assertTrue(r.isSafe)
         assertTrue(r.bondClassAssessed)
+        assertEquals(com.civileg.app.domain.entities.BarBondClass.DEFORMED, r.barBondClass)
+        assertFalse(r.engineeringAcceptance) // declared bond still not acceptance: serviceability open
         assertTrue(r.codeNotes.any { it.contains("declared by caller") })
         assertFalse(r.codeNotes.any { it.contains("ESTIMATE, not acceptance") })
     }

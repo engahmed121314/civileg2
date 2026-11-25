@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.calculations.InputGuard
-import com.civileg.app.domain.calculations.base.BarBondClass
+import com.civileg.app.domain.entities.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.SlabDesignResult
@@ -202,6 +202,7 @@ class ECPHordiSlabDesign : HordiSlabDesign {
 
         if (!areaSufficient) warnings.add("Adopted main bars provide less than the calculated required steel area")
         codeNotes.add("Estimate scope: positive-moment rectangular-web rib section + concrete-only shear. Anchorage, T-flange credit, negative moment, serviceability and adopted detailing are outside this estimate — see ECP2020JoistCaseReview for declared cases.")
+        codeNotes.add("Deflection/serviceability NOT assessed — explicit absence, not a pass (serviceabilityAssessed=false)")
 
         return SlabDesignResult(
             requiredReinforcement = if (asRequired.isFinite()) asRequired else Double.POSITIVE_INFINITY,
@@ -214,7 +215,9 @@ class ECPHordiSlabDesign : HordiSlabDesign {
             utilizationRatio = utilizationRatio,
             warnings = warnings,
             codeNotes = codeNotes,
-            bondClassAssessed = bondAssessed
+            bondClassAssessed = bondAssessed,
+            barBondClass = barBondClass,
+            serviceabilityAssessed = false
         )
     }
 }

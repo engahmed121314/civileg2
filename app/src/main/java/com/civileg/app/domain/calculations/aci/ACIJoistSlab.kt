@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.calculations.InputGuard
-import com.civileg.app.domain.calculations.base.BarBondClass
+import com.civileg.app.domain.entities.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
@@ -73,7 +73,9 @@ class ACIJoistSlab : HordiSlabDesign {
             isSafe = isSafe,
             utilizationRatio = if (phiVc > 0) designShear / phiVc else 0.0,
             codeNotes = listOf("Effective depth d = h - coverMm - mainBarDiaMm/2 = h - ${(coverMm + mainBarDiaMm / 2.0).toInt()} mm (caller inputs; previously fixed h - 25); linkDiaMm=${linkDiaMm.toInt()} accepted, not used in this effective-depth convention"),
-            bondClassAssessed = false // bar surface/bond not assessed by this engine
+            bondClassAssessed = false, // bar surface/bond not assessed by this engine
+            barBondClass = barBondClass, // caller selection carried for traceability, NOT assessed
+            serviceabilityAssessed = false // no deflection check in this engine
         )
     }
 }

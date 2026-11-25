@@ -69,7 +69,7 @@ fun HordiSlabScreen(
     var loadCombination by remember { mutableStateOf(LoadCombination.DEAD_LIVE) }
     var loadCombinationExpanded by remember { mutableStateOf(false) }
     var cover by remember { mutableStateOf("") }
-    var barBondClass by remember { mutableStateOf(com.civileg.app.domain.calculations.base.BarBondClass.UNKNOWN) }
+    var barBondClass by remember { mutableStateOf(com.civileg.app.domain.entities.BarBondClass.UNKNOWN) }
     var bondClassExpanded by remember { mutableStateOf(false) }
     var detailDraft by remember { mutableStateOf(com.civileg.app.domain.calculations.utils.JoistDetailDraft()) }
 
@@ -220,9 +220,9 @@ fun HordiSlabScreen(
                     ) {
                         OutlinedTextField(
                             value = when (barBondClass) {
-                                com.civileg.app.domain.calculations.base.BarBondClass.DEFORMED -> "Deformed (ribbed) bars"
-                                com.civileg.app.domain.calculations.base.BarBondClass.PLAIN -> "Plain (smooth) bars"
-                                com.civileg.app.domain.calculations.base.BarBondClass.UNKNOWN -> "Unknown — estimate only"
+                                com.civileg.app.domain.entities.BarBondClass.DEFORMED -> "Deformed (ribbed) bars"
+                                com.civileg.app.domain.entities.BarBondClass.PLAIN -> "Plain (smooth) bars"
+                                com.civileg.app.domain.entities.BarBondClass.UNKNOWN -> "Unknown — estimate only"
                             },
                             onValueChange = {},
                             readOnly = true,
@@ -236,13 +236,13 @@ fun HordiSlabScreen(
                             expanded = bondClassExpanded,
                             onDismissRequest = { bondClassExpanded = false }
                         ) {
-                            com.civileg.app.domain.calculations.base.BarBondClass.values().forEach { option ->
+                            com.civileg.app.domain.entities.BarBondClass.values().forEach { option ->
                                 DropdownMenuItem(
                                     text = {
                                         AppText(when (option) {
-                                            com.civileg.app.domain.calculations.base.BarBondClass.DEFORMED -> "Deformed (ribbed) bars"
-                                            com.civileg.app.domain.calculations.base.BarBondClass.PLAIN -> "Plain (smooth) bars"
-                                            com.civileg.app.domain.calculations.base.BarBondClass.UNKNOWN -> "Unknown — estimate only"
+                                            com.civileg.app.domain.entities.BarBondClass.DEFORMED -> "Deformed (ribbed) bars"
+                                            com.civileg.app.domain.entities.BarBondClass.PLAIN -> "Plain (smooth) bars"
+                                            com.civileg.app.domain.entities.BarBondClass.UNKNOWN -> "Unknown — estimate only"
                                         }, fontSize = 13.sp)
                                     },
                                     onClick = {
@@ -438,7 +438,9 @@ fun HordiSlabScreen(
                                     !res.bondClassAssessed -> "ESTIMATE ONLY - bar surface undeclared, cannot be accepted"
                                     res.isSafe -> "PASS - method not verified"
                                     else -> "FAIL"
-                                }
+                                },
+                                "Serviceability (deflection)" to if (res.serviceabilityAssessed) "assessed" else "NOT ASSESSED - no deflection check",
+                                "Engineering acceptance" to if (res.engineeringAcceptance) "ACCEPTED" else "NO - qualification incomplete"
                             ),
                             icon = Icons.Default.Shield,
                             accentColor = Color(0xFFE53935)

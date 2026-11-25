@@ -130,8 +130,25 @@ data class SlabDesignResult(
      * when every numeric check passed. Default FALSE (fail-closed): an engine
      * that omits this field has NOT assessed bond class and must not read as
      * assessed; engines that evaluate it set the value explicitly. */
-    val bondClassAssessed: Boolean = false
-) : Parcelable
+    val bondClassAssessed: Boolean = false,
+    /** The caller's selected bar surface/bond class, carried for traceability
+     * through solved inputs, results and persisted outputs. NULL marks results
+     * that predate this contract (legacy payloads); UNKNOWN marks an explicit
+     * non-declaration. A non-null value is the SELECTION, not an assessment:
+     * engines that do not consume it still carry it with assessed=false. */
+    val barBondClass: BarBondClass? = null,
+    /** Deflection/serviceability qualification. FALSE everywhere today: no
+     * hordi engine performs a deflection check. The absence is explicit, not
+     * a silent pass — even with a declared bond class. */
+    val serviceabilityAssessed: Boolean = false
+) : Parcelable {
+    /** Engineering acceptance: the numeric aggregate AND every qualification
+     * dimension. Derived, never stored — it cannot drift from its components
+     * and legacy payloads can never carry it. FALSE for all current results
+     * because serviceability is unassessed. */
+    val engineeringAcceptance: Boolean
+        get() = isSafe && bondClassAssessed && serviceabilityAssessed && barBondClass != null && barBondClass != BarBondClass.UNKNOWN
+}
 
 @Parcelize
 data class AdvancedSlabResult(

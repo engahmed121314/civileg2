@@ -42,6 +42,16 @@ class HordiRoomPersistenceTest {
    assertFalse(oldGeneric.bondClassAssessed);assertFalse(oldDomain.bondClassAssessed)
    // Historical numeric status can remain true. It must not be treated as acceptance.
    assertTrue(oldGeneric.isSafe);assertTrue(oldDomain.isSafe)
+   assertFalse(oldGeneric.engineeringAcceptance);assertFalse(oldDomain.engineeringAcceptance)
+   assertNull(oldGeneric.barBondClass);assertNull(oldDomain.barBondClass)
+   assertFalse(oldGeneric.serviceabilityAssessed);assertFalse(oldDomain.serviceabilityAssessed)
+   // Even an old green numeric status cannot become a green saved Hordi record.
+   val oldHordi=oldGeneric.copy(type=CalculatorEngine.SlabType.HOLLOW_BLOCK)
+   DesignRepository(db.designDao(),db.footingDao(),db.columnDao(),db.slabDao(),db.beamDao(),
+    db.stairDao(),db.retainingWallDao(),db.tankDao(),db.inventoryDao())
+    .saveSlabDesign(projectId,"Legacy Hordi diagnostic",oldHordi)
+   db.close();db=open()
+   assertTrue(db.designDao().getDesignsForProjectList(projectId).all{!it.isSafe})
    val out=File(ctx.filesDir,"drawing-samples/hordi").apply{mkdirs()}
    File(out,"room-persistence.txt").writeText("Actual Room save-close-reopen passed. UNKNOWN material false, warnings/notes preserved. Old Gson fields absent: material assessed false, legacy numeric isSafe true. No construction acceptance or full UI restore proved.\n")
   } finally {db.close();ctx.deleteDatabase(name)}

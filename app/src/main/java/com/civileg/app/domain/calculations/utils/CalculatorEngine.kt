@@ -277,8 +277,22 @@ class CalculatorEngine @Inject constructor(
          * result and its persistence. Default FALSE (fail-closed): old saved
          * results and non-assessing branches read as unassessed, never as
          * qualified. Separate from the numeric flexure/shear checks. */
-        val bondClassAssessed: Boolean = false
-    ) : Parcelable
+        val bondClassAssessed: Boolean = false,
+        /** The caller's selected bar surface/bond class, carried for
+         * traceability. NULL = predates this contract (legacy payload).
+         * A non-null value is the SELECTION, not an assessment. */
+        val barBondClass: com.civileg.app.domain.entities.BarBondClass? = null,
+        /** Deflection/serviceability qualification; FALSE = not assessed
+         * (explicit absence, not a pass), even with a declared bond class. */
+        val serviceabilityAssessed: Boolean = false
+    ) : Parcelable {
+        /** Engineering acceptance: numeric aggregate AND every qualification
+         * dimension. Derived, never persisted — it cannot drift from its
+         * components and legacy payloads can never carry it. FALSE for all
+         * current results because serviceability is unassessed. */
+        val engineeringAcceptance: Boolean
+            get() = isSafe && bondClassAssessed && serviceabilityAssessed && barBondClass != null && barBondClass != com.civileg.app.domain.entities.BarBondClass.UNKNOWN
+    }
 
     @Parcelize
     data class StairResult(
@@ -1576,7 +1590,9 @@ class CalculatorEngine @Inject constructor(
                     safetyChecks = listOf(DesignSafetyCheck("Engine aggregate verdict (flexure + shear + adoption + material)", res.requiredReinforcement, res.providedReinforcement, "mm²", res.isSafe)),
                     warnings = res.warnings,
                     codeNotes = res.codeNotes,
-                    bondClassAssessed = res.bondClassAssessed
+                    bondClassAssessed = res.bondClassAssessed,
+                    barBondClass = res.barBondClass,
+                    serviceabilityAssessed = res.serviceabilityAssessed
                 )
             }
 

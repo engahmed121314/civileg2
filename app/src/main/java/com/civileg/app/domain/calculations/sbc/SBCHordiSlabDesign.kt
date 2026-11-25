@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
-import com.civileg.app.domain.calculations.base.BarBondClass
+import com.civileg.app.domain.entities.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
@@ -227,7 +227,9 @@ class SBCHordiSlabDesign : HordiSlabDesign {
             utilizationRatio = if (RnBal > 0) Rn / RnBal else 2.0,
             warnings = warnings,
             codeNotes = codeNotes,
-            bondClassAssessed = false // bar surface/bond not assessed by this engine
+            bondClassAssessed = false, // bar surface/bond not assessed by this engine
+            barBondClass = barBondClass, // caller selection carried for traceability, NOT assessed
+            serviceabilityAssessed = false // no deflection check in this engine
         )
     }
 }

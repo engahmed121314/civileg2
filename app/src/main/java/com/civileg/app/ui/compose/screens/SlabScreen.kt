@@ -494,6 +494,48 @@ fun SlabScreen(
                                             color = if (res.bondClassAssessed) Color(0xFF2E7D32) else Color.Red
                                         )
                                     }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            if (res.serviceabilityAssessed) Icons.Default.CheckCircle else Icons.Default.Error,
+                                            contentDescription = null,
+                                            tint = if (res.serviceabilityAssessed) Color(0xFF2E7D32) else Color.Red,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        AppText("Serviceability (deflection)", modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        AppText(
+                                            if (res.serviceabilityAssessed) "assessed" else "NOT ASSESSED - no deflection check",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (res.serviceabilityAssessed) Color(0xFF2E7D32) else Color.Red
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            if (res.engineeringAcceptance) Icons.Default.CheckCircle else Icons.Default.Error,
+                                            contentDescription = null,
+                                            tint = if (res.engineeringAcceptance) Color(0xFF2E7D32) else Color.Red,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        AppText("Engineering acceptance", modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        AppText(
+                                            if (res.engineeringAcceptance) "ACCEPTED" else "NO - qualification incomplete",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (res.engineeringAcceptance) Color(0xFF2E7D32) else Color.Red
+                                        )
+                                    }
                                 }
                                 res.safetyChecks.forEach { check ->
                                     Row(
@@ -868,16 +910,16 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            if (res.isSafe) Icons.Default.CheckCircle else Icons.Default.Warning,
+                            if (res.type != CalculatorEngine.SlabType.HOLLOW_BLOCK && res.isSafe || res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK && res.engineeringAcceptance) Icons.Default.CheckCircle else Icons.Default.Warning,
                             contentDescription = null,
-                            tint = if (res.isSafe) Color(0xFF2E7D32) else Color.Red,
+                            tint = if (if(res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK) res.engineeringAcceptance else res.isSafe) Color(0xFF2E7D32) else Color.Red,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(4.dp))
                         AppText(
-                            if (res.isSafe) stringResource(R.string.slab_safe) else stringResource(R.string.slab_unsafe),
+                            if(res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK && !res.engineeringAcceptance) "INCOMPLETE - not accepted" else if (res.isSafe) stringResource(R.string.slab_safe) else stringResource(R.string.slab_unsafe),
                             fontWeight = FontWeight.Bold,
-                            color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red
+                            color = if (if(res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK) res.engineeringAcceptance else res.isSafe) Color(0xFF2E7D32) else Color.Red
                         )
                     }
                 }
