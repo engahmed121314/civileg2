@@ -417,37 +417,33 @@ object BeamDesignEnginePart2 {
         InputGuard.positive("span", span)
         InputGuard.positive("d", d)
 
-        // Lengths come from RcDevelopmentLength, transcribed from the primary code texts (see its KDoc).
-        // Bottom bar, straight end, "other cases" spacing/cover for ACI/SBC, lap at the conservative 1.3 factor.
-        val fcPrimeRepoConversion = 0.8 * fcu // repo convention for cylinder strength; not a code value
-        val r = when (code) {
-            DesignCode.ECP -> RcDevelopmentLength.ecpTension(fcu, fy, dia.toDouble())
-            DesignCode.SBC -> RcDevelopmentLength.aciSbcTension(fcPrimeRepoConversion, fy, dia.toDouble(), smallBarLimitMm = 20.0)
-            DesignCode.ACI -> RcDevelopmentLength.aciSbcTension(fcPrimeRepoConversion, fy, dia.toDouble(), smallBarLimitMm = 19.0)
-        }
-        // ECP: fbu of Eq. 4-67. ACI/SBC use no bond-stress form, so 0.0 is reported.
-        val fbd = if (code == DesignCode.ECP) 0.30 * sqrt(fcu / RcDevelopmentLength.ECP_GAMMA_C) else 0.0
-        val LdMin = r.length
+        // ECP only: lengths from RcDevelopmentLength (ECP 203-2020 Eq. 4-66/4-67). Bottom bar (eta = 1.0), straight end,
+        // uncoated, normalweight, not bundled; these are stated in the step. ACI/SBC need cylinder strength fc' and the
+        // app input is not confirmed to be fc', so they are reported as not computed (required = 0.0).
+        val ecp = code == DesignCode.ECP
+        val r = if (ecp) RcDevelopmentLength.ecpTension(fcu, fy, dia.toDouble()) else null
+        val fbd = if (ecp) 0.30 * sqrt(fcu / RcDevelopmentLength.ECP_GAMMA_C) else 0.0
+        val LdMin = r?.length ?: 0.0
         // Available anchorage is not computed. A span/3 stand-in was used before and produced a fake pass/fail.
         val provided = 0.0 // 0.0 = not computed
-        val lapLength = when (code) {
-            DesignCode.ECP -> RcDevelopmentLength.ecpTensionLap(LdMin, null, null)
-            else -> RcDevelopmentLength.aciSbcTensionLap(LdMin, classB = true)
-        }
+        val lapLength = if (ecp) RcDevelopmentLength.ecpTensionLap(LdMin, null, null) else 0.0
 
         val f0 = { v: Double -> String.format("%.0f", v) }
-        val step = CalculationStep(
-            1, "Development & Lap Length (tension, straight bar; available anchorage not evaluated)",
-            codeReference = when (code) {
-                DesignCode.ECP -> "ECP 203-2020 section 4-2-5-1 Eq. 4-66/4-67, Tables 4-7/4-8; lap 4-2-5-4-1"
-                DesignCode.SBC -> "SBC 304-CR-2018 25.4.2, Table 25.4.2.2/25.4.2.4, Table 25.5.2.1"
-                DesignCode.ACI -> "ACI 318M-14 25.4.2, Table 25.4.2.2/25.4.2.4, Table 25.5.2.1"
-            },
+        val step = if (r != null) CalculationStep(
+            1, "Development & Lap Length (tension, straight bottom bar; available anchorage not evaluated)",
+            codeReference = "ECP 203-2020 section 4-2-5-1 Eq. 4-66/4-67, Tables 4-7/4-8; lap 4-2-5-4-1",
             formula = r.basis,
             formulaWithValues = "Ld,formula = ${f0(r.formulaLength)} mm; minimum ${f0(r.minimum)} mm; Ld = ${f0(LdMin)} mm\n" +
-                "Lap = ${f0(lapLength)} mm (conservative case: area ratio / lapped fraction not known)" +
-                if (code != DesignCode.ECP) "\nfc' = 0.8 x fcu = ${f0(fcPrimeRepoConversion)} MPa (repo conversion, not a code value)" else "",
-            result = "Ld = ${f0(LdMin)} mm, Lap = ${f0(lapLength)} mm (bottom bar, no end hook, no coating, normalweight concrete)",
+                "Lap = ${f0(lapLength)} mm (1.3 Ld case: area ratio and lapped fraction not known)",
+            result = "Ld = ${f0(LdMin)} mm, Lap = ${f0(lapLength)} mm (bottom bar, eta 1.0, no end hook, uncoated, normalweight, not bundled)",
+            unit = "mm",
+            status = com.civileg.app.domain.entities.StepStatus.WARNING
+        ) else CalculationStep(
+            1, "Development & Lap Length (not computed; available anchorage not evaluated)",
+            codeReference = "${code.displayName}: not computed, cylinder strength fc' basis not resolved",
+            formula = "Not computed",
+            formulaWithValues = "Not computed",
+            result = "Development and lap lengths not computed for this code",
             unit = "mm",
             status = com.civileg.app.domain.entities.StepStatus.WARNING
         )

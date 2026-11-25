@@ -21,8 +21,13 @@ class BeamAnchorageHonestyTest {
             assertEquals("provided anchorage must not be a span/3 stand-in ($code)", 0.0, r.provided, 0.0)
             assertTrue("step must say anchorage is not evaluated ($code): ${r.step.title}", r.step.title.contains("not evaluated"))
             assertEquals(com.civileg.app.domain.entities.StepStatus.WARNING, r.step.status)
-            assertTrue("code reference must name the edition ($code)", listOf("ECP 203-2020", "SBC 304-CR-2018", "ACI 318M-14").any { r.step.codeReference.contains(it) })
-            assertTrue("required length is at least the 300 mm code minimum ($code)", r.required >= 300.0)
+            if (code == DesignCode.ECP) {
+                assertTrue(r.step.codeReference.contains("ECP 203-2020"))
+                assertTrue("ECP required length is at least the 300 mm minimum", r.required >= 300.0)
+            } else {
+                assertEquals("not computed without a resolved fc' basis ($code)", 0.0, r.required, 0.0)
+                assertTrue(r.step.codeReference.contains("not computed"))
+            }
         }
     }
 }

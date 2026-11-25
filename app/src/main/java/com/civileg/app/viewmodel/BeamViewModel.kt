@@ -58,25 +58,22 @@ class BeamViewModel @Inject constructor(
     val solvedFy: Double get() = lastFy
 
     /**
-     * Development length (mm) of the bottom bar for the drawing bracket, from the primary code formula
-     * (RcDevelopmentLength). Straight bar, no coating, normalweight concrete; ACI/SBC use the repo's fc' = 0.8 fcu
-     * conversion and the Table 25.4.2.2 "other cases" row. This is a formula length, not a checked anchorage.
+     * Development length (mm) of the bottom bar for the drawing bracket. ECP only: Eq. 4-66/4-67 for a straight
+     * deformed bottom bar (eta = 1.0, alpha = 1.0, beta = 0.75), no coating, normalweight concrete, not bundled.
+     * Returns 0.0 ("not computed") for SBC/ACI: their formulas need the cylinder strength fc' and the app input is
+     * not confirmed to be fc' (the repo's 0.8 x fcu conversion is not from either code).
      */
-    fun drawingDevelopmentLengthMm(code: com.civileg.app.domain.entities.DesignCode, dbMm: Double): Double = when (code) {
-        com.civileg.app.domain.entities.DesignCode.ECP ->
-            com.civileg.app.domain.calculations.beam.RcDevelopmentLength.ecpTension(lastFcu, lastFy, dbMm).length
-        com.civileg.app.domain.entities.DesignCode.SBC ->
-            com.civileg.app.domain.calculations.beam.RcDevelopmentLength.aciSbcTension(0.8 * lastFcu, lastFy, dbMm, 20.0).length
-        com.civileg.app.domain.entities.DesignCode.ACI ->
-            com.civileg.app.domain.calculations.beam.RcDevelopmentLength.aciSbcTension(0.8 * lastFcu, lastFy, dbMm, 19.0).length
-    }
+    fun drawingDevelopmentLengthMm(code: com.civileg.app.domain.entities.DesignCode, dbMm: Double): Double =
+        if (code == com.civileg.app.domain.entities.DesignCode.ECP)
+            com.civileg.app.domain.calculations.beam.RcDevelopmentLength.ecpTension(
+                lastFcu, lastFy, dbMm, topBarWithMoreThan300mmBelow = false
+            ).length
+        else 0.0
 
-    /** Conservative tension lap (1.3 Ld; the area-ratio and lapped-fraction relaxations need data not available here). */
+    /** ECP tension lap at the 1.3 Ld case (As ratio and lapped fraction not available). 0.0 = not computed. */
     fun drawingLapLengthMm(code: com.civileg.app.domain.entities.DesignCode, dbMm: Double): Double {
         val ld = drawingDevelopmentLengthMm(code, dbMm)
-        return if (code == com.civileg.app.domain.entities.DesignCode.ECP)
-            com.civileg.app.domain.calculations.beam.RcDevelopmentLength.ecpTensionLap(ld, null, null)
-        else com.civileg.app.domain.calculations.beam.RcDevelopmentLength.aciSbcTensionLap(ld, classB = true)
+        return if (ld > 0.0) com.civileg.app.domain.calculations.beam.RcDevelopmentLength.ecpTensionLap(ld, null, null) else 0.0
     }
 
     private var lastSupportType: CalculatorEngine.SupportType = CalculatorEngine.SupportType.HINGED_HINGED
