@@ -926,7 +926,7 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
 
                 Box(contentAlignment = Alignment.Center) {
                     val animatedRatio by animateFloatAsState(
-                        targetValue = res.utilizationRatio.toFloat(),
+                        targetValue = com.civileg.app.utils.DesignNumberFormat.progress(res.utilizationRatio),
                         animationSpec = tween(1000), label = ""
                     )
                     CircularProgressIndicator(
@@ -937,7 +937,7 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                     AppText(
-                        "${(res.utilizationRatio * 100).toInt()}%",
+                        com.civileg.app.utils.DesignNumberFormat.percent(res.utilizationRatio),
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp
                     )

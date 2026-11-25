@@ -521,7 +521,7 @@ fun HordiSlabScreen(
                         ResultDataCard(
                             "Legacy engine reinforcement - NOT selected-edition design",
                             listOf(
-                                stringResource(R.string.hordi_slab_required_as) to String.format("%.1f mm²", res.requiredReinforcement),
+                                stringResource(R.string.hordi_slab_required_as) to com.civileg.app.utils.DesignNumberFormat.areaMm2(res.requiredReinforcement),
                                 stringResource(R.string.hordi_slab_provided_as) to String.format("%.1f mm²", res.providedReinforcement),
                                 "Bar Diameter" to String.format("φ%.0f mm", res.barDiameter),
                                 "Bars per rib (review)" to (com.civileg.app.domain.calculations.utils.HordiBarAdoption.adoptedCount(res.providedReinforcement, res.barDiameter)?.toString() ?: "Not resolved"),
@@ -539,7 +539,7 @@ fun HordiSlabScreen(
                             listOf(
                                 "Shear Capacity" to String.format("%.1f kN", res.shearCapacity),
                                 "Min Thickness" to String.format("%.0f mm", res.minThickness),
-                                "Utilization" to String.format("%.1f%%", res.utilizationRatio * 100),
+                                "Utilization" to com.civileg.app.utils.DesignNumberFormat.percent(res.utilizationRatio, 1),
                                 "Engine Check (unverified)" to when {
                                     !res.bondClassAssessed -> "ESTIMATE ONLY - bar surface undeclared, cannot be accepted"
                                     res.isSafe -> "PASS - method not verified"

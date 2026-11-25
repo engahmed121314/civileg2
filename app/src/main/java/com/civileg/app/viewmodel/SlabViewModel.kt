@@ -243,7 +243,7 @@ class SlabViewModel @Inject constructor(
                     "Secondary Reinforcement" to res.reinforcementSecondary.barString,
                     "Min Thickness" to "${String.format("%.0f", res.minThickness)} mm",
                     "Punching Safe" to if (res.punchingSafe) "PASS" else "FAIL",
-                    "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
+                    "Utilization" to com.civileg.app.utils.DesignNumberFormat.percent(res.utilizationRatio),
                     "Concrete Volume" to "${String.format("%.2f", res.concreteVolume)} m³",
                     "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
                 )

@@ -261,13 +261,13 @@ class HordiSlabViewModel @Inject constructor(
                 )
 
                 val resultsMap = mapOf(
-                    "Legacy Engine Required As (unverified)" to "${"%.2f".format(res.requiredReinforcement)} mm²",
+                    "Legacy Engine Required As (unverified)" to com.civileg.app.utils.DesignNumberFormat.areaMm2(res.requiredReinforcement, 2),
                     "Legacy Engine Provided As (unverified)" to "${"%.2f".format(res.providedReinforcement)} mm²",
                     "Bar Diameter" to "${res.barDiameter} mm",
                     "Rib Pitch (not bar spacing)" to "${params.ribSpacing} mm",
                     "Min Thickness" to "${res.minThickness} mm",
                     "Legacy Engine Shear Capacity (unverified)" to "${"%.1f".format(res.shearCapacity)} kN",
-                    "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
+                    "Utilization" to com.civileg.app.utils.DesignNumberFormat.percent(res.utilizationRatio),
                     "Engine Check Flag (unverified)" to if (res.isSafe) "PASS (unverified method)" else "FAIL",
                     "Detailing Status" to com.civileg.app.domain.calculations.utils.HordiReviewTakeoff.LIMITATION,
                     "Engineering Approval" to "NOT ISSUED - selected edition and adopted detailing not verified"
@@ -282,11 +282,11 @@ class HordiSlabViewModel @Inject constructor(
                 val reviewInputRows = mapOf(
                     "Actual Rib Count" to (params.detailCase.actualRibCount?.toString() ?: "Missing"),
                     "Effective Flange Width" to (params.detailCase.effectiveFlangeWidthMm?.let { "$it mm, explicit input, code-width validation pending" } ?: "Missing"),
-                    "Left Support Input" to params.detailCase.leftSupport.toString(),
-                    "Right Support Input" to params.detailCase.rightSupport.toString(),
-                    "Load Decomposition Input" to params.detailCase.loadBasis.toString(),
-                    "Serviceability Input" to params.detailCase.serviceability.toString(),
-                    "Detailing Input" to params.detailCase.detailing.toString(),
+                    "Left Support Input" to (params.detailCase.leftSupport?.toString() ?: "Missing"),
+                    "Right Support Input" to (params.detailCase.rightSupport?.toString() ?: "Missing"),
+                    "Load Decomposition Input" to (params.detailCase.loadBasis?.toString() ?: "Missing"),
+                    "Serviceability Input" to (params.detailCase.serviceability?.toString() ?: "Missing"),
+                    "Detailing Input" to (params.detailCase.detailing?.toString() ?: "Missing"),
                     "Quantity Basis" to if (partialPanelBottom?.schedule != null)
                         "PARTIAL PANEL bottom straight bars with full straight development; concrete separately per periodic 1 m width, NOT same basis"
                         else "If issued: straight bodies over clear span for ONE RIB, no anchorage; concrete separately per periodic 1 m width",

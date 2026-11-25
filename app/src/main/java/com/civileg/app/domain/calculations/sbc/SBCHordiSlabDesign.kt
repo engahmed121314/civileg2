@@ -217,7 +217,9 @@ class SBCHordiSlabDesign : HordiSlabDesign {
 
         // ── Serviceability — Table 9.3.1.1 deemed-to-satisfy l/h (joist per §9.8.1) ──
         val serv = HordiDeemedToSatisfy.sbc(span, totalThickness, fy, supportCondition, loadingApplicability)
-        if (!serv.safe) {
+        if (!serv.evaluated) {
+            codeNotes.add("Deflection/serviceability NOT assessed: ${serv.summary}")
+        } else if (!serv.safe) {
             warnings.add("Deflection deemed-to-satisfy FAILED: ${serv.summary} — increase depth or satisfy the calculated deflection limits of SBC 304 9.3.2")
         } else {
             codeNotes.add("Deflection deemed-to-satisfy PASS: ${serv.summary}")
@@ -242,7 +244,7 @@ class SBCHordiSlabDesign : HordiSlabDesign {
             barSpacing = if (numBars > 1) ribWidth / (numBars - 1) else ribWidth,
             minThickness = totalThickness,
             shearCapacity = Vc,
-            isSafe = discriminant > 0 && isShearSafe && rhoFinal <= rhoBal * 1.5 && serv.safe,
+            isSafe = discriminant > 0 && isShearSafe && rhoFinal <= rhoBal * 1.5 && (!serv.evaluated || serv.safe),
             utilizationRatio = if (RnBal > 0) Rn / RnBal else 2.0,
             warnings = warnings,
             codeNotes = codeNotes,

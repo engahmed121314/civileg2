@@ -745,9 +745,9 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
-    private fun addBoqSection(document: Document, rows: List<BoqRow>, incompleteReview: Boolean = false) {
+    private fun addBoqSection(document: Document, rows: List<BoqRow>, incompleteReview: Boolean = false, sectionNumber: Int = 7) {
         if (rows.isEmpty()) return
-        document.add(sectionTitle("7. Bill of Quantities").setKeepWithNext(true))
+        document.add(sectionTitle("$sectionNumber. Bill of Quantities").setKeepWithNext(true))
         document.add(separator().setKeepWithNext(true))
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(10f, 55f, 15f, 20f))).useAllAvailableWidth()
@@ -941,7 +941,7 @@ object ProfessionalEnglishPdfReporter {
             // Keep the diagnostic capture and quantity table as separate readable pages.
             if(config.includeDiagnosticDrawing && drawingBitmap != null && boqRows.isNotEmpty()) document.add(AreaBreak())
             // 7. Bill of Quantities
-            addBoqSection(document, boqRows, config.incompleteReview)
+            addBoqSection(document, boqRows, config.incompleteReview, if (bbsRows.isEmpty()) 6 else 7)
 
             // 8. Site Photographs (optional)
             addPhotoGallery(document, photos)
