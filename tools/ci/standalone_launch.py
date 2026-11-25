@@ -117,10 +117,14 @@ def frame_block():
     log.append(("frame_open", ok)); time.sleep(3); shot("frame-open"); dump("frame-open")
     log.append(("frame_hint_expand", tap_text(["إظهار تلميح الأداة"], "fr-hint"))); time.sleep(1); shot("frame-hint-open"); dump("frame-hint-open")
     log.append(("frame_hint_collapse", tap_text(["اضغط للإخفاء"], "fr-hint2"))); time.sleep(1); shot("frame-hint-closed")
-    log.append(("frame_solve", tap_text(["تحليل"], "fr-solve", exact=True))); time.sleep(4); shot("frame-solved"); dump("frame-solved")
-    log.append(("frame_results_tab", tap_text(["العرض والنتائج"], "fr-res"))); time.sleep(2); shot("frame-results"); dump("frame-results")
-    for k in range(2):
-        scroll_up(2); shot(f"frame-results-{k}")
+    # Explicit small model (NOT the user's frame): built-in simple portal template, 6 m span, 4 m height, 20 kN/m
+    log.append(("frame_menu", tap_text(["Actions"], "fr-actions"))); time.sleep(1)
+    log.append(("frame_templates", tap_text(["Templates"], "fr-templates"))); time.sleep(1)
+    log.append(("frame_portal", tap_text(["إطار بوابة بسيط"], "fr-portal"))); time.sleep(2); shot("frame-portal"); dump("frame-portal")
+    log.append(("frame_solve", tap_text(["تحليل"], "fr-solve", exact=True))); time.sleep(5); shot("frame-solved"); dump("frame-solved")
+    for t in ("SFD", "AFD", "BMD"):
+        log.append(("frame_diag_" + t, tap_text([t], "fr-diag-" + t, exact=True))); time.sleep(2); shot("frame-diag-" + t)
+    log.append(("frame_hint_expand2", tap_text(["إظهار تلميح الأداة"], "fr-hint3"))); time.sleep(1); shot("frame-portal-hint")
 if os.path.exists("tools/ci/STAIR_ONLY"):
     try:
         stair_block()
