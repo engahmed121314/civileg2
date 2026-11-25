@@ -15,6 +15,9 @@ import com.civileg.app.domain.calculations.base.StairSafetyCheck
 import com.civileg.app.domain.calculations.base.mainSteelStepPass
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.civileg.app.domain.calculations.base.FlexureCardState
+import com.civileg.app.domain.calculations.base.flexureRatioOf
+import com.civileg.app.domain.calculations.base.flexureCardState
 
 /**
  * An unverified table applicability or unverified restraint must never read as a pass, and a row that is not a code
@@ -83,5 +86,54 @@ class StairCheckSemanticsTest {
         val flexBad = flexOk.copy(isSafe = false)
         assertEquals(false, mainSteelStepPass(listOf(flexBad, defl)))
         assertNull(mainSteelStepPass(listOf(defl)))
+    }
+}
+
+class StairFlexureRatioTest {
+    private fun row(name: String, v: Double, l: Double, na: Boolean = false) =
+        com.civileg.app.domain.calculations.base.StairSafetyCheck(name = name, value = v, limit = l, unit = "", isSafe = v <= l && !na, notAssessed = na)
+
+    @Test
+    fun `ratio is the unclamped flexure row value over limit with its basis`() {
+        val aci = flexureRatioOf(listOf(row("Flexure (ρ ≤ ρ_max_tc)", 0.0123, 0.0100)))!!
+        assertEquals(1.23, aci.ratio, 1e-9); assertEquals("rho/rho_max", aci.basis)
+        val ecp = flexureRatioOf(listOf(row("Flexure (K ≤ K_bal)", 0.05, 0.156)))!!
+        assertEquals(0.05 / 0.156, ecp.ratio, 1e-9); assertEquals("K/K_bal", ecp.basis)
+        assertEquals(0.02, flexureRatioOf(listOf(row("Flexure (K ≤ K_bal)", 0.002, 0.1)))!!.ratio, 1e-9)
+    }
+
+    @Test
+    fun `no assessed flexure row or invalid limit gives no ratio, never a fallback`() {
+        val f = ::flexureRatioOf
+        assertNull(f(emptyList()))
+        assertNull(f(listOf(row("2R + G (Comfort)", 600.0, 630.0))))
+        assertNull(f(listOf(row("Flexure (ρ ≤ ρ_max_tc)", 0.01, 0.0))))
+        assertNull(f(listOf(row("Flexure (ρ ≤ ρ_max_tc)", 0.01, 0.02, na = true))))
+        assertNull(f(listOf(row("Flexure (ρ ≤ ρ_max_tc)", Double.NaN, 0.02))))
+    }
+
+    @Test
+    fun `card never reads approved while acceptance is incomplete and is unavailable without a ratio`() {
+        val S = FlexureCardState.values()
+        val c = ::flexureCardState
+        assertEquals(FlexureCardState.UNAVAILABLE, c(null, true))
+        assertEquals(FlexureCardState.UNAVAILABLE, c(null, false))
+        assertEquals(FlexureCardState.PRELIMINARY, c(0.3, false))
+        assertEquals(FlexureCardState.PRELIMINARY, c(0.95, false))
+        assertEquals(FlexureCardState.EXCEEDS_LIMIT, c(1.2, false))
+        assertEquals(FlexureCardState.WITHIN_LIMIT, c(0.3, true))
+        assertEquals(4, S.size)
+    }
+
+    @Test
+    fun `live lanes expose a measured flexure ratio equal to value over limit`() {
+        val inp = StaircaseInput(stairType = StairType.STRAIGHT, span = 3.0, totalRise = 1.8, stairWidth = 1.2, waistThickness = 200.0,
+            fcu = 25.0, fy = 400.0, supportCondition = StairSupportCondition.SIMPLY_SUPPORTED)
+        for ((n, lane) in mapOf("ECP" to ECPStaircase(), "ACI" to ACIStaircase(), "SBC" to SBCStaircase())) {
+            val checks = lane.designStaircase(inp).safetyChecks
+            val r = flexureRatioOf(checks)
+            val row = checks.first { it.name.startsWith("Flexure") }
+            if (r != null) assertEquals(n, row.value / row.limit, r.ratio, 1e-12)
+        }
     }
 }

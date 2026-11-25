@@ -242,7 +242,7 @@ class StairViewModel @Inject constructor(
                         "Concrete Volume" to "${String.format("%.3f", currentResult.concreteVolume)} m³",
                         "Net flight steel only (not final)" to "${String.format("%.1f", currentResult.steelWeight)} kg",
                         "Quantity qualification" to "Final steel/BBS unavailable: excludes anchorage, bends, laps, top and landing steel",
-                        "Flexure ratio rho/rho_max (one check, not an overall utilization)" to "${(currentResult.utilizationRatio * 100).toInt()}%"
+                        "Flexure check ratio (${currentResult.flexureRatioBasis.ifEmpty { "n/a" }}; one check, not an overall utilization)" to (currentResult.flexureRatio?.let { "${String.format("%.0f", it * 100)}%" } ?: "Unavailable (no assessed flexure row)")
                     )
                     val safetyChecks = currentResult.safetyChecks.map { chk ->
                         GenericSafetyCheck(

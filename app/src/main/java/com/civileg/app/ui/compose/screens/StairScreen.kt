@@ -335,15 +335,13 @@ fun StairScreen(
                 
                 if (designUsable) {
                 item {
-                    // The ratio is one flexure check. While code acceptance is incomplete it must not read as an
-                    // approved/ideal section: show the preliminary caution state unless that check itself exceeds 1.0.
-                    val acceptanceIncomplete = !res.codeAcceptanceComplete
-                    val ecoColor = when {
-                        res.utilizationRatio > 1.0 -> Color.Red
-                        acceptanceIncomplete -> Color(0xFFEF6C00)
-                        res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
-                        res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
-                        else -> Color(0xFF2196F3)
+                    // One measured flexure-row ratio (unclamped) or none. Never an approved/ideal reading while acceptance is incomplete.
+                    val cardState = com.civileg.app.domain.calculations.base.flexureCardState(res.flexureRatio, res.codeAcceptanceComplete)
+                    val ecoColor = when (cardState) {
+                        com.civileg.app.domain.calculations.base.FlexureCardState.EXCEEDS_LIMIT -> Color.Red
+                        com.civileg.app.domain.calculations.base.FlexureCardState.PRELIMINARY -> Color(0xFFEF6C00)
+                        com.civileg.app.domain.calculations.base.FlexureCardState.UNAVAILABLE -> Color.Gray
+                        else -> Color(0xFF4CAF50)
                     }
 
                     Card(
@@ -359,25 +357,29 @@ fun StairScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            if (res.utilizationRatio > 1.0) Icons.Default.Dangerous
-                                            else if (acceptanceIncomplete) Icons.Default.Warning
-                                            else Icons.Default.Verified,
+                                            when (cardState) {
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.EXCEEDS_LIMIT -> Icons.Default.Dangerous
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.WITHIN_LIMIT -> Icons.Default.Verified
+                                                else -> Icons.Default.Warning
+                                            },
                                             contentDescription = null,
                                             tint = ecoColor
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         AppText(
-                                            if (res.utilizationRatio > 1.0) stringResource(R.string.tank_design_unsafe)
-                                            else if (acceptanceIncomplete) stringResource(R.string.design_caution)
-                                            else if (res.utilizationRatio > 0.9) stringResource(R.string.design_caution)
-                                            else if (res.utilizationRatio > 0.4) stringResource(R.string.beam_section_ideal)
-                                            else stringResource(R.string.tank_section_large),
+                                            when (cardState) {
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.EXCEEDS_LIMIT -> "Flexure check exceeds its limit"
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.PRELIMINARY -> stringResource(R.string.design_caution)
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.UNAVAILABLE -> "Flexure ratio unavailable"
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.WITHIN_LIMIT -> "Flexure check within its limit"
+                                            },
                                             fontWeight = FontWeight.Bold,
                                             color = ecoColor
                                         )
                                     }
                                     AppText(
-                                        stringResource(R.string.consultant_ratio),
+                                        if (res.flexureRatio == null) "No assessed flexure row: no ratio is shown"
+                                        else "One flexure check (${res.flexureRatioBasis}), not an overall utilization or acceptance",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -385,7 +387,7 @@ fun StairScreen(
 
                                 Box(contentAlignment = Alignment.Center) {
                                     val animatedRatio by animateFloatAsState(
-                                        targetValue = res.utilizationRatio.toFloat(),
+                                        targetValue = (res.flexureRatio ?: 0.0).coerceIn(0.0, 1.0).toFloat(),
                                         animationSpec = tween(1000), label = ""
                                     )
                                     CircularProgressIndicator(
@@ -396,7 +398,7 @@ fun StairScreen(
                                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                     )
                                     AppText(
-                                        "${(res.utilizationRatio * 100).toInt()}%",
+                                        res.flexureRatio?.let { "${(it * 100).toInt()}%" } ?: "n/a",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp
                                     )

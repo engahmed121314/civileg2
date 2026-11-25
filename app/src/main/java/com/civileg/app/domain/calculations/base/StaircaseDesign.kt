@@ -92,6 +92,26 @@ data class StairSafetyCheck(
 /** Main-steel step state: follows the flexure strength row only, never the overall result (which stays not-a-pass while any row is NOT ASSESSED). */
 fun mainSteelStepPass(checks: List<StairSafetyCheck>): Boolean? = checks.firstOrNull { it.name.startsWith("Flexure") }?.isSafe
 
+/** The measured ratio of the flexure strength row (value/limit, unclamped) and what it is. Null when no assessed flexure row exists. */
+data class StairFlexureRatio(val ratio: Double, val basis: String)
+
+/** ACI/SBC flexure row is rho vs rho_max_tc; the ECP row is K vs K_bal. No clamp and no fallback: absent or unassessed means null. */
+fun flexureRatioOf(checks: List<StairSafetyCheck>): StairFlexureRatio? {
+    val row = checks.firstOrNull { it.name.startsWith("Flexure") } ?: return null
+    if (row.notAssessed || !row.value.isFinite() || !row.limit.isFinite() || row.limit <= 0.0 || row.value < 0.0) return null
+    return StairFlexureRatio(row.value / row.limit, if (row.name.contains("K_bal")) "K/K_bal" else "rho/rho_max")
+}
+
+enum class FlexureCardState { UNAVAILABLE, EXCEEDS_LIMIT, PRELIMINARY, WITHIN_LIMIT }
+
+/** Card state: never an approved/ideal reading while code acceptance is incomplete; unavailable when there is no measured ratio. */
+fun flexureCardState(ratio: Double?, acceptanceComplete: Boolean): FlexureCardState = when {
+    ratio == null -> FlexureCardState.UNAVAILABLE
+    ratio > 1.0 -> FlexureCardState.EXCEEDS_LIMIT
+    !acceptanceComplete -> FlexureCardState.PRELIMINARY
+    else -> FlexureCardState.WITHIN_LIMIT
+}
+
 enum class StairCheckKind(val prefix: String) {
     CODE(""),
     /** Geometric limits (IBC 1011.5, comfort rule) taken from documents other than the design code of the lane. */

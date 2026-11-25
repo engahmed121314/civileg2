@@ -13,6 +13,7 @@ import com.civileg.app.domain.calculations.base.StairSupportCondition
 import com.civileg.app.domain.calculations.base.StairAnalysisStatus
 import com.civileg.app.domain.calculations.base.StairCheckKind
 import com.civileg.app.domain.calculations.base.mainSteelStepPass
+import com.civileg.app.domain.calculations.base.flexureRatioOf
 import com.civileg.app.domain.calculations.base.StaircaseInput
 import com.civileg.app.domain.calculations.base.SeismicZone
 import com.civileg.app.domain.calculations.base.SoilType
@@ -344,7 +345,10 @@ class CalculatorEngine @Inject constructor(
         val qualificationNotes: List<String> = emptyList(),
         val quantityReview: StairQuantityReview? = null,
         val barMaterialClassification: String = "UNDECLARED: fy alone does not identify bar surface/grade",
-        val documentaryBasisLabel: String = "Edition verification incomplete"
+        val documentaryBasisLabel: String = "Edition verification incomplete",
+        /** Measured flexure-row ratio (unclamped) or null; utilizationRatio below is a clamped legacy scalar and is not engineering data. */
+        val flexureRatio: Double? = null,
+        val flexureRatioBasis: String = ""
     ) : Parcelable
 
     @Parcelize
@@ -2324,6 +2328,8 @@ class CalculatorEngine @Inject constructor(
                     DesignSafetyCheck(name = it.displayName, value = it.value, limit = it.limit, unit = it.unit, isSafe = it.isSafe, notAssessed = it.notAssessed)
                 },
                 utilizationRatio = utilization,
+                flexureRatio = flexureRatioOf(result.safetyChecks)?.ratio,
+                flexureRatioBasis = flexureRatioOf(result.safetyChecks)?.basis ?: "",
                 mu = result.maxMoment,
                 wu = result.horizontalLoad,
                 span = span,
