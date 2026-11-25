@@ -264,9 +264,7 @@ class StairViewModel @Inject constructor(
                         incompleteReview = !currentResult.codeAcceptanceComplete,
                         includeDiagnosticDrawing = hasCapturedScreenDrawing,
                         calculationSteps = currentResult.calculationSteps,
-                        bbsEntries = runCatching {
-                            BbsGenerator.generateStairBbs("ST1", currentResult, currentResult.stairWidthMm)
-                        }.getOrDefault(emptyList()),
+                        bbsEntries = BbsGenerator.generateStairBbs("ST1", currentResult, currentResult.stairWidthMm),
                         boqRows = BoqEstimator.stairRows(currentResult, currentResult.stairWidthMm / 1000.0, "ST1"),
                         drawingBitmap = drawingBitmap,
                         drawing = buildDxfDrawing(),

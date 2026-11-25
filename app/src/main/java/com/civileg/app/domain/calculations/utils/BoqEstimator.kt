@@ -82,6 +82,9 @@ object BoqEstimator {
         widthM: Double,
         mark: String = "Stair"
     ): List<BoqRow> {
+        require(com.civileg.app.utils.StairResultGate.isDesignUsable(result.analysisStatus)) {
+            "Stair BOQ is not available: the case is not an assessed design (${result.analysisStatus})"
+        }
         val geometry = StairFlightGeometry.from(result.span, result.riser, result.tread)
         val runM = geometry.runMm / 1000.0
         val riseM = geometry.riseMm / 1000.0

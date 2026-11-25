@@ -57,8 +57,44 @@ class StairUnsupportedConsumersTest {
         CalculationValidator.validateStair(res)
         com.civileg.app.ui.compose.components.drawings.stairDrawingSummary(res)
         com.civileg.app.domain.calculations.utils.StairFlightGeometry.from(res.span, res.riser, res.tread)
-        // BBS and BOQ builders reject a zero-thickness result by design (InputGuard). They are only reachable
-        // behind StairResultGate.isDesignUsable, so the contract here is: the gate is closed for this result.
+        // The BBS and BOQ builders reject an unsupported case explicitly (deliberate contract, see below).
         assertTrue(!StairResultGate.isDesignUsable(res.analysisStatus))
+    }
+
+    private fun unsupported() = engine.designStaircase(
+        type = CalculatorEngine.StairType.CANTILEVER, span = 4.0, riser = 150.0, tread = 300.0,
+        deadLoad = 5.0, liveLoad = 4.0, fcu = 25.0, fy = 360.0,
+        preferredDiameter = 12, code = DesignCode.ECP
+    )
+
+    @Test
+    fun `BBS builder rejects an unsupported case with an explicit message`() {
+        val e = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            BbsGenerator.generateStairBbs(mark = "ST1", result = unsupported(), stairWidthMm = 1200.0)
+        }
+        assertTrue(e.message.orEmpty().contains("not an assessed design"))
+    }
+
+    @Test
+    fun `BOQ builder rejects an unsupported case with an explicit message`() {
+        val e = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            BoqEstimator.stairRows(unsupported(), 1.2, "ST1")
+        }
+        assertTrue(e.message.orEmpty().contains("not an assessed design"))
+    }
+
+    @Test
+    fun `save never reaches the repository for an unsupported case`() {
+        val repo = mockk<com.civileg.app.db.DesignRepository>(relaxed = true)
+        val vm = com.civileg.app.viewmodel.StairViewModel(repo, engine)
+        vm.saveStair(1L, "x", unsupported())
+        io.mockk.coVerify(exactly = 0) { repo.saveStairDesign(any(), any(), any()) }
+    }
+
+    @Test
+    fun `supported single flight still builds BBS and BOQ`() {
+        val ok = design(CalculatorEngine.StairType.SINGLE_FLIGHT)
+        BbsGenerator.generateStairBbs(mark = "ST1", result = ok, stairWidthMm = 1200.0)
+        assertTrue(BoqEstimator.stairRows(ok, 1.2, "ST1").isNotEmpty())
     }
 }

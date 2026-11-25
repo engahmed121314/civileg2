@@ -245,6 +245,9 @@ object BbsGenerator {
         stairWidthMm: Double,
         coverMm: Double = 25.0
     ): List<BbsEntry> {
+        require(com.civileg.app.utils.StairResultGate.isDesignUsable(result.analysisStatus)) {
+            "Stair BBS is not available: the case is not an assessed design (${result.analysisStatus})"
+        }
         // A net flight review has no approved cutting geometry. Never convert it
         // into straight bars with invented hooks/tails or a final fabrication BBS.
         if (result.quantityReview?.fabricationScheduleAvailable == false) return emptyList()
