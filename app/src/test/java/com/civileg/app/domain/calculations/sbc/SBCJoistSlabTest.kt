@@ -33,9 +33,16 @@ class SBCJoistSlabTest {
         ribSpacing: Double = 600.0,
         totalThickness: Double = 250.0,
         toppingThickness: Double = 60.0,
-        span: Double = 6.0,
+        // default 3.0 m (was 6.0): l/h = 3000/250 = 12 <= 16 (Table 9.3.1.1 SS,
+        // fy=420 factor 1.0) so characterization tests stay on the passing side;
+        // beff is min(ribSpacing, span*250+bw) and unchanged for span >= 1.8 m.
+        span: Double = 3.0,
         designMoment: Double = 45.0,
-        designShear: Double = 25.0
+        designShear: Double = 25.0,
+        supportCondition: com.civileg.app.domain.calculations.base.SlabSupportCondition =
+            com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED,
+        loadingApplicability: com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability =
+            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS
     ) = SBCJoistSlab().designHordiSlab(
         fcu = fcu,
         fy = fy,
@@ -46,7 +53,9 @@ class SBCJoistSlabTest {
         span = span,
         designMoment = designMoment,
         designShear = designShear,
-        loadCombination = LoadCombination.DEAD_LIVE
+        loadCombination = LoadCombination.DEAD_LIVE,
+        supportCondition = supportCondition,
+        loadingApplicability = loadingApplicability
     )
 
     private fun expectGuard(name: String, block: () -> Unit) {
@@ -220,6 +229,43 @@ class SBCJoistSlabTest {
 
         val longSpan = design(span = 6.0)
         assertTrue(longSpan.codeNotes.any { it.contains("beff=600 mm") })
+    }
+
+    @Test
+    fun `Table 9-3-1-1 deemed-to-satisfy failure gates isSafe`() {
+        // l/h = 6000/250 = 24 > 16 (simply supported, fy=420) -> fail
+        val r = design(span = 6.0)
+        assertTrue(r.serviceabilityAssessed)
+        assertFalse(r.isSafe)
+        assertTrue(r.warnings.any { it.contains("Table 9.3.1.1") })
+        // both ends continuous: limit 21; l/h = 4000/250 = 16 <= 21 -> pass
+        val cont = design(span = 4.0,
+            supportCondition = com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS)
+        assertTrue(cont.serviceabilityAssessed)
+        assertTrue(cont.warnings.none { it.contains("Table 9.3.1.1") })
+    }
+
+    @Test
+    fun `ACI deemed-to-satisfy applies Table 9-3-1-1 with own citation and gate`() {
+        val aci = ACIJoistSlab()
+        val fail = aci.designHordiSlab(
+            fcu = 30.0, fy = 420.0, ribWidth = 150.0, ribSpacing = 600.0,
+            totalThickness = 250.0, toppingThickness = 60.0, span = 6000.0,
+            designMoment = 45.0, designShear = 10.0, loadCombination = LoadCombination.DEAD_LIVE,
+            supportCondition = com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED,
+            loadingApplicability = com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS
+        )
+        assertTrue(fail.serviceabilityAssessed)
+        assertFalse(fail.isSafe)
+        assertTrue(fail.warnings.any { it.contains("ACI 318M-14 Table 9.3.1.1") })
+        val unselected = aci.designHordiSlab(
+            fcu = 30.0, fy = 420.0, ribWidth = 150.0, ribSpacing = 600.0,
+            totalThickness = 250.0, toppingThickness = 60.0, span = 6000.0,
+            designMoment = 45.0, designShear = 10.0, loadCombination = LoadCombination.DEAD_LIVE,
+            supportCondition = com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED,
+            loadingApplicability = com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS
+        )
+        assertFalse(unselected.serviceabilityAssessed)
     }
 
     @Test

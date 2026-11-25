@@ -71,6 +71,15 @@ fun HordiSlabScreen(
     var cover by remember { mutableStateOf("") }
     var barBondClass by remember { mutableStateOf(com.civileg.app.domain.entities.BarBondClass.UNKNOWN) }
     var bondClassExpanded by remember { mutableStateOf(false) }
+    // UNSPECIFIED: no support system presumed (simply-supported would be
+    // UNconservative against a cantilever); the deemed deflection check does
+    // not run until the user selects the actual condition.
+    var supportCondition by remember { mutableStateOf(com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED) }
+    var supportExpanded by remember { mutableStateOf(false) }
+    // UNDECLARED: the deemed check also requires the user's declaration that
+    // loading is ordinary and no deflection-sensitive elements are supported.
+    var loadingApplicability by remember { mutableStateOf(com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED) }
+    var loadingExpanded by remember { mutableStateOf(false) }
     var detailDraft by remember { mutableStateOf(com.civileg.app.domain.calculations.utils.JoistDetailDraft()) }
 
     val result by viewModel.result.observeAsState()
@@ -256,6 +265,100 @@ fun HordiSlabScreen(
                     }
                 }
 
+                // Support/continuity condition — drives the deemed-to-satisfy
+                // deflection check (ECP Table 4-10 / SBC Table 9.3.1.1).
+                item {
+                    ExposedDropdownMenuBox(
+                        expanded = supportExpanded,
+                        onExpandedChange = { supportExpanded = !supportExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = when (supportCondition) {
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED -> "Not specified - deflection NOT assessed"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED -> "Simply supported"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.ONE_END_CONTINUOUS -> "One end continuous"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS -> "Both ends continuous"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.CANTILEVER -> "Cantilever"
+                            },
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { AppText("Support Condition (deflection check)", fontSize = 12.sp) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = supportExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            shape = PremiumDesignSystem.InputShape,
+                            singleLine = true
+                        )
+                        ExposedDropdownMenu(
+                            expanded = supportExpanded,
+                            onDismissRequest = { supportExpanded = false }
+                        ) {
+                            com.civileg.app.domain.calculations.base.SlabSupportCondition.values().forEach { option ->
+                                DropdownMenuItem(
+                                    text = {
+                                        AppText(when (option) {
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED -> "Not specified - deflection NOT assessed"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED -> "Simply supported"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.ONE_END_CONTINUOUS -> "One end continuous"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS -> "Both ends continuous"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.CANTILEVER -> "Cantilever"
+                                        }, fontSize = 13.sp)
+                                    },
+                                    onClick = {
+                                        viewModel.clearResult()
+                                        supportCondition = option
+                                        supportExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Loading/deflection-sensitivity declaration — Table 4-10 notes
+                // (ج/د) / SBC 9.3.1.1 scope gate the deemed deflection check.
+                item {
+                    ExposedDropdownMenuBox(
+                        expanded = loadingExpanded,
+                        onExpandedChange = { loadingExpanded = !loadingExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = when (loadingApplicability) {
+                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED -> "Not declared - deflection NOT assessed"
+                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS -> "Ordinary loading, no damage-sensitive elements"
+                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.SENSITIVE_OR_IRREGULAR -> "Sensitive/irregular - detailed calc required"
+                            },
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { AppText("Loading / Supported Elements (deflection check)", fontSize = 12.sp) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = loadingExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            shape = PremiumDesignSystem.InputShape,
+                            singleLine = true
+                        )
+                        ExposedDropdownMenu(
+                            expanded = loadingExpanded,
+                            onDismissRequest = { loadingExpanded = false }
+                        ) {
+                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.values().forEach { option ->
+                                DropdownMenuItem(
+                                    text = {
+                                        AppText(when (option) {
+                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED -> "Not declared - deflection NOT assessed"
+                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS -> "Ordinary loading, no damage-sensitive elements"
+                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.SENSITIVE_OR_IRREGULAR -> "Sensitive/irregular - detailed calc required"
+                                        }, fontSize = 13.sp)
+                                    },
+                                    onClick = {
+                                        viewModel.clearResult()
+                                        loadingApplicability = option
+                                        loadingExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Load Combination Dropdown
                 item {
                     ExposedDropdownMenuBox(
@@ -316,6 +419,8 @@ fun HordiSlabScreen(
                                 designCode = designCode,
                                 coverMm = cover.toDoubleOrNull() ?: Double.NaN,
                                 barBondClass = barBondClass,
+                                supportCondition = supportCondition,
+                                loadingApplicability = loadingApplicability,
                                 detailCase = detailDraft.toCase(
                                     span.toDoubleOrNull() ?: Double.NaN,
                                     designMoment.toDoubleOrNull() ?: Double.NaN,
