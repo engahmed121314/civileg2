@@ -911,6 +911,8 @@ class CorrectedEquationsTest {
 
     @Test
     fun beamDesignEnginePart2FbdECP() {
+        // ECP 203-2020 Eq. 4-66/4-67 (changed from the earlier 0.6*sqrt(fcu) and 350 mm values, which had no
+        // primary-source basis): fbu = 0.30*sqrt(fcu/1.5); Ld = 0.75*(fy/1.15)/(4*fbu)*phi, min max(40 phi, 300).
         val fcu = 25.0
         val fy = 360.0
         val dia = 16
@@ -920,14 +922,12 @@ class CorrectedEquationsTest {
             code = DesignCode.ECP, span = 6.0, d = 500.0
         )
 
-        val expectedFbd = 0.6 * sqrt(fcu) // 3.0 MPa
-        assertEquals("fbd = 0.6√fcu", expectedFbd, result.fbd, 0.01)
+        val expectedFbu = 0.30 * sqrt(fcu / 1.5) // 1.2247 MPa
+        assertEquals("fbu = 0.30*sqrt(fcu/gammaC)", expectedFbu, result.fbd, 0.001)
 
-        // Ld = (fy/γs × db) / (4 × fbd) = (360/1.15 × 16) / (4 × 3.0) = 417.4 mm
-        val fs = fy / 1.15
-        val expectedLd = (fs * dia.toDouble()) / (4.0 * expectedFbd)
-        val expectedLdMin = max(expectedLd, 350.0)
-        assertEquals("Development length (min Ld or 350)", expectedLdMin, result.required, 1.0)
+        val expectedLd = 0.75 * (fy / 1.15) / (4.0 * expectedFbu) * dia // = 0.75*313.04/4.899*16 = 766.8 mm
+        val expectedLdMin = max(expectedLd, max(40.0 * dia, 300.0))
+        assertEquals("Development length (Eq. 4-66, min 40 phi / 300 mm)", expectedLdMin, result.required, 1.0)
     }
 
     // =====================================================================

@@ -433,19 +433,8 @@ fun BeamScreen(
                                 stirrupDia = res.stirrups.diameter.toDouble(),
                                 stirrupSpacing = res.stirrups.spacing.toDouble(),
                                 cover = 50.0,
-                                developmentLength = {
-                                    val fcuVal = viewModel.solvedFcu
-                                    val fyVal = viewModel.solvedFy
-                                    val db = res.reinforcementBottom.diameter.toDouble()
-                                    (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
-                                }(),
-                                lapLength = {
-                                    val fcuVal = viewModel.solvedFcu
-                                    val fyVal = viewModel.solvedFy
-                                    val db = res.reinforcementBottom.diameter.toDouble()
-                                    val ld = (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
-                                    1.3 * ld
-                                }(),
+                                developmentLength = viewModel.drawingDevelopmentLengthMm(res.code, res.reinforcementBottom.diameter.toDouble()),
+                                lapLength = viewModel.drawingLapLengthMm(res.code, res.reinforcementBottom.diameter.toDouble()),
                                 isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
                                 supportType = res.supportType,
                                 hasTopSteel = res.reinforcementTop.numBars > 0,
@@ -508,19 +497,8 @@ fun BeamScreen(
                         stirrupDia = res.stirrups.diameter.toDouble(),
                         stirrupSpacing = res.stirrups.spacing.toDouble(),
                         cover = 50.0,
-                        developmentLength = {
-                            val fcuVal = viewModel.solvedFcu
-                            val fyVal = viewModel.solvedFy
-                            val db = res.reinforcementBottom.diameter.toDouble()
-                            (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
-                        }(),
-                        lapLength = {
-                            val fcuVal = viewModel.solvedFcu
-                            val fyVal = viewModel.solvedFy
-                            val db = res.reinforcementBottom.diameter.toDouble()
-                            val ld = (0.25 * fyVal * db) / (sqrt(fcuVal) * 1.25)
-                            1.3 * ld
-                        }(),
+                        developmentLength = viewModel.drawingDevelopmentLengthMm(res.code, res.reinforcementBottom.diameter.toDouble()),
+                                lapLength = viewModel.drawingLapLengthMm(res.code, res.reinforcementBottom.diameter.toDouble()),
                         isContinuous = res.supportType == CalculatorEngine.SupportType.FIXED_FIXED || res.supportType == CalculatorEngine.SupportType.FIXED_HINGED,
                         supportType = res.supportType,
                         hasTopSteel = res.reinforcementTop.numBars > 0,

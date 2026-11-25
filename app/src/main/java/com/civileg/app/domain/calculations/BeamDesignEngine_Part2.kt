@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
+import com.civileg.app.domain.calculations.beam.RcDevelopmentLength
 import kotlin.math.*
 
 /**
@@ -416,27 +417,37 @@ object BeamDesignEnginePart2 {
         InputGuard.positive("span", span)
         InputGuard.positive("d", d)
 
-        val fbd = when(code) {
-            DesignCode.ECP -> 0.6 * sqrt(fcu) // ECP 203 §5-2-2: fbd =0.6√fcu for deformed bars (high bond)
-            else -> {
-                // FIX: ACI 318-25 §25.4.2.2 (metric): Ld = (fy × ψt × ψe) / (1.7 × λ × √f'c) × db
-                // Simplified for ψt=ψe=λ=1: fbd_equiv = 1.7×√f'c / 4, using 4×fbd form
-                1.7 * sqrt(fcu * 0.8) / 4.0  // bond stress equivalent for ACI Ld formula
-            }
+        // Lengths come from RcDevelopmentLength, transcribed from the primary code texts (see its KDoc).
+        // Bottom bar, straight end, "other cases" spacing/cover for ACI/SBC, lap at the conservative 1.3 factor.
+        val fcPrimeRepoConversion = 0.8 * fcu // repo convention for cylinder strength; not a code value
+        val r = when (code) {
+            DesignCode.ECP -> RcDevelopmentLength.ecpTension(fcu, fy, dia.toDouble())
+            DesignCode.SBC -> RcDevelopmentLength.aciSbcTension(fcPrimeRepoConversion, fy, dia.toDouble(), smallBarLimitMm = 20.0)
+            DesignCode.ACI -> RcDevelopmentLength.aciSbcTension(fcPrimeRepoConversion, fy, dia.toDouble(), smallBarLimitMm = 19.0)
         }
-        val fs = when(code) { DesignCode.ECP -> fy / 1.15 else -> fy }
-        val Ld = (fs * dia.toDouble()) / (4.0 * fbd)
-        val LdMin = max(Ld, 350.0) // ECP minimum
+        // ECP: fbu of Eq. 4-67. ACI/SBC use no bond-stress form, so 0.0 is reported.
+        val fbd = if (code == DesignCode.ECP) 0.30 * sqrt(fcu / RcDevelopmentLength.ECP_GAMMA_C) else 0.0
+        val LdMin = r.length
         // Available anchorage is not computed. A span/3 stand-in was used before and produced a fake pass/fail.
         val provided = 0.0 // 0.0 = not computed
-        val lapLength = 1.3 * LdMin // 30% extra for lapping
+        val lapLength = when (code) {
+            DesignCode.ECP -> RcDevelopmentLength.ecpTensionLap(LdMin, null, null)
+            else -> RcDevelopmentLength.aciSbcTensionLap(LdMin, classB = true)
+        }
 
+        val f0 = { v: Double -> String.format("%.0f", v) }
         val step = CalculationStep(
-            1, "Development & Lap Length (PRELIMINARY, basis not verified)",
-            codeReference = "Basis not verified against ECP 203-2020 / ACI 318M-14 / SBC 304-CR-2018",
-            formula = "Ld = (fs x db) / (4 x fbd), Ld,min and lap factor are implementation values, not verified code values",
-            formulaWithValues = "fbd = ${String.format("%.2f", fbd)} MPa (implementation value)\nLd = ($fs x $dia) / (4 x ${String.format("%.2f", fbd)}) = ${String.format("%.0f", Ld)} mm\nLd,used = ${String.format("%.0f", LdMin)} mm (implementation minimum 350 mm)\nLap = 1.3 x Ld,used = ${String.format("%.0f", lapLength)} mm (implementation factor)",
-            result = "Ld = ${String.format("%.0f", LdMin)} mm, Lap = ${String.format("%.0f", lapLength)} mm (preliminary, not code-checked; available anchorage not evaluated)",
+            1, "Development & Lap Length (tension, straight bar; available anchorage not evaluated)",
+            codeReference = when (code) {
+                DesignCode.ECP -> "ECP 203-2020 section 4-2-5-1 Eq. 4-66/4-67, Tables 4-7/4-8; lap 4-2-5-4-1"
+                DesignCode.SBC -> "SBC 304-CR-2018 25.4.2, Table 25.4.2.2/25.4.2.4, Table 25.5.2.1"
+                DesignCode.ACI -> "ACI 318M-14 25.4.2, Table 25.4.2.2/25.4.2.4, Table 25.5.2.1"
+            },
+            formula = r.basis,
+            formulaWithValues = "Ld,formula = ${f0(r.formulaLength)} mm; minimum ${f0(r.minimum)} mm; Ld = ${f0(LdMin)} mm\n" +
+                "Lap = ${f0(lapLength)} mm (conservative case: area ratio / lapped fraction not known)" +
+                if (code != DesignCode.ECP) "\nfc' = 0.8 x fcu = ${f0(fcPrimeRepoConversion)} MPa (repo conversion, not a code value)" else "",
+            result = "Ld = ${f0(LdMin)} mm, Lap = ${f0(lapLength)} mm (bottom bar, no end hook, no coating, normalweight concrete)",
             unit = "mm",
             status = com.civileg.app.domain.entities.StepStatus.WARNING
         )

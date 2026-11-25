@@ -243,7 +243,7 @@ object BeamDesignEngine {
         allWarnings.addAll(shearResult.warnings)
         if (deflResult.longTerm > deflResult.allowable) allWarnings.add("Deflection exceeds allowable limit")
         if (crackResult.calculated > crackResult.allowable) allWarnings.add("Crack width exceeds ${crackResult.allowable} mm")
-        allWarnings.add("Development, lap and hook lengths are preliminary and not code-checked; no anchorage adequacy check was performed")
+        allWarnings.add("Development and lap lengths are code-formula lengths only (straight bottom bar); available anchorage, curtailment and hook/bend cutting lengths were not checked")
 
         val isSafe = safetyChecks.all { it.isSafe }
         val flexUtil = mu / max(MR, 0.001)
