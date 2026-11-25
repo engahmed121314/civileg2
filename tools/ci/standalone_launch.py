@@ -136,7 +136,11 @@ def stair_codes():
             scroll_up(2); shot(f"sc-{tag}-res-{k}"); dump(f"sc-{tag}-res-{k}")
         # Stair PDF export request for this lane (evidence of the export path, then dismiss)
         if tag == "SBC":
-            pdf_ok = tap_text(["تقرير PDF", "PDF"], "sc-pdf-find"); log.append(("sc_pdf_tap_" + tag, pdf_ok)); time.sleep(4)
+            pdf_ok = False
+            for _ in range(8):
+                if tap_text(["تقرير PDF", "PDF"], "sc-pdf-find"): pdf_ok = True; break
+                scroll_top(2)
+            log.append(("sc_pdf_tap_" + tag, pdf_ok)); time.sleep(4)
             shot("sc-" + tag + "-pdf"); dump("sc-" + tag + "-pdf")
             for k in range(1, 6):
                 adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
