@@ -83,6 +83,8 @@ fun FlatSlabScreen(
     var floorFinish by remember { mutableStateOf("2.0") }
     var clearCover by remember { mutableStateOf("25") }
     var showDropInputs by remember { mutableStateOf(false) }
+    // An edited input makes the shown result stale: drop it so it cannot be read, exported or saved as the new case.
+    LaunchedEffect(panelType, designMethod, designCode, lx, ly, slabThickness, dropThickness, dropSizeX, dropSizeY, columnWidth, columnDepth, fcu, fy, liveLoad, floorFinish, clearCover, showDropInputs) { viewModel.clearResult() }
 
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)

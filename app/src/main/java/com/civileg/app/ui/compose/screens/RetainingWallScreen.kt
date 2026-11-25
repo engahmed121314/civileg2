@@ -96,6 +96,8 @@ fun RetainingWallScreen(
     // Site quantities (trench excavation)
     var excavationDepth by remember { mutableStateOf("2.0") }
     var trenchWidth by remember { mutableStateOf("1.0") }
+    // An edited input makes the shown result stale: drop it so it cannot be read, exported or saved as the new case.
+    LaunchedEffect(height, wallLength, soilDensity, frictionAngle, surcharge, fcu, fy, selectedCode, excavationDepth, trenchWidth) { viewModel.clearResult() }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     LaunchedEffect(vmError) {

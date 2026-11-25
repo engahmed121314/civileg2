@@ -95,6 +95,8 @@ fun StrapFootingScreen(
     var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     var barDia by remember { mutableStateOf("18") }
     var cover by remember { mutableStateOf("75") }
+    // An edited input makes the shown result stale: drop it so it cannot be read, exported or saved as the new case.
+    LaunchedEffect(col1Load, col2Load, distance, col1W, col1D, col2W, col2D, soil, fcu, fy, strapWidth, selectedCode, barDia, cover) { viewModel.clearResult() }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },

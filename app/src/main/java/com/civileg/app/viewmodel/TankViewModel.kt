@@ -82,12 +82,21 @@ class TankViewModel @Inject constructor(
                 _error.value = null
                 _errorMessage.value = null
             } catch (e: Exception) {
+                _result.value = null; _validationReport.value = null  // a failed attempt must not leave the previous design on screen
                 _error.value = "Error: ${e.message}"
                 _errorMessage.value = "Tank calculation error / خطأ في حساب الخزان: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    /** Drop the shown result (an input changed or the last attempt failed). */
+    fun clearResult() {
+        _result.value = null
+        _validationReport.value = null
+        _error.value = null
+        pendingDrawingBitmap = null
     }
 
     // Legacy method

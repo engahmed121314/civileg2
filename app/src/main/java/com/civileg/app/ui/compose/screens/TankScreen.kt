@@ -100,6 +100,8 @@ fun TankScreen(
     // Site quantities (pit excavation / blinding)
     var excavationDepth by remember { mutableStateOf("2.0") }
     var blindingThickness by remember { mutableStateOf("0.1") }
+    // An edited input makes the shown result stale: drop it so it cannot be read, exported or saved as the new case.
+    LaunchedEffect(selectedType, capacity, height, fcu, fy, selectedCode, excavationDepth, blindingThickness) { viewModel.clearResult() }
 
     // Input validation states
     var capacityError by remember { mutableStateOf("") }

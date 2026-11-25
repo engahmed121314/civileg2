@@ -115,6 +115,7 @@ class FlatSlabViewModel @Inject constructor(
                 val result = designer.design(input)
                 _result.value = result
             } catch (e: Exception) {
+                _result.value = null  // a failed attempt must not leave the previous design on screen
                 _error.value = "Error: ${e.message}"
                 _errorMessage.value = "Flat slab calculation error / خطأ في حساب البلاطة المسطحة: ${e.message}"
             } finally {
