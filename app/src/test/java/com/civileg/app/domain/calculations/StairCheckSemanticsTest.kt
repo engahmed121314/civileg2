@@ -143,4 +143,15 @@ class StairFlexureRatioTest {
         assertEquals("FLEXURE rho/rho_max: 29%", com.civileg.app.ui.compose.components.drawings.stairFlexureStripText(0.29, "rho/rho_max"))
         assertEquals("FLEXURE K/K_bal: 123%", com.civileg.app.ui.compose.components.drawings.stairFlexureStripText(1.23, "K/K_bal"))
     }
+
+    @Test
+    fun `ACI minimum main steel is not assessed for every fy, never a pass`() {
+        for (fy in listOf(300.0, 420.0, 500.0)) {
+            val r = ACIStaircase().designStaircase(StaircaseInput(stairType = StairType.STRAIGHT, span = 3.0, totalRise = 1.8, stairWidth = 1.2, waistThickness = 200.0, fcu = 25.0, fy = fy, supportCondition = StairSupportCondition.SIMPLY_SUPPORTED))
+            val row = r.safetyChecks.single { it.name.startsWith("Minimum main steel NOT ASSESSED") }
+            assertTrue("fy=$fy", row.notAssessed)
+            assertFalse("fy=$fy", row.isSafe)
+            assertTrue(row.description.contains("Table 7.6.1.1") && row.description.contains("not established"))
+        }
+    }
 }
