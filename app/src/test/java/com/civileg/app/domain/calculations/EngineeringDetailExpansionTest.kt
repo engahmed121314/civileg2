@@ -404,8 +404,12 @@ class EngineeringDetailExpansionTest {
             capacity = 100.0, heightM = 3.0, fcu = 30.0, fy = 420.0,
             preferredDiameter = 12, code = DesignCode.ECP
         )
-        assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+        assertEquals("six design steps plus the base punching NOT ASSESSED note", 7, r.calculationSteps.size)
+        assertEquals("NOT ASSESSED", r.calculationSteps.last().result)
         assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
+        r.calculationSteps.filter { it.title == "Wall Reinforcement" || it.title == "Base Reinforcement" }.forEach {
+            assertTrue("step text must show provided steel: ${it.formulaWithValues}", it.formulaWithValues.contains("provided"))
+        }
         assertTrue("wall steel step must exist", r.calculationSteps.any { it.title == "Wall Reinforcement" })
     }
 
