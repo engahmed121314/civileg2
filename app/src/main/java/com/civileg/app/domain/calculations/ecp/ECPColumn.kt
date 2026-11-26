@@ -165,6 +165,7 @@ class ECPColumn : ColumnDesign {
         codeNotes.add(CodeReference.ECP.COLUMN_REINFORCEMENT_MAX)
         codeNotes.add(CodeReference.ECP.COLUMN_COVER)
         codeNotes.add("Cover: ${getMinCover()}mm minimum")
+        codeNotes.add(EcpColumnProvisions2025.coverNote(getMinCover()))
         codeNotes.add("P-M interaction: ${if (pmSafe) "SAFE" else "UNSAFE"} (e=${"%.1f".format(designEccentricity)}mm)")
         
         return ReinforcementResult(
