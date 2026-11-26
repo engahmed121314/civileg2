@@ -464,8 +464,8 @@ item {
                         }
                     }
 
-                    // Deflection
-                    item {
+                    // Deflection (no row while it is not calculated; the warnings card says so)
+                    if (res.deflectionAssessed) item {
                         ResultDataCard(
                             stringResource(R.string.fs_deflection),
                             if (res.deflectionAssessed) listOf(

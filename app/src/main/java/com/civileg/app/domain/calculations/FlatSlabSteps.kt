@@ -32,7 +32,7 @@ fun flatSlabCalculationSteps(
         DesignCode.ACI -> DesignCode.ACI.version
         DesignCode.SBC -> DesignCode.SBC.version
     }
-    return listOf(
+    return listOfNotNull(
         CalculationStep(
             stepNumber = 1, title = "Factored Load",
             formula = "wu = γD·DL + γL·LL",
@@ -71,13 +71,7 @@ fun flatSlabCalculationSteps(
             codeReference = ref, isPass = punchingOk,
             status = if (punchingOk) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
         ),
-        if (!deflectionAssessed) CalculationStep(
-            stepNumber = 6, title = "Deflection",
-            formula = "", formulaWithValues = "",
-            result = "NOT ASSESSED (no verified clause for the empirical-method deflection check)", unit = "",
-            codeReference = ref, isPass = false,
-            status = StepStatus.WARNING
-        ) else CalculationStep(
+        if (!deflectionAssessed) null else CalculationStep(
             stepNumber = 6, title = "Deflection",
             formula = "Δ ≤ L/250",
             formulaWithValues = "Δ = ${"%.2f".format(deflection)} mm vs ${"%.2f".format(allowableDeflection)} mm",

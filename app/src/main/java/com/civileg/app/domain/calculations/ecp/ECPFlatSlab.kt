@@ -290,7 +290,7 @@ class ECPFlatSlab : FlatSlabDesign {
         codeNotes.add("Column-head reinforcement (6-2-5-9) and openings (6-2-5-10) are NOT ASSESSED")
 
         // ── 9. Deflection: NOT ASSESSED ───────────────────────────
-        warnings.add("Deflection NOT ASSESSED: ECP 203-2025 4-3-1 limits and effective-inertia method were not read; Table 6-3 thickness alone does not replace the 4-3-1 check")
+        warnings.add("Deflection is not yet calculated (ECP 203-2025 4-3-1 not implemented); Table 6-3 thickness alone does not replace it")
 
         // ── 10. Minimum thickness, Table 6-3 ──────────────────────
         val exteriorPanel = input.panelType != PanelType.INTERIOR

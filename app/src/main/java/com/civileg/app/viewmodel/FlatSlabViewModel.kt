@@ -190,7 +190,9 @@ class FlatSlabViewModel @Inject constructor(
                     "Col Bot Rebar" to res.columnStripBotRebar.barString,
                     "Punching Vu" to "${"%.1f".format(res.punchingShearVu)} kN",
                     "Punching Vc" to "${"%.1f".format(res.punchingShearVc)} kN",
-                    "Deflection" to "${"%.2f".format(res.deflection)} mm",
+                    // No deflection row while the deflection is not calculated: a 0.00 mm value would read as a result.
+                    *(if (res.deflectionAssessed) arrayOf("Deflection" to "${"%.2f".format(res.deflection)} mm")
+                      else arrayOf("Warning" to "Deflection is not yet calculated")),
                     "Concrete Vol" to "${"%.3f".format(res.concreteVolumePerPanel)} m³",
                     "Steel Wt" to "${"%.1f".format(res.steelWeightPerPanel)} kg",
                     "Utilization" to "${(res.utilizationRatio * 100).toInt()}%"
