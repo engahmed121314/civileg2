@@ -360,6 +360,19 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `footing drawing status never reads SAFE and a failing footing reads FAIL`() {
+        val ok = engine.calculateFooting(
+            type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, fcu = 25.0, fy = 360.0,
+            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
+        )
+        assertTrue(ok.isSafe)
+        val okSummary = com.civileg.app.ui.compose.components.drawings.footingDrawingSummary(ok)
+        assertEquals("UNVERIFIED", okSummary.safetyLabel)
+        val bad = ok.copy(isSafe = false)
+        assertEquals("FAIL", com.civileg.app.ui.compose.components.drawings.footingDrawingSummary(bad).safetyLabel)
+    }
+
+    @Test
     fun `ECP footing punching row is a stress in MPa equal to the hand calculation`() {
         // qp = 0.9*P*1000/(b0*d) [MPa], b0 = 2(c1+c2)+4d [mm], d = t - cover - 10. The row used to be labelled kN.
         val r = engine.calculateFooting(

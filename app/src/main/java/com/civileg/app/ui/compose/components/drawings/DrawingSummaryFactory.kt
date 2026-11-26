@@ -55,7 +55,10 @@ fun footingDrawingSummary(result: CalculatorEngine.FootingResult): DrawingResult
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
-        designCodeLabel = result.code.version
+        designCodeLabel = result.code.version,
+        // The listed footing checks do not make a full assessment (service-load basis, punching demand model, minimum spacing and the
+        // BBS/BOQ scope are unverified), so a passing result reads UNVERIFIED on the drawing, as in the PDF. Failing checks still read UNSAFE.
+        codeAcceptanceComplete = !result.isSafe
     )
 
 fun slabDrawingSummary(result: CalculatorEngine.SlabResult): DrawingResultSummary =
