@@ -1938,7 +1938,7 @@ class CalculatorEngine @Inject constructor(
             val cost = concreteVolume * 120.0 + steelWeight * 1.5
             val safetyChecks = listOf(
                 DesignSafetyCheck("Soil Bearing", combinedRes.soilPressure, soil, "kPa", combinedRes.soilPressure <= soil),
-                DesignSafetyCheck("Punching Shear", combinedRes.punchingShearCheck.appliedShear, combinedRes.punchingShearCheck.shearCapacity, "kN", combinedRes.punchingShearCheck.isSafe),
+                DesignSafetyCheck("Punching Shear", combinedRes.punchingShearCheck.appliedShear, combinedRes.punchingShearCheck.shearCapacity, if (code == DesignCode.ACI) "kN" else "MPa", combinedRes.punchingShearCheck.isSafe),
                 DesignSafetyCheck("Flexure Steel", combinedRes.reinforcement.astProvided, combinedRes.reinforcement.astRequired, "mm²", combinedRes.reinforcement.isSafe)
             )
             return FootingResult(
@@ -1987,7 +1987,7 @@ class CalculatorEngine @Inject constructor(
 
         val safetyChecks = listOf(
             DesignSafetyCheck("Soil Bearing", res.soilPressure, soil, "kPa", res.soilPressure <= soil),
-            DesignSafetyCheck("Punching Shear", res.punchingShearCheck.appliedShear, res.punchingShearCheck.shearCapacity, "kN", res.punchingShearCheck.isSafe),
+            DesignSafetyCheck("Punching Shear", res.punchingShearCheck.appliedShear, res.punchingShearCheck.shearCapacity, if (code == DesignCode.ACI) "kN" else "MPa", res.punchingShearCheck.isSafe),
             DesignSafetyCheck("Flexure Steel", res.reinforcement.astProvided, res.reinforcement.astRequired, "mm²", res.reinforcement.isSafe)
         )
 
@@ -2018,8 +2018,8 @@ class CalculatorEngine @Inject constructor(
             CalculationStep(
                 stepNumber = 4, title = "Punching Shear",
                 formula = "Vp ≤ Vc (u1 at d/2)",
-                formulaWithValues = "Vp = ${"%.1f".format(res.punchingShearCheck.appliedShear)} kN vs Vc = ${"%.1f".format(res.punchingShearCheck.shearCapacity)} kN",
-                result = if (res.punchingShearCheck.isSafe) "OK" else "Increase thickness", unit = "kN",
+                formulaWithValues = "Vp = ${"%.2f".format(res.punchingShearCheck.appliedShear)} ${if (code == DesignCode.ACI) "kN" else "MPa"} vs Vc = ${"%.2f".format(res.punchingShearCheck.shearCapacity)} ${if (code == DesignCode.ACI) "kN" else "MPa"}",
+                result = if (res.punchingShearCheck.isSafe) "OK" else "Increase thickness", unit = if (code == DesignCode.ACI) "kN" else "MPa",
                 codeReference = ref, isPass = res.punchingShearCheck.isSafe,
                 status = if (res.punchingShearCheck.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
             ),

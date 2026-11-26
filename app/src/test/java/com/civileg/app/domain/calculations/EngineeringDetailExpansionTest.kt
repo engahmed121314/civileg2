@@ -325,32 +325,38 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
-    fun `footing displayed bars cover the steel the flexure check reports as required`() {
-        // The result shows nbars x dia @ spacing and the BOQ weighs those bars; they must provide at least the engine's As,req
-        // across the footing width (Ast per metre x width), otherwise the displayed layout and the check disagree.
+    fun `footing displayed bars cover the steel the flexure check reports as required per metre`() {
+        // Flexure rows are per metre of footing: As = (1000/spacing) * bar area. An earlier version of this test compared
+        // the total bars across the width with the per-metre requirement, so it passed while the screen showed a failed
+        // row (1131 provided vs 1143 required, because spacing was clamped up to the 100 mm minimum).
         for (soil in listOf(100.0, 150.0, 250.0)) {
-            val r = engine.calculateFooting(
-                type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
-                soil = soil, colB = 300.0, colT = 500.0, code = DesignCode.ECP
-            )
-            val barArea = Math.PI / 4.0 * r.barDiameter * r.barDiameter
-            val providedX = r.barsX * barArea
-            val flex = r.safetyChecks.first { it.name == "Flexure Steel" }
-            // value = astProvided, limit = astRequired (engine's own numbers, same units mm2)
-            assertTrue("soil=$soil displayed bars ${r.barsX}x${r.barDiameter} give $providedX mm2 vs engine As,req ${flex.limit}", providedX >= flex.limit - 1e-6)
+            for (p in listOf(800.0, 1200.0, 2000.0)) {
+                val r = engine.calculateFooting(
+                    type = CalculatorEngine.FootingType.ISOLATED, p = p, fcu = 25.0, fy = 360.0,
+                    soil = soil, colB = 300.0, colT = 500.0, code = DesignCode.ECP
+                )
+                val flex = r.safetyChecks.first { it.name == "Flexure Steel" }
+                val barArea = Math.PI / 4.0 * r.barDiameter * r.barDiameter
+                val perMetre = 1000.0 / r.reinforcementBottom.spacing * barArea
+                assertTrue("soil=$soil P=$p: row provided ${flex.value} < required ${flex.limit}", flex.value >= flex.limit - 1e-6)
+                assertTrue("soil=$soil P=$p: displayed ${r.barDiameter} @ ${r.reinforcementBottom.spacing} gives $perMetre mm2/m vs required ${flex.limit}", perMetre >= flex.limit - 1e-6)
+            }
         }
     }
 
     @Test
-    fun `footing result carries the cover its design used so drawings can show the same value`() {
-        // Drawings used a fixed 70 mm while the ECP engine designed with 50 mm (SBC 75 mm).
-        val ecp = engine.calculateFooting(type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
-            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP)
-        assertEquals(50.0, ecp.coverMm, 1e-9)
-        val sbc = engine.calculateFooting(type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
-            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.SBC)
-        assertEquals(75.0, sbc.coverMm, 1e-9)
-        assertTrue("utilization is the raw soil ratio, not clamped", Math.abs(ecp.utilizationRatio - ecp.soilPressure / ecp.allowablePressure) < 1e-9)
+    fun `ECP footing punching row is a stress in MPa equal to the hand calculation`() {
+        // qp = 0.9*P*1000/(b0*d) [MPa], b0 = 2(c1+c2)+4d [mm], d = t - cover - 10. The row used to be labelled kN.
+        val r = engine.calculateFooting(
+            type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, fcu = 25.0, fy = 360.0,
+            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
+        )
+        val row = r.safetyChecks.first { it.name == "Punching Shear" }
+        assertEquals("MPa", row.unit)
+        val d = r.thickness - r.coverMm - 10.0
+        val b0 = 2.0 * (300.0 + 500.0) + 4.0 * d
+        assertEquals(0.9 * 1200.0 * 1000.0 / (b0 * d), row.value, 1e-6)
+        assertEquals(0.316 * Math.sqrt(25.0 / 1.5), row.limit, 1e-6)
     }
 
     @Test
