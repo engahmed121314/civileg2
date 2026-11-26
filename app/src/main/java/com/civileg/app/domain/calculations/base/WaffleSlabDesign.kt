@@ -96,7 +96,7 @@ interface WaffleSlabDesign {
         val steelWeight: Double = 0.0,
         val cost: Double = 0.0,
         /** FAIL if any computed check failed, otherwise PRELIMINARY (deflection is never assessed). */
-        val status: CheckStatus = CheckStatus.PRELIMINARY,
+        val status: DesignCheckStatus = DesignCheckStatus.PRELIMINARY,
         /** Checks or applicability that were not assessed. */
         val notAssessed: List<String> = emptyList(),
         val deflectionAssessed: Boolean = false
@@ -107,7 +107,7 @@ interface WaffleSlabDesign {
         val shearReinforcement: ShearReinforcementResult,
         val isSafe: Boolean,
         val utilizationRatio: Double,
-        val status: CheckStatus = CheckStatus.NOT_ASSESSED,
+        val status: DesignCheckStatus = DesignCheckStatus.NOT_ASSESSED,
         val warnings: List<String> = emptyList(),
         val notes: List<String> = emptyList()
     )
@@ -116,7 +116,7 @@ interface WaffleSlabDesign {
         val flexureReinforcement: RebarResult,
         val punchingShear: PunchingShearCheck,
         val isSafe: Boolean,
-        val status: CheckStatus = CheckStatus.NOT_ASSESSED,
+        val status: DesignCheckStatus = DesignCheckStatus.NOT_ASSESSED,
         val note: String = ""
     )
 
@@ -125,7 +125,7 @@ interface WaffleSlabDesign {
         val vc: Double,
         val isSafe: Boolean,
         val utilizationRatio: Double,
-        val status: CheckStatus = CheckStatus.NOT_ASSESSED,
+        val status: DesignCheckStatus = DesignCheckStatus.NOT_ASSESSED,
         val note: String = ""
     )
 

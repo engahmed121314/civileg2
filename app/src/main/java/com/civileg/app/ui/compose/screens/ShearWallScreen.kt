@@ -284,7 +284,7 @@ fun ShearWallScreen(
                 item {
                     // Verdict is the engine status (FAIL / PRELIMINARY). The ratio banner is not used because it
                     // reads a low ratio as safe even when checks are unverified or not assessed.
-                    val failed = result.status == com.civileg.app.domain.calculations.base.CheckStatus.FAIL
+                    val failed = result.status == com.civileg.app.domain.calculations.base.DesignCheckStatus.FAIL
                     Card(
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(

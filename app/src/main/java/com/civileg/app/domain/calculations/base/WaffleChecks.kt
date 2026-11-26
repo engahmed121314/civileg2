@@ -13,7 +13,7 @@ import kotlin.math.sqrt
  * FAIL means the computed demand exceeds capacity (a failure always outranks incompleteness).
  * NOT_ASSESSED means no supported method or no real demand: nothing was checked.
  */
-enum class CheckStatus(val label: String) {
+enum class DesignCheckStatus(val label: String) {
     PASS("PASS"),
     PRELIMINARY("PRELIMINARY"),
     FAIL("FAIL"),
@@ -72,7 +72,7 @@ object WaffleChecks {
         wuPanel: Double, cover: Double, phiFlex: Double, phiShear: Double,
         vcCoef: Double, vsMaxCoef: Double?, beta1: Double?,
         minAs: (asReq: Double, bw: Double, d: Double) -> Double,
-        passStatus: CheckStatus, codeRef: String
+        passStatus: DesignCheckStatus, codeRef: String
     ): WaffleSlabDesign.RibDesignResult {
         val d = h - cover - D_ALLOWANCE_MM
         val warnings = mutableListOf<String>()
@@ -128,7 +128,7 @@ object WaffleChecks {
         }
         val shearUtil = if (phiVc > 0.0) vu / phiVc else 2.0
 
-        val status = if (flexFail || shearFail) CheckStatus.FAIL else passStatus
+        val status = if (flexFail || shearFail) DesignCheckStatus.FAIL else passStatus
         return WaffleSlabDesign.RibDesignResult(
             flexureReinforcement = RebarResult(
                 bars = n, diameter = BAR_DIA_MM, spacing = spacing,
@@ -154,20 +154,20 @@ object WaffleChecks {
     /** Concentric punching check at the column critical section d/2 from the column face (interior, square column). */
     fun punching(
         columnMm: Double, totalDepthMm: Double, cover: Double, vuKN: Double, phiShear: Double,
-        nominalVc: (bo: Double, d: Double, beta: Double) -> Double, passStatus: CheckStatus
+        nominalVc: (bo: Double, d: Double, beta: Double) -> Double, passStatus: DesignCheckStatus
     ): WaffleSlabDesign.PunchingShearCheck {
         val d = totalDepthMm - cover - D_ALLOWANCE_MM
         if (d <= 0.0 || vuKN <= 0.0) {
             return WaffleSlabDesign.PunchingShearCheck(
                 vu = max(vuKN, 0.0), vc = 0.0, isSafe = false, utilizationRatio = 0.0,
-                status = CheckStatus.NOT_ASSESSED,
+                status = DesignCheckStatus.NOT_ASSESSED,
                 note = "No real punching demand or slab depth supplied; nothing was checked."
             )
         }
         val bo = 4.0 * (columnMm + d)
         val vc = phiShear * nominalVc(bo, d, 1.0)
         val failed = vuKN > vc
-        val status = if (failed) CheckStatus.FAIL else passStatus
+        val status = if (failed) DesignCheckStatus.FAIL else passStatus
         return WaffleSlabDesign.PunchingShearCheck(
             vu = vuKN, vc = vc, isSafe = status.computedOk, utilizationRatio = if (vc > 0) vuKN / vc else 2.0,
             status = status,
@@ -179,10 +179,10 @@ object WaffleChecks {
         flexureReinforcement = RebarResult(bars = 0, diameter = 0, spacing = 0, providedArea = 0.0, requiredArea = 0.0, ratio = 0.0),
         punchingShear = WaffleSlabDesign.PunchingShearCheck(
             vu = 0.0, vc = 0.0, isSafe = false, utilizationRatio = 0.0,
-            status = CheckStatus.NOT_ASSESSED, note = "Solid-head design is not implemented."
+            status = DesignCheckStatus.NOT_ASSESSED, note = "Solid-head design is not implemented."
         ),
         isSafe = false,
-        status = CheckStatus.NOT_ASSESSED,
+        status = DesignCheckStatus.NOT_ASSESSED,
         note = "Solid-head flexure and reinforcement are not designed. No bars are adopted."
     )
 

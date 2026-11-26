@@ -101,7 +101,7 @@ class SBCWaffleSlabDesignTest {
         // With very high load, shear should fail or be close to failing
         // The key assertion: isSafe is based on REAL calculation, not hardcoded
         // Wu = 200 kN/m2 on a 150 x 300 rib: the rib must visibly FAIL (flexure and shear demand exceed capacity)
-        assertEquals(com.civileg.app.domain.calculations.base.CheckStatus.FAIL, result.status)
+        assertEquals(com.civileg.app.domain.calculations.base.DesignCheckStatus.FAIL, result.status)
         assertFalse(result.isSafe)
         assertTrue("Failed rib should have utilization > 1.0", result.utilizationRatio > 1.0)
     }

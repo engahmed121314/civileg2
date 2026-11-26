@@ -3,7 +3,7 @@ package com.civileg.app.domain.calculations.aci
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign
-import com.civileg.app.domain.calculations.base.CheckStatus
+import com.civileg.app.domain.calculations.base.DesignCheckStatus
 import com.civileg.app.domain.calculations.base.WaffleChecks
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabInput
@@ -128,13 +128,13 @@ class ACIWaffleSlabDesign : WaffleSlabDesign {
         val providedSteel = ribDesign.flexureReinforcement.providedArea
         val steelWeight = ((numRibsX * providedSteel * (input.ly / 1000.0) / 1e6) + (numRibsY * providedSteel * (input.lx / 1000.0) / 1e6)) * 7850.0
 
-        val status = if (ribDesign.status == CheckStatus.FAIL || punchingShearCheck.status == CheckStatus.FAIL) CheckStatus.FAIL else CheckStatus.PRELIMINARY
+        val status = if (ribDesign.status == DesignCheckStatus.FAIL || punchingShearCheck.status == DesignCheckStatus.FAIL) DesignCheckStatus.FAIL else DesignCheckStatus.PRELIMINARY
         val notAssessed = mutableListOf(
             "Deflection: no supported method (the earlier fixed-section estimate was removed)",
             "Solid head flexure and reinforcement",
             "Punching at the solid-head edge, moment transfer, edge and corner columns"
         )
-        if (ribDesign.status == CheckStatus.PRELIMINARY || punchingShearCheck.status == CheckStatus.PRELIMINARY) {
+        if (ribDesign.status == DesignCheckStatus.PRELIMINARY || punchingShearCheck.status == DesignCheckStatus.PRELIMINARY) {
             notAssessed.add("ACI 318M coefficient tables (phi, Vc, vc, beta1, As,min) are not in the supplied text extract; constants kept from the existing code. Only 0.33 lambda sqrt(fc') (R22.6.5.2), eps_t >= 0.005 and eps_cu = 0.003 are in the supplied text.")
         }
         val punchUtil = if (punchingShearCheck.vc > 0) punchingShearCheck.vu / punchingShearCheck.vc else 0.0
@@ -143,14 +143,14 @@ class ACIWaffleSlabDesign : WaffleSlabDesign {
         warnings.addAll(ribDesign.warnings)
         if (punchingShearCheck.note.isNotEmpty()) codeNotes.add("Punching: " + punchingShearCheck.note)
         codeNotes.addAll(ribDesign.notes)
-        if (status == CheckStatus.FAIL) warnings.add("FAIL: one or more computed ACI 318M checks failed")
+        if (status == DesignCheckStatus.FAIL) warnings.add("FAIL: one or more computed ACI 318M checks failed")
         if (utilizationRatio > 1.0) warnings.add("Utilization ratio = ${String.format("%.2f", utilizationRatio)} > 1.0")
         notAssessed.forEach { warnings.add("NOT ASSESSED: " + it) }
 
-        if (ribDesign.status != CheckStatus.NOT_ASSESSED) {
+        if (ribDesign.status != DesignCheckStatus.NOT_ASSESSED) {
             safetyChecks.add(SafetyCheckItem("Rib flexure and shear", ribDesign.utilizationRatio, 1.0, "ACI 318M (" + ribDesign.status.label + ")", passed = ribDesign.isSafe))
         }
-        if (punchingShearCheck.status != CheckStatus.NOT_ASSESSED) {
+        if (punchingShearCheck.status != DesignCheckStatus.NOT_ASSESSED) {
             safetyChecks.add(SafetyCheckItem("Punching shear (concentric)", punchUtil, 1.0, "ACI 318M (" + punchingShearCheck.status.label + ")", passed = punchingShearCheck.isSafe))
         }
 
@@ -204,7 +204,7 @@ class ACIWaffleSlabDesign : WaffleSlabDesign {
             wuPanel = totalLoad, cover = 25.0, phiFlex = PHI_FLEXURE, phiShear = PHI_SHEAR,
             vcCoef = 0.17, vsMaxCoef = 0.66, beta1 = beta1,
             minAs = { _, b, dd -> max(0.25 * sqrt(fc) / fy, 1.4 / fy) * b * dd },
-            passStatus = CheckStatus.PRELIMINARY, codeRef = "ACI 318M"
+            passStatus = DesignCheckStatus.PRELIMINARY, codeRef = "ACI 318M"
         )
     }
 
@@ -251,7 +251,7 @@ class ACIWaffleSlabDesign : WaffleSlabDesign {
         return WaffleChecks.punching(
             columnMm = columnSize, totalDepthMm = totalDepth, cover = 25.0, vuKN = shear, phiShear = PHI_SHEAR,
             nominalVc = { bo, d, beta -> minOf(0.33 * sqrt(fc) * bo * d / 1000.0, 0.17 * (1.0 + 2.0 / beta) * sqrt(fc) * bo * d / 1000.0, 0.083 * (2.0 + 40.0 * d / bo) * sqrt(fc) * bo * d / 1000.0) },
-            passStatus = CheckStatus.PRELIMINARY
+            passStatus = DesignCheckStatus.PRELIMINARY
         )
     }
 

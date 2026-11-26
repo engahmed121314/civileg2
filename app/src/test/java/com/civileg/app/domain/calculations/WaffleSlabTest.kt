@@ -148,13 +148,13 @@ class WaffleSlabTest {
 
         // Solid-head design is not implemented: NOT ASSESSED, no adopted bars, never a pass.
         for (head in listOf(ecpHead, aciHead)) {
-            assertEquals(com.civileg.app.domain.calculations.base.CheckStatus.NOT_ASSESSED, head.status)
+            assertEquals(com.civileg.app.domain.calculations.base.DesignCheckStatus.NOT_ASSESSED, head.status)
             assertFalse(head.isSafe)
             assertEquals(0, head.flexureReinforcement.bars)
-            assertEquals(com.civileg.app.domain.calculations.base.CheckStatus.NOT_ASSESSED, head.punchingShear.status)
+            assertEquals(com.civileg.app.domain.calculations.base.DesignCheckStatus.NOT_ASSESSED, head.punchingShear.status)
         }
         // SBC keeps its indicative solid-head estimate, which is never a verified pass
-        assertNotEquals(com.civileg.app.domain.calculations.base.CheckStatus.PASS, sbcHead.status)
+        assertNotEquals(com.civileg.app.domain.calculations.base.DesignCheckStatus.PASS, sbcHead.status)
     }
 
     @Test

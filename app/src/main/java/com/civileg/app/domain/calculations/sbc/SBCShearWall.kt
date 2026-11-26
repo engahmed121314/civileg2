@@ -5,7 +5,7 @@ import com.civileg.app.domain.*
 import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.calculations.base.ShearWallDesign
 import com.civileg.app.domain.calculations.base.ShearWallChecks
-import com.civileg.app.domain.calculations.base.CheckStatus
+import com.civileg.app.domain.calculations.base.DesignCheckStatus
 import kotlin.math.*
 
 /**
@@ -224,7 +224,7 @@ class SBCShearWall : ShearWallDesign {
 
         // ── 9. Overall safety ──────────────────────────────────────
         val computedOk = flexOk && shearOk && slenderOk
-        val overallStatus = if (computedOk) CheckStatus.PRELIMINARY else CheckStatus.FAIL
+        val overallStatus = if (computedOk) DesignCheckStatus.PRELIMINARY else DesignCheckStatus.FAIL
         val overallSafe = false  // unverified constants: never SAFE
         val maxUtil = maxOf(flexUtilRatio, shearUtilRatio)
 
@@ -551,7 +551,7 @@ class SBCShearWall : ShearWallDesign {
         val needsDiagonal = vuRatio > 0.15 || input.wallType == WallType.COUPLED
 
         if (!needsDiagonal) {
-            return CouplingBeamResult(0, 0, 0, 0, false, 0.0, CheckStatus.NOT_ASSESSED, ShearWallChecks.COUPLING_NOTE)
+            return CouplingBeamResult(0, 0, 0, 0, false, 0.0, DesignCheckStatus.NOT_ASSESSED, ShearWallChecks.COUPLING_NOTE)
         }
 
         // Diagonal reinforcement design (SBC with φ = 0.9)
@@ -585,7 +585,7 @@ class SBCShearWall : ShearWallDesign {
             diagonalBars = diagCount, diagonalBarDiameter = diagDia.toInt(),
             transverseBarsDiameter = transDia.toInt(), transverseBarsSpacing = transSpacing,
             isSafe = false, utilizationRatio = utilRatio,
-            status = CheckStatus.NOT_ASSESSED, note = ShearWallChecks.COUPLING_NOTE
+            status = DesignCheckStatus.NOT_ASSESSED, note = ShearWallChecks.COUPLING_NOTE
         )
     }
 

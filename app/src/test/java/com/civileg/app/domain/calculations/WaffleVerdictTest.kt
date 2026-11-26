@@ -1,7 +1,7 @@
 package com.civileg.app.domain.calculations
 
 import com.civileg.app.domain.calculations.aci.ACIWaffleSlabDesign
-import com.civileg.app.domain.calculations.base.CheckStatus
+import com.civileg.app.domain.calculations.base.DesignCheckStatus
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabInput
 import com.civileg.app.domain.calculations.ecp.ECPWaffleSlabDesign
 import com.civileg.app.domain.calculations.sbc.SBCWaffleSlabDesign
@@ -33,14 +33,14 @@ class WaffleVerdictTest {
         assertEquals(0.0, rib.shearReinforcement.requiredShearReinforcement, 1e-9)
         assertEquals(33.10, rib.shearReinforcement.concreteShearCapacity, 0.05)
         // Passing ACI values still read PRELIMINARY: coefficient tables are not in the supplied text.
-        assertEquals(CheckStatus.PRELIMINARY, rib.status)
+        assertEquals(DesignCheckStatus.PRELIMINARY, rib.status)
     }
 
     @Test
     fun `ACI rib that cannot resist the moment fails and is not hidden by a bar clamp`() {
         // Wu = 40 -> w = 24 kN/m, Mu = 108 kN.m: 2Mu/(0.85 fc phi b) = 78431 > d^2 = 70225 mm2
         val rib = aci.designRib(30.0, 400.0, 150.0, 300.0, 600.0, 6000.0, 40.0, lc)
-        assertEquals(CheckStatus.FAIL, rib.status)
+        assertEquals(DesignCheckStatus.FAIL, rib.status)
         assertFalse(rib.isSafe)
     }
 
@@ -49,7 +49,7 @@ class WaffleVerdictTest {
         // Wu = 40, L = 3 m: Vu = 36 kN > phiVc = 24.83 kN. Vs = 36/0.75 - 33.10 = 14.90 kN, Av/s = 0.1405 mm2/mm
         val rib = aci.designRib(30.0, 400.0, 150.0, 300.0, 600.0, 3000.0, 40.0, lc)
         assertEquals(0.1405, rib.shearReinforcement.requiredShearReinforcement, 0.001)
-        assertEquals(CheckStatus.PRELIMINARY, rib.status)
+        assertEquals(DesignCheckStatus.PRELIMINARY, rib.status)
         // Stirrups are required but not detailed, so no stirrup diameter or spacing is claimed.
         assertEquals(0.0, rib.shearReinforcement.stirrupSpacing, 0.0)
     }
@@ -60,29 +60,29 @@ class WaffleVerdictTest {
         val ok = aci.checkPunchingShear(30.0, 400.0, 1000.0, 400.0, 373.71, 373.71, 350.0)
         assertEquals(1092.34, ok.vc, 0.1)
         assertEquals(373.71, ok.vu, 1e-6)
-        assertEquals(CheckStatus.PRELIMINARY, ok.status)
+        assertEquals(DesignCheckStatus.PRELIMINARY, ok.status)
         val bad = aci.checkPunchingShear(30.0, 400.0, 1000.0, 400.0, 2669.33, 2669.33, 350.0)
-        assertEquals(CheckStatus.FAIL, bad.status)
+        assertEquals(DesignCheckStatus.FAIL, bad.status)
         assertFalse(bad.isSafe)
     }
 
     @Test
     fun `punching without a supplied demand or depth is NOT ASSESSED not a pass`() {
         val noDemand = aci.checkPunchingShear(30.0, 400.0, 1000.0, 400.0, 1000.0, 0.0, 350.0)
-        assertEquals(CheckStatus.NOT_ASSESSED, noDemand.status)
+        assertEquals(DesignCheckStatus.NOT_ASSESSED, noDemand.status)
         assertFalse(noDemand.isSafe)
         val noDepth = ecp.checkPunchingShear(30.0, 400.0, 1000.0, 400.0, 1000.0, 200.0)
-        assertEquals(CheckStatus.NOT_ASSESSED, noDepth.status)
+        assertEquals(DesignCheckStatus.NOT_ASSESSED, noDepth.status)
     }
 
     @Test
     fun `ECP and SBC passing values are NOT ASSESSED while a computed failure still fails`() {
         for (d in listOf(ecp, sbc)) {
             val ok = d.designRib(30.0, 400.0, 150.0, 300.0, 600.0, 6000.0, 8.4, lc)
-            assertEquals(CheckStatus.NOT_ASSESSED, ok.status)
+            assertEquals(DesignCheckStatus.NOT_ASSESSED, ok.status)
             assertFalse(ok.isSafe)
             val bad = d.designRib(30.0, 400.0, 150.0, 300.0, 600.0, 6000.0, 40.0, lc)
-            assertEquals(CheckStatus.FAIL, bad.status)
+            assertEquals(DesignCheckStatus.FAIL, bad.status)
         }
     }
 
@@ -99,11 +99,11 @@ class WaffleVerdictTest {
             assertFalse(r.deflectionAssessed)
             assertTrue(r.notAssessed.any { it.startsWith("Deflection") })
             assertTrue(r.notAssessed.any { it.startsWith("Solid head") })
-            assertNotEquals(CheckStatus.PASS, r.status)
+            assertNotEquals(DesignCheckStatus.PASS, r.status)
         }
         // ACI at Wu = 1.2 x 3 + 1.6 x 3 = 8.4 kN/m2: rib and punching computed and not failed
-        assertEquals(CheckStatus.PRELIMINARY, aci.design(input).status)
+        assertEquals(DesignCheckStatus.PRELIMINARY, aci.design(input).status)
         // A very heavy load must fail visibly
-        assertEquals(CheckStatus.FAIL, aci.design(input.copy(deadLoad = 30.0, liveLoad = 20.0)).status)
+        assertEquals(DesignCheckStatus.FAIL, aci.design(input.copy(deadLoad = 30.0, liveLoad = 20.0)).status)
     }
 }

@@ -395,7 +395,7 @@ fun WaffleSlabScreen(
                                 stringResource(R.string.waffle_slab_deflection_check),
                                 listOf("Status" to "NOT ASSESSED (no supported method)"),
                                 icon = Icons.Default.Straighten,
-                                accentColor = waffleStatusColor(com.civileg.app.domain.calculations.base.CheckStatus.NOT_ASSESSED)
+                                accentColor = waffleStatusColor(com.civileg.app.domain.calculations.base.DesignCheckStatus.NOT_ASSESSED)
                             )
                         }
                     }
@@ -601,8 +601,8 @@ fun WaffleSlabScreen(
 }
 
 
-private fun waffleStatusColor(status: com.civileg.app.domain.calculations.base.CheckStatus): Color = when (status) {
-    com.civileg.app.domain.calculations.base.CheckStatus.PASS -> Color(0xFF2E7D32)
-    com.civileg.app.domain.calculations.base.CheckStatus.FAIL -> Color(0xFFE53935)
+private fun waffleStatusColor(status: com.civileg.app.domain.calculations.base.DesignCheckStatus): Color = when (status) {
+    com.civileg.app.domain.calculations.base.DesignCheckStatus.PASS -> Color(0xFF2E7D32)
+    com.civileg.app.domain.calculations.base.DesignCheckStatus.FAIL -> Color(0xFFE53935)
     else -> Color(0xFFF9A825)
 }

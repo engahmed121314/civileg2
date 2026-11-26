@@ -234,7 +234,7 @@ class WaffleSlabViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     // PRELIMINARY unless a computed check failed: the report must not print SAFE or UNSAFE for unassessed checks
-                    assessmentPending = res.status != com.civileg.app.domain.calculations.base.CheckStatus.FAIL,
+                    assessmentPending = res.status != com.civileg.app.domain.calculations.base.DesignCheckStatus.FAIL,
                     bbsEntries = runCatching {
                         com.civileg.app.domain.calculations.utils.BbsGenerator.generateWaffleSlabBbs(
                             "WS1", res, input.lx, input.ly, input.ribSpacing,

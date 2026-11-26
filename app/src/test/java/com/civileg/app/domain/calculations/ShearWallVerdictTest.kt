@@ -2,7 +2,7 @@ package com.civileg.app.domain.calculations
 
 import com.civileg.app.domain.*
 import com.civileg.app.domain.calculations.aci.ACIShearWall
-import com.civileg.app.domain.calculations.base.CheckStatus
+import com.civileg.app.domain.calculations.base.DesignCheckStatus
 import com.civileg.app.domain.calculations.base.ShearWallChecks
 import com.civileg.app.domain.calculations.ecp.ECPShearWall
 import com.civileg.app.domain.calculations.sbc.SBCShearWall
@@ -43,7 +43,7 @@ class ShearWallVerdictTest {
         for ((name, e) in engines) {
             val r = e.designWall(ShearWallInput(axialLoad = 0.0, shearForce = 100.0, bendingMoment = 40000.0))
             assertFalse("$name flexure must fail", r.flexuralOk)
-            assertEquals("$name status", CheckStatus.FAIL, r.status)
+            assertEquals("$name status", DesignCheckStatus.FAIL, r.status)
             assertFalse("$name isSafe", r.isSafe)
         }
     }
@@ -54,7 +54,7 @@ class ShearWallVerdictTest {
             val r = e.designWall(ShearWallInput(numberOfStories = 1, axialLoad = 500.0, shearForce = 100.0, bendingMoment = 200.0))
             assertTrue("$name flexure computed ok", r.flexuralOk)
             assertEquals("$name H/t", 10.0, r.slendernessRatio, 1e-9)
-            assertEquals("$name status", CheckStatus.PRELIMINARY, r.status)
+            assertEquals("$name status", DesignCheckStatus.PRELIMINARY, r.status)
             assertFalse("$name isSafe", r.isSafe)
         }
     }
@@ -67,7 +67,7 @@ class ShearWallVerdictTest {
             )
             val r = e.designWall(low)
             val c = r.couplingBeamResult!!
-            assertEquals("$name coupling status", CheckStatus.NOT_ASSESSED, c.status)
+            assertEquals("$name coupling status", DesignCheckStatus.NOT_ASSESSED, c.status)
             assertFalse("$name coupling isSafe", c.isSafe)
             if (c.diagonalBars == 0) {
                 assertEquals("$name no invented transverse bars", 0, c.transverseBarsDiameter)

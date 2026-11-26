@@ -5,7 +5,7 @@ import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ShearWallDesign
 import com.civileg.app.domain.calculations.base.ShearWallChecks
-import com.civileg.app.domain.calculations.base.CheckStatus
+import com.civileg.app.domain.calculations.base.DesignCheckStatus
 import kotlin.math.*
 
 /**
@@ -220,7 +220,7 @@ class ECPShearWall : ShearWallDesign {
 
         // ── 9. Overall safety ──────────────────────────────────────
         val computedOk = flexOk && shearOk && slenderOk
-        val overallStatus = if (computedOk) CheckStatus.PRELIMINARY else CheckStatus.FAIL
+        val overallStatus = if (computedOk) DesignCheckStatus.PRELIMINARY else DesignCheckStatus.FAIL
         val overallSafe = false  // unverified constants: never SAFE
         val maxUtil = maxOf(flexUtilRatio, shearUtilRatio)
 
@@ -630,7 +630,7 @@ class ECPShearWall : ShearWallDesign {
                 diagonalBars = 0, diagonalBarDiameter = 0,
                 transverseBarsDiameter = 0, transverseBarsSpacing = 0,
                 isSafe = false, utilizationRatio = 0.0,
-                status = CheckStatus.NOT_ASSESSED, note = ShearWallChecks.COUPLING_NOTE
+                status = DesignCheckStatus.NOT_ASSESSED, note = ShearWallChecks.COUPLING_NOTE
             )
         }
 
@@ -672,7 +672,7 @@ class ECPShearWall : ShearWallDesign {
             transverseBarsSpacing = transSpacing,
             isSafe = false,
             utilizationRatio = utilRatio,
-            status = CheckStatus.NOT_ASSESSED, note = ShearWallChecks.COUPLING_NOTE
+            status = DesignCheckStatus.NOT_ASSESSED, note = ShearWallChecks.COUPLING_NOTE
         )
     }
 

@@ -3,7 +3,7 @@ package com.civileg.app.domain.calculations.ecp
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign
-import com.civileg.app.domain.calculations.base.CheckStatus
+import com.civileg.app.domain.calculations.base.DesignCheckStatus
 import com.civileg.app.domain.calculations.base.WaffleChecks
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabInput
@@ -149,16 +149,16 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         val providedSteel = ribDesign.flexureReinforcement.providedArea
         val steelWeight = ((numRibsX * providedSteel * (input.ly / 1000.0) / 1e6) + (numRibsY * providedSteel * (input.lx / 1000.0) / 1e6)) * 7850.0
 
-        val status = if (ribDesign.status == CheckStatus.FAIL || punchingShearCheck.status == CheckStatus.FAIL) CheckStatus.FAIL else CheckStatus.PRELIMINARY
+        val status = if (ribDesign.status == DesignCheckStatus.FAIL || punchingShearCheck.status == DesignCheckStatus.FAIL) DesignCheckStatus.FAIL else DesignCheckStatus.PRELIMINARY
         val notAssessed = mutableListOf(
             "Deflection: no supported method (the earlier fixed-section estimate was removed)",
             "Solid head flexure and reinforcement",
             "Punching at the solid-head edge, moment transfer, edge and corner columns"
         )
-        if (ribDesign.status == CheckStatus.NOT_ASSESSED) {
+        if (ribDesign.status == DesignCheckStatus.NOT_ASSESSED) {
             notAssessed.add("Rib flexure and shear: ECP 203 clauses are not in the supplied reference text; values are indicative only")
         }
-        if (punchingShearCheck.status == CheckStatus.NOT_ASSESSED) {
+        if (punchingShearCheck.status == DesignCheckStatus.NOT_ASSESSED) {
             notAssessed.add("Punching shear: ECP 203 clauses are not in the supplied reference text")
         }
         val punchUtil = if (punchingShearCheck.vc > 0) punchingShearCheck.vu / punchingShearCheck.vc else 0.0
@@ -167,14 +167,14 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         warnings.addAll(ribDesign.warnings)
         if (punchingShearCheck.note.isNotEmpty()) codeNotes.add("Punching: " + punchingShearCheck.note)
         codeNotes.addAll(ribDesign.notes)
-        if (status == CheckStatus.FAIL) warnings.add("FAIL: one or more computed ECP 203 checks failed")
+        if (status == DesignCheckStatus.FAIL) warnings.add("FAIL: one or more computed ECP 203 checks failed")
         if (utilizationRatio > 1.0) warnings.add("Utilization ratio = ${String.format("%.2f", utilizationRatio)} > 1.0")
         notAssessed.forEach { warnings.add("NOT ASSESSED: " + it) }
 
-        if (ribDesign.status != CheckStatus.NOT_ASSESSED) {
+        if (ribDesign.status != DesignCheckStatus.NOT_ASSESSED) {
             safetyChecks.add(SafetyCheckItem("Rib flexure and shear", ribDesign.utilizationRatio, 1.0, "ECP 203 (" + ribDesign.status.label + ")", passed = ribDesign.isSafe))
         }
-        if (punchingShearCheck.status != CheckStatus.NOT_ASSESSED) {
+        if (punchingShearCheck.status != DesignCheckStatus.NOT_ASSESSED) {
             safetyChecks.add(SafetyCheckItem("Punching shear (concentric)", punchUtil, 1.0, "ECP 203 (" + punchingShearCheck.status.label + ")", passed = punchingShearCheck.isSafe))
         }
 
@@ -227,7 +227,7 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
             wuPanel = totalLoad, cover = COVER, phiFlex = PHI_FLEXURE, phiShear = PHI_SHEAR,
             vcCoef = 0.24, vsMaxCoef = null, beta1 = null,
             minAs = { _, b, dd -> max(0.15 / 100.0 * b * dd, 0.0) },
-            passStatus = CheckStatus.NOT_ASSESSED, codeRef = "ECP 203"
+            passStatus = DesignCheckStatus.NOT_ASSESSED, codeRef = "ECP 203"
         )
     }
 
@@ -274,7 +274,7 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         return WaffleChecks.punching(
             columnMm = columnSize, totalDepthMm = totalDepth, cover = COVER, vuKN = shear, phiShear = PHI_SHEAR,
             nominalVc = { bo, d, beta -> minOf(0.31 * sqrt(fc) * bo * d / 1000.0, 0.15 * (1.0 + 2.0 / beta) * sqrt(fc) * bo * d / 1000.0, 0.08 * (2.0 + 40.0 * d / bo) * sqrt(fc) * bo * d / 1000.0) },
-            passStatus = CheckStatus.NOT_ASSESSED
+            passStatus = DesignCheckStatus.NOT_ASSESSED
         )
     }
 

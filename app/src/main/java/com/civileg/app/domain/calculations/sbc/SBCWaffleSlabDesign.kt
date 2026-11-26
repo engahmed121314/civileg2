@@ -3,7 +3,7 @@ package com.civileg.app.domain.calculations.sbc
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign
-import com.civileg.app.domain.calculations.base.CheckStatus
+import com.civileg.app.domain.calculations.base.DesignCheckStatus
 import com.civileg.app.domain.calculations.base.WaffleChecks
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabInput
@@ -137,11 +137,11 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         // SBC solid head, punching and deflection keep their existing functions, but none of them has a verified
         // SBC 304 clause in the supplied text (solid head uses an unsourced /32 column-strip factor and bar clamps, deflection
         // uses fixed service loads and an unsourced L/250 limit), so they cannot support a pass.
-        val punchStatus = if (!punchingShearCheck.isSafe) CheckStatus.FAIL else CheckStatus.NOT_ASSESSED
+        val punchStatus = if (!punchingShearCheck.isSafe) DesignCheckStatus.FAIL else DesignCheckStatus.NOT_ASSESSED
         val punchChecked = punchingShearCheck.copy(status = punchStatus)
-        val headChecked = solidHeadDesign.copy(status = if (!solidHeadDesign.isSafe) CheckStatus.FAIL else CheckStatus.NOT_ASSESSED)
+        val headChecked = solidHeadDesign.copy(status = if (!solidHeadDesign.isSafe) DesignCheckStatus.FAIL else DesignCheckStatus.NOT_ASSESSED)
         val headFlexNote = "Solid head: SBC 304 method not verified (unsourced column-strip factor, bar-count clamps); result indicative only"
-        val status = if (ribDesign.status == CheckStatus.FAIL || punchStatus == CheckStatus.FAIL || !solidHeadDesign.isSafe) CheckStatus.FAIL else CheckStatus.PRELIMINARY
+        val status = if (ribDesign.status == DesignCheckStatus.FAIL || punchStatus == DesignCheckStatus.FAIL || !solidHeadDesign.isSafe) DesignCheckStatus.FAIL else DesignCheckStatus.PRELIMINARY
         val notAssessed = mutableListOf(
             "Deflection: SBC 304 method not verified (fixed service loads and limit); result not used for the verdict",
             headFlexNote,
@@ -153,11 +153,11 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
 
         warnings.addAll(ribDesign.warnings)
         codeNotes.addAll(ribDesign.notes)
-        if (status == CheckStatus.FAIL) warnings.add("FAIL: one or more computed SBC 304 checks failed")
+        if (status == DesignCheckStatus.FAIL) warnings.add("FAIL: one or more computed SBC 304 checks failed")
         if (utilizationRatio > 1.0) warnings.add("Utilization ratio = ${String.format("%.2f", utilizationRatio)} > 1.0")
         notAssessed.forEach { warnings.add("NOT ASSESSED: " + it) }
 
-        safetyChecks.add(SafetyCheckItem("Rib flexure and shear", ribDesign.utilizationRatio, 1.0, "SBC 304 (" + ribDesign.status.label + ")", passed = ribDesign.isSafe || ribDesign.status == CheckStatus.NOT_ASSESSED))
+        safetyChecks.add(SafetyCheckItem("Rib flexure and shear", ribDesign.utilizationRatio, 1.0, "SBC 304 (" + ribDesign.status.label + ")", passed = ribDesign.isSafe || ribDesign.status == DesignCheckStatus.NOT_ASSESSED))
         safetyChecks.add(SafetyCheckItem("Solid head", 0.0, 1.0, "SBC 304 (indicative)", passed = solidHeadDesign.isSafe))
         safetyChecks.add(SafetyCheckItem("Punching shear", punchUtil, 1.0, "SBC 304 (" + punchStatus.label + ")", passed = punchingShearCheck.isSafe))
 
@@ -210,7 +210,7 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
             wuPanel = totalLoad, cover = COVER, phiFlex = PHI_FLEXURE, phiShear = PHI_SHEAR,
             vcCoef = 0.24, vsMaxCoef = null, beta1 = null,
             minAs = { _, b, dd -> max(0.15 / 100.0 * b * dd, 0.0) },
-            passStatus = CheckStatus.NOT_ASSESSED, codeRef = "SBC 304"
+            passStatus = DesignCheckStatus.NOT_ASSESSED, codeRef = "SBC 304"
         )
     }
 
