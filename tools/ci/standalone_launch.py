@@ -455,6 +455,11 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
             sweep(prefix + "-res", 4)
         except Exception as e:
             log.append((prefix + "_exception", repr(e)))
+    for blk in (footing_block, stair_block):
+        try:
+            restart_app(); blk()
+        except Exception as e:
+            log.append((blk.__name__ + "_exception", repr(e)))
     pull_exported_pdfs()
     open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
 if os.path.exists("tools/ci/FOOTING_ONLY"):
