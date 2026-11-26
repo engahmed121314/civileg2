@@ -2536,7 +2536,7 @@ class CalculatorEngine @Inject constructor(
             DesignSafetyCheck(it.name, it.value, it.limit, it.unit, it.isSafe)
         }
 
-        val ref = codeNoteRef(code)
+        val ref = if (code == DesignCode.ECP) "ECP 203-2025 (partial: Table 4-1 Kmax only)" else codeNoteRef(code)
         val steps = listOf(
             CalculationStep(
                 stepNumber = 1, title = "Tank Geometry",
