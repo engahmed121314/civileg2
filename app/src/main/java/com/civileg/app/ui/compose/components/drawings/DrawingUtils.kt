@@ -1449,6 +1449,98 @@ fun DrawScope.drawResultSummaryStrip(
     width: Float,
     cfg: DrawingDimensionsConfig,
     color: Color = DrawingColorDefaults.DimensionWhite,
+    borderColor: Color = DrawingColorDefaults.ExtensionGray,
+    stacked: Boolean = false
+) {
+    val small = cfg.annotationTextSmall
+    if (stacked) { drawStackedResultSummaryStrip(summary, x, y, width, cfg, color, borderColor); return }
+    val rowHeight = small * 1.35f
+    val height = rowHeight * 2f
+    val statusColor = if (summary.listedChecksFailed || !summary.codeAcceptanceComplete) DrawingColorDefaults.UnsafeRed else if (summary.isSafe) DrawingColorDefaults.SafeGreen else DrawingColorDefaults.UnsafeRed
+    val pad = small * 0.4f
+
+    drawRect(Color(0x22FFFFFF), Offset(x, y), Size(width, height))
+    drawRect(borderColor, Offset(x, y), Size(width, height), style = Stroke(cfg.strokeTable))
+    drawLine(borderColor, Offset(x, y + rowHeight), Offset(x + width, y + rowHeight), cfg.strokeDefault)
+
+    val status = if (summary.listedChecksFailed) "UNSAFE" else if (!summary.codeAcceptanceComplete) "UNVERIFIED" else if (summary.isSafe) "SAFE" else "UNSAFE"
+    drawTextAnnotated("STATUS: $status", x + pad, y + small * 1.05f, statusColor, small, bold = true)
+    drawTextAnnotated(
+        summary.utilizationText ?: "UTIL: ${summary.utilizationPercent}",
+        x + width * 0.32f, y + small * 1.05f, color, small
+    )
+    if (summary.designCodeLabel.isNotBlank()) {
+        drawTextAnnotated(
+            "CODE: ${summary.designCodeLabel}",
+            x + width * 0.60f, y + small * 1.05f, color, small
+        )
+    }
+
+    val total = summary.safetyChecks.size
+    val passed = total - summary.failedCheckCount - summary.notAssessedCheckCount
+    val checks = if (total == 0) "CHECKS: N/A"
+        else if (summary.notAssessedCheckCount > 0) "CHECKS: $passed/$total PASS, ${summary.notAssessedCheckCount} NOT ASSESSED"
+        else "CHECKS: $passed/$total PASS"
+    drawTextAnnotated(checks, x + pad, y + rowHeight + small * 1.05f, color, small)
+    drawTextAnnotated(
+        "CONC: %.2f m3".format(summary.concreteVolume),
+        x + width * 0.38f, y + rowHeight + small * 1.05f, color, small
+    )
+    drawTextAnnotated(
+        "STEEL: %.1f kg".format(summary.steelWeight),
+        x + width * 0.67f, y + rowHeight + small * 1.05f, color, small
+    )
+}
+
+/**
+ * Draw the sheet status strip and a north arrow directly above the title block.
+ * Call once per drawing so every sheet is self-describing when exported to PDF.
+ */
+fun DrawScope.drawSheetAnnotations(
+    x: Float,
+    y: Float,
+    cfg: DrawingDimensionsConfig,
+    summary: DrawingResultSummary? = null,
+    color: Color = DrawingColorDefaults.DimensionWhite,
+    stackedSummary: Boolean = false
+) {
+    val blockWidth = cfg.titleBlockWidth
+    val small = cfg.annotationTextSmall
+    if (summary != null) {
+        val stripY = if (stackedSummary) y - small * 1.35f * SUMMARY_STRIP_ROWS - small * 0.4f else y - small * 2.7f
+        drawResultSummaryStrip(
+            summary = summary,
+            x = x,
+            y = stripY,
+            width = blockWidth,
+            cfg = cfg,
+            color = color,
+            stacked = stackedSummary
+        )
+        drawNorthArrow(
+            x = x + blockWidth * 0.5f,
+            y = if (stackedSummary) stripY - small * 2.8f else y - small * 6.2f,
+            size = small * 1.4f,
+            color = color
+        )
+    } else {
+        drawNorthArrow(
+            x = x + blockWidth * 0.5f,
+            y = y - small * 2.2f,
+            size = small * 1.4f,
+            color = color
+        )
+    }
+}
+
+/** Footing-only layout: one short line per row so STATUS, UTIL and CODE do not overprint in the narrow strip. */
+private fun DrawScope.drawStackedResultSummaryStrip(
+    summary: DrawingResultSummary,
+    x: Float,
+    y: Float,
+    width: Float,
+    cfg: DrawingDimensionsConfig,
+    color: Color = DrawingColorDefaults.DimensionWhite,
     borderColor: Color = DrawingColorDefaults.ExtensionGray
 ) {
     val small = cfg.annotationTextSmall
@@ -1484,40 +1576,3 @@ fun DrawScope.drawResultSummaryStrip(
 /** Rows in the result summary strip (one short text line per row). */
 const val SUMMARY_STRIP_ROWS = 6
 
-/**
- * Draw the sheet status strip and a north arrow directly above the title block.
- * Call once per drawing so every sheet is self-describing when exported to PDF.
- */
-fun DrawScope.drawSheetAnnotations(
-    x: Float,
-    y: Float,
-    cfg: DrawingDimensionsConfig,
-    summary: DrawingResultSummary? = null,
-    color: Color = DrawingColorDefaults.DimensionWhite
-) {
-    val blockWidth = cfg.titleBlockWidth
-    val small = cfg.annotationTextSmall
-    if (summary != null) {
-        drawResultSummaryStrip(
-            summary = summary,
-            x = x,
-            y = y - small * 1.35f * SUMMARY_STRIP_ROWS - small * 0.4f,
-            width = blockWidth,
-            cfg = cfg,
-            color = color
-        )
-        drawNorthArrow(
-            x = x + blockWidth * 0.5f,
-            y = y - small * 1.35f * SUMMARY_STRIP_ROWS - small * 3.2f,
-            size = small * 1.4f,
-            color = color
-        )
-    } else {
-        drawNorthArrow(
-            x = x + blockWidth * 0.5f,
-            y = y - small * 2.2f,
-            size = small * 1.4f,
-            color = color
-        )
-    }
-}
