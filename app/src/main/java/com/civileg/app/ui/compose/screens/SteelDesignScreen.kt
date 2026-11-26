@@ -443,8 +443,9 @@ fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
             AppText(stringResource(R.string.steel_design_summary), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             ResultRow(stringResource(R.string.steel_total_weight), "${String.format("%.1f", res.totalWeight)} Tons")
             ResultRow(stringResource(R.string.steel_weight_m2), "${String.format("%.1f", res.weightPerM2)} kg/m\u00B2")
-            ResultRow(stringResource(R.string.steel_base_plate_thickness), "${res.mainFrame.basePlateThickness.toInt()} mm")
-            ResultRow(stringResource(R.string.steel_base_plate_anchor_bolts), "${res.mainFrame.basePlateBoltsCount}xM24 Bolts")
+            // Sections and per-member weights actually used by the analysis (tons).
+            res.materialTakeoff.forEach { (k, v) -> ResultRow(k, "${String.format("%.2f", v)} Tons") }
+            ResultRow("Base plate / anchor bolts", "NOT ASSESSED (not designed)")
             if (res.mainFrame.floorBeamSection != null) {
                 ResultRow(stringResource(R.string.steel_intermediate_floor_beam), res.mainFrame.floorBeamSection.sectionName)
                 ResultRow(stringResource(R.string.steel_floor_beam_moment), "${String.format("%.1f", res.mainFrame.floorBeamMaxMoment)} kN.m")

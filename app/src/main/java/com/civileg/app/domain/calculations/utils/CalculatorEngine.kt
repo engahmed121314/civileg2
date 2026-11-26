@@ -883,6 +883,9 @@ class CalculatorEngine @Inject constructor(
         val totalPurlinLen = purlinsPerRafter * length
 
         val frameWeightTons = (2 * eave * colSection.area * 7850.0 + 2 * rafterLen * rafSection.area * 7850.0) / 1e9 * numFrames
+        // Real per-member weights from section area (mm2) x length (mm) x 7850 kg/m3 -> tons
+        val columnWeightTons = 2 * eave * colSection.area * 7850.0 / 1e9 * numFrames
+        val rafterWeightTons = 2 * rafterLen * rafSection.area * 7850.0 / 1e9 * numFrames
         val purlinWeightTons = totalPurlinLen * (purlinSection.area * 7850.0 / 1e6) / 1000.0
         val totalWeightTons = frameWeightTons + purlinWeightTons
 
@@ -903,9 +906,9 @@ class CalculatorEngine @Inject constructor(
             maxMoment = maxMoment, maxShear = maxShear, maxAxial = maxAxial,
             maxDeflection = maxDeflection, allowableDeflection = allowableDef,
             isSafe = maxDeflection <= allowableDef,
-            utilizationMoment = rafFlexUtil.coerceIn(0.1, 1.5),
-            utilizationShear = max(rafShearUtil, colShearUtil).coerceIn(0.1, 1.5),
-            utilizationAxial = colAxialUtil.coerceIn(0.1, 1.5)
+            utilizationMoment = rafFlexUtil, // measured ratio, not clamped
+            utilizationShear = max(rafShearUtil, colShearUtil),
+            utilizationAxial = colAxialUtil
         )
 
         val secondary = SecondaryMembersResult(
@@ -916,17 +919,16 @@ class CalculatorEngine @Inject constructor(
         val weldedConn = ConnectionType.Welded(weldType = WeldType.FILLET, weldSize = 8.0, weldLength = 200.0, electrodeType = ElectrodeType.E70XX)
         val boltedConn = ConnectionType.Bolted(boltDiameter = 20.0, boltGrade = BoltGrade.GRADE_8_8, numberOfBolts = 6, boltPattern = BoltPattern.DOUBLE_ROW, connectionType = BoltConnectionType.BEARING)
 
-        val connections = listOf(
-            SteelConnectionDetail("Base Plate Connection", boltedConn, 400.0, maxAxial, true),
-            SteelConnectionDetail("Apex Haunch Connection", weldedConn, maxMoment * 1.2, maxMoment, true)
-        )
+        // Connections are not designed by this analysis; the former list used a hardcoded
+        // 400 kN / 1.2*M capacity with isSafe=true. Report none rather than invented values.
+        val connections = emptyList<SteelConnectionDetail>()
 
         return SteelWarehouseAnalysisResult(
             mainFrame = mainFrame, secondaryMembers = secondary, connections = connections,
             totalWeight = totalWeightTons, totalCladdingArea = claddingArea, weightPerM2 = weightPerM2,
             resultsByCode = inputs.code.displayName, safetyStatus = maxDeflection <= allowableDef,
             recommendations = if (maxDeflection > allowableDef) listOf("Increase rafter section height to control deflection") else emptyList(),
-            materialTakeoff = mapOf("Columns (${colSection.displayName})" to frameWeightTons * 0.5, "Rafters (${rafSection.displayName})" to frameWeightTons * 0.5, "Purlins (${purlinSection.displayName})" to purlinWeightTons),
+            materialTakeoff = mapOf("Columns (${colSection.sectionName})" to columnWeightTons, "Rafters (${rafSection.sectionName})" to rafterWeightTons, "Purlins (${purlinSection.sectionName})" to purlinWeightTons),
             estimatedTotalCost = cost, costPerM2 = cost / (span * length)
         )
     }
