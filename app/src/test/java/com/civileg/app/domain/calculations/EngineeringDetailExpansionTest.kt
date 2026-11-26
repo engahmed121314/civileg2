@@ -367,9 +367,14 @@ class EngineeringDetailExpansionTest {
         )
         assertTrue(ok.isSafe)
         val okSummary = com.civileg.app.ui.compose.components.drawings.footingDrawingSummary(ok)
+        assertFalse(okSummary.codeAcceptanceComplete)
+        assertFalse(okSummary.listedChecksFailed)
         assertEquals("UNVERIFIED", okSummary.safetyLabel)
         val bad = ok.copy(isSafe = false)
-        assertEquals("FAIL", com.civileg.app.ui.compose.components.drawings.footingDrawingSummary(bad).safetyLabel)
+        val badSummary = com.civileg.app.ui.compose.components.drawings.footingDrawingSummary(bad)
+        assertFalse("incomplete stays incomplete when a check fails", badSummary.codeAcceptanceComplete)
+        assertTrue(badSummary.listedChecksFailed)
+        assertEquals("FAIL", badSummary.safetyLabel)
     }
 
     @Test
