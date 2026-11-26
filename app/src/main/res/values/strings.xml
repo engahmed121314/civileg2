@@ -763,6 +763,7 @@
     <string name="fs_perimeter">Perimeter bo</string>
     <string name="fs_shear_reinf">Shear Reinf.</string>
     <string name="fs_deflection">Deflection</string>
+    <string name="fs_deflection_estimate">Deflection (estimate)</string>
     <string name="fs_long_term_delta">Long Term Δ</string>
     <string name="fs_quantities">Quantities</string>
     <string name="fs_concrete">Concrete</string>

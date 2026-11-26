@@ -152,7 +152,7 @@ class EngineeringDetailExpansionTest {
         val ecp = ECPFlatSlab().design(FlatSlabInput())
         val aci = ACIFlatSlab().design(FlatSlabInput())
         listOf(ecp, aci).forEach { r ->
-            assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+            assertEquals("traceable steps expected (deflection step only when assessed)", if (r.deflectionAssessed) 6 else 5, r.calculationSteps.size)
             assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
             assertTrue("punching step must exist", r.calculationSteps.any { it.title == "Punching Shear" })
         }

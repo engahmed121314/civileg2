@@ -760,6 +760,7 @@
     <string name="fs_perimeter">المحيط الحرج bo</string>
     <string name="fs_shear_reinf">تسليح القص</string>
     <string name="fs_deflection">الترخيم</string>
+    <string name="fs_deflection_estimate">الترخيم (تقدير)</string>
     <string name="fs_long_term_delta">الترخيم طويل الأمد</string>
     <string name="fs_quantities">الكميات</string>
     <string name="fs_concrete">خرسانة</string>

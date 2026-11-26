@@ -28,11 +28,11 @@ fun flatSlabCalculationSteps(
     deflectionAssessed: Boolean = true
 ): List<CalculationStep> {
     val ref = when (code) {
-        DesignCode.ECP -> "ECP 203-2025 (flat slab: Eq 6-18, Table 6-5, punching Eq 4-46/4-47, Table 6-3; deflection NOT ASSESSED)"
+        DesignCode.ECP -> "ECP 203-2025 (flat slab: Eq 6-18, Table 6-5, punching Eq 4-46/4-47, Table 6-3; deflection is an estimate: the code gives no flat slab strip method)"
         DesignCode.ACI -> DesignCode.ACI.version
         DesignCode.SBC -> DesignCode.SBC.version
     }
-    return listOf(
+    return listOfNotNull(
         CalculationStep(
             stepNumber = 1, title = "Factored Load",
             formula = "wu = γD·DL + γL·LL",
@@ -71,14 +71,8 @@ fun flatSlabCalculationSteps(
             codeReference = ref, isPass = punchingOk,
             status = if (punchingOk) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
         ),
-        if (!deflectionAssessed) CalculationStep(
-            stepNumber = 6, title = "Deflection",
-            formula = "", formulaWithValues = "",
-            result = "NOT ASSESSED (no verified clause for the empirical-method deflection check)", unit = "",
-            codeReference = ref, isPass = false,
-            status = StepStatus.WARNING
-        ) else CalculationStep(
-            stepNumber = 6, title = "Deflection",
+        if (!deflectionAssessed) null else CalculationStep(
+            stepNumber = 6, title = if (code == DesignCode.ECP) "Deflection (estimate)" else "Deflection",
             formula = "Δ ≤ L/250",
             formulaWithValues = "Δ = ${"%.2f".format(deflection)} mm vs ${"%.2f".format(allowableDeflection)} mm",
             result = if (deflectionOk) "OK" else "Exceeds limit", unit = "mm",

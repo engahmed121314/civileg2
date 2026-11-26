@@ -495,7 +495,7 @@ class ECPAdvancedSlab {
     private fun checkSlabDeflection(slab: SlabType, fy: Double, fcu: Double = 25.0): DeflectionCheckResult {
         // حساب الانحراف حسب ECP 203 البند 6-3
         // δ = 5 × w × L⁴ / (384 × Ec × I)
-        // Ec = 4400 × √(fcu) حسب ECP 203 البند 4-1-1-1
+        // Ec = 4400 × √(fcu) حسب ECP 203-2025 البند 2-3-3-1 (ص 2-23، المعادلة 2-1)
         val Ec = 4400.0 * sqrt(fcu)  // MPa
         
         val thickness = when (slab) {
