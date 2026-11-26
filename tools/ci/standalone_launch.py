@@ -71,15 +71,28 @@ def press_calc(name):
         scroll_up(2)
     return False
 
+def open_stair_from_hub(tag):
+    """Reach the Design hub (retry BACK until its title is on screen, no blind single BACK), then open the stair card.
+    The card title is matched exactly (the subtitle also contains the word) so the tap lands on the card."""
+    hub = False
+    for _ in range(4):
+        # a "Viewing full screen" tip left over by the PDF viewer hides the hub until it is dismissed
+        tap_text(["Got it", "حسنًا", "حسناً"], tag + "-gotit")
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+        tap_text(["Got it", "حسنًا", "حسناً"], tag + "-gotit2")
+        tap_text(["التصميم"], tag + "-design", exact=True)
+        if any("اختر وحدة التصميم" in t for t, b in nodes(dump(tag + "-hubcheck"))): hub = True; break
+    log.append((tag + "_hub", hub))
+    scroll_top(3)
+    ok = False
+    for _ in range(8):
+        if tap_text(["السلالم"], tag + "-find", exact=True): ok = True; break
+        scroll_up(1)
+    return ok
+
 # Stair: open from the Design tab, design with the defaults, open the drawing's reinforcement tab
 def stair_block():
-    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
-    ok = False
-    log.append(("stair_design_tab", tap_text(["التصميم"], "stair-d-design", exact=True)))
-    scroll_top(3)
-    for _ in range(5):
-        if tap_text(["السلالم"], "stair-find"): ok = True; break
-        scroll_up(2)
+    ok = open_stair_from_hub("stair")
     log.append(("stair_open", ok)); time.sleep(2); shot("stair-open")
     for _ in range(6):
         if tap_text(["تصميم السلم الآن"], "stair-calc-find"): log.append(("stair_calc", True)); break
@@ -95,12 +108,7 @@ def stair_block():
         log.append(("stair_tab_" + t, tap_text([t], "stair-tab-" + t, exact=True))); time.sleep(2); shot("stair-tab-" + t)
 def stair_unsupported():
     """Re-open Stair, pick the cantilever type (not implemented) and design; capture what is offered."""
-    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
-    tap_text(["التصميم"], "su-design", exact=True); scroll_top(3)
-    ok = False
-    for _ in range(5):
-        if tap_text(["السلالم"], "su-find"): ok = True; break
-        scroll_up(2)
+    ok = open_stair_from_hub("su")
     log.append(("su_open", ok)); time.sleep(2)
     log.append(("su_type_menu", tap_text(["قلبة واحدة", "Single Flight"], "su-type"))); time.sleep(1); shot("su-menu")
     log.append(("su_pick_cantilever", tap_text(["درج كابولي", "Cantilever"], "su-pick"))); time.sleep(1); shot("su-picked")
@@ -116,12 +124,7 @@ def stair_unsupported():
         scroll_up(2); shot(f"su-res-{k}"); dump(f"su-res-{k}")
 def stair_codes():
     """Open Stair again and design the default flight under the American and then the Saudi code."""
-    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
-    tap_text(["التصميم"], "sc-design", exact=True); scroll_top(3)
-    ok = False
-    for _ in range(5):
-        if tap_text(["السلالم"], "sc-find"): ok = True; break
-        scroll_up(2)
+    ok = open_stair_from_hub("sc")
     log.append(("sc_open", ok)); time.sleep(2)
     for label, tag in (("American Code", "ACI"), ("Saudi Code", "SBC")):
         scroll_top(8)
@@ -166,12 +169,7 @@ def stair_codes():
     open(f"{out}/sc-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
 def stair_invalid():
     """Re-open Stair, set the flight width to 0 (invalid) and press design; capture the field error and whether a result appears."""
-    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
-    tap_text(["التصميم"], "inv-design", exact=True); scroll_top(3)
-    ok = False
-    for _ in range(5):
-        if tap_text(["السلالم"], "inv-find"): ok = True; break
-        scroll_up(2)
+    ok = open_stair_from_hub("inv")
     log.append(("inv_open", ok)); time.sleep(2); scroll_top(4)
     log.append(("inv_edit_width_0", edit_field("1200", "0", "inv-edit"))); time.sleep(1); shot("inv-field")
     for _ in range(6):
@@ -427,6 +425,110 @@ def sweep(prefix, n=5):
     for k in range(n):
         shot(f"{prefix}-{k}"); dump(f"{prefix}-{k}")
         scroll_up(2)
+def tap_checkable(name):
+    """Tap the first Switch-like (checkable) node on screen; used for the flat slab drop panel toggle."""
+    for t, b in nodes_attr(dump(name), "checkable"):
+        adb("shell", "input", "tap", str((b[0]+b[2])//2), str((b[1]+b[3])//2)); time.sleep(1.5); return True
+    return False
+def nodes_attr(x, attr):
+    try: r = ET.fromstring(x)
+    except Exception: return []
+    res = []
+    for n in r.iter("node"):
+        if n.get(attr) == "true":
+            m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", n.get("bounds") or "")
+            if m: res.append((n.get("text") or "", [int(v) for v in m.groups()]))
+    return res
+def flatslab_drop_block():
+    """Flat slab with a drop panel (100 mm below the slab, 2500 x 2500 mm): sweep the result and export the PDF."""
+    dismiss_not_responding()
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); dismiss_not_responding()
+    tap_text(["التصميم"], "fd-tab", exact=True); scroll_top(3)
+    ok = False
+    for _ in range(5):
+        if tap_text(["البلاطات المسطحة"], "fd-find"): ok = True; break
+        scroll_up(2)
+    log.append(("fsdrop_open", ok)); time.sleep(2); dismiss_not_responding()
+    scroll_top(2)
+    log.append(("fsdrop_switch", tap_checkable("fd-switch")))
+    time.sleep(1); dismiss_not_responding(); shot("fsdrop-form"); dump("fsdrop-form")
+    scroll_up(1)
+    got = [edit_field("0", "100", "fd-thk"), edit_field("0", "2500", "fd-x"), edit_field("0", "2500", "fd-y")]
+    log.append(("fsdrop_fields", got)); time.sleep(1); shot("fsdrop-typed"); dump("fsdrop-typed")
+    calc = False
+    for _ in range(5):
+        if tap_text(["تصميم بلاطة مسطحة"], "fd-calc"): calc = True; break
+        scroll_up(2)
+    log.append(("fsdrop_calc", calc)); time.sleep(4); dismiss_not_responding()
+    sweep("fsdrop-res", 9)
+    pdf_ok = False
+    for _ in range(8):
+        if tap_text(["PDF", "تقرير"], "fd-pdf-find"): pdf_ok = True; break
+        scroll_up(2)
+    log.append(("fsdrop_pdf_tap", pdf_ok)); time.sleep(6)
+    if not tap_text(["Got it", "حسنًا", "حسناً"], "fd-pdf-gotit"):
+        wm = adb("shell", "wm", "size").stdout.decode(errors="ignore")
+        mm = re.search(r"(\d+)x(\d+)", wm)
+        if mm:
+            adb("shell", "input", "tap", str(int(int(mm.group(1)) * 0.79)), str(int(int(mm.group(2)) * 0.27))); time.sleep(1.5)
+    shot("fsdrop-pdf"); dump("fsdrop-pdf")
+    for k in range(1, 5):
+        adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
+        shot("fsdrop-pdf-" + str(k))
+def flatslab_vary_block():
+    """Same flat slab screen, different inputs: the check cards must change values and PASS/FAIL with the inputs."""
+    cases = [
+        ("fsv1", [("6.0", "9.0", "fv-lx"), ("7.5", "9.0", "fv-ly")]),
+        ("fsv2", [("250", "160", "fv-thk")]),
+        ("fsv3", [("3.0", "8", "fv-ll"), ("400", "500", "fv-fy"), ("30", "40", "fv-fcu")]),
+    ]
+    for tag, edits in cases:
+        try:
+            dismiss_not_responding()
+            adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); dismiss_not_responding()
+            tap_text(["التصميم"], tag + "-tab", exact=True); scroll_top(3)
+            ok = False
+            for _ in range(5):
+                if tap_text(["البلاطات المسطحة"], tag + "-find"): ok = True; break
+                scroll_up(2)
+            log.append((tag + "_open", ok)); time.sleep(2); scroll_top(2)
+            for cur, new, nm in edits:
+                done = False
+                for _ in range(6):
+                    if edit_field(cur, new, nm): done = True; break
+                    scroll_up(1)
+                log.append((tag + "_" + nm, done))
+            calc = False
+            for _ in range(6):
+                if tap_text(["تصميم بلاطة مسطحة"], tag + "-calc"): calc = True; break
+                scroll_up(2)
+            log.append((tag + "_calc", calc)); time.sleep(4); dismiss_not_responding()
+            sweep(tag + "-res", 9)
+        except Exception as e:
+            log.append((tag + "_exception", repr(e)))
+def font_extra_block():
+    """Open Steel (design hub), Wind and Concrete mix (tools hub), try the calculate button, sweep (font pixel proof)."""
+    items = [("steel", "التصميم", "المنشآت المعدنية", ["تحليل وحساب", "تصميم", "احسب"]),
+             ("wind", "صندوق الأدوات", "أحمال الرياح", ["احسب", "حساب", "تحليل"]),
+             ("mix", "صندوق الأدوات", "خلطة الخرسانة", ["احسب", "تصميم الخلطة", "حساب"])]
+    for tag, tab, label, calc in items:
+        try:
+            dismiss_not_responding()
+            adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); dismiss_not_responding()
+            tap_text([tab], "fx-" + tag + "-tab", exact=True); scroll_top(3)
+            ok = False
+            for _ in range(6):
+                if tap_text([label], "fx-" + tag + "-find"): ok = True; break
+                scroll_up(2)
+            log.append(("fx_" + tag + "_open", ok)); time.sleep(2); shot("fx-" + tag + "-form"); dump("fx-" + tag + "-form")
+            got = False
+            for _ in range(5):
+                if tap_text(calc, "fx-" + tag + "-calc"): got = True; break
+                scroll_up(2)
+            log.append(("fx_" + tag + "_calc", got)); time.sleep(4); dismiss_not_responding()
+            sweep("fx-" + tag + "-res", 6)
+        except Exception as e:
+            log.append(("fx_" + tag + "_exception", repr(e)))
 if os.path.exists("tools/ci/CALCPAGES_ONLY"):
     # Default-input calculation of the calculation pages whose standalone result lines were changed (alignment evidence).
     pages = [
@@ -453,10 +555,10 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
                 if tap_text(calc, prefix + "-calc"): got = True; break
                 scroll_up(2)
             log.append((prefix + "_calc", got)); time.sleep(3)
-            sweep(prefix + "-res", 4)
+            sweep(prefix + "-res", 9 if prefix in ("cp-fs", "cp-strap") else 4)
         except Exception as e:
             log.append((prefix + "_exception", repr(e)))
-    for blk in (footing_block, stair_block, pile_block):
+    for blk in (flatslab_drop_block, flatslab_vary_block, font_extra_block, footing_block, stair_block, pile_block):
         try:
             blk()
         except Exception as e:
