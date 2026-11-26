@@ -699,7 +699,7 @@ fun ProfessionalFootingDrawing(
         } // end reinforcement table
 
         // ── Result strip and title block (measured, Footing sheet only) ─────────────────────────────
-        val blockTop = drawMeasuredSheetBlock(
+        val blockTopLeft = drawMeasuredSheetBlock(
             summary = resultSummary,
             drawingTitle = "Footing Detail",
             designCode = codeLabel,
@@ -708,8 +708,8 @@ fun ProfessionalFootingDrawing(
             cfg = cfg
         )
         drawNorthArrow(
-            x = w - cfg.margin * 0.3f - cfg.annotationTextSmall * 3f,
-            y = blockTop - cfg.annotationTextSmall * 2.8f,
+            x = blockTopLeft.x - cfg.annotationTextSmall * 2.6f,
+            y = blockTopLeft.y + cfg.annotationTextSmall * 2.2f,
             size = cfg.annotationTextSmall * 1.4f,
             color = textColor
         )
