@@ -31,7 +31,6 @@ class ECPFooting : FootingDesign {
         private const val MIN_REIN_RATIO = 0.0015 // 0.15% للقواعد per ECP 203 Table 4-8
         // أقل سماكة للقواعد ECP 203
         private const val MIN_THICKNESS = 300.0 // mm
-        private const val PUNCHING_SHEAR_REDUCTION = 0.90  // ECP/SBC: approximate reduction for soil reaction within critical perimeter
     }
 
     // ===================== القاعدة المنفصلة =====================
@@ -77,7 +76,12 @@ class ECPFooting : FootingDesign {
         val t_m = footingDepth / 1000.0
         val netSBC = soilBearingCapacity - GAMMA_CONCRETE * t_m
         // Guard: netSBC must be positive — if overburden exceeds bearing, use gross SBC
-        val A_req = if (netSBC > 0.001) P_service / netSBC else P_service / soilBearingCapacity
+        // Overburden of the footing weight consuming the whole allowable pressure is a failed input, not a case to
+        // silently size on the gross value (that hid an unusable thickness/soil combination).
+        require(netSBC > 0.001) {
+            "soilBearingCapacity: allowable bearing ${"%.1f".format(soilBearingCapacity)} kPa is not larger than the footing weight pressure ${"%.1f".format(GAMMA_CONCRETE * t_m)} kPa at footingDepth ${"%.0f".format(footingDepth)} mm; enter a larger allowable bearing or a smaller thickness"
+        }
+        val A_req = P_service / netSBC
         InputGuard.finite("A_req", A_req)
 
         // 4. نسبة العرض للطول
@@ -101,8 +105,28 @@ class ECPFooting : FootingDesign {
         }
 
         // 6. تقريب الأبعاد لأقرب 50 مم
-        val B = ceil(B_m * 1000 / 50.0) * 50.0
-        val L = ceil(L_m * 1000 / 50.0) * 50.0
+        var B = ceil(B_m * 1000 / 50.0) * 50.0
+        var L = ceil(L_m * 1000 / 50.0) * 50.0
+        // With moments the uniform-pressure area is not enough: grow both sides by 50 mm until the biaxial service
+        // pressure at the edge is within the allowable bearing and the base stays in compression (middle third in
+        // each direction). Corner/edge boundary limits are not exceeded: growth stops at them and the warning stays.
+        val maxB = if (constraints.isCornerColumn) B else Double.MAX_VALUE
+        val maxL = if (constraints.isCornerColumn) L else Double.MAX_VALUE
+        if (Mx_service != 0.0 || My_service != 0.0) {
+            var guard = 0
+            while (guard++ < 200) {
+                val a = B * L / 1e6
+                val qa = P_service / a
+                val exg = Mx_service / P_service
+                val eyg = My_service / P_service
+                val qmx = qa * (1 + 6 * exg / (B / 1000.0) + 6 * eyg / (L / 1000.0))
+                val qmn = qa * (1 - 6 * exg / (B / 1000.0) - 6 * eyg / (L / 1000.0))
+                if (qmx <= soilBearingCapacity && qmn >= 0) break
+                if (B >= maxB && L >= maxL) break
+                if (B < maxB) B += 50.0
+                if (L < maxL) L += 50.0
+            }
+        }
         val A_actual = B * L / 1e6
 
         // 7. ضغط التربة مع الانحراف
@@ -112,13 +136,11 @@ class ECPFooting : FootingDesign {
         val ey = if (P_service > 0) My_service / P_service else 0.0
         val B_m_dim = B / 1000.0
         val L_m_dim = L / 1000.0
-        val q_max_x = q_avg * (1 + 6 * ex / B_m_dim.coerceAtLeast(0.001))
-        val q_max_y = q_avg * (1 + 6 * ey / L_m_dim.coerceAtLeast(0.001))
-        val q_max = max(q_max_x, q_max_y)
-        val q_min = min(
-            q_avg * (1 - 6 * ex / B_m_dim.coerceAtLeast(0.001)),
-            q_avg * (1 - 6 * ey / L_m_dim.coerceAtLeast(0.001))
-        )
+        // Biaxial: the two eccentricity effects add at the loaded corner (taking only the larger one under-estimated it).
+        val bendX = 6 * ex / B_m_dim.coerceAtLeast(0.001)
+        val bendY = 6 * ey / L_m_dim.coerceAtLeast(0.001)
+        val q_max = q_avg * (1 + bendX + bendY)
+        val q_min = q_avg * (1 - bendX - bendY)
 
         // Factored soil pressure for flexure and one-way shear design (ultimate level)
         // With an explicit service load the factored pressure comes from the factored load, not from a ratio.
@@ -135,8 +157,11 @@ class ECPFooting : FootingDesign {
         // 9. cantilever moments (factored pressure), needed to size the bars before the effective depth is final
         val cantX = (B - columnWidth) / 2.0 / 1000.0  // م
         val cantY = (L - columnDepth) / 2.0 / 1000.0  // م
-        val Mu_x = q_factored * (L / 1000.0) * cantX * cantX / 2.0  // kN.m
-        val Mu_y = q_factored * (B / 1000.0) * cantY * cantY / 2.0  // kN.m
+        // With moments the pressure is not uniform; design on the factored pressure at the loaded edge (conservative,
+        // uniform over the cantilever). Without moments q_max == q_avg so nothing changes.
+        val q_design = if (q_avg > 0) q_factored * (q_max / q_avg) else q_factored
+        val Mu_x = q_design * (L / 1000.0) * cantX * cantX / 2.0  // kN.m
+        val Mu_y = q_design * (B / 1000.0) * cantY * cantY / 2.0  // kN.m
         val Mu_x_per_m = Mu_x / (L / 1000.0)
         val Mu_y_per_m = Mu_y / (B / 1000.0)
 
@@ -162,9 +187,11 @@ class ECPFooting : FootingDesign {
         }
         val dSafe = d.coerceAtLeast(50.0)
 
-        // 10. فحص القص الأحادي عند بعد d/2 من وجه العمود (ECP 203 البند 4-3-1-2) — factored pressure
-        val Vu_x = q_factored * (L / 1000.0) * max(cantX - dSafe / 2000.0, 0.0)  // kN
-        val Vu_y = q_factored * (B / 1000.0) * max(cantY - dSafe / 2000.0, 0.0)  // kN
+        // 10. One-way shear: critical section at d from the column face (beam-type shear). The previous d/2 is the
+        // punching distance and under-estimated the shear. The ECP 203-2025 clause page for the footing section
+        // location was NOT located in the scan; d from the face is the standard beam-shear section (NOT ASSESSED vs 2025 text).
+        val Vu_x = q_design * (L / 1000.0) * max(cantX - dSafe / 1000.0, 0.0)  // kN
+        val Vu_y = q_design * (B / 1000.0) * max(cantY - dSafe / 1000.0, 0.0)  // kN
 
         // ECP 203-2025 Eq 4-29 (PDF p.105, printed 4-25): footings concrete only, qcu = 0.16 sqrt(fcu/gc)
         val qcu = ECP2025ConcreteShear.oneWayQcu(fcu, GAMMA_C)  // MPa
@@ -179,7 +206,11 @@ class ECPFooting : FootingDesign {
         }
 
         // 11. فحص قص الاختراق
-        val punchingCheck = checkPunchingShear(fcu, columnWidth, columnDepth, dSafe, axialLoad, loadCombination)
+        // Net punching force = factored column load minus the factored soil reaction inside the critical perimeter
+        // (c1+d)(c2+d) at d/2 from the face. Statics, replaces the flat 0.9 factor that had no source.
+        val punchArea_m2 = (columnWidth + dSafe) / 1000.0 * (columnDepth + dSafe) / 1000.0
+        val netPunchForce = (axialLoad - q_factored * punchArea_m2).coerceAtLeast(0.001)
+        val punchingCheck = checkPunchingShear(fcu, columnWidth, columnDepth, dSafe, netPunchForce, loadCombination)
 
         // 13. التسليح التوزيعي (distribution steel) - 20% من التسليح الرئيسي
         val mainAs = max(reinfX.astRequired, reinfY.astRequired)
@@ -253,9 +284,8 @@ class ECPFooting : FootingDesign {
         // Here we compute for interior column (full perimeter)
         val bo = 2.0 * (columnWidth + columnDepth) + 4.0 * effectiveDepth
         InputGuard.finite("criticalPerimeter", bo)
-        // القوة القاطعة: 0.9 x الحمل الكلي، بدون خصم رد فعل التربة داخل المحيط (punchArea أدناه غير مستخدمة في الإجهاد)
-        val punchArea = (columnWidth + 2.0 * effectiveDepth) * (columnDepth + 2.0 * effectiveDepth)
-        val V_punch = punchingShearForce * PUNCHING_SHEAR_REDUCTION
+        // The caller passes the net punching force Qup (Eq 4-44: qup = Qup/(b0 d)); no extra reduction is applied here.
+        val V_punch = punchingShearForce
 
         // ضغط القص المُطبَّق
         val denom = (bo * effectiveDepth).coerceAtLeast(0.001)
