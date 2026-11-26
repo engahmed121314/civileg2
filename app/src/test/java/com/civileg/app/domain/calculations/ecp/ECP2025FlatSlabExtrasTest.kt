@@ -42,8 +42,9 @@ class ECP2025FlatSlabExtrasTest {
         assertEquals(2, s.size)
         assertEquals(10288.0, s[1].bo, 1e-9)
         assertEquals(172.0, s[1].d, 1e-9)
-        assertEquals(1.4131949617798671, s[1].qcup, 1e-9)           // Eq 4-46-c governs
-        assertEquals(1.4131949617798671 * 10288.0 * 172.0 / 1000.0, s[1].vcKn, 1e-6)
+        val qa = 0.8 * (4.0 * 172.0 / 10288.0 + 0.2) * Math.sqrt(30.0 / 1.5)   // Eq 4-46-a governs (about 0.955)
+        assertEquals(qa, s[1].qcup, 1e-9)
+        assertEquals(qa * 10288.0 * 172.0 / 1000.0, s[1].vcKn, 1e-6)
         assertEquals(232.0, s[0].d, 1e-9)                              // 200 + 60 - 20 - 8
     }
     @Test fun noDropGivesOneSection() {
