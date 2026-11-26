@@ -685,20 +685,20 @@ fun ProfessionalFootingDrawing(
         )
         } // end reinforcement table
 
-        // ── Responsive title block ─────────────────────────────
-        drawSheetAnnotations(
-            x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
-            y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,
-            cfg = cfg,
+        // ── Result strip and title block (measured, Footing sheet only) ─────────────────────────────
+        val blockTop = drawMeasuredSheetBlock(
             summary = resultSummary,
-            stackedSummary = true // Footing sheet only; other drawings keep the shared layout until it is visually regression-checked
-        )
-        drawResponsiveTitleBlock(
-            x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
-            y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,
-            cfg = cfg,
             drawingTitle = "Footing Detail",
-            designCode = codeLabel
+            designCode = codeLabel,
+            right = w - cfg.margin * 0.3f,
+            bottom = h - cfg.margin * 0.3f,
+            cfg = cfg
+        )
+        drawNorthArrow(
+            x = w - cfg.margin * 0.3f - cfg.annotationTextSmall * 3f,
+            y = blockTop - cfg.annotationTextSmall * 2.8f,
+            size = cfg.annotationTextSmall * 1.4f,
+            color = textColor
         )
     }
 }
