@@ -31,14 +31,13 @@ fun ProfessionalWarehouseDrawing(
     // ── Responsive config ──────────────────────────────────────────
     val cfg = drawingDimensionsConfig()
     // ── Code-reference annotation ──────────────────────────────────
-    val codeLabel = "ECP 205"
 
     Canvas(modifier = modifier.fillMaxWidth().fillMaxSize()) {
         val w = size.width
         val h = size.height
 
         // ── Combined section indicator ──────────────────────────
-        drawCombinedSectionLabel(cfg.headerHeight, w, listOf("Front", "Plan", "Side", "3D"), cfg, DrawingColorDefaults.AccentCyan)
+//         drawCombinedSectionLabel(cfg.headerHeight, w, listOf("Front", "Plan", "Side", "3D"), cfg, DrawingColorDefaults.AccentCyan)
 
         // ── Section separator & zone labels per view mode ───────
         val zoneLabel = when (viewMode) {
@@ -59,20 +58,14 @@ fun ProfessionalWarehouseDrawing(
         }
 
         // ── Responsive title block ────────────────────────────────
-        // Annotations sit above the title block (they were drawn at the same position and overprinted it).
+        // Result summary strip and north arrow (no title block below them any more).
         drawSheetAnnotations(
-            w - cfg.titleBlockWidth - cfg.margin,
-            h - 2f * cfg.titleBlockHeight - 2f * cfg.margin,
-            cfg,
-            resultSummary
-        )
-        drawResponsiveTitleBlock(
             w - cfg.titleBlockWidth - cfg.margin,
             h - cfg.titleBlockHeight - cfg.margin,
             cfg,
-            "CivilEG", "Warehouse Detail", "NTS", "WH-001", codeLabel,
-            DrawingColorDefaults.DimensionWhite, DrawingColorDefaults.ExtensionGray
+            resultSummary
         )
+        // The drawing title block is omitted here: its text overprinted its own small box, and the PDF carries its own title block.
     }
 }
 
