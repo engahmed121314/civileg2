@@ -202,7 +202,7 @@ def frame_block():
     log.append(("frame_view_tab", tap_text(["العرض والنتائج"], "fr-viewtab"))); time.sleep(3); shot("frame-view-BMD"); dump("frame-view-BMD")
     for t in ("SFD", "AFD"):
         log.append(("frame_view_" + t, tap_text([t], "fr-view-" + t, exact=True))); time.sleep(2); shot("frame-view-" + t)
-def stale_block(label, prefix, calc_words, calc_exact, field, newval):
+def stale_block(label, prefix, calc_words, calc_exact, field, newval, badval=None):
     """Open a page, solve with default inputs, edit one input, and prove the old result disappears."""
     try:
         restart_app()
@@ -220,12 +220,22 @@ def stale_block(label, prefix, calc_words, calc_exact, field, newval):
             scroll_up(2)
         log.append((prefix + "_calc", ok)); time.sleep(5)
         shot(prefix + "-solved"); dump(prefix + "-solved")
-        scroll_top(6)
+        for k in (1, 2, 3):
+            scroll_up(3); time.sleep(1); shot(prefix + f"-solved-r{k}"); dump(prefix + f"-solved-r{k}")
+        scroll_top(8)
         log.append((prefix + "_edit", edit_field(field, newval, prefix + "-edit"))); time.sleep(1.5)
         shot(prefix + "-edited-top")
         scroll_up(4); time.sleep(1)
         shot(prefix + "-edited"); dump(prefix + "-edited")
         scroll_up(4); shot(prefix + "-edited-2"); dump(prefix + "-edited-2")
+        if badval is not None:
+            scroll_top(8)
+            log.append((prefix + "_bad_edit", edit_field(newval, badval, prefix + "-bad"))); time.sleep(1)
+            for _ in range(8):
+                if tap_text(calc_words, prefix + "-bad-calc", exact=calc_exact): break
+                scroll_up(2)
+            time.sleep(3); shot(prefix + "-invalid"); dump(prefix + "-invalid")
+            scroll_top(8); shot(prefix + "-invalid-top")
     except Exception as e:
         log.append((prefix + "_stale_exception", repr(e)))
 def dismiss_not_responding():
@@ -283,7 +293,7 @@ if os.path.exists("tools/ci/STAIR_ONLY"):
         restart_app()
         stair_invalid()
         pile_block()
-        stale_block("الخزانات", "tank", ["تصميم الخزان الآن"], False, "50.0", "60.0")
+        stale_block("الخزانات", "tank", ["تصميم الخزان الآن"], False, "50.0", "60.0", "0")
         stale_block("حوائط السند", "rw", ["تحليل"], True, "4.0", "5.0")
         stale_block("القواعد الشداد", "strap", ["تحليل وحساب"], False, "1200", "1300")
         stale_block("البلاطات المسطحة", "fs", ["تصميم بلاطة مسطحة"], False, "6.0", "6.5")
