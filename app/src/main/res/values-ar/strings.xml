@@ -1269,7 +1269,7 @@
     <string name="footing_design_now">تصميم القاعدة الآن</string>
     <string name="slab_results">نتائج التصميم</string>
     <string name="footing_safe_economical">آمن واقتصادي</string>
-    <string name="footing_safe_review">آمن - راجع التصميم</string>
+    <string name="footing_safe_review">مبدئي - اجتازت الفحوصات المدرجة، وليس تقييماً كاملاً</string>
     <string name="footing_unsafe_review">غير آمن - فشل فحص أو أكثر، راجع التصميم</string>
     <string name="footing_dims">أبعاد الأساس</string>
     <string name="footing_thickness_label2">السمك (t) مم</string>
