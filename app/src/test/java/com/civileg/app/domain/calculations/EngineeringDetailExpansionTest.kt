@@ -214,6 +214,13 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `tank delivers the requested capacity at the design water depth`() {
+        val r = engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, height = 3000.0, fcu = 25.0, fy = 360.0)
+        assertEquals(50.0, r.capacity, 0.01)
+        assertEquals(50.0, r.length / 1000.0 * r.width / 1000.0 * 2.7, 0.01)
+    }
+
+    @Test
     fun `footing property line limit is enforced not ignored`() {
         val base = engine.calculateFooting(
             type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,

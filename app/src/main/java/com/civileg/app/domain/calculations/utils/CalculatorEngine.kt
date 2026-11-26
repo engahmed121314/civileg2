@@ -2447,7 +2447,13 @@ class CalculatorEngine @Inject constructor(
         val tankEngine = CalculationFactory.getTankDesign(domainCode)
 
         val hM = height / 1000.0
-        val sideM = sqrt(capacity / max(0.5, hM))
+        // Size the plan area for the requested capacity at the depth the design actually uses
+        // (water depth = height - 300 mm freeboard). Sizing on the full height delivered less than requested.
+        val waterDepthMm = max(100.0, height - 300.0)
+        val planAreaM2 = capacity / (waterDepthMm / 1000.0)
+        val isCircularType = type == TankType.CIRCULAR_GROUND || type == TankType.CIRCULAR_ELEVATED ||
+            type == TankType.CIRCULAR_UNDERGROUND
+        val sideM = if (isCircularType) sqrt(4.0 * planAreaM2 / PI) else sqrt(planAreaM2)
         val sideMm = sideM * 1000.0
 
         val baseType = when(type) {
@@ -2460,7 +2466,7 @@ class CalculatorEngine @Inject constructor(
         }
 
         val res = tankEngine.calculateTank(
-            length = sideMm, width = sideMm, height = height, waterDepth = max(100.0, height - 300.0),
+            length = sideMm, width = sideMm, height = height, waterDepth = waterDepthMm,
             fcu = fcu, fy = fy, type = baseType
         )
 
@@ -2488,7 +2494,7 @@ class CalculatorEngine @Inject constructor(
                 stepNumber = 1, title = "Tank Geometry",
                 formula = "V = L·W·H",
                 formulaWithValues = "L = W = ${"%.2f".format(sideM)} m, H = ${"%.2f".format(hM)} m",
-                result = "V = ${"%.2f".format(res.capacityM3)} m³", unit = "m³",
+                result = "V = ${"%.2f".format(planAreaM2 * waterDepthMm / 1000.0)} m³ at water depth ${"%.2f".format(waterDepthMm / 1000.0)} m", unit = "m³",
                 codeReference = ref
             ),
             CalculationStep(
@@ -2537,7 +2543,7 @@ class CalculatorEngine @Inject constructor(
             wallReinforcement = wallBar, baseReinforcement = baseBar,
             isSafe = res.isSafe, concreteVolume = res.concreteVolume, steelWeight = res.steelWeight,
             cost = res.cost, code = code, waterPressure = res.pressure,
-            capacity = res.capacityM3, safetyChecks = checks, fcu = fcu, fy = fy,
+            capacity = planAreaM2 * waterDepthMm / 1000.0, safetyChecks = checks, fcu = fcu, fy = fy,
             calculationSteps = steps
         )
     }
