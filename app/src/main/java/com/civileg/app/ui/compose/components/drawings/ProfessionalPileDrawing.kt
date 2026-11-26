@@ -65,7 +65,7 @@ fun ProfessionalPileDrawing(
     // ECP 203-2020: pile capacity per ECP 202-2015, shaft resistance fs
     // ACI 318-19:  Chapter 18 — soil-structure interaction, φ = 0.70
     // SBC 304-2018: adopts ACI pile provisions with SBC SRS factors
-    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    val codeLabel = (resultSummary?.designCodeLabel ?: "").ifBlank { designCode.version }  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
     // ── Responsive config ──────────────────────────────────────────────────
     val cfg = drawingDimensionsConfig()
 

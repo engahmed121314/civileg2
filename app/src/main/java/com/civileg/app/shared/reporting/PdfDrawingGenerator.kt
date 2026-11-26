@@ -1965,12 +1965,14 @@ object PdfDrawingGenerator {
         tiesSpacing: Int,
         capRebarDia: Int,
         capRebarCount: Int,
-        soilType: String
+        soilType: String,
+        statusBanner: String? = null
     ): Bitmap {
         val W = 1200; val H = 750
         val (bitmap, canvas) = createCanvas(W, H)
         val outlineP = createPaint(Color.WHITE, 1.5f)
         val titleP = textPaint(Color.WHITE, 24f, true)
+        statusBanner?.let { canvas.drawTextCentered(it, W / 2f, 66f, textPaint(Color.parseColor("#FFB74D"), 18f, true)) }
 
         canvas.drawTextCentered(
             "PILE FOUNDATION DETAIL — $pattern (${numberOfPiles} piles) | L=${pileLength.toInt()}m",

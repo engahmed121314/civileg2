@@ -133,10 +133,15 @@ fun retainingWallDrawingSummary(result: CalculatorEngine.RetainingWallResult): D
 fun pileDrawingSummary(result: com.civileg.app.domain.PileDesignResult): DrawingResultSummary =
     DrawingResultSummary(
         isSafe = result.isSafe,
+        // A passing pile estimate is never ACCEPTED while acceptance is incomplete: the sheet reads UNVERIFIED, a failed estimate reads UNSAFE.
+        codeAcceptanceComplete = result.codeAcceptanceComplete,
+        listedChecksFailed = !result.isSafe,
         utilizationRatio = result.utilizationRatio,
         safetyChecks = emptyList(),
-        codeNotes = result.warnings + result.codeNotes,
-        designCodeLabel = ""
+        codeNotes = (if (result.isSafe && !result.codeAcceptanceComplete)
+            listOf(com.civileg.app.domain.PileQualification.PRELIMINARY_BANNER) else emptyList()) +
+            result.qualificationNotes + result.warnings + result.codeNotes,
+        designCodeLabel = com.civileg.app.domain.PileQualification.DRAWING_CODE_LABEL
     )
 
 fun strapFootingDrawingSummary(result: CalculatorEngine.StrapFootingResult): DrawingResultSummary =
