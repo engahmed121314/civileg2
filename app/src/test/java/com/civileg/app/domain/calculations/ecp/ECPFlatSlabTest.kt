@@ -86,11 +86,14 @@ class ECPFlatSlabTest {
     }
 
     @Test
-    fun `design_deflectionIsReportedNotAssessed`() {
+    fun `design_deflectionIsAnEstimateWithItsLabel`() {
         val result = flatSlab.design(defaultInput())
-        assertFalse("Deflection must not be reported as assessed", result.deflectionAssessed)
-        assertFalse("No false deflection pass", result.deflectionOk)
-        assertTrue(result.warnings.any { it.contains("Deflection is not yet calculated") })
+        assertTrue(result.deflectionAssessed)
+        assertTrue("Estimated deflection must be positive", result.deflection > 0.0)
+        assertEquals("Limit is L/250 on the long span (Eq 4-74)", 7500.0 / 250.0, result.allowableDeflection, 1e-6)
+        assertTrue(result.warnings.any { it.contains("ESTIMATE") })
+        assertTrue(result.safetyChecks.any { it.name == "Deflection (estimate)" })
+        if (!result.deflectionOk) assertFalse("A failing deflection estimate must fail the slab", result.isSafe)
     }
 
     // ECP 203-2025 hand checks (defaultInput: 6.0 x 7.5 m, h=250, col 400, fcu 30, fy 400, LL 3, finish 2)

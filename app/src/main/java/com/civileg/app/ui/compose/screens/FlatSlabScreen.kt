@@ -467,7 +467,7 @@ item {
                     // Deflection (no row while it is not calculated; the warnings card says so)
                     if (res.deflectionAssessed) item {
                         ResultDataCard(
-                            stringResource(R.string.fs_deflection),
+                            stringResource(R.string.fs_deflection_estimate),
                             if (res.deflectionAssessed) listOf(
                                 stringResource(R.string.fs_long_term_delta) to String.format("%.2f mm", res.deflection),
                                 stringResource(R.string.pile_allowable_set) to String.format("%.2f mm", res.allowableDeflection),

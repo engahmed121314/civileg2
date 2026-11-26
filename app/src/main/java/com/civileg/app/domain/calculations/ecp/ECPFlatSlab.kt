@@ -333,7 +333,20 @@ class ECPFlatSlab : FlatSlabDesign {
         codeNotes.add("Column-head reinforcement (6-2-5-9) and openings (6-2-5-10) are NOT ASSESSED")
 
         // ── 9. Deflection: NOT ASSESSED ───────────────────────────
-        warnings.add("Deflection is not yet calculated (ECP 203-2025 4-3-1 not implemented); Table 6-3 thickness alone does not replace it")
+        val defl = estimateDeflection(
+            input, totalDeadLoad, wu, dirX, dirY, colStripWidth, midStripWidthX, midStripWidthY, dPos, dNeg
+        )
+        val deflOk = defl.totalCheck.ok && defl.liveCheck.ok
+        safetyChecks.add(SafetyCheckItem("Deflection (estimate)", defl.total, defl.totalCheck.allowable, "mm", defl.totalCheck.ok))
+        safetyChecks.add(SafetyCheckItem("Live-load deflection (estimate)", defl.immediateLive, defl.liveCheck.allowable, "mm", defl.liveCheck.ok))
+        codeNotes.add(String.format(
+            "Deflection ESTIMATE (panel centre, strips combined as in ACI practice): immediate D+L = %.2f mm, live part = %.2f mm (limit L/360 = %.2f, Eq 4-76), alpha = %.2f (Eq 4-73, xi 2.0, rho' 0), total = %.2f mm (limit L/250 = %.2f mm with L = long span, Eq 4-74, p.4-63/4-64) -> %s",
+            defl.immediateTotal, defl.immediateLive, defl.liveCheck.allowable, defl.alpha, defl.total, defl.totalCheck.allowable,
+            if (deflOk) "OK" else "FAIL"))
+        codeNotes.add(ECP2025FlatSlabExtras.ESTIMATE_LABEL)
+        codeNotes.add("Estimate assumptions: Ec = 4400 sqrt(fcu) (older-code value, ECP 203-2025 Ec not verified), Es = 200000 N/mm2; strip moments scaled from the factored Table 6-5 moments; Ie by Eq 4-70/4-72 at midspan and both supports; drop panel thickness ignored for stiffness; sustained live load taken as zero; compression steel ignored")
+        warnings.add("Deflection is an ESTIMATE using ECP 203-2025 general provisions (4-3-1); the code gives no flat slab strip method. Table 6-3 thickness does not replace it.")
+        if (!deflOk) warnings.add("Estimated deflection exceeds the ECP 203-2025 limit (Eq 4-74 L/250 total, Eq 4-76 L/360 live): increase the slab thickness or revise the design")
 
         // ── 10. Minimum thickness, Table 6-3 ──────────────────────
         val exteriorPanel = input.panelType != PanelType.INTERIOR
@@ -384,7 +397,7 @@ class ECPFlatSlab : FlatSlabDesign {
         if (!flexureOk) warnings.add("Flexure not satisfied in one or more strips (reinforcement insufficient or K > Kmax: increase thickness)")
 
         val maxUtil = maxOf(punchingResult.utilizationRatio, flexUtil, if (minThk > 0) minThk / input.slabThickness else 0.0)
-        val overallSafe = punchingResult.isSafe && dropEdgeOk && minThkOk && flexureOk && applicable
+        val overallSafe = punchingResult.isSafe && dropEdgeOk && deflOk && minThkOk && flexureOk && applicable
 
         val punchingReinforcement = if (punchingResult.needsReinforcement && punchingResult.studDia > 0) {
             val studArea = PI * punchingResult.studDia * punchingResult.studDia / 4
@@ -423,9 +436,9 @@ class ECPFlatSlab : FlatSlabDesign {
             punchingReinforcement = punchingReinforcement,
             dropRequired = dropRequired,
             dropThickness = recommendedDropThickness,
-            deflectionOk = false,
-            deflection = 0.0,
-            allowableDeflection = 0.0,
+            deflectionOk = deflOk,
+            deflection = defl.total,
+            allowableDeflection = defl.totalCheck.allowable,
             concreteVolumePerPanel = concreteVolume,
             steelWeightPerPanel = steelWeight,
             warnings = warnings,
@@ -440,18 +453,57 @@ class ECPFlatSlab : FlatSlabDesign {
                 columnStripBotRebar = colBotRebarX,
                 punchingVu = punchingResult.vu, punchingVc = punchingResult.vc,
                 punchingOk = punchingResult.isSafe,
-                deflection = 0.0,
-                allowableDeflection = 0.0,
-                deflectionOk = false,
+                deflection = defl.total,
+                allowableDeflection = defl.totalCheck.allowable,
+                deflectionOk = deflOk,
                 punchingStuds = punchingResult.needsReinforcement && punchingResult.studDia > 0,
-                deflectionAssessed = false
+                deflectionAssessed = true
             ),
             columnStripTopRebarY = dirY.colTop,
             columnStripBotRebarY = dirY.colBot,
             middleStripTopRebarY = dirY.midTop,
             middleStripBotRebarY = dirY.midBot,
-            deflectionAssessed = false
+            deflectionAssessed = true
         )
+    }
+
+    /** Strip deflection estimate: see ECP2025FlatSlabExtras (not a code flat slab method). Units mm, N, N.mm. */
+    private fun estimateDeflection(
+        input: FlatSlabInput, dead: Double, wu: Double, dirX: DirResult, dirY: DirResult,
+        colW: Double, midWX: Double, midWY: Double, dPos: Double, dNeg: Double
+    ): ECP2025FlatSlabExtras.DeflectionEstimate {
+        val ec = 4400.0 * sqrt(input.fcu)
+        val n = 200000.0 / ec
+        val t = input.slabThickness
+        fun icr(b: Double, d: Double, asArea: Double): Double {
+            if (asArea <= 0.0) return 1.0
+            // x from b x^2 / 2 = n As (d - x)
+            val a = b / 2.0
+            val bq = n * asArea
+            val x = (-bq + sqrt(bq * bq + 4.0 * a * bq * d)) / (2.0 * a)
+            return max(1.0, b * x * x * x / 3.0 + n * asArea * (d - x) * (d - x))
+        }
+        // one strip, one load level; moments in kN.m (strip total), scale r = w / wu
+        fun strip(span: Double, b: Double, w: Double, mA: Double, mMid: Double, mB: Double,
+                  asMid: Double, asTop: Double, dMid: Double, dTop: Double): Double {
+            val r = w / wu
+            val ig = ECP2025FlatSlabExtras.grossInertia(b, t)
+            val ie = ECP2025FlatSlabExtras.stripEffectiveInertia(
+                input.fcu, input.fy, ig, t / 2.0,
+                mMid * r * 1e6, mA * r * 1e6, mB * r * 1e6,
+                icr(b, dMid, asMid), icr(b, dTop, asTop), icr(b, dTop, asTop))
+            return ECP2025FlatSlabExtras.stripMidspanDeflection(w * b / 1000.0, span, mA * r * 1e6, mB * r * 1e6, ec, ie)
+        }
+        fun level(w: Double): Double {
+            val cx = strip(input.lx, colW, w, dirX.cNE, dirX.cP, dirX.cNI, dirX.colBot.providedArea, dirX.colTop.providedArea, dPos, dNeg)
+            val mx = strip(input.lx, midWX, w, dirX.mNE, dirX.mP, dirX.mNI, dirX.midBot.providedArea, dirX.midTop.providedArea, dPos, dPos)
+            val cy = strip(input.ly, colW, w, dirY.cNE, dirY.cP, dirY.cNI, dirY.colBot.providedArea, dirY.colTop.providedArea, dPos - ASSUMED_BAR_DIA, dNeg - ASSUMED_BAR_DIA)
+            val my = strip(input.ly, midWY, w, dirY.mNE, dirY.mP, dirY.mNI, dirY.midBot.providedArea, dirY.midTop.providedArea, dPos - ASSUMED_BAR_DIA, dPos - ASSUMED_BAR_DIA)
+            return ECP2025FlatSlabExtras.panelMidpoint(cx, mx, cy, my).average
+        }
+        val dD = level(dead)
+        val dDL = level(dead + input.liveLoad)
+        return ECP2025FlatSlabExtras.estimate(dD, dD, dDL, max(input.lx, input.ly), 2.0, 0.0)
     }
 
     private data class DirResult(
