@@ -385,7 +385,7 @@ class ACITank : TankDesign {
         val b0 = if (isCircular) 2 * PI * (wallThickness / 1000.0 + d / 1000.0)
             else 2.0 * (2.0 * wallThickness / 1000.0 + 2.0 * d / 1000.0)
         val vc_punch = 0.33 * sqrt(fcPrime)  // MPa
-        val punchingCap = PHI_SHEAR * vc_punch * b0 * d / 1000.0
+        val punchingCap = PHI_SHEAR * vc_punch * (b0 * 1000.0) * d / 1000.0 // b0 m -> mm
         val punchingLoad = totalPressure * L * B * 0.5
         val punchingSafe = punchingLoad <= punchingCap
         safetyChecks.add(TankSafetyCheck(

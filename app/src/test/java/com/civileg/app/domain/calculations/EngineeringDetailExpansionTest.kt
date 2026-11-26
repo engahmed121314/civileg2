@@ -302,6 +302,18 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `ECP tank base punching capacity matches a hand calculation in kN`() {
+        // qp = 0.316*sqrt(fcu/1.5) [MPa], b0 = 4*(t+d) [mm], capacity = qp*b0*d/1000 [kN].
+        // The perimeter used to stay in metres, making the capacity 1000x too small.
+        val r = engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, heightM = 3.5, fcu = 30.0, fy = 400.0, code = DesignCode.ECP)
+        val check = r.safetyChecks.first { it.name == "Punching Shear (Base)" }
+        fun cap(d: Double) = 0.316 * Math.sqrt(30.0 / 1.5) * 4.0 * (r.wallThickness + d) * d / 1000.0
+        val lo = cap(r.baseThickness - 100.0)
+        val hi = cap(r.baseThickness - 30.0)
+        assertTrue("capacity ${check.limit} kN outside hand range $lo..$hi", check.limit in lo..hi)
+    }
+
+    @Test
     fun `tank height not above freeboard is rejected`() {
         org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
             engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, heightM = 0.3, fcu = 25.0, fy = 360.0)

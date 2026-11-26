@@ -422,14 +422,14 @@ class ECPTank : TankDesign {
         } else {
             2 * (wallThickness / 1000.0 + d / 1000.0 + wallThickness / 1000.0 + d / 1000.0)
         }
-        val punchingShearCapacity = 0.316 * sqrt(fcu / GAMMA_C) * punchingPerimeter * d / 1000.0 // kN (ECP 203 §4-3-2)
+        val punchingShearCapacity = 0.316 * sqrt(fcu / GAMMA_C) * (punchingPerimeter * 1000.0) * d / 1000.0 // kN; perimeter m -> mm (was 1000x too small)
         val soilPressure = totalPressure / (L * B) // kPa
         val criticalArea = (wallThickness / 1000.0 + d / 1000.0) * (wallThickness / 1000.0 + d / 1000.0)
         val punchingLoad = totalPressure * L * B - soilPressure * criticalArea // kN
         val punchingCheck = punchingLoad <= punchingShearCapacity
 
         safetyChecks.add(TankSafetyCheck(
-            "Punching Shear (Base)", punchingLoad * 0.5, punchingShearCapacity, "kN",
+            "Punching Shear (Base)", punchingLoad, punchingShearCapacity, "kN",
             punchingCheck, "ECP 203: qp = 0.316×√(fcu/γc)×b₀×d"
         ))
 
