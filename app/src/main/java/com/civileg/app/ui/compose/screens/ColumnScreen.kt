@@ -341,7 +341,7 @@ fun ColumnScreen(
                     }
                 }
 
-                rebarCardIndex[0] = 13 + (if (bbsEntries.isNotEmpty()) 1 else 0) +
+                rebarCardIndex[0] = 13 + /* BBS card is not issued for columns */ 0 +
                     (if (boqRows.isNotEmpty()) 1 else 0) + (if (result.mx != 0.0 || result.my != 0.0) 1 else 0)
                 item {
                     Row(
