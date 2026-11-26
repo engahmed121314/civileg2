@@ -1013,7 +1013,7 @@ class CalculatorEngine @Inject constructor(
                 fcu = fcu, width = width, depth = depth,
                 reinforcementArea = res.astProvided, isCircular = isCircular
             )
-            if (momentMagnifier > 1.0) {
+            if (momentMagnifier > 1.0 && momentMagnifier.isFinite()) {
                 designMx *= momentMagnifier
                 designMy *= momentMagnifier
                 res = engine.calculateReinforcement(
@@ -1082,17 +1082,24 @@ class CalculatorEngine @Inject constructor(
         val steelWeight = mainSteelWeight + tieWeight
         val cost = concreteVolume * 120.0 + steelWeight * 1.5
 
+        // Second-order validity: an unstable column (Pu >= Pcr) has no valid design. ACI 318M-14 / SBC 304
+        // 6.2.6 also limit Mu with second-order effects to 1.4 x the first-order Mu.
+        val secondOrderStable = momentMagnifier.isFinite()
+        val secondOrderWithinLimit = secondOrderStable &&
+            (domainCode == DesignCode.ECP || momentMagnifier <= 1.4 + 1e-9)
         val warnings = (res.warnings + buildList {
             if (isSlender) {
-                add("Slender column (λ=${"%.1f".format(slenderness)} > ${"%.0f".format(slendernessLimit)}): moments magnified by δ=${"%.2f".format(momentMagnifier)}")
+                add("Slender column (λ=${"%.1f".format(slenderness)} > ${"%.0f".format(slendernessLimit)})" + if (secondOrderStable) ": moments magnified by δ=${"%.2f".format(momentMagnifier)}" else "")
             }
             if (!axialAssessed) add("AXIAL CAPACITY NOT ASSESSED: e=${"%.1f".format(ecpEccentricityMm)} mm exceeds max(0.05t, 20 mm)=${"%.1f".format(ecpEccentricityLimitMm)} mm, outside ECP 203-2020 Eq. 4-12-a. Use a full P-M interaction check.")
+            if (!secondOrderStable) add("UNSTABLE: Pu is not below the elastic buckling load Pcr, so no second-order moment exists. Increase the section; no passing result.")
+            else if (!secondOrderWithinLimit) add("Second-order moment exceeds 1.4 x the first-order moment (ACI 318M-14 / SBC 304-CR-2018 6.2.6, delta=${"%.2f".format(momentMagnifier)}). Increase the section.")
             if (!momentReview.assessed) add("Moment capacity unavailable: interaction check not assessed, no passing result")
             if (!momentSafe) add("Biaxial moment demand exceeds the section capacity — increase the section or reinforcement")
             if (!ratioSafe) add("Reinforcement ratio ${"%.2f".format(reinforcementPercent)}% is outside the code limits")
         }).distinct()
 
-        val isSafe = res.isSafe && axialSafe && momentSafe && ratioSafe
+        val isSafe = res.isSafe && axialSafe && momentSafe && ratioSafe && secondOrderWithinLimit
 
         return ColumnResult(
             width = width, depth = depth, pu = puDesign, mx = designMx, my = designMy,
@@ -1112,7 +1119,9 @@ class CalculatorEngine @Inject constructor(
                 DesignSafetyCheck("Reinforcement Ratio", reinforcementPercent,
                     engine.getMaxReinforcementRatio() * 100.0, "%", ratioSafe),
                 DesignSafetyCheck("Slenderness", slenderness, slendernessLimit, "", !isSlender)
-            ),
+            ) + (if (isSlender && secondOrderStable && domainCode != DesignCode.ECP)
+                listOf(DesignSafetyCheck("Second-order magnifier (limit 1.4)", momentMagnifier, 1.4, "", secondOrderWithinLimit))
+                else emptyList()),
             isSafe = isSafe,
             concreteVolume = concreteVolume,
             steelWeight = steelWeight,
@@ -1178,8 +1187,10 @@ class CalculatorEngine @Inject constructor(
         val steelInertia = reinforcementArea / 2.0 * ((d - dPrime) / 2.0).pow(2) * 2.0
         val ei = 0.4 * ec * ig + 200000.0 * steelInertia
         val pcrKn = PI.pow(2) * ei / (clearHeightMm * clearHeightMm) / 1000.0
-        if (pcrKn <= 0.0 || puKn >= pcrKn) return 2.5
-        return (1.0 / (1.0 - puKn / pcrKn)).coerceIn(1.0, 2.5)
+        // Pu >= Pcr means the column is unstable: there is no finite magnifier, so return infinity
+        // (a capped value would read as a measured, passing second-order result).
+        if (pcrKn <= 0.0 || puKn >= pcrKn) return Double.POSITIVE_INFINITY
+        return (1.0 / (1.0 - puKn / pcrKn)).coerceAtLeast(1.0)
     }
 
     /**
@@ -1891,6 +1902,11 @@ class CalculatorEngine @Inject constructor(
         InputGuard.positive("colT", colT)
 
         val domainCode = code
+        maxLeft?.let { InputGuard.positive("maxLeft", it) }
+        maxRight?.let { InputGuard.positive("maxRight", it) }
+        require(!(type == FootingType.COMBINED && p2 > 0.0 && distance > 0.0 && (maxLeft != null || maxRight != null))) {
+            "Property-line limits are not implemented for combined footings; clear Max Left/Max Right."
+        }
         val footingEngine = CalculationFactory.getFootingDesign(domainCode)
 
         val initialDepth = 600.0
@@ -1967,11 +1983,18 @@ class CalculatorEngine @Inject constructor(
         val steelWeight = (totalLengthX + totalLengthY) * barAreaSingle * 7850.0 / 1e6
         val cost = concreteVolume * 120.0 + steelWeight * 1.5
 
+        // User-entered property-line limits (mm from column centre, concentric footing): the footing must
+        // not extend past them. Orientation of left/right is not modelled, so the larger plan dimension governs.
+        val halfPlan = max(res.requiredWidth, res.requiredLength) / 2.0
+        val limitChecks = listOfNotNull(maxLeft, maxRight).map { lim ->
+            DesignSafetyCheck("Property Line Limit (half plan)", halfPlan, lim, "mm", halfPlan <= lim)
+        }
+        val limitsOk = limitChecks.all { it.isSafe }
         val safetyChecks = listOf(
             DesignSafetyCheck("Soil Bearing", res.soilPressure, soil, "kPa", res.soilPressure <= soil),
             DesignSafetyCheck("Punching Shear", res.punchingShearCheck.appliedShear, res.punchingShearCheck.shearCapacity, "kN", res.punchingShearCheck.isSafe),
             DesignSafetyCheck("Flexure Steel", res.reinforcement.astProvided, res.reinforcement.astRequired, "mm²", res.reinforcement.isSafe)
-        )
+        ) + limitChecks
 
         val ref = codeNoteRef(domainCode)
         val steps = listOf(
@@ -2021,7 +2044,7 @@ class CalculatorEngine @Inject constructor(
             reinforcementBottom = ReinforcementBar(
                 numBars = numBarsX, diameter = barDia, spacing = spacing, weightKg = steelWeight
             ),
-            isSafe = res.isSafe, code = code,
+            isSafe = res.isSafe && limitsOk, code = code,
             concreteVolume = concreteVolume, steelWeight = steelWeight, cost = cost,
             barsX = numBarsX, barsY = numBarsY, barDiameter = barDia,
             utilizationRatio = (res.soilPressure / soil).coerceIn(0.1, 1.5),

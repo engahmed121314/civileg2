@@ -205,6 +205,36 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `unstable slender column is never reported safe`() {
+        val r = engine.designColumn(
+            width = 200.0, depth = 200.0, pu = 3000.0, fcu = 25.0, fy = 360.0,
+            code = DesignCode.ECP, clearHeight = 6000.0
+        )
+        assertFalse("Pu above the buckling load must not pass", r.isSafe)
+    }
+
+    @Test
+    fun `footing property line limit is enforced not ignored`() {
+        val base = engine.calculateFooting(
+            type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
+            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
+        )
+        val half = maxOf(base.width, base.length) / 2.0
+        val tight = engine.calculateFooting(
+            type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
+            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP, maxLeft = half - 100.0
+        )
+        assertFalse("limit below the required half plan must fail", tight.isSafe)
+        assertTrue(tight.safetyChecks.any { it.name.startsWith("Property Line") && !it.isSafe })
+        val loose = engine.calculateFooting(
+            type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
+            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP, maxRight = half + 100.0
+        )
+        assertEquals(base.isSafe, loose.isSafe)
+        assertTrue(loose.safetyChecks.any { it.name.startsWith("Property Line") && it.isSafe })
+    }
+
+    @Test
     fun `footing result exposes calculation steps`() {
         val r = engine.calculateFooting(
             type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
