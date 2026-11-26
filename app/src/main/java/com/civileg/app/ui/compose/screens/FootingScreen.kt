@@ -433,7 +433,7 @@ fun FootingScreen(
                             ResultRow(stringResource(R.string.column_concrete_vol), "${"%.2f".format(res.concreteVolume)} m³")
                             ResultRow(stringResource(R.string.column_steel_weight), "${"%.2f".format(res.steelWeight)} kg")
                             ResultRow(stringResource(R.string.footing_allowable_pressure), "${"%.1f".format(res.allowablePressure)} kN/m²")
-                            ResultRow(stringResource(R.string.column_estimated_cost), "${"%.2f".format(res.cost)}")
+                            ResultRow(stringResource(R.string.column_estimated_cost), "Unavailable (no price basis)")
                             if (selectedType == CalculatorEngine.FootingType.COMBINED) {
                                 Spacer(Modifier.height(8.dp))
                                 AppText(

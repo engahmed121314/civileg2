@@ -671,7 +671,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             AppText(stringResource(R.string.column_quantities), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ResultDataRow(stringResource(R.string.column_concrete_vol), String.format("%.3f m³", result.concreteVolume))
             ResultDataRow(stringResource(R.string.column_steel_weight), String.format("%.2f kg", result.steelWeight))
-            ResultDataRow(stringResource(R.string.column_estimated_cost), String.format("%.2f", result.cost))
+            ResultDataRow(stringResource(R.string.column_estimated_cost), "Unavailable (no price basis)")
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
             
