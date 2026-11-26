@@ -37,6 +37,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     private val LIGHT_BLUE = DeviceRgb(227, 242, 253)
     private val ROW_ALT = DeviceRgb(248, 249, 250)
     private val WHITE = DeviceRgb(255, 255, 255)
+    private val NOT_ASSESSED_GRAY = DeviceRgb(128, 128, 128)
 
     private fun helvetica(bold: Boolean = false): PdfFont = PdfFontFactory.createFont(
         if (bold) StandardFonts.HELVETICA_BOLD else StandardFonts.HELVETICA
@@ -204,7 +205,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
             }
             table.addCell(dataCell(qtyText, false, bg))
             // No per-member capacity check backs this schedule; do not print SAFE.
-            table.addCell(dataCell("NOT ASSESSED", true, bg, ColorConstants.GRAY))
+            table.addCell(dataCell("NOT ASSESSED", true, bg, NOT_ASSESSED_GRAY))
         }
         document.add(table)
     }
@@ -218,9 +219,9 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         
         // These rows mix result values with typical placeholders and no capacity check is
         // run behind them, so none may carry PASS/SAFE.
-        table.addCell(dataCell("Base Plates (PL)", true)).addCell(dataCell("Thickness: ${result.mainFrame.basePlateThickness.toInt()}mm, Grade: S355")).addCell(dataCell("mm")).addCell(dataCell("NOT ASSESSED", true, null, ColorConstants.GRAY))
-        table.addCell(dataCell("Anchor Bolts", true, ROW_ALT)).addCell(dataCell("Type: M24 Grade 8.8, Qty: ${result.mainFrame.basePlateBoltsCount} per base", false, ROW_ALT)).addCell(dataCell("Nos", false, ROW_ALT)).addCell(dataCell("NOT ASSESSED", true, ROW_ALT, ColorConstants.GRAY))
-        table.addCell(dataCell("End Plates (PL)")).addCell(dataCell("Thickness: 20mm, Grade: S355, High-Strength Bolted (typical, not designed)")).addCell(dataCell("mm")).addCell(dataCell("NOT ASSESSED", true, null, ColorConstants.GRAY))
+        table.addCell(dataCell("Base Plates (PL)", true)).addCell(dataCell("Thickness: ${result.mainFrame.basePlateThickness.toInt()}mm, Grade: S355")).addCell(dataCell("mm")).addCell(dataCell("NOT ASSESSED", true, null, NOT_ASSESSED_GRAY))
+        table.addCell(dataCell("Anchor Bolts", true, ROW_ALT)).addCell(dataCell("Type: M24 Grade 8.8, Qty: ${result.mainFrame.basePlateBoltsCount} per base", false, ROW_ALT)).addCell(dataCell("Nos", false, ROW_ALT)).addCell(dataCell("NOT ASSESSED", true, ROW_ALT, NOT_ASSESSED_GRAY))
+        table.addCell(dataCell("End Plates (PL)")).addCell(dataCell("Thickness: 20mm, Grade: S355, High-Strength Bolted (typical, not designed)")).addCell(dataCell("mm")).addCell(dataCell("NOT ASSESSED", true, null, NOT_ASSESSED_GRAY))
 
         document.add(table)
         document.add(Paragraph("Connection details above are typical values, not designed against the calculated forces.").setFontSize(7f).setFontColor(ColorConstants.GRAY))
