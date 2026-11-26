@@ -78,7 +78,9 @@ class ECPFooting : FootingDesign {
 
         // 4. نسبة العرض للطول
         val L_ratio = sqrt(columnDepth / columnWidth * 1.2)
-        var B_m = A_req / L_ratio
+        // B*L must equal A_req with L = ratio*B, so B = sqrt(A_req/ratio). Dividing by the ratio alone gave B*L = A_req^2/ratio,
+        // about 3x the required area for the default case (22.9 m2 vs 8 m2 shown in the same report).
+        var B_m = sqrt(A_req / L_ratio)
         var L_m = L_ratio * B_m
 
         // 5. تطبيق الحدود (حدود الجار)

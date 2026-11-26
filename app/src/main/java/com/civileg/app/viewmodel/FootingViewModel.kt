@@ -166,7 +166,7 @@ class FootingViewModel @Inject constructor(
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val res = _result.value ?: return null
         return com.civileg.app.utils.ElementDxfDrawings.footingSection(
-            title = "FOOTING ${res.type.displayName}",
+            title = "FOOTING ${res.type.displayNameEn}",
             widthMm = res.width.toDouble(),
             thicknessMm = res.thickness.toDouble(),
             coverMm = res.coverMm,
@@ -229,7 +229,7 @@ class FootingViewModel @Inject constructor(
                     else -> "ECP 203"
                 }
                 val inputsMap = mapOf(
-                    "Footing Type" to res.type.displayName,
+                    "Footing Type" to res.type.displayNameEn, // the English-only PDF printed a blank for the Arabic name
                     "Width" to "${res.width} mm",
                     "Length" to "${res.length} mm",
                     "Thickness" to "${res.thickness} mm",
@@ -251,16 +251,15 @@ class FootingViewModel @Inject constructor(
                     "Bars X" to "${res.barsX} Ø${res.barDiameter}",
                     "Bars Y" to "${res.barsY} Ø${res.barDiameter}",
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
-                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg",
-                    "Efficiency" to "${String.format("%.0f", res.efficiencyScore)}%",
-                    "Optimal" to if (res.isOptimal) "Yes" else "No"
+                    "Steel Weight (bars x length, no laps or hooks)" to "${String.format("%.1f", res.steelWeight)} kg",
+                    // Efficiency and Optimal were unassessed defaults (100% / Yes) printed beside an UNSAFE verdict
                 )
                 // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم قاعدة - ${res.type.displayName}",
-                    titleEn = "Footing Design Report — ${res.type.displayName}",
+                    titleEn = "Footing Design Report — ${res.type.displayNameEn}",
                     subtitle = "Code: $codeName  •  ${res.width}×${res.length}×${res.thickness}mm",
-                    designType = "Footing (${res.type.displayName})",
+                    designType = "Footing (${res.type.displayNameEn})",
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = res.safetyChecks.map {

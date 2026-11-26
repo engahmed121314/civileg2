@@ -1275,6 +1275,7 @@
     <string name="slab_results">Design Results</string>
     <string name="footing_safe_economical">Safe &amp; Economical</string>
     <string name="footing_safe_review">Safe - Review Design</string>
+    <string name="footing_unsafe_review">UNSAFE - one or more checks failed, review design</string>
     <string name="footing_dims">Foundation Dims</string>
     <string name="footing_thickness_label2">Thickness (t) mm</string>
     <string name="footing_drawing_title">Reinforcement Plan</string>
