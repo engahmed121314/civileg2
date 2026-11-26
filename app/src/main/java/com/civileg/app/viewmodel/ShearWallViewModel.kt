@@ -312,6 +312,7 @@ class ShearWallViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
+                    assessmentPending = res.status != com.civileg.app.domain.calculations.base.CheckStatus.FAIL,
                     drawingBitmap = pendingDrawingBitmap,
                     drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath

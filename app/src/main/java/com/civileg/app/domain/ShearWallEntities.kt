@@ -51,7 +51,10 @@ data class CouplingBeamResult(
     val transverseBarsDiameter: Int,
     val transverseBarsSpacing: Int,
     val isSafe: Boolean,
-    val utilizationRatio: Double
+    val utilizationRatio: Double,
+    val status: com.civileg.app.domain.calculations.base.CheckStatus =
+        com.civileg.app.domain.calculations.base.CheckStatus.PRELIMINARY,
+    val note: String = ""
 )
 
 // ══════════════════════════════════════════════════════════════
@@ -87,7 +90,12 @@ data class ShearWallResult(
     val warnings: List<String> = emptyList(),
     val codeNotes: List<String> = emptyList(),
     val safetyChecks: List<ShearWallSafetyCheck> = emptyList(),
-    val calculationSteps: List<com.civileg.app.domain.entities.CalculationStep> = emptyList()
+    val calculationSteps: List<com.civileg.app.domain.entities.CalculationStep> = emptyList(),
+    /** FAIL if any computed check fails, otherwise PRELIMINARY. Never PASS while constants are unverified. */
+    val status: com.civileg.app.domain.calculations.base.CheckStatus =
+        com.civileg.app.domain.calculations.base.CheckStatus.PRELIMINARY,
+    /** Checks that were not performed. A non-empty list means the result is incomplete. */
+    val notAssessed: List<String> = emptyList()
 )
 
 data class ShearWallSafetyCheck(

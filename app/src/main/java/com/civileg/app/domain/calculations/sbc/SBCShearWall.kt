@@ -4,6 +4,8 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.*
 import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.calculations.base.ShearWallDesign
+import com.civileg.app.domain.calculations.base.ShearWallChecks
+import com.civileg.app.domain.calculations.base.CheckStatus
 import kotlin.math.*
 
 /**
@@ -122,7 +124,13 @@ class SBCShearWall : ShearWallDesign {
         // Apply φ factors for SBC
         val phiMn = PHI_FLEXURE * Mn
         val phiPn = PHI_AXIAL * Pn
-        val flexOk = input.bendingMoment <= phiMn && input.axialLoad <= phiPn
+        val clampHidesSection = ShearWallChecks.compressionLimitExceeded(
+            k = 0.67 * input.fcu / GAMMA_C * input.wallThickness, p = input.axialLoad * 1000.0, d = 0.8 * input.wallLength,
+            mPrime = input.bendingMoment * 1e6 - input.axialLoad * 1000.0 * (0.8 * input.wallLength - input.wallLength / 2.0),
+            beta1 = calculateBeta1(input.fcu), limitRatio = 0.3)
+        val flexOk = input.bendingMoment <= phiMn && input.axialLoad <= phiPn && !clampHidesSection
+        val notAssessed = mutableListOf<String>()
+        if (clampHidesSection) warnings.add("Flexure FAIL: the unclamped compression zone exceeds the engine's block-depth limit, or no equilibrium exists. The clamped block depth is not a result.")
         val flexUtilRatio = max(
             if (phiMn > 0) input.bendingMoment / phiMn else 2.0,
             if (phiPn > 0) input.axialLoad / phiPn else 0.0
@@ -191,14 +199,10 @@ class SBCShearWall : ShearWallDesign {
         // ── 6. Coupling beam design ────────────────────────────────
         val couplingResult = designCouplingBeam(input)
         if (couplingResult != null) {
-            codeNotes.add(String.format(
-                "Coupling beam: %dΦ%d diagonal, transverse Φ%d @ %d mm",
-                couplingResult.diagonalBars, couplingResult.diagonalBarDiameter,
-                couplingResult.transverseBarsDiameter, couplingResult.transverseBarsSpacing
-            ))
-            safetyChecks.add(ShearWallSafetyCheck(
-                "Coupling Beam", couplingResult.utilizationRatio, 1.0, "ratio", couplingResult.isSafe
-            ))
+            notAssessed.add(ShearWallChecks.COUPLING_NOTE)
+            warnings.add(ShearWallChecks.COUPLING_NOTE)
+            codeNotes.add("Coupling beam: NOT ASSESSED (no verdict issued). Indicative diagonal bars: " +
+                "${couplingResult.diagonalBars} x dia ${couplingResult.diagonalBarDiameter} mm")
         }
 
         // ── 7. Slenderness check ───────────────────────────────────
@@ -219,8 +223,10 @@ class SBCShearWall : ShearWallDesign {
         val totalWeight = vertWeight + horzWeight
 
         // ── 9. Overall safety ──────────────────────────────────────
-        val overallSafe = flexOk && shearOk && slenderOk && (couplingResult?.isSafe ?: true)
-        val maxUtil = maxOf(flexUtilRatio, shearUtilRatio, couplingResult?.utilizationRatio ?: 0.0)
+        val computedOk = flexOk && shearOk && slenderOk
+        val overallStatus = if (computedOk) CheckStatus.PRELIMINARY else CheckStatus.FAIL
+        val overallSafe = false  // unverified constants: never SAFE
+        val maxUtil = maxOf(flexUtilRatio, shearUtilRatio)
 
         return ShearWallResult(
             isSafe = overallSafe, utilizationRatio = maxUtil,
@@ -233,7 +239,8 @@ class SBCShearWall : ShearWallDesign {
             slendernessOk = slenderOk, slendernessRatio = slendernessRatio,
             couplingBeamResult = couplingResult,
             concreteVolumePerStory = concreteVolPerStory, steelWeightPerStory = totalWeight,
-            warnings = warnings, codeNotes = codeNotes, safetyChecks = safetyChecks
+            warnings = warnings, codeNotes = codeNotes, safetyChecks = safetyChecks,
+            status = overallStatus, notAssessed = notAssessed
         )
     }
 
@@ -544,7 +551,7 @@ class SBCShearWall : ShearWallDesign {
         val needsDiagonal = vuRatio > 0.15 || input.wallType == WallType.COUPLED
 
         if (!needsDiagonal) {
-            return CouplingBeamResult(0, 0, 10, 150, true, 0.5)
+            return CouplingBeamResult(0, 0, 0, 0, false, 0.0, CheckStatus.NOT_ASSESSED, ShearWallChecks.COUPLING_NOTE)
         }
 
         // Diagonal reinforcement design (SBC with φ = 0.9)
@@ -577,7 +584,8 @@ class SBCShearWall : ShearWallDesign {
         return CouplingBeamResult(
             diagonalBars = diagCount, diagonalBarDiameter = diagDia.toInt(),
             transverseBarsDiameter = transDia.toInt(), transverseBarsSpacing = transSpacing,
-            isSafe = utilRatio <= 1.0, utilizationRatio = utilRatio
+            isSafe = false, utilizationRatio = utilRatio,
+            status = CheckStatus.NOT_ASSESSED, note = ShearWallChecks.COUPLING_NOTE
         )
     }
 

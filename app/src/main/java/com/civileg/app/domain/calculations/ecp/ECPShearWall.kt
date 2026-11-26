@@ -4,6 +4,8 @@ import com.civileg.app.domain.*
 import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.ShearWallDesign
+import com.civileg.app.domain.calculations.base.ShearWallChecks
+import com.civileg.app.domain.calculations.base.CheckStatus
 import kotlin.math.*
 
 /**
@@ -123,7 +125,13 @@ class ECPShearWall : ShearWallDesign {
 
         // ── 2. Flexural design ─────────────────────────────────────
         val (Mn, Pn) = calculateFlexuralStrength(input)
-        val flexOk = input.bendingMoment <= Mn && input.axialLoad <= Pn
+        val clampHidesSection = ShearWallChecks.compressionLimitExceeded(
+            k = 0.67 * input.fcu / GAMMA_C * input.wallThickness, p = input.axialLoad * 1000.0, d = 0.8 * input.wallLength,
+            mPrime = input.bendingMoment * 1e6 - input.axialLoad * 1000.0 * (0.8 * input.wallLength - input.wallLength / 2.0),
+            beta1 = beta1, limitRatio = 0.3)
+        val flexOk = input.bendingMoment <= Mn && input.axialLoad <= Pn && !clampHidesSection
+        val notAssessed = mutableListOf<String>()
+        if (clampHidesSection) warnings.add("Flexure FAIL: the unclamped compression zone exceeds the engine's block-depth limit, or no equilibrium exists. The clamped block depth is not a result.")
         val flexUtilRatio = max(
             if (Mn > 0) input.bendingMoment / Mn else 2.0,
             if (Pn > 0) input.axialLoad / Pn else 0.0
@@ -187,14 +195,10 @@ class ECPShearWall : ShearWallDesign {
         // ── 6. Coupling beam design ────────────────────────────────
         val couplingResult = designCouplingBeam(input)
         if (couplingResult != null) {
-            codeNotes.add(String.format(
-                "Coupling beam: %dΦ%d diagonal, transverse Φ%d @ %d mm",
-                couplingResult.diagonalBars, couplingResult.diagonalBarDiameter,
-                couplingResult.transverseBarsDiameter, couplingResult.transverseBarsSpacing
-            ))
-            safetyChecks.add(ShearWallSafetyCheck(
-                "Coupling Beam", couplingResult.utilizationRatio, 1.0, "ratio", couplingResult.isSafe
-            ))
+            notAssessed.add(ShearWallChecks.COUPLING_NOTE)
+            warnings.add(ShearWallChecks.COUPLING_NOTE)
+            codeNotes.add("Coupling beam: NOT ASSESSED (no verdict issued). Indicative diagonal bars: " +
+                "${couplingResult.diagonalBars} x dia ${couplingResult.diagonalBarDiameter} mm")
         }
 
         // ── 7. Slenderness check ───────────────────────────────────
@@ -215,10 +219,10 @@ class ECPShearWall : ShearWallDesign {
         val totalWeight = vertWeight + horzWeight
 
         // ── 9. Overall safety ──────────────────────────────────────
-        val overallSafe = flexOk && shearOk && slenderOk &&
-            (couplingResult?.isSafe ?: true)
-        val maxUtil = maxOf(flexUtilRatio, shearUtilRatio,
-            couplingResult?.utilizationRatio ?: 0.0)
+        val computedOk = flexOk && shearOk && slenderOk
+        val overallStatus = if (computedOk) CheckStatus.PRELIMINARY else CheckStatus.FAIL
+        val overallSafe = false  // unverified constants: never SAFE
+        val maxUtil = maxOf(flexUtilRatio, shearUtilRatio)
 
         return ShearWallResult(
             isSafe = overallSafe,
@@ -242,7 +246,9 @@ class ECPShearWall : ShearWallDesign {
             steelWeightPerStory = totalWeight,
             warnings = warnings,
             codeNotes = codeNotes,
-            safetyChecks = safetyChecks
+            safetyChecks = safetyChecks,
+            status = overallStatus,
+            notAssessed = notAssessed
         )
     }
 
@@ -622,8 +628,9 @@ class ECPShearWall : ShearWallDesign {
             // Conventional reinforcement (not typical for coupled walls but possible)
             return CouplingBeamResult(
                 diagonalBars = 0, diagonalBarDiameter = 0,
-                transverseBarsDiameter = 10, transverseBarsSpacing = 150,
-                isSafe = true, utilizationRatio = 0.5
+                transverseBarsDiameter = 0, transverseBarsSpacing = 0,
+                isSafe = false, utilizationRatio = 0.0,
+                status = CheckStatus.NOT_ASSESSED, note = ShearWallChecks.COUPLING_NOTE
             )
         }
 
@@ -663,8 +670,9 @@ class ECPShearWall : ShearWallDesign {
             diagonalBarDiameter = diagDia.toInt(),
             transverseBarsDiameter = transDia.toInt(),
             transverseBarsSpacing = transSpacing,
-            isSafe = utilRatio <= 1.0,
-            utilizationRatio = utilRatio
+            isSafe = false,
+            utilizationRatio = utilRatio,
+            status = CheckStatus.NOT_ASSESSED, note = ShearWallChecks.COUPLING_NOTE
         )
     }
 

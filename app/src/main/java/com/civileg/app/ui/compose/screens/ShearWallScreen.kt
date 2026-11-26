@@ -282,10 +282,23 @@ fun ShearWallScreen(
             uiState.result?.let { result ->
                 // Status banner
                 item {
-                    DesignStatusBanner(
-                        ratio = result.utilizationRatio.toFloat(),
-                        isSafe = result.isSafe
-                    )
+                    // Verdict is the engine status (FAIL / PRELIMINARY). The ratio banner is not used because it
+                    // reads a low ratio as safe even when checks are unverified or not assessed.
+                    val failed = result.status == com.civileg.app.domain.calculations.base.CheckStatus.FAIL
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (failed) MaterialTheme.colorScheme.errorContainer
+                            else MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Verdict: ${result.status.label}", fontWeight = FontWeight.Bold)
+                            Text("Max computed utilization: ${(result.utilizationRatio * 100).toInt()}%")
+                            result.notAssessed.forEach { Text("Not assessed: $it") }
+                            if (!failed) Text("Preliminary: not a final design verdict. Constants are not verified against the code text.")
+                        }
+                    }
                 }
 
                 // Safety checks warnings
@@ -375,10 +388,14 @@ fun ShearWallScreen(
                     item { DesignSectionHeader(stringResource(R.string.sw_coupling_section), Icons.Default.CropSquare) }
 
                     item {
-                        ResultCard(isSafe = cb.isSafe) {
-                            DesignResultRow("Diagonal Bars", "${cb.diagonalBars}Φ${cb.diagonalBarDiameter}")
-                            DesignResultRow("Transverse", "Φ${cb.transverseBarsDiameter} @ ${cb.transverseBarsSpacing} mm")
-                            DesignResultRow(stringResource(R.string.steel_util_ratio), "${(cb.utilizationRatio * 100).toInt()}%")
+                        Card(shape = RoundedCornerShape(12.dp)) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("Coupling beam: ${cb.status.label}", fontWeight = FontWeight.Bold)
+                                Text(cb.note)
+                                if (cb.diagonalBars > 0) {
+                                    DesignResultRow("Indicative diagonal bars", "${cb.diagonalBars}Φ${cb.diagonalBarDiameter}")
+                                }
+                            }
                         }
                     }
                 }
