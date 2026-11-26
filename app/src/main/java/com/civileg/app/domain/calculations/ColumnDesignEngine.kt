@@ -316,7 +316,7 @@ object ColumnDesignEngine {
         stepNum++
         val tieD = 8
         val sMax = when(code) {
-            DesignCode.ECP -> EcpColumnRules.tieMaxSpacing(preferredDia) // p.6-55: min(15 db, 200)
+            DesignCode.ECP -> EcpColumnRules.tieMaxSpacing(preferredDia.toDouble()) // p.6-55: min(15 db, 200)
             else -> minOf(16.0 * preferredDia, 48.0 * tieD, min(b, t))
         }
         val condLen = min(max(b, t), H * 0.15)  // condensation zone = min(dimension, 15% of height)
