@@ -42,6 +42,13 @@ import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.db.Project
 import com.civileg.app.domain.calculations.base.*
+import com.civileg.app.domain.calculations.sbc.SbcElfInput
+import com.civileg.app.domain.calculations.sbc.SbcElfResult
+import com.civileg.app.domain.calculations.sbc.SbcRiskCategory
+import com.civileg.app.domain.calculations.sbc.SbcSeismic301
+import com.civileg.app.domain.calculations.sbc.SbcSeismic301Adapter
+import com.civileg.app.domain.calculations.sbc.SbcSeismicSystems
+import com.civileg.app.domain.calculations.sbc.SbcSiteClass
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
@@ -79,7 +86,8 @@ private data class SeismicUiResult(
     val floorForces: List<SeismicForceDistribution>,
     val fundamentalPeriod: Double,
     val spectralAccel: Double,
-    val code: DesignCode
+    val code: DesignCode,
+    val sbcElf: SbcElfResult? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -109,6 +117,14 @@ fun SeismicScreen(
     var totalWeight by remember { mutableStateOf("5000") }
     var importanceFactor by remember { mutableStateOf("1.0") }
     var reductionFactor by remember { mutableStateOf("5.0") }
+
+    // ── SBC 301-CR-2018 inputs (Ss, S1, TL come from the code maps and stay blank until entered) ──
+    var ssText by remember { mutableStateOf("") }
+    var s1Text by remember { mutableStateOf("") }
+    var tlText by remember { mutableStateOf("") }
+    var sbcSite by remember { mutableStateOf(SbcSiteClass.D) }          // 11.4.2.2: Site Class D where soil data are not known
+    var sbcRisk by remember { mutableStateOf(SbcRiskCategory.II) }
+    var sbcSystemCode by remember { mutableStateOf("C4") }
 
     // ── UI state ────────────────────────────────────────────────────────────
     var result by remember { mutableStateOf<SeismicUiResult?>(null) }
@@ -143,11 +159,42 @@ fun SeismicScreen(
         isCalculating = true
         try {
             val designer = getDesigner()
-            val nFloors = numFloors.toIntOrNull()?.coerceIn(1, 50) ?: 5
-            val floorH = avgFloorHeight.toDoubleOrNull()?.coerceIn(2.0, 6.0) ?: 3.0
-            val w = totalWeight.toDoubleOrNull()?.coerceAtLeast(1.0) ?: 5000.0
-            val I = importanceFactor.toDoubleOrNull()?.coerceIn(0.5, 2.0) ?: 1.0
-            val R = reductionFactor.toDoubleOrNull()?.coerceAtLeast(1.0) ?: 5.0
+            val nFloors = numFloors.toIntOrNull()?.takeIf { it in 1..50 }
+                ?: throw IllegalArgumentException("Number of floors must be a whole number from 1 to 50 / عدد الأدوار عدد صحيح من 1 إلى 50")
+            val floorH = avgFloorHeight.toDoubleOrNull()?.takeIf { it in 2.0..6.0 }
+                ?: throw IllegalArgumentException("Average floor height must be a number from 2 to 6 m / متوسط ارتفاع الدور من 2 إلى 6 م")
+            val w = totalWeight.toDoubleOrNull()?.takeIf { it > 0.0 }
+                ?: throw IllegalArgumentException("Total weight must be a positive number (kN) / الوزن الكلي رقم موجب (kN)")
+
+            if (selectedCode == SeismicCodeOption.SBC_301) {
+                val ss = ssText.toDoubleOrNull()?.takeIf { it > 0.0 }
+                    ?: throw IllegalArgumentException("Enter Ss (g) from SBC 301 Figure 22-1 / أدخل Ss من الشكل 22-1")
+                val s1 = s1Text.toDoubleOrNull()?.takeIf { it > 0.0 }
+                    ?: throw IllegalArgumentException("Enter S1 (g) from SBC 301 Figure 22-2 / أدخل S1 من الشكل 22-2")
+                val tl = tlText.toDoubleOrNull()?.takeIf { it > 0.0 }
+                    ?: throw IllegalArgumentException("Enter TL (s) from SBC 301 Figure 22-4 / أدخل TL من الشكل 22-4")
+                val sbcInput = SbcElfInput(
+                    ss = ss, s1 = s1, tl = tl, siteClass = sbcSite, riskCategory = sbcRisk,
+                    system = SbcSeismicSystems.byCode(sbcSystemCode), hn = nFloors * floorH,
+                    storyWeights = List(nFloors) { w / nFloors }, storyHeights = List(nFloors) { (it + 1) * floorH }
+                )
+                val elf = SbcSeismic301.compute(sbcInput)
+                result = SeismicUiResult(
+                    baseShearResult = SbcSeismic301Adapter.baseShear(sbcInput, elf),
+                    spectrumValues = SbcSeismic301Adapter.spectrum(sbcInput, elf),
+                    floorForces = SbcSeismic301Adapter.floorForces(sbcInput, elf),
+                    fundamentalPeriod = elf.t,
+                    spectralAccel = SbcSeismic301Adapter.spectralAccelAtT(sbcInput, elf),
+                    code = DesignCode.SBC,
+                    sbcElf = elf
+                )
+                return
+            }
+
+            val I = importanceFactor.toDoubleOrNull()?.takeIf { it in 0.5..2.0 }
+                ?: throw IllegalArgumentException("Importance factor must be a number from 0.5 to 2.0 / معامل الأهمية من 0.5 إلى 2.0")
+            val R = reductionFactor.toDoubleOrNull()?.takeIf { it >= 1.0 }
+                ?: throw IllegalArgumentException("Response modification factor must be a number of at least 1 / معامل تعديل الاستجابة 1 أو أكبر")
 
             // Floor weights distributed equally
             val floorWeights = List(nFloors) { w / nFloors }
@@ -306,7 +353,7 @@ fun SeismicScreen(
             // ═══ Section 2: Site Parameters ═══════════════════════════════════
             item { SectionHeader(stringResource(R.string.seismic_site_data), R.drawable.ic_calculator) }
 
-            item {
+            if (selectedCode != SeismicCodeOption.SBC_301) item {
                 ExposedDropdownMenuBox(
                     expanded = expandedZone,
                     onExpandedChange = { expandedZone = !expandedZone },
@@ -332,7 +379,7 @@ fun SeismicScreen(
                 }
             }
 
-            item {
+            if (selectedCode != SeismicCodeOption.SBC_301) item {
                 ExposedDropdownMenuBox(
                     expanded = expandedSoil,
                     onExpandedChange = { expandedSoil = !expandedSoil },
@@ -358,6 +405,42 @@ fun SeismicScreen(
                 }
             }
 
+            if (selectedCode == SeismicCodeOption.SBC_301) {
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SeismicInputField(ssText, stringResource(R.string.seismic_sbc_ss), { ssText = it; result = null }, Modifier.weight(1f))
+                        SeismicInputField(s1Text, stringResource(R.string.seismic_sbc_s1), { s1Text = it; result = null }, Modifier.weight(1f))
+                        SeismicInputField(tlText, stringResource(R.string.seismic_sbc_tl), { tlText = it; result = null }, Modifier.weight(1f))
+                    }
+                }
+                item {
+                    SbcSeismicDropdown(
+                        stringResource(R.string.seismic_sbc_site_class), "${sbcSite.label}",
+                        SbcSiteClass.entries.map { it.label }
+                    ) { sbcSite = SbcSiteClass.entries[it]; result = null }
+                }
+                item {
+                    SbcSeismicDropdown(
+                        stringResource(R.string.seismic_sbc_risk), "${sbcRisk.label}  (Ie = ${"%.2f".format(sbcRisk.ie)})",
+                        SbcRiskCategory.entries.map { "${it.label}  (Ie = ${"%.2f".format(it.ie)})" }
+                    ) { sbcRisk = SbcRiskCategory.entries[it]; result = null }
+                }
+                item {
+                    val sys = SbcSeismicSystems.byCode(sbcSystemCode)
+                    SbcSeismicDropdown(
+                        stringResource(R.string.seismic_sbc_system), "${sys.code}  ${sys.name}  (R = ${sys.r})",
+                        SbcSeismicSystems.all.map { "${it.code}  ${it.name}  (R = ${it.r})" }
+                    ) { sbcSystemCode = SbcSeismicSystems.all[it].code; result = null }
+                }
+                item {
+                    AppText(
+                        stringResource(R.string.seismic_sbc_inputs_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             // ═══ Section 3: Building Parameters ══════════════════════════════
             item { SectionHeader(stringResource(R.string.seismic_building_data), R.drawable.ic_beam) }
 
@@ -371,11 +454,11 @@ fun SeismicScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     SeismicInputField(totalWeight, stringResource(R.string.seismic_total_weight), { totalWeight = it }, Modifier.weight(1f))
-                    SeismicInputField(importanceFactor, stringResource(R.string.seismic_importance_factor), { importanceFactor = it }, Modifier.weight(1f))
+                    if (selectedCode != SeismicCodeOption.SBC_301) SeismicInputField(importanceFactor, stringResource(R.string.seismic_importance_factor), { importanceFactor = it }, Modifier.weight(1f))
                 }
             }
 
-            item {
+            if (selectedCode != SeismicCodeOption.SBC_301) item {
                 SeismicInputField(reductionFactor, stringResource(R.string.seismic_response_modification), { reductionFactor = it }, Modifier.fillMaxWidth())
             }
 
@@ -510,8 +593,26 @@ fun SeismicScreen(
                         Column(modifier = Modifier.padding(16.dp)) {
                             ResultRow(stringResource(R.string.seismic_fundamental_period), "${"%.3f".format(res.fundamentalPeriod)} sec")
                             ResultRow(stringResource(R.string.seismic_spectral_accel), "${"%.4f".format(res.spectralAccel)} g")
-                            ResultRow(stringResource(R.string.seismic_zone_factor), "${"%.3f".format(res.baseShearResult.zoneFactor)}")
-                            ResultRow(stringResource(R.string.seismic_soil_factor), "${"%.2f".format(res.baseShearResult.soilFactor)}")
+                            val elf = res.sbcElf
+                            if (elf == null) {
+                                ResultRow(stringResource(R.string.seismic_zone_factor), "${"%.3f".format(res.baseShearResult.zoneFactor)}")
+                                ResultRow(stringResource(R.string.seismic_soil_factor), "${"%.2f".format(res.baseShearResult.soilFactor)}")
+                            } else {
+                                ResultRow("Fa / Fv", "${"%.2f".format(elf.fa)} / ${"%.2f".format(elf.fv)}")
+                                ResultRow("SDS / SD1", "${"%.3f".format(elf.sds)} / ${"%.3f".format(elf.sd1)} g")
+                                ResultRow("SDC", elf.sdc)
+                                ResultRow("Cs", "${"%.4f".format(elf.cs)}  (${elf.csGoverning})")
+                                ResultRow("Ta / Cu / T", "${"%.3f".format(elf.ta)} / ${"%.2f".format(elf.cu)} / ${"%.3f".format(elf.t)} s")
+                                ResultRow("k", "${"%.3f".format(elf.k)}")
+                                AppText(elf.sdcNote, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                AppText(elf.periodNote, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                AppText(elf.systemNote, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                elf.warnings.forEach { AppText(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
+                                AppText(
+                                    stringResource(R.string.seismic_sbc_not_assessed) + ": " + elf.notAssessed.joinToString("; "),
+                                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             ResultRow(stringResource(R.string.seismic_importance_factor_val), "${"%.2f".format(res.baseShearResult.importanceFactor)}")
                             ResultRow(stringResource(R.string.seismic_response_mod_val), "${"%.1f".format(res.baseShearResult.responseModification)}")
                             AppText(
@@ -695,13 +796,13 @@ fun SeismicScreen(
                                 isExporting = true
                                 val details = mapOf(
                                     labelPdfCode to selectedCode.displayName,
-                                    labelZone to selectedZone.displayName,
-                                    labelSoilType to "${selectedSoil.displayName} - ${selectedSoil.description}",
+                                    labelZone to (res.sbcElf?.let { "Ss=$ssText g, S1=$s1Text g, TL=$tlText s" } ?: selectedZone.displayName),
+                                    labelSoilType to (res.sbcElf?.let { "${sbcSite.label} / SDC ${it.sdc}" } ?: "${selectedSoil.displayName} - ${selectedSoil.description}"),
                                     labelNumFloors to (numFloors.toIntOrNull() ?: 5).toString(),
                                     labelHeight to "${"%.1f".format(totalHeight)} m",
                                     labelWeight to "${totalWeight} kN",
-                                    labelImportance to importanceFactor,
-                                    labelReduction to reductionFactor,
+                                    labelImportance to (res.sbcElf?.let { "%.2f".format(it.ie) } ?: importanceFactor),
+                                    labelReduction to (res.sbcElf?.let { "${it.r}" } ?: reductionFactor),
                                     labelBaseShear to "${"%.2f".format(res.baseShearResult.baseShear)} kN",
                                     labelPeriod to "${"%.3f".format(res.fundamentalPeriod)} sec",
                                     labelSpectral to "${"%.4f".format(res.spectralAccel)} g",
@@ -733,7 +834,7 @@ fun SeismicScreen(
                                                 baseShear = res.baseShearResult.baseShear,
                                                 fundamentalPeriod = res.fundamentalPeriod,
                                                 spectralAccel = res.spectralAccel,
-                                                isSafe = res.baseShearResult.baseShear > 0
+                                                isSafe = res.sbcElf?.heightLimitOk != false
                                             )
                                         } catch (e: Exception) {
                                             android.util.Log.e("SeismicScreen", "Drawing gen failed", e)
@@ -743,12 +844,12 @@ fun SeismicScreen(
                                         val filePath = PdfExportHelper.exportDesignReportAsync(
                                             context = context,
                                             title = labelTitle,
-                                            subtitle = "${labelPdfCode}: ${selectedCode.displayName}  •  ${labelZone}: ${selectedZone.displayName}",
+                                            subtitle = "${labelPdfCode}: ${selectedCode.displayName}  •  ${labelZone}: ${res.sbcElf?.let { "Ss=$ssText g" } ?: selectedZone.displayName}",
                                             designType = "Seismic Analysis — ${selectedCode.displayName}",
                                             inputs = details,
                                             results = emptyMap(),
                                             safetyChecks = emptyList(),
-                                            isSafe = res.baseShearResult.baseShear > 0,
+                                            isSafe = res.sbcElf?.heightLimitOk != false,
                                             drawingBitmap = drawingBitmap,
                                             fileName = "Seismic_Report_${System.currentTimeMillis()}"
                                         )
@@ -914,7 +1015,7 @@ fun SeismicScreen(
                                 storyDrift = res.baseShearResult.maxStoryDrift,
                                 timePeriod = res.fundamentalPeriod,
                                 spectralAcceleration = res.spectralAccel,
-                                isSafe = res.baseShearResult.driftIsSafe,
+                                isSafe = res.sbcElf?.let { it.heightLimitOk != false } ?: res.baseShearResult.driftIsSafe,
                                 code = when (res.code) {
                                     DesignCode.ECP -> DesignCode.ECP
                                     DesignCode.ACI -> DesignCode.ACI
@@ -948,11 +1049,28 @@ fun SeismicScreen(
 
 @Composable
 fun SeismicStabilityCard(res: SeismicBaseShearResult, totalHeight: Double) {
-    // Prefer the engine's equivalent-SDOF drift estimate; fall back to a heuristic if unavailable.
+    // Drift is shown only when the engine produced one. No heuristic drift or pass verdict is invented:
+    // SBC 301 12.8.6 needs the elastic deflections of the structural model.
     val hasEngineDrift = res.maxStoryDrift > 0.0
-    val drift = if (hasEngineDrift) res.maxStoryDrift / 1000.0 else 0.005 * (totalHeight / 5.0)
-    val limit = if (hasEngineDrift) res.allowableDrift / 1000.0 else 0.020 * (totalHeight / 5.0)
-    val isSafe = if (hasEngineDrift) res.driftIsSafe else drift <= limit
+    if (!hasEngineDrift) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.2f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                AppText("Story drift and stability", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                AppText(
+                    "NOT ASSESSED: the story drift (SBC 301 12.8.6, Eq 12-26, Table 12-8) and P-delta (12.8.7) need the elastic deflections from a structural analysis. غير مقيَّم: يحتاج الانحراف الطابقي إلى تحليل إنشائي.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+        return
+    }
+    val drift = res.maxStoryDrift / 1000.0
+    val limit = res.allowableDrift / 1000.0
+    val isSafe = res.driftIsSafe
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -1127,4 +1245,25 @@ private fun FormulaItem(formula: String) {
         modifier = Modifier.padding(vertical = 1.dp),
         color = MaterialTheme.colorScheme.secondary
     )
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SbcSeismicDropdown(label: String, value: String, options: List<String>, onSelect: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {},
+            readOnly = true,
+            label = { AppText(label) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEachIndexed { i, o ->
+                DropdownMenuItem(text = { AppText(o) }, onClick = { onSelect(i); expanded = false })
+            }
+        }
+    }
 }

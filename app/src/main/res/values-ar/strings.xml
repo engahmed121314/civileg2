@@ -2408,4 +2408,12 @@
     <string name="settings_support_title">دعم التطبيق</string>
     <string name="settings_support_message">Civil Engineer Pro مجاني وبدون إعلانات. التبرعات الطوعية تموّل أكواد تصميم واختبارات ورسومات جديدة.</string>
     <string name="settings_support_button">تبرع عبر GitHub Sponsors</string>
+    <string name="seismic_sbc_ss">Ss (g)</string>
+    <string name="seismic_sbc_s1">S1 (g)</string>
+    <string name="seismic_sbc_tl">TL (ث)</string>
+    <string name="seismic_sbc_site_class">فئة الموقع (SBC 301 فصل 20)</string>
+    <string name="seismic_sbc_risk">فئة المخاطر (جدول 1-3)</string>
+    <string name="seismic_sbc_system">نظام مقاومة القوى الزلزالية (جدول 12-1)</string>
+    <string name="seismic_sbc_inputs_note">قيم Ss وS1 وTL تؤخذ من الأشكال 22-1 و22-2 و22-4 في SBC 301-CR-2018 لموقع المشروع. تُستخدم فئة الموقع D عند عدم توفر بيانات التربة (11.4.2.2). تُفترض أوزان الأدوار متساوية.</string>
+    <string name="seismic_sbc_not_assessed">غير مقيَّم</string>
 </resources>
