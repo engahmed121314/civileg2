@@ -273,8 +273,8 @@ class ECPCombinedFooting {
         val vuMax = max(vuLeft, vuRight)
 
         // One-way shear capacity: Vc = qcu * B * d
-        // qcu = 0.24 * sqrt(fcu) / gamma_c per ECP 203 Clause 4-3-1-2
-        val qcu = 0.24 * sqrt(fcu) / GAMMA_C  // MPa
+        // ECP 203-2025 Eq 4-29 (PDF p.105, printed 4-25): qcu = 0.16 sqrt(fcu/gc)
+        val qcu = ECP2025ConcreteShear.oneWayQcu(fcu, GAMMA_C)  // MPa, ECP 203-2025 Eq 4-29 (PDF p.105)
         val vc = qcu * (width * 1000.0) * d / 1000.0  // kN (B in mm, d in mm -> convert)
 
         val oneWayShearSafe = vuMax <= vc
@@ -285,7 +285,6 @@ class ECPCombinedFooting {
         // ==================== 11. Punching Shear Check ====================
         // ECP 203 Clause 4-3-2: Punching at each column
         // Punching capacity: qp = 0.316 * sqrt(fcu / gamma_c) (MPa)
-        val qpCapacity = 0.316 * sqrt(fcu / GAMMA_C)  // MPa
 
         // --- Column 1 punching ---
         val punchingCol1Safe = checkPunchingShear(
@@ -293,7 +292,7 @@ class ECPCombinedFooting {
             columnDepth = col1Depth,
             d = d,
             load = p1,
-            qpCapacity = qpCapacity
+            fcu = fcu
         )
         if (!punchingCol1Safe) {
             warnings.add("Punching shear at Column 1 not satisfied - increase thickness")
@@ -305,7 +304,7 @@ class ECPCombinedFooting {
             columnDepth = col2Depth,
             d = d,
             load = p2,
-            qpCapacity = qpCapacity
+            fcu = fcu
         )
         if (!punchingCol2Safe) {
             warnings.add("Punching shear at Column 2 not satisfied - increase thickness")
@@ -457,7 +456,7 @@ class ECPCombinedFooting {
         columnDepth: Double,
         d: Double,
         load: Double,         // kN - ultimate column load
-        qpCapacity: Double    // MPa - punching shear capacity of concrete
+        fcu: Double           // MPa
     ): Boolean {
         // Critical punching perimeter at d/2 from column face
         val bo = 2.0 * (columnWidth + columnDepth) + 4.0 * d  // mm
@@ -469,6 +468,8 @@ class ECPCombinedFooting {
         // Applied punching stress
         val qpApplied = (Vpunch * 1000.0) / (bo * d)  // MPa
 
+        // ECP 203-2025 Eq 4-46 a/b/c (PDF p.107-108); interior column assumed
+        val qpCapacity = ECP2025ConcreteShear.punchingQcup(fcu, d, bo, columnWidth, columnDepth)
         return qpApplied <= qpCapacity
     }
 
@@ -514,7 +515,7 @@ class ECPCombinedFooting {
 
     /**
      * Calculate one-way shear capacity of concrete per ECP 203.
-     * qcu = 0.24 * sqrt(fcu) / gamma_c
+     * qcu = 0.16 * sqrt(fcu / gamma_c)  (ECP 203-2025 Eq 4-29)
      *
      * @param fcu Concrete strength (MPa)
      * @return Shear stress capacity (MPa)
@@ -522,12 +523,13 @@ class ECPCombinedFooting {
     fun calculateOneWayShearCapacity(fcu: Double): Double {
         // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("fcu", fcu)
-        return 0.24 * sqrt(fcu) / GAMMA_C
+        return ECP2025ConcreteShear.oneWayQcu(fcu, GAMMA_C)  // ECP 203-2025 Eq 4-29
     }
 
     /**
      * Calculate punching shear capacity of concrete per ECP 203.
-     * qp = 0.316 * sqrt(fcu / gamma_c)
+     * qp = 0.316 * sqrt(fcu / gamma_c): ECP 203-2025 Eq 4-46-c upper bound only (PDF p.108), WITHOUT ls,
+     * Eq 4-46-a and the 1.70 cap. Not used by the design path; use ECP2025ConcreteShear.punchingQcup.
      *
      * @param fcu Concrete strength (MPa)
      * @return Punching shear stress capacity (MPa)

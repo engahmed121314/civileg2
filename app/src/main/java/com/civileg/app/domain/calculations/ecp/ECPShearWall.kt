@@ -150,7 +150,8 @@ class ECPShearWall : ShearWallDesign {
 
         // ── 4. Shear design ────────────────────────────────────────
         val (Vc, Vs) = calculateShearStrength(input)
-        val Vn = Vc + Vs
+        val VnMax = maxWallShearKn(input)  // Eq 6-65 cap, ECP 203-2025 PDF p.285
+        val Vn = min(Vc + Vs, VnMax)
         val shearOk = input.shearForce <= Vn
         val shearUtilRatio = if (Vn > 0) input.shearForce / Vn else 2.0
         safetyChecks.add(ShearWallSafetyCheck(
@@ -381,12 +382,12 @@ class ECPShearWall : ShearWallDesign {
         // ── Concrete shear capacity ────────────────────────────────
         // ECP 203 §4-3 for walls with axial load:
         // Vc = 0.24 × √(fcu + 0.1 × Nu/(b×d)) × b × d / γc
-        val axialStress = if (bw > 0 && d > 0) NuN / (bw * d) else 0.0
-        val fcv = sqrt(max(0.0, fcu + 0.1 * axialStress.coerceAtLeast(0.0)))
-        val Vc = 0.24 * fcv * bw * d / GAMMA_C / 1000.0  // kN
-
-        // Maximum concrete shear (ECP 203): Vc_max = 0.5 × √fcu × b × d / γc
-        val VcMax = 0.5 * sqrt(fcu) * bw * d / GAMMA_C / 1000.0
+        // ECP 203-2025 (scan PDF p.285-286, printed 6-92/6-93) replaces the former 0.24 formula:
+        //  SPECIAL/COUPLED (ductile shear walls): Vc = 0.9 αc √(fcu/γc) bw d, Eq 6-65 concrete term.
+        //  ORDINARY: no dedicated wall shear clause was read; the ch.4 beam rule with stirrups is used
+        //  (cracked qcu = 0.12 √(fcu/γc) x δc, Eq 4-30/4-31, PDF p.101). UNVERIFIED applicability.
+        val vcStress = wallConcreteShearStress(input)
+        val Vc = vcStress * bw * d / 1000.0  // kN
 
         // ── Steel shear required ───────────────────────────────────
         val VsRequired = max(0.0, Vu - Vc)
@@ -401,7 +402,9 @@ class ECPShearWall : ShearWallDesign {
         var selDia = 10.0
         var selSpacing = 200.0
         // Max spacing: min(L/5, 3t, 450mm) per ECP
-        val maxSpacing = minOf(Lw / 5.0, 3 * bw, 450.0)
+        // ECP 203-2025 6-8-3-3-2 (PDF p.284, printed 6-91): distributed steel spacing <= 200 mm in shear walls.
+        val maxSpacing = if (input.wallType == WallType.ORDINARY) minOf(Lw / 5.0, 3 * bw, 450.0)
+                         else minOf(Lw / 5.0, 3 * bw, 200.0)
 
         for (dia in SMALL_BAR_DIAMETERS) {
             val asBar = PI * dia * dia / 4
@@ -412,6 +415,7 @@ class ECPShearWall : ShearWallDesign {
         }
         selSpacing = selSpacing.coerceAtMost(maxSpacing)
 
+        // Eq 6-65 caps the total: qumax <= 0.55 √(fcu/γc) (PDF p.285, printed 6-92)
         // Provided Vs
         val asProvided = PI * selDia * selDia / 4 / selSpacing  // mm²/mm
         val Vs = asProvided * fyvDesign * d / 1000.0  // kN
@@ -904,8 +908,9 @@ class ECPShearWall : ShearWallDesign {
         val reqAreaPerMeter = designAsvPerS * 1000.0  // mm²/m
 
         // Select bar diameter and spacing
-        // Max spacing: min(L/5, 3t, 450mm)
-        val maxSpacing = minOf(Lw / 5.0, 3 * bw, 450.0)
+        // Max spacing: min(L/5, 3t, 450mm); 200 mm for ductile shear walls (ECP 203-2025 6-8-3-3-2, PDF p.284)
+        val maxSpacing = if (input.wallType == WallType.ORDINARY) minOf(Lw / 5.0, 3 * bw, 450.0)
+                         else minOf(Lw / 5.0, 3 * bw, 200.0)
 
         var selDia = 10.0
         var selSpacing = 200.0
@@ -955,12 +960,22 @@ class ECPShearWall : ShearWallDesign {
      * Check maximum shear capacity: Vn_max = 0.5 × √fcu × b × d / γc
      * ECP 203 limits the maximum shear that can be resisted.
      */
-    private fun checkMaxShearCapacity(input: ShearWallInput): Boolean {
-        val Lw = input.wallLength
-        val bw = input.wallThickness
-        val d = 0.8 * Lw
-        val VcMax = 0.5 * sqrt(input.fcu) * bw * d / GAMMA_C / 1000.0  // kN
-        return input.shearForce <= VcMax
+    private fun checkMaxShearCapacity(input: ShearWallInput): Boolean =
+        input.shearForce <= maxWallShearKn(input)
+
+    /** Eq 6-65 upper cap qumax <= 0.55 √(fcu/γc) (PDF p.285, printed 6-92), as force in kN with d = 0.8 Lw (no source for d). */
+    fun maxWallShearKn(input: ShearWallInput): Double =
+        ECP2025WallShear.maxShearStress(input.fcu, GAMMA_C) * input.wallThickness * 0.8 * input.wallLength / 1000.0
+
+    /** Concrete shear stress of the wall, N/mm2 (see calculateShearStrength for sources). */
+    fun wallConcreteShearStress(input: ShearWallInput): Double {
+        val acN = input.wallThickness * input.wallLength
+        val nu = input.axialLoad * 1000.0
+        return when (input.wallType) {
+            WallType.ORDINARY -> ECP2025WallShear.ordinaryConcreteStress(input.fcu, nu / acN, GAMMA_C)
+            else -> ECP2025WallShear.ductileConcreteStress(
+                input.fcu, input.wallHeight * input.numberOfStories, input.wallLength, nu, acN, GAMMA_C)
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════
