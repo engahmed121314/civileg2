@@ -247,6 +247,14 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `tank steps cite the partial ECP 203-2025 basis, same wording as the drawing`() {
+        val t = engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, heightM = 3.0, fcu = 25.0, fy = 360.0)
+        assertTrue(t.calculationSteps.isNotEmpty())
+        assertTrue(t.calculationSteps.any { it.codeReference == "ECP 203-2025 (partial: Table 4-1 Kmax only)" })
+        assertFalse(t.calculationSteps.any { it.codeReference == "ECP 203 (edition not verified)" })
+    }
+
+    @Test
     fun `tank delivers the requested capacity at the design water depth`() {
         val rect = engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, heightM = 3.0, fcu = 25.0, fy = 360.0)
         assertEquals(50.0, rect.capacity, 0.01)
