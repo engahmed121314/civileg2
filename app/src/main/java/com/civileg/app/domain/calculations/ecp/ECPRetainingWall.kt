@@ -51,19 +51,12 @@ class ECPRetainingWall : RetainingWallDesign {
         val Ka = tan(Math.PI / 4 - phiRad / 2).pow(2)
         val KaSurcharge = Ka
 
-        // Earth pressures at base of wall
-        val hSoil = if (zwt >= H) H else zwt
+        // Lateral loads about the underside of the base (kN/m, kN.m/m), water table zwt
+        // measured down from the wall top. Shared with the stem so both use the same pressure model.
+        val whole = lateralLoads(H, zwt, gamma, Ka, q)
+        val totalPa = whole.force
+        val momentOverturning = whole.moment
         val hWater = max(0.0, H - zwt)
-        val gammaSub = gamma - 9.81
-
-        val paSoil = 0.5 * Ka * gamma * hSoil.pow(2)
-        val paWater = 0.5 * 9.81 * hWater.pow(2)
-        val paSurcharge = KaSurcharge * q * H
-        val totalPa = paSoil + paWater + paSurcharge
-        val paHeight = H / 3.0
-        val surchargeHeight = H / 2.0
-
-        val momentOverturning = paSoil * paHeight + paWater * (hWater / 3.0 + hSoil) + paSurcharge * surchargeHeight
 
         // Self-weight components (per meter run)
         val stemWeight = 0.5 * (tBase + tTop) * H * 25.0
@@ -99,52 +92,12 @@ class ECPRetainingWall : RetainingWallDesign {
         }
         val bearingFS = if (maxBearing > 0) input.soilBearingCapacity / maxBearing else 0.0
 
-        // Stem design (cantilever from base) — account for water table
+        // Stem design (cantilever from base). The stem top is the wall top, so the water
+        // table depth zwt is measured from the stem top too.
         val stemH = H - tFooting
-        val zwtRelative = zwt - tFooting  // Water table depth relative to stem top
-        
-        // Compute stem moment and shear considering water table
-        val stemMomentUnfactored: Double
-        val stemShearUnfactored: Double
-        
-        if (zwtRelative <= 0) {
-            // Water table at or above stem top: fully submerged
-            val gammaEff = gamma - 9.81
-            val hWaterStem = stemH
-            stemMomentUnfactored = (Ka * gammaEff * stemH.pow(3) / 6) +
-                (0.5 * 9.81 * hWaterStem.pow(2) * (2.0/3.0) * stemH) + // water pressure moment
-                (Ka * q * stemH.pow(2) / 2)
-            stemShearUnfactored = Ka * gammaEff * stemH.pow(2) / 2 +
-                9.81 * hWaterStem * stemH +
-                Ka * q * stemH
-        } else if (zwtRelative >= stemH) {
-            // Water table below stem base: dry stem
-            stemMomentUnfactored = (Ka * gamma * stemH.pow(3) / 6) + (Ka * q * stemH.pow(2) / 2)
-            stemShearUnfactored = Ka * gamma * stemH.pow(2) / 2 + Ka * q * stemH
-        } else {
-            // Water table within stem height: partial submergence
-            val hDry = zwtRelative
-            val hSub = stemH - zwtRelative
-            val gammaEff = gamma - 9.81
-            
-            // Dry portion (above water table)
-            val momentDry = (Ka * gamma * hDry.pow(3) / 6) + (Ka * q * hDry.pow(2) / 2)
-            val shearDry = Ka * gamma * hDry.pow(2) / 2 + Ka * q * hDry
-            
-            // Submerged portion (below water table)
-            // Soil pressure at top of submerged portion
-            val paTop = Ka * gamma * hDry + Ka * q
-            val paBase = Ka * gammaEff * hSub + paTop
-            val momentSub = paTop * hSub * hSub / 2.0 + (paBase - paTop) * hSub * hSub / 3.0
-            val shearSub = (paTop + paBase) / 2.0 * hSub
-            
-            // Water pressure on submerged portion
-            val momentWater = 0.5 * 9.81 * hSub.pow(2) * (2.0/3.0) * hSub
-            val shearWater = 9.81 * hSub * hSub / 2.0
-            
-            stemMomentUnfactored = momentDry + momentSub + momentWater
-            stemShearUnfactored = shearDry + shearSub + shearWater
-        }
+        val stemLoads = lateralLoads(stemH, zwt, gamma, Ka, q)
+        val stemMomentUnfactored = stemLoads.moment
+        val stemShearUnfactored = stemLoads.force
 
         val Mu = LOAD_FACTOR_LIVE * stemMomentUnfactored
         val Vu = LOAD_FACTOR_LIVE * stemShearUnfactored
@@ -172,8 +125,9 @@ class ECPRetainingWall : RetainingWallDesign {
         // Toe design - q_avg و Δq : M = (q_avg + Δq/3)*toe²/2 حيث q_avg=(max+min)/2, Δq=max-min
         val qAvg = (maxBearing + minBearing) / 2.0
         val deltaQ = maxBearing - minBearing
-        val toeMoment = max(0.0, (qAvg + deltaQ / 3.0) * toe * toe / 2.0)
-        val toeShear = max(0.0, (maxBearing + minBearing) / 2 * toe)
+        val toeMomentService = max(0.0, (qAvg + deltaQ / 3.0) * toe * toe / 2.0)
+        val toeMoment = LOAD_FACTOR_DEAD * toeMomentService
+        val toeShear = LOAD_FACTOR_DEAD * max(0.0, (maxBearing + minBearing) / 2 * toe)
         val toeD = (tFooting * 1000) - COVER_EARTH - 8.0
         val toeK = toeMoment * 1e6 / (fcu * b * toeD * toeD)
         val toeZ = toeD * (0.5 + sqrt(max(0.0, 0.25 - toeK / 0.893)))
@@ -194,6 +148,11 @@ class ECPRetainingWall : RetainingWallDesign {
         val heelBars = RetainingWallDesign.selectBars(heelAsFinal)
         val heelRebarStr = "${heelBars.first}\u03A6${heelBars.second}"
 
+        val toeProvided = toeBars.first * PI * (toeBars.second / 2.0).pow(2)
+        val heelProvided = heelBars.first * PI * (heelBars.second / 2.0).pow(2)
+        val toeQu = toeShear * 1000 / (b * toeD)
+        val heelQu = heelShear * 1000 / (b * heelD)
+
         val checks = listOf(
             WallSafetyCheck("OT FS", overturningFS >= OT_FS_LIMIT, overturningFS, OT_FS_LIMIT,
                 "Overturning: ${"%.2f".format(overturningFS)} >= ${OT_FS_LIMIT}"),
@@ -203,17 +162,27 @@ class ECPRetainingWall : RetainingWallDesign {
                 "Max: ${"%.1f".format(maxBearing)} kN/m\u00B2 <= ${"%.1f".format(input.soilBearingCapacity)}"),
             WallSafetyCheck("Stem Flexure", AsProvided >= AsReq, AsProvided, AsReq,
                 "As=${"%.0f".format(AsProvided)} >= Req=${"%.0f".format(AsReq)} mm\u00B2/m"),
-            WallSafetyCheck("Shear", !needStirrups, qu, 0.67 * qcu,
-                "qu=${"%.2f".format(qu)} <= ${"%.2f".format(0.67 * qcu)}")
+            WallSafetyCheck("Shear", !needStirrups, qu, qcu,
+                "qu=${"%.2f".format(qu)} <= qcu=${"%.2f".format(qcu)} N/mm\u00B2 (stem; qcu formula from ECP 203-2020, not yet verified against ECP 203-2025 text: NOT ASSESSED)"),
+            WallSafetyCheck("Toe Flexure", toeProvided >= toeAsFinal, toeProvided, toeAsFinal,
+                "As=${"%.0f".format(toeProvided)} >= Req=${"%.0f".format(toeAsFinal)} mm\u00B2/m"),
+            WallSafetyCheck("Heel Flexure", heelProvided >= heelAsFinal, heelProvided, heelAsFinal,
+                "As=${"%.0f".format(heelProvided)} >= Req=${"%.0f".format(heelAsFinal)} mm\u00B2/m"),
+            WallSafetyCheck("Toe Shear", toeQu <= qcu, toeQu, qcu,
+                "qu=${"%.2f".format(toeQu)} <= qcu=${"%.2f".format(qcu)} N/mm\u00B2 (footing depth, no stirrups)"),
+            WallSafetyCheck("Heel Shear", heelQu <= qcu, heelQu, qcu,
+                "qu=${"%.2f".format(heelQu)} <= qcu=${"%.2f".format(qcu)} N/mm\u00B2 (footing depth, no stirrups)")
         )
 
         val isSafe = checks.all { it.isSafe }
         val notes = mutableListOf(
-            "ECP 203: \u03B3c=${GAMMA_C}, \u03B3s=${GAMMA_S}",
+            "ECP 203-2025 clause numbers, load factors, \u03B3c=${GAMMA_C}, \u03B3s=${GAMMA_S}, qcu and minimum steel: NOT ASSESSED (values carried from ECP 203-2020 implementation, not yet verified clause-by-clause against the ECP 203-2025 text)",
             "Ka = ${"%.3f".format(Ka)} (Rankine)",
             "Cover = ${COVER_EARTH}mm (earth contact)",
             "Min steel = ${"%.4f".format(MIN_STEEL_RATIO)} (${MIN_STEEL_RATIO * 100}%)"
         )
+        notes.add("Sliding: passive resistance taken at 50% (engineering assumption, no code source). Overturning/sliding limits 1.5: NOT ASSESSED against ECP 203-2025")
+        notes.add("Buoyancy on base and seismic/earthquake earth pressure: NOT ASSESSED")
         if (hWater > 0) notes.add("Water table at ${"%.1f".format(zwt)}m - hydrostatic pressure included")
         notes.add(CodeReference.ECP.RW_LATERAL_EARTH)
         notes.add(CodeReference.ECP.RW_STABILITY)
@@ -225,9 +194,27 @@ class ECPRetainingWall : RetainingWallDesign {
             stemMoment = Mu, stemShear = Vu,
             stemMainRebar = RetainingWallDesign.formatRebar(numBars, barDia), stemMainRebarArea = AsProvided,
             stemDistributionRebar = distBars,
-            toeMoment = toeMoment * LOAD_FACTOR_DEAD, toeShear = toeShear, toeRebar = toeRebarStr,
+            toeMoment = toeMoment, toeShear = toeShear, toeRebar = toeRebarStr,
             heelMoment = heelMoment, heelShear = heelShear, heelRebar = heelRebarStr,
             safetyChecks = checks, codeNotes = notes
         )
+    }
+
+    /** Resultant lateral force and its moment about the base of a vertical face of height [h]. */
+    internal data class LateralLoads(val force: Double, val moment: Double)
+
+    internal fun lateralLoads(h: Double, zwt: Double, gamma: Double, ka: Double, q: Double): LateralLoads {
+        val gammaW = 9.81
+        val hDry = min(max(zwt, 0.0), h)
+        val hSub = h - hDry
+        val gammaSub = max(gamma - gammaW, 0.0)
+        val f1 = 0.5 * ka * gamma * hDry * hDry
+        val f2 = ka * gamma * hDry * hSub
+        val f3 = 0.5 * ka * gammaSub * hSub * hSub
+        val f4 = 0.5 * gammaW * hSub * hSub
+        val f5 = ka * q * h
+        val force = f1 + f2 + f3 + f4 + f5
+        val moment = f1 * (hSub + hDry / 3.0) + f2 * (hSub / 2.0) + (f3 + f4) * (hSub / 3.0) + f5 * (h / 2.0)
+        return LateralLoads(force, moment)
     }
 }
