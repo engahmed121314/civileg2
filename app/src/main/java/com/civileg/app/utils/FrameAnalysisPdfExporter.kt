@@ -251,7 +251,9 @@ object FrameAnalysisPdfExporter {
                     document.add(styledEnglishParagraph("${sr.memberName} (#${sr.memberId}) - ${sr.memberType.displayNameEn}", arabicBold, 11f, bold = true).setMarginTop(8f))
                     document.add(styledEnglishParagraph("Selected: ${sr.selectedSection} | W = ${sr.sectionWeight} kg/m | Ix = ${sr.sectionIx} cm^4", arabicFont, 9f))
                     document.add(styledEnglishParagraph("Max M = ${fmt(sr.maxMoment)} kN.m | Max V = ${fmt(sr.maxShear)} kN | N = ${fmt(sr.axialForce)} kN", arabicFont, 9f))
-                    document.add(styledEnglishParagraph("Utilization - Flexure: ${String.format("%.0f", sr.flexuralUtilization * 100)}% | Shear: ${String.format("%.0f", sr.shearUtilization * 100)}% | Combined: ${String.format("%.0f", sr.combinedUtilization * 100)}% | ${if (sr.isSafe) "SAFE" else "UNSAFE"}", arabicFont, 9f))
+                    // Steel section checks here are not verified against a supplied steel code
+                    // edition, so a pass reads PRELIMINARY with the basis stated, never SAFE.
+                    document.add(styledEnglishParagraph("Utilization - Flexure: ${String.format("%.0f", sr.flexuralUtilization * 100)}% | Shear: ${String.format("%.0f", sr.shearUtilization * 100)}% | Combined: ${String.format("%.0f", sr.combinedUtilization * 100)}% | ${if (sr.isSafe) "CHECKS PASS (PRELIMINARY - steel code edition unverified)" else "UNSAFE"}", arabicFont, 9f))
                 }
             }
         }
