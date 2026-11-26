@@ -105,7 +105,7 @@ class DrawingSummaryFactoryTest {
         val slabSummary = slabDrawingSummary(slab)
 
         assertTrue(footingSummary.isSafe)
-        assertEquals(com.civileg.app.domain.entities.DesignCode.ECP.version, footingSummary.designCodeLabel)
+        assertEquals("ECP 203-2025 (partial: clauses on steps)", footingSummary.designCodeLabel)
         assertEquals(0, footingSummary.failedCheckCount)
         assertTrue(slabSummary.isSafe)
         assertEquals(com.civileg.app.domain.entities.DesignCode.SBC.version, slabSummary.designCodeLabel)
