@@ -835,11 +835,7 @@ fun SeismicScreen(
                                                 baseShear = res.baseShearResult.baseShear,
                                                 fundamentalPeriod = res.fundamentalPeriod,
                                                 spectralAccel = res.spectralAccel,
-<<<<<<< ours
-                                                isSafe = com.civileg.app.viewmodel.SeismicExportStatus.isSafe(res.baseShearResult)
-=======
                                                 isSafe = res.sbcElf?.heightLimitOk != false
->>>>>>> theirs
                                             )
                                         } catch (e: Exception) {
                                             android.util.Log.e("SeismicScreen", "Drawing gen failed", e)
@@ -853,13 +849,8 @@ fun SeismicScreen(
                                             designType = "Seismic Analysis — ${selectedCode.displayName}",
                                             inputs = details,
                                             results = emptyMap(),
-<<<<<<< ours
-                                            safetyChecks = com.civileg.app.viewmodel.SeismicExportStatus.checks(res.baseShearResult),
-                                            isSafe = com.civileg.app.viewmodel.SeismicExportStatus.isSafe(res.baseShearResult),
-=======
                                             safetyChecks = emptyList(),
                                             isSafe = res.sbcElf?.heightLimitOk != false,
->>>>>>> theirs
                                             drawingBitmap = drawingBitmap,
                                             fileName = "Seismic_Report_${System.currentTimeMillis()}",
                                             assessmentPending = com.civileg.app.viewmodel.SeismicExportStatus.assessmentPending(res.baseShearResult)
@@ -1026,11 +1017,7 @@ fun SeismicScreen(
                                 storyDrift = res.baseShearResult.maxStoryDrift,
                                 timePeriod = res.fundamentalPeriod,
                                 spectralAcceleration = res.spectralAccel,
-<<<<<<< ours
-                                isSafe = com.civileg.app.viewmodel.SeismicExportStatus.archivedIsSafe(res.baseShearResult),
-=======
                                 isSafe = res.sbcElf?.let { it.heightLimitOk != false } ?: res.baseShearResult.driftIsSafe,
->>>>>>> theirs
                                 code = when (res.code) {
                                     DesignCode.ECP -> DesignCode.ECP
                                     DesignCode.ACI -> DesignCode.ACI
@@ -1063,15 +1050,6 @@ fun SeismicScreen(
 }
 
 @Composable
-<<<<<<< ours
-fun SeismicStabilityCard(res: SeismicBaseShearResult, @Suppress("UNUSED_PARAMETER") totalHeight: Double) {
-    // Only the engine's equivalent-SDOF drift estimate is shown. When the engine did not compute one, the card says
-    // so. It used to invent a drift and a limit from the building height, which no code supplies.
-    val assessed = res.driftAssessed
-    val drift = res.maxStoryDrift / 1000.0
-    val limit = res.allowableDrift / 1000.0
-    val aboveReference = assessed && res.maxStoryDrift > res.allowableDrift
-=======
 fun SeismicStabilityCard(res: SeismicBaseShearResult, totalHeight: Double) {
     // Drift is shown only when the engine produced one. No heuristic drift or pass verdict is invented:
     // SBC 301 12.8.6 needs the elastic deflections of the structural model.
@@ -1095,7 +1073,6 @@ fun SeismicStabilityCard(res: SeismicBaseShearResult, totalHeight: Double) {
     val drift = res.maxStoryDrift / 1000.0
     val limit = res.allowableDrift / 1000.0
     val isSafe = res.driftIsSafe
->>>>>>> theirs
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),

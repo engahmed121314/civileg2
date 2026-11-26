@@ -166,6 +166,8 @@ data class ProjectSummary(
     val totalSteel: Double = 0.0,
     val totalCost: Double = 0.0,
     val designCount: Int = 0,
+    /** Designs whose saved totalCost is > 0. Designs without a cost estimate are not priced, not free. */
+    val pricedDesignCount: Int = 0,
     val costEfficiencyIndex: Double = 1.0,
     val costBreakdown: Map<String, Double> = emptyMap()
 ) : Parcelable
