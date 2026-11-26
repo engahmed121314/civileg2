@@ -285,6 +285,20 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `ECP tank provided steel is never below the required steel it reports`() {
+        for (h in listOf(2.5, 3.0, 3.5, 4.0)) {
+            val r = engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, heightM = h, fcu = 30.0, fy = 400.0)
+            for (title in listOf("Wall Reinforcement", "Base Reinforcement")) {
+                val step = r.calculationSteps.first { it.title == title }
+                assertTrue("h=$h $title provided steel below required: ${step.formulaWithValues}", step.isPass)
+            }
+            // spacing x bars: the delivered area equals the area reported for the rounded spacing
+            val wall = r.wallReinforcement
+            assertTrue("wall spacing must be a positive multiple of 10 mm", wall.spacing > 0.0 && wall.spacing % 10.0 == 0.0)
+        }
+    }
+
+    @Test
     fun `tank height not above freeboard is rejected`() {
         org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
             engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, heightM = 0.3, fcu = 25.0, fy = 360.0)

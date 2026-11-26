@@ -219,14 +219,14 @@ class ECPTank : TankDesign {
         val barDiameter = selectBarDiameter(asRequired, wallThickness)
         val barArea = PI * barDiameter * barDiameter / 4
         val barsPerMeter = ceil(asRequired / barArea).toInt().coerceIn(7, 20)
-        val spacing = (1000.0 / barsPerMeter).let { ceil(it / 10.0) * 10.0 }
+        val spacing = (1000.0 / barsPerMeter).let { floor(it / 10.0) * 10.0 } // round spacing DOWN: rounding up delivered less steel than required
         val asProvided = (1000.0 / spacing) * barArea
 
         // التسليح الأفقي (تقريبي: 25-50% من العمودي)
         val asHorizontal = asProvided * 0.35
         val hBarDia = selectBarDiameter(asHorizontal, wallThickness)
         val hBarsPerMeter = ceil(asHorizontal / (PI * hBarDia * hBarDia / 4)).toInt().coerceIn(6, 16)
-        val hSpacing = (1000.0 / hBarsPerMeter).let { ceil(it / 10.0) * 10.0 }
+        val hSpacing = (1000.0 / hBarsPerMeter).let { floor(it / 10.0) * 10.0 } // round spacing DOWN: rounding up delivered less steel than required
 
         // فحص القص
         val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // ECP 203 §4-3-1-2
@@ -320,14 +320,14 @@ class ECPTank : TankDesign {
         val hoopBarDia = selectBarDiameter(asHoopRequired, wallThickness)
         val hoopBarArea = PI * hoopBarDia * hoopBarDia / 4
         val hoopBarsPerMeter = ceil(asHoopRequired / hoopBarArea).toInt().coerceIn(7, 20)
-        val hoopSpacing = (1000.0 / hoopBarsPerMeter).let { ceil(it / 10.0) * 10.0 }
+        val hoopSpacing = (1000.0 / hoopBarsPerMeter).let { floor(it / 10.0) * 10.0 } // round spacing DOWN: rounding up delivered less steel than required
         val asHoopProvided = (1000.0 / hoopSpacing) * hoopBarArea
 
         // اختيار الأسياخ العمودية
         val vertBarDia = selectBarDiameter(asVerticalRequired, wallThickness)
         val vertBarArea = PI * vertBarDia * vertBarDia / 4
         val vertBarsPerMeter = ceil(asVerticalRequired / vertBarArea).toInt().coerceIn(6, 16)
-        val vertSpacing = (1000.0 / vertBarsPerMeter).let { ceil(it / 10.0) * 10.0 }
+        val vertSpacing = (1000.0 / vertBarsPerMeter).let { floor(it / 10.0) * 10.0 } // round spacing DOWN: rounding up delivered less steel than required
 
         val steelStress = maxHoopTension / (hoopBarsPerMeter / 1000.0 * (PI * hoopBarDia * hoopBarDia / 4)) // MPa
         val fct = 0.6 * sqrt(fcu)
@@ -413,7 +413,7 @@ class ECPTank : TankDesign {
         val barDiameter = selectBarDiameter(asRequired, baseThickness)
         val barArea = PI * barDiameter * barDiameter / 4
         val barsPerMeter = ceil(asRequired / barArea).toInt().coerceIn(6, 20)
-        val spacing = (1000.0 / barsPerMeter).let { ceil(it / 10.0) * 10.0 }
+        val spacing = (1000.0 / barsPerMeter).let { floor(it / 10.0) * 10.0 } // round spacing DOWN: rounding up delivered less steel than required
         val asProvided = (1000.0 / spacing) * barArea
 
         // فحص قص الاختراق
