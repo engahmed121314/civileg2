@@ -276,7 +276,8 @@ class PileFoundationViewModel @Inject constructor(
                         tiesSpacing = reinf.tiesSpacing,
                         capRebarDia = cap.flexuralReinforcement.diameter,
                         capRebarCount = cap.flexuralReinforcement.bars,
-                        soilType = res.soilType
+                        soilType = res.soilType,
+                        statusBanner = if (res.isSafe && !res.codeAcceptanceComplete) com.civileg.app.domain.PileQualification.PRELIMINARY_BANNER else null
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
 

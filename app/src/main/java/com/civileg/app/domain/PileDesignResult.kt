@@ -60,6 +60,13 @@ data class PileDesignResult(
 enum class PileStatus { CHECKS_FAILED, PRELIMINARY, ACCEPTED }
 
 object PileQualification {
+    /** One banner text for the results screen, the drawing sheet and the PDF, so the three never disagree. */
+    const val PRELIMINARY_BANNER: String =
+        "PRELIMINARY: estimates pass, not a code-accepted design / نتيجة أولية: التقديرات مقبولة وليست تصميماً معتمداً وفق الكود"
+
+    /** Title-block label. It names no concrete edition because the pile rules are not checked against one: NOT ASSESSED. */
+    const val DRAWING_CODE_LABEL: String = "Geotechnical estimates; code clauses NOT ASSESSED"
+
     val NOTES: List<String> = listOf(
         "PRELIMINARY: single-pile capacity (alpha/beta, Nc, Nq), group efficiency, settlement, lateral (Broms) and negative skin friction are geotechnical estimates from engine formulas. They are not checks taken from the selected concrete code. A geotechnical report and an independent check are required.",
         "Pile cap and pile reinforcement rules are not verified clause by clause against the selected edition. The result is not a code-accepted pile design."
