@@ -226,7 +226,7 @@ class ECPColumn : ColumnDesign {
             threshold = threshold,
             isShortColumn = isShort,
             isBraced = isBraced,
-            recommendation = if (isShort) {
+            recommendation = EcpColumnProvisions2025.maxSlendernessWarning(slendernessRatio, isBraced) ?: if (isShort) {
                 "Short column (λ=${"%.1f".format(slendernessRatio)} ≤ ${"%.0f".format(threshold)}) — no moment magnification needed"
             } else {
                 "Long column (λ=${"%.1f".format(slendernessRatio)} > ${"%.0f".format(threshold)}) — moment magnification required per ECP 203 §4-2-3"

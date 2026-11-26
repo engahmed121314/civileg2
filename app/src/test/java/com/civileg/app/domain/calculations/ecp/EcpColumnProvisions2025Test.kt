@@ -5,6 +5,8 @@ import com.civileg.app.domain.calculations.ecp.EcpColumnProvisions2025.SectionKi
 import com.civileg.app.domain.calculations.ecp.EcpColumnProvisions2025.SlendernessClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -62,5 +64,21 @@ class EcpColumnProvisions2025Test {
         assertFalse(EcpColumnProvisions2025.compareCover(Exposure.CHLORIDE_CYCLIC_WET_DRY, 40.0).adequate)
         assertTrue(EcpColumnProvisions2025.coverNote(40.0).contains("Cover 40 mm"))
         assertTrue(EcpColumnProvisions2025.coverNote(40.0).contains("NOT ASSESSED"))
+    }
+
+    @Test
+    fun table68WarningShownWithValueAndLimit_notFail() {
+        val w = EcpColumnProvisions2025.maxSlendernessWarning(110.0, true)!!
+        assertTrue(w.startsWith("WARNING"))
+        assertTrue(w.contains("110.0") && w.contains("100") && w.contains("Table 6-8") && w.contains("تحذير"))
+        assertNull(EcpColumnProvisions2025.maxSlendernessWarning(100.0, true))
+        assertNotNull(EcpColumnProvisions2025.maxSlendernessWarning(71.0, false))
+    }
+
+    @Test
+    fun checkSlendernessCarriesTable68Warning() {
+        val r = ECPColumn().checkSlenderness(20000.0, 300.0, 300.0, true)  // lambda_i = 20000/90 = 222
+        assertTrue(r.recommendation.startsWith("WARNING"))
+        assertFalse(r.isShortColumn)
     }
 }

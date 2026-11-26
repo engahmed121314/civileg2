@@ -38,6 +38,16 @@ object EcpColumnProvisions2025 {
         else -> SlendernessClass.EXCEEDS_MAXIMUM
     }
 
+    /** WARNING text (EN + AR) when lambda_i exceeds the Table 6-8 maximum; null otherwise. A warning, not a FAIL (user decision). */
+    fun maxSlendernessWarning(lambdaI: Double, braced: Boolean): String? {
+        if (classifyByLambdaI(lambdaI, braced) != SlendernessClass.EXCEEDS_MAXIMUM) return null
+        val v = String.format(java.util.Locale.US, "%.1f", lambdaI)
+        val m = fmt(maxLambdaI(braced))
+        val kind = if (braced) "braced" else "unbraced"
+        return "WARNING: slenderness lambda_i = $v exceeds the ECP 203-2025 Table 6-8 maximum $m ($kind, p.6-43). " +
+            "Change the section or bracing. / تحذير: نسبة النحافة λ = $v تتجاوز الحد الأقصى $m في الجدول 6-8 من ECP 203-2025 (صفحة 6-43)، غيّر المقطع أو التدعيم."
+    }
+
     /**
      * Legacy check used by core ECP203Engine.analyzeSlenderColumn: lambda = k*L/b against 15 (braced) / 10 (unbraced).
      * Returns true when the legacy result agrees with Table 6-7 lambda_b limits for a rectangular section.

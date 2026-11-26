@@ -602,6 +602,7 @@ class ECPAdvancedColumn : ColumnDesign {
         val lambda = effectiveLength / r
         val isSlender = lambda > EcpColumnRules.shortLimitLambdaI(true)  // Table 6-7 lambda_i braced 50 (sway not distinguished here)
 
+        EcpColumnProvisions2025.maxSlendernessWarning(lambda, !isSwayFrame)?.let { codeNotes.add(it) }
         codeNotes.add("ECP 203 البند 4-2-7: تكبير العزم بسبب النحافة")
         codeNotes.add(String.format("Ec = 4400√fcu = %.0f MPa", Ec))
         codeNotes.add(String.format("Ig = %.2e mm⁴, Is = %.2e mm⁴", Ig, Is))
