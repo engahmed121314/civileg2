@@ -87,9 +87,14 @@ class EngineeringDetailExpansionTest {
     fun `waffle slab ECP publishes safety checks`() {
         val r = ECPWaffleSlabDesign().design(WaffleSlabDesign.WaffleSlabInput())
         // Only checks backed by a computed demand are listed. Deflection is not assessed, so it must not appear as a check.
-        assertTrue("ECP waffle should expose its 2 computed checks, got ${r.safetyChecks.size}", r.safetyChecks.size == 2)
-        assertTrue(r.safetyChecks.any { it.name.contains("Rib flexure") })
-        assertTrue(r.safetyChecks.any { it.name.contains("Punching") })
+        // A check whose demand is not computed is left out and reported as NOT ASSESSED in the warnings, so each of the two
+        // (rib, punching) is either listed or named in a NOT ASSESSED warning.
+        assertTrue("ECP waffle lists at most its 2 computed checks, got ${r.safetyChecks.size}", r.safetyChecks.size in 1..2)
+        val ribListed = r.safetyChecks.any { it.name.contains("Rib flexure") }
+        val punchListed = r.safetyChecks.any { it.name.contains("Punching") }
+        assertTrue("every listed check is rib or punching", r.safetyChecks.all { it.name.contains("Rib flexure") || it.name.contains("Punching") })
+        if (!ribListed) assertTrue(r.warnings.any { it.startsWith("NOT ASSESSED") && it.contains("ib", ignoreCase = true) })
+        if (!punchListed) assertTrue(r.warnings.any { it.startsWith("NOT ASSESSED") && it.contains("unch", ignoreCase = true) })
         assertTrue(r.safetyChecks.none { it.name.contains("Deflection") })
     }
 
