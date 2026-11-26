@@ -283,6 +283,102 @@ def pull_exported_pdfs():
     for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:4]:
         d = adb("shell", "run-as", pkg, "cat", pth).stdout
         open(f"{out}/exported-" + os.path.basename(pth), "wb").write(d)
+def footing_block():
+    """Footing only: open the isolated footing from the Design tab, design with defaults, sweep the result, export the PDF."""
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)  # leave the Beam screen opened by the common prologue
+    tap_text(["التصميم"], "ft-design", exact=True); scroll_top(3)
+    ok = False
+    for _ in range(6):
+        if tap_text(["القواعد"], "ft-find", exact=True): ok = True; break
+        scroll_up(2)
+    log.append(("footing_open", ok)); time.sleep(2); shot("footing-open"); dump("footing-open")
+    # Ps is a required, blank project input. First press with it blank must show the field error; then a demo value (800 kN) is typed.
+    for _ in range(8):
+        if tap_text(["تصميم القاعدة الآن"], "ft-calc-blank"): log.append(("footing_calc_blank_ps", True)); break
+        scroll_up(2)
+    else: log.append(("footing_calc_blank_ps", False))
+    time.sleep(2); shot("footing-blank-ps"); dump("footing-blank-ps")
+    log.append(("footing_type_ps_demo_800", edit_field("", "800", "ft-ps"))); time.sleep(1); shot("footing-ps-typed"); dump("footing-ps-typed")
+    for _ in range(8):
+        if tap_text(["تصميم القاعدة الآن"], "ft-calc-find"): log.append(("footing_calc", True)); break
+        scroll_up(2)
+    else: log.append(("footing_calc", False))
+    time.sleep(4)
+    for k in range(8):
+        scroll_up(2); shot(f"footing-res-{k}"); dump(f"footing-res-{k}")
+    pdf_ok = False
+    for _ in range(14):
+        if tap_text(["تقرير PDF"], "ft-pdf-find"): pdf_ok = True; break
+        scroll_top(1)
+    log.append(("footing_pdf_tap", pdf_ok)); time.sleep(6)
+    if not tap_text(["Got it", "حسنًا", "حسناً"], "ft-pdf-gotit"):
+        wm = adb("shell", "wm", "size").stdout.decode(errors="ignore")
+        mm = re.search(r"(\d+)x(\d+)", wm)
+        if mm:
+            adb("shell", "input", "tap", str(int(int(mm.group(1)) * 0.79)), str(int(int(mm.group(2)) * 0.27))); time.sleep(1.5)
+    shot("footing-pdf"); dump("footing-pdf")
+    for k in range(1, 5):
+        adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
+        shot("footing-pdf-" + str(k))
+    fl = adb("shell", "find", "/sdcard", "/data/user/0/" + pkg, "-name", "Footing_Report*.pdf").stdout.decode(errors="ignore").split()
+    for k2, fp in enumerate(fl[:2]):
+        open(f"{out}/footing-report-{k2}.pdf", "wb").write(adb("exec-out", "run-as", pkg, "cat", fp).stdout if fp.startswith("/data") else adb("exec-out", "cat", fp).stdout)
+    open(f"{out}/footing-report-paths.txt", "w").write("\n".join(fl))
+    open(f"{out}/footing-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
+def steel_block():
+    """Steel page: open it from the Design tab, sweep the warehouse inputs, analyse with the defaults, sweep results, export the PDF, then sweep the member design tab."""
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+    tap_text(["التصميم"], "st-design", exact=True); scroll_top(3)
+    ok = False
+    for _ in range(6):
+        if tap_text(["المنشآت المعدنية"], "st-find"): ok = True; break
+        scroll_up(2)
+    log.append(("steel_open", ok)); time.sleep(3); shot("steel-open"); dump("steel-open")
+    for k in range(3):
+        scroll_up(2); shot(f"steel-in-{k}"); dump(f"steel-in-{k}")
+    for _ in range(8):
+        if tap_text(["تحليل الهنجر"], "st-calc-find"): log.append(("steel_calc", True)); break
+        scroll_up(2)
+    else: log.append(("steel_calc", False))
+    time.sleep(8)
+    for k in range(10):
+        shot(f"steel-res-{k}"); dump(f"steel-res-{k}"); scroll_up(2)
+    pdf_ok = False
+    for _ in range(14):
+        if tap_text(["إنشاء تقرير PDF"], "st-pdf-find"): pdf_ok = True; break
+        scroll_top(1)
+    log.append(("steel_pdf_tap", pdf_ok)); time.sleep(2); shot("steel-pdf-dialog"); dump("steel-pdf-dialog")
+    log.append(("steel_export_now", tap_text(["تصدير الآن"], "st-export-now"))); time.sleep(8)
+    if not tap_text(["Got it", "حسنًا", "حسناً"], "st-pdf-gotit"):
+        wm = adb("shell", "wm", "size").stdout.decode(errors="ignore")
+        mm = re.search(r"(\d+)x(\d+)", wm)
+        if mm:
+            adb("shell", "input", "tap", str(int(int(mm.group(1)) * 0.79)), str(int(int(mm.group(2)) * 0.27))); time.sleep(1.5)
+    shot("steel-pdf"); dump("steel-pdf")
+    for k in range(1, 6):
+        adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
+        shot("steel-pdf-" + str(k))
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(2)
+    # Member design tab
+    scroll_top(8)
+    log.append(("steel_member_tab", tap_text(["تصميم القطاعات"], "st-member-tab"))); time.sleep(3)
+    for k in range(6):
+        shot(f"steel-member-{k}"); dump(f"steel-member-{k}"); scroll_up(2)
+    open(f"{out}/steel-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
+if os.path.exists("tools/ci/STEEL_ONLY"):
+    try:
+        steel_block()
+    except Exception as e:
+        log.append(("steel_exception", repr(e)))
+    pull_exported_pdfs()
+    open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
+if os.path.exists("tools/ci/FOOTING_ONLY"):
+    try:
+        footing_block()
+    except Exception as e:
+        log.append(("footing_exception", repr(e)))
+    pull_exported_pdfs()
+    open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
 if os.path.exists("tools/ci/STAIR_ONLY"):
     try:
         stair_block()
