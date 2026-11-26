@@ -45,6 +45,13 @@ for _ in range(4):
     time.sleep(2)
 shot("home"); dump("home")
 log = []
+for _try in range(3):
+    if tap_text(["التصميم"], "d-design-probe", exact=True): break
+    adb("shell", "am", "force-stop", pkg); time.sleep(2)
+    adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"); time.sleep(10)
+    for _ in range(3):
+        if not tap_text(["Wait"], "anr-wait-retry", exact=True): break
+        time.sleep(2)
 log.append(("design_tab", tap_text(["التصميم"], "d-design", exact=True))); shot("design")
 log.append(("beam_card", tap_text(["كمر"], "d-beam"))); shot("beam-open"); dump("beam-open")
 def scroll_up(n=3):
