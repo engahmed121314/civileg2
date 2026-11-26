@@ -10,7 +10,26 @@ class ECPBeam : BeamDesign {
     companion object {
         private const val GAMMA_C = 1.5      // معامل أمان الخرسانة
         private const val GAMMA_S = 1.15     // معامل أمان الحديد
-        private const val BETA_1 = 0.9       // ECP 203 K-method factor (consistent with K_bal derivation)
+        // ECP 203-2025 Table 4-1 (p.4-6): maximum neutral axis depth ratio c_max/d by steel grade (fy, N/mm2), tension steel only.
+        // fy is not tabulated at every grade; values between rows are linearly interpolated (labelled in the notes).
+        private val CMAX_OVER_D_TABLE_4_1 = listOf(240.0 to 0.50, 350.0 to 0.45, 400.0 to 0.42, 420.0 to 0.41, 500.0 to 0.39, 600.0 to 0.36, 700.0 to 0.33)
+        // ECP 203-2025 4-1-2-1 item 9 (p.4-4): equivalent rectangular block a = 0.8 c
+        private const val BLOCK_DEPTH_FACTOR = 0.8
+        fun cMaxOverD(fy: Double): Double {
+            val t = CMAX_OVER_D_TABLE_4_1
+            if (fy <= t.first().first) return t.first().second
+            if (fy >= t.last().first) return t.last().second
+            val i = t.indexOfLast { it.first <= fy }
+            val (f0, c0) = t[i]; val (f1, c1) = t[i + 1]
+            return c0 + (c1 - c0) * (fy - f0) / (f1 - f0)
+        }
+        /** Rmax / gamma_c of Table 4-1 (Eq 4-4: Mu,max = Rmax fcu b d^2 / gamma_c), derived from c_max/d and the 0.8 c stress block. */
+        fun kMax(fy: Double): Double { val u = BLOCK_DEPTH_FACTOR * cMaxOverD(fy); return (0.67 / GAMMA_C) * u * (1.0 - u / 2.0) }
+        /** mu_max of Table 4-1 / Eq 4-5: (0.67 fcu / gamma_c)(a_max/d) / (fy / gamma_s). */
+        fun muMax(fcu: Double, fy: Double): Double = (0.67 * fcu / GAMMA_C) * (BLOCK_DEPTH_FACTOR * cMaxOverD(fy)) / (fy / GAMMA_S)
+        /** Minimum steel ratio, ECP 203-2025 Eq 4-9 (p.4-10): 0.225 sqrt(fcu)/fy, not less than 1.1/fy, and the floors 0.25% (mild steel) / 0.15% to 0.18% (high-grade, fcu 30 to 40). */
+        fun muMinEq49(fcu: Double, fy: Double): Double = max(0.225 * sqrt(fcu) / fy, 1.1 / fy)
+        fun muMinFloor(fcu: Double, fy: Double): Double = if (fy <= 280.0) 0.0025 else 0.0015 + (0.0018 - 0.0015) * ((fcu - 30.0).coerceIn(0.0, 10.0) / 10.0)
         // Ec = 4400 * sqrt(fcu) per ECP 203 (MPa, fcu in MPa)
         private fun ec(fcu: Double) = 4400.0 * sqrt(fcu)
         private const val E_S = 200000.0     // معامل مرونة الحديد
@@ -48,7 +67,7 @@ class ECPBeam : BeamDesign {
         // التحقق من أن المقطع غير مفرط التسليح
         // ECP 203 §4-2-2-2: When K > K_bal, doubly-reinforced design is required
         if (K > K_bal) {
-            warnings.add("Section is over-reinforced (K=${"%.4f".format(K)} > K_bal=${"%.4f".format(K_bal)}! Doubly-reinforced design required per ECP 203 §4-2-2-2")
+            warnings.add("Section is over the single-reinforcement limit (K=${"%.4f".format(K)} > K_max=${"%.4f".format(K_bal)} = Rmax/gamma_c, ECP 203-2025 Table 4-1 p.4-6 and Eq 4-4; fy between table rows interpolated). Compression steel required (Eq 4-6, 4-7) ")
             codeNotes.add(CodeReference.ECP.BEAM_REINFORCEMENT_MAX)
         }
         
@@ -56,7 +75,7 @@ class ECPBeam : BeamDesign {
         // 0.893 = γc/(2×0.67) = 1.5/1.34 — the mathematically correct divisor
         val K_DIVISOR = 0.893
         val discriminant = 0.25 - K / K_DIVISOR
-        val leverArm = if (discriminant > 0) {
+        var leverArm = if (discriminant > 0) {
             effectiveDepth * (0.5 + sqrt(discriminant))
         } else {
             // ECP 203 §4-2-2-2: When discriminant ≤ 0, section is over-reinforced.
@@ -64,6 +83,8 @@ class ECPBeam : BeamDesign {
             warnings.add("Lever arm discriminant ≤ 0 — using z = 0.7d (doubly-reinforced required)")
             effectiveDepth * 0.7
         }
+        // ECP 203-2025 4-1-2-2-a (p.4-5): a/d not less than 0.1, i.e. lever arm z not more than 0.95 d
+        leverArm = min(leverArm, 0.95 * effectiveDepth)
         InputGuard.finite("leverArm", leverArm)
         
         // مساحة التسليح المطلوبة: As = Mu / (fy/γs × z) حسب ECP 203 §4-2-2-1
@@ -77,8 +98,12 @@ class ECPBeam : BeamDesign {
         val maxSteel = getMaxReinforcementRatioDynamic(fcu, fy) * Ag
         
         if (astRequired < minSteel) {
-            astRequired = minSteel
-            warnings.add("Minimum reinforcement applied per ${CodeReference.ECP.BEAM_REINFORCEMENT_MIN}")
+            // ECP 203-2025 4-1-2-2-h (p.4-10): when the calculated steel is below the minimum, 1.3 x calculated may be provided,
+            // not exceeding the Eq 4-9 minimum and not below the 0.25% (mild) / 0.15-0.18% (high-grade) floors. Ratios taken on b x d.
+            val floorSteel = muMinFloor(fcu, fy) * Ag
+            val relief = max(floorSteel, min(minSteel, 1.3 * astRequired))
+            astRequired = relief
+            warnings.add("Minimum reinforcement applied per ECP 203-2025 4-1-2-2-h Eq 4-9 (ratios on b x d)")
         }
         
         // اختيار قطر حديد مناسب مع بدائل اقتصادية وآمنة
@@ -131,7 +156,7 @@ class ECPBeam : BeamDesign {
         
         // حساب عمق المحور المحايد: c = 2*(d - z) / β1
         // ECP 203 §4-2-2-1: Neutral axis depth from compression face
-        val beta1 = 0.85
+        val beta1 = BLOCK_DEPTH_FACTOR   // a = 0.8 c, ECP 203-2025 4-1-2-1 item 9 (p.4-4)
         val neutralAxisDepth = if (beta1 > 0) 2.0 * (effectiveDepth - leverArm) / beta1 else 0.0
         
         return ReinforcementResult(
@@ -326,16 +351,11 @@ class ECPBeam : BeamDesign {
     }
 
     // ECP 203 §4-2-2-3: ρ_min = max(0.26 × √(fcu) / fy, 0.0013)
-    private fun getMinReinforcementRatioDynamic(fcu: Double, fy: Double): Double {
-        return max(0.26 * sqrt(fcu) / fy, 0.0013)
-    }
+    private fun getMinReinforcementRatioDynamic(fcu: Double, fy: Double): Double =
+        max(muMinEq49(fcu, fy), muMinFloor(fcu, fy))
     // ECP 203 §4-2-2-1: عندما K يقترب من K_bal، نحد ρ إلى ~75% من النسبة المتوازنة
-    private fun getMaxReinforcementRatioDynamic(fcu: Double, fy: Double): Double {
-        val kBal = calculateKBal(fcu, fy)
-        val fs = fy / GAMMA_S
-        val rhoBal = if (fs > 0) kBal * 1.25 * fcu / fs else 0.04
-        return min(0.75 * rhoBal, 0.04)
-    }
+    private fun getMaxReinforcementRatioDynamic(fcu: Double, fy: Double): Double =
+        min(muMax(fcu, fy), 0.04)   // Table 4-1 mu_max (Eq 4-5); the 4% ceiling is the app's earlier cap, not verified in the 2025 text
     override fun getMinReinforcementRatio(): Double = 0.0013  // حد أدنى آمن بدون fcu/fy
     override fun getMaxReinforcementRatio(): Double = 0.04   // 4%
     override fun getMinShearReinforcementRatio(): Double = 0.0015  // 0.15%
@@ -355,21 +375,8 @@ class ECPBeam : BeamDesign {
      * حيث a/d = 0.9 × εcu/(εcu + fy/(Es×γs))
      * التحقيق: fcu=25, fy=360 → K_bal=0.186
      */
-    private fun calculateKBal(fcu: Double, fy: Double): Double {
-        val Es = 200000.0  // معامل مرونة الحديد MPa
-        val epsilonCu = 0.003  // إجهاد الخرسانة الأقصى عند التوازن
-        val beta = BETA_1  // معامل الكتلة الفعال في طريقة K (ECP 203)
-        
-        // إجهاد خضوع التصميم
-        val epsilonY = fy / (Es * GAMMA_S)
-        // نسبة عمق المحور المحايد عند التوازن
-        val cOverD = epsilonCu / (epsilonCu + epsilonY)
-        // نسبة عمق كتلة الإجهاد
-        val aOverD = beta * cOverD
-        // K_bal = (α/γc) × (a/d) × (1 - a/(2d))
-        return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
-    }
-    
+    private fun calculateKBal(fcu: Double, fy: Double): Double = kMax(fy)   // ECP 203-2025 Table 4-1 / Eq 4-4: K,max = Rmax / gamma_c
+
     // دالة مساعدة لحساب قدرة العزم
     // ECP 203 §4-2-2-1: Moment capacity of singly reinforced section
     private fun calculateMomentCapacity(
@@ -433,9 +440,7 @@ class ECPBeam : BeamDesign {
         notes.add("K_bal = ${String.format("%.4f", kBal)}")
         
         // عمق المحور المحايد
-        val epsilonCu = 0.003
-        val epsilonY = fy / (E_S * GAMMA_S)
-        val cOverD = epsilonCu / (epsilonCu + epsilonY)
+        val cOverD = cMaxOverD(fy)   // ECP 203-2025 Table 4-1 (p.4-6)
         val neutralAxisDepth = cOverD * d
         
         // إذا كان K ≤ K_bal: المقطع لا يحتاج حديد ضغط
