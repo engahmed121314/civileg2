@@ -39,7 +39,11 @@ adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1")
 t0 = time.time(); i = 0
 while time.time() - t0 < 14:
     shot(f"splash-{i:02d}-{time.time()-t0:04.1f}s"); i += 1
-time.sleep(4); shot("home"); dump("home")
+time.sleep(4)
+for _ in range(4):
+    if not tap_text(["Wait"], "anr-wait0", exact=True): break
+    time.sleep(2)
+shot("home"); dump("home")
 log = []
 log.append(("design_tab", tap_text(["التصميم"], "d-design", exact=True))); shot("design")
 log.append(("beam_card", tap_text(["كمر"], "d-beam"))); shot("beam-open"); dump("beam-open")
