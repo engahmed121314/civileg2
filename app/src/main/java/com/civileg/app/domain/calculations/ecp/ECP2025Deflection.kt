@@ -106,7 +106,7 @@ object ECP2025Deflection {
      * Table 4-10 (p.4-65): span / thickness ratios. One-way members, spans <= 6 m, cantilevers < 2 m.
      * Table values are for fy = 420. For other steel with fy <= 500 the code says the table values are DIVIDED by
      * Eq 4-81 = 0.40 + fy/700 (printed word: "qisma"). For fy > 500 deflection must be computed: returns null.
-     * WARNING: dividing lowers the allowed ratio for fy > 420 and RAISES it for fy < 420, the opposite sense of
+     * WARNING: dividing lowers the allowed ratio for fy > 420 and would raise it for fy < 420 (so it is NOT applied below 420: factor 1.0), the opposite sense of
      * the ACI 318 table 7.3.1.1 footnote (multiply). Implemented as printed; flagged for lead decision.
      */
     fun spanToDepthRatio(element: Element, support: Support, fy: Double): Double? {
@@ -116,7 +116,15 @@ object ECP2025Deflection {
             Element.RIBBED_SLAB_OR_BURIED_BEAM -> when (support) { Support.SIMPLE -> 20.0; Support.ONE_END_CONTINUOUS -> 23.0; Support.BOTH_ENDS_CONTINUOUS -> 24.0; Support.CANTILEVER -> 8.0 }
             Element.RIGID_BEAM -> when (support) { Support.SIMPLE -> 12.0; Support.ONE_END_CONTINUOUS -> 14.0; Support.BOTH_ENDS_CONTINUOUS -> 16.0; Support.CANTILEVER -> 5.0 }
         }
-        return base / fyModifier(fy)
+        // Note ب prints "divide by Eq 4-81". For fy < 420 that would loosen the limit; not applied (factor 1.0).
+        return if (fy > 420.0) base / fyModifier(fy) else base
+    }
+
+    /** Fig 4-32 (p.4-65, note هـ): T-beam factor delta on Table 4-10: 0.80 for b/B <= 0.30, linear to 1.00 at b/B = 1.00. */
+    fun tBeamFactor(webWidth: Double, flangeWidth: Double): Double {
+        require(webWidth > 0.0 && flangeWidth >= webWidth)
+        val r = webWidth / flangeWidth
+        return if (r <= 0.30) 0.80 else 0.80 + 0.20 * (r - 0.30) / 0.70
     }
 
     /** Eq 4-81 (p.4-65): 0.40 + fy/700. */

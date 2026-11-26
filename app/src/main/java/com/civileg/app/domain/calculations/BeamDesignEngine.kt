@@ -208,7 +208,8 @@ object BeamDesignEngine {
 
         // ===== SECTION 9: DEFLECTION CHECK (Enhanced) =====
         stepNum++
-        val deflResult = BeamDesignEnginePart2.checkDeflection(b, h, d, span, mu, fcu, fy, code, flexureResult.asProvided, flexureResult.neutralAxisDepth)
+        val deflResult = BeamDesignEnginePart2.checkDeflection(b, h, d, span, mu, fcu, fy, code, flexureResult.asProvided, flexureResult.neutralAxisDepth,
+            serviceRatio = ws / max(wu, 1e-9), sustainedFraction = totalDead / max(ws, 1e-9), supportType = supportType, flangeWidth = flangeWidth)
         steps.addAll(deflResult.steps)
         stepNum = steps.size
 
@@ -230,7 +231,11 @@ object BeamDesignEngine {
         safetyChecks.add(SafetyCheckItem("Shear (qu ≤ qu,max)", shearResult.appliedStress, shearResult.maxStress, "MPa", shearResult.appliedStress <= shearResult.maxStress, when(code) { DesignCode.ECP -> "ECP 203 §4-2-6" else -> "ACI 318 §22.5" }))
         safetyChecks.add(SafetyCheckItem("Min Reinforcement", flexureResult.asProvided, flexureResult.asMin, "mm²", flexureResult.asProvided >= flexureResult.asMin, when(code) { DesignCode.ECP -> "ECP 203 §4-2-1-1" else -> "ACI 318 §9.6.1" }))
         safetyChecks.add(SafetyCheckItem("Max Reinforcement %", flexureResult.rhoActual * 100, flexureResult.rhoMax * 100, "%", flexureResult.rhoActual <= flexureResult.rhoMax, when(code) { DesignCode.ECP -> "ECP 203 §4-2-1-1" else -> "ACI 318 §9.2.2" }))
-        safetyChecks.add(SafetyCheckItem("Deflection", deflResult.longTerm, deflResult.allowable, "mm", deflResult.longTerm <= deflResult.allowable, when(code) { DesignCode.ECP -> "ECP 203 §4-2-3" else -> "ACI 318 §24.2" }))
+        if (code == DesignCode.ECP && !deflResult.computed) {
+            // ECP 203-2025 Table 4-10 (p.4-65): span/depth check; NOT ASSESSED (no check item) when the table does not apply
+            val ta = deflResult.tableAllowableRatio
+            if (ta != null) safetyChecks.add(SafetyCheckItem("Deflection (Table 4-10, L/h)", deflResult.tableActualRatio, ta, "L/h", deflResult.tableActualRatio <= ta, "ECP 203-2025 Table 4-10 p.4-65"))
+        } else safetyChecks.add(SafetyCheckItem("Deflection", deflResult.longTerm, deflResult.allowable, "mm", deflResult.longTerm <= deflResult.allowable, when(code) { DesignCode.ECP -> "ECP 203-2025 Eq 4-70, 4-73, 4-74" else -> "ACI 318 §24.2" }))
         if (crackResult.calculated > 0) {
             safetyChecks.add(SafetyCheckItem("Crack Width", crackResult.calculated, crackResult.allowable, "mm", crackResult.calculated <= crackResult.allowable, when(code) { DesignCode.ECP -> "ECP 203 §4-2-4" else -> "ACI 318 §24.5" }))
         }
@@ -241,14 +246,16 @@ object BeamDesignEngine {
         val allWarnings = mutableListOf<String>()
         allWarnings.addAll(flexureResult.warnings)
         allWarnings.addAll(shearResult.warnings)
-        if (deflResult.longTerm > deflResult.allowable) allWarnings.add("Deflection exceeds allowable limit")
+        if (deflResult.notAssessed) allWarnings.add("Deflection NOT ASSESSED: Table 4-10 does not apply (span > 6 m, cantilever >= 2 m or fy > 500) and a computed deflection is available only for simply supported beams.")
+        else if (deflResult.computed && deflResult.longTerm > deflResult.allowable) allWarnings.add("Deflection exceeds allowable limit")
+        else if (!deflResult.computed && deflResult.tableAllowableRatio != null && deflResult.tableActualRatio > deflResult.tableAllowableRatio) allWarnings.add("Span/depth exceeds the ECP 203-2025 Table 4-10 limit")
         if (crackResult.calculated > crackResult.allowable) allWarnings.add("Crack width exceeds ${crackResult.allowable} mm")
         allWarnings.add("Development and lap lengths are code-formula lengths only (straight bottom bar); available anchorage, curtailment and hook/bend cutting lengths were not checked")
 
         val isSafe = safetyChecks.all { it.isSafe }
         val flexUtil = mu / max(MR, 0.001)
         val shearUtil = shearResult.appliedStress / max(shearResult.maxStress, 0.001)
-        val deflUtil = deflResult.longTerm / max(deflResult.allowable, 0.001)
+        val deflUtil = if (deflResult.computed) deflResult.longTerm / max(deflResult.allowable, 0.001) else (deflResult.tableAllowableRatio?.let { deflResult.tableActualRatio / it } ?: 0.0)
         val overallUtil = maxOf(flexUtil, shearUtil, deflUtil, 0.0).coerceIn(0.0, 1.5)
 
         // Volume & Weight
@@ -324,7 +331,7 @@ object BeamDesignEngine {
             effectiveMomentOfInertia = deflResult.Ie, modulusOfElasticity = deflResult.Ec,
             crackingMoment = deflResult.Mcr, immediateDeflection = deflResult.immediate,
             longTermDeflection = deflResult.longTerm, allowableDeflection = deflResult.allowable,
-            deflectionIsSafe = deflResult.longTerm <= deflResult.allowable,
+            deflectionIsSafe = if (deflResult.computed) deflResult.longTerm <= deflResult.allowable else (deflResult.tableAllowableRatio?.let { deflResult.tableActualRatio <= it } ?: false),
             deflectionSpanRatio = deflResult.ratioDesc,
             basicSpanDepthRatio = deflResult.basicRatio, modifiedSpanDepthRatio = deflResult.modifiedRatio,
             crackWidthCalculated = crackResult.calculated, crackWidthAllowable = crackResult.allowable,

@@ -261,15 +261,27 @@ object BeamDesignEnginePart2 {
         val immediate: Double, val longTerm: Double, val allowable: Double,
         val basicRatio: Double, val modifiedRatio: Double,
         val ratioDesc: String,
-        val steps: List<CalculationStep>
+        val steps: List<CalculationStep>,
+        /** ECP only: true when the deflection value was computed (Eq 4-70, 4-73); false when only Table 4-10 applies. */
+        val computed: Boolean = true,
+        /** ECP Table 4-10 allowable L/t (null when the table does not apply: span > 6 m, cantilever >= 2 m or fy > 500). */
+        val tableAllowableRatio: Double? = null,
+        val tableActualRatio: Double = 0.0,
+        /** True when the ECP deflection check cannot be made (no computation for this support type and Table 4-10 not applicable). */
+        val notAssessed: Boolean = false
     )
 
     fun checkDeflection(
         b: Double, h: Double, d: Double, span: Double,
         mu: Double, fcu: Double, fy: Double,
         code: DesignCode, asProvided: Double,
-        nADepth: Double
+        nADepth: Double,
+        serviceRatio: Double = 1.0,
+        sustainedFraction: Double = 1.0,
+        supportType: String = "SS",
+        flangeWidth: Double = 0.0
     ): DeflectionResult {
+        if (code == DesignCode.ECP) return checkDeflectionEcp2025(b, h, d, span, mu, fcu, fy, asProvided, nADepth, serviceRatio, sustainedFraction, supportType, flangeWidth)
         // ── InputGuard (ADR-010) ──
         InputGuard.positive("b", b)
         InputGuard.positive("h", h)
@@ -346,6 +358,85 @@ object BeamDesignEnginePart2 {
             immediate = immediate, longTerm = longTerm, allowable = allowable,
             basicRatio = basicRatio, modifiedRatio = modifiedRatio,
             ratioDesc = ratioDesc, steps = steps
+        )
+    }
+
+
+    /**
+     * ECP 203-2025 beam deflection. Ec = 4400 sqrt(fcu) (2-3-3-1, p.2-23), Es = 200000 (Fig 4-1), Mcr = fctr Ig / yt (4-71),
+     * Ie Eq 4-70 with Icr <= Ig, long-term alpha = xi / (1 + 50 rho') Eq 4-73 (xi = 2.0, five years or more),
+     * total limit L/250 (4-74), live-load limit L/360 (4-76). The modular ratio n = Es/Ec for Icr is a choice, not a
+     * printed clause (page not found). Computed for simply supported beams only; other supports use Table 4-10
+     * (p.4-65). rho' = 0 (compression steel is not an input here), sustained part = dead share of service load.
+     */
+    private fun checkDeflectionEcp2025(
+        b: Double, h: Double, d: Double, span: Double, mu: Double, fcu: Double, fy: Double,
+        asProvided: Double, nADepth: Double, serviceRatio: Double, sustainedFraction: Double,
+        supportType: String, flangeWidth: Double
+    ): DeflectionResult {
+        InputGuard.positive("b", b); InputGuard.positive("h", h); InputGuard.positive("d", d)
+        InputGuard.positive("span", span); InputGuard.positive("fcu", fcu); InputGuard.positive("fy", fy)
+        InputGuard.nonNegative("mu", mu); InputGuard.nonNegative("asProvided", asProvided)
+        val D = com.civileg.app.domain.calculations.ecp.ECP2025Deflection
+        val steps = mutableListOf<CalculationStep>()
+        val spanMm = span * 1000.0
+        val ec = 4400.0 * sqrt(fcu)
+        val ig = b * h.pow(3) / 12.0
+        val n = 200000.0 / ec
+        val x = nADepth
+        val icr = b * x.pow(3) / 3.0 + n * asProvided * (d - x).pow(2)
+        val fctr = D.fctr(fcu, fy)
+        val mcr = D.crackingMoment(fctr, ig, h / 2.0) / 1e6
+        val ma = mu * serviceRatio
+        val simple = supportType == "SS" || supportType == "SIMPLY_SUPPORTED"
+        val ie = if (asProvided > 0.0 && mcr > 0.0 && icr > 0.0) D.effectiveInertia(mcr, ma, ig, icr) else ig
+        val allowable = spanMm / 250.0
+        var immediate = 0.0; var longTerm = 0.0
+        if (simple) {
+            val ws = ma * 8.0 / (span * span)
+            immediate = 5.0 * ws * spanMm.pow(4) / (384.0 * ec * ie)
+            val alpha = D.longTermMultiplier(D.timeFactorXi(60)!!, 0.0)
+            longTerm = D.totalDeflection(immediate, immediate * sustainedFraction, alpha)
+        }
+        // Table 4-10 (p.4-65), beams are "dropped beams"; T-beam factor from Fig 4-32
+        val sup = when (supportType) {
+            "SS", "SIMPLY_SUPPORTED" -> D.Support.SIMPLE
+            "CANTILEVER" -> D.Support.CANTILEVER
+            "FH", "FIXED_HINGED" -> D.Support.ONE_END_CONTINUOUS
+            else -> D.Support.BOTH_ENDS_CONTINUOUS
+        }
+        val applicable = (sup == D.Support.CANTILEVER && span < 2.0) || (sup != D.Support.CANTILEVER && span <= 6.0)
+        val baseTable = if (applicable) D.spanToDepthRatio(D.Element.RIGID_BEAM, sup, fy) else null
+        val delta = if (flangeWidth > b) D.tBeamFactor(b, flangeWidth) else 1.0
+        val tableAllow = baseTable?.let { it * delta }
+        val actual = spanMm / h
+        val notAssessed = !simple && tableAllow == null
+        val computed = simple
+        steps.add(CalculationStep(
+            1, "Deflection Check (ECP 203-2025)",
+            codeReference = "ECP 203-2025 Eq 4-70, 4-71, 4-73, 4-74 (pp.4-60 to 4-62); Ec 2-3-3-1 p.2-23; Table 4-10 p.4-65",
+            formula = "Ie = (Mcr/Ma)^3 Ig + [1-(Mcr/Ma)^3] Icr (Icr <= Ig); alpha = xi/(1+50 rho'); total = d_i + alpha d_sustained",
+            formulaWithValues = if (simple) "Ec = ${String.format("%.0f", ec)} MPa, Mcr = ${String.format("%.2f", mcr)} kN.m, Ma (service) = ${String.format("%.2f", ma)} kN.m\nIe = ${String.format("%.3e", ie)} mm4, immediate = ${String.format("%.2f", immediate)} mm, alpha = 2.00 (xi 2.0, rho' = 0)\nn = Es/Ec is an implementation choice (page not found); rho' = 0 (not an input)"
+                else "Deflection is not computed for this support type; Table 4-10 is used" ,
+            result = when {
+                simple -> "${if (longTerm <= allowable) "PASS" else "FAIL"}: total = ${String.format("%.2f", longTerm)} mm vs L/250 = ${String.format("%.2f", allowable)} mm"
+                tableAllow != null -> "${if (actual <= tableAllow) "PASS" else "FAIL"}: L/h = ${String.format("%.1f", actual)} vs Table 4-10 limit ${String.format("%.1f", tableAllow)} (T-beam factor ${String.format("%.2f", delta)})"
+                else -> "NOT ASSESSED: Table 4-10 does not apply (span > 6 m, cantilever >= 2 m or fy > 500) and deflection is not computed for this support type"
+            },
+            unit = "mm",
+            isPass = if (simple) longTerm <= allowable else (tableAllow != null && actual <= tableAllow),
+            status = when {
+                notAssessed -> StepStatus.INFO
+                (if (simple) longTerm <= allowable else actual <= (tableAllow ?: 0.0)) -> StepStatus.CHECK_PASS
+                else -> StepStatus.CHECK_FAIL
+            }
+        ))
+        return DeflectionResult(
+            Ig = ig, Icr = icr, Ie = ie, Ec = ec, Mcr = mcr,
+            immediate = immediate, longTerm = longTerm, allowable = allowable,
+            basicRatio = baseTable ?: 0.0, modifiedRatio = tableAllow ?: 0.0,
+            ratioDesc = if (simple) "L/${String.format("%.0f", spanMm / max(longTerm, 0.1))}" else "L/h = ${String.format("%.1f", actual)}",
+            steps = steps, computed = computed, tableAllowableRatio = tableAllow, tableActualRatio = actual, notAssessed = notAssessed
         )
     }
 
