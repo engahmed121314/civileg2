@@ -336,7 +336,7 @@ class ColumnViewModel @Inject constructor(
             title = "COLUMN ${res.columnType}",
             widthMm = res.width.toDouble(),
             depthMm = res.depth.toDouble(),
-            coverMm = 40.0,
+            coverMm = com.civileg.app.domain.calculations.column.ColumnCover.mm(res.code),
             mainBarDiaMm = res.reinforcement.diameter.toDouble(),
             mainBarCount = res.reinforcement.numBars,
             tieDiaMm = res.stirrups.diameter.toDouble(),
@@ -387,7 +387,7 @@ class ColumnViewModel @Inject constructor(
                         barDia = res.reinforcement.diameter.toDouble(),
                         tieDia = res.stirrups.diameter.toDouble(),
                         tieSpacing = res.stirrups.spacing,
-                        cover = 40.0,
+                        cover = com.civileg.app.domain.calculations.column.ColumnCover.mm(res.code),
                         isSpiral = isSpiralTies,
                         spiralPitch = if (isSpiralTies) res.stirrups.spacing else 0.0,
                         sectionType = if (snap.isCircular) "Circular" else "Rectangular"
@@ -419,15 +419,17 @@ class ColumnViewModel @Inject constructor(
                     "Design Code" to codeName,
                     "Load Combination" to snap.loadCombination.name
                 )
+                val out = com.civileg.app.domain.calculations.column.ColumnOutputModel.from(res)
                 val resultsMap = mutableMapOf(
-                    "Axial Capacity" to res.axialCapacityLabel,
+                    "Status" to out.status.label,
+                    "Axial Capacity" to out.axialCapacityText,
                     "Reinforcement" to res.reinforcement.barString,
                     "Stirrups" to res.stirrups.description,
                     "Slenderness Ratio" to String.format("%.1f", res.slenderness),
                     "Is Slender" to if (res.isSlender) "Yes" else "No",
-                    "Punching Safe" to if (res.punchingSafe) "Yes" else "No",
-                    "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
-                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
+                    "Concrete Volume" to out.concreteVolumeText,
+                    "Steel Weight (net)" to out.steelWeightText,
+                    "Bar Bending Schedule" to out.bbsStatusText
                 )
                 
                 if (res.stirrups.zones.isNotEmpty()) {
@@ -450,7 +452,7 @@ class ColumnViewModel @Inject constructor(
 
                 // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
-                    titleAr = "????? ????? ????? - ${res.columnType}",
+                    titleAr = "Column Design Report - ${res.columnType}",
                     titleEn = "Column Design Report - ${res.columnType}",
                     subtitle = "Code: $codeName    ${res.width}x${res.depth}mm, H=${h}m",
                     designType = "Column (${res.columnType})",
@@ -460,9 +462,7 @@ class ColumnViewModel @Inject constructor(
                     isSafe = res.isSafe,
                     assessmentPending = !res.assessmentComplete,
                     calculationSteps = res.calculationSteps,
-                    bbsEntries = runCatching {
-                        com.civileg.app.domain.calculations.utils.BbsGenerator.generateColumnBbs("C1", res, h * 1000.0)
-                    }.getOrDefault(emptyList()),
+                    bbsEntries = emptyList(),
                     boqRows = BoqEstimator.columnRows(res, h, "C1"),
                     drawingBitmap = drawingBitmap,
                     drawing = buildDxfDrawing(),
