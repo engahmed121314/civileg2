@@ -321,7 +321,7 @@ class ECPFlatSlab : FlatSlabDesign {
                        midTopRebarX.providedArea + midBotRebarX.providedArea
         val totalAsY = totalAsX * (lnYm / lnXm).coerceAtLeast(0.5)  // approximate Y
         val totalAs = totalAsX + totalAsY
-        val steelWeight = totalAs * (input.lx + input.ly) / 1e6 * STEEL_UNIT_WEIGHT  // kg
+        val steelWeight = totalAs * (input.lx + input.ly) / 1e9 * STEEL_UNIT_WEIGHT  // mm2 x mm = mm3; /1e9 = m3; x 7850 kg/m3
 
         codeNotes.add(String.format(
             "Concrete volume = %.3f m³/panel", concreteVolume

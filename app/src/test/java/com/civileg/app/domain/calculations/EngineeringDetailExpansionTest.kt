@@ -118,6 +118,19 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `flat slab steel quantity has a plausible magnitude in every code`() {
+        val results = listOf(
+            "ECP" to ECPFlatSlab().design(FlatSlabInput()),
+            "ACI" to ACIFlatSlab().design(FlatSlabInput()),
+            "SBC" to com.civileg.app.domain.calculations.sbc.SBCFlatSlab().design(FlatSlabInput())
+        )
+        for ((name, r) in results) {
+            val density = r.steelWeightPerPanel / r.concreteVolumePerPanel
+            assertTrue("$name steel density $density kg/m3 is outside 10..400 (a unit error gave ~1000x)", density in 10.0..400.0)
+        }
+    }
+
+    @Test
     fun `flat slab ACI exposes flexure checks`() {
         val r = ACIFlatSlab().design(FlatSlabInput())
         assertTrue(r.safetyChecks.any { it.name.contains("Col-strip top") })

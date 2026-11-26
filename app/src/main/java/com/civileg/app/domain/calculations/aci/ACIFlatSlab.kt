@@ -268,7 +268,7 @@ class ACIFlatSlab : FlatSlabDesign {
         val totalAsX = colTopRebarX.providedArea + colBotRebarX.providedArea +
                 midTopRebarX.providedArea + midBotRebarX.providedArea
         val totalAsY = totalAsX * (lnYm / lnXm).coerceAtLeast(0.5)
-        val steelWeight = (totalAsX + totalAsY) * (input.lx + input.ly) / 1e6 * STEEL_UNIT_WEIGHT
+        val steelWeight = (totalAsX + totalAsY) * (input.lx + input.ly) / 1e9 * STEEL_UNIT_WEIGHT
 
         // ── Flexure (reinforcement) checks ──────────────────────────
         val flexGroups = listOf(

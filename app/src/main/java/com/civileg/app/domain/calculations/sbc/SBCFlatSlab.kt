@@ -259,7 +259,7 @@ class SBCFlatSlab : FlatSlabDesign {
                        midTopRebarX.providedArea + midBotRebarX.providedArea
         val totalAsY = totalAsX * (lnYm / lnXm).coerceAtLeast(0.5)
         val totalAs = totalAsX + totalAsY
-        val steelWeight = totalAs * (input.lx + input.ly) / 1e6 * STEEL_UNIT_WEIGHT
+        val steelWeight = totalAs * (input.lx + input.ly) / 1e9 * STEEL_UNIT_WEIGHT
 
         // ── 15. Flexure (reinforcement) checks ──────────────────────
         val flexGroups = listOf(
