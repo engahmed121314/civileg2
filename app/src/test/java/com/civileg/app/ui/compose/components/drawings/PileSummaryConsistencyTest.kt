@@ -12,7 +12,7 @@ import org.junit.Test
 class PileSummaryConsistencyTest {
     @Test
     fun `passing pile estimate reads unverified with the preliminary banner and names no edition`() {
-        val r = ECPPileFoundation().designPile(PileInput())
+        val r = ECPPileFoundation().designPile(PileInput(axialLoad = 100.0))
         assertTrue(r.isSafe)
         val s = pileDrawingSummary(r)
         assertEquals("UNVERIFIED", s.safetyLabel)
