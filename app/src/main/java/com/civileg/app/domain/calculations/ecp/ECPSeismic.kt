@@ -15,6 +15,14 @@ class ECPSeismic : SeismicDesign {
     private data class SoilParameters(val s: Double, val tb: Double, val tc: Double, val td: Double)
 
     companion object {
+        /**
+         * ECP 201 is not in hand (no Arabic scan received yet). The zone factors, soil parameters, Ct,
+         * minimum base shear and drift limit below are NOT ASSESSED against the code text. They are kept
+         * only as a preliminary estimate and every result carries this warning until verified.
+         */
+        const val NOT_ASSESSED_WARNING =
+            "NOT ASSESSED: ECP 201 source text not verified. Zone factors, soil parameters, Ct, minimum base shear and drift limit are preliminary, not code-checked. / غير مُقيَّم: لم يتم التحقق من قيم ECP 201 من نص الكود، والنتائج أولية."
+
         // عجلة الأرض التصميمية (ag/g) - الخريطة الزلزالية المصرية الحديثة
         private val ZONE_FACTORS = mapOf(
             SeismicZone.ZONE_1 to 0.10,
@@ -58,7 +66,7 @@ class ECPSeismic : SeismicDesign {
         InputGuard.positive("importanceFactor", importanceFactor)
         InputGuard.positive("responseModificationFactor", responseModificationFactor)
 
-        val warnings = mutableListOf<String>()
+        val warnings = mutableListOf<String>(NOT_ASSESSED_WARNING)
         
         // ارتفاع المنشأ - يُقدر من الوزن إذا لم يُحدد
         // تقدير: W ≈ 12 kN/m² × A_floor × n_floors, H ≈ 3m × n_floors

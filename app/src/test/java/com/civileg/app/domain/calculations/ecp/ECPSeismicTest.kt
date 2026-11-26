@@ -7,7 +7,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Unit tests for ECPSeismic — ECP 201-2020 seismic design engine.
+ * Unit tests for ECPSeismic — ECP 201 seismic design engine (edition not verified).
  * Covers base shear, response spectrum, force distribution,
  * InputGuard validation, and edge cases.
  */
@@ -281,5 +281,11 @@ class ECPSeismicTest {
             10000.0, SeismicZone.ZONE_3, SoilType.D, 1.0, 5.0, 30.0
         )
         assertTrue("Rock should give lower shear than soft soil", rock.baseShear <= soft.baseShear)
+    }
+
+    @Test
+    fun `calculateBaseShear_carriesNotAssessedWarning_untilEcp201Verified`() {
+        val result = seismic.calculateBaseShear(5000.0, SeismicZone.ZONE_3, SoilType.C, 1.0, 5.0, 12.0)
+        assertTrue("ECP 201 values must be flagged NOT ASSESSED", result.warnings.contains(ECPSeismic.NOT_ASSESSED_WARNING))
     }
 }
