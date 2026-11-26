@@ -1,6 +1,6 @@
 package com.civileg.app.domain.calculations.ecp
 
-import com.civileg.app.domain.calculations.base.SupportCondition
+import com.civileg.app.domain.entities.SupportCondition
 import com.civileg.app.utils.Constants
 import org.junit.Assert.assertEquals
 import org.junit.Test
