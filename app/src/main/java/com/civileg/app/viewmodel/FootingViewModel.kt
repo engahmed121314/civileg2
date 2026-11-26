@@ -169,7 +169,7 @@ class FootingViewModel @Inject constructor(
             title = "FOOTING ${res.type.displayName}",
             widthMm = res.width.toDouble(),
             thicknessMm = res.thickness.toDouble(),
-            coverMm = 70.0,
+            coverMm = res.coverMm,
             barDiaMm = res.barDiameter.toDouble(),
             barSpacingMm = res.reinforcementBottom.spacing.toDouble(),
             columnWidthMm = res.column1Size.first.toDouble()
@@ -216,7 +216,7 @@ class FootingViewModel @Inject constructor(
                         rebarYDia = res.barDiameter.toDouble(),
                         rebarYSpatial = res.reinforcementBottom.spacing,
                         footingType = res.type.displayName,
-                        cover = 70.0,
+                        cover = res.coverMm,
                         soilPressureMax = res.soilPressure,
                         soilPressureMin = res.soilPressure
                     )

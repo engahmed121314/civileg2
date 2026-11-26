@@ -342,6 +342,18 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `footing result carries the cover its design used so drawings can show the same value`() {
+        // Drawings used a fixed 70 mm while the ECP engine designed with 50 mm (SBC 75 mm).
+        val ecp = engine.calculateFooting(type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
+            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP)
+        assertEquals(50.0, ecp.coverMm, 1e-9)
+        val sbc = engine.calculateFooting(type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
+            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.SBC)
+        assertEquals(75.0, sbc.coverMm, 1e-9)
+        assertTrue("utilization is the raw soil ratio, not clamped", Math.abs(ecp.utilizationRatio - ecp.soilPressure / ecp.allowablePressure) < 1e-9)
+    }
+
+    @Test
     fun `footing property line limits are rejected not silently ignored`() {
         val e = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
             engine.calculateFooting(

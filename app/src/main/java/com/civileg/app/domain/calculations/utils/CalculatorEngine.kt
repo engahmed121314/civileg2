@@ -249,7 +249,9 @@ class CalculatorEngine @Inject constructor(
         val reinforcementTopX: Int = 0,
         val topBarDiameter: Int = 16,
         val reinforcementTopY: Int = 0,
-        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
+        /** Minimum cover (mm) the engine used for the effective depth; drawings must show the same value. */
+        val coverMm: Double = 70.0
     ) : Parcelable
 
     @Parcelize
@@ -1948,12 +1950,13 @@ class CalculatorEngine @Inject constructor(
                 isSafe = combinedRes.isSafe, code = code,
                 concreteVolume = concreteVolume, steelWeight = steelWeight, cost = cost,
                 barsX = numBarsX, barsY = numBarsY, barDiameter = barDia,
-                utilizationRatio = (combinedRes.soilPressure / soil).coerceIn(0.1, 1.5),
+                utilizationRatio = combinedRes.soilPressure / soil,
                 safetyChecks = safetyChecks,
                 column1Size = Pair(colB, colT),
                 column2Size = Pair(colB, colT),
                 isCombined = true,
-                distanceBetweenColumns = distance
+                distanceBetweenColumns = distance,
+                coverMm = footingEngine.getMinCover()
             )
         }
 
@@ -2039,10 +2042,11 @@ class CalculatorEngine @Inject constructor(
             isSafe = res.isSafe, code = code,
             concreteVolume = concreteVolume, steelWeight = steelWeight, cost = cost,
             barsX = numBarsX, barsY = numBarsY, barDiameter = barDia,
-            utilizationRatio = (res.soilPressure / soil).coerceIn(0.1, 1.5),
+            utilizationRatio = res.soilPressure / soil,
             safetyChecks = safetyChecks,
             column1Size = Pair(colB, colT),
-            calculationSteps = steps
+            calculationSteps = steps,
+            coverMm = footingEngine.getMinCover()
         )
     }
 
