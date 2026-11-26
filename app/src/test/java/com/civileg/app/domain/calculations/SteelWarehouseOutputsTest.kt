@@ -60,3 +60,36 @@ class SteelWarehouseFootingTest {
         assertTrue(engine.designSteelWarehouse(inp(100.0)).footingPreliminary!!.squareSideMm > f.squareSideMm)
     }
 }
+
+class SteelWarehouseBracingTest {
+    private val engine = CalculatorEngine(mockk(relaxed = true))
+    private fun inp(h: Double?, bays: List<Int>? = null) = SteelWarehouseInputs(span = 20.0, length = 60.0, eaveHeight = 6.0,
+        ridgeHeight = 7.0, baySpacing = 6.0, deadLoad = 0.25, liveLoad = 0.5, bracedBays = bays, bracingLateralLoadKn = h)
+
+    @Test fun geometryWeightAndForceFollowHandValues() {
+        val b = engine.designSteelWarehouse(inp(30.0)).bracing!!
+        // hand: L = sqrt(36+36) = 8.485281, angle = 45 deg, 10 bays
+        assertEquals(8.485281374, b.lengthM, 1e-6)
+        assertEquals(45.0, b.angleDeg, 1e-9)
+        // C 160: A = 2*65*7.5 + (160-15)*5.5 = 1772.5 mm2 -> 13.914125 kg/m
+        assertEquals(1772.5, b.areaMm2, 1e-9)
+        assertEquals(13.9141, b.weightKgM, 1e-4)
+        assertEquals(listOf(1, 10), b.bracedBays)
+        assertTrue(b.usedDefaultBays)
+        assertEquals(8, b.braceCount)                       // 2 bays x 2 walls x 2 diagonals
+        assertEquals(13.914125 * 8.485281374 * 8, b.totalWeightKg, 1e-3)   // = 944.5 kg
+        // N = 30 / cos45 = 42.4264 kN
+        assertEquals(42.42640687, b.braceForceKn!!, 1e-6)
+    }
+
+    @Test fun noEnteredLoadMeansForceNotAssessed() {
+        val b = engine.designSteelWarehouse(inp(null)).bracing!!
+        assertNull(b.braceForceKn)
+        assertTrue(b.lines.any { it.contains("NOT ASSESSED") })
+    }
+
+    @Test fun userBracedBaysAndInvalidBays() {
+        assertEquals(12, engine.designSteelWarehouse(inp(null, listOf(1, 5, 10))).bracing!!.braceCount)
+        assertFalse(engine.designSteelWarehouse(inp(null, listOf(11))).bracing!!.issued)
+    }
+}

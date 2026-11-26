@@ -937,6 +937,8 @@ class CalculatorEngine @Inject constructor(
 
         return SteelWarehouseAnalysisResult(
             footingPreliminary = footing,
+            bracing = com.civileg.app.domain.calculations.steel.WarehouseBracing.compute(
+                bay, eave, numBays, secondary.bracingSection, inputs.bracedBays, inputs.bracingLateralLoadKn),
             mainFrame = mainFrame, secondaryMembers = secondary, connections = connections,
             totalWeight = totalWeightTons, totalCladdingArea = claddingArea, weightPerM2 = weightPerM2,
             resultsByCode = inputs.code.displayName, safetyStatus = maxDeflection <= allowableDef,

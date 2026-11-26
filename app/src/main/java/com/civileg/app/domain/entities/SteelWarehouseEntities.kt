@@ -34,7 +34,12 @@ data class SteelWarehouseInputs(
     val overridePurlinSection: SteelSectionType? = null,
 
     // Allowable soil bearing, kN/m2. Required for the footing plan size; no default is assumed.
-    val allowableSoilBearingKnM2: Double? = null
+    val allowableSoilBearingKnM2: Double? = null,
+
+    // X-bracing: braced bay numbers (1-based along the length); null = default end bays.
+    val bracedBays: List<Int>? = null,
+    // Lateral load carried by ONE braced panel (kN), entered by the user; null = force NOT ASSESSED.
+    val bracingLateralLoadKn: Double? = null
 ) : Parcelable
 
 @Parcelize
@@ -61,7 +66,8 @@ data class SteelWarehouseAnalysisResult(
     val mezzanineArea: Double = 0.0,
     val mezzanineSteelWeight: Double = 0.0,
     val calculationTrace: @RawValue List<String> = emptyList(),
-    val footingPreliminary: FootingPlanPreliminary? = null
+    val footingPreliminary: FootingPlanPreliminary? = null,
+    val bracing: BracingPreliminary? = null
 ) : Parcelable
 
 @Parcelize
@@ -123,4 +129,28 @@ data class FootingPlanPreliminary(
     val allowableBearingKnM2: Double = 0.0,     // kN/m2, user input
     val requiredAreaM2: Double = 0.0,
     val squareSideMm: Double = 0.0              // rounded up to 50 mm
+) : Parcelable
+
+@Parcelize
+data class BracingPreliminary(
+    val issued: Boolean,
+    val reason: String? = null,
+    val numBays: Int = 0,
+    val bracedBays: List<Int> = emptyList(),
+    val usedDefaultBays: Boolean = false,
+    val bayM: Double = 0.0,
+    val eaveM: Double = 0.0,
+    val lengthM: Double = 0.0,
+    val angleDeg: Double = 0.0,
+    val sectionName: String = "",
+    val areaMm2: Double = 0.0,
+    val weightKgM: Double = 0.0,
+    val weightPerBraceKg: Double = 0.0,
+    val braceCount: Int = 0,
+    val totalWeightKg: Double = 0.0,
+    val slenderness: Double? = null,
+    val lateralLoadPerPanelKn: Double? = null,
+    val braceForceKn: Double? = null,
+    val stressMpa: Double? = null,
+    val lines: List<String> = emptyList()
 ) : Parcelable

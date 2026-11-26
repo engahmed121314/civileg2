@@ -185,6 +185,53 @@ object PdfDrawingGenerator {
         canvas.drawBilingualText("span ${s}m x length ${l}m, eave ${eh}m, ridge ${rh}m, ${numBays} bays", cx, cy + h/2 - 10f, DIM_TEXT, 18f, false)
     }
 
+    /**
+     * Side-wall X-bracing elevation (tag B1): braced bays hatched with both diagonals,
+     * brace length and angle dimensioned, bay and eave dimensions. Scaled to fit the sheet.
+     */
+    fun generateBracingDrawing(b: com.civileg.app.domain.entities.BracingPreliminary): Bitmap {
+        val (bitmap, canvas) = createCanvas(1200, 700)
+        val pMain = createPaint(Color.WHITE, 3f)
+        val pDim = createPaint(DIM_LINE, 1.5f)
+        val pBrace = createPaint(Color.parseColor("#F39C12"), 5f)
+        val pHatch = createPaint(Color.parseColor("#55F39C12"), 2f)
+        canvas.drawBilingualText("SIDE WALL X-BRACING (B1)", 600f, 40f, DIM_TEXT, 24f, true)
+        if (!b.issued) {
+            canvas.drawBilingualText(b.reason ?: "NOT ISSUED", 600f, 350f, DIM_TEXT, 22f, true)
+            return bitmap
+        }
+        val totalW = b.numBays * b.bayM.toFloat()
+        val scale = min(1000f / totalW, 380f / b.eaveM.toFloat())
+        val x0 = 600f - totalW * scale / 2f
+        val yBase = 130f + b.eaveM.toFloat() * scale
+        val yEave = yBase - b.eaveM.toFloat() * scale
+        val bw = b.bayM.toFloat() * scale
+        canvas.drawLine(x0, yBase, x0 + totalW * scale, yBase, pMain)
+        canvas.drawLine(x0, yEave, x0 + totalW * scale, yEave, pMain)
+        for (i in 0..b.numBays) canvas.drawLine(x0 + i * bw, yBase, x0 + i * bw, yEave, pMain)
+        for (bay in b.bracedBays) {
+            val xl = x0 + (bay - 1) * bw
+            val xr = xl + bw
+            // hatch
+            var hx = xl
+            while (hx < xr) { canvas.drawLine(hx, yBase, min(hx + (yBase - yEave), xr), yBase - (min(hx + (yBase - yEave), xr) - hx), pHatch); hx += 18f }
+            canvas.drawLine(xl, yBase, xr, yEave, pBrace)
+            canvas.drawLine(xl, yEave, xr, yBase, pBrace)
+            canvas.drawBilingualText("B1", (xl + xr) / 2f, (yBase + yEave) / 2f - 10f, Color.WHITE, 22f, true, Paint.Align.CENTER)
+        }
+        // dimensions: bay, eave height, brace length and angle (first braced bay)
+        canvas.drawLine(x0, yBase + 25f, x0 + bw, yBase + 25f, pDim)
+        canvas.drawBilingualText("bay ${"%.2f".format(b.bayM)} m", x0 + bw / 2f, yBase + 55f, DIM_TEXT, 18f, false, Paint.Align.CENTER)
+        canvas.drawLine(x0 - 25f, yBase, x0 - 25f, yEave, pDim)
+        canvas.drawBilingualText("eave ${"%.2f".format(b.eaveM)} m", x0 - 35f, (yBase + yEave) / 2f, DIM_TEXT, 18f, false, Paint.Align.RIGHT)
+        val first = b.bracedBays.first()
+        val fx = x0 + (first - 1) * bw
+        canvas.drawBilingualText("L = ${"%.2f".format(b.lengthM)} m, angle ${"%.1f".format(b.angleDeg)} deg", fx + bw / 2f, yEave - 20f, Color.WHITE, 20f, true, Paint.Align.CENTER)
+        canvas.drawBilingualText("Braced bays: ${b.bracedBays.joinToString(", ")}${if (b.usedDefaultBays) " (default: end bays)" else ""}   |   B1 = ${b.sectionName}, tension-only X", 600f, yBase + 110f, DIM_TEXT, 20f, false)
+        canvas.drawBilingualText("Both side walls are braced identically. Schematic: not a shop drawing; connections not designed.", 600f, yBase + 145f, DIM_TEXT, 18f, false)
+        return bitmap
+    }
+
     fun generateBasePlateDrawing(
         plateWidth: Double,
         plateLength: Double,
