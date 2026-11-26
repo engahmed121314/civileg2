@@ -356,6 +356,14 @@ def steel_block():
         steel_up(2); shot(f"steel-in-{k}"); dump(f"steel-in-{k}")
     # Required footing input: allowable soil bearing 150 kN/m2 typed by the evidence run (a stated test value, not an app default).
     # Bracing inputs typed as stated test values (braced bays 1,5,10 and H = 40 kN per braced panel); the app has no defaults for H.
+    # American Code selected so the AISC 360-10 (14th ed. Manual) D2 tension inputs appear; Fy 250, Fu 400, Ae 1500 are stated test values.
+    ac = tap_text(["American Code"], "st-code-aci"); time.sleep(1.0)
+    log.append(("steel_code_american", ac))
+    for lab, val, nm in (("Brace Fy", "250", "st-fy"), ("Brace Fu", "400", "st-fu"), ("Brace net area", "1500", "st-ae")):
+        if tap_text([lab], nm):
+            adb("shell", "input", "text", val); time.sleep(0.8)
+            adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.0)
+        else: log.append(("steel_" + nm + "_missing", True))
     bb = tap_text(["Braced bays"], "st-bb")
     if bb:
         adb("shell", "input", "text", "1,5,10"); time.sleep(0.8)
@@ -377,8 +385,9 @@ def steel_block():
         steel_up(2)
     else: log.append(("steel_calc", False))
     time.sleep(8)
-    for k in range(10):
-        shot(f"steel-res-{k}"); dump(f"steel-res-{k}"); steel_up(2)
+    for k in range(26):
+        shot(f"steel-res-{k}"); dump(f"steel-res-{k}")
+        adb("shell", "input", "swipe", "1000", "1700", "1000", "1000", "300"); time.sleep(0.7)
     pdf_ok = False
     for _ in range(14):
         if tap_text(["إنشاء تقرير PDF"], "st-pdf-find"): pdf_ok = True; break
