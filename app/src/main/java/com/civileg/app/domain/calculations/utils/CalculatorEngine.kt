@@ -1992,12 +1992,14 @@ class CalculatorEngine @Inject constructor(
         )
 
         val ref = codeNoteRef(domainCode)
+        val gammaAvg = LoadCombination.DEAD_LIVE.getFactorForCode(domainCode)
+        val pService = p / gammaAvg
         val steps = listOf(
             CalculationStep(
-                stepNumber = 1, title = "Required Area",
-                formula = "A = P / q_allow",
-                formulaWithValues = "A = ${"%.0f".format(p)} / ${"%.0f".format(soil)} = ${"%.2f".format(p / soil)} m²",
-                result = "A = ${"%.2f".format(p / soil)} m²", unit = "m²",
+                stepNumber = 1, title = "Service Load and Required Area",
+                formula = "P_service = Pu / γ_avg (γ_avg = ${"%.2f".format(gammaAvg)} assumed average factor, unverified); A ≈ P_service / q_net",
+                formulaWithValues = "P_service = ${"%.0f".format(p)} / ${"%.2f".format(gammaAvg)} = ${"%.0f".format(pService)} kN; plan area provided = ${"%.2f".format(res.requiredWidth * res.requiredLength / 1e6)} m²",
+                result = "P_service = ${"%.0f".format(pService)} kN (Pu input = ${"%.0f".format(p)} kN)", unit = "kN",
                 codeReference = ref
             ),
             CalculationStep(
@@ -2009,8 +2011,8 @@ class CalculatorEngine @Inject constructor(
             ),
             CalculationStep(
                 stepNumber = 3, title = "Soil Bearing Check",
-                formula = "q = P/A ≤ q_allow",
-                formulaWithValues = "q = ${"%.1f".format(res.soilPressure)} kPa vs ${"%.1f".format(soil)} kPa",
+                formula = "q = P_service / A ≤ q_allow",
+                formulaWithValues = "q = ${"%.0f".format(pService)} / ${"%.2f".format(res.requiredWidth * res.requiredLength / 1e6)} = ${"%.1f".format(res.soilPressure)} kPa vs ${"%.1f".format(soil)} kPa",
                 result = if (res.soilPressure <= soil) "OK" else "Exceeds allowable", unit = "kPa",
                 codeReference = ref, isPass = res.soilPressure <= soil,
                 status = if (res.soilPressure <= soil) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
