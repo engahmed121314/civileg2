@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.steel
 
 import com.civileg.app.domain.entities.BracingPreliminary
+import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.entities.SteelSectionType
 import com.civileg.app.domain.entities.area
 import com.civileg.app.domain.entities.rx
@@ -22,7 +23,11 @@ object WarehouseBracing {
         numBays: Int,
         section: SteelSectionType,
         bracedBaysInput: List<Int>?,
-        lateralLoadPerPanelKn: Double?
+        lateralLoadPerPanelKn: Double?,
+        code: DesignCode = DesignCode.ECP,
+        fyMpa: Double? = null,
+        fuMpa: Double? = null,
+        netAreaMm2: Double? = null
     ): BracingPreliminary {
         val usedDefault = bracedBaysInput == null
         val braced = (bracedBaysInput ?: if (numBays <= 1) listOf(1) else listOf(1, numBays)).distinct().sorted()
@@ -47,22 +52,45 @@ object WarehouseBracing {
 
         var force: Double? = null
         var stress: Double? = null
+        var tension: String? = null
+        var util: Double? = null
         if (lateralLoadPerPanelKn != null && lateralLoadPerPanelKn > 0.0) {
             val cosT = cos(Math.toRadians(angleDeg))
             force = lateralLoadPerPanelKn / cosT
             stress = force * 1000.0 / area
             lines += "Tension-only, one diagonal active per braced panel: N = H / cos(angle) = ${f(lateralLoadPerPanelKn)} / ${f(cosT, 4)} = ${f(force)} kN (H entered per braced panel)"
-            lines += "Axial stress N / A = ${f(force * 1000.0)} / ${f(area)} = ${f(stress)} MPa (no capacity check: NOT ASSESSED)"
+            lines += "Axial stress N / A = ${f(force * 1000.0)} / ${f(area)} = ${f(stress)} MPa"
+            if (code == DesignCode.ACI) {
+                // AISC 360-10 Section D2, Specification p.16.1-26 (14th ed. Manual). LRFD only; N is taken as the entered factored load.
+                val fy = fyMpa; val fu = fuMpa; val ae = netAreaMm2
+                val missing = listOfNotNull(if (fy == null || fy <= 0.0) "Fy" else null, if (fu == null || fu <= 0.0) "Fu" else null, if (ae == null || ae <= 0.0) "net area Ae" else null)
+                if (missing.isNotEmpty()) {
+                    lines += "AISC 360-10 D2 tension check: NOT ASSESSED (enter ${missing.joinToString(", ")})"
+                } else if (ae!! > area + 1e-9) {
+                    lines += "AISC 360-10 D2 tension check: NOT ASSESSED (net area Ae ${f(ae)} mm2 exceeds the brace gross area Ag ${f(area)} mm2; Ae must be Ag or less)"
+                } else {
+                    val yieldKn = 0.90 * fy!! * area / 1000.0
+                    val ruptureKn = 0.75 * fu!! * ae / 1000.0
+                    val cap = min(yieldKn, ruptureKn)
+                    util = force / cap
+                    tension = if (util <= 1.0 + 1e-9) "PASS" else "FAIL"
+                    lines += "AISC 360-10 D2 (p.16.1-26), LRFD: yielding phi Pn = 0.90 x Fy x Ag = 0.90 x ${f(fy)} x ${f(area)} / 1000 = ${f(yieldKn)} kN (D2-1)"
+                    lines += "Rupture phi Pn = 0.75 x Fu x Ae = 0.75 x ${f(fu)} x ${f(ae)} / 1000 = ${f(ruptureKn)} kN (D2-2); governing phi Pn = ${f(cap)} kN"
+                    lines += "N / phi Pn = ${f(force)} / ${f(cap)} = ${f(util, 3)} -> $tension (tension member only; Ag from the section model, Ae and Fy, Fu as entered)"
+                }
+            } else {
+                lines += "Brace capacity check: NOT ASSESSED for ${code.displayName} (no sourced steel code text)"
+            }
         } else {
             lines += "Brace force: NOT ASSESSED (enter the lateral load H per braced panel, kN)"
         }
-        lines += "NOT ASSESSED: wind derivation, base fixity, connections, frame stability, sway, brace capacity/utilisation"
+        lines += "NOT ASSESSED: wind derivation, base fixity, connections (AISC J3 bolts, J4.3 block shear need bolt layout), frame stability, sway${if (code == DesignCode.ACI) "" else ", brace capacity/utilisation"}"
         return BracingPreliminary(
             issued = true, numBays = numBays, bracedBays = braced, usedDefaultBays = usedDefault,
             bayM = bayM, eaveM = eaveM, lengthM = lengthM, angleDeg = angleDeg, sectionName = section.sectionName,
             areaMm2 = area, weightKgM = weightKgM, weightPerBraceKg = perBraceKg, braceCount = count,
             totalWeightKg = perBraceKg * count, slenderness = slender,
-            lateralLoadPerPanelKn = lateralLoadPerPanelKn, braceForceKn = force, stressMpa = stress, lines = lines
+            lateralLoadPerPanelKn = lateralLoadPerPanelKn, braceForceKn = force, stressMpa = stress, tensionCheck = tension, tensionUtilisation = util, lines = lines
         )
     }
 
