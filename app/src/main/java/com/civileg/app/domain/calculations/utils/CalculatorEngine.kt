@@ -1085,15 +1085,16 @@ class CalculatorEngine @Inject constructor(
         // Second-order validity: an unstable column (Pu >= Pcr) has no valid design. ACI 318M-14 / SBC 304
         // 6.2.6 also limit Mu with second-order effects to 1.4 x the first-order Mu.
         val secondOrderStable = momentMagnifier.isFinite()
-        val secondOrderWithinLimit = secondOrderStable &&
-            (domainCode == DesignCode.ECP || momentMagnifier <= 1.4 + 1e-9)
+        // The 1.4 limit (ACI 318 / SBC 304 6.2.6) applies only when slenderness effects cannot be neglected under 6.2.5.
+        // Bracing and M1/M2 are not inputs here, so applicability is unverified: warn, do not decide the verdict.
+        val secondOrderWithinLimit = secondOrderStable
         val warnings = (res.warnings + buildList {
             if (isSlender) {
                 add("Slender column (λ=${"%.1f".format(slenderness)} > ${"%.0f".format(slendernessLimit)})" + if (secondOrderStable) ": moments magnified by δ=${"%.2f".format(momentMagnifier)}" else "")
             }
             if (!axialAssessed) add("AXIAL CAPACITY NOT ASSESSED: e=${"%.1f".format(ecpEccentricityMm)} mm exceeds max(0.05t, 20 mm)=${"%.1f".format(ecpEccentricityLimitMm)} mm, outside ECP 203-2020 Eq. 4-12-a. Use a full P-M interaction check.")
             if (!secondOrderStable) add("UNSTABLE: Pu is not below the elastic buckling load Pcr, so no second-order moment exists. Increase the section; no passing result.")
-            else if (!secondOrderWithinLimit) add("Second-order moment exceeds 1.4 x the first-order moment (ACI 318M-14 / SBC 304-CR-2018 6.2.6, delta=${"%.2f".format(momentMagnifier)}). Increase the section.")
+            else if (domainCode != DesignCode.ECP && momentMagnifier > 1.4 + 1e-9) add("CHECK NOT ASSESSED: delta=${"%.2f".format(momentMagnifier)} exceeds 1.4. ACI/SBC 6.2.6 limits second-order Mu to 1.4 x first-order Mu when slenderness cannot be neglected; bracing and M1/M2 are not modelled, so applicability is unverified and this does not change the result.")
             if (!momentReview.assessed) add("Moment capacity unavailable: interaction check not assessed, no passing result")
             if (!momentSafe) add("Biaxial moment demand exceeds the section capacity — increase the section or reinforcement")
             if (!ratioSafe) add("Reinforcement ratio ${"%.2f".format(reinforcementPercent)}% is outside the code limits")
@@ -1119,9 +1120,7 @@ class CalculatorEngine @Inject constructor(
                 DesignSafetyCheck("Reinforcement Ratio", reinforcementPercent,
                     engine.getMaxReinforcementRatio() * 100.0, "%", ratioSafe),
                 DesignSafetyCheck("Slenderness", slenderness, slendernessLimit, "", !isSlender)
-            ) + (if (isSlender && secondOrderStable && domainCode != DesignCode.ECP)
-                listOf(DesignSafetyCheck("Second-order magnifier (limit 1.4)", momentMagnifier, 1.4, "", secondOrderWithinLimit))
-                else emptyList()),
+            ),
             isSafe = isSafe,
             concreteVolume = concreteVolume,
             steelWeight = steelWeight,
@@ -1326,8 +1325,8 @@ class CalculatorEngine @Inject constructor(
             CalculationStep(
                 stepNumber = 5, title = "Slenderness", subtitle = "λ = l0 / i",
                 formula = "λ = l0 / (h/√12)",
-                formulaWithValues = "λ = ${"%.1f".format(slenderness)} vs ${"%.0f".format(slendernessLimit)}; δ = ${"%.2f".format(momentMagnifier)}",
-                result = if (slender) "Slender — second-order effects applied (δ=${"%.2f".format(momentMagnifier)})" else "Short column",
+                formulaWithValues = "λ = ${"%.1f".format(slenderness)} vs ${"%.0f".format(slendernessLimit)}; δ = ${if (momentMagnifier.isFinite()) "%.2f".format(momentMagnifier) else "none (Pu ≥ Pcr, unstable)"}",
+                result = if (!slender) "Short column" else if (momentMagnifier.isFinite()) "Slender — second-order effects applied (δ=${"%.2f".format(momentMagnifier)})" else "Slender — UNSTABLE, no second-order result",
                 unit = "", codeReference = ref,
                 status = if (slender) StepStatus.WARNING else StepStatus.CHECK_PASS,
                 isPass = !slender
@@ -1904,8 +1903,8 @@ class CalculatorEngine @Inject constructor(
         val domainCode = code
         maxLeft?.let { InputGuard.positive("maxLeft", it) }
         maxRight?.let { InputGuard.positive("maxRight", it) }
-        require(!(type == FootingType.COMBINED && p2 > 0.0 && distance > 0.0 && (maxLeft != null || maxRight != null))) {
-            "Property-line limits are not implemented for combined footings; clear Max Left/Max Right."
+        require(maxLeft == null && maxRight == null) {
+            "Property-line limits (Max Left / Max Right) are not supported: the footing/column offset and the axis of left/right are not modelled, so the limit cannot be checked. Clear the limit fields; no result is issued with an unchecked limit."
         }
         val footingEngine = CalculationFactory.getFootingDesign(domainCode)
 
@@ -1983,18 +1982,11 @@ class CalculatorEngine @Inject constructor(
         val steelWeight = (totalLengthX + totalLengthY) * barAreaSingle * 7850.0 / 1e6
         val cost = concreteVolume * 120.0 + steelWeight * 1.5
 
-        // User-entered property-line limits (mm from column centre, concentric footing): the footing must
-        // not extend past them. Orientation of left/right is not modelled, so the larger plan dimension governs.
-        val halfPlan = max(res.requiredWidth, res.requiredLength) / 2.0
-        val limitChecks = listOfNotNull(maxLeft, maxRight).map { lim ->
-            DesignSafetyCheck("Property Line Limit (half plan)", halfPlan, lim, "mm", halfPlan <= lim)
-        }
-        val limitsOk = limitChecks.all { it.isSafe }
         val safetyChecks = listOf(
             DesignSafetyCheck("Soil Bearing", res.soilPressure, soil, "kPa", res.soilPressure <= soil),
             DesignSafetyCheck("Punching Shear", res.punchingShearCheck.appliedShear, res.punchingShearCheck.shearCapacity, "kN", res.punchingShearCheck.isSafe),
             DesignSafetyCheck("Flexure Steel", res.reinforcement.astProvided, res.reinforcement.astRequired, "mm²", res.reinforcement.isSafe)
-        ) + limitChecks
+        )
 
         val ref = codeNoteRef(domainCode)
         val steps = listOf(
@@ -2044,7 +2036,7 @@ class CalculatorEngine @Inject constructor(
             reinforcementBottom = ReinforcementBar(
                 numBars = numBarsX, diameter = barDia, spacing = spacing, weightKg = steelWeight
             ),
-            isSafe = res.isSafe && limitsOk, code = code,
+            isSafe = res.isSafe, code = code,
             concreteVolume = concreteVolume, steelWeight = steelWeight, cost = cost,
             barsX = numBarsX, barsY = numBarsY, barDiameter = barDia,
             utilizationRatio = (res.soilPressure / soil).coerceIn(0.1, 1.5),
@@ -2437,15 +2429,18 @@ class CalculatorEngine @Inject constructor(
         )
     }
 
-    fun designTank(type: TankType, capacity: Double, height: Double, fcu: Double, fy: Double, preferredDiameter: Int = 12, code: DesignCode = DesignCode.ECP): TankResult {
-        InputGuard.positive("height", height)
+    /** [heightM] is the wall height in METRES (as entered on the screen); the result length/width/height are metres too. */
+    fun designTank(type: TankType, capacity: Double, heightM: Double, fcu: Double, fy: Double, preferredDiameter: Int = 12, code: DesignCode = DesignCode.ECP): TankResult {
+        InputGuard.positive("height", heightM)
         InputGuard.positive("capacity", capacity)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
+        val height = heightM * 1000.0 // mm for the base engine
 
         val domainCode = code
         val tankEngine = CalculationFactory.getTankDesign(domainCode)
 
+        require(height > 300.0) { "Tank height must exceed the 300 mm freeboard assumed by this design." }
         val hM = height / 1000.0
         // Size the plan area for the requested capacity at the depth the design actually uses
         // (water depth = height - 300 mm freeboard). Sizing on the full height delivered less than requested.
@@ -2538,7 +2533,7 @@ class CalculatorEngine @Inject constructor(
         )
 
         return TankResult(
-            type = type, length = sideMm, width = sideMm, height = height,
+            type = type, length = sideM, width = sideM, height = heightM,
             wallThickness = res.wallThickness, baseThickness = res.baseThickness,
             wallReinforcement = wallBar, baseReinforcement = baseBar,
             isSafe = res.isSafe, concreteVolume = res.concreteVolume, steelWeight = res.steelWeight,

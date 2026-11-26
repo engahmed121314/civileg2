@@ -214,31 +214,42 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
-    fun `tank delivers the requested capacity at the design water depth`() {
-        val r = engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, height = 3000.0, fcu = 25.0, fy = 360.0)
-        assertEquals(50.0, r.capacity, 0.01)
-        assertEquals(50.0, r.length / 1000.0 * r.width / 1000.0 * 2.7, 0.01)
+    fun `unstable column output carries no infinity or NaN`() {
+        val r = engine.designColumn(width = 200.0, depth = 200.0, pu = 3000.0, fcu = 25.0, fy = 360.0, code = DesignCode.ECP, clearHeight = 6000.0)
+        val nums = listOf(r.pu, r.mx, r.my, r.axialCapacity, r.mxCapacity, r.myCapacity, r.slenderness, r.utilizationRatio, r.steelWeight, r.cost)
+        assertTrue(nums.all { it.isFinite() })
+        assertTrue(r.safetyChecks.all { it.value.isFinite() && it.limit.isFinite() })
+        assertTrue(r.calculationSteps.none { it.formulaWithValues.contains("Infinity") || it.result.contains("Infinity") })
     }
 
     @Test
-    fun `footing property line limit is enforced not ignored`() {
-        val base = engine.calculateFooting(
-            type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
-            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
-        )
-        val half = maxOf(base.width, base.length) / 2.0
-        val tight = engine.calculateFooting(
-            type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
-            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP, maxLeft = half - 100.0
-        )
-        assertFalse("limit below the required half plan must fail", tight.isSafe)
-        assertTrue(tight.safetyChecks.any { it.name.startsWith("Property Line") && !it.isSafe })
-        val loose = engine.calculateFooting(
-            type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
-            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP, maxRight = half + 100.0
-        )
-        assertEquals(base.isSafe, loose.isSafe)
-        assertTrue(loose.safetyChecks.any { it.name.startsWith("Property Line") && it.isSafe })
+    fun `tank delivers the requested capacity at the design water depth`() {
+        val rect = engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, heightM = 3.0, fcu = 25.0, fy = 360.0)
+        assertEquals(50.0, rect.capacity, 0.01)
+        assertEquals(50.0, rect.length * rect.width * 2.7, 0.01)
+        val circ = engine.designTank(CalculatorEngine.TankType.CIRCULAR_GROUND, capacity = 50.0, heightM = 3.0, fcu = 25.0, fy = 360.0)
+        val d = circ.length
+        assertEquals(50.0, Math.PI * d * d / 4.0 * 2.7, 0.01)
+        assertEquals(50.0, circ.capacity, 0.01)
+        assertEquals("height stays in metres", 3.0, rect.height, 1e-9)
+    }
+
+    @Test
+    fun `tank height not above freeboard is rejected`() {
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, heightM = 0.3, fcu = 25.0, fy = 360.0)
+        }
+    }
+
+    @Test
+    fun `footing property line limits are rejected not silently ignored`() {
+        val e = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            engine.calculateFooting(
+                type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
+                soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP, maxLeft = 1000.0
+            )
+        }
+        assertTrue(e.message!!.contains("not supported"))
     }
 
     @Test
@@ -290,7 +301,7 @@ class EngineeringDetailExpansionTest {
     fun `tank result exposes calculation steps`() {
         val r = engine.designTank(
             type = CalculatorEngine.TankType.RECTANGULAR_GROUND,
-            capacity = 100.0, height = 3000.0, fcu = 30.0, fy = 420.0,
+            capacity = 100.0, heightM = 3.0, fcu = 30.0, fy = 420.0,
             preferredDiameter = 12, code = DesignCode.ECP
         )
         assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
