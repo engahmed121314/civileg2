@@ -344,7 +344,7 @@ class ECPFlatSlab : FlatSlabDesign {
             defl.immediateTotal, defl.immediateLive, defl.liveCheck.allowable, defl.alpha, defl.total, defl.totalCheck.allowable,
             if (deflOk) "OK" else "FAIL"))
         codeNotes.add(ECP2025FlatSlabExtras.ESTIMATE_LABEL)
-        codeNotes.add("Estimate assumptions: Ec = 4400 sqrt(fcu) (older-code value, ECP 203-2025 Ec not verified), Es = 200000 N/mm2; strip moments scaled from the factored Table 6-5 moments; Ie by Eq 4-70/4-72 at midspan and both supports; drop panel thickness ignored for stiffness; sustained live load taken as zero; compression steel ignored")
+        codeNotes.add("Estimate assumptions: Ec = 4400 sqrt(fcu) (ECP 203-2025 2-3-3-1, Eq 2-1, p.2-23) used at all load levels, long-term effect only through alpha (Eq 4-73); Es = 200000 N/mm2 (Fig 4-1, p.4-2); strip moments scaled from the factored Table 6-5 moments; Ie by Eq 4-70/4-72 at midspan and both supports; drop panel thickness ignored for stiffness; sustained live load taken as zero; compression steel ignored")
         warnings.add("Deflection is an ESTIMATE using ECP 203-2025 general provisions (4-3-1); the code gives no flat slab strip method. Table 6-3 thickness does not replace it.")
         if (!deflOk) warnings.add("Estimated deflection exceeds the ECP 203-2025 limit (Eq 4-74 L/250 total, Eq 4-76 L/360 live): increase the slab thickness or revise the design")
 
