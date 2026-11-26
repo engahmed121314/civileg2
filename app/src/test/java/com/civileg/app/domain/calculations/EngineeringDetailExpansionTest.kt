@@ -379,14 +379,14 @@ class EngineeringDetailExpansionTest {
 
     @Test
     fun `ECP footing punching row is a stress in MPa equal to the hand calculation`() {
-        // qp = 0.9*P*1000/(b0*d) [MPa], b0 = 2(c1+c2)+4d [mm], d = t - cover - 10. The row used to be labelled kN.
+        // qp = 0.9*P*1000/(b0*d) [MPa], b0 = 2(c1+c2)+4d [mm], d = t - cover - 0.75*dia (mean of the two layers, the diameter actually selected). The row used to be labelled kN.
         val r = engine.calculateFooting(
             type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, fcu = 25.0, fy = 360.0,
             soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
         )
         val row = r.safetyChecks.first { it.name == "Punching Shear" }
         assertEquals("MPa", row.unit)
-        val d = r.thickness - r.coverMm - 10.0
+        val d = r.thickness - r.coverMm - 0.75 * r.barDiameter
         val b0 = 2.0 * (300.0 + 500.0) + 4.0 * d
         assertEquals(0.9 * 1200.0 * 1000.0 / (b0 * d), row.value, 1e-6)
         assertEquals(0.316 * Math.sqrt(25.0 / 1.5), row.limit, 1e-6)

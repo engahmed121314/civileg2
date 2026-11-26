@@ -248,7 +248,7 @@ class ECPFooting : FootingDesign {
         // Here we compute for interior column (full perimeter)
         val bo = 2.0 * (columnWidth + columnDepth) + 4.0 * effectiveDepth
         InputGuard.finite("criticalPerimeter", bo)
-        // القوة القاطعة الفعالة (بعد خصم رد فعل التربة داخل المحيط)
+        // القوة القاطعة: 0.9 x الحمل الكلي، بدون خصم رد فعل التربة داخل المحيط (punchArea أدناه غير مستخدمة في الإجهاد)
         val punchArea = (columnWidth + 2.0 * effectiveDepth) * (columnDepth + 2.0 * effectiveDepth)
         val V_punch = punchingShearForce * PUNCHING_SHEAR_REDUCTION
 
