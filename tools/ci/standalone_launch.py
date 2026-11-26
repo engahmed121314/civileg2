@@ -506,6 +506,29 @@ def flatslab_vary_block():
             sweep(tag + "-res", 9)
         except Exception as e:
             log.append((tag + "_exception", repr(e)))
+def font_extra_block():
+    """Open Steel (design hub), Wind and Concrete mix (tools hub), try the calculate button, sweep (font pixel proof)."""
+    items = [("steel", "التصميم", "المنشآت المعدنية", ["تحليل وحساب", "تصميم", "احسب"]),
+             ("wind", "صندوق الأدوات", "أحمال الرياح", ["احسب", "حساب", "تحليل"]),
+             ("mix", "صندوق الأدوات", "خلطة الخرسانة", ["احسب", "تصميم الخلطة", "حساب"])]
+    for tag, tab, label, calc in items:
+        try:
+            dismiss_not_responding()
+            adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); dismiss_not_responding()
+            tap_text([tab], "fx-" + tag + "-tab", exact=True); scroll_top(3)
+            ok = False
+            for _ in range(6):
+                if tap_text([label], "fx-" + tag + "-find"): ok = True; break
+                scroll_up(2)
+            log.append(("fx_" + tag + "_open", ok)); time.sleep(2); shot("fx-" + tag + "-form"); dump("fx-" + tag + "-form")
+            got = False
+            for _ in range(5):
+                if tap_text(calc, "fx-" + tag + "-calc"): got = True; break
+                scroll_up(2)
+            log.append(("fx_" + tag + "_calc", got)); time.sleep(4); dismiss_not_responding()
+            sweep("fx-" + tag + "-res", 6)
+        except Exception as e:
+            log.append(("fx_" + tag + "_exception", repr(e)))
 if os.path.exists("tools/ci/CALCPAGES_ONLY"):
     # Default-input calculation of the calculation pages whose standalone result lines were changed (alignment evidence).
     pages = [
@@ -535,7 +558,7 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
             sweep(prefix + "-res", 9 if prefix in ("cp-fs", "cp-strap") else 4)
         except Exception as e:
             log.append((prefix + "_exception", repr(e)))
-    for blk in (flatslab_drop_block, flatslab_vary_block, footing_block, stair_block, pile_block):
+    for blk in (flatslab_drop_block, flatslab_vary_block, font_extra_block, footing_block, stair_block, pile_block):
         try:
             blk()
         except Exception as e:
