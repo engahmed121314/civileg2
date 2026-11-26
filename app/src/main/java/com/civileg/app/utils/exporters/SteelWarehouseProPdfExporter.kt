@@ -185,30 +185,41 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         }
     }
 
-    /** Crops the uniform background margin of a captured view so a small drawing in a tall canvas is not shrunk to a sliver. */
+    /**
+     * Removes long empty horizontal bands from a captured view (a small drawing in a tall canvas) by collapsing every run of
+     * background-only rows longer than [maxGap] to [keepGap] rows. Pixels are copied unchanged; nothing is scaled or redrawn.
+     */
     private fun cropToContent(input: Bitmap): Bitmap {
         // Captured views can be HARDWARE bitmaps, whose pixels cannot be read: work on a software copy.
         val src = if (input.config == Bitmap.Config.HARDWARE) (input.copy(Bitmap.Config.ARGB_8888, false) ?: return input) else input
         val w = src.width; val h = src.height
         if (w < 16 || h < 16) return src
         val bg = src.getPixel(2, 2)
-        var minX = w; var minY = h; var maxX = -1; var maxY = -1
         val row = IntArray(w)
+        val blank = BooleanArray(h)
         for (y in 0 until h) {
             src.getPixels(row, 0, w, 0, y, w, 1)
-            for (x in 0 until w) {
-                if (row[x] != bg) {
-                    if (x < minX) minX = x; if (x > maxX) maxX = x
-                    if (y < minY) minY = y; if (y > maxY) maxY = y
-                }
-            }
+            blank[y] = row.all { it == bg }
         }
-        if (maxX < 0) return src
-        val pad = 12
-        val l = (minX - pad).coerceAtLeast(0); val t = (minY - pad).coerceAtLeast(0)
-        val r = (maxX + pad).coerceAtMost(w - 1); val b = (maxY + pad).coerceAtMost(h - 1)
-        if (r - l < 32 || b - t < 32) return src
-        return Bitmap.createBitmap(src, l, t, r - l + 1, b - t + 1)
+        val maxGap = (h * 0.06f).toInt().coerceAtLeast(24)
+        val keepGap = (maxGap / 3).coerceAtLeast(8)
+        // Source row ranges to keep, in order.
+        val keep = mutableListOf<IntArray>()
+        var y = 0
+        while (y < h) {
+            if (!blank[y]) { val s0 = y; while (y < h && !blank[y]) y++; keep.add(intArrayOf(s0, y)); continue }
+            val s0 = y; while (y < h && blank[y]) y++
+            val len = y - s0
+            keep.add(intArrayOf(s0, s0 + if (len > maxGap) keepGap else len))
+        }
+        val outH = keep.sumOf { it[1] - it[0] }
+        if (outH >= h || outH < 32) return src
+        val out = Bitmap.createBitmap(w, outH, Bitmap.Config.ARGB_8888)
+        var oy = 0
+        for (r in keep) {
+            for (yy in r[0] until r[1]) { src.getPixels(row, 0, w, 0, yy, w, 1); out.setPixels(row, 0, w, 0, oy++, w, 1) }
+        }
+        return out
     }
 
     private fun addMemberSchedule(document: Document, inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
