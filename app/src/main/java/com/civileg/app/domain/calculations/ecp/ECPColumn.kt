@@ -165,6 +165,7 @@ class ECPColumn : ColumnDesign {
         codeNotes.add(CodeReference.ECP.COLUMN_REINFORCEMENT_MAX)
         codeNotes.add(CodeReference.ECP.COLUMN_COVER)
         codeNotes.add("Cover: ${getMinCover()}mm minimum")
+        codeNotes.add(EcpColumnProvisions2025.coverNote(getMinCover()))
         codeNotes.add("P-M interaction: ${if (pmSafe) "SAFE" else "UNSAFE"} (e=${"%.1f".format(designEccentricity)}mm)")
         
         return ReinforcementResult(
@@ -225,7 +226,7 @@ class ECPColumn : ColumnDesign {
             threshold = threshold,
             isShortColumn = isShort,
             isBraced = isBraced,
-            recommendation = if (isShort) {
+            recommendation = EcpColumnProvisions2025.maxSlendernessWarning(slendernessRatio, isBraced) ?: if (isShort) {
                 "Short column (λ=${"%.1f".format(slendernessRatio)} ≤ ${"%.0f".format(threshold)}) — no moment magnification needed"
             } else {
                 "Long column (λ=${"%.1f".format(slendernessRatio)} > ${"%.0f".format(threshold)}) — moment magnification required per ECP 203 §4-2-3"

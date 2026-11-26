@@ -105,7 +105,11 @@ data class AdvancedColumnResult(
     val warnings: List<String>,
     val codeNotes: List<String>,
     val steelWeightPerMeter: Double = 0.0,
-    val concreteVolumePerMeter: Double = 0.0
+    val concreteVolumePerMeter: Double = 0.0,
+    /** true when lambda_i exceeds the code maximum for slender columns (ECP 203-2025 Table 6-8): the column FAILS. */
+    val slendernessMaxExceeded: Boolean = false,
+    /** The maximum lambda_i applied (ECP 203-2025 Table 6-8), 0 when not applied. */
+    val slendernessMaxLimit: Double = 0.0
 ) : Parcelable
 
 /**

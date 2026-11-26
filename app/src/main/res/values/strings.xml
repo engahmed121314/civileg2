@@ -2478,4 +2478,11 @@
     <string name="seismic_sbc_system">Seismic force-resisting system (Table 12-1)</string>
     <string name="seismic_sbc_inputs_note">Ss, S1 and TL are read from SBC 301-CR-2018 Figures 22-1, 22-2 and 22-4 for the site; Site Class D applies where soil data are not known (11.4.2.2). Equal story weights are assumed.</string>
     <string name="seismic_sbc_not_assessed">Not assessed</string>
+    <string name="column_seismic_confinement_title">Seismic Confinement</string>
+    <string name="column_seismic_confinement_sub">Enable special detailing for earthquake zones</string>
+    <string name="column_biaxial_interaction_title">Biaxial Interaction (P-M)</string>
+    <string name="column_warnings_label">Warnings</string>
+    <string name="column_code_notes_label">Code Notes</string>
+    <string name="column_boq_title">Column Bill of Quantities</string>
+    <string name="column_rebar_edits_not_applied">Rebar edits not applied. The design shown is the last solved one. Press Update before export or save.</string>
 </resources>

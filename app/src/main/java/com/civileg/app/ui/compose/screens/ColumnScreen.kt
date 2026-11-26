@@ -220,8 +220,8 @@ fun ColumnScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            AppText("Seismic Confinement", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                            AppText("Enable special detailing for earthquake zones", style = MaterialTheme.typography.labelSmall)
+                            AppText(stringResource(R.string.column_seismic_confinement_title), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                            AppText(stringResource(R.string.column_seismic_confinement_sub), style = MaterialTheme.typography.labelSmall)
                         }
                         Switch(
                             checked = uiState.isSeismic,
@@ -325,12 +325,12 @@ fun ColumnScreen(
                     BoqEstimator.columnRows(result, solvedHeightM, "C1")
                 }.getOrDefault(emptyList())
                 if (boqRows.isNotEmpty()) {
-                    item { BoqTableCard(boqRows, title = "Column Bill of Quantities") }
+                    item { BoqTableCard(boqRows, title = stringResource(R.string.column_boq_title)) }
                 }
 
                 if (result.mx != 0.0 || result.my != 0.0) {
                     item {
-                        AppText("Biaxial Interaction (P-M)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        AppText(stringResource(R.string.column_biaxial_interaction_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                         com.civileg.app.ui.compose.components.charts.BiaxialInteractionChart(
                             mxPoints = emptyList(), // Needs wiring to ViewModel for actual curve
                             myPoints = emptyList(),
@@ -407,7 +407,7 @@ fun ColumnScreen(
                 item {
                     Column {
                     if (uiState.resultIsStale) {
-                        AppText("Rebar edits not applied. The design shown is the last solved one. Press Update before export or save.", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                        AppText(stringResource(R.string.column_rebar_edits_not_applied), color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         AppButton(
@@ -684,7 +684,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
 
             if (result.warnings.isNotEmpty()) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
-                AppText("Warnings", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                AppText(stringResource(R.string.column_warnings_label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
                 result.warnings.forEach { warning ->
                     AppTextBlock("• $warning", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                 }
@@ -692,7 +692,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
 
             if (result.codeNotes.isNotEmpty()) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
-                AppText("Code Notes", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                AppText(stringResource(R.string.column_code_notes_label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 result.codeNotes.forEach { note ->
                     AppTextBlock("• $note", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
