@@ -213,7 +213,7 @@ class DesignRepositoryImpl(
             utilizationRatio = 0.0,
             concreteVolume = 0.0,
             steelWeight = result.totalWeight * 1000.0,
-            totalCost = result.totalWeight * 50000.0,
+            totalCost = 0.0, // NOT ISSUED: no verified steel unit rate; the BOQ shows NOT ISSUED for this design
             result = result,
             codeUsed = "Steel Code"
         )

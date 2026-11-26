@@ -34,6 +34,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 import com.civileg.app.domain.calculations.ecp.TrialRunManager
+import com.civileg.app.db.DesignType
 import com.civileg.app.domain.entities.BoqCategory
 import com.civileg.app.utils.EstimationEngine
 import com.civileg.app.shared.reporting.PdfGenerator
@@ -291,7 +292,7 @@ fun DesignsBOQContent(
                     projects.forEach { project -> Tab(selected = project.id == selectedProjectId, onClick = { selectedProjectId = project.id; selectedDesignId = -1L; boqViewModel.clearResult() }, text = { AppText(project.name) }) }
                 }
             }
-            item { TotalCostCard(projectDesigns.sumOf { it.totalCost }) }
+            item { TotalCostCard(projectDesigns.sumOf { it.totalCost }, projectDesigns.any { it.type == DesignType.STEEL_WAREHOUSE }) }
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AppButton(
@@ -519,17 +520,18 @@ fun DesignBOQCard(design: com.civileg.app.db.Design, isSelected: Boolean = false
                 AppText(design.name, fontWeight = FontWeight.Bold)
                 AppText(design.type.name, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
             }
-            AppText(String.format(Locale.US, "%,.0f EGP", design.totalCost), fontWeight = FontWeight.Black)
+            AppText(if (design.type == DesignType.STEEL_WAREHOUSE) "Cost NOT ISSUED" else String.format(Locale.US, "%,.0f EGP", design.totalCost), fontWeight = FontWeight.Black)
         }
     }
 }
 
 @Composable
-fun TotalCostCard(cost: Double) {
+fun TotalCostCard(cost: Double, excludesSteelWarehouse: Boolean = false) {
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(24.dp)) {
             AppText(stringResource(R.string.boq_total_saved_cost), color = Color.White.copy(alpha = 0.8f))
             AppText(String.format(Locale.US, "%,.0f EGP", cost), color = Color.White, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Black)
+            if (excludesSteelWarehouse) AppText("Excludes steel warehouse cost: NOT ISSUED", color = Color.White.copy(alpha = 0.8f))
         }
     }
 }

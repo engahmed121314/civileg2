@@ -955,11 +955,17 @@ class CalculatorEngine @Inject constructor(
      */
     fun calculateSteelWarehousePro(inputs: SteelWarehouseInputs): SteelWarehouseProResult {
         val basicRes = designSteelWarehouse(inputs)
-        val bom = listOf(
-            BOMItem("Main Columns (${basicRes.mainFrame.columnSection.displayName})", "Structural Columns", basicRes.totalWeight * 0.4 * 1000.0 / 100.0, "Tons", basicRes.totalWeight * 0.4 * 1000.0, basicRes.estimatedTotalCost * 0.4),
-            BOMItem("Roof Rafters (${basicRes.mainFrame.rafterSection.displayName})", "Structural Beams", basicRes.totalWeight * 0.4 * 1000.0 / 100.0, "Tons", basicRes.totalWeight * 0.4 * 1000.0, basicRes.estimatedTotalCost * 0.4),
-            BOMItem("Purlins & Girts (${basicRes.secondaryMembers.purlinSection.displayName})", "Secondary Members", basicRes.totalWeight * 0.2 * 1000.0 / 100.0, "Tons", basicRes.totalWeight * 0.2 * 1000.0, basicRes.estimatedTotalCost * 0.2)
-        )
+        // Weights come from the per-member takeoff of the design (tons). No unit rate is verified, so every BOM cost is 0.0 and
+        // the cost is reported as NOT ISSUED in the notes; the former fixed 40/40/20 weight split and cost shares are removed.
+        val takeoff = basicRes.materialTakeoff.entries.toList()
+        val bom = takeoff.map { e ->
+            val cat = when {
+                e.key.startsWith("Columns") -> "Structural Columns"
+                e.key.startsWith("Rafters") -> "Structural Beams"
+                else -> "Secondary Members"
+            }
+            BOMItem(e.key, cat, e.value, "Tons", e.value * 1000.0, 0.0)
+        }
         return SteelWarehouseProResult(
             codeName = inputs.code.displayName,
             tributaryAreaM2 = inputs.span * inputs.length,
@@ -973,9 +979,9 @@ class CalculatorEngine @Inject constructor(
             utilization = basicRes.mainFrame.utilizationMoment,
             compressionZone = "Top Flange in Midspan",
             tensionZone = "Bottom Flange in Midspan",
-            notes = listOf("Design performed according to ${inputs.code.displayName}"),
+            notes = listOf("Design performed according to ${inputs.code.displayName}", "Cost: NOT ISSUED (no verified unit rates)"),
             billOfMaterials = bom,
-            totalCost = basicRes.estimatedTotalCost,
+            totalCost = 0.0, // NOT ISSUED: no verified unit rates
             durationWeeks = 8,
             safetyScore = if (basicRes.safetyStatus) 95.0 else 60.0
         )
