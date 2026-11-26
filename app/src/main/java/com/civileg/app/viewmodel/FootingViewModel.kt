@@ -254,7 +254,9 @@ class FootingViewModel @Inject constructor(
                     "Bars X" to "${res.barsX} Ø${res.barDiameter}",
                     "Bars Y" to "${res.barsY} Ø${res.barDiameter}",
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
-                    "Steel Weight (bars x length, no laps or hooks)" to "${String.format("%.1f", res.steelWeight)} kg",
+                    "Bar bending schedule" to "NOT ISSUED - cutting lengths (bends, hooks, anchorage, laps) have no verified code basis",
+                    "Net bar lengths" to com.civileg.app.domain.calculations.utils.BbsGenerator.footingNetLengthNote(res),
+                    "Steel Weight (plan dimensions, no cover, laps, hooks or bends)" to "${String.format("%.1f", res.steelWeight)} kg",
                     // Efficiency and Optimal were unassessed defaults (100% / Yes) printed beside an UNSAFE verdict
                 )
                 // Professional English PDF Report — English only, no Arabic encoding issues
@@ -274,9 +276,7 @@ class FootingViewModel @Inject constructor(
                     // Passing checks do not make a complete assessment (punching demand model, constants and layer order are unverified)
                     assessmentPending = res.isSafe,
                     calculationSteps = res.calculationSteps,
-                    bbsEntries = runCatching {
-                        com.civileg.app.domain.calculations.utils.BbsGenerator.generateFootingBbs("F1", res)
-                    }.getOrDefault(emptyList()),
+                    bbsEntries = emptyList(), // bar bending schedule NOT ISSUED, see the results table
                     boqRows = BoqEstimator.footingRows(res, "F1", solved.excavationDepthM, solved.workingSpaceM, solved.blindingThicknessM),
                     drawingBitmap = drawingBitmap,
                     drawing = buildDxfDrawing(),

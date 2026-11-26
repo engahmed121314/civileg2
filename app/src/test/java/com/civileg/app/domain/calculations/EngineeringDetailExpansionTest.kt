@@ -397,6 +397,36 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `footing engines reject moments together with an entered service load`() {
+        for (code in listOf(DesignCode.ECP, DesignCode.ACI, DesignCode.SBC)) {
+            val e = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+                com.civileg.app.domain.calculations.CalculationFactory.getFootingDesign(code).designIsolatedFooting(
+                    fcu = 25.0, fy = 360.0, columnWidth = 300.0, columnDepth = 500.0, axialLoad = 1200.0,
+                    momentX = 50.0, momentY = 0.0, soilBearingCapacity = 150.0, footingDepth = 600.0,
+                    loadCombination = com.civileg.app.domain.entities.LoadCombination.DEAD_LIVE, serviceAxialLoad = 800.0
+                )
+            }
+            assertTrue("$code: ${e.message}", e.message!!.contains("Moments are not supported"))
+        }
+    }
+
+    @Test
+    fun `footing net length note uses the design cover and the independently computed net steel`() {
+        val r = engine.calculateFooting(
+            type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, ps = 800.0, fcu = 25.0, fy = 360.0,
+            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
+        )
+        val netX = r.length - 2 * r.coverMm
+        val netY = r.width - 2 * r.coverMm
+        val kg = (r.barsX * netX + r.barsY * netY) / 1000.0 * (r.barDiameter * r.barDiameter / 162.0)
+        val note = com.civileg.app.domain.calculations.utils.BbsGenerator.footingNetLengthNote(r)
+        assertTrue(note, note.contains("X ${r.barsX} x ${"%.0f".format(netX)} mm"))
+        assertTrue(note, note.contains("Y ${r.barsY} x ${"%.0f".format(netY)} mm"))
+        assertTrue(note, note.contains("net steel ${"%.1f".format(kg)} kg"))
+        assertTrue(note, note.contains("not a cutting schedule"))
+    }
+
+    @Test
     fun `ECP footing punching row is a stress in MPa equal to the hand calculation`() {
         // qp = 0.9*P*1000/(b0*d) [MPa], b0 = 2(c1+c2)+4d [mm], d = t - cover - 0.75*dia (mean of the two layers, the diameter actually selected). The row used to be labelled kN.
         val r = engine.calculateFooting(

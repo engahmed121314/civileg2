@@ -48,6 +48,9 @@ class ACIFooting : FootingDesign {
 
         // 2. تحويل الأحمال للخدمة (لحساب أبعاد القاعدة)
         val factor = loadCombination.getFactorForCode(DesignCode.ACI)
+        require(serviceAxialLoad == null || (momentX == 0.0 && momentY == 0.0)) {
+            "Moments are not supported together with an entered service load: the service and factored moment components are not available, and dividing by a load factor is not a grounded conversion."
+        }
         val P_service = serviceAxialLoad ?: (axialLoad / factor)
         val Mx_service = momentX / factor
         val My_service = momentY / factor

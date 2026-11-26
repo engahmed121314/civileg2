@@ -112,7 +112,7 @@ fun FootingScreen(
     var barSpacing by remember { mutableStateOf("150") }
     
     var axialLoad by remember { mutableStateOf("1200") }
-    var axialServiceLoad by remember { mutableStateOf("800") }
+    var axialServiceLoad by remember { mutableStateOf("") } // required project input, no assumed value
     var soilCapacity by remember { mutableStateOf("150") }
     var colLength by remember { mutableStateOf("600") }
     var colWidth by remember { mutableStateOf("300") }
@@ -462,6 +462,15 @@ fun FootingScreen(
                     }
                 }
 
+                if (!res.isCombined && res.serviceLoadKn == null) {
+                    item {
+                        AppText(
+                            "Service-load basis unknown: this result has no entered service load Ps (saved before that input existed). Bearing and plan size are not redesigned. Enter Ps and calculate again.",
+                            fontSize = 12.sp, color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+
                 if (res.calculationSteps.isNotEmpty()) {
                     item { CalculationStepsCard(res.calculationSteps, title = stringResource(R.string.footing_calc_steps)) }
                 }
@@ -469,11 +478,16 @@ fun FootingScreen(
                 // BBS/BOQ are heavy pure functions: remember them so recomposition
                 // (typing, scrolling, snackbars) does not regenerate the tables.
                 item {
-                    val bbsEntries = remember(res) {
-                        runCatching { BbsGenerator.generateFootingBbs("F1", res) }.getOrDefault(emptyList())
-                    }
-                    if (bbsEntries.isNotEmpty()) {
-                        BbsTableCard(bbsEntries, title = stringResource(R.string.footing_bbs_title))
+                    // Bar bending schedule NOT ISSUED: bend-up/hook/anchorage/lap lengths have no verified code basis.
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        AppText(
+                            "Bar bending schedule: NOT ISSUED. Cutting lengths (bends, hooks, anchorage, laps) have no verified code basis.",
+                            fontSize = 12.sp, color = MaterialTheme.colorScheme.error
+                        )
+                        AppText(
+                            BbsGenerator.footingNetLengthNote(res),
+                            fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 

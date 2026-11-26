@@ -1453,42 +1453,36 @@ fun DrawScope.drawResultSummaryStrip(
 ) {
     val small = cfg.annotationTextSmall
     val rowHeight = small * 1.35f
-    val height = rowHeight * 2f
+    val height = rowHeight * SUMMARY_STRIP_ROWS
     val statusColor = if (summary.listedChecksFailed || !summary.codeAcceptanceComplete) DrawingColorDefaults.UnsafeRed else if (summary.isSafe) DrawingColorDefaults.SafeGreen else DrawingColorDefaults.UnsafeRed
     val pad = small * 0.4f
 
     drawRect(Color(0x22FFFFFF), Offset(x, y), Size(width, height))
     drawRect(borderColor, Offset(x, y), Size(width, height), style = Stroke(cfg.strokeTable))
-    drawLine(borderColor, Offset(x, y + rowHeight), Offset(x + width, y + rowHeight), cfg.strokeDefault)
 
     val status = if (summary.listedChecksFailed) "UNSAFE" else if (!summary.codeAcceptanceComplete) "UNVERIFIED" else if (summary.isSafe) "SAFE" else "UNSAFE"
-    drawTextAnnotated("STATUS: $status", x + pad, y + small * 1.05f, statusColor, small, bold = true)
-    drawTextAnnotated(
-        summary.utilizationText ?: "UTIL: ${summary.utilizationPercent}",
-        x + width * 0.32f, y + small * 1.05f, color, small
-    )
-    if (summary.designCodeLabel.isNotBlank()) {
-        drawTextAnnotated(
-            "CODE: ${summary.designCodeLabel}",
-            x + width * 0.60f, y + small * 1.05f, color, small
-        )
-    }
-
     val total = summary.safetyChecks.size
     val passed = total - summary.failedCheckCount - summary.notAssessedCheckCount
     val checks = if (total == 0) "CHECKS: N/A"
-        else if (summary.notAssessedCheckCount > 0) "CHECKS: $passed/$total PASS, ${summary.notAssessedCheckCount} NOT ASSESSED"
+        else if (summary.notAssessedCheckCount > 0) "CHECKS: $passed/$total PASS, ${summary.notAssessedCheckCount} N/A"
         else "CHECKS: $passed/$total PASS"
-    drawTextAnnotated(checks, x + pad, y + rowHeight + small * 1.05f, color, small)
-    drawTextAnnotated(
+    // One short line per row: the old two-row layout put STATUS, UTIL and CODE side by side and they overprinted each other.
+    val lines = listOf(
+        "STATUS: $status",
+        checks,
+        summary.utilizationText ?: "UTIL: ${summary.utilizationPercent}",
+        if (summary.designCodeLabel.isNotBlank()) "CODE: ${summary.designCodeLabel}" else "",
         "CONC: %.2f m3".format(summary.concreteVolume),
-        x + width * 0.38f, y + rowHeight + small * 1.05f, color, small
+        "STEEL: %.1f kg".format(summary.steelWeight)
     )
-    drawTextAnnotated(
-        "STEEL: %.1f kg".format(summary.steelWeight),
-        x + width * 0.67f, y + rowHeight + small * 1.05f, color, small
-    )
+    lines.forEachIndexed { i, text ->
+        if (i > 0) drawLine(borderColor, Offset(x, y + rowHeight * i), Offset(x + width, y + rowHeight * i), cfg.strokeDefault)
+        drawTextAnnotated(text, x + pad, y + rowHeight * i + small * 1.05f, if (i == 0) statusColor else color, small, bold = i == 0)
+    }
 }
+
+/** Rows in the result summary strip (one short text line per row). */
+const val SUMMARY_STRIP_ROWS = 6
 
 /**
  * Draw the sheet status strip and a north arrow directly above the title block.
@@ -1507,14 +1501,14 @@ fun DrawScope.drawSheetAnnotations(
         drawResultSummaryStrip(
             summary = summary,
             x = x,
-            y = y - small * 2.7f,
+            y = y - small * 1.35f * SUMMARY_STRIP_ROWS - small * 0.4f,
             width = blockWidth,
             cfg = cfg,
             color = color
         )
         drawNorthArrow(
             x = x + blockWidth * 0.5f,
-            y = y - small * 6.2f,
+            y = y - small * 1.35f * SUMMARY_STRIP_ROWS - small * 3.2f,
             size = small * 1.4f,
             color = color
         )
