@@ -423,6 +423,36 @@ if os.path.exists("tools/ci/STEEL_ONLY"):
         log.append(("steel_exception", repr(e)))
     pull_exported_pdfs()
     open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
+if os.path.exists("tools/ci/CALCPAGES_ONLY"):
+    # Default-input calculation of the calculation pages whose standalone result lines were changed (alignment evidence).
+    pages = [
+        ("الكمرات", "cp-beam", ["تصميم الكمرة الآن", "تحليل وحساب", "احسب"]),
+        ("الأعمدة", "cp-col", ["تصميم العمود الآن", "تصميم العمود", "تحليل وحساب", "احسب"]),
+        ("البلاطات المسطحة", "cp-fs", ["تصميم بلاطة مسطحة"]),
+        ("الخزانات", "cp-tank", ["تصميم الخزان الآن"]),
+        ("حوائط السند", "cp-rw", ["تحليل"]),
+        ("القواعد الشداد", "cp-strap", ["تحليل وحساب"]),
+        ("الزلازل", "cp-seis", ["تحليل القص عند القاعدة"]),
+    ]
+    for label, prefix, calc in pages:
+        try:
+            adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+            tap_text(["التصميم"], prefix + "-tab", exact=True); scroll_top(3)
+            ok = False
+            for _ in range(5):
+                if tap_text([label], prefix + "-find"): ok = True; break
+                scroll_up(2)
+            log.append((prefix + "_open", ok)); time.sleep(2)
+            got = False
+            for _ in range(5):
+                if tap_text(calc, prefix + "-calc"): got = True; break
+                scroll_up(2)
+            log.append((prefix + "_calc", got)); time.sleep(3)
+            sweep(prefix + "-res", 4)
+        except Exception as e:
+            log.append((prefix + "_exception", repr(e)))
+    pull_exported_pdfs()
+    open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
 if os.path.exists("tools/ci/FOOTING_ONLY"):
     try:
         footing_block()
