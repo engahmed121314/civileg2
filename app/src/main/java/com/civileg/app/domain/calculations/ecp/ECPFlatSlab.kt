@@ -664,9 +664,7 @@ class ECPFlatSlab : FlatSlabDesign {
         val K = Mu / (fcu * b * d * d)
 
         // K_bal — ECP 203 §4-2-2-1
-        val epsilonY = fy / (ES * GAMMA_S)
-        val aOverD = 0.9 * EPSILON_CU / (EPSILON_CU + epsilonY)
-        val K_bal = (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
+        val K_bal = ECP2025FlexureLimits.kMax(fy)   // ECP 203-2025 Table 4-1 (p.4-6), a = 0.8 c; replaces the 0.9 factor
 
         // Lever arm: z = d × (0.5 + √(0.25 - K/0.893))
         val leverArm = if (0.25 - K / 0.893 > 0) {

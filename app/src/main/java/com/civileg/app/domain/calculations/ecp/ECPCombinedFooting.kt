@@ -433,13 +433,7 @@ class ECPCombinedFooting {
      * For fcu=25, fy=360: K_bal ~ 0.186
      */
     private fun calculateKBalForFooting(fcu: Double, fy: Double): Double {
-        val Es = 200000.0
-        val epsilonCu = 0.003
-        val epsilonY = fy / (Es * GAMMA_S)
-        val cOverD = epsilonCu / (epsilonCu + epsilonY)
-        val beta = 0.9  // ECP 203 K-method factor (consistent with K_bal derivation)
-        val aOverD = beta * cOverD
-        return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
+        return ECP2025FlexureLimits.kMax(fy)   // ECP 203-2025 Table 4-1 (p.4-6), a = 0.8 c; replaces the 0.9 factor
     }
 
     /**
