@@ -206,7 +206,13 @@ def stale_block(label, prefix, calc_words, calc_exact, field, newval):
     """Open a page, solve with default inputs, edit one input, and prove the old result disappears."""
     try:
         restart_app()
-        open_from_design(label, prefix)
+        tap_text(["التصميم"], prefix + "-tab", exact=True); scroll_top(3)
+        found = False
+        for _ in range(6):
+            if tap_text([label], prefix + "-find"): found = True; break
+            scroll_up(2)
+        log.append((prefix + "_open", found)); time.sleep(2)
+        shot(prefix + "-open")
         scroll_top(4)
         ok = False
         for _ in range(8):
@@ -222,9 +228,15 @@ def stale_block(label, prefix, calc_words, calc_exact, field, newval):
         scroll_up(4); shot(prefix + "-edited-2"); dump(prefix + "-edited-2")
     except Exception as e:
         log.append((prefix + "_stale_exception", repr(e)))
+def dismiss_not_responding():
+    """The emulator launcher sometimes shows an 'isn't responding' dialog; choose Wait so it cannot cover the app."""
+    for _ in range(2):
+        if not tap_text(["Wait"], "anr-wait", exact=True): break
+        time.sleep(1.5)
 def restart_app():
     adb("shell", "am", "force-stop", pkg); time.sleep(2)
     adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"); time.sleep(8)
+    dismiss_not_responding()
 def pile_block():
     """Pile screen: default inputs, design, status card sweep, PDF request; exported PDFs are pulled afterwards."""
     try:
