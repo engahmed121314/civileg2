@@ -708,6 +708,17 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
+    /**
+     * Starts a new page unless the current page is still empty. Overflowing result rows can leave the cursor at the top of a
+     * fresh page; an unconditional AreaBreak then produced a blank page.
+     */
+    private fun breakPageUnlessEmpty(pdfDoc: PdfDocument, document: Document) {
+        val area = document.renderer?.currentArea?.bBox
+        val pageTop = pdfDoc.getPage(pdfDoc.numberOfPages).pageSize.top - document.topMargin
+        val atTop = area != null && area.top >= pageTop - 1f
+        if (!atTop) document.add(AreaBreak())
+    }
+
     private fun addBbsSection(document: Document, rows: List<BbsRow>, incompleteReview: Boolean = false) {
         if (rows.isEmpty()) return
         document.add(AreaBreak())
@@ -923,7 +934,7 @@ object ProfessionalEnglishPdfReporter {
 
             // 6. Engineering Drawing
             if (drawingBitmap != null) {
-                document.add(AreaBreak())
+                breakPageUnlessEmpty(pdfDoc, document)
             }
             if (config.incompleteReview) {
                 document.add(sectionTitle("5. Construction Drawing: NOT ISSUED"))

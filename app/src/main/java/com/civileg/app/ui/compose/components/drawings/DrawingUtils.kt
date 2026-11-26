@@ -1576,3 +1576,65 @@ private fun DrawScope.drawStackedResultSummaryStrip(
 /** Rows in the result summary strip (one short text line per row). */
 const val SUMMARY_STRIP_ROWS = 6
 
+
+/**
+ * Footing sheet block: result strip and title block merged into one box whose size comes from the measured text.
+ * The shared strip/title block use fixed pixel widths (160-200 px) while their text is scaled by screen density, so on a
+ * dense screen the text ran past the box, was clipped at the canvas edge and overprinted the next row. ASCII digits are
+ * forced so the text stays on the plain drawing path (a device with Arabic digits sent the utilisation line through the
+ * Arabic layout path and shifted it off its row).
+ * Returns the top edge of the box so the caller can place the north arrow above it.
+ */
+fun DrawScope.drawMeasuredSheetBlock(
+    summary: DrawingResultSummary?,
+    drawingTitle: String,
+    designCode: String,
+    right: Float,
+    bottom: Float,
+    cfg: DrawingDimensionsConfig,
+    color: Color = DrawingColorDefaults.DimensionWhite,
+    borderColor: Color = DrawingColorDefaults.ExtensionGray
+): Float {
+    val small = cfg.annotationTextSmall
+    val rowHeight = small * 1.35f
+    val pad = small * 0.5f
+    val us = java.util.Locale.US
+    val lines = mutableListOf<Pair<String, Boolean>>() // text, bold/status row
+    var statusColor = color
+    if (summary != null) {
+        val status = if (summary.listedChecksFailed) "UNSAFE" else if (!summary.codeAcceptanceComplete) "UNVERIFIED" else if (summary.isSafe) "SAFE" else "UNSAFE"
+        statusColor = if (summary.listedChecksFailed || !summary.codeAcceptanceComplete) DrawingColorDefaults.UnsafeRed
+            else if (summary.isSafe) DrawingColorDefaults.SafeGreen else DrawingColorDefaults.UnsafeRed
+        val total = summary.safetyChecks.size
+        val passed = total - summary.failedCheckCount - summary.notAssessedCheckCount
+        lines += "STATUS: $status" to true
+        lines += (if (total == 0) "CHECKS: N/A"
+            else if (summary.notAssessedCheckCount > 0) "CHECKS: $passed/$total PASS, ${summary.notAssessedCheckCount} NOT ASSESSED"
+            else "CHECKS: $passed/$total PASS") to false
+        lines += (summary.utilizationText ?: String.format(us, "UTIL: %.1f%%", summary.utilizationRatio * 100.0)) to false
+        lines += String.format(us, "CONC: %.2f m3", summary.concreteVolume) to false
+        lines += String.format(us, "STEEL: %.1f kg", summary.steelWeight) to false
+    }
+    lines += "CivilEG - $drawingTitle" to true
+    if (designCode.isNotBlank()) lines += "CODE: $designCode" to false
+    lines += "SCALE: NTS" to false
+
+    val paint = android.graphics.Paint().apply { textSize = small; isAntiAlias = true }
+    val boldPaint = android.graphics.Paint().apply {
+        textSize = small; isAntiAlias = true
+        typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+    }
+    val textWidth = lines.maxOf { (t, b) -> (if (b) boldPaint else paint).measureText(t) }
+    val boxW = (textWidth + 2 * pad).coerceAtMost(size.width - 2 * cfg.margin * 0.3f)
+    val boxH = rowHeight * lines.size
+    val x = right - boxW
+    val y = bottom - boxH
+    drawRect(Color(0x22FFFFFF), Offset(x, y), Size(boxW, boxH))
+    drawRect(borderColor, Offset(x, y), Size(boxW, boxH), style = Stroke(cfg.strokeTable))
+    lines.forEachIndexed { i, (text, bold) ->
+        if (i > 0) drawLine(borderColor, Offset(x, y + rowHeight * i), Offset(x + boxW, y + rowHeight * i), cfg.strokeDefault)
+        val c = if (summary != null && i == 0) statusColor else color
+        drawTextAnnotated(text, x + pad, y + rowHeight * i + small * 1.0f, c, small, bold = bold)
+    }
+    return y
+}
