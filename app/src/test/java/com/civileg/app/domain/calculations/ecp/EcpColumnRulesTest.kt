@@ -53,3 +53,12 @@ class EcpColumnRulesTest {
         assertEquals(1.40, EcpColumnRules.alphaN(1.0), 1e-12)
     }
 }
+
+/** CalculatorEngine hunk hand values: 400x400 ECP column, clear height 3000 mm: i = 0.30*400 = 120, lambda_i = 3000/120 = 25 <= 50, so not slender.
+ *  Old rule: r = 400/sqrt12 = 115.47, lambda = 25.98 > 15 (was flagged slender). Circular D=500: i = 125, lambda_i = 3000/125 = 24. */
+class EcpColumnSlendernessHandValuesTest {
+    @Test fun lambdaI_rect_and_circ() {
+        assertEquals(25.0, 3000.0 / EcpColumnRules.radiusRect(400.0), 1e-9)
+        assertEquals(24.0, 3000.0 / EcpColumnRules.radiusCircular(500.0), 1e-9)
+    }
+}
