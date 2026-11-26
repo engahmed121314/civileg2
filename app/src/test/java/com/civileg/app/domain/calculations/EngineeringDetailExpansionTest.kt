@@ -86,15 +86,18 @@ class EngineeringDetailExpansionTest {
     @Test
     fun `waffle slab ECP publishes safety checks`() {
         val r = ECPWaffleSlabDesign().design(WaffleSlabDesign.WaffleSlabInput())
-        assertTrue("ECP waffle should expose >= 4 checks, got ${r.safetyChecks.size}", r.safetyChecks.size >= 4)
+        // Only checks backed by a computed demand are listed. Deflection is not assessed, so it must not appear as a check.
+        assertTrue("ECP waffle should expose its 2 computed checks, got ${r.safetyChecks.size}", r.safetyChecks.size == 2)
         assertTrue(r.safetyChecks.any { it.name.contains("Rib flexure") })
-        assertTrue(r.safetyChecks.any { it.name.contains("Deflection") })
+        assertTrue(r.safetyChecks.any { it.name.contains("Punching") })
+        assertTrue(r.safetyChecks.none { it.name.contains("Deflection") })
     }
 
     @Test
     fun `waffle slab ACI publishes safety checks`() {
         val r = ACIWaffleSlabDesign().design(WaffleSlabDesign.WaffleSlabInput())
-        assertTrue("ACI waffle should expose >= 4 checks, got ${r.safetyChecks.size}", r.safetyChecks.size >= 4)
+        assertTrue("ACI waffle should expose its 2 computed checks, got ${r.safetyChecks.size}", r.safetyChecks.size == 2)
+        assertTrue(r.safetyChecks.any { it.name.contains("Rib flexure") })
         assertTrue(r.safetyChecks.any { it.name.contains("Punching") })
     }
 
