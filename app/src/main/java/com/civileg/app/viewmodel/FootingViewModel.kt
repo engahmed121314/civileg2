@@ -268,6 +268,8 @@ class FootingViewModel @Inject constructor(
                         )
                     },
                     isSafe = res.isSafe,
+                    // Passing checks do not make a complete assessment (punching demand model, constants and layer order are unverified)
+                    assessmentPending = res.isSafe,
                     calculationSteps = res.calculationSteps,
                     bbsEntries = runCatching {
                         com.civileg.app.domain.calculations.utils.BbsGenerator.generateFootingBbs("F1", res)
