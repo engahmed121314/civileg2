@@ -152,7 +152,7 @@ class EngineeringDetailExpansionTest {
         val ecp = ECPFlatSlab().design(FlatSlabInput())
         val aci = ACIFlatSlab().design(FlatSlabInput())
         listOf(ecp, aci).forEach { r ->
-            assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+            assertEquals("traceable steps expected (deflection step only when assessed)", if (r.deflectionAssessed) 6 else 5, r.calculationSteps.size)
             assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
             assertTrue("punching step must exist", r.calculationSteps.any { it.title == "Punching Shear" })
         }
@@ -528,7 +528,7 @@ class EngineeringDetailExpansionTest {
             deadLoad = 4.0, liveLoad = 3.0, fcu = 30.0, fy = 420.0,
             preferredDiameter = 12, code = DesignCode.ECP
         )
-        assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+        assertEquals("traceable steps expected (deflection step only when assessed)", if (r.deflectionAssessed) 6 else 5, r.calculationSteps.size)
         assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
     }
 
@@ -538,7 +538,7 @@ class EngineeringDetailExpansionTest {
             height = 4.0, soilDensity = 18.0, frictionAngle = 30.0, surcharge = 10.0,
             fcu = 25.0, fy = 360.0, preferredDiameter = 16, code = DesignCode.ECP
         )
-        assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+        assertEquals("traceable steps expected (deflection step only when assessed)", if (r.deflectionAssessed) 6 else 5, r.calculationSteps.size)
         assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
         assertTrue("stability checks must be present", r.calculationSteps.any { it.title == "Overturning Stability" })
     }
@@ -562,7 +562,7 @@ class EngineeringDetailExpansionTest {
     @Test
     fun `shear wall result exposes calculation steps`() {
         val r = engine.designShearWall(ShearWallInput(), DesignCode.ECP)
-        assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+        assertEquals("traceable steps expected (deflection step only when assessed)", if (r.deflectionAssessed) 6 else 5, r.calculationSteps.size)
         assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
         assertTrue("shear demand step must exist", r.calculationSteps.any { it.title == "Shear Demand" })
     }
@@ -570,7 +570,7 @@ class EngineeringDetailExpansionTest {
     @Test
     fun `pile result exposes calculation steps`() {
         val r = engine.designPileFoundation(PileInput(), DesignCode.ECP)
-        assertEquals("six traceable steps expected", 6, r.calculationSteps.size)
+        assertEquals("traceable steps expected (deflection step only when assessed)", if (r.deflectionAssessed) 6 else 5, r.calculationSteps.size)
         assertTrue("steps must carry code references", r.calculationSteps.all { it.codeReference.isNotBlank() })
         assertTrue("capacity step must exist", r.calculationSteps.any { it.title == "Single Pile Capacity" })
     }

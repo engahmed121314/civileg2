@@ -90,7 +90,7 @@ class ECPFlatSlabTest {
         val result = flatSlab.design(defaultInput())
         assertFalse("Deflection must not be reported as assessed", result.deflectionAssessed)
         assertFalse("No false deflection pass", result.deflectionOk)
-        assertTrue(result.warnings.any { it.contains("NOT ASSESSED") })
+        assertTrue(result.warnings.any { it.contains("Deflection is not yet calculated") })
     }
 
     // ECP 203-2025 hand checks (defaultInput: 6.0 x 7.5 m, h=250, col 400, fcu 30, fy 400, LL 3, finish 2)
