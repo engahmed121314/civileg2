@@ -345,6 +345,21 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `footing input is factored Pu and the pressure times plan area equals Pu over 1_5`() {
+        // Hand calculation: Pu = 1200 kN factored; the engine's assumed average factor for D+L is 1.5 (unverified approximation),
+        // so the service load is 800 kN and q * B * L must be 800 kN. The wrapper once printed A = 1200/150 = 8.00 m2 beside a 6.1 m2 plan.
+        val r = engine.calculateFooting(
+            type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, fcu = 25.0, fy = 360.0,
+            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
+        )
+        val area = r.width * r.length / 1e6
+        assertEquals(800.0, r.soilPressure * area, 0.5)
+        val step1 = r.calculationSteps.first { it.stepNumber == 1 }
+        assertTrue(step1.formulaWithValues, step1.formulaWithValues.contains("1200 / 1.50 = 800"))
+        assertTrue(step1.result, !step1.result.contains("8.00"))
+    }
+
+    @Test
     fun `ECP footing punching row is a stress in MPa equal to the hand calculation`() {
         // qp = 0.9*P*1000/(b0*d) [MPa], b0 = 2(c1+c2)+4d [mm], d = t - cover - 10. The row used to be labelled kN.
         val r = engine.calculateFooting(
