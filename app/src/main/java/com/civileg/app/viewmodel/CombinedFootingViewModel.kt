@@ -211,7 +211,7 @@ class CombinedFootingViewModel @Inject constructor(
                     "Excavation Depth" to "$excavationDepthM m",
                     "Working Space" to "$workingSpaceM m",
                     "Blinding Thickness" to "$blindingThicknessM m",
-                    "Design Code" to state.designCode
+                    "Design Code" to codeLabel(state.designCode)
                 )
 
                 val resultsMap = if (ecpRes != null) {
@@ -314,7 +314,7 @@ class CombinedFootingViewModel @Inject constructor(
                 } catch (e: Exception) { e.printStackTrace(); null }
                 pendingDrawingBitmap = null  // consume after use
 
-                val codeName = state.designCode
+                val codeName = codeLabel(state.designCode)
                 val eR = ecpRes
                 val fR = footingRes
                 val distMm = state.distanceBetweenColumns.toDoubleOrNull() ?: 5000.0
@@ -412,5 +412,13 @@ class CombinedFootingViewModel @Inject constructor(
                 cost = 0.0
             ))
         }
+    }
+
+    /** Honest report label: the edition of each code is not verified for the combined footing engine. */
+    private fun codeLabel(code: String): String = when (code) {
+        "ECP" -> "ECP 203 (edition not verified)"
+        "ACI" -> "ACI 318 (edition not verified)"
+        "SBC" -> "SBC 304 (edition not verified)"
+        else -> code
     }
 }

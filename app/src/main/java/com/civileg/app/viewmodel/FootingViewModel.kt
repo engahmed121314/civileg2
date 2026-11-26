@@ -226,9 +226,9 @@ class FootingViewModel @Inject constructor(
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
-                    DesignCode.ACI -> "ACI 318"
-                    DesignCode.SBC -> "SBC 304"
-                    else -> "ECP 203"
+                    DesignCode.ACI -> "ACI 318 (edition not verified)"
+                    DesignCode.SBC -> "SBC 304 (edition not verified)"
+                    else -> "ECP 203-2025 (partial: punching, shear, K-method; other clauses not compared)"
                 }
                 val inputsMap = mapOf(
                     "Footing Type" to res.type.displayNameEn, // the English-only PDF printed a blank for the Arabic name
