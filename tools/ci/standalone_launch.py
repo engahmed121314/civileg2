@@ -423,6 +423,10 @@ if os.path.exists("tools/ci/STEEL_ONLY"):
         log.append(("steel_exception", repr(e)))
     pull_exported_pdfs()
     open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
+def sweep(prefix, n=5):
+    for k in range(n):
+        shot(f"{prefix}-{k}"); dump(f"{prefix}-{k}")
+        scroll_up(2)
 if os.path.exists("tools/ci/CALCPAGES_ONLY"):
     # Default-input calculation of the calculation pages whose standalone result lines were changed (alignment evidence).
     pages = [
