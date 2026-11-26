@@ -2549,16 +2549,21 @@ private fun SteelModuleSectionHeader(title: String, iconRes: Int) {
 
 @Composable
 fun SteelInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { AppText(label, fontSize = 12.sp) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        singleLine = true,
-        textStyle = MaterialTheme.typography.bodySmall
-    )
+    // An English label reads left-to-right and sits on the left even inside the Arabic (RTL) screen; Arabic labels keep the screen direction.
+    val latinLabel = com.civileg.app.ui.components.alignmentFromText(label) == androidx.compose.ui.text.style.TextAlign.Left
+    val direction = if (latinLabel) androidx.compose.ui.unit.LayoutDirection.Ltr else androidx.compose.ui.platform.LocalLayoutDirection.current
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides direction) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { AppText(label, fontSize = 12.sp) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = modifier,
+            shape = RoundedCornerShape(12.dp),
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodySmall
+        )
+    }
 }
 
 @Composable
