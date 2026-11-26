@@ -352,11 +352,7 @@ class SBCTank : TankDesign {
         val vc_punch = 0.33 * sqrt(fcPrime)
         val punchingCap = PHI_SHEAR * vc_punch * (b0 * 1000.0) * d / 1000.0 // b0 m -> mm
         val punchingLoad = totalPressure * L * B * 0.5
-        val punchingSafe = punchingLoad <= punchingCap
-        safetyChecks.add(TankSafetyCheck(
-            "Punching Shear (Base)", punchingLoad, punchingCap, "kN",
-            punchingSafe, "SBC 304/ACI 318: vc = 0.33√f'c × b₀ × d"
-        ))
+        codeNotes.add(String.format(java.util.Locale.US, "Base punching shear: NOT ASSESSED (surrogate only; applicability, load model and critical perimeter unverified). Computed load=%.2f kN, capacity=%.2f kN, not a pass/fail verdict", punchingLoad, punchingCap))
 
         codeNotes.add(String.format("Base: %dØ%d @ %dmm (each way)", 
             barsPerMeter, barDiameter.toInt(), spacing.toInt()))
@@ -368,7 +364,7 @@ class SBCTank : TankDesign {
             numberOfBars = barsPerMeter,
             tiesDiameter = barDiameter,
             tiesSpacing = spacing,
-            isSafe = punchingSafe,
+            isSafe = asProvided >= asRequired - 1e-6, // flexural steel coverage; punching surrogate carries no verdict
             utilizationRatio = asRequired / asProvided,
             spacing = spacing,
             warnings = warnings,

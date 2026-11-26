@@ -426,12 +426,8 @@ class ECPTank : TankDesign {
         val soilPressure = totalPressure / (L * B) // kPa
         val criticalArea = (wallThickness / 1000.0 + d / 1000.0) * (wallThickness / 1000.0 + d / 1000.0)
         val punchingLoad = totalPressure * L * B - soilPressure * criticalArea // kN
-        val punchingCheck = punchingLoad <= punchingShearCapacity
 
-        safetyChecks.add(TankSafetyCheck(
-            "Punching Shear (Base)", punchingLoad, punchingShearCapacity, "kN",
-            punchingCheck, "ECP 203: qp = 0.316×√(fcu/γc)×b₀×d"
-        ))
+        codeNotes.add(String.format(java.util.Locale.US, "Base punching shear: NOT ASSESSED (surrogate only; applicability, load model and critical perimeter unverified). Computed load=%.2f kN, capacity=%.2f kN, not a pass/fail verdict", punchingLoad, punchingShearCapacity))
 
         codeNotes.add("Base: ${barsPerMeter}Ø${barDiameter.toInt()} @ ${spacing.toInt()}mm (each way)")
 
@@ -442,7 +438,7 @@ class ECPTank : TankDesign {
             numberOfBars = barsPerMeter,
             tiesDiameter = barDiameter, // same both ways
             tiesSpacing = spacing,
-            isSafe = punchingCheck,
+            isSafe = asProvided >= asRequired - 1e-6, // flexural steel coverage; punching surrogate is NOT ASSESSED and carries no verdict
             utilizationRatio = asRequired / asProvided,
             spacing = spacing,
             warnings = warnings,

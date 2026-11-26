@@ -2512,18 +2512,18 @@ class CalculatorEngine @Inject constructor(
             CalculationStep(
                 stepNumber = 4, title = "Wall Reinforcement",
                 formula = "As = M / (0.87fy·j·d)",
-                formulaWithValues = "As = ${"%.0f".format(res.wallReinforcement.astRequired)} mm²/m → ${wallBar.barString}",
+                formulaWithValues = "As,req = ${"%.0f".format(res.wallReinforcement.astRequired)} mm²/m; provided ${"%.0f".format(res.wallReinforcement.astProvided)} mm²/m at ${"%.0f".format(res.wallReinforcement.spacing)} mm spacing (${wallBar.barString})",
                 result = wallBar.barString, unit = "mm²/m",
-                codeReference = ref, isPass = res.wallReinforcement.isSafe,
-                status = if (res.wallReinforcement.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                codeReference = ref, isPass = res.wallReinforcement.astProvided >= res.wallReinforcement.astRequired - 1e-6,
+                status = if (res.wallReinforcement.astProvided >= res.wallReinforcement.astRequired - 1e-6) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
             ),
             CalculationStep(
                 stepNumber = 5, title = "Base Reinforcement",
                 formula = "As = M / (0.87fy·j·d)",
-                formulaWithValues = "As = ${"%.0f".format(res.baseReinforcement.astRequired)} mm²/m → ${baseBar.barString}",
+                formulaWithValues = "As,req = ${"%.0f".format(res.baseReinforcement.astRequired)} mm²/m; provided ${"%.0f".format(res.baseReinforcement.astProvided)} mm²/m at ${"%.0f".format(res.baseReinforcement.spacing)} mm spacing (${baseBar.barString})",
                 result = baseBar.barString, unit = "mm²/m",
-                codeReference = ref, isPass = res.baseReinforcement.isSafe,
-                status = if (res.baseReinforcement.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                codeReference = ref, isPass = res.baseReinforcement.astProvided >= res.baseReinforcement.astRequired - 1e-6,
+                status = if (res.baseReinforcement.astProvided >= res.baseReinforcement.astRequired - 1e-6) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
             ),
             CalculationStep(
                 stepNumber = 6, title = "Safety Checks",
@@ -2532,6 +2532,13 @@ class CalculatorEngine @Inject constructor(
                 result = if (res.isSafe) "SAFE" else "UNSAFE", unit = "",
                 codeReference = ref, isPass = res.isSafe,
                 status = if (res.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 7, title = "Base punching shear (surrogate)",
+                formula = "Not assessed",
+                formulaWithValues = "Applicability, load model and critical perimeter unverified; no verdict",
+                result = "NOT ASSESSED", unit = "",
+                codeReference = ref, status = StepStatus.INFO
             )
         )
 
