@@ -120,7 +120,15 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         }
         addRow("Project Name", project)
         addRow("Client Name", client)
-        addRow("Design Code", inputs.code.version)
+        run {
+            val sel = result.resultsByCode
+            val ref = when (sel) {
+                com.civileg.app.domain.entities.DesignCode.ECP.displayName -> "steel reference ECP 205 LRFD 2008 (tension and slenderness of bracing only)"
+                com.civileg.app.domain.entities.DesignCode.ACI.displayName -> "steel reference AISC 360-10 (14th ed. Manual) D2 (bracing tension only)"
+                else -> "no sourced steel code text: code checks NOT ASSESSED"
+            }
+            addRow("Design Code", "$sel, $ref")
+        }
         addRow("Span / Length", "${inputs.span.fmt()}m / ${inputs.length.fmt()}m")
         addRow("Eave / Ridge Height", "${inputs.eaveHeight.fmt()}m / ${inputs.ridgeHeight.fmt()}m")
         addRow("Report Date", SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date()))
