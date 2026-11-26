@@ -55,7 +55,7 @@ fun footingDrawingSummary(result: CalculatorEngine.FootingResult): DrawingResult
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
-        designCodeLabel = result.code.version,
+        designCodeLabel = ecp2025Label(result.code),
         // The listed footing checks do not make a full assessment (service-load basis, punching demand model, minimum spacing and the
         // BBS/BOQ scope are unverified), so a passing result reads UNVERIFIED on the drawing, as in the PDF. A failed check is carried separately and reads UNSAFE.
         codeAcceptanceComplete = false,
@@ -146,7 +146,7 @@ fun strapFootingDrawingSummary(result: CalculatorEngine.StrapFootingResult): Dra
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
-        designCodeLabel = result.footing1.code.version
+        designCodeLabel = ecp2025Label(result.footing1.code)
     )
 
 fun waffleSlabDrawingSummary(
@@ -171,3 +171,7 @@ fun hordiSlabDrawingSummary(
         utilizationRatio = result.utilizationRatio,
         codeNotes = result.warnings + result.codeNotes
     )
+
+/** Footing and strap engines follow ECP 203-2025 for the clauses named on their steps; other clauses are not compared. */
+private fun ecp2025Label(code: com.civileg.app.domain.entities.DesignCode): String =
+    if (code == com.civileg.app.domain.entities.DesignCode.ECP) "ECP 203-2025 (partial: clauses on steps)" else code.version

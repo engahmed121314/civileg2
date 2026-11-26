@@ -468,13 +468,15 @@ item {
                     item {
                         ResultDataCard(
                             stringResource(R.string.fs_deflection),
-                            listOf(
+                            if (res.deflectionAssessed) listOf(
                                 stringResource(R.string.fs_long_term_delta) to String.format("%.2f mm", res.deflection),
                                 stringResource(R.string.pile_allowable_set) to String.format("%.2f mm", res.allowableDeflection),
                                 stringResource(R.string.status) to if (res.deflectionOk) "PASS ✓" else "FAIL ✗"
+                            ) else listOf(
+                                stringResource(R.string.status) to "NOT ASSESSED"
                             ),
                             icon = Icons.Default.Straighten,
-                            accentColor = if (res.deflectionOk) Color(0xFF2E7D32) else Color(0xFFE53935)
+                            accentColor = if (!res.deflectionAssessed) Color(0xFFF57C00) else if (res.deflectionOk) Color(0xFF2E7D32) else Color(0xFFE53935)
                         )
                     }
 
