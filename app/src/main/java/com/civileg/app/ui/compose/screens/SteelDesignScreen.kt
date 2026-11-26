@@ -2550,7 +2550,7 @@ private fun SteelModuleSectionHeader(title: String, iconRes: Int) {
 @Composable
 fun SteelInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier) {
     // An English label reads left-to-right and sits on the left even inside the Arabic (RTL) screen; Arabic labels keep the screen direction.
-    val latinLabel = com.civileg.app.ui.components.alignmentFromText(label) == androidx.compose.ui.text.style.TextAlign.Left
+    val latinLabel = (label.firstOrNull { it.isLetter() }?.code ?: 0x600) < 0x590
     val direction = if (latinLabel) androidx.compose.ui.unit.LayoutDirection.Ltr else androidx.compose.ui.platform.LocalLayoutDirection.current
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides direction) {
         OutlinedTextField(
