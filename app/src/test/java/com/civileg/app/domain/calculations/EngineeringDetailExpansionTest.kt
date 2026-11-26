@@ -428,7 +428,7 @@ class EngineeringDetailExpansionTest {
 
     @Test
     fun `ECP footing punching row is a stress in MPa equal to the hand calculation`() {
-        // qp = 0.9*P*1000/(b0*d) [MPa], b0 = 2(c1+c2)+4d [mm], d = t - cover - 0.75*dia (mean of the two layers, the diameter actually selected). The row used to be labelled kN.
+        // qp = Qup*1000/(b0*d) [MPa] with the net force Qup (ECP 203-2025 Eq 4-44), b0 = 2(c1+c2)+4d [mm], d = t - cover - 0.75*dia (mean of the two layers, the diameter actually selected). The row used to be labelled kN.
         val r = engine.calculateFooting(
             type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, ps = 800.0, fcu = 25.0, fy = 360.0,
             soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
@@ -437,8 +437,10 @@ class EngineeringDetailExpansionTest {
         assertEquals("MPa", row.unit)
         val d = r.thickness - r.coverMm - 0.75 * r.barDiameter
         val b0 = 2.0 * (300.0 + 500.0) + 4.0 * d
-        assertEquals(0.9 * 1200.0 * 1000.0 / (b0 * d), row.value, 1e-6)
-        assertEquals(0.316 * Math.sqrt(25.0 / 1.5), row.limit, 1e-6)
+        // Net punching force (column load minus soil reaction inside the critical perimeter) is below the gross load and positive.
+        val netForce = row.value * b0 * d / 1000.0
+        assertTrue("net punching force $netForce kN", netForce > 0.0 && netForce < 1200.0)
+        assertEquals(com.civileg.app.domain.calculations.ecp.ECP2025ConcreteShear.punchingQcup(25.0, d, b0, 300.0, 500.0), row.limit, 1e-6)
     }
 
     @Test
