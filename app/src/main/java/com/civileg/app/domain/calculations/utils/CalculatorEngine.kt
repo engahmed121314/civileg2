@@ -1071,7 +1071,7 @@ class CalculatorEngine @Inject constructor(
         val axialSafe = axialAssessed && puDesign <= axialCapacity + 1e-6
 
         val concreteVolume = grossArea * clearHeight / 1e9
-        val cover = if (domainCode == DesignCode.SBC) 50.0 else 40.0
+        val cover = com.civileg.app.domain.calculations.column.ColumnCover.mm(domainCode)
         val tiePerimeterMm = if (isCircular) {
             PI * (width - 2.0 * cover).coerceAtLeast(50.0)
         } else {
