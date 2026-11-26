@@ -257,7 +257,9 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
             val tons = result.materialTakeoff.entries.firstOrNull { e ->
                 when (m.first) { "C1" -> e.key.startsWith("Columns"); "R1" -> e.key.startsWith("Rafters"); "P1" -> e.key.startsWith("Purlins"); else -> false }
             }?.value
-            if (tons != null) table.addCell(dataCell((tons * 1000.0).fmt(0), true, bg))
+            val bracing = if (m.first == "B1") result.bracing?.takeIf { it.issued } else null
+            if (bracing != null) table.addCell(dataCell("${bracing.totalWeightKg.fmt(0)} (geometry only)", true, bg))
+            else if (tons != null) table.addCell(dataCell((tons * 1000.0).fmt(0), true, bg))
             else table.addCell(dataCell("NOT ASSESSED", true, bg, NOT_ASSESSED_GRAY))
         }
         document.add(table)
