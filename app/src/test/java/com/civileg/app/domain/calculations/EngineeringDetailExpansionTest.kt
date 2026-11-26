@@ -309,6 +309,23 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `footing displayed bars cover the steel the flexure check reports as required`() {
+        // The result shows nbars x dia @ spacing and the BOQ weighs those bars; they must provide at least the engine's As,req
+        // across the footing width (Ast per metre x width), otherwise the displayed layout and the check disagree.
+        for (soil in listOf(100.0, 150.0, 250.0)) {
+            val r = engine.calculateFooting(
+                type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
+                soil = soil, colB = 300.0, colT = 500.0, code = DesignCode.ECP
+            )
+            val barArea = Math.PI / 4.0 * r.barDiameter * r.barDiameter
+            val providedX = r.barsX * barArea
+            val flex = r.safetyChecks.first { it.name == "Flexure Steel" }
+            // value = astProvided, limit = astRequired (engine's own numbers, same units mm2)
+            assertTrue("soil=$soil displayed bars ${r.barsX}x${r.barDiameter} give $providedX mm2 vs engine As,req ${flex.limit}", providedX >= flex.limit - 1e-6)
+        }
+    }
+
+    @Test
     fun `footing property line limits are rejected not silently ignored`() {
         val e = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
             engine.calculateFooting(
