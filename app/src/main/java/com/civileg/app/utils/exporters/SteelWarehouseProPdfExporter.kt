@@ -270,7 +270,8 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         document.add(Paragraph("\nX-Bracing (B1)").setFontSize(12f).setBold().setFontColor(PRIMARY))
         document.add(LineSeparator(SolidLine(0.5f)).setMarginBottom(5f))
         if (!b.issued) { document.add(Paragraph(b.reason ?: "NOT ISSUED").setFontSize(9f)); return }
-        document.add(Paragraph("Selected design code: ${result.resultsByCode}. Code-specific bracing checks (load combinations, brace slenderness limit, capacity, connections) are NOT ASSESSED: no sourced steel code text is available for any code. The lines below are geometry and statics only.").setFontSize(8f).setBold())
+        val american = result.resultsByCode == com.civileg.app.domain.entities.DesignCode.ACI.displayName
+        document.add(Paragraph(if (american) "Selected design code: ${result.resultsByCode}. Steel reference: AISC 360-10 (14th ed. Manual), Section D2 tension yielding and rupture only (Specification p.16.1-26). Load combinations, slenderness limit, connections (J3, J4.3) and frame stability are NOT ASSESSED." else "Selected design code: ${result.resultsByCode}. Code-specific bracing checks (load combinations, brace slenderness limit, capacity, connections) are NOT ASSESSED: no sourced steel code text is available for this code. The lines below are geometry and statics only.").setFontSize(8f).setBold())
         b.lines.forEach { document.add(Paragraph(it).setFontSize(8f)) }
         try {
             val bmp = PdfDrawingGenerator.generateBracingDrawing(b)

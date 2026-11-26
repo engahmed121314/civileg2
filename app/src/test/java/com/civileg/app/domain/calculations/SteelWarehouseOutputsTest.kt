@@ -92,4 +92,26 @@ class SteelWarehouseBracingTest {
         assertEquals(12, engine.designSteelWarehouse(inp(null, listOf(1, 5, 10))).bracing!!.braceCount)
         assertFalse(engine.designSteelWarehouse(inp(null, listOf(11))).bracing!!.issued)
     }
+
+    private fun aci(h: Double?, fy: Double?, fu: Double?, ae: Double?, code: com.civileg.app.domain.entities.DesignCode = com.civileg.app.domain.entities.DesignCode.ACI) =
+        inp(h).copy(code = code, braceFyMpa = fy, braceFuMpa = fu, braceNetAreaMm2 = ae)
+
+    @Test fun aiscD2TensionCheckFollowsHandValues() {
+        val b = engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, 1500.0)).bracing!!
+        // hand: yield 0.90 x 250 x 1772.5 / 1000 = 398.8125 kN; rupture 0.75 x 400 x 1500 / 1000 = 450 kN; N = 42.4264 kN
+        assertEquals("PASS", b.tensionCheck)
+        assertEquals(42.42640687 / 398.8125, b.tensionUtilisation!!, 1e-9)
+        assertEquals("FAIL", engine.designSteelWarehouse(aci(400.0, 250.0, 400.0, 1500.0)).bracing!!.tensionCheck)
+        // rupture governs when Ae is small: 0.75 x 400 x 1000 / 1000 = 300 kN
+        assertEquals(42.42640687 / 300.0, engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, 1000.0)).bracing!!.tensionUtilisation!!, 1e-9)
+    }
+
+    @Test fun aiscD2NotAssessedWithoutInputsOrForOtherCodes() {
+        assertNull(engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, null)).bracing!!.tensionCheck)
+        assertNull(engine.designSteelWarehouse(aci(30.0, null, 400.0, 1500.0)).bracing!!.tensionCheck)
+        assertNull(engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, 1500.0, com.civileg.app.domain.entities.DesignCode.ECP)).bracing!!.tensionCheck)
+        assertNull(engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, 1500.0, com.civileg.app.domain.entities.DesignCode.SBC)).bracing!!.tensionCheck)
+        assertNull(engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, 5000.0)).bracing!!.tensionCheck)   // Ae > Ag
+        assertNull(engine.designSteelWarehouse(aci(null, 250.0, 400.0, 1500.0)).bracing!!.tensionCheck)
+    }
 }

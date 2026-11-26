@@ -39,7 +39,11 @@ data class SteelWarehouseInputs(
     // X-bracing: braced bay numbers (1-based along the length); null = default end bays.
     val bracedBays: List<Int>? = null,
     // Lateral load carried by ONE braced panel (kN), entered by the user; null = force NOT ASSESSED.
-    val bracingLateralLoadKn: Double? = null
+    val bracingLateralLoadKn: Double? = null,
+    // Brace material and net section, entered by the user (AISC D2 tension check). No defaults are assumed.
+    val braceFyMpa: Double? = null,
+    val braceFuMpa: Double? = null,
+    val braceNetAreaMm2: Double? = null
 ) : Parcelable
 
 @Parcelize
@@ -152,5 +156,8 @@ data class BracingPreliminary(
     val lateralLoadPerPanelKn: Double? = null,
     val braceForceKn: Double? = null,
     val stressMpa: Double? = null,
+    /** Result of the AISC 360-10 D2 tension check: "PASS", "FAIL" or null when NOT ASSESSED. */
+    val tensionCheck: String? = null,
+    val tensionUtilisation: Double? = null,
     val lines: List<String> = emptyList()
 ) : Parcelable
