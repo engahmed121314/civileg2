@@ -705,18 +705,9 @@ object ProfessionalEnglishPdfReporter {
             }
             document.add(table)
         }
-        document.add(emptyLine())
-    }
-
-    /**
-     * Starts a new page unless the current page is still empty. Overflowing result rows can leave the cursor at the top of a
-     * fresh page; an unconditional AreaBreak then produced a blank page.
-     */
-    private fun breakPageUnlessEmpty(pdfDoc: PdfDocument, document: Document) {
-        val area = document.renderer?.currentArea?.bBox
-        val pageTop = pdfDoc.getPage(pdfDoc.numberOfPages).pageSize.top - document.topMargin
-        val atTop = area != null && area.top >= pageTop - 1f
-        if (!atTop) document.add(AreaBreak())
+        // A spacer paragraph here spilled onto a new page when the table ended at the page bottom, and the page break
+        // before the drawing then left a blank page. A bottom margin cannot spill.
+        document.add(Paragraph().setMargin(0f).setPadding(0f).setFixedLeading(0f))
     }
 
     private fun addBbsSection(document: Document, rows: List<BbsRow>, incompleteReview: Boolean = false) {
@@ -934,7 +925,7 @@ object ProfessionalEnglishPdfReporter {
 
             // 6. Engineering Drawing
             if (drawingBitmap != null) {
-                breakPageUnlessEmpty(pdfDoc, document)
+                document.add(AreaBreak())
             }
             if (config.incompleteReview) {
                 document.add(sectionTitle("5. Construction Drawing: NOT ISSUED"))
