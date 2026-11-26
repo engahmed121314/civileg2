@@ -105,6 +105,10 @@ fun AppText(
         }
     }
 
+    // Arabic reads RTL and sits on the right, English reads LTR and sits on the left, whatever the layout direction.
+    // Only an unset or default (Start) alignment is resolved from the first strong character; an explicit alignment is kept.
+    val contentAlign = if (textAlign == null || textAlign == TextAlign.Start) alignmentFromText(text) else textAlign
+
     Text(
         text = com.civileg.app.ui.theme.arabicUiText(text),
         modifier = modifier,
@@ -119,7 +123,22 @@ fun AppText(
         overflow = effectiveOverflow,
         softWrap = effectiveSoftWrap,
         maxLines = effectiveMaxLines,
-        textAlign = textAlign,
+        textAlign = contentAlign,
         style = effectiveStyle
     )
+}
+
+/** First strong character decides: Arabic-script letter gives Right, Latin letter gives Left, anything else keeps the default. */
+internal fun alignmentFromText(text: String): TextAlign? {
+    var i = 0
+    while (i < text.length) {
+        val cp = Character.codePointAt(text, i)
+        when (Character.getDirectionality(cp)) {
+            Character.DIRECTIONALITY_RIGHT_TO_LEFT, Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC -> return TextAlign.Right
+            Character.DIRECTIONALITY_LEFT_TO_RIGHT -> return TextAlign.Left
+            else -> {}
+        }
+        i += Character.charCount(cp)
+    }
+    return null
 }
