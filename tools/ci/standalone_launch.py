@@ -292,6 +292,13 @@ def footing_block():
         if tap_text(["القواعد"], "ft-find", exact=True): ok = True; break
         scroll_up(2)
     log.append(("footing_open", ok)); time.sleep(2); shot("footing-open"); dump("footing-open")
+    # Ps is a required, blank project input. First press with it blank must show the field error; then a demo value (800 kN) is typed.
+    for _ in range(8):
+        if tap_text(["تصميم القاعدة الآن"], "ft-calc-blank"): log.append(("footing_calc_blank_ps", True)); break
+        scroll_up(2)
+    else: log.append(("footing_calc_blank_ps", False))
+    time.sleep(2); shot("footing-blank-ps"); dump("footing-blank-ps")
+    log.append(("footing_type_ps_demo_800", edit_field("", "800", "ft-ps"))); time.sleep(1); shot("footing-ps-typed"); dump("footing-ps-typed")
     for _ in range(8):
         if tap_text(["تصميم القاعدة الآن"], "ft-calc-find"): log.append(("footing_calc", True)); break
         scroll_up(2)
