@@ -2473,7 +2473,6 @@
     <string name="seismic_drift_exceeded">تجاوزت الإزاحة الحد المسموح - راجع الجساءة</string>
     <string name="seismic_drift_unverified">تقدير أولي فقط. قيمة الإزاحة ناتجة عن تقريب نظام أحادي درجة الحرية المكافئ، والحد المذكور مرجع غير موثّق وليس فحص إزاحة وفق الكود. لا يُذكر نجاح أو فشل.</string>
     <string name="seismic_drift_above_reference">التقدير أعلى من هذا الحد المرجعي. يلزم تحليل إنشائي كامل.</string>
-</resources>
     <string name="seismic_sbc_ss">Ss (g)</string>
     <string name="seismic_sbc_s1">S1 (g)</string>
     <string name="seismic_sbc_tl">TL (ث)</string>
