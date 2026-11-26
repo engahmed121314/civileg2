@@ -475,6 +475,37 @@ def flatslab_drop_block():
     for k in range(1, 5):
         adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
         shot("fsdrop-pdf-" + str(k))
+def flatslab_vary_block():
+    """Same flat slab screen, different inputs: the check cards must change values and PASS/FAIL with the inputs."""
+    cases = [
+        ("fsv1", [("6.0", "9.0", "fv-lx"), ("7.5", "9.0", "fv-ly")]),
+        ("fsv2", [("250", "160", "fv-thk")]),
+        ("fsv3", [("3.0", "8", "fv-ll"), ("400", "500", "fv-fy"), ("30", "40", "fv-fcu")]),
+    ]
+    for tag, edits in cases:
+        try:
+            dismiss_not_responding()
+            adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); dismiss_not_responding()
+            tap_text(["التصميم"], tag + "-tab", exact=True); scroll_top(3)
+            ok = False
+            for _ in range(5):
+                if tap_text(["البلاطات المسطحة"], tag + "-find"): ok = True; break
+                scroll_up(2)
+            log.append((tag + "_open", ok)); time.sleep(2); scroll_top(2)
+            for cur, new, nm in edits:
+                done = False
+                for _ in range(6):
+                    if edit_field(cur, new, nm): done = True; break
+                    scroll_up(1)
+                log.append((tag + "_" + nm, done))
+            calc = False
+            for _ in range(6):
+                if tap_text(["تصميم بلاطة مسطحة"], tag + "-calc"): calc = True; break
+                scroll_up(2)
+            log.append((tag + "_calc", calc)); time.sleep(4); dismiss_not_responding()
+            sweep(tag + "-res", 9)
+        except Exception as e:
+            log.append((tag + "_exception", repr(e)))
 if os.path.exists("tools/ci/CALCPAGES_ONLY"):
     # Default-input calculation of the calculation pages whose standalone result lines were changed (alignment evidence).
     pages = [
@@ -504,7 +535,7 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
             sweep(prefix + "-res", 9 if prefix in ("cp-fs", "cp-strap") else 4)
         except Exception as e:
             log.append((prefix + "_exception", repr(e)))
-    for blk in (flatslab_drop_block, footing_block, stair_block, pile_block):
+    for blk in (flatslab_drop_block, flatslab_vary_block, footing_block, stair_block, pile_block):
         try:
             blk()
         except Exception as e:
