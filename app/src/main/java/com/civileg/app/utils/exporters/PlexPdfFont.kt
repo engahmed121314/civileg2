@@ -21,6 +21,7 @@ object PlexPdfFont {
     @Volatile private var bold: FontProgram? = null
 
     @Synchronized
+    @android.annotation.SuppressLint("ResourceType") // res/font files are read as raw bytes for iText
     private fun program(isBold: Boolean): FontProgram {
         (if (isBold) bold else regular)?.let { return it }
         val res = if (isBold) R.font.ibm_plex_sans_arabic_bold else R.font.ibm_plex_sans_arabic_regular
