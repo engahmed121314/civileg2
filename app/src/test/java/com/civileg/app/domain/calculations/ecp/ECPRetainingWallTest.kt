@@ -240,4 +240,69 @@ class ECPRetainingWallTest {
         val result = wall.designRetainingWall(defaultInput())
         assertTrue("Min bearing pressure >= 0", result.minBearingPressure >= 0)
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    // W5: water table model, factored toe, labels
+    // ═══════════════════════════════════════════════════════════════
+
+    @Test
+    fun `lateralLoads_dry_matchesRankineTriangleAndSurcharge`() {
+        val ka = 1.0 / 3.0
+        val l = wall.lateralLoads(h = 3.0, zwt = 10.0, gamma = 18.0, ka = ka, q = 10.0)
+        val tri = 0.5 * ka * 18.0 * 9.0
+        val sur = ka * 10.0 * 3.0
+        assertEquals(tri + sur, l.force, 1e-9)
+        assertEquals(tri * 1.0 + sur * 1.5, l.moment, 1e-9)
+    }
+
+    @Test
+    fun `lateralLoads_waterAtBase_equalsDry`() {
+        val ka = 1.0 / 3.0
+        val dry = wall.lateralLoads(3.0, 10.0, 18.0, ka, 10.0)
+        val atBase = wall.lateralLoads(3.0, 3.0, 18.0, ka, 10.0)
+        assertEquals(dry.force, atBase.force, 1e-9)
+        assertEquals(dry.moment, atBase.moment, 1e-9)
+    }
+
+    @Test
+    fun `lateralLoads_partialWaterTable_increasesForceAndMoment`() {
+        val ka = 1.0 / 3.0
+        val dry = wall.lateralLoads(3.0, 10.0, 18.0, ka, 0.0)
+        val wet = wall.lateralLoads(3.0, 1.0, 18.0, ka, 0.0)
+        assertTrue(wet.force > dry.force)
+        assertTrue(wet.moment > dry.moment)
+    }
+
+    @Test
+    fun `designRetainingWall_stemMomentWithWaterTable_exceedsDry`() {
+        val dry = wall.designRetainingWall(defaultInput(waterTableDepth = 10.0))
+        val wet = wall.designRetainingWall(defaultInput(waterTableDepth = 1.0))
+        assertTrue(wet.stemMoment > dry.stemMoment)
+    }
+
+    @Test
+    fun `designRetainingWall_shearCheckLimitIsQcu`() {
+        val shear = wall.designRetainingWall(defaultInput()).safetyChecks.first { it.name == "Shear" }
+        assertEquals(0.24 * Math.sqrt(25.0 / 1.5), shear.limit, 1e-9)
+    }
+
+    @Test
+    fun `designRetainingWall_hasFootingFlexureAndShearChecks`() {
+        val names = wall.designRetainingWall(defaultInput()).safetyChecks.map { it.name }
+        assertTrue(names.containsAll(listOf("Toe Flexure", "Heel Flexure", "Toe Shear", "Heel Shear")))
+    }
+
+    @Test
+    fun `designRetainingWall_toeMomentAndShearAreFactored`() {
+        val r = wall.designRetainingWall(defaultInput())
+        // Factored toe shear must be 1.4x the average bearing pressure times toe length.
+        val avg = (r.maxBearingPressure + r.minBearingPressure) / 2.0
+        assertEquals(1.4 * avg * 0.6, r.toeShear, 1e-6)
+    }
+
+    @Test
+    fun `designRetainingWall_unsourcedItemsAreMarkedNotAssessed`() {
+        val notes = wall.designRetainingWall(defaultInput()).codeNotes.joinToString(" ")
+        assertTrue(notes.contains("NOT ASSESSED"))
+    }
 }
