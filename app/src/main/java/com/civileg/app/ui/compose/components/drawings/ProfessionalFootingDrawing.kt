@@ -37,6 +37,8 @@ fun ProfessionalFootingDrawing(
     rebarYDia: Double,
     rebarYCount: Int,
     cover: Double,
+    rebarXSpacingMm: Double? = null,
+    rebarYSpacingMm: Double? = null,
     col1X: Double = 0.0,
     col2X: Double = 0.0,
     soilPressureMax: Double = 0.0,
@@ -652,8 +654,10 @@ fun ProfessionalFootingDrawing(
         val tblLeft = margin
         val tblWidth = w - 2 * margin
 
-        val xSpacing = if (rebarXCount > 1) (lxMm / (rebarXCount - 1)).toInt() else lxMm.toInt()
-        val ySpacing = if (rebarYCount > 1) (lyMm / (rebarYCount - 1)).toInt() else lyMm.toInt()
+        // Spacing is the designed centre-to-centre value passed by the caller. It used to be recomputed as length/(count-1) over the
+        // wrong dimension (169 and 68 mm for a design of 100 mm), so without a designed value the cell reads "-" instead of a derived number.
+        val xSpacing = rebarXSpacingMm?.toInt()?.toString() ?: "-"
+        val ySpacing = rebarYSpacingMm?.toInt()?.toString() ?: "-"
         val barLengthX = lxMm.toInt()
         val barLengthY = lyMm.toInt()
 
@@ -663,8 +667,8 @@ fun ProfessionalFootingDrawing(
             tblWidth * 0.16f, tblWidth * 0.18f, tblWidth * 0.18f
         )
         val rows = listOf(
-            listOf("\u2460", "X-bottom", rebarXDia.toInt().toString(), rebarXCount.toString(), xSpacing.toString(), barLengthX.toString()),
-            listOf("\u2461", "Y-bottom", rebarYDia.toInt().toString(), rebarYCount.toString(), ySpacing.toString(), barLengthY.toString())
+            listOf("\u2460", "X-bottom", rebarXDia.toInt().toString(), rebarXCount.toString(), xSpacing, barLengthX.toString()),
+            listOf("\u2461", "Y-bottom", rebarYDia.toInt().toString(), rebarYCount.toString(), ySpacing, barLengthY.toString())
         )
 
         drawReinforcementTable(
