@@ -189,10 +189,7 @@ class ECPTank : TankDesign {
         // K-method حسب ECP 203 البند 4-2-2-1
         // K = Mu / (fcu * b * d^2)
         val K = Mu_Nmm / (fcu * b * d * d)
-        val epsilonCu = 0.003
-        val epsilonY = fy / (200000.0 * GAMMA_S)
-        val aOverDBal = 0.9 * epsilonCu / (epsilonCu + epsilonY)
-        val K_bal = (0.67 / GAMMA_C) * aOverDBal * (1.0 - aOverDBal / 2.0)
+        val K_bal = ECP2025FlexureLimits.kMax(fy)   // ECP 203-2025 Table 4-1 (p.4-6), a = 0.8 c; replaces the 0.9 factor
 
         if (K > K_bal) {
             warnings.add("المقطع مفرط التسليح - يُنصح بزيادة سمك الجدار")
