@@ -4,6 +4,8 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.StrapFootingDesign
 import com.civileg.app.domain.entities.CodeReference
 import com.civileg.core.engineering.StrapFootingDesignEngine
+import kotlin.math.max
+import kotlin.math.sqrt
 
 /**
  * تصميم القاعدة الشريطية حسب ECP 203
@@ -15,6 +17,7 @@ class ECPStrapFooting : StrapFootingDesign {
         // ECP 203 §2.3: معاملات التحميل
         private const val LF_DEAD = 1.4
         private const val LF_LIVE = 1.6
+        private const val GAMMA_S = 1.15
     }
 
     override fun design(inputs: StrapFootingDesignEngine.Inputs): StrapFootingDesignEngine.Result {
@@ -32,7 +35,26 @@ class ECPStrapFooting : StrapFootingDesign {
         // ── حقن معاملات تحميل ECP §2.3 ──
         val codeInputs = inputs.copy(
             deadLoadFactor = LF_DEAD,
-            liveLoadFactor = LF_LIVE
+            liveLoadFactor = LF_LIVE,
+            // ECP 203-2025 Eq 4-46 punching (edge column alpha 3, interior 4), K-method flexure and Eq 4-30 concrete
+            // shear share (cracked, with stirrups) instead of the ACI-style 0.33*sqrt(fcu), phi/Rn and 0.17*sqrt(fcu).
+            punchingQcup = { fcu, d, b0, colB, colT, edge ->
+                ECP2025ConcreteShear.punchingQcup(
+                    fcu, d, b0, colB, colT,
+                    if (edge) ECP2025ConcreteShear.ColumnPosition.EDGE else ECP2025ConcreteShear.ColumnPosition.INTERIOR
+                )
+            },
+            flexureAs = { mu, b, d, fcu, fy ->
+                val kBal = run {
+                    val epsY = fy / (200000.0 * GAMMA_S)
+                    val aOverD = 0.9 * 0.003 / (0.003 + epsY)
+                    (0.67 / ECP2025ConcreteShear.GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
+                }
+                val k = mu * 1e6 / (fcu * b * d * d)
+                if (k > kBal) Double.NaN
+                else mu * 1e6 / (fy / GAMMA_S * d * (0.5 + sqrt(max(0.0, 0.25 - k / 0.893))))
+            },
+            beamQcu = 0.12 * sqrt(inputs.fcu / ECP2025ConcreteShear.GAMMA_C)
         )
 
         val result = StrapFootingDesignEngine.design(codeInputs)

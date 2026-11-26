@@ -36,7 +36,13 @@ object StrapFootingDesignEngine {
         val fy: Double,                      // MPa
         val strapBeamWidth: Double = 400.0,  // mm
         val deadLoadFactor: Double = 1.4,
-        val liveLoadFactor: Double = 1.6
+        val liveLoadFactor: Double = 1.6,
+        /** Code hook: punching concrete stress capacity, MPa, from (fcu, d, b0, colB, colT, edgeColumn). When null the legacy ACI-style 0.33*sqrt(fcu) is used. */
+        val punchingQcup: ((Double, Double, Double, Double, Double, Boolean) -> Double)? = null,
+        /** Code hook: required tension steel mm2 for (Mu kN.m, b, d, fcu, fy); NaN when the section is over-reinforced. When null the legacy phi/Rn method is used. */
+        val flexureAs: ((Double, Double, Double, Double, Double) -> Double)? = null,
+        /** Code hook: concrete shear stress MPa used for the strap beam with stirrups. When null the legacy 0.17*sqrt(fcu) is used. */
+        val beamQcu: Double? = null
     )
 
     data class ReinforcementResult(
@@ -99,9 +105,21 @@ object StrapFootingDesignEngine {
     private fun roundDown(value: Double, step: Double): Double = floor(value / step) * step
 
     /** تصميم تسليح الانحناء لشريط عرضه b (mm) وعمقه الفعّال d (mm). */
-    private fun flexureSteel(mu: Double, b: Double, d: Double, h: Double, fy: Double, fcu: Double): Double {
+    private fun flexureSteel(
+        mu: Double, b: Double, d: Double, h: Double, fy: Double, fcu: Double,
+        hook: ((Double, Double, Double, Double, Double) -> Double)? = null,
+        fails: MutableList<String>? = null, label: String = ""
+    ): Double {
         val asMin = 0.0015 * b * h
         if (mu <= 0.0) return asMin
+        if (hook != null) {
+            val req = hook(mu, b, d, fcu, fy)
+            if (req.isNaN()) {
+                fails?.add("$label: K > K_bal, increase the depth")
+                return b * d * 0.04
+            }
+            return max(req, asMin)
+        }
         val rn = mu * 1e6 / (PHI_FLEXURE * b * d * d) // MPa
         val term = 2.0 * rn / (0.85 * fcu)
         if (term >= 1.0) return b * d * 0.04 // above balanced: caller will flag via isSafe
@@ -134,15 +152,35 @@ object StrapFootingDesignEngine {
         )
     }
 
-    /** السماكة المطلوبة من قص الاختراق (punching) عند العمود. */
-    private fun requiredThickness(
-        pu: Double, colB: Double, colT: Double, qu: Double, fcu: Double
-    ): Double {
-        var d = 150.0
-        while (d <= 2000.0) {
+    /** Net punching force and concrete capacity (kN) at depth d. edge = column face on the footing edge (3-sided perimeter). */
+    private fun punchVuVc(
+        pu: Double, colB: Double, colT: Double, d: Double, qu: Double, fcu: Double,
+        hook: ((Double, Double, Double, Double, Double, Boolean) -> Double)?, edge: Boolean
+    ): Pair<Double, Double> {
+        if (hook == null) {
             val perimeter = 2.0 * ((colB + d) + (colT + d)) / 1000.0 // m
             val vu = pu - qu * ((colB + d) * (colT + d)) / 1e6       // kN
             val vc = 0.33 * sqrt(fcu) * perimeter * d / 1000.0       // kN
+            return vu to vc
+        }
+        // colT is the column side perpendicular to the footing edge. For the edge column the footing edge is flush with
+        // the column face, so only the inner side extends d/2 and the edge side of the perimeter is absent.
+        val along = if (edge) colT + d / 2.0 else colT + d
+        val across = colB + d
+        val bo = if (edge) 2.0 * along + across else 2.0 * (along + across)  // mm
+        val vu = pu - qu * (along * across) / 1e6
+        val qcup = hook(fcu, d, bo, colB, colT, edge)
+        return vu to qcup * bo * d / 1000.0
+    }
+
+    /** السماكة المطلوبة من قص الاختراق (punching) عند العمود. */
+    private fun requiredThickness(
+        pu: Double, colB: Double, colT: Double, qu: Double, fcu: Double,
+        hook: ((Double, Double, Double, Double, Double, Boolean) -> Double)?, edge: Boolean
+    ): Double {
+        var d = 150.0
+        while (d <= 2000.0) {
+            val (vu, vc) = punchVuVc(pu, colB, colT, d, qu, fcu, hook, edge)
             if (vc >= vu) break
             d += 10.0
         }
@@ -160,6 +198,7 @@ object StrapFootingDesignEngine {
         val fcu = inputs.fcu
         val fy = inputs.fy
         val loadFactor = max(inputs.deadLoadFactor, inputs.liveLoadFactor)
+        val flexFails = mutableListOf<String>()
 
         // ── 1. الهندسة ──
         val dcc = inputs.distanceBetweenColumns / 1000.0     // m, c-c
@@ -211,27 +250,27 @@ object StrapFootingDesignEngine {
         val pu2 = p2 * loadFactor
         val qu1 = pu1 / area1
         val qu2 = pu2 / area2
-        val h1 = requiredThickness(pu1, inputs.column1Width, inputs.column1Depth, qu1, fcu)
-        val h2 = requiredThickness(pu2, inputs.column2Width, inputs.column2Depth, qu2, fcu)
+        val h1 = requiredThickness(pu1, inputs.column1Width, inputs.column1Depth, qu1, fcu, inputs.punchingQcup, true)
+        val h2 = requiredThickness(pu2, inputs.column2Width, inputs.column2Depth, qu2, fcu, inputs.punchingQcup, false)
         val d1 = h1 - COVER
         val d2 = h2 - COVER
 
         steps.add("Thickness 1 (punching) = ${"%.0f".format(h1)} mm ; Thickness 2 = ${"%.0f".format(h2)} mm")
 
         // ── 5. فحص الاختراق الفعلي ──
-        val punch1 = punching(pu1, inputs.column1Width, inputs.column1Depth, h1, qu1, fcu)
-        val punch2 = punching(pu2, inputs.column2Width, inputs.column2Depth, h2, qu2, fcu)
+        val punch1 = punching(pu1, inputs.column1Width, inputs.column1Depth, h1, qu1, fcu, inputs.punchingQcup, true)
+        val punch2 = punching(pu2, inputs.column2Width, inputs.column2Depth, h2, qu2, fcu, inputs.punchingQcup, false)
 
         // ── 6. تسليح القواعد (انحناء عند وجه العمود) ──
         val pOut1 = max(x1 - col1Half, 0.05)
         val pIn1 = max(l1 - x1 - col1Half, 0.05)
         val mu1 = qu1 * max(pOut1, pIn1).pow(2) / 2.0          // kN.m/m
-        val as1 = flexureSteel(mu1, 1000.0, d1, h1, fy, fcu)
+        val as1 = flexureSteel(mu1, 1000.0, d1, h1, fy, fcu, inputs.flexureAs, flexFails, "Footing 1")
         val bar1 = chooseBars(as1, a1 * 1000.0, 16.0, 100.0, 200.0)
 
         val p2Proj = max((a2 - inputs.column2Depth / 1000.0) / 2.0, 0.05)
         val mu2 = qu2 * p2Proj.pow(2) / 2.0
-        val as2 = flexureSteel(mu2, 1000.0, d2, h2, fy, fcu)
+        val as2 = flexureSteel(mu2, 1000.0, d2, h2, fy, fcu, inputs.flexureAs, flexFails, "Footing 2")
         val bar2 = chooseBars(as2, b2 * 1000.0, 16.0, 100.0, 200.0)
 
         steps.add("As footing 1 = ${"%.0f".format(as1)} mm²/m → ${bar1.numberOfBars}Ø${bar1.barDiameter.toInt()}@${"%.0f".format(bar1.spacing)}")
@@ -244,12 +283,12 @@ object StrapFootingDesignEngine {
         val strapW = inputs.strapBeamWidth
         val strapDepth = 1000.0
         val ds = strapDepth - 75.0
-        val asStrap = flexureSteel(ms, strapW, ds, strapDepth, fy, fcu)
+        val asStrap = flexureSteel(ms, strapW, ds, strapDepth, fy, fcu, inputs.flexureAs, flexFails, "Strap beam")
         val strapTop = chooseBars(asStrap, strapW, 20.0, 60.0, 200.0)
         val asStrapBottom = max(0.2 * asStrap, 0.0015 * strapW * strapDepth)
         val strapBottom = chooseBars(asStrapBottom, strapW, 16.0, 60.0, 200.0)
 
-        val vcStrap = 0.17 * sqrt(fcu) * strapW * ds / 1000.0 // kN
+        val vcStrap = (inputs.beamQcu ?: (0.17 * sqrt(fcu))) * strapW * ds / 1000.0 // kN
         val stirrupDia = 8.0
         val stirrupArea = 2.0 * barArea(stirrupDia)
         val stirrupSpacing: Double = if (vs > vcStrap) {
@@ -266,12 +305,13 @@ object StrapFootingDesignEngine {
         // ── 8. التقييم ──
         val bearingOk = q1 <= qAllow * 1.001 && q2 <= qAllow * 1.001
         val punchingOk = punch1.first <= punch1.second && punch2.first <= punch2.second
-        val flexureOk = bar1.isSafe && bar2.isSafe && strapTop.isSafe && strapBottom.isSafe
+        val flexureOk = bar1.isSafe && bar2.isSafe && strapTop.isSafe && strapBottom.isSafe && flexFails.isEmpty()
         val shearOk = vs <= totalStrapShearCapacity
         val isSafe = bearingOk && punchingOk && flexureOk && shearOk
 
         if (!bearingOk) warnings.add("ضغط التربة يتجاوز المسموح — زد أبعاد القواعد.")
         if (!punchingOk) warnings.add("قص الاختراق يتجاوز المقاومة — زد سماكة القاعدة.")
+        warnings.addAll(flexFails)
         if (!flexureOk) warnings.add("تسليح الانحناء غير كافٍ — زد التسليح أو العمق.")
         if (!shearOk) warnings.add("مقاومة القص للكمر الرابط غير كافية — زد التسليح العرضي أو العمق.")
 
@@ -312,12 +352,7 @@ object StrapFootingDesignEngine {
     }
 
     private fun punching(
-        pu: Double, colB: Double, colT: Double, h: Double, qu: Double, fcu: Double
-    ): Pair<Double, Double> {
-        val d = h - COVER
-        val perimeter = 2.0 * ((colB + d) + (colT + d)) / 1000.0 // m
-        val vu = pu - qu * ((colB + d) * (colT + d)) / 1e6       // kN
-        val vc = 0.33 * sqrt(fcu) * perimeter * d / 1000.0       // kN
-        return vu to vc
-    }
+        pu: Double, colB: Double, colT: Double, h: Double, qu: Double, fcu: Double,
+        hook: ((Double, Double, Double, Double, Double, Boolean) -> Double)?, edge: Boolean
+    ): Pair<Double, Double> = punchVuVc(pu, colB, colT, h - COVER, qu, fcu, hook, edge)
 }
