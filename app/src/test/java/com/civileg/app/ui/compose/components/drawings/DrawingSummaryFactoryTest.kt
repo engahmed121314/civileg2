@@ -141,4 +141,11 @@ class DrawingSummaryFactoryTest {
         assertEquals("FLEXURE: n/a", none.utilizationText)
         assertEquals(0.0, none.utilizationRatio, 0.0)
     }
+
+    @Test
+    fun tankCodeLabel_ecpIsPartial2025_othersKeepTheirVersion() {
+        assertEquals("ECP 203-2025 (partial: Table 4-1 Kmax only)", tankCodeLabel(DesignCode.ECP))
+        assertEquals(DesignCode.SBC.version, tankCodeLabel(DesignCode.SBC))
+        assertEquals(DesignCode.ACI.version, tankCodeLabel(DesignCode.ACI))
+    }
 }

@@ -117,8 +117,15 @@ fun tankDrawingSummary(result: CalculatorEngine.TankResult): DrawingResultSummar
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
         codeNotes = listOf("Steel weight is an indicative ratio x concrete volume, not designed bars; cost unavailable"),
-        designCodeLabel = result.code.version
+        designCodeLabel = tankCodeLabel(result.code)
     )
+
+/**
+ * The ECP tank engine follows ECP 203-2025 only for the single-reinforcement limit (Table 4-1, p.4-6).
+ * Shear, crack width, minimum steel, hoop tension and uplift are not compared with that edition.
+ */
+fun tankCodeLabel(code: com.civileg.app.domain.entities.DesignCode): String =
+    if (code == com.civileg.app.domain.entities.DesignCode.ECP) "ECP 203-2025 (partial: Table 4-1 Kmax only)" else code.version
 
 fun retainingWallDrawingSummary(result: CalculatorEngine.RetainingWallResult): DrawingResultSummary =
     DrawingResultSummary(

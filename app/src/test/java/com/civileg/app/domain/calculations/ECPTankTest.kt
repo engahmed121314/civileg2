@@ -63,4 +63,22 @@ class ECPTankTest {
         assertTrue(result.capacityM3 > 0.0)
         assertTrue(result.wallThickness > 0.0)
     }
+
+    @Test
+    fun rectangularWall_codeNotesStateEcp2025ScopeAndNotAssessed() {
+        val r = engine.calculateTank(6000.0, 4000.0, 3000.0, 2500.0, 30.0, 400.0, TankType.RECTANGULAR_GROUND)
+        val notes = r.wallReinforcement.codeNotes
+        assertTrue(notes.contains(ECPTank.EDITION_SCOPE_NOTE))
+        assertTrue(notes.none { it.contains("Section 8-1") })
+        assertTrue(ECPTank.EDITION_SCOPE_NOTE.contains("Table 4-1"))
+        assertTrue(ECPTank.EDITION_SCOPE_NOTE.contains("NOT ASSESSED"))
+    }
+
+    @Test
+    fun circularWall_codeNotesStateEcp2025ScopeAndNotAssessed() {
+        val r = engine.calculateTank(6000.0, 6000.0, 4000.0, 3500.0, 35.0, 420.0, TankType.CIRCULAR_ELEVATED)
+        val notes = r.wallReinforcement.codeNotes
+        assertTrue(notes.contains(ECPTank.EDITION_SCOPE_NOTE))
+        assertTrue(notes.any { it.contains("hoop tension") && it.contains("NOT ASSESSED") })
+    }
 }
