@@ -4,6 +4,7 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
 import com.civileg.app.domain.calculations.beam.RcDevelopmentLength
 import kotlin.math.*
+import com.civileg.app.domain.calculations.ecp.ECP2025Deflection as D
 
 /**
  * Part 2 of BeamDesignEngine - Shear, Torsion, Deflection, Crack Width, Development Length
@@ -377,7 +378,6 @@ object BeamDesignEnginePart2 {
         InputGuard.positive("b", b); InputGuard.positive("h", h); InputGuard.positive("d", d)
         InputGuard.positive("span", span); InputGuard.positive("fcu", fcu); InputGuard.positive("fy", fy)
         InputGuard.nonNegative("mu", mu); InputGuard.nonNegative("asProvided", asProvided)
-        val D = com.civileg.app.domain.calculations.ecp.ECP2025Deflection
         val steps = mutableListOf<CalculationStep>()
         val spanMm = span * 1000.0
         val ec = 4400.0 * sqrt(fcu)
