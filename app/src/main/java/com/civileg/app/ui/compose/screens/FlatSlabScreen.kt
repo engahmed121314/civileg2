@@ -4,6 +4,8 @@ import com.civileg.app.domain.entities.DesignCode
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -83,6 +85,8 @@ fun FlatSlabScreen(
     var liveLoad by remember { mutableStateOf("3.0") }
     var floorFinish by remember { mutableStateOf("2.0") }
     var clearCover by remember { mutableStateOf("25") }
+    var coverExposure by remember { mutableStateOf<com.civileg.app.domain.calculations.ecp.ECP2025Cover.Exposure?>(null) }
+    var coverFireHours by remember { mutableStateOf<Double?>(null) }
     var showDropInputs by remember { mutableStateOf(false) }
     // An edited input makes the shown result stale: drop it so it cannot be read, exported or saved as the new case.
     LaunchedEffect(panelType, designMethod, designCode, lx, ly, slabThickness, dropThickness, dropSizeX, dropSizeY, columnWidth, columnDepth, fcu, fy, liveLoad, floorFinish, clearCover, showDropInputs) { viewModel.clearResult() }
@@ -283,6 +287,48 @@ item {
                         clearCover, stringResource(R.string.fs_clear_cover), { clearCover = it },
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+                // Exposure-based minimum cover, ECP 203-2025 Tables 2-21 to 2-23 (exposure) and 2-25 (slab fire)
+                item {
+                    val isAr = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language == "ar"
+                    val exposures = com.civileg.app.domain.calculations.ecp.ECP2025Cover.Exposure.entries
+                    AppText(stringResource(R.string.fs_cover_exposure_title), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        exposures.forEach { ex ->
+                            FilterChip(
+                                selected = coverExposure == ex,
+                                onClick = {
+                                    coverExposure = ex
+                                    clearCover = com.civileg.app.domain.calculations.ecp.ECP2025Cover.slabMinCover(ex, coverFireHours).toInt().toString()
+                                },
+                                label = { AppText(if (isAr) ex.labelAr else ex.labelEn, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf<Double?>(null, 1.0, 1.5, 2.0, 3.0, 4.0).forEach { h ->
+                            FilterChip(
+                                selected = coverFireHours == h,
+                                onClick = {
+                                    coverFireHours = h
+                                    coverExposure?.let { clearCover = com.civileg.app.domain.calculations.ecp.ECP2025Cover.slabMinCover(it, h).toInt().toString() }
+                                },
+                                label = { AppText(if (h == null) stringResource(R.string.fs_cover_fire_none) else "${h} h", fontSize = 11.sp) }
+                            )
+                        }
+                    }
+                    val ex = coverExposure
+                    if (ex != null) {
+                        val minC = com.civileg.app.domain.calculations.ecp.ECP2025Cover.slabMinCover(ex, coverFireHours)
+                        val entered = clearCover.toDoubleOrNull()
+                        AppTextBlock(
+                            stringResource(R.string.fs_cover_exposure_note, minC.toInt(), ex.source, ex.minFcu?.toInt() ?: 0, ex.maxWc?.toString() ?: "-"),
+                            fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (entered != null && entered < minC) {
+                            AppTextBlock(stringResource(R.string.fs_cover_below_min, minC.toInt()), fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
                 }
 
                 // ── Calculate Button ──────────────────────────────────

@@ -2479,4 +2479,8 @@
     <string name="seismic_sbc_system">Seismic force-resisting system (Table 12-1)</string>
     <string name="seismic_sbc_inputs_note">Ss, S1 and TL are read from SBC 301-CR-2018 Figures 22-1, 22-2 and 22-4 for the site; Site Class D applies where soil data are not known (11.4.2.2). Equal story weights are assumed.</string>
     <string name="seismic_sbc_not_assessed">Not assessed</string>
+    <string name="fs_cover_exposure_title">Minimum cover by exposure (ECP 203-2025)</string>
+    <string name="fs_cover_fire_none">No fire requirement</string>
+    <string name="fs_cover_exposure_note">Minimum cover %1$d mm (%2$s). Exposure also needs fcu of at least %3$d MPa and w/c of at most %4$s. Fire cover applies to slabs only (Table 2-25, p.2-39).</string>
+    <string name="fs_cover_below_min">Entered cover is below the minimum of %1$d mm for this exposure.</string>
 </resources>
