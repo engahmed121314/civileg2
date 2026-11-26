@@ -541,15 +541,13 @@ class ECPPileFoundation : PileFoundationDesign {
 
         // K = Mu / (fcu * b * d²); K_bal from strain compatibility as in the footing engines
         val K = Mu / (fcu * b * d * d)
-        val epsilonY = fy / (200000.0 * GAMMA_S)
-        val aOverDBal = 0.9 * 0.003 / (0.003 + epsilonY)
-        val K_bal = (0.67 / GAMMA_C) * aOverDBal * (1.0 - aOverDBal / 2.0)
+        val K_bal = ECP2025Flexure.kLimit(fy)  // Eq 4-4 / Table 4-1
         if (K > K_bal) {
             warnings.add("Cap $label: K=${"%.3f".format(K)} > K_bal=${"%.3f".format(K_bal)}; increase the cap thickness")
         }
 
         // z = d * (0.5 + sqrt(0.25 - K/0.893))
-        val z = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
+        val z = ECP2025Flexure.leverArm(K, d)
 
         // As = Mu / (fy/gamma_s * z)
         val asRequired = Mu / (fy / GAMMA_S * z)

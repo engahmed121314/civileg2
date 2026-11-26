@@ -104,6 +104,7 @@ class ECPCombinedFooting {
         InputGuard.nonNegative("p1", p1)
         InputGuard.nonNegative("p2", p2)
         val warnings = mutableListOf<String>()
+        overReinforced = false
 
         // ==================== 1. Service Loads ====================
         // Approximate service loads (assuming dominant dead load; use average factor)
@@ -366,8 +367,9 @@ class ECPCombinedFooting {
         val steelWeight = longBottomWeight + longTopWeight + transWeight
 
         // ==================== 14. Final Safety Assessment ====================
+        if (overReinforced) warnings.add("Flexure: K exceeds Rmax/gamma_c (ECP 203-2025 Eq 4-4, Table 4-1) in at least one section; increase the thickness")
         val isSafe = oneWayShearSafe && punchingCol1Safe && punchingCol2Safe
-                && qMin >= 0 && longBottomAsMm2 > 0
+                && qMin >= 0 && longBottomAsMm2 > 0 && !overReinforced
 
         return CombinedFootingResult(
             footingLength = length,
@@ -409,6 +411,9 @@ class ECPCombinedFooting {
      * @param isFooting If true, uses footing-specific min steel ratio (0.15%)
      * @return Required steel area (mm^2)
      */
+    // Set by designFlexuralSteel when K exceeds Rmax/gamma_c (ECP 203-2025 Eq 4-4); read once per design() call.
+    private var overReinforced = false
+
     private fun designFlexuralSteel(
         mu: Double,
         b: Double,
@@ -429,13 +434,8 @@ class ECPCombinedFooting {
         val kBal = calculateKBalForFooting(fcu, fy)
 
         // Lever arm: z = d * (0.5 + sqrt(0.25 - K/0.893)) — 0.893 = γc/(2×0.67) per ECP 203
-        val discriminant = 0.25 - K / 0.893
-        val z = if (discriminant >= 0) {
-            d * (0.5 + sqrt(discriminant))
-        } else {
-            // Over-reinforced: use maximum lever arm limited by K_bal
-            d * (0.5 + sqrt(max(0.0, 0.25 - kBal / 0.893)))
-        }
+        val z = ECP2025Flexure.leverArm(min(K, kBal), d)
+        if (K > kBal) overReinforced = true
 
         // Required steel
         var asRequired = Mu / (fs * z)
@@ -457,15 +457,7 @@ class ECPCombinedFooting {
      * Uses strain compatibility per ECP 203 Clause 4-2-2-1.
      * For fcu=25, fy=360: K_bal ~ 0.186
      */
-    private fun calculateKBalForFooting(fcu: Double, fy: Double): Double {
-        val Es = 200000.0
-        val epsilonCu = 0.003
-        val epsilonY = fy / (Es * GAMMA_S)
-        val cOverD = epsilonCu / (epsilonCu + epsilonY)
-        val beta = 0.9  // ECP 203 K-method factor (consistent with K_bal derivation)
-        val aOverD = beta * cOverD
-        return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
-    }
+    private fun calculateKBalForFooting(fcu: Double, fy: Double): Double = ECP2025Flexure.kLimit(fy)
 
     /**
      * Check punching shear at a column per ECP 203 Clause 4-3-2.

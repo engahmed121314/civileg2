@@ -343,11 +343,9 @@ class ECPFooting : FootingDesign {
         val K = if (K_denom > 0) Mu / K_denom else 0.0
         InputGuard.finite("K", K)
 
-        // K_bal for tension-controlled - strain compatibility per ECP 203
-        val epsilonCu = 0.003
-        val epsilonY = fy / (200000.0 * GAMMA_S)
-        val aOverDBal = 0.9 * epsilonCu / (epsilonCu + epsilonY)
-        val K_bal = (0.67 / GAMMA_C) * aOverDBal * (1.0 - aOverDBal / 2.0)
+        // Single-reinforcement limit: ECP 203-2025 Eq 4-4 / Table 4-1, K <= Rmax/gamma_c (replaces the strain formula
+        // with an undocumented 0.9 factor, which was unconservative).
+        val K_bal = ECP2025Flexure.kLimit(fy)
 
         if (K > K_bal) {
             warnings.add(String.format("K=%.3f > K_bal=%.3f - زِد العمق الفعال", K, K_bal))
@@ -355,7 +353,7 @@ class ECPFooting : FootingDesign {
 
         // 2. حساب z (ذراع القوة)
         // z = d * (0.5 + sqrt(0.25 - K / 0.893))  — 0.893 = γc/(2×0.67) per ECP 203 K-method
-        val z = d * (0.5 + sqrt(max(0.0, 0.25 - K / 0.893)))
+        val z = ECP2025Flexure.leverArm(K, d)
 
         // 3. As = Mu / (fy/gamma_s * z)
         val asRequired = Mu / (fy / GAMMA_S * z)

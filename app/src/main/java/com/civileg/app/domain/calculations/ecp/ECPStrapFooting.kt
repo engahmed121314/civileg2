@@ -45,14 +45,9 @@ class ECPStrapFooting : StrapFootingDesign {
                 )
             },
             flexureAs = { mu, b, d, fcu, fy ->
-                val kBal = run {
-                    val epsY = fy / (200000.0 * GAMMA_S)
-                    val aOverD = 0.9 * 0.003 / (0.003 + epsY)
-                    (0.67 / ECP2025ConcreteShear.GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
-                }
                 val k = mu * 1e6 / (fcu * b * d * d)
-                if (k > kBal) Double.NaN
-                else mu * 1e6 / (fy / GAMMA_S * d * (0.5 + sqrt(max(0.0, 0.25 - k / 0.893))))
+                if (k > ECP2025Flexure.kLimit(fy)) Double.NaN  // Eq 4-4 / Table 4-1
+                else mu * 1e6 / (fy / GAMMA_S * ECP2025Flexure.leverArm(k, d))
             },
             beamQcu = 0.12 * sqrt(inputs.fcu / ECP2025ConcreteShear.GAMMA_C)
         )
