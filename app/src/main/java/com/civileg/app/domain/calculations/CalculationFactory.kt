@@ -228,7 +228,7 @@ object CalculationFactory {
         return when (code) {
             DesignCode.ECP -> ECPSeismic()
             DesignCode.ACI -> ACISeismic()
-            DesignCode.SBC -> SBCSeismic()
+            DesignCode.SBC -> SBCSeismic() // legacy, unverified factors: see SBCSeismic KDoc; use SBC301SeismicElf
         }
     }
 
