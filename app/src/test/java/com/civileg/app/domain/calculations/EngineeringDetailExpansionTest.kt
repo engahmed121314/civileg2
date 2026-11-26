@@ -360,6 +360,17 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `ECP isolated footing plan area matches the required area not its square over the aspect ratio`() {
+        // B = A/ratio and L = ratio*B gave B*L = A^2/ratio: 22.9 m2 for the 8 m2 shown in the report. Soil pressure was 35 kPa vs 150.
+        for (soil in listOf(100.0, 150.0, 250.0)) {
+            val r = engine.calculateFooting(type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, fcu = 25.0, fy = 360.0,
+                soil = soil, colB = 300.0, colT = 600.0, code = DesignCode.ECP)
+            assertTrue("soil=$soil q=${r.soilPressure} must not exceed allowable", r.soilPressure <= soil + 1e-6)
+            assertTrue("soil=$soil q=${r.soilPressure} implies an oversized footing (area ${r.width * r.length / 1e6} m2)", r.soilPressure >= 0.6 * soil)
+        }
+    }
+
+    @Test
     fun `footing property line limits are rejected not silently ignored`() {
         val e = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
             engine.calculateFooting(

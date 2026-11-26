@@ -369,7 +369,8 @@ fun FootingScreen(
                 item { SectionHeader(stringResource(R.string.slab_results), R.drawable.ic_calculator) }
                 
                 item {
-                    val ecoColor = if (res.isOptimal) Color(0xFF2E7D32) else Color(0xFFF57C00)
+                    // isOptimal is an unassessed default, never a verdict; the header follows the real safety checks only.
+                    val ecoColor = if (res.isSafe) Color(0xFFF57C00) else Color(0xFFC62828)
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
                         shape = RoundedCornerShape(16.dp)
@@ -382,12 +383,12 @@ fun FootingScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(if (res.isOptimal) Icons.Default.Verified else Icons.Default.Info, 
+                                        Icon(Icons.Default.Info, 
                                             contentDescription = null, tint = ecoColor)
                                         Spacer(Modifier.width(8.dp))
                                         AppText(
-                                            if (res.isOptimal) stringResource(R.string.footing_safe_economical) 
-                                            else stringResource(R.string.footing_safe_review),
+                                            if (res.isSafe) stringResource(R.string.footing_safe_review)
+                                            else stringResource(R.string.footing_unsafe_review),
                                             fontWeight = FontWeight.Bold,
                                             color = ecoColor
                                         )
