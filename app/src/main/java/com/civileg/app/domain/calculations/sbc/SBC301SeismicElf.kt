@@ -22,10 +22,11 @@ import kotlin.math.pow
  *  12.8.2.2 T <= Cu Ta (Table 12-6), Eq 12-18 Ta = Ct hn^x (Table 12-7), Eq 12-19 Ta = 0.1 N                    p.81, p.104
  *  Eq 12-21 to 12-23 vertical distribution, k = 1 for T <= 0.5 s, 2 for T >= 2.5 s, linear between            p.81
  *  Eq 12-24 story shear                                                                                           p.81
- *  Eq 12-26 delta_x = Cd delta_xe / Ie, Table 12-8 allowable drift                                              p.83, p.104
+ *  Eq 12-26 delta_x = Cd delta_xe / Ie, Table 12-8 allowable drift                                              p.82, p.104
  *  Eq 12-27 stability coefficient theta, Eq 12-28 theta_max = 0.5/(beta Cd) <= 0.25                             p.83
  *  Table 12-1 R, Omega0, Cd, height limits (subset of rows below)                                                p.98-99
  *
+ * Story drift and P-delta checks on user-entered elastic deflections: [SbcDrift301] (12.8.6, 12.8.7, 12.12.1, Table 12-8).
  * NOT ASSESSED (no calculation is made, the result says so): site-specific ground motion (Chapter 21), irregularity checks (Tables 12-2,
  * 12-3), redundancy factor rho (12.3.4, entered by the user, default 1.0 only where the code says so), torsion (12.8.4.3 to 12.8.4.5),
  * modal response spectrum analysis, diaphragm design, footnotes of Table 12-1, the drift itself (needs an elastic analysis, 12.8.6).
@@ -187,14 +188,14 @@ object SbcSeismic301 {
         else -> 1.0 + (t - 0.5) / 2.0
     }
 
-    /** Table 12-8 p.104. Returns the allowable story drift ratio (of hsx) for the "all other structures" row. */
+    /** Table 12-8 (p.104), "all other structures" row. The full table with every row is [SbcDriftStructureType]. */
     fun allowableDriftRatioAllOthers(risk: SbcRiskCategory): Double = when (risk) {
         SbcRiskCategory.I, SbcRiskCategory.II -> 0.020
         SbcRiskCategory.III -> 0.015
         SbcRiskCategory.IV -> 0.010
     }
 
-    /** Eq 12-26 p.83. */
+    /** Eq 12-26 (p.82). The full story-drift check on analysis deflections is [SbcDrift301.check]. */
     fun amplifiedDeflection(deltaXe: Double, cd: Double, ie: Double): Double = cd * deltaXe / ie
 
     /** Eq 12-27 and 12-28 p.83. beta is the shear demand/capacity ratio, 1.0 is permitted as conservative. */
@@ -285,7 +286,7 @@ object SbcSeismic301 {
         val na = mutableListOf(
             "Irregularity checks (Tables 12-2, 12-3) and the redundancy factor (12.3.4)",
             "Torsion (12.8.4.3 to 12.8.4.5)",
-            "Story drift and P-delta: need the elastic analysis deflections (12.8.6, 12.8.7); formulas 12-26 to 12-28 are available but no deflection is invented",
+            "The elastic deflections for drift and P-delta (12.8.6.5): they come from the structural analysis; the checks of entered deflections are SbcDrift301 (Eq 12-26 to 12-28, Table 12-8)",
             "Footnotes of Table 12-1 and the detailing chapter 14 requirements",
             "Site-specific ground motion (Chapter 21)"
         )
