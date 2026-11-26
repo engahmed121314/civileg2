@@ -186,7 +186,9 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     }
 
     /** Crops the uniform background margin of a captured view so a small drawing in a tall canvas is not shrunk to a sliver. */
-    private fun cropToContent(src: Bitmap): Bitmap {
+    private fun cropToContent(input: Bitmap): Bitmap {
+        // Captured views can be HARDWARE bitmaps, whose pixels cannot be read: work on a software copy.
+        val src = if (input.config == Bitmap.Config.HARDWARE) (input.copy(Bitmap.Config.ARGB_8888, false) ?: return input) else input
         val w = src.width; val h = src.height
         if (w < 16 || h < 16) return src
         val bg = src.getPixel(2, 2)
