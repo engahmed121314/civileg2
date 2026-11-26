@@ -270,6 +270,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         document.add(Paragraph("\nX-Bracing (B1)").setFontSize(12f).setBold().setFontColor(PRIMARY))
         document.add(LineSeparator(SolidLine(0.5f)).setMarginBottom(5f))
         if (!b.issued) { document.add(Paragraph(b.reason ?: "NOT ISSUED").setFontSize(9f)); return }
+        document.add(Paragraph("Selected design code: ${result.resultsByCode}. Code-specific bracing checks (load combinations, brace slenderness limit, capacity, connections) are NOT ASSESSED: no sourced steel code text is available for any code. The lines below are geometry and statics only.").setFontSize(8f).setBold())
         b.lines.forEach { document.add(Paragraph(it).setFontSize(8f)) }
         try {
             val bmp = PdfDrawingGenerator.generateBracingDrawing(b)

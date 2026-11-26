@@ -467,6 +467,7 @@ fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
             }
             res.bracing?.let { br ->
                 if (br.issued) {
+                    AppText("Selected design code: ${res.resultsByCode}. Code-specific bracing checks are NOT ASSESSED (no sourced steel code text); geometry and statics only.", fontSize = 11.sp)
                     ResultRow("X-bracing B1 (bays ${br.bracedBays.joinToString(",")}${if (br.usedDefaultBays) ", default" else ""})", "${br.sectionName}, ${br.braceCount} diagonals")
                     ResultRow("Brace length / angle", "${String.format("%.2f", br.lengthM)} m / ${String.format("%.1f", br.angleDeg)} deg")
                     ResultRow("Bracing weight (geometry only)", "${String.format("%.0f", br.totalWeightKg)} kg")
