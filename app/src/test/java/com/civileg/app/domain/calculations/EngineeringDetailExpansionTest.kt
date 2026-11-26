@@ -118,15 +118,21 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
-    fun `flat slab steel quantity has a plausible magnitude in every code`() {
+    fun `flat slab steel weight follows the dimensional hand calculation in every code`() {
+        // Square panel with equal column sizes: ln_x = ln_y, so the engines' Y steel equals the X steel.
+        // The strip areas are totals in mm2 over each strip width; mm2 x mm = mm3; / 1e9 = m3; x 7850 kg/m3.
+        val input = FlatSlabInput(lx = 6000.0, ly = 6000.0, columnWidth = 400.0, columnDepth = 400.0)
         val results = listOf(
-            "ECP" to ECPFlatSlab().design(FlatSlabInput()),
-            "ACI" to ACIFlatSlab().design(FlatSlabInput()),
-            "SBC" to com.civileg.app.domain.calculations.sbc.SBCFlatSlab().design(FlatSlabInput())
+            "ECP" to ECPFlatSlab().design(input),
+            "ACI" to ACIFlatSlab().design(input),
+            "SBC" to com.civileg.app.domain.calculations.sbc.SBCFlatSlab().design(input)
         )
         for ((name, r) in results) {
-            val density = r.steelWeightPerPanel / r.concreteVolumePerPanel
-            assertTrue("$name steel density $density kg/m3 is outside 10..400 (a unit error gave ~1000x)", density in 10.0..400.0)
+            val asX = r.columnStripTopRebar.providedArea + r.columnStripBotRebar.providedArea +
+                r.middleStripTopRebar.providedArea + r.middleStripBotRebar.providedArea
+            val expectedKg = 2.0 * asX * (6000.0 + 6000.0) / 1e9 * 7850.0
+            assertEquals("$name steel kg/panel", expectedKg, r.steelWeightPerPanel, 1e-6 * expectedKg + 1e-9)
+            assertTrue("$name steel must be a few hundred kg for a 36 m2 panel, not 1000x", r.steelWeightPerPanel < 5000.0)
         }
     }
 
