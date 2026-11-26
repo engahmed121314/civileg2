@@ -683,7 +683,11 @@ class CalculatorEngine @Inject constructor(
             weight = section.weight,
             cost = 0.0,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            // Propagate the engine's completeness flag: a noncompact/slender section whose
+            // flexure used Zx without a local-buckling reduction is not fully assessed.
+            assessmentComplete = beam.assessmentComplete,
+            incompleteReasons = beam.incompleteReasons
         )
     }
 
