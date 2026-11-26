@@ -453,7 +453,7 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
                 if tap_text(calc, prefix + "-calc"): got = True; break
                 scroll_up(2)
             log.append((prefix + "_calc", got)); time.sleep(3)
-            sweep(prefix + "-res", 4)
+            sweep(prefix + "-res", 9 if prefix in ("cp-fs", "cp-strap") else 4)
         except Exception as e:
             log.append((prefix + "_exception", repr(e)))
     for blk in (footing_block, stair_block, pile_block):
