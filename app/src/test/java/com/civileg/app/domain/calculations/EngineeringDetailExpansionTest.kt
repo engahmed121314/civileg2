@@ -360,14 +360,42 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
-    fun `ECP isolated footing plan area matches the required area not its square over the aspect ratio`() {
-        // B = A/ratio and L = ratio*B gave B*L = A^2/ratio: 22.9 m2 for the 8 m2 shown in the report. Soil pressure was 35 kPa vs 150.
-        for (soil in listOf(100.0, 150.0, 250.0)) {
-            val r = engine.calculateFooting(type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, fcu = 25.0, fy = 360.0,
-                soil = soil, colB = 300.0, colT = 600.0, code = DesignCode.ECP)
-            assertTrue("soil=$soil q=${r.soilPressure} must not exceed allowable", r.soilPressure <= soil + 1e-6)
-            assertTrue("soil=$soil q=${r.soilPressure} implies an oversized footing (area ${r.width * r.length / 1e6} m2)", r.soilPressure >= 0.6 * soil)
+    fun `ECP isolated footing plan size equals the independently computed B and L`() {
+        // Hand calculation: P_service = P / factor; A = P_service / (q_allow - 25 kN/m3 * t); ratio = sqrt(colT/colB * 1.2);
+        // B = sqrt(A/ratio), L = ratio*B, each rounded UP to 50 mm. t = 0.6 m (the engine's initial depth).
+        // Earlier B = A/ratio gave B*L = A^2/ratio: 22.9 m2 for an 8 m2 requirement.
+        val factor = com.civileg.app.domain.entities.LoadCombination.DEAD_LIVE.getFactorForCode(DesignCode.ECP)
+        for ((p, soil, colB, colT) in listOf(
+            listOf(1200.0, 150.0, 300.0, 600.0), listOf(1200.0, 250.0, 300.0, 600.0),
+            listOf(800.0, 100.0, 400.0, 400.0), listOf(2000.0, 200.0, 300.0, 500.0)
+        )) {
+            val r = engine.calculateFooting(type = CalculatorEngine.FootingType.ISOLATED, p = p, fcu = 25.0, fy = 360.0,
+                soil = soil, colB = colB, colT = colT, code = DesignCode.ECP)
+            val area = (p / factor) / (soil - 25.0 * 0.6)
+            val ratio = Math.sqrt(colT / colB * 1.2)
+            val b = Math.sqrt(area / ratio)
+            val expectedB = Math.ceil(b * 1000.0 / 50.0) * 50.0
+            val expectedL = Math.ceil(ratio * b * 1000.0 / 50.0) * 50.0
+            assertEquals("P=$p soil=$soil width", expectedB, r.width, 1e-9)
+            assertEquals("P=$p soil=$soil length", expectedL, r.length, 1e-9)
+            assertTrue("area ${r.width * r.length / 1e6} must cover required $area", r.width * r.length / 1e6 >= area - 1e-9)
+            assertTrue("area ${r.width * r.length / 1e6} must stay within the 50 mm rounding of $area", r.width * r.length / 1e6 <= area * 1.25)
         }
+    }
+
+    @Test
+    fun `ECP footing effective depth follows the bar diameter actually selected`() {
+        // d (mean of the two layers) = t - cover - 0.75*dia. The engine must not keep a fixed 10 mm allowance when it steps the diameter up.
+        val res = com.civileg.app.domain.calculations.ecp.ECPFooting().designIsolatedFooting(
+            fcu = 25.0, fy = 360.0, columnWidth = 300.0, columnDepth = 600.0, axialLoad = 1200.0, momentX = 0.0, momentY = 0.0,
+            soilBearingCapacity = 150.0, footingDepth = 600.0,
+            loadCombination = com.civileg.app.domain.entities.LoadCombination.DEAD_LIVE,
+            constraints = com.civileg.app.domain.calculations.base.BoundaryConstraints()
+        )
+        val d = Regex("d=([0-9]+) mm").find(res.codeNotes.first { it.contains("d=") && it.startsWith("B=") })!!.groupValues[1].toDouble()
+        val dia = res.reinforcement.barDiameter
+        assertTrue("d=$d must not exceed t - cover - 0.75*dia for the displayed dia $dia", d <= 600.0 - 50.0 - 0.75 * dia + 1.0)
+        assertTrue("flexure row provides at least the requirement", res.reinforcement.astProvided >= res.reinforcement.astRequired - 1e-6)
     }
 
     @Test
