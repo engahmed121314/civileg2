@@ -28,5 +28,5 @@ object Constants {
     // Maximum crack widths (mm)
     const val CRACK_WIDTH_NORMAL = 0.3
     const val CRACK_WIDTH_AGGRESSIVE = 0.2
-    const val CRACK_WIDTH_WATER_RETAINING = 0.2  // ECP 203: 0.2mm max for water-retaining structures
+    const val CRACK_WIDTH_WATER_RETAINING = 0.15  // ECP 203-2025 Table 4-12 (p.4-69): section 3 (water tanks) 0.15 mm
 }

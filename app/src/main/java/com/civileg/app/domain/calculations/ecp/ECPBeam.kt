@@ -297,15 +297,17 @@ class ECPBeam : BeamDesign {
         // For more accurate deflection, use cracked section properties:
         // δ ≈ (5 × w × L^4) / (384 × E_c × I_cr) for simply supported
         // Here we use the simplified ratio-based estimate
+        // ECP 203-2025 Eq 4-75 (p.4-63): cantilevers L/450 (stricter); Eq 4-74: beams and slabs L/250.
+        val deflectionDivisor = if (supportCondition == SupportCondition.CANTILEVER) 450.0 else 250.0
         val calculatedDeflection = if (ratio > 1.0) {
             // تقدير تقريبي للانحراف الزائد
-            (span * 1000) / 250.0 * ratio  // mm
+            (span * 1000) / deflectionDivisor * ratio  // mm
         } else {
-            (span * 1000) / 250.0 * ratio  // Scale proportionally even when OK
+            (span * 1000) / deflectionDivisor * ratio  // Scale proportionally even when OK
         }
         InputGuard.finite("calculatedDeflection", calculatedDeflection)
         
-        val allowableDeflection = getDeflectionLimit(span)
+        val allowableDeflection = (span * 1000) / deflectionDivisor
         
         return DeflectionCheckResult(
             calculatedDeflection = calculatedDeflection,

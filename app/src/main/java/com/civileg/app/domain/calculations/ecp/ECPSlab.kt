@@ -260,7 +260,7 @@ class ECPSlab : SlabDesign {
     override fun getMinSlabThickness(span: Double, supportCondition: SupportCondition): Double {
         // ECP 203-2025 6-2-1-2-1 (p.6-4): one-way t,min = L/30 simple, L/35 continuous one end, L/40 continuous both ends;
         // not less than 80 mm (static loads). CONTINUOUS has no end-count here, so L/35 is used (conservative vs L/40).
-        // CANTILEVER: clause not read, the earlier L/10 value is unsourced (NOT ASSESSED by the code).
+        // CANTILEVER 10: ECP 203-2025 Table 4-10 (p.4-65), solid slab cantilever Ln/t = 10, valid only for cantilevers shorter than 2 m and fy 420 (deflection-skip basis, not clause 6-2-1-2-1).
         val ratio = when (supportCondition) {
             SupportCondition.SIMPLY_SUPPORTED -> 30.0
             SupportCondition.CONTINUOUS -> 35.0

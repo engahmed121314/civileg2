@@ -24,7 +24,7 @@ class ECPTank : TankDesign {
         private const val MIN_COVER = 50.0    // غطاء أدنى للمنشآت المائية mm
         private const val MIN_WALL_THICKNESS = 200.0 // سمك أدنى للجدران mm
         private const val MIN_BASE_THICKNESS = 250.0 // سمك أدنى للقاعدة mm
-        private const val CRACK_WIDTH_LIMIT = 0.2 // أقصى عرض شق mm
+        private const val CRACK_WIDTH_LIMIT = 0.15 // ECP 203-2025 Table 4-12 (p.4-69): section 3 (water tanks) wk,max = 0.15 mm
         private const val MIN_RHO_WATER = 0.0025 // نسبة تسليح أدنى للمنشآت المائية
     }
 
@@ -239,7 +239,7 @@ class ECPTank : TankDesign {
         val crackWidth = 0.0001 * steelStress * max(2.0, (wallThickness - MIN_COVER) / barDiameter)
         safetyChecks.add(TankSafetyCheck(
             "Crack Width", crackWidth, CRACK_WIDTH_LIMIT, "mm",
-            crackWidth <= CRACK_WIDTH_LIMIT, "ECP 203 Sec. 8: Max crack width 0.2mm for water-retaining structures"
+            crackWidth <= CRACK_WIDTH_LIMIT, "ECP 203-2025 Table 4-12 (p.4-69): section 3, max crack width 0.15 mm for water tanks. The crack width estimate itself is not the 2025 Eq 4-83 method (NOT ASSESSED)."
         ))
 
         // فحص نسبة التسليح
