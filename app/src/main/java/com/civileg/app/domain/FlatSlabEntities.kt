@@ -75,7 +75,14 @@ data class FlatSlabResult(
     val warnings: List<String> = emptyList(),
     val codeNotes: List<String> = emptyList(),
     val safetyChecks: List<SafetyCheckItem> = emptyList(),
-    val calculationSteps: List<com.civileg.app.domain.entities.CalculationStep> = emptyList()
+    val calculationSteps: List<com.civileg.app.domain.entities.CalculationStep> = emptyList(),
+    /** Y-direction reinforcement (null for engines that design X only). */
+    val columnStripTopRebarY: RebarResult? = null,
+    val columnStripBotRebarY: RebarResult? = null,
+    val middleStripTopRebarY: RebarResult? = null,
+    val middleStripBotRebarY: RebarResult? = null,
+    /** false = deflection was NOT ASSESSED; deflectionOk/deflection/allowableDeflection are then meaningless. */
+    val deflectionAssessed: Boolean = true
 )
 
 data class SafetyCheckItem(
