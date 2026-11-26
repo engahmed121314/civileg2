@@ -322,10 +322,15 @@ fun WaffleSlabScreen(
 
                     // Safety Status Gauge
                     item {
-                        SafetyStatusCard(
-                            utilizationRatio = res.utilizationRatio,
-                            isSafe = res.isSafe,
-                            title = stringResource(R.string.waffle_slab_safety_title, designCode)
+                        ResultDataCard(
+                            stringResource(R.string.waffle_slab_safety_title, designCode),
+                            listOf(
+                                "Verdict" to res.status.label,
+                                "Utilization (assessed checks)" to String.format("%.1f%%", res.utilizationRatio * 100),
+                                "Not assessed" to (if (res.notAssessed.isEmpty()) "none" else res.notAssessed.joinToString("\n"))
+                            ),
+                            icon = Icons.Default.Shield,
+                            accentColor = waffleStatusColor(res.status)
                         )
                     }
 
@@ -337,13 +342,12 @@ fun WaffleSlabScreen(
                                 listOf(
                                     stringResource(R.string.waffle_slab_bottom_bars) to rib.flexureReinforcement.barString,
                                     "As prov/req" to String.format("%.0f / %.0f mm²", rib.flexureReinforcement.providedArea, rib.flexureReinforcement.requiredArea),
-                                    stringResource(R.string.waffle_slab_shear_reinf) to String.format("φ%.0f @%.0f mm", rib.shearReinforcement.stirrupDiameter, rib.shearReinforcement.stirrupSpacing),
-                                    stringResource(R.string.waffle_slab_shear_reinf) to String.format("φ%.0f @%.0f mm", rib.shearReinforcement.stirrupDiameter, rib.shearReinforcement.stirrupSpacing),
+                                    stringResource(R.string.waffle_slab_shear_reinf) to (if (rib.shearReinforcement.requiredShearReinforcement > 0.0) String.format("Av/s %.3f mm²/mm required, not detailed", rib.shearReinforcement.requiredShearReinforcement) else "not required (Vu ≤ φVc)"),
                                     "Rib Utilization" to String.format("%.1f%%", rib.utilizationRatio * 100),
-                                    "Rib Safe" to if (rib.isSafe) "PASS ✓" else "FAIL ✗"
+                                    "Rib check" to rib.status.label
                                 ),
                                 icon = Icons.Default.ViewColumn,
-                                accentColor = if (rib.isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)
+                                accentColor = waffleStatusColor(rib.status)
                             )
                         }
                     }
@@ -354,15 +358,15 @@ fun WaffleSlabScreen(
                             ResultDataCard(
                                 stringResource(R.string.waffle_slab_solid_head_design),
                                 listOf(
-                                    "Flexure Rebar" to head.flexureReinforcement.barString,
+                                    "Flexure Rebar" to (if (head.flexureReinforcement.bars > 0) head.flexureReinforcement.barString + " (indicative)" else "not designed"),
                                     "As prov/req" to String.format("%.0f / %.0f mm²", head.flexureReinforcement.providedArea, head.flexureReinforcement.requiredArea),
                                     "Punching Vu" to String.format("%.1f kN", head.punchingShear.vu),
                                     "Punching Vc" to String.format("%.1f kN", head.punchingShear.vc),
-                                    "Punching" to if (head.punchingShear.isSafe) "PASS ✓" else "FAIL ✗",
-                                    "Head Safe" to if (head.isSafe) "PASS ✓" else "FAIL ✗"
+                                    "Punching" to head.punchingShear.status.label,
+                                    "Head check" to head.status.label
                                 ),
                                 icon = Icons.Default.Dashboard,
-                                accentColor = if (head.isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)
+                                accentColor = waffleStatusColor(head.status)
                             )
                         }
                     }
@@ -376,10 +380,10 @@ fun WaffleSlabScreen(
                                     "Vu" to String.format("%.1f kN", punch.vu),
                                     "Vc" to String.format("%.1f kN", punch.vc),
                                     "Utilization" to String.format("%.1f%%", punch.utilizationRatio * 100),
-                                    "Status" to if (punch.isSafe) "PASS ✓" else "FAIL ✗"
+                                    "Status" to punch.status.label
                                 ),
                                 icon = Icons.Default.Shield,
-                                accentColor = if (punch.isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)
+                                accentColor = waffleStatusColor(punch.status)
                             )
                         }
                     }
@@ -389,15 +393,9 @@ fun WaffleSlabScreen(
                         item {
                             ResultDataCard(
                                 stringResource(R.string.waffle_slab_deflection_check),
-                                listOf(
-                                    "Immediate" to String.format("%.2f mm", defl.immediate),
-                                    "Long-Term" to String.format("%.2f mm", defl.longTerm),
-                                    "Allowable" to String.format("%.2f mm", defl.allowable),
-                                    "Ratio" to String.format("%.2f", defl.ratio),
-                                    "Status" to if (defl.isSafe) "PASS ✓" else "FAIL ✗"
-                                ),
+                                listOf("Status" to "NOT ASSESSED (no supported method)"),
                                 icon = Icons.Default.Straighten,
-                                accentColor = if (defl.isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)
+                                accentColor = waffleStatusColor(com.civileg.app.domain.calculations.base.CheckStatus.NOT_ASSESSED)
                             )
                         }
                     }
@@ -600,4 +598,11 @@ fun WaffleSlabScreen(
             }
         }
     }
+}
+
+
+private fun waffleStatusColor(status: com.civileg.app.domain.calculations.base.CheckStatus): Color = when (status) {
+    com.civileg.app.domain.calculations.base.CheckStatus.PASS -> Color(0xFF2E7D32)
+    com.civileg.app.domain.calculations.base.CheckStatus.FAIL -> Color(0xFFE53935)
+    else -> Color(0xFFF9A825)
 }

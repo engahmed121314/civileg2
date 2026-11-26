@@ -3,6 +3,8 @@ package com.civileg.app.domain.calculations.ecp
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign
+import com.civileg.app.domain.calculations.base.CheckStatus
+import com.civileg.app.domain.calculations.base.WaffleChecks
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabInput
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.RibDesignResult
@@ -113,13 +115,15 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         )
 
         // ── 6. Punching Shear Check ──────────────────────────────────
+        val totalDepth = input.ribHeight + input.toppingThickness
+        val punchVu = WaffleChecks.punchingDemand(wu, input.lx, input.ly, input.columnWidth, totalDepth, COVER)
         val punchingShearCheck = checkPunchingShear(
-            fcu = input.fcu,
-            fy = input.fy,
+            fcu = input.fcu, fy = input.fy,
             solidHeadSize = input.solidHeadSize,
             columnSize = input.columnWidth,
-            axialLoad = input.liveLoad * input.lx * input.ly / 1000000.0,
-            shear = 0.0
+            axialLoad = punchVu,
+            shear = punchVu,
+            totalDepth = totalDepth
         )
 
         // ── 7. Deflection Check ──────────────────────────────────────
@@ -145,23 +149,37 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         val providedSteel = ribDesign.flexureReinforcement.providedArea
         val steelWeight = ((numRibsX * providedSteel * (input.ly / 1000.0) / 1e6) + (numRibsY * providedSteel * (input.lx / 1000.0) / 1e6)) * 7850.0
 
-        val isSafe = ribDesign.isSafe && solidHeadDesign.isSafe && punchingShearCheck.isSafe && deflectionCheck.isSafe
+        val status = if (ribDesign.status == CheckStatus.FAIL || punchingShearCheck.status == CheckStatus.FAIL) CheckStatus.FAIL else CheckStatus.PRELIMINARY
+        val notAssessed = mutableListOf(
+            "Deflection: no supported method (the earlier fixed-section estimate was removed)",
+            "Solid head flexure and reinforcement",
+            "Punching at the solid-head edge, moment transfer, edge and corner columns"
+        )
+        if (ribDesign.status == CheckStatus.NOT_ASSESSED) {
+            notAssessed.add("Rib flexure and shear: ECP 203 clauses are not in the supplied reference text; values are indicative only")
+        }
+        if (punchingShearCheck.status == CheckStatus.NOT_ASSESSED) {
+            notAssessed.add("Punching shear: ECP 203 clauses are not in the supplied reference text")
+        }
         val punchUtil = if (punchingShearCheck.vc > 0) punchingShearCheck.vu / punchingShearCheck.vc else 0.0
-        val deflUtil = if (deflectionCheck.allowable > 0) deflectionCheck.longTerm / deflectionCheck.allowable else 0.0
-        val utilizationRatio = maxOf(ribDesign.utilizationRatio, punchUtil, deflUtil)
+        val utilizationRatio = maxOf(ribDesign.utilizationRatio, punchUtil)
 
-        if (!isSafe) warnings.add("⚠ Waffle slab failed one or more ECP 203 checks")
-        if (utilizationRatio > 1.0) warnings.add("⚠ Utilization ratio = ${String.format("%.2f", utilizationRatio)} > 1.0")
+        warnings.addAll(ribDesign.warnings)
+        if (punchingShearCheck.note.isNotEmpty()) codeNotes.add("Punching: " + punchingShearCheck.note)
+        codeNotes.addAll(ribDesign.notes)
+        if (status == CheckStatus.FAIL) warnings.add("FAIL: one or more computed ECP 203 checks failed")
+        if (utilizationRatio > 1.0) warnings.add("Utilization ratio = ${String.format("%.2f", utilizationRatio)} > 1.0")
+        notAssessed.forEach { warnings.add("NOT ASSESSED: " + it) }
 
-        val solidHeadUtil = if (solidHeadDesign.punchingShear.vc > 0)
-            solidHeadDesign.punchingShear.vu / solidHeadDesign.punchingShear.vc else 0.0
-        safetyChecks.add(SafetyCheckItem("Rib flexure", ribDesign.utilizationRatio, 1.0, "ECP 203 §4-2", passed = ribDesign.isSafe))
-        safetyChecks.add(SafetyCheckItem("Solid head", solidHeadUtil, 1.0, "ECP 203 §6-4", passed = solidHeadDesign.isSafe))
-        safetyChecks.add(SafetyCheckItem("Punching shear", punchUtil, 1.0, "ECP 203 §4-3", passed = punchingShearCheck.isSafe))
-        safetyChecks.add(SafetyCheckItem("Deflection", deflUtil, 1.0, "ECP 203 §6-3", passed = deflectionCheck.isSafe))
+        if (ribDesign.status != CheckStatus.NOT_ASSESSED) {
+            safetyChecks.add(SafetyCheckItem("Rib flexure and shear", ribDesign.utilizationRatio, 1.0, "ECP 203 (" + ribDesign.status.label + ")", passed = ribDesign.isSafe))
+        }
+        if (punchingShearCheck.status != CheckStatus.NOT_ASSESSED) {
+            safetyChecks.add(SafetyCheckItem("Punching shear (concentric)", punchUtil, 1.0, "ECP 203 (" + punchingShearCheck.status.label + ")", passed = punchingShearCheck.isSafe))
+        }
 
         return WaffleSlabResult(
-            isSafe = isSafe,
+            isSafe = false, // never SAFE: deflection and solid head are not assessed
             utilizationRatio = utilizationRatio,
             warnings = warnings,
             codeNotes = codeNotes,
@@ -172,7 +190,10 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
             deflectionCheck = deflectionCheck,
             concreteVolume = concreteVolume,
             steelWeight = steelWeight,
-            cost = concreteVolume * 500.0 + steelWeight * 1.5
+            cost = concreteVolume * 500.0 + steelWeight * 1.5,
+            status = status,
+            notAssessed = notAssessed,
+            deflectionAssessed = false
         )
     }
 
@@ -190,73 +211,23 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         totalLoad: Double,
         loadCombination: LoadCombination
     ): WaffleSlabDesign.RibDesignResult {
-        // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("ribWidth", ribWidth)
         InputGuard.positive("ribHeight", ribHeight)
         InputGuard.positive("ribSpacing", ribSpacing)
         InputGuard.positive("clearSpan", clearSpan)
+        InputGuard.nonNegative("totalLoad", totalLoad)
         InputGuard.notNull("loadCombination", loadCombination)
 
-        val warnings = mutableListOf<String>()
-        val codeNotes = mutableListOf<String>()
-
-        val fc = fcu / GAMMA_C  // cylinder strength
-        val phi = PHI_FLEXURE
-
-        // Effective depth
-        val d = ribHeight - COVER - 10.0
-
-        // Factored moment
-        val wu = totalLoad * 1.4 + 0.0 // simplified
-        val mu = totalLoad * 1.4 * clearSpan * clearSpan / 8.0 / 1000.0 // kN.m
-
-        // Rn-ρ method
-        val Mu = mu * 1e6 // N.mm
-        val Rn = Mu / (PHI_FLEXURE * ribWidth * d * d)
-        val m = fy / (0.85 * fc)
-        val rho = (1.0 - sqrt(max(0.0, 1.0 - 2.0 * m * Rn / fy))) / m
-        val As = rho * ribWidth * d
-
-        // Min steel per ECP 203
-        val minAs = max(0.15 / 100.0 * ribWidth * d, 1.3 * As / 100.0)
-
-        val AsProvided = maxOf(As, minAs)
-
-        // Bar selection
-        val barDia = 16.0
-        val barArea = PI * 16.0 * 16.0 / 4.0
-        val nBars = ceil(AsProvided / barArea).toInt().coerceIn(2, 6)
-
-        // Shear
-        val Vu = totalLoad * 1.4 * clearSpan / 2.0
-        val vc = 0.24 * sqrt(fc) * ribWidth * d / 1000.0
-        val phiVc = PHI_SHEAR * vc
-
-        val flexure = RebarResult(
-            bars = nBars,
-            diameter = 16,
-            spacing = 200,
-            providedArea = AsProvided,
-            requiredArea = As,
-            ratio = AsProvided / (ribWidth * d)
-        )
-        val shear = ShearReinforcementResult(
-            concreteShearCapacity = vc,
-            requiredShearReinforcement = 0.0,
-            providedShearReinforcement = 0.0,
-            isSafe = true,
-            utilizationRatio = 0.5,
-            warnings = emptyList(),
-            codeNotes = emptyList()
-        )
-
-        return WaffleSlabDesign.RibDesignResult(
-            flexureReinforcement = flexure,
-            shearReinforcement = shear,
-            isSafe = true,
-            utilizationRatio = 0.7
+        // totalLoad is the FACTORED panel load Wu in kN/m2 (already combined by design()); it is not factored again.
+        val fc = fcu / GAMMA_C
+        return WaffleChecks.ribDesign(
+            fc = fc, fy = fy, bw = ribWidth, h = ribHeight, ribSpacing = ribSpacing, spanMm = clearSpan,
+            wuPanel = totalLoad, cover = COVER, phiFlex = PHI_FLEXURE, phiShear = PHI_SHEAR,
+            vcCoef = 0.24, vsMaxCoef = null, beta1 = null,
+            minAs = { _, b, dd -> max(0.15 / 100.0 * b * dd, 0.0) },
+            passStatus = CheckStatus.NOT_ASSESSED, codeRef = "ECP 203"
         )
     }
 
@@ -273,46 +244,13 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         axialLoad: Double,
         moment: Double
     ): WaffleSlabDesign.SolidHeadDesignResult {
-        // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("solidHeadSize", solidHeadSize)
         InputGuard.positive("columnSize", columnSize)
         InputGuard.nonNegative("axialLoad", axialLoad)
-
-        val warnings = mutableListOf<String>()
-        val codeNotes = mutableListOf<String>()
-
-        val d = 200.0 - COVER - 10.0
-        val b = 1000.0
-
-        val flexure = RebarResult(
-            bars = 8,
-            diameter = 16,
-            spacing = 150,
-            providedArea = 1608.0,
-            requiredArea = 1000.0,
-            ratio = 0.008
-        )
-
-        val punching = PunchingShearCheck(
-            vu = 100.0, vc = 200.0, isSafe = true, utilizationRatio = 0.5
-        )
-
-        return WaffleSlabDesign.SolidHeadDesignResult(
-            flexureReinforcement = RebarResult(
-                bars = 8,
-                diameter = 16,
-                spacing = 150,
-                providedArea = 1608.0,
-                requiredArea = 1000.0,
-                ratio = 0.008
-            ),
-            punchingShear = PunchingShearCheck(
-                vu = 100.0, vc = 200.0, isSafe = true, utilizationRatio = 0.5
-            ),
-            isSafe = true
-        )
+        // No supported solid-head method: report NOT ASSESSED with no adopted bars (no fixed or clamped values).
+        return WaffleChecks.solidHeadNotAssessed()
     }
 
     // ════════════════════════════════════════════════════════════════════════════════════
@@ -325,33 +263,18 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         solidHeadSize: Double,
         columnSize: Double,
         axialLoad: Double,
-        shear: Double
+        shear: Double,
+        totalDepth: Double
     ): WaffleSlabDesign.PunchingShearCheck {
-        // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("fcu", fcu)
-        InputGuard.positive("solidHeadSize", solidHeadSize)
         InputGuard.positive("columnSize", columnSize)
-        InputGuard.nonNegative("axialLoad", axialLoad)
-
-        val warnings = mutableListOf<String>()
-        val codeNotes = mutableListOf<String>()
-
+        InputGuard.nonNegative("shear", shear)
+        // `shear` is the factored punching demand Vu in kN; totalDepth is the slab depth at the column in mm.
         val fc = fcu / GAMMA_C
-        val bo = 4.0 * (solidHeadSize + columnSize) / 2.0
-        val d = 200.0 - COVER - 10.0
-
-        val beta = max(columnSize, solidHeadSize) / min(solidHeadSize, columnSize).coerceAtLeast(1.0)
-        val vc1 = 0.31 * sqrt(fc) * bo * d / 1000.0
-        val vc2 = 0.15 * (1.0 + 2.0 / beta) * sqrt(fc) * bo * d / 1000.0
-        val vc3 = 0.08 * (2.0 + 40.0 * d / bo) * sqrt(fc) * bo * d / 1000.0
-        val vc = minOf(vc1, vc2, vc3) * PHI_SHEAR
-
-        val vu = 100.0
-        val isSafe = vu <= vc
-
-        return PunchingShearCheck(
-            vu = vu, vc = vc, isSafe = isSafe,
-            utilizationRatio = if (vc > 0) vu / vc else 2.0
+        return WaffleChecks.punching(
+            columnMm = columnSize, totalDepthMm = totalDepth, cover = COVER, vuKN = shear, phiShear = PHI_SHEAR,
+            nominalVc = { bo, d, beta -> minOf(0.31 * sqrt(fc) * bo * d / 1000.0, 0.15 * (1.0 + 2.0 / beta) * sqrt(fc) * bo * d / 1000.0, 0.08 * (2.0 + 40.0 * d / bo) * sqrt(fc) * bo * d / 1000.0) },
+            passStatus = CheckStatus.NOT_ASSESSED
         )
     }
 
@@ -369,34 +292,10 @@ class ECPWaffleSlabDesign : WaffleSlabDesign {
         providedAs: Double,
         loadCombination: LoadCombination
     ): FlatSlabDesign.DeflectionResult {
-        // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("span", span)
-        InputGuard.positive("totalDepth", totalDepth)
         InputGuard.positive("fcu", fcu)
-        InputGuard.positive("fy", fy)
-
-        val fc = fcu / GAMMA_C
-        val Ec = 4400.0 * sqrt(fc)
-        val Ig = 1000.0 * 300.0 * 300.0 * 300.0 / 12.0
-        val n = 200000.0 / Ec
-        val Icr = 0.35 * Ig
-        val Ie = if (n > 0) (Ig + (n - 1.0) * 0.35 * Ig) / (1.0 + 1.0) else Ig
-        val immediate = if (Ec > 0 && Ie > 0) {
-            5.0 * 10.0 * span * span / (48.0 * Ec * Ie) * 1000.0
-        } else 0.0
-
-        val longTerm = immediate * 2.0
-        val allowable = span / 250.0
-        val ratio = longTerm / allowable
-        val isSafe = longTerm <= allowable
-
-        return FlatSlabDesign.DeflectionResult(
-            immediate = immediate,
-            longTerm = longTerm,
-            allowable = allowable,
-            isSafe = isSafe,
-            ratio = ratio
-        )
+        // No supported deflection method: the previous estimate used a fixed section and fixed loads.
+        return WaffleChecks.deflectionNotAssessed()
     }
 
     // ════════════════════════════════════════════════════════════════════════════════════

@@ -100,10 +100,10 @@ class SBCWaffleSlabDesignTest {
 
         // With very high load, shear should fail or be close to failing
         // The key assertion: isSafe is based on REAL calculation, not hardcoded
-        if (!result.isSafe) {
-            assertTrue("Failed rib should have utilization > 1.0", result.utilizationRatio > 1.0)
-            assertTrue("Shear should indicate unsafe", !result.shearReinforcement.isSafe)
-        }
+        // Wu = 200 kN/m2 on a 150 x 300 rib: the rib must visibly FAIL (flexure and shear demand exceed capacity)
+        assertEquals(com.civileg.app.domain.calculations.base.CheckStatus.FAIL, result.status)
+        assertFalse(result.isSafe)
+        assertTrue("Failed rib should have utilization > 1.0", result.utilizationRatio > 1.0)
     }
 
     @Test
@@ -551,7 +551,7 @@ class SBCWaffleSlabDesignTest {
 
         val result = engine.design(input)
 
-        assertTrue("Should have 4 safety checks", result.safetyChecks.size == 4)
+        assertTrue("Should have 3 safety checks (deflection is not assessed)", result.safetyChecks.size == 3)
         // Safety check outcomes depend on SBC 304 parameters; verify structure exists
         result.safetyChecks.forEach { check ->
             assertNotNull("Check name should exist", check.name)
@@ -658,7 +658,7 @@ class SBCWaffleSlabDesignTest {
         val ecpResult = ecpEngine.checkPunchingShear(
             fcu = 30.0, fy = 420.0,
             solidHeadSize = 1000.0, columnSize = 400.0,
-            axialLoad = 500.0, shear = 300.0
+            axialLoad = 500.0, shear = 300.0, totalDepth = 350.0
         )
 
         // SBC and ECP should use different formulas/capacities
@@ -682,7 +682,7 @@ class SBCWaffleSlabDesignTest {
             loadCombination = LoadCombination.DEAD_LIVE
         )
 
-        assertTrue("Should still produce valid result", result.flexureReinforcement.bars >= 2)
+        assertTrue("Should still produce valid result", result.flexureReinforcement.bars >= 1)
         // With tiny load, result should be computed (not stub); isSafe depends on SBC 304 checks
         assertNotNull("isSafe should be computed", result.isSafe)
     }

@@ -3,6 +3,8 @@ package com.civileg.app.domain.calculations.sbc
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.base.FlatSlabDesign
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign
+import com.civileg.app.domain.calculations.base.CheckStatus
+import com.civileg.app.domain.calculations.base.WaffleChecks
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabResult
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.WaffleSlabInput
 import com.civileg.app.domain.calculations.base.WaffleSlabDesign.RibDesignResult
@@ -132,38 +134,49 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         val steelWeight = ((numRibsX * providedSteel * (input.ly / 1000.0) / 1e6) + (numRibsY * providedSteel * (input.lx / 1000.0) / 1e6)) * STEEL_UNIT_WEIGHT
 
         // ── 7. Aggregate safety from all sub-checks ───────────────────
-        val ribSafe = ribDesign.isSafe
-        val solidHeadSafe = solidHeadDesign.isSafe
-        val punchingSafe = punchingShearCheck.isSafe
-        val deflectionSafe = deflectionCheck.isSafe
-        val isSafe = ribSafe && solidHeadSafe && punchingSafe && deflectionSafe
-
-        val ribUtil = ribDesign.utilizationRatio
+        // SBC solid head, punching and deflection keep their existing functions, but none of them has a verified
+        // SBC 304 clause in the supplied text (solid head uses an unsourced /32 column-strip factor and bar clamps, deflection
+        // uses fixed service loads and an unsourced L/250 limit), so they cannot support a pass.
+        val punchStatus = if (!punchingShearCheck.isSafe) CheckStatus.FAIL else CheckStatus.NOT_ASSESSED
+        val punchChecked = punchingShearCheck.copy(status = punchStatus)
+        val headChecked = solidHeadDesign.copy(status = if (!solidHeadDesign.isSafe) CheckStatus.FAIL else CheckStatus.NOT_ASSESSED)
+        val headFlexNote = "Solid head: SBC 304 method not verified (unsourced column-strip factor, bar-count clamps); result indicative only"
+        val status = if (ribDesign.status == CheckStatus.FAIL || punchStatus == CheckStatus.FAIL || !solidHeadDesign.isSafe) CheckStatus.FAIL else CheckStatus.PRELIMINARY
+        val notAssessed = mutableListOf(
+            "Deflection: SBC 304 method not verified (fixed service loads and limit); result not used for the verdict",
+            headFlexNote,
+            "Rib flexure and shear: SBC 304 clauses are not in the supplied reference text; values are indicative only",
+            "Punching shear: SBC 304 clauses are not in the supplied reference text; solid-head edge, moment transfer, edge and corner columns not checked"
+        )
         val punchUtil = punchingShearCheck.utilizationRatio
-        val deflUtil = if (deflectionCheck.allowable > 0) deflectionCheck.longTerm / deflectionCheck.allowable else 0.0
-        val utilizationRatio = maxOf(ribUtil, punchUtil, deflUtil)
+        val utilizationRatio = maxOf(ribDesign.utilizationRatio, punchUtil)
 
-        if (!isSafe) warnings.add("⚠ Waffle slab failed one or more SBC 304 checks")
-        if (utilizationRatio > 1.0) warnings.add("⚠ Utilization ratio = ${String.format("%.2f", utilizationRatio)} > 1.0")
+        warnings.addAll(ribDesign.warnings)
+        codeNotes.addAll(ribDesign.notes)
+        if (status == CheckStatus.FAIL) warnings.add("FAIL: one or more computed SBC 304 checks failed")
+        if (utilizationRatio > 1.0) warnings.add("Utilization ratio = ${String.format("%.2f", utilizationRatio)} > 1.0")
+        notAssessed.forEach { warnings.add("NOT ASSESSED: " + it) }
 
-        safetyChecks.add(SafetyCheckItem("Rib flexure", ribDesign.utilizationRatio, 1.0, "SBC 304 §4-2", passed = ribDesign.isSafe))
-        safetyChecks.add(SafetyCheckItem("Solid head", 0.0, 1.0, "SBC 304 §6-4", passed = solidHeadDesign.isSafe))
-        safetyChecks.add(SafetyCheckItem("Punching shear", punchingShearCheck.utilizationRatio, 1.0, "SBC 304 §4-3", passed = punchingShearCheck.isSafe))
-        safetyChecks.add(SafetyCheckItem("Deflection", deflUtil, 1.0, "SBC 304 §6-3", passed = deflectionCheck.isSafe))
+        safetyChecks.add(SafetyCheckItem("Rib flexure and shear", ribDesign.utilizationRatio, 1.0, "SBC 304 (" + ribDesign.status.label + ")", passed = ribDesign.isSafe || ribDesign.status == CheckStatus.NOT_ASSESSED))
+        safetyChecks.add(SafetyCheckItem("Solid head", 0.0, 1.0, "SBC 304 (indicative)", passed = solidHeadDesign.isSafe))
+        safetyChecks.add(SafetyCheckItem("Punching shear", punchUtil, 1.0, "SBC 304 (" + punchStatus.label + ")", passed = punchingShearCheck.isSafe))
 
         return WaffleSlabResult(
-            isSafe = isSafe,
+            isSafe = false, // never SAFE: not every check has a verified method
             utilizationRatio = utilizationRatio,
             warnings = warnings,
             codeNotes = codeNotes,
             safetyChecks = safetyChecks,
             ribDesign = ribDesign,
-            solidHeadDesign = solidHeadDesign,
-            punchingShearCheck = punchingShearCheck,
+            solidHeadDesign = headChecked,
+            punchingShearCheck = punchChecked,
             deflectionCheck = deflectionCheck,
             concreteVolume = concreteVolume,
             steelWeight = steelWeight,
-            cost = concreteVolume * CONCRETE_COST_PER_M3 + steelWeight * STEEL_COST_PER_KG
+            cost = concreteVolume * CONCRETE_COST_PER_M3 + steelWeight * STEEL_COST_PER_KG,
+            status = status,
+            notAssessed = notAssessed,
+            deflectionAssessed = false
         )
     }
 
@@ -181,7 +194,6 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         totalLoad: Double,
         loadCombination: LoadCombination
     ): WaffleSlabDesign.RibDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("ribWidth", ribWidth)
@@ -191,88 +203,14 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         InputGuard.nonNegative("totalLoad", totalLoad)
         InputGuard.notNull("loadCombination", loadCombination)
 
-        val warnings = mutableListOf<String>()
-        val codeNotes = mutableListOf<String>()
-
-        val fc = fcu / GAMMA_C  // cylinder strength
-        val phi = PHI_FLEXURE
-
-        // Effective depth
-        val d = ribHeight - COVER - 10.0
-
-        // Factored moment
-        val wu = totalLoad * 1.4 + 0.0 // simplified
-        val mu = totalLoad * 1.4 * clearSpan * clearSpan / 8.0 / 1000.0 // kN.m
-
-        // Rn-ρ method
-        val Mu = mu * 1e6 // N.mm
-        val Rn = Mu / (PHI_FLEXURE * ribWidth * d * d)
-        val m = fy / (0.85 * fc)
-        val rho = (1.0 - sqrt(max(0.0, 1.0 - 2.0 * m * Rn / fy))) / m
-        val As = rho * ribWidth * d
-
-        // Min steel per SBC 304
-        val minAs = max(0.15 / 100.0 * ribWidth * d, 1.3 * As / 100.0)
-
-        val AsProvided = maxOf(As, minAs)
-
-        // Bar selection
-        val barDia = 16.0
-        val barArea = PI * 16.0 * 16.0 / 4.0
-        val nBars = ceil(AsProvided / barArea).toInt().coerceIn(2, 6)
-
-        // Shear
-        val Vu = totalLoad * 1.4 * clearSpan / 2.0
-        val vc = 0.24 * sqrt(fc) * ribWidth * d / 1000.0
-        val phiVc = PHI_SHEAR * vc
-
-        // Shear check — SBC 304 §4-3
-        val shearDemand = Vu  // kN
-        val shearIsSafe = shearDemand <= phiVc
-        val shearUtilRatio = if (phiVc > 0) shearDemand / phiVc else 2.0
-
-        // Shear reinforcement if needed
-        val requiredAvS = if (!shearIsSafe && phiVc > 0) {
-            (shearDemand - phiVc) / (PHI_SHEAR * fy / 1000.0)  // mm²/mm
-        } else 0.0
-        val providedAvS = if (requiredAvS > 0) {
-            // Use 2-leg stirrups Ø8 @ spacing
-            val stirrupDia = 8.0
-            val stirrupArea = 2.0 * PI * stirrupDia * stirrupDia / 4.0
-            val maxSpacing = minOf(0.75 * d, 300.0)
-            val spacing = if (requiredAvS > 0) min(maxSpacing, stirrupArea / requiredAvS) else maxSpacing
-            stirrupArea / spacing
-        } else 0.0
-
-        val flexure = RebarResult(
-            bars = nBars,
-            diameter = 16,
-            spacing = 200,
-            providedArea = AsProvided,
-            requiredArea = As,
-            ratio = AsProvided / (ribWidth * d)
-        )
-        val shear = ShearReinforcementResult(
-            concreteShearCapacity = vc,
-            requiredShearReinforcement = requiredAvS,
-            providedShearReinforcement = providedAvS,
-            isSafe = shearIsSafe,
-            utilizationRatio = shearUtilRatio,
-            warnings = if (!shearIsSafe) listOf("Shear demand exceeds φVc") else emptyList(),
-            codeNotes = listOf("SBC 304 §4-3: φVc = ${String.format("%.1f", phiVc)} kN, Vu = ${String.format("%.1f", shearDemand)} kN")
-        )
-
-        val ribIsSafe = shearIsSafe && (AsProvided >= As)
-        val ribUtilRatio = maxOf(
-            if (As > 0) AsProvided / As else 0.0,
-            shearUtilRatio
-        )
-
-        return WaffleSlabDesign.RibDesignResult(
-            flexureReinforcement = flexure,
-            shearReinforcement = shear,
-            isSafe = ribIsSafe,
-            utilizationRatio = ribUtilRatio
+        // totalLoad is the FACTORED panel load Wu in kN/m2 (already combined by design()); it is not factored again.
+        val fc = fcu / GAMMA_C
+        return WaffleChecks.ribDesign(
+            fc = fc, fy = fy, bw = ribWidth, h = ribHeight, ribSpacing = ribSpacing, spanMm = clearSpan,
+            wuPanel = totalLoad, cover = COVER, phiFlex = PHI_FLEXURE, phiShear = PHI_SHEAR,
+            vcCoef = 0.24, vsMaxCoef = null, beta1 = null,
+            minAs = { _, b, dd -> max(0.15 / 100.0 * b * dd, 0.0) },
+            passStatus = CheckStatus.NOT_ASSESSED, codeRef = "SBC 304"
         )
     }
 
@@ -367,7 +305,8 @@ class SBCWaffleSlabDesign : WaffleSlabDesign {
         solidHeadSize: Double,
         columnSize: Double,
         axialLoad: Double,
-        shear: Double
+        shear: Double,
+        totalDepth: Double
     ): WaffleSlabDesign.PunchingShearCheck {
         // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)

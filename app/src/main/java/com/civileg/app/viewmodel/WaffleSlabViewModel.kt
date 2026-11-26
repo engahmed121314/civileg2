@@ -179,13 +179,13 @@ class WaffleSlabViewModel @Inject constructor(
 
                 val resultsMap = mutableMapOf(
                     "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
-                    "Is Safe" to if (res.isSafe) "YES" else "NO",
+                    "Verdict" to (res.status.label + if (res.notAssessed.isNotEmpty()) " (${res.notAssessed.size} items not assessed)" else ""),
                     "Concrete Volume" to "${"%.3f".format(res.concreteVolume)} m³",
                     "Steel Weight" to "${"%.1f".format(res.steelWeight)} kg"
                 )
                 res.ribDesign?.let { rib ->
-                    resultsMap["Rib Flexure Rebar"] = rib.flexureReinforcement.barString
-                    resultsMap["Rib Shear Rebar"] = "φ${rib.shearReinforcement.stirrupDiameter.toInt()}@${rib.shearReinforcement.stirrupSpacing.toInt()} mm"
+                    resultsMap["Rib Flexure Rebar"] = rib.flexureReinforcement.barString + " (" + rib.status.label + ")"
+                    resultsMap["Rib Shear Rebar"] = if (rib.shearReinforcement.requiredShearReinforcement > 0.0) "Av/s ${"%.3f".format(rib.shearReinforcement.requiredShearReinforcement)} mm2/mm required, stirrups not detailed" else "not required (Vu <= phiVc)"
                     resultsMap["Rib Utilization"] = "${(rib.utilizationRatio * 100).toInt()}%"
                 }
                 res.punchingShearCheck?.let { punch ->
@@ -193,7 +193,10 @@ class WaffleSlabViewModel @Inject constructor(
                     resultsMap["Punching Vc"] = "${"%.1f".format(punch.vc)} kN"
                 }
                 res.deflectionCheck?.let { defl ->
-                    resultsMap["Deflection Check"] = if (defl.isSafe) "PASS" else "FAIL"
+                    resultsMap["Deflection Check"] = "NOT ASSESSED"
+                }
+                if (res.notAssessed.isNotEmpty()) {
+                    resultsMap["Not assessed"] = res.notAssessed.joinToString("; ")
                 }
 
                 val safetyChecks = res.safetyChecks.map {
@@ -230,6 +233,8 @@ class WaffleSlabViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
+                    // PRELIMINARY unless a computed check failed: the report must not print SAFE or UNSAFE for unassessed checks
+                    assessmentPending = res.status != com.civileg.app.domain.calculations.base.CheckStatus.FAIL,
                     bbsEntries = runCatching {
                         com.civileg.app.domain.calculations.utils.BbsGenerator.generateWaffleSlabBbs(
                             "WS1", res, input.lx, input.ly, input.ribSpacing,

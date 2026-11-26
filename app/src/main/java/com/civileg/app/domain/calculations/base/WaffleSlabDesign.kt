@@ -60,7 +60,8 @@ interface WaffleSlabDesign {
         solidHeadSize: Double,
         columnSize: Double,
         axialLoad: Double,
-        shear: Double
+        shear: Double,
+        totalDepth: Double = 0.0
     ): PunchingShearCheck
 
     /**
@@ -93,27 +94,39 @@ interface WaffleSlabDesign {
         val deflectionCheck: FlatSlabDesign.DeflectionResult? = null,
         val concreteVolume: Double = 0.0,
         val steelWeight: Double = 0.0,
-        val cost: Double = 0.0
+        val cost: Double = 0.0,
+        /** FAIL if any computed check failed, otherwise PRELIMINARY (deflection is never assessed). */
+        val status: CheckStatus = CheckStatus.PRELIMINARY,
+        /** Checks or applicability that were not assessed. */
+        val notAssessed: List<String> = emptyList(),
+        val deflectionAssessed: Boolean = false
     )
 
     data class RibDesignResult(
         val flexureReinforcement: RebarResult,
         val shearReinforcement: ShearReinforcementResult,
         val isSafe: Boolean,
-        val utilizationRatio: Double
+        val utilizationRatio: Double,
+        val status: CheckStatus = CheckStatus.NOT_ASSESSED,
+        val warnings: List<String> = emptyList(),
+        val notes: List<String> = emptyList()
     )
 
     data class SolidHeadDesignResult(
         val flexureReinforcement: RebarResult,
         val punchingShear: PunchingShearCheck,
-        val isSafe: Boolean
+        val isSafe: Boolean,
+        val status: CheckStatus = CheckStatus.NOT_ASSESSED,
+        val note: String = ""
     )
 
     data class PunchingShearCheck(
         val vu: Double,
         val vc: Double,
         val isSafe: Boolean,
-        val utilizationRatio: Double
+        val utilizationRatio: Double,
+        val status: CheckStatus = CheckStatus.NOT_ASSESSED,
+        val note: String = ""
     )
 
     // ══════════════════════════════════════════════════════════════════════════════════════════════════════════════════

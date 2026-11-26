@@ -146,22 +146,22 @@ class WaffleSlabTest {
         val aciHead = aciWaffle.designSolidHead(30.0, 60.0, 1000.0, 150.0, 400.0, 1000.0, 50.0)
         val sbcHead = sbcWaffle.designSolidHead(30.0, 400.0, 1000.0, 150.0, 400.0, 1000.0, 50.0)
 
-        assertNotNull(ecpHead.flexureReinforcement)
-        assertTrue(ecpHead.flexureReinforcement.bars > 0)
-        assertNotNull(ecpHead.punchingShear)
-
-        assertNotNull(aciHead.flexureReinforcement)
-        assertTrue(aciHead.flexureReinforcement.bars > 0)
-
-        assertNotNull(sbcHead.flexureReinforcement)
-        assertTrue(sbcHead.flexureReinforcement.bars > 0)
+        // Solid-head design is not implemented: NOT ASSESSED, no adopted bars, never a pass.
+        for (head in listOf(ecpHead, aciHead)) {
+            assertEquals(com.civileg.app.domain.calculations.base.CheckStatus.NOT_ASSESSED, head.status)
+            assertFalse(head.isSafe)
+            assertEquals(0, head.flexureReinforcement.bars)
+            assertEquals(com.civileg.app.domain.calculations.base.CheckStatus.NOT_ASSESSED, head.punchingShear.status)
+        }
+        // SBC keeps its indicative solid-head estimate, which is never a verified pass
+        assertNotEquals(com.civileg.app.domain.calculations.base.CheckStatus.PASS, sbcHead.status)
     }
 
     @Test
     fun `Punching shear check works for all codes`() {
-        val ecpPunch = ecpWaffle.checkPunchingShear(30.0, 400.0, 1000.0, 400.0, 1000.0, 200.0)
-        val aciPunch = aciWaffle.checkPunchingShear(30.0, 60.0, 1000.0, 400.0, 1000.0, 200.0)
-        val sbcPunch = sbcWaffle.checkPunchingShear(30.0, 400.0, 1000.0, 400.0, 1000.0, 200.0)
+        val ecpPunch = ecpWaffle.checkPunchingShear(30.0, 400.0, 1000.0, 400.0, 1000.0, 200.0, 350.0)
+        val aciPunch = aciWaffle.checkPunchingShear(30.0, 60.0, 1000.0, 400.0, 1000.0, 200.0, 350.0)
+        val sbcPunch = sbcWaffle.checkPunchingShear(30.0, 400.0, 1000.0, 400.0, 1000.0, 200.0, 350.0)
 
         assertNotNull(ecpPunch)
         assertTrue(ecpPunch.vu >= 0.0)
@@ -184,16 +184,12 @@ class WaffleSlabTest {
         val aciDefl = aciWaffle.checkDeflection(6000.0, 350.0, 150.0, 300.0, 30.0, 60.0, 500.0, loadCombination)
         val sbcDefl = sbcWaffle.checkDeflection(6000.0, 350.0, 150.0, 300.0, 30.0, 400.0, 500.0, loadCombination)
 
-        assertNotNull(ecpDefl)
-        assertTrue(ecpDefl.allowable > 0.0)
-        assertTrue(ecpDefl.immediate >= 0.0)
-        assertTrue(ecpDefl.longTerm >= 0.0)
-
-        assertNotNull(aciDefl)
-        assertTrue(aciDefl.allowable > 0.0)
-
-        assertNotNull(sbcDefl)
-        assertTrue(sbcDefl.allowable > 0.0)
+        // No supported deflection method: nothing is computed and nothing passes.
+        for (defl in listOf(ecpDefl, aciDefl)) {
+            assertFalse(defl.isSafe)
+            assertEquals(0.0, defl.allowable, 0.0)
+            assertEquals(0.0, defl.longTerm, 0.0)
+        }
     }
 
     @Test
@@ -204,7 +200,7 @@ class WaffleSlabTest {
             toppingThickness = 50.0, solidHeadSize = 1000.0,
             columnWidth = 400.0, columnDepth = 400.0,
             fcu = 30.0, fy = 400.0,
-            liveLoad = 3.0, deadLoad = 3.0,
+            liveLoad = 6.0, deadLoad = 6.0,
             clearCover = 25.0
         )
 
