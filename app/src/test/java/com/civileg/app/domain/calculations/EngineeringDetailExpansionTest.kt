@@ -354,7 +354,7 @@ class EngineeringDetailExpansionTest {
         )
         val area = r.width * r.length / 1e6
         assertEquals(800.0, r.soilPressure * area, 0.5)
-        val step1 = r.steps.first { it.stepNumber == 1 }
+        val step1 = r.calculationSteps.first { it.stepNumber == 1 }
         assertTrue(step1.formulaWithValues, step1.formulaWithValues.contains("1200 / 1.50 = 800"))
         assertTrue(step1.result, !step1.result.contains("8.00"))
     }
