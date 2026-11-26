@@ -2556,7 +2556,7 @@ class CalculatorEngine @Inject constructor(
                 stepNumber = 4, title = "Wall Reinforcement",
                 formula = "As = M / (0.87fy·j·d)",
                 formulaWithValues = "As,req = ${"%.0f".format(res.wallReinforcement.astRequired)} mm²/m; provided ${"%.0f".format(res.wallReinforcement.astProvided)} mm²/m at ${"%.0f".format(res.wallReinforcement.spacing)} mm spacing (${wallBar.barString})",
-                result = wallBar.barString, unit = "mm²/m",
+                result = wallBar.barString, unit = "",
                 codeReference = ref, isPass = res.wallReinforcement.astProvided >= res.wallReinforcement.astRequired - 1e-6,
                 status = if (res.wallReinforcement.astProvided >= res.wallReinforcement.astRequired - 1e-6) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
             ),
@@ -2564,7 +2564,7 @@ class CalculatorEngine @Inject constructor(
                 stepNumber = 5, title = "Base Reinforcement",
                 formula = "As = M / (0.87fy·j·d)",
                 formulaWithValues = "As,req = ${"%.0f".format(res.baseReinforcement.astRequired)} mm²/m; provided ${"%.0f".format(res.baseReinforcement.astProvided)} mm²/m at ${"%.0f".format(res.baseReinforcement.spacing)} mm spacing (${baseBar.barString})",
-                result = baseBar.barString, unit = "mm²/m",
+                result = baseBar.barString, unit = "",
                 codeReference = ref, isPass = res.baseReinforcement.astProvided >= res.baseReinforcement.astRequired - 1e-6,
                 status = if (res.baseReinforcement.astProvided >= res.baseReinforcement.astRequired - 1e-6) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
             ),
