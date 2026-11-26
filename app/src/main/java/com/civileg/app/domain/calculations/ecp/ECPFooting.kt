@@ -322,14 +322,22 @@ class ECPFooting : FootingDesign {
         val asFinal = max(asRequired, asMin)
 
         // 5. اختيار القضبان
-        val barDiameter = selectBarDiameter(asFinal)
+        val minSpacing = 100.0  // constructability limit used by this engine; not verified against a code clause
+        // A bar size whose spacing would fall below the minimum cannot be clamped up to it: that delivers less steel
+        // than required (1131 provided vs 1143 required in the default case). Step the diameter up instead.
+        var barDiameter = selectBarDiameter(asFinal)
+        for (cand in listOf(10.0, 12.0, 14.0, 16.0, 18.0, 20.0, 22.0, 25.0, 28.0, 32.0)) {
+            if (cand < barDiameter) continue
+            barDiameter = cand
+            val a1 = PI * cand * cand / 4.0
+            if (floor(1000.0 / ceil(asFinal / a1).toInt()) >= minSpacing) break
+        }
         val barArea = PI * barDiameter * barDiameter / 4.0
         val nominalBars = ceil(asFinal / barArea).toInt()
         val nominalSpacing = floor(1000.0 / nominalBars)
 
         // 6. المسافة بين القضبان (ECP 203 البند 7-1-3-3)
         val maxSpacing = min(250.0, min(3.0 * d, 750.0))
-        val minSpacing = 100.0
         val finalSpacing = nominalSpacing.coerceIn(minSpacing, maxSpacing)
         val actualBars = ceil(1000.0 / finalSpacing).toInt()
         val asProvided = actualBars * barArea
