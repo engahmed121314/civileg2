@@ -89,7 +89,7 @@ class EngineeringDetailExpansionTest {
         // Only checks backed by a computed demand are listed. Deflection is not assessed, so it must not appear as a check.
         // A check whose demand is not computed is left out and reported as NOT ASSESSED in the warnings, so each of the two
         // (rib, punching) is either listed or named in a NOT ASSESSED warning.
-        assertTrue("ECP waffle lists at most its 2 computed checks, got ${r.safetyChecks.size}", r.safetyChecks.size in 1..2)
+        assertTrue("ECP waffle lists at most its 2 computed checks, got ${r.safetyChecks.size}", r.safetyChecks.size in 0..2)
         val ribListed = r.safetyChecks.any { it.name.contains("Rib flexure") }
         val punchListed = r.safetyChecks.any { it.name.contains("Punching") }
         assertTrue("every listed check is rib or punching", r.safetyChecks.all { it.name.contains("Rib flexure") || it.name.contains("Punching") })
