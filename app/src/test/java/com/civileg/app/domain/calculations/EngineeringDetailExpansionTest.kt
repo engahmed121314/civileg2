@@ -253,6 +253,19 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `strap footing verdict includes footing flexure and the unbounded ratio`() {
+        val r = engine.calculateStrapFooting(
+            col1Load = 1500.0, col2Load = 2000.0, distance = 5000.0,
+            col1W = 300.0, col1D = 600.0, col2W = 300.0, col2D = 700.0,
+            soil = 150.0, fcu = 25.0, fy = 360.0, code = DesignCode.ECP, preferredDiameter = 18
+        )
+        assertTrue(r.safetyChecks.any { it.name == "Flexure Steel - Footing 1" })
+        assertTrue(r.safetyChecks.any { it.name == "Flexure Steel - Footing 2" })
+        if (r.safetyChecks.any { !it.isSafe }) assertFalse(r.isSafe)
+        assertTrue(r.utilizationRatio.isFinite() && r.utilizationRatio >= 0.0)
+    }
+
+    @Test
     fun `tank height not above freeboard is rejected`() {
         org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
             engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, heightM = 0.3, fcu = 25.0, fy = 360.0)

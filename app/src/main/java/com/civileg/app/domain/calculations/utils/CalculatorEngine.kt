@@ -2102,16 +2102,19 @@ class CalculatorEngine @Inject constructor(
             DesignSafetyCheck("Punching Shear - Footing 1", res.punchingShear1, res.punchingCapacity1, "kN", res.punchingShear1 <= res.punchingCapacity1),
             DesignSafetyCheck("Punching Shear - Footing 2", res.punchingShear2, res.punchingCapacity2, "kN", res.punchingShear2 <= res.punchingCapacity2),
             DesignSafetyCheck("Strap Beam Flexure (As)", res.strapAsRequired, res.strapAsProvided, "mm²", res.strapAsRequired <= res.strapAsProvided),
-            DesignSafetyCheck("Strap Beam Shear", res.strapShear, res.strapShearCapacity, "kN", res.strapShear <= res.strapShearCapacity)
+            DesignSafetyCheck("Strap Beam Shear", res.strapShear, res.strapShearCapacity, "kN", res.strapShear <= res.strapShearCapacity),
+            // Footing flexure steel is judged by the engine (reinforcement.isSafe); it was missing from this verdict.
+            DesignSafetyCheck("Flexure Steel - Footing 1", res.footing1.reinforcement.areaProvided, res.footing1.reinforcement.areaRequired, "mm²", res.footing1.reinforcement.isSafe),
+            DesignSafetyCheck("Flexure Steel - Footing 2", res.footing2.reinforcement.areaProvided, res.footing2.reinforcement.areaRequired, "mm²", res.footing2.reinforcement.isSafe)
         )
-        val isSafe = safetyChecks.all { it.isSafe }
+        val isSafe = safetyChecks.all { it.isSafe } && res.isSafe
         val utilization = maxOf(
             if (soil > 0) maxOf(q1, q2) / soil else 0.0,
             if (res.punchingCapacity1 > 0) res.punchingShear1 / res.punchingCapacity1 else 0.0,
             if (res.punchingCapacity2 > 0) res.punchingShear2 / res.punchingCapacity2 else 0.0,
             if (res.strapAsProvided > 0) res.strapAsRequired / res.strapAsProvided else 0.0,
             if (res.strapShearCapacity > 0) res.strapShear / res.strapShearCapacity else 0.0
-        ).coerceIn(0.0, 1.5)
+        ).coerceAtLeast(0.0) // not capped: a ratio above 1.0 is a failure and is shown as computed
 
         val footing1Safe = q1 <= soil * 1.001 && res.punchingShear1 <= res.punchingCapacity1
         val footing2Safe = q2 <= soil * 1.001 && res.punchingShear2 <= res.punchingCapacity2
