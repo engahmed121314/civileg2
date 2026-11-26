@@ -1073,6 +1073,8 @@ fun SeismicStabilityCard(res: SeismicBaseShearResult, totalHeight: Double) {
     val drift = res.maxStoryDrift / 1000.0
     val limit = res.allowableDrift / 1000.0
     val isSafe = res.driftIsSafe
+    val assessed = true  // the NOT ASSESSED card above returns early when the engine gave no drift
+    val aboveReference = res.maxStoryDrift > res.allowableDrift
 
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
