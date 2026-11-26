@@ -1763,15 +1763,55 @@ private fun fmt(value: Double, decimals: Int = 2): String =
 
 private fun yesNo(value: Boolean): String = if (value) "Yes / نعم" else "No / لا"
 
-private fun String.num(name: String): Double =
-    trim().toDoubleOrNull() ?: throw IllegalArgumentException("Invalid number for $name")
+/** Western digits and a dot decimal separator, from Arabic-Indic digits and Arabic/comma separators. */
+internal fun normalizeNumericText(raw: String): String {
+    val sb = StringBuilder()
+    for (c in raw.trim()) {
+        val piece: String = when (c) {
+            in '\u0660'..'\u0669' -> ('0' + (c - '\u0660')).toString()
+            in '\u06F0'..'\u06F9' -> ('0' + (c - '\u06F0')).toString()
+            '\u066B' -> "."
+            '\u066C' -> ""
+            else -> c.toString()
+        }
+        sb.append(piece)
+    }
+    val t = sb.toString()
+    // A single comma with no dot: "2,5" is a decimal comma. "1,250" is ambiguous (1.25 or 1250), so it is
+    // left unchanged and fails to parse instead of silently guessing. With a dot, commas are thousands separators.
+    if (t.contains('.')) {
+        // Dot decimal with comma thousands only: every comma group must be exactly 3 digits and precede the dot.
+        // "1.250,5" (European) or "1,25.0" is ambiguous or malformed, so it is left unchanged and fails to parse.
+        val intPart = t.substringBefore('.')
+        val ok = !t.substringAfter('.').contains(',') && intPart.split(',').drop(1).all { it.length == 3 }
+        return if (ok) t.replace(",", "") else t
+    }
+    if (t.count { it == ',' } == 1) {
+        val after = t.substringAfter(',')
+        return if (after.length == 3) t else t.replace(',', '.')
+    }
+    return t
+}
 
-private fun String.int(name: String): Int =
-    trim().toIntOrNull() ?: throw IllegalArgumentException("Invalid integer for $name")
+internal fun String.num(name: String): Double {
+    val n = normalizeNumericText(this)
+    // Kotlin/Java also accept "2.5f", "1d", "1e5" and hex floats; none of those are valid entries here.
+    if (!Regex("[+-]?(\\d+(\\.\\d*)?|\\.\\d+)").matches(n)) throw IllegalArgumentException("Invalid number for $name")
+    val v = n.toDoubleOrNull()
+        ?: throw IllegalArgumentException("Invalid number for $name")
+    // "NaN" and "Infinity" parse as doubles but are never valid inputs.
+    if (!v.isFinite()) throw IllegalArgumentException("Invalid number for $name")
+    return v
+}
 
-private fun String.intOrNull(name: String): Int? {
-    val text = trim()
+internal fun String.int(name: String): Int =
+    normalizeNumericText(this).toIntOrNull() ?: throw IllegalArgumentException("Invalid integer for $name")
+
+internal fun String.intOrNull(name: String): Int? {
+    val text = normalizeNumericText(this)
     if (text.isEmpty()) return null
     val value = text.toIntOrNull() ?: throw IllegalArgumentException("Invalid integer for $name")
-    return if (value <= 0) null else value
+    // Blank or 0 means "not provided". A negative count is a mistake and must not be ignored silently.
+    if (value < 0) throw IllegalArgumentException("$name must not be negative")
+    return if (value == 0) null else value
 }
