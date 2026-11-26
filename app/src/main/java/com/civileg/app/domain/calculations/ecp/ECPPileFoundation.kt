@@ -447,7 +447,8 @@ class ECPPileFoundation : PileFoundationDesign {
         val punchArea = (colW + 2.0 * d) * (colL + 2.0 * d)  // mm²
         val Vpunch = input.axialLoad * 0.9  // kN (net punching after soil/pile reaction)
         val punchingStress = (Vpunch * 1000.0) / (bo * d)  // MPa
-        val punchingCapacity = 0.316 * sqrt(input.fcu / GAMMA_C)  // MPa
+        // ECP 203-2025 Eq 4-46 a/b/c (PDF p.107-108); interior column assumed
+        val punchingCapacity = ECP2025ConcreteShear.punchingQcup(input.fcu, d, bo, colW, colL)  // MPa
         val punchingOk = punchingStress <= punchingCapacity
 
         if (!punchingOk) {
@@ -466,8 +467,8 @@ class ECPPileFoundation : PileFoundationDesign {
         val Vu_x = nPilesBeyondDx * maxPileReaction  // kN
         val Vu_y = nPilesBeyondDy * maxPileReaction  // kN
 
-        // One-way shear capacity per ECP 203: qcu = 0.24 * sqrt(fcu/gamma_c)
-        val qcu = 0.24 * sqrt(input.fcu / GAMMA_C)  // MPa
+        // ECP 203-2025 Eq 4-29 (PDF p.105, printed 4-25): qcu = 0.16 sqrt(fcu/gc)
+        val qcu = ECP2025ConcreteShear.oneWayQcu(input.fcu, GAMMA_C)  // MPa
         val beamShearStress = kotlin.math.max(
             (Vu_x * 1000.0) / (capLength * d),
             (Vu_y * 1000.0) / (capWidth * d)

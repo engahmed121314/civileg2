@@ -83,8 +83,8 @@ class ECPSlab : SlabDesign {
         val astProvided = barArea * 1000 / barSpacing
         
         // التحقق من القص - ECP 203 البند 4-3-1-2
-        // qcu = 0.24 × √(fcu) / γc per ECP 203 §4-3-1-2
-        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa — ECP 203 §4-3-1-2 (includes γc)
+        // ECP 203-2025 Eq 4-29 (PDF p.105, printed 4-25): slabs resist shear by concrete only, qcu = 0.16 sqrt(fcu/gc)
+        val qcu = ECP2025ConcreteShear.oneWayQcu(fcu, GAMMA_C)  // MPa
         val shearCapacity = qcu * width * effectiveDepth / 1000.0  // kN/m
         
         // designShear بالفعل هو القوة القصية التصميمية (kN/m)

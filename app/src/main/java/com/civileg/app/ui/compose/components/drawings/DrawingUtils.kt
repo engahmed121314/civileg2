@@ -1583,7 +1583,7 @@ const val SUMMARY_STRIP_ROWS = 6
  * dense screen the text ran past the box, was clipped at the canvas edge and overprinted the next row. ASCII digits are
  * forced so the text stays on the plain drawing path (a device with Arabic digits sent the utilisation line through the
  * Arabic layout path and shifted it off its row).
- * Returns the top edge of the box so the caller can place the north arrow above it.
+ * Returns the top-left corner of the box so the caller can place the north arrow beside it.
  */
 fun DrawScope.drawMeasuredSheetBlock(
     summary: DrawingResultSummary?,
@@ -1594,7 +1594,7 @@ fun DrawScope.drawMeasuredSheetBlock(
     cfg: DrawingDimensionsConfig,
     color: Color = DrawingColorDefaults.DimensionWhite,
     borderColor: Color = DrawingColorDefaults.ExtensionGray
-): Float {
+): Offset {
     val small = cfg.annotationTextSmall
     val rowHeight = small * 1.35f
     val pad = small * 0.5f
@@ -1636,5 +1636,5 @@ fun DrawScope.drawMeasuredSheetBlock(
         val c = if (summary != null && i == 0) statusColor else color
         drawTextAnnotated(text, x + pad, y + rowHeight * i + small * 1.0f, c, small, bold = bold)
     }
-    return y
+    return Offset(x, y)
 }

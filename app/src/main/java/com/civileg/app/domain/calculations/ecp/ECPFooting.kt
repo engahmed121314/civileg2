@@ -166,8 +166,8 @@ class ECPFooting : FootingDesign {
         val Vu_x = q_factored * (L / 1000.0) * max(cantX - dSafe / 2000.0, 0.0)  // kN
         val Vu_y = q_factored * (B / 1000.0) * max(cantY - dSafe / 2000.0, 0.0)  // kN
 
-        // One-way shear capacity ECP 203 §4-3-1-2: qcu = 0.24 * sqrt(fcu/γc)
-        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
+        // ECP 203-2025 Eq 4-29 (PDF p.105, printed 4-25): footings concrete only, qcu = 0.16 sqrt(fcu/gc)
+        val qcu = ECP2025ConcreteShear.oneWayQcu(fcu, GAMMA_C)  // MPa
         val Vc_x = qcu * (L / 1000.0) * dSafe / 1000.0 * 1000.0  // kN
         val Vc_y = qcu * (B / 1000.0) * dSafe / 1000.0 * 1000.0  // kN
 
@@ -260,8 +260,9 @@ class ECPFooting : FootingDesign {
         // ضغط القص المُطبَّق
         val denom = (bo * effectiveDepth).coerceAtLeast(0.001)
         val qp_applied = (V_punch * 1000.0) / denom
-        // Punching shear capacity ECP 203 §4-3-2: qp = 0.316 * sqrt(fcu/γc)
-        val qp_capacity = 0.316 * sqrt(fcu / GAMMA_C)  // MPa (includes γc)
+        // ECP 203-2025 Eq 4-46 a/b/c with ls and the 1.70 N/mm2 cap (PDF p.107-108, printed 4-27/4-28).
+        // Interior column assumed (bo above is the full perimeter); no punching steel is designed here.
+        val qp_capacity = ECP2025ConcreteShear.punchingQcup(fcu, effectiveDepth, bo, columnWidth, columnDepth)  // MPa
 
         val isSafe = qp_applied <= qp_capacity
 
@@ -270,17 +271,14 @@ class ECPFooting : FootingDesign {
             warnings.add(String.format("قص الاختراق %.2f MPa > %.2f MPa - زِد سمك القاعدة", qp_applied, qp_capacity))
         }
 
-        // ECP 203 §4-3-2: Check maximum punching shear stress (strut failure limit)
-        // qp_max = 0.7 * sqrt(fcu/γc) — if exceeded, section is inadequate regardless of reinforcement
-        val qp_max = 0.7 * sqrt(fcu / GAMMA_C)
-        if (qp_applied > qp_max) {
-            warnings.add(String.format("قص الاختراق %.2f MPa > qp_max=%.2f MPa — section inadequate! Increase dimensions", qp_applied, qp_max))
-        }
+        // The former qp_max = 0.7 sqrt(fcu/gc) had no source in ECP 203-2025 and was removed.
+        // The 2025 cap with punching steel is 0.45 sqrt(fcu/gc) (Eq 4-47-c); this engine designs no punching steel,
+        // so concrete-only capacity (Eq 4-46) governs.
 
         return ShearCheckResult(
             appliedShear = qp_applied,
             shearCapacity = qp_capacity,
-            isSafe = isSafe && qp_applied <= qp_max,
+            isSafe = isSafe,
             utilizationRatio = qp_applied / qp_capacity.coerceAtLeast(0.001),
             criticalSection = effectiveDepth / 2.0,  // المسافة من وجه العمود (d/2)
             criticalPerimeter = bo,
