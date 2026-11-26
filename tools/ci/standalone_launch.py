@@ -354,6 +354,13 @@ def steel_block():
     log.append(("steel_open", ok)); time.sleep(3); shot("steel-open"); dump("steel-open")
     for k in range(3):
         steel_up(2); shot(f"steel-in-{k}"); dump(f"steel-in-{k}")
+    # Required footing input: allowable soil bearing 150 kN/m2 typed by the evidence run (a stated test value, not an app default).
+    soil = tap_text(["Allowable soil bearing"], "st-soil")
+    if soil:
+        adb("shell", "input", "text", "150"); time.sleep(0.8)
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.0)
+        shot("steel-soil-typed"); dump("steel-soil-typed")
+    log.append(("steel_soil_typed", soil))
     for _ in range(8):
         if tap_text(["تحليل الهنجر"], "st-calc-find"): log.append(("steel_calc", True)); break
         steel_up(2)
