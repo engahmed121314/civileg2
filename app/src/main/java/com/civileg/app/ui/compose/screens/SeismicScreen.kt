@@ -537,7 +537,7 @@ fun SeismicScreen(
                                     AppText(
                                         res.baseShearResult.calculationFormula,
                                         style = MaterialTheme.typography.bodySmall,
-                                        fontFamily = FontFamily.Monospace,
+                                        fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily,
                                         color = MaterialTheme.colorScheme.secondary
                                     )
                                 }
@@ -1255,7 +1255,7 @@ private fun ResultRow(label: String, value: String) {
 private fun FormulaItem(formula: String) {
     AppText(
         text = formula,
-        fontFamily = FontFamily.Monospace,
+        fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily,
         fontSize = 12.sp,
         modifier = Modifier.padding(vertical = 1.dp),
         color = MaterialTheme.colorScheme.secondary

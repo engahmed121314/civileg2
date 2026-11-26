@@ -1021,7 +1021,7 @@ private fun SectionHeader(title: String, iconRes: Int) {
 private fun FormulaItem(formula: String) {
     AppText(
         text = formula,
-        fontFamily = FontFamily.Monospace,
+        fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily,
         fontSize = 12.sp,
         modifier = Modifier.padding(vertical = 2.dp),
         color = MaterialTheme.colorScheme.secondary

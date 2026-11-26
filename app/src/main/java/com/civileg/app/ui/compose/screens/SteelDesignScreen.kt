@@ -368,7 +368,7 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                             AppText(stringResource(R.string.steel_engineering_calc_trace), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                             Spacer(Modifier.height(8.dp))
                             res.calculationTrace.forEach { step ->
-                                AppTextBlock("• $step", fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(vertical = 2.dp))
+                                AppTextBlock("• $step", fontSize = 11.sp, fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, modifier = Modifier.padding(vertical = 2.dp))
                             }
                         }
                     }
@@ -1166,7 +1166,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             AppText(stringResource(R.string.steel_calculation_trace), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.height(8.dp))
                             flexRes.calculationTrace.forEach { step ->
-                                AppTextBlock("• $step", fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(vertical = 2.dp))
+                                AppTextBlock("• $step", fontSize = 11.sp, fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, modifier = Modifier.padding(vertical = 2.dp))
                             }
                         }
                     }
@@ -2549,7 +2549,7 @@ fun FormulaText(formula: String) {
     AppText(
         text = formula,
         style = MaterialTheme.typography.bodySmall,
-        fontFamily = FontFamily.Monospace,
+        fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily,
         color = MaterialTheme.colorScheme.secondary,
         modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)
     )

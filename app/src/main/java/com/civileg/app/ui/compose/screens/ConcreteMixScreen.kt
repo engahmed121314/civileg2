@@ -523,7 +523,7 @@ private fun InputRow(
             keyboardType = KeyboardType.Decimal
         ),
         singleLine = true,
-        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 15.sp)
+        textStyle = TextStyle(fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, fontSize = 15.sp)
     )
 }
 
@@ -552,7 +552,7 @@ private fun ResultRow(
             style = if (highlight) MaterialTheme.typography.titleMedium
             else MaterialTheme.typography.bodyMedium,
             fontWeight = if (highlight) FontWeight.Bold else FontWeight.Normal,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily,
             color = if (highlight) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.onSurface
         )
@@ -684,7 +684,7 @@ private fun MixResultCard(result: MixResult) {
                         .padding(12.dp),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily,
                     textAlign = TextAlign.Center
                 )
             }
@@ -862,7 +862,7 @@ private fun MixProportionBarChart(result: MixResult) {
                         modifier = Modifier.width(80.dp),
                         textAlign = TextAlign.End,
                         style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily
                     )
                 }
             }
