@@ -48,7 +48,15 @@ class SteelDesignEngine {
         val localBucklingCheck: SteelCheckResult?,
         val isSafe: Boolean,
         val warnings: List<String> = emptyList(),
-        val codeNotes: List<String> = emptyList()
+        val codeNotes: List<String> = emptyList(),
+        /**
+         * false when a governing check is not implemented for this section (e.g. flexure of a
+         * noncompact or slender section needs a local-buckling reduction this engine lacks).
+         * isSafe then only means "the checks that were run passed". Consumers must not present
+         * it as an all-clear.
+         */
+        val assessmentComplete: Boolean = true,
+        val incompleteReasons: List<String> = emptyList()
     )
 
     data class ColumnDesignResult(
@@ -237,6 +245,13 @@ class SteelDesignEngine {
         if (!momentCheck.isSafe) warnings.add("العزم يتجاوز القدرة - اختر مقطع أكبر")
         if (!shearCheck.isSafe) warnings.add("القص يتجاوز القدرة - زِد سماكة الجذع")
         if (!deflectionCheck.isSafe) warnings.add("الانحراف يتجاوز الحد المسموح")
+        if (ltbCheck != null && !ltbCheck.isSafe) warnings.add("الالتواء الجانبي يتجاوز القدرة - قلّل طول الدعم الجانبي أو اختر مقطعاً أكبر")
+
+        val incompleteReasons = mutableListOf<String>()
+        if (localBucklingCheck.classification.startsWith("Noncompact") || localBucklingCheck.classification.startsWith("Slender")) {
+            incompleteReasons.add("Flexural capacity uses Zx without a local-buckling reduction but the section is ${localBucklingCheck.classification}")
+            warnings.add("NOT ASSESSED: " + incompleteReasons.last())
+        }
 
         return BeamDesignResult(
             momentCheck = momentCheck,
@@ -246,7 +261,9 @@ class SteelDesignEngine {
             localBucklingCheck = localBucklingCheck,
             isSafe = momentCheck.isSafe && shearCheck.isSafe && deflectionCheck.isSafe,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            assessmentComplete = incompleteReasons.isEmpty(),
+            incompleteReasons = incompleteReasons
         )
     }
 
