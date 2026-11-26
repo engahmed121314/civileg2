@@ -441,16 +441,17 @@ def nodes_attr(x, attr):
     return res
 def flatslab_drop_block():
     """Flat slab with a drop panel (100 mm below the slab, 2500 x 2500 mm): sweep the result and export the PDF."""
-    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+    dismiss_not_responding()
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); dismiss_not_responding()
     tap_text(["التصميم"], "fd-tab", exact=True); scroll_top(3)
     ok = False
     for _ in range(5):
         if tap_text(["البلاطات المسطحة"], "fd-find"): ok = True; break
         scroll_up(2)
-    log.append(("fsdrop_open", ok)); time.sleep(2)
+    log.append(("fsdrop_open", ok)); time.sleep(2); dismiss_not_responding()
     scroll_top(2)
     log.append(("fsdrop_switch", tap_checkable("fd-switch")))
-    time.sleep(1); shot("fsdrop-form"); dump("fsdrop-form")
+    time.sleep(1); dismiss_not_responding(); shot("fsdrop-form"); dump("fsdrop-form")
     scroll_up(1)
     got = [edit_field("0", "100", "fd-thk"), edit_field("0", "2500", "fd-x"), edit_field("0", "2500", "fd-y")]
     log.append(("fsdrop_fields", got)); time.sleep(1); shot("fsdrop-typed"); dump("fsdrop-typed")
@@ -458,7 +459,7 @@ def flatslab_drop_block():
     for _ in range(5):
         if tap_text(["تصميم بلاطة مسطحة"], "fd-calc"): calc = True; break
         scroll_up(2)
-    log.append(("fsdrop_calc", calc)); time.sleep(4)
+    log.append(("fsdrop_calc", calc)); time.sleep(4); dismiss_not_responding()
     sweep("fsdrop-res", 9)
     pdf_ok = False
     for _ in range(8):
