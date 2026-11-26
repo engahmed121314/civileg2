@@ -283,6 +283,47 @@ def pull_exported_pdfs():
     for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:4]:
         d = adb("shell", "run-as", pkg, "cat", pth).stdout
         open(f"{out}/exported-" + os.path.basename(pth), "wb").write(d)
+def footing_block():
+    """Footing only: open the isolated footing from the Design tab, design with defaults, sweep the result, export the PDF."""
+    tap_text(["التصميم"], "ft-design", exact=True); scroll_top(3)
+    ok = False
+    for _ in range(6):
+        if tap_text(["القواعد"], "ft-find", exact=True): ok = True; break
+        scroll_up(2)
+    log.append(("footing_open", ok)); time.sleep(2); shot("footing-open"); dump("footing-open")
+    for _ in range(8):
+        if tap_text(["تصميم القاعدة الآن"], "ft-calc-find"): log.append(("footing_calc", True)); break
+        scroll_up(2)
+    else: log.append(("footing_calc", False))
+    time.sleep(4)
+    for k in range(8):
+        scroll_up(2); shot(f"footing-res-{k}"); dump(f"footing-res-{k}")
+    pdf_ok = False
+    for _ in range(14):
+        if tap_text(["تقرير PDF"], "ft-pdf-find"): pdf_ok = True; break
+        scroll_top(1)
+    log.append(("footing_pdf_tap", pdf_ok)); time.sleep(6)
+    if not tap_text(["Got it", "حسنًا", "حسناً"], "ft-pdf-gotit"):
+        wm = adb("shell", "wm", "size").stdout.decode(errors="ignore")
+        mm = re.search(r"(\d+)x(\d+)", wm)
+        if mm:
+            adb("shell", "input", "tap", str(int(int(mm.group(1)) * 0.79)), str(int(int(mm.group(2)) * 0.27))); time.sleep(1.5)
+    shot("footing-pdf"); dump("footing-pdf")
+    for k in range(1, 5):
+        adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
+        shot("footing-pdf-" + str(k))
+    fl = adb("shell", "find", "/sdcard", "/data/user/0/" + pkg, "-name", "Footing_Report*.pdf").stdout.decode(errors="ignore").split()
+    for k2, fp in enumerate(fl[:2]):
+        open(f"{out}/footing-report-{k2}.pdf", "wb").write(adb("exec-out", "run-as", pkg, "cat", fp).stdout if fp.startswith("/data") else adb("exec-out", "cat", fp).stdout)
+    open(f"{out}/footing-report-paths.txt", "w").write("\n".join(fl))
+    open(f"{out}/footing-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
+if os.path.exists("tools/ci/FOOTING_ONLY"):
+    try:
+        footing_block()
+    except Exception as e:
+        log.append(("footing_exception", repr(e)))
+    pull_exported_pdfs()
+    open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
 if os.path.exists("tools/ci/STAIR_ONLY"):
     try:
         stair_block()
