@@ -237,7 +237,7 @@ object BoqEstimator {
         val pitArea = if (isCircular) Math.PI * (lengthM + 0.5) * (lengthM + 0.5) / 4.0 else (lengthM + 0.5) * (widthM + 0.5)
         val rows = mutableListOf(
             item(1, "Concrete - $mark", "m3", concreteVolumeM3),
-            item(2, "Reinforcement steel - $mark", "kg", steelWeightKg),
+            item(2, "Reinforcement steel - $mark (indicative ratio, not designed bars)", "kg", steelWeightKg),
             item(3, "Formwork - $mark (walls)", "m2", wallFormArea),
             item(4, "Formwork - $mark (base)", "m2", baseArea)
         )

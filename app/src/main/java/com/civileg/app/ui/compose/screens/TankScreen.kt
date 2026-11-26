@@ -368,8 +368,8 @@ fun TankScreen(
                             ResultRow(stringResource(R.string.tank_max_water_pressure), "${"%.1f".format(res.waterPressure)} kN/m²")
                             ResultRow(stringResource(R.string.tank_wall_reinforcement), res.wallReinforcement.barString)
                             ResultRow("Concrete Volume", "${"%.3f".format(res.concreteVolume)} m³")
-                            ResultRow("Steel Weight", "${"%.1f".format(res.steelWeight)} kg")
-                            ResultRow("Cost", "${"%.2f".format(res.cost)}")
+                            ResultRow("Steel (indicative ratio, not designed bars)", "${"%.1f".format(res.steelWeight)} kg")
+                            ResultRow("Cost", "Unavailable (no price basis)")
                         }
                     }
                 }

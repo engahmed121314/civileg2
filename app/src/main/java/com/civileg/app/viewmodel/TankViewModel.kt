@@ -197,7 +197,7 @@ class TankViewModel @Inject constructor(
                     "Base Reinforcement" to res.baseReinforcement.barString,
                     "Utilization" to String.format("%.2f", res.utilizationRatio),
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
-                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
+                    "Steel (indicative ratio, not designed bars)" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
                 val safetyChecks = res.safetyChecks.map { chk ->
                     GenericSafetyCheck(
