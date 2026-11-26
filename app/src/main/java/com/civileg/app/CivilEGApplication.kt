@@ -29,6 +29,7 @@ class CivilEGApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        java.util.Locale.setDefault(java.util.Locale.Category.FORMAT, java.util.Locale.US)
         instance = this
 
         // Seed the synchronous default-design-code cache from persisted settings
