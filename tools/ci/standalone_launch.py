@@ -425,6 +425,55 @@ def sweep(prefix, n=5):
     for k in range(n):
         shot(f"{prefix}-{k}"); dump(f"{prefix}-{k}")
         scroll_up(2)
+def tap_checkable(name):
+    """Tap the first Switch-like (checkable) node on screen; used for the flat slab drop panel toggle."""
+    for t, b in nodes_attr(dump(name), "checkable"):
+        adb("shell", "input", "tap", str((b[0]+b[2])//2), str((b[1]+b[3])//2)); time.sleep(1.5); return True
+    return False
+def nodes_attr(x, attr):
+    try: r = ET.fromstring(x)
+    except Exception: return []
+    res = []
+    for n in r.iter("node"):
+        if n.get(attr) == "true":
+            m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", n.get("bounds") or "")
+            if m: res.append((n.get("text") or "", [int(v) for v in m.groups()]))
+    return res
+def flatslab_drop_block():
+    """Flat slab with a drop panel (100 mm below the slab, 2500 x 2500 mm): sweep the result and export the PDF."""
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+    tap_text(["التصميم"], "fd-tab", exact=True); scroll_top(3)
+    ok = False
+    for _ in range(5):
+        if tap_text(["البلاطات المسطحة"], "fd-find"): ok = True; break
+        scroll_up(2)
+    log.append(("fsdrop_open", ok)); time.sleep(2)
+    scroll_top(2)
+    log.append(("fsdrop_switch", tap_checkable("fd-switch")))
+    time.sleep(1); shot("fsdrop-form"); dump("fsdrop-form")
+    scroll_up(1)
+    got = [edit_field("0", "100", "fd-thk"), edit_field("0", "2500", "fd-x"), edit_field("0", "2500", "fd-y")]
+    log.append(("fsdrop_fields", got)); time.sleep(1); shot("fsdrop-typed"); dump("fsdrop-typed")
+    calc = False
+    for _ in range(5):
+        if tap_text(["تصميم بلاطة مسطحة"], "fd-calc"): calc = True; break
+        scroll_up(2)
+    log.append(("fsdrop_calc", calc)); time.sleep(4)
+    sweep("fsdrop-res", 9)
+    pdf_ok = False
+    for _ in range(8):
+        if tap_text(["PDF", "تقرير"], "fd-pdf-find"): pdf_ok = True; break
+        scroll_up(2)
+    log.append(("fsdrop_pdf_tap", pdf_ok)); time.sleep(6)
+    if not tap_text(["Got it", "حسنًا", "حسناً"], "fd-pdf-gotit"):
+        wm = adb("shell", "wm", "size").stdout.decode(errors="ignore")
+        mm = re.search(r"(\d+)x(\d+)", wm)
+        if mm:
+            adb("shell", "input", "tap", str(int(int(mm.group(1)) * 0.79)), str(int(int(mm.group(2)) * 0.27))); time.sleep(1.5)
+    shot("fsdrop-pdf"); dump("fsdrop-pdf")
+    for k in range(1, 5):
+        adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
+        shot("fsdrop-pdf-" + str(k))
 if os.path.exists("tools/ci/CALCPAGES_ONLY"):
     # Default-input calculation of the calculation pages whose standalone result lines were changed (alignment evidence).
     pages = [
@@ -454,7 +503,7 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
             sweep(prefix + "-res", 9 if prefix in ("cp-fs", "cp-strap") else 4)
         except Exception as e:
             log.append((prefix + "_exception", repr(e)))
-    for blk in (footing_block, stair_block, pile_block):
+    for blk in (flatslab_drop_block, footing_block, stair_block, pile_block):
         try:
             blk()
         except Exception as e:
