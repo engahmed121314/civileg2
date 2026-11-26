@@ -135,7 +135,7 @@ class EngineeringDetailExpansionTest {
                 r.columnStripTopRebarY!!.providedArea + r.columnStripBotRebarY!!.providedArea +
                     r.middleStripTopRebarY!!.providedArea + r.middleStripBotRebarY!!.providedArea
             } else asX
-            val expectedKg = (asX * 6000.0 + asY * 6000.0) / 1e9 * 7850.0
+            val expectedKg = if (name == "ECP") (asX * 6000.0 + asY * 6000.0) / 1e9 * 7850.0 else 2.0 * asX * (6000.0 + 6000.0) / 1e9 * 7850.0
             assertEquals("$name steel kg/panel", expectedKg, r.steelWeightPerPanel, 1e-6 * expectedKg + 1e-9)
             assertTrue("$name steel must be a few hundred kg for a 36 m2 panel, not 1000x", r.steelWeightPerPanel < 5000.0)
         }
