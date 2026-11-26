@@ -131,7 +131,7 @@ class EngineeringDetailExpansionTest {
             val asX = r.columnStripTopRebar.providedArea + r.columnStripBotRebar.providedArea +
                 r.middleStripTopRebar.providedArea + r.middleStripBotRebar.providedArea
             // ECP 203-2025 designs the Y direction separately (its own effective depth); the other codes mirror X.
-            val asY = if (r.columnStripTopRebarY != null) {
+            val asY = if (name == "ECP" && r.columnStripTopRebarY != null) {
                 r.columnStripTopRebarY!!.providedArea + r.columnStripBotRebarY!!.providedArea +
                     r.middleStripTopRebarY!!.providedArea + r.middleStripBotRebarY!!.providedArea
             } else asX
