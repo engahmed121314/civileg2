@@ -58,6 +58,7 @@ import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 import kotlinx.coroutines.launch
@@ -539,7 +540,7 @@ fun SeismicScreen(
                                 }
                                 Spacer(Modifier.height(4.dp))
                                 res.baseShearResult.warnings.forEach { w ->
-                                    AppText("• $w", style = MaterialTheme.typography.bodySmall, color = Color(0xFF795548))
+                                    AppTextBlock("• $w", style = MaterialTheme.typography.bodySmall, color = Color(0xFF795548))
                                 }
                             }
                         }

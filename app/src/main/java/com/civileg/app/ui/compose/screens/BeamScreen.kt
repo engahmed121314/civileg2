@@ -55,6 +55,7 @@ import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.domain.validation.FieldSpec
@@ -652,7 +653,7 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
                 AppText("Warnings", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
                 result.warnings.forEach { warning ->
-                    AppText("• $warning", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                    AppTextBlock("• $warning", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                 }
             }
 
@@ -660,7 +661,7 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f))
                 AppText("Code Notes", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 result.codeNotes.forEach { note ->
-                    AppText("• $note", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    AppTextBlock("• $note", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

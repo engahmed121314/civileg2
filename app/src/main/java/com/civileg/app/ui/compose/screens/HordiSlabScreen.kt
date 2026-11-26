@@ -40,6 +40,7 @@ import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 
@@ -568,7 +569,7 @@ fun HordiSlabScreen(
                                     }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     res.warnings.forEach { w ->
-                                        AppText("• $w", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                                        AppTextBlock("• $w", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
                                     }
                                 }
                             }

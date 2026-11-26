@@ -61,6 +61,7 @@ import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.domain.validation.FieldKind
 import com.civileg.app.domain.validation.FieldSpec
 import com.civileg.app.domain.validation.FormValidator
@@ -1087,7 +1088,7 @@ private fun StairFormulasCard(result:CalculatorEngine.StairResult) {
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr) {
                 result.calculationSteps.forEach { step ->
                     FormulaItem("${step.stepNumber}. ${step.formula}")
-                    AppText(step.formulaWithValues,style=MaterialTheme.typography.bodySmall)
+                    AppTextBlock(step.formulaWithValues,style=MaterialTheme.typography.bodySmall)
                 }
             }
         }

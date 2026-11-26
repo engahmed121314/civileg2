@@ -4,6 +4,7 @@ import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 
@@ -1748,12 +1749,12 @@ private fun NotesCard(warnings: List<String>, notes: List<String>) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (warnings.isNotEmpty()) {
                 AppText("Warnings / تحذيرات", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFFC62828))
-                warnings.forEach { AppText("• $it", style = MaterialTheme.typography.bodySmall) }
+                warnings.forEach { AppTextBlock("• $it", style = MaterialTheme.typography.bodySmall) }
                 HorizontalDivider()
             }
             if (notes.isNotEmpty()) {
                 AppText("Notes / ملاحظات", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                notes.forEach { AppText("• $it", style = MaterialTheme.typography.bodySmall) }
+                notes.forEach { AppTextBlock("• $it", style = MaterialTheme.typography.bodySmall) }
             }
         }
     }

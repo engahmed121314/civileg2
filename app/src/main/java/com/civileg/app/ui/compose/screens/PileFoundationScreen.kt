@@ -49,6 +49,7 @@ import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 
@@ -706,7 +707,7 @@ fun PileFoundationScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         AppText("⚠", color = Color(0xFFFF9800), fontSize = 13.sp)
                                         Spacer(Modifier.width(4.dp))
-                                        AppText(w, fontSize = 12.sp, color = Color(0xFFFF9800))
+                                        AppTextBlock(w, fontSize = 12.sp, color = Color(0xFFFF9800))
                                     }
                                     Spacer(Modifier.height(2.dp))
                                 }

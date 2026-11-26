@@ -68,6 +68,7 @@ import com.civileg.app.ui.compose.components.DesignCodeSelectorRow
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen as AppInteractiveDrawingScreen
@@ -367,7 +368,7 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                             AppText(stringResource(R.string.steel_engineering_calc_trace), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                             Spacer(Modifier.height(8.dp))
                             res.calculationTrace.forEach { step ->
-                                AppText("• $step", fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(vertical = 2.dp))
+                                AppTextBlock("• $step", fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(vertical = 2.dp))
                             }
                         }
                     }
@@ -486,7 +487,7 @@ fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
                     br.tensionCheck?.let { ResultRow(if (res.resultsByCode == DesignCode.ACI.displayName) "AISC D2 tension check" else "ECP 205 tension check", "$it (N / phi Pn = ${String.format(java.util.Locale.US, "%.3f", br.tensionUtilisation ?: 0.0)})") }
                     br.slendernessCheck?.let { ResultRow("Slenderness vs 300 (Table 2.3)", it) }
                     ResultRow("Brace force (tension-only)", br.braceForceKn?.let { "${String.format("%.1f", it)} kN" } ?: "NOT ASSESSED (enter H)")
-                    br.lines.forEach { AppText(it, fontSize = 11.sp) }
+                    br.lines.forEach { AppTextBlock(it, fontSize = 11.sp) }
                     val bmp = remember(br) { com.civileg.app.shared.reporting.PdfDrawingGenerator.generateBracingDrawing(br) }
                     androidx.compose.foundation.Image(bmp.asImageBitmap(), contentDescription = "X-bracing elevation", modifier = Modifier.fillMaxWidth())
                 } else ResultRow("X-bracing", br.reason ?: "NOT ISSUED")
@@ -736,7 +737,7 @@ fun RecommendationsCard(items: List<String>) {
         Column(modifier = Modifier.padding(12.dp)) {
             AppText(stringResource(R.string.steel_recommendations), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
             items.forEach { item ->
-                AppText("• $item", fontSize = 12.sp, modifier = Modifier.padding(vertical = 2.dp))
+                AppTextBlock("• $item", fontSize = 12.sp, modifier = Modifier.padding(vertical = 2.dp))
             }
         }
     }
@@ -1163,7 +1164,7 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
                             AppText(stringResource(R.string.steel_calculation_trace), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.height(8.dp))
                             flexRes.calculationTrace.forEach { step ->
-                                AppText("• $step", fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(vertical = 2.dp))
+                                AppTextBlock("• $step", fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(vertical = 2.dp))
                             }
                         }
                     }
@@ -1833,7 +1834,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                             Spacer(modifier = Modifier.height(8.dp))
                             AppText(stringResource(R.string.steel_warnings), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFF57C00))
                             res.warnings.forEach { warning ->
-                                AppText(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
+                                AppTextBlock(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
                             }
                         }
 
@@ -1842,7 +1843,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                             Spacer(modifier = Modifier.height(8.dp))
                             AppText(stringResource(R.string.steel_code_notes), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                             res.codeNotes.forEach { note ->
-                                AppText(note, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
+                                AppTextBlock(note, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
                             }
                         }
 
@@ -1902,7 +1903,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                             Spacer(modifier = Modifier.height(8.dp))
                             AppText(stringResource(R.string.steel_warnings), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFF57C00))
                             res.warnings.forEach { warning ->
-                                AppText(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
+                                AppTextBlock(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
                             }
                         }
 
@@ -1911,7 +1912,7 @@ fun ConnectionDesignTab(viewModel: SteelViewModel) {
                             Spacer(modifier = Modifier.height(8.dp))
                             AppText(stringResource(R.string.steel_code_notes), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
                             res.codeNotes.forEach { note ->
-                                AppText(note, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
+                                AppTextBlock(note, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
                             }
                         }
 
@@ -2233,7 +2234,7 @@ private fun BasePlateConcentricResultCard(
                 Spacer(modifier = Modifier.height(8.dp))
                 AppText(stringResource(R.string.steel_warnings), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFF57C00))
                 res.warnings.forEach { warning ->
-                    AppText(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
+                    AppTextBlock(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
                 }
             }
 
@@ -2311,7 +2312,7 @@ private fun BasePlateEccentricResultCard(
                 Spacer(modifier = Modifier.height(8.dp))
                 AppText(stringResource(R.string.steel_warnings), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFF57C00))
                 res.warnings.forEach { warning ->
-                    AppText(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
+                    AppTextBlock(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
                 }
             }
 
@@ -2379,7 +2380,7 @@ private fun BasePlatePocketResultCard(
                 Spacer(modifier = Modifier.height(8.dp))
                 AppText(stringResource(R.string.steel_warnings), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFF57C00))
                 res.warnings.forEach { warning ->
-                    AppText(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
+                    AppTextBlock(warning, fontSize = 11.sp, color = Color(0xFFF57C00), modifier = Modifier.padding(top = 2.dp))
                 }
             }
 

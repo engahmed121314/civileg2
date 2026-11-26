@@ -51,6 +51,7 @@ import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 
@@ -215,7 +216,7 @@ fun StrapFootingScreen(
 
             error?.let {
                 item {
-                    AppText(it, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
+                    AppTextBlock(it, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
                 }
             }
 

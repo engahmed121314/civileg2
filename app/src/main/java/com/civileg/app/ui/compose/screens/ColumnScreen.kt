@@ -58,6 +58,7 @@ import com.civileg.app.ui.compose.components.drawings.BarInfo
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.utils.ComposeDrawingCaptureUtil
@@ -684,7 +685,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
                 AppText("Warnings", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
                 result.warnings.forEach { warning ->
-                    AppText("• $warning", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                    AppTextBlock("• $warning", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                 }
             }
 
@@ -692,7 +693,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
                 AppText("Code Notes", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 result.codeNotes.forEach { note ->
-                    AppText("• $note", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    AppTextBlock("• $note", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

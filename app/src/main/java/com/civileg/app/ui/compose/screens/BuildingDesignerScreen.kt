@@ -19,6 +19,7 @@ import com.civileg.app.ui.compose.components.editor.BuildingDesignerToolbar
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 import kotlinx.coroutines.launch
@@ -218,7 +219,7 @@ fun BuildingDesignerScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         AppText("بنود جدول الكميات (BOQ Items):", style = MaterialTheme.typography.titleSmall)
                         summary.boqItems.forEach { item ->
-                            AppText("• ${item.descriptionAr}: ${item.quantity} ${item.unitAr} (${item.totalPrice} ج.م)")
+                            AppTextBlock("• ${item.descriptionAr}: ${item.quantity} ${item.unitAr} (${item.totalPrice} ج.م)")
                         }
                     }
                 }

@@ -1,5 +1,6 @@
 package com.civileg.app.ui.components
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -147,3 +148,28 @@ internal fun alignmentFromText(text: String): TextAlign? {
     }
     return null
 }
+
+/**
+ * A standalone line or paragraph inside a calculation result panel (formula step, warning, note). It takes the full width of its
+ * column so that English text sits at the left edge and Arabic at the right edge in both layout directions; a wrap-content text
+ * would otherwise be placed at the column's start edge (the right edge on Arabic screens) and look indented. Use it only for lines that
+ * are not side by side with a value in a Row.
+ */
+@Composable
+fun AppTextBlock(
+    text: String,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
+    color: Color = Color.Unspecified,
+    fontSize: TextUnit = TextUnit.Unspecified,
+    fontStyle: FontStyle? = null,
+    fontWeight: FontWeight? = null,
+    fontFamily: FontFamily? = null,
+    lineHeight: TextUnit = TextUnit.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
+    style: TextStyle = LocalTextStyle.current
+) = AppText(
+    text = text,
+    modifier = androidx.compose.ui.Modifier.fillMaxWidth().then(modifier),
+    color = color, fontSize = fontSize, fontStyle = fontStyle, fontWeight = fontWeight, fontFamily = fontFamily,
+    lineHeight = lineHeight, maxLines = maxLines, style = style
+)
