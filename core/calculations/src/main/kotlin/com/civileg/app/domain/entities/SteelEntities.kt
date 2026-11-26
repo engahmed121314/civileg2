@@ -598,7 +598,14 @@ data class SteelMemberResult(
     val cost: Double,
     val warnings: List<String>,
     val codeNotes: List<String>,
-    val detailedResults: @RawValue Map<String, Any> = emptyMap()
+    val detailedResults: @RawValue Map<String, Any> = emptyMap(),
+    /**
+     * false when a governing check is not implemented for this section (e.g. flexure of a
+     * noncompact or slender section without a local-buckling reduction). isSafe then only
+     * means "the checks that were run passed" and must not be presented as an all-clear.
+     */
+    val assessmentComplete: Boolean = true,
+    val incompleteReasons: List<String> = emptyList()
 ) : Parcelable
 
 @Parcelize

@@ -121,9 +121,11 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         addRow("Report Date", SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date()))
         document.add(info)
 
-        val statusColor = if (result.safetyStatus) SUCCESS else ERROR
+        // safetyStatus currently reflects the deflection check only (see CalculatorEngine);
+        // member capacity is not confirmed, so a pass must not read as an overall approval.
+        val statusColor = if (result.safetyStatus) DeviceRgb(239, 108, 0) else ERROR
         document.add(Paragraph("\n"))
-        document.add(Paragraph(if (result.safetyStatus) "STATUS: STRUCTURAL ANALYSIS PASSED" else "STATUS: REVIEW REQUIRED")
+        document.add(Paragraph(if (result.safetyStatus) "STATUS: PRELIMINARY - deflection check passes; member capacity NOT ASSESSED" else "STATUS: REVIEW REQUIRED")
             .setFont(helvetica(true)).setFontSize(12f).setFontColor(statusColor).setTextAlignment(TextAlignment.CENTER)
             .setPadding(10f).setBorder(SolidBorder(statusColor, 1f)))
     }
@@ -201,7 +203,8 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
                 else -> "Full Bay Sets"
             }
             table.addCell(dataCell(qtyText, false, bg))
-            table.addCell(dataCell("SAFE", true, bg, SUCCESS))
+            // No per-member capacity check backs this schedule; do not print SAFE.
+            table.addCell(dataCell("NOT ASSESSED", true, bg, ColorConstants.GRAY))
         }
         document.add(table)
     }
@@ -213,11 +216,14 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         val table = Table(UnitValue.createPercentArray(floatArrayOf(25f, 40f, 15f, 20f))).useAllAvailableWidth()
         table.addHeaderCell(headerCell("COMPONENT")).addHeaderCell(headerCell("SPECIFICATIONS / DETAILING")).addHeaderCell(headerCell("UNIT")).addHeaderCell(headerCell("STATUS"))
         
-        table.addCell(dataCell("Base Plates (PL)", true)).addCell(dataCell("Thickness: ${result.mainFrame.basePlateThickness.toInt()}mm, Grade: S355")).addCell(dataCell("mm")).addCell(dataCell("PASS", true, null, SUCCESS))
-        table.addCell(dataCell("Anchor Bolts", true, ROW_ALT)).addCell(dataCell("Type: M24 Grade 8.8, Qty: ${result.mainFrame.basePlateBoltsCount} per base", false, ROW_ALT)).addCell(dataCell("Nos", false, ROW_ALT)).addCell(dataCell("SAFE", true, ROW_ALT, SUCCESS))
-        table.addCell(dataCell("End Plates (PL)")).addCell(dataCell("Thickness: 20mm, Grade: S355, High-Strength Bolted")).addCell(dataCell("mm")).addCell(dataCell("PASS", true, null, SUCCESS))
+        // These rows mix result values with typical placeholders and no capacity check is
+        // run behind them, so none may carry PASS/SAFE.
+        table.addCell(dataCell("Base Plates (PL)", true)).addCell(dataCell("Thickness: ${result.mainFrame.basePlateThickness.toInt()}mm, Grade: S355")).addCell(dataCell("mm")).addCell(dataCell("NOT ASSESSED", true, null, ColorConstants.GRAY))
+        table.addCell(dataCell("Anchor Bolts", true, ROW_ALT)).addCell(dataCell("Type: M24 Grade 8.8, Qty: ${result.mainFrame.basePlateBoltsCount} per base", false, ROW_ALT)).addCell(dataCell("Nos", false, ROW_ALT)).addCell(dataCell("NOT ASSESSED", true, ROW_ALT, ColorConstants.GRAY))
+        table.addCell(dataCell("End Plates (PL)")).addCell(dataCell("Thickness: 20mm, Grade: S355, High-Strength Bolted (typical, not designed)")).addCell(dataCell("mm")).addCell(dataCell("NOT ASSESSED", true, null, ColorConstants.GRAY))
 
         document.add(table)
+        document.add(Paragraph("Connection details above are typical values, not designed against the calculated forces.").setFontSize(7f).setFontColor(ColorConstants.GRAY))
     }
 
     private fun addMaterialTakeoff(document: Document, result: SteelWarehouseAnalysisResult, inputs: SteelWarehouseInputs) {
@@ -227,14 +233,17 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         val table = Table(UnitValue.createPercentArray(floatArrayOf(5f, 40f, 15f, 15f, 25f))).useAllAvailableWidth()
         table.addHeaderCell(headerCell("#")).addHeaderCell(headerCell("ITEM DESCRIPTION")).addHeaderCell(headerCell("QTY")).addHeaderCell(headerCell("UNIT")).addHeaderCell(headerCell("EST. COST (EGP)"))
         
+        // materialTakeoff values are produced in TONS (CalculatorEngine): convert to kg here.
+        // Unit rates below are illustrative placeholders, not from a verified price source.
         var idx = 1
         result.materialTakeoff.forEach { (k, v) ->
             val bg = if (idx % 2 == 0) ROW_ALT else null
-            table.addCell(dataCell("${idx++}", false, bg)).addCell(dataCell("Structural Steel: $k", false, bg)).addCell(dataCell(v.fmt(0), false, bg)).addCell(dataCell("kg", false, bg)).addCell(dataCell((v * 45.0).fmt(0), false, bg))
+            val kg = v * 1000.0
+            table.addCell(dataCell("${idx++}", false, bg)).addCell(dataCell("Structural Steel: $k", false, bg)).addCell(dataCell(kg.fmt(0), false, bg)).addCell(dataCell("kg", false, bg)).addCell(dataCell((kg * 45.0).fmt(0), false, bg))
         }
 
-        val secWeight = result.totalWeight * 0.15 * 1000 
-        table.addCell(dataCell("${idx++}", false, ROW_ALT)).addCell(dataCell("Accessories (Plates, Bracing, Bolts)", false, ROW_ALT)).addCell(dataCell(secWeight.fmt(0), false, ROW_ALT)).addCell(dataCell("kg", false, ROW_ALT)).addCell(dataCell((secWeight * 65.0).fmt(0), false, ROW_ALT))
+        val secWeight = result.totalWeight * 0.15 * 1000 // rough allowance, kg (totalWeight is tons)
+        table.addCell(dataCell("${idx++}", false, ROW_ALT)).addCell(dataCell("Accessories allowance (~15% of steel weight - rough allowance, not measured)", false, ROW_ALT)).addCell(dataCell(secWeight.fmt(0), false, ROW_ALT)).addCell(dataCell("kg", false, ROW_ALT)).addCell(dataCell((secWeight * 65.0).fmt(0), false, ROW_ALT))
 
         table.addCell(dataCell("${idx++}")).addCell(dataCell("Roof & Wall Cladding (Sandwich Panels)")).addCell(dataCell(result.totalCladdingArea.fmt(0))).addCell(dataCell("m\u00B2")).addCell(dataCell((result.totalCladdingArea * 350.0).fmt(0)))
 
@@ -242,6 +251,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         table.addCell(Cell(1, 4).add(Paragraph("GRAND TOTAL ESTIMATED PROJECT COST").setBold().setTextAlignment(TextAlignment.RIGHT)).setBackgroundColor(totalRowBg))
         table.addCell(dataCell("${result.estimatedTotalCost.fmt(0)} EGP", true, totalRowBg, PRIMARY))
         document.add(table)
+        document.add(Paragraph("Costs use illustrative placeholder unit rates, not prices from a verified or dated source; do not use for procurement.").setFontSize(7f).setFontColor(ColorConstants.GRAY))
     }
 
     private fun addTitleBlock(document: Document, client: String, project: String, inputs: SteelWarehouseInputs) {

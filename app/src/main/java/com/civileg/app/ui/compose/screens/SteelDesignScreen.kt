@@ -2479,7 +2479,18 @@ fun SteelResultCard(res: SteelMemberResult) {
             if (showFormulas) FormulaText("\u03A6Vn = \u03A6 \u00B7 0.6 \u00B7 Fy \u00B7 Aw")
             
             ResultRow(stringResource(R.string.steel_utilization_ratio_label), "${(res.utilizationRatio * 100).toInt()}%")
-            ResultRow(stringResource(R.string.status), if (res.isSafe) stringResource(R.string.steel_status_safe) else stringResource(R.string.steel_status_unsafe))
+            // patch3: a failed check outranks incompleteness; an incomplete assessment must
+            // never read as an all-clear even when the checks that ran passed.
+            when {
+                !res.isSafe -> ResultRow(stringResource(R.string.status), stringResource(R.string.steel_status_unsafe))
+                !res.assessmentComplete -> ResultRow(stringResource(R.string.status), "NOT ASSESSED")
+                else -> ResultRow(stringResource(R.string.status), stringResource(R.string.steel_status_safe))
+            }
+            if (!res.assessmentComplete) {
+                res.incompleteReasons.forEach { reason ->
+                    AppText("NOT ASSESSED: $reason", color = Color(0xFFEF6C00), style = MaterialTheme.typography.bodySmall)
+                }
+            }
         }
     }
 }

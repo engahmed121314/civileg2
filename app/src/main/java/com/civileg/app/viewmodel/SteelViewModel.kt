@@ -21,6 +21,16 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 
+/**
+ * Overall status label for a steel member result, shared by the PDF export. A failed check
+ * outranks incompleteness; an incomplete assessment (patch3) must never read as an all-clear.
+ */
+internal fun steelMemberPdfStatus(res: SteelMemberResult): String = when {
+    !res.isSafe -> "CHECK FAILS"
+    !res.assessmentComplete -> "NOT ASSESSED - a governing check is not implemented for this section"
+    else -> "CHECK PASSES (PRELIMINARY)"
+}
+
 @HiltViewModel
 class SteelViewModel @Inject constructor(
     private val repository: DesignRepository,
@@ -338,7 +348,7 @@ class SteelViewModel @Inject constructor(
                     "Moment Capacity" to "${String.format("%.2f", res.flexuralCapacity)} kN.m",
                     "Shear Capacity" to "${String.format("%.2f", res.shearCapacity)} kN",
                     "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
-                    "Status" to if (res.isSafe) "CHECK PASSES (PRELIMINARY)" else "CHECK FAILS"
+                    "Status" to steelMemberPdfStatus(res)
                 )
                 val memberTypeLabel = when (stored.memberType) {
                     com.civileg.app.domain.entities.SteelMemberType.COLUMN -> "Column"
@@ -409,7 +419,8 @@ class SteelViewModel @Inject constructor(
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
                     drawing = buildDxfDrawing(),
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    assessmentPending = !res.assessmentComplete
                 ).pdfFile
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
