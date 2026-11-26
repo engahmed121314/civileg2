@@ -286,7 +286,50 @@ class ECPFlatSlab : FlatSlabDesign {
             codeNotes.add(String.format("Shear studs (Eq 4-47, fy<=350): phi%d @ %.0f mm, %d lines, total capacity %.0f kN",
                 punchingResult.studDia.toInt(), punchingResult.studSpacing, punchingResult.studRows, punchingResult.vsProvided))
         }
-        if (dropOk) warnings.add("Second punching section outside the drop panel is NOT ASSESSED")
+        val pos = when (input.panelType) {
+            PanelType.INTERIOR -> ECP2025FlatSlabExtras.Position.INTERIOR
+            PanelType.EDGE -> ECP2025FlatSlabExtras.Position.EDGE
+            PanelType.CORNER -> ECP2025FlatSlabExtras.Position.CORNER
+        }
+        var dropEdgeOk = true
+        if (dropOk) {
+            // Second critical section at d/2 outside the drop panel edge, slab-only d (p.4-26 item 3-a, Fig 4-13 p.4-27)
+            val secs = ECP2025FlatSlabExtras.punchingSections(
+                Vu, input.fcu, input.slabThickness, input.dropThickness,
+                input.columnWidth, input.columnDepth, input.dropSizeX, input.dropSizeY,
+                input.clearCover, ASSUMED_BAR_DIA, pos)
+            val outer = secs.last()
+            dropEdgeOk = outer.ok
+            safetyChecks.add(SafetyCheckItem("Punching at drop edge", outer.vuKn, outer.vcKn, "kN", outer.ok))
+            codeNotes.add(String.format(
+                "Punching at drop panel edge (ECP 203-2025 p.4-26 item 3-a): bo=%.0f mm, d=%.0f mm (slab only), Vu=%.1f kN (full Vu, no reduction found in code text), Vc=%.1f kN, U=%.0f%% -> %s",
+                outer.bo, outer.d, outer.vuKn, outer.vcKn, outer.utilization * 100, if (outer.ok) "OK" else "FAIL"))
+            if (!outer.ok) warnings.add("Punching FAILED at the drop panel edge (ECP 203-2025 p.4-26 item 3-a): enlarge the drop panel or increase the slab thickness")
+        }
+        if (!punchingResult.isSafe && !dropOk && input.dropThickness <= 0.0) {
+            // Suggest a drop panel and re-check both sections for it (limits 6-2-5-2-d, p.6-19)
+            val sizeX = input.lx / 3.0
+            val sizeY = input.ly / 3.0
+            var found: Pair<Double, List<ECP2025FlatSlabExtras.Section>>? = null
+            var proj = max(ceil(input.slabThickness / 4.0 / 25.0) * 25.0, 50.0)
+            while (found == null && proj <= input.slabThickness) {
+                if (sizeX <= lMin / 2.0 + 1e-6 && sizeY <= lMin / 2.0 + 1e-6) {
+                    val trial = ECP2025FlatSlabExtras.punchingSections(
+                        Vu, input.fcu, input.slabThickness, proj, input.columnWidth, input.columnDepth,
+                        sizeX, sizeY, input.clearCover, ASSUMED_BAR_DIA, pos)
+                    if (trial.all { it.ok }) found = proj to trial
+                }
+                proj += 25.0
+            }
+            if (found != null) {
+                warnings.add(String.format(
+                    "Suggested drop panel: %.0f x %.0f mm, %.0f mm below the slab. Both punching sections pass concrete-only (Vu %.0f kN; Vc %.0f kN at column, %.0f kN at drop edge). Enter these values and recalculate.",
+                    sizeX, sizeY, found.first, Vu, found.second.first().vcKn, found.second.last().vcKn))
+            } else {
+                warnings.add("No drop panel within the 6-2-5-2-d limits (t/4 to t projection, extent L/3 to Lmin/2) passes punching: increase slab thickness or column size")
+            }
+        }
+        if (dropOk) codeNotes.add("Column head slope <= 45 deg and D <= Lmin/4 (p.6-18) are not inputs: column head geometry is not assessed")
         codeNotes.add("Column-head reinforcement (6-2-5-9) and openings (6-2-5-10) are NOT ASSESSED")
 
         // ── 9. Deflection: NOT ASSESSED ───────────────────────────
@@ -341,7 +384,7 @@ class ECPFlatSlab : FlatSlabDesign {
         if (!flexureOk) warnings.add("Flexure not satisfied in one or more strips (reinforcement insufficient or K > Kmax: increase thickness)")
 
         val maxUtil = maxOf(punchingResult.utilizationRatio, flexUtil, if (minThk > 0) minThk / input.slabThickness else 0.0)
-        val overallSafe = punchingResult.isSafe && minThkOk && flexureOk && applicable
+        val overallSafe = punchingResult.isSafe && dropEdgeOk && minThkOk && flexureOk && applicable
 
         val punchingReinforcement = if (punchingResult.needsReinforcement && punchingResult.studDia > 0) {
             val studArea = PI * punchingResult.studDia * punchingResult.studDia / 4
