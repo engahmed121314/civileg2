@@ -377,9 +377,8 @@ fun TankScreen(
                 if (res.calculationSteps.isNotEmpty()) {
                     item { CalculationStepsCard(res.calculationSteps, title = "Tank Calculation Steps") }
 
-                    val bbsEntries = runCatching {
-                        BbsGenerator.generateTankBbs("T1", res)
-                    }.getOrDefault(emptyList())
+                    // Not issued: generator omits horizontal wall bars and the top base layer (unverified, incomplete).
+                    val bbsEntries = emptyList<com.civileg.app.domain.calculations.utils.BbsEntry>()
                     if (bbsEntries.isNotEmpty()) {
                         item { BbsTableCard(bbsEntries, title = "Tank Bar Bending Schedule") }
                     }

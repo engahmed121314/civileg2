@@ -217,9 +217,9 @@ class TankViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     calculationSteps = res.calculationSteps,
-                    bbsEntries = runCatching {
-                        BbsGenerator.generateTankBbs("T1", res)
-                    }.getOrDefault(emptyList()),
+                    // Tank bar schedule not issued: the generator schedules only vertical wall bars and one base mat
+                    // (no horizontal wall bars, no top base layer), so it is not a designed-bar schedule.
+                    bbsEntries = emptyList(),
                     boqRows = BoqEstimator.tankRows(
                         res.concreteVolume, res.steelWeight, res.length, res.width, res.height,
                         "T1", excavationDepthM, blindingThicknessM,
