@@ -176,4 +176,25 @@ class DxfExporterTest {
         assertTrue(dxf.contains("Zone 3 / Soil C"))
         assertTrue(count(dxf, "TEXT") >= 5)
     }
+
+    @Test
+    fun tankSheet_circularDrawsCirclesAndStatesBarScheduleNotIssued() {
+        val drawing = ElementDxfDrawings.tankSheet(
+            "TANK", true, 4460.0, 4460.0, 3500.0, 300.0, 400.0, 40.0, 14.0, 100.0, 12.0, 150.0
+        )
+        val text = DxfExporter().renderToString(drawing)
+        assertTrue(count(text, "CIRCLE") >= 4)
+        assertTrue(text.contains("PLAN (CIRCULAR)"))
+        assertTrue(text.contains("NOT ISSUED"))
+    }
+
+    @Test
+    fun tankSheet_rectangularHasPlanAndSection() {
+        val drawing = ElementDxfDrawings.tankSheet(
+            "TANK", false, 7000.0, 7000.0, 3500.0, 300.0, 400.0, 40.0, 14.0, 100.0, 12.0, 150.0
+        )
+        val text = DxfExporter().renderToString(drawing)
+        assertTrue(text.contains("SECTION A-A"))
+        assertTrue(text.contains("PLAN"))
+    }
 }

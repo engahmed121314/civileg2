@@ -117,14 +117,19 @@ class TankViewModel @Inject constructor(
     /** Standalone DXF sheet for the current tank design (null when no result). */
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val res = _result.value ?: return null
-        return com.civileg.app.utils.ElementDxfDrawings.tankSection(
-            title = "TANK ${res.type.displayName}",
-            widthMm = res.width * 1000.0,
+        return com.civileg.app.utils.ElementDxfDrawings.tankSheet(
+            title = "TANK ${res.type.displayNameEn}",
+            isCircular = res.type.name.contains("CIRCULAR"),
+            innerLengthMm = res.length * 1000.0,
+            innerWidthMm = res.width * 1000.0,
             heightMm = res.height * 1000.0,
             wallThicknessMm = res.wallThickness,
+            baseThicknessMm = res.baseThickness,
             coverMm = 40.0,
-            barDiaMm = res.wallReinforcement.diameter.toDouble(),
-            barSpacingMm = res.wallReinforcement.spacing.toDouble()
+            vertBarDiaMm = res.wallReinforcement.diameter.toDouble(),
+            vertBarSpacingMm = res.wallReinforcement.spacing.toDouble(),
+            horizBarDiaMm = res.baseReinforcement.diameter.toDouble(),
+            horizBarSpacingMm = res.baseReinforcement.spacing.toDouble()
         )
     }
 
