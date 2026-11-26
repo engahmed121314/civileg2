@@ -56,7 +56,7 @@ class FootingViewModel @Inject constructor(
     /** Everything the shown result was solved with. BOQ, PDF and save read this, never live UI fields. */
     data class FootingSolvedInputs(
         val type: CalculatorEngine.FootingType,
-        val pu: Double, val pu2: Double, val distanceMm: Double,
+        val pu: Double, val ps: Double?, val pu2: Double, val distanceMm: Double,
         val fcu: Double, val fy: Double, val soil: Double,
         val colB: Double, val colT: Double,
         val code: DesignCode,
@@ -70,6 +70,7 @@ class FootingViewModel @Inject constructor(
     fun calculateFooting(
         type: CalculatorEngine.FootingType,
         p: Double,
+        ps: Double?,
         fcu: Double,
         fy: Double,
         soil: Double,
@@ -105,6 +106,7 @@ class FootingViewModel @Inject constructor(
                 val res = calculatorEngine.calculateFooting(
                     type = type,
                     p = p,
+                    ps = ps,
                     fcu = fcu,
                     fy = fy,
                     soil = soil,
@@ -127,7 +129,7 @@ class FootingViewModel @Inject constructor(
                 _validationReport.value = report.copy(warnings = combinedWarnings)
                 
                 _solvedInputs.value = FootingSolvedInputs(
-                    type, p, p2, distance, fcu, fy, soil, colB, colT, code,
+                    type, p, ps, p2, distance, fcu, fy, soil, colB, colT, code,
                     preferredDiameter, preferredSpacing, maxLeft, maxRight,
                     excavationDepthM, workingSpaceM, blindingThicknessM
                 )
@@ -244,14 +246,17 @@ class FootingViewModel @Inject constructor(
                     "Blinding Thickness" to "${solved.blindingThicknessM} m",
                     // Entered load from the solved snapshot. The old line printed soil pressure x area,
                     // a derived service load, under the label "Applied Load".
-                    "Entered axial load Pu" to "${String.format("%.1f", solved.pu)} kN"
+                    "Entered axial load Pu" to "${String.format("%.1f", solved.pu)} kN",
+                    "Entered service load Ps" to (solved.ps?.let { "${String.format("%.1f", it)} kN" } ?: "not entered (combined or legacy record: basis unknown)")
                 )
                 val resultsMap = mapOf(
                     "Reinforcement" to res.reinforcementBottom.barString,
                     "Bars X" to "${res.barsX} Ø${res.barDiameter}",
                     "Bars Y" to "${res.barsY} Ø${res.barDiameter}",
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
-                    "Steel Weight (bars x length, no laps or hooks)" to "${String.format("%.1f", res.steelWeight)} kg",
+                    "Bar bending schedule" to "NOT ISSUED - cutting lengths (bends, hooks, anchorage, laps) have no verified code basis",
+                    "Net bar lengths" to com.civileg.app.domain.calculations.utils.BbsGenerator.footingNetLengthNote(res),
+                    "Steel Weight (plan dimensions, no cover, laps, hooks or bends)" to "${String.format("%.1f", res.steelWeight)} kg",
                     // Efficiency and Optimal were unassessed defaults (100% / Yes) printed beside an UNSAFE verdict
                 )
                 // Professional English PDF Report — English only, no Arabic encoding issues
@@ -271,9 +276,7 @@ class FootingViewModel @Inject constructor(
                     // Passing checks do not make a complete assessment (punching demand model, constants and layer order are unverified)
                     assessmentPending = res.isSafe,
                     calculationSteps = res.calculationSteps,
-                    bbsEntries = runCatching {
-                        com.civileg.app.domain.calculations.utils.BbsGenerator.generateFootingBbs("F1", res)
-                    }.getOrDefault(emptyList()),
+                    bbsEntries = emptyList(), // bar bending schedule NOT ISSUED, see the results table
                     boqRows = BoqEstimator.footingRows(res, "F1", solved.excavationDepthM, solved.workingSpaceM, solved.blindingThicknessM),
                     drawingBitmap = drawingBitmap,
                     drawing = buildDxfDrawing(),

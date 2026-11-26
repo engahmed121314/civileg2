@@ -112,6 +112,7 @@ fun FootingScreen(
     var barSpacing by remember { mutableStateOf("150") }
     
     var axialLoad by remember { mutableStateOf("1200") }
+    var axialServiceLoad by remember { mutableStateOf("") } // required project input, no assumed value
     var soilCapacity by remember { mutableStateOf("150") }
     var colLength by remember { mutableStateOf("600") }
     var colWidth by remember { mutableStateOf("300") }
@@ -224,6 +225,15 @@ fun FootingScreen(
                 }
             }
 
+            if (selectedType != CalculatorEngine.FootingType.COMBINED) {
+                item {
+                    // Unfactored column load for plan size and bearing. Pu above is used for strength checks; neither is derived from the other.
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ValidatedNumberField(form, "axialServiceLoad", axialServiceLoad, stringResource(R.string.footing_ps_label), { axialServiceLoad = it; touch("axialServiceLoad") }, Modifier.weight(1f))
+                    }
+                }
+            }
+
             if (selectedType == CalculatorEngine.FootingType.COMBINED) {
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -284,10 +294,10 @@ fun FootingScreen(
 
             item {
                 // LazyColumn item index per field (the combined-only row shifts later rows by one).
-                val shift = if (selectedType == CalculatorEngine.FootingType.COMBINED) 1 else 0
+                val shift = 1 // the combined-only row or the service-load row always occupies item 5
                 val fieldItemIndex = mapOf(
                     "colLength" to 2, "colWidth" to 2, "fcu" to 3, "fy" to 3,
-                    "axialLoad" to 4, "soilCapacity" to 4, "axialLoad2" to 5, "colDistance" to 5,
+                    "axialLoad" to 4, "soilCapacity" to 4, "axialServiceLoad" to 5, "axialLoad2" to 5, "colDistance" to 5,
                     "maxLeft" to 5 + shift, "maxRight" to 5 + shift,
                     "barDiameter" to 6 + shift, "barSpacing" to 6 + shift,
                     "excavationDepth" to 8 + shift, "workingSpace" to 8 + shift, "blindingThickness" to 8 + shift
@@ -300,7 +310,7 @@ fun FootingScreen(
                         viewModel.clearResult() // never leave a stale result on screen
                         val combined = selectedType == CalculatorEngine.FootingType.COMBINED
                         val groups = buildSet {
-                            if (combined) add("combined")
+                            if (combined) add("combined") else add("single")
                             if (limitLeftOn) add("left")
                             if (limitRightOn) add("right")
                         }
@@ -314,6 +324,7 @@ fun FootingScreen(
                                 FieldSpec("fy", fy, FieldKind.POSITIVE),
                                 FieldSpec("axialLoad", axialLoad, FieldKind.POSITIVE),
                                 FieldSpec("soilCapacity", soilCapacity, FieldKind.POSITIVE),
+                                FieldSpec("axialServiceLoad", axialServiceLoad, FieldKind.POSITIVE, group = "single"),
                                 // Engine runs the combined design only when p2 > 0 and distance > 0.
                                 FieldSpec("axialLoad2", axialLoad2, FieldKind.POSITIVE, group = "combined"),
                                 FieldSpec("colDistance", colDistance, FieldKind.POSITIVE, group = "combined"),
@@ -339,6 +350,7 @@ fun FootingScreen(
                         viewModel.calculateFooting(
                             type = selectedType,
                             p = checked.value("axialLoad"),
+                            ps = if (combined) null else checked.value("axialServiceLoad"),
                             fcu = checked.value("fcu"),
                             fy = checked.value("fy"),
                             soil = checked.value("soilCapacity"),
@@ -450,6 +462,15 @@ fun FootingScreen(
                     }
                 }
 
+                if (!res.isCombined && res.serviceLoadKn == null) {
+                    item {
+                        AppText(
+                            "Service-load basis unknown: this result has no entered service load Ps (saved before that input existed). Bearing and plan size are not redesigned. Enter Ps and calculate again.",
+                            fontSize = 12.sp, color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+
                 if (res.calculationSteps.isNotEmpty()) {
                     item { CalculationStepsCard(res.calculationSteps, title = stringResource(R.string.footing_calc_steps)) }
                 }
@@ -457,11 +478,16 @@ fun FootingScreen(
                 // BBS/BOQ are heavy pure functions: remember them so recomposition
                 // (typing, scrolling, snackbars) does not regenerate the tables.
                 item {
-                    val bbsEntries = remember(res) {
-                        runCatching { BbsGenerator.generateFootingBbs("F1", res) }.getOrDefault(emptyList())
-                    }
-                    if (bbsEntries.isNotEmpty()) {
-                        BbsTableCard(bbsEntries, title = stringResource(R.string.footing_bbs_title))
+                    // Bar bending schedule NOT ISSUED: bend-up/hook/anchorage/lap lengths have no verified code basis.
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        AppText(
+                            "Bar bending schedule: NOT ISSUED. Cutting lengths (bends, hooks, anchorage, laps) have no verified code basis.",
+                            fontSize = 12.sp, color = MaterialTheme.colorScheme.error
+                        )
+                        AppText(
+                            BbsGenerator.footingNetLengthNote(res),
+                            fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 

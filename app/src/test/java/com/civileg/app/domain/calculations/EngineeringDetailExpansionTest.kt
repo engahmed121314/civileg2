@@ -332,7 +332,7 @@ class EngineeringDetailExpansionTest {
         for (soil in listOf(100.0, 150.0, 250.0)) {
             for (p in listOf(800.0, 1200.0, 2000.0)) {
                 val r = engine.calculateFooting(
-                    type = CalculatorEngine.FootingType.ISOLATED, p = p, fcu = 25.0, fy = 360.0,
+                    type = CalculatorEngine.FootingType.ISOLATED, p = p, ps = p / 1.5, fcu = 25.0, fy = 360.0,
                     soil = soil, colB = 300.0, colT = 500.0, code = DesignCode.ECP
                 )
                 val flex = r.safetyChecks.first { it.name == "Flexure Steel" }
@@ -345,24 +345,24 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
-    fun `footing input is factored Pu and the pressure times plan area equals Pu over 1_5`() {
-        // Hand calculation: Pu = 1200 kN factored; the engine's assumed average factor for D+L is 1.5 (unverified approximation),
-        // so the service load is 800 kN and q * B * L must be 800 kN. The wrapper once printed A = 1200/150 = 8.00 m2 beside a 6.1 m2 plan.
+    fun `footing pressure times plan area equals the entered service load`() {
+        // Hand calculation: the entered service load is 800 kN, so q * B * L must be 800 kN. The wrapper once printed
+        // A = 1200/150 = 8.00 m2 beside a 6.1 m2 plan.
         val r = engine.calculateFooting(
-            type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, fcu = 25.0, fy = 360.0,
+            type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, ps = 800.0, fcu = 25.0, fy = 360.0,
             soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
         )
         val area = r.width * r.length / 1e6
         assertEquals(800.0, r.soilPressure * area, 0.5)
         val step1 = r.calculationSteps.first { it.stepNumber == 1 }
-        assertTrue(step1.formulaWithValues, step1.formulaWithValues.contains("1200 / 1.50 = 800"))
+        assertTrue(step1.formulaWithValues, step1.formulaWithValues.contains("Ps = 800 kN (entered); Pu = 1200 kN (entered)"))
         assertTrue(step1.result, !step1.result.contains("8.00"))
     }
 
     @Test
     fun `footing drawing status never reads SAFE and a failing footing reads FAIL`() {
         val ok = engine.calculateFooting(
-            type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, fcu = 25.0, fy = 360.0,
+            type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, ps = 800.0, fcu = 25.0, fy = 360.0,
             soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
         )
         assertTrue(ok.isSafe)
@@ -378,10 +378,59 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `footing plan needs an entered service load and uses it instead of a ratio to Pu`() {
+        // No Ps: no plan is designed, the error names the field.
+        val e = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            engine.calculateFooting(
+                type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, fcu = 25.0, fy = 360.0,
+                soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
+            )
+        }
+        assertTrue(e.message, e.message!!.contains("Service load Ps"))
+        // Ps = 900 with the same Pu = 1200: pressure x area must be 900 (hand value), not 1200/1.5 = 800.
+        val r = engine.calculateFooting(
+            type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, ps = 900.0, fcu = 25.0, fy = 360.0,
+            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
+        )
+        assertEquals(900.0, r.soilPressure * r.width * r.length / 1e6, 0.5)
+        assertEquals(900.0, r.serviceLoadKn!!, 1e-9)
+    }
+
+    @Test
+    fun `footing engines reject moments together with an entered service load`() {
+        for (code in listOf(DesignCode.ECP, DesignCode.ACI, DesignCode.SBC)) {
+            val e = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+                com.civileg.app.domain.calculations.CalculationFactory.getFootingDesign(code).designIsolatedFooting(
+                    fcu = 25.0, fy = 360.0, columnWidth = 300.0, columnDepth = 500.0, axialLoad = 1200.0,
+                    momentX = 50.0, momentY = 0.0, soilBearingCapacity = 150.0, footingDepth = 600.0,
+                    loadCombination = com.civileg.app.domain.entities.LoadCombination.DEAD_LIVE, serviceAxialLoad = 800.0
+                )
+            }
+            assertTrue("$code: ${e.message}", e.message!!.contains("Moments are not supported"))
+        }
+    }
+
+    @Test
+    fun `footing net length note uses the design cover and the independently computed net steel`() {
+        val r = engine.calculateFooting(
+            type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, ps = 800.0, fcu = 25.0, fy = 360.0,
+            soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
+        )
+        val netX = r.length - 2 * r.coverMm
+        val netY = r.width - 2 * r.coverMm
+        val kg = (r.barsX * netX + r.barsY * netY) / 1000.0 * (r.barDiameter * r.barDiameter / 162.0)
+        val note = com.civileg.app.domain.calculations.utils.BbsGenerator.footingNetLengthNote(r)
+        assertTrue(note, note.contains("X ${r.barsX} x ${"%.0f".format(netX)} mm"))
+        assertTrue(note, note.contains("Y ${r.barsY} x ${"%.0f".format(netY)} mm"))
+        assertTrue(note, note.contains("net steel ${"%.1f".format(kg)} kg"))
+        assertTrue(note, note.contains("not a cutting schedule"))
+    }
+
+    @Test
     fun `ECP footing punching row is a stress in MPa equal to the hand calculation`() {
         // qp = 0.9*P*1000/(b0*d) [MPa], b0 = 2(c1+c2)+4d [mm], d = t - cover - 0.75*dia (mean of the two layers, the diameter actually selected). The row used to be labelled kN.
         val r = engine.calculateFooting(
-            type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, fcu = 25.0, fy = 360.0,
+            type = CalculatorEngine.FootingType.ISOLATED, p = 1200.0, ps = 800.0, fcu = 25.0, fy = 360.0,
             soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
         )
         val row = r.safetyChecks.first { it.name == "Punching Shear" }
@@ -402,7 +451,7 @@ class EngineeringDetailExpansionTest {
             listOf(1200.0, 150.0, 300.0, 600.0), listOf(1200.0, 250.0, 300.0, 600.0),
             listOf(800.0, 100.0, 400.0, 400.0), listOf(2000.0, 200.0, 300.0, 500.0)
         )) {
-            val r = engine.calculateFooting(type = CalculatorEngine.FootingType.ISOLATED, p = p, fcu = 25.0, fy = 360.0,
+            val r = engine.calculateFooting(type = CalculatorEngine.FootingType.ISOLATED, p = p, ps = p / factor, fcu = 25.0, fy = 360.0,
                 soil = soil, colB = colB, colT = colT, code = DesignCode.ECP)
             val area = (p / factor) / (soil - 25.0 * 0.6)
             val ratio = Math.sqrt(colT / colB * 1.2)
@@ -435,7 +484,7 @@ class EngineeringDetailExpansionTest {
     fun `footing property line limits are rejected not silently ignored`() {
         val e = org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
             engine.calculateFooting(
-                type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
+                type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, ps = 540.0, fcu = 25.0, fy = 360.0,
                 soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP, maxLeft = 1000.0
             )
         }
@@ -445,7 +494,7 @@ class EngineeringDetailExpansionTest {
     @Test
     fun `footing result exposes calculation steps`() {
         val r = engine.calculateFooting(
-            type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, fcu = 25.0, fy = 360.0,
+            type = CalculatorEngine.FootingType.ISOLATED, p = 800.0, ps = 540.0, fcu = 25.0, fy = 360.0,
             soil = 150.0, colB = 300.0, colT = 500.0, code = DesignCode.ECP
         )
         assertEquals("five traceable design steps expected", 5, r.calculationSteps.size)

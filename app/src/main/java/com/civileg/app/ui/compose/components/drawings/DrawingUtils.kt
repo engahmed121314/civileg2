@@ -1449,9 +1449,11 @@ fun DrawScope.drawResultSummaryStrip(
     width: Float,
     cfg: DrawingDimensionsConfig,
     color: Color = DrawingColorDefaults.DimensionWhite,
-    borderColor: Color = DrawingColorDefaults.ExtensionGray
+    borderColor: Color = DrawingColorDefaults.ExtensionGray,
+    stacked: Boolean = false
 ) {
     val small = cfg.annotationTextSmall
+    if (stacked) { drawStackedResultSummaryStrip(summary, x, y, width, cfg, color, borderColor); return }
     val rowHeight = small * 1.35f
     val height = rowHeight * 2f
     val statusColor = if (summary.listedChecksFailed || !summary.codeAcceptanceComplete) DrawingColorDefaults.UnsafeRed else if (summary.isSafe) DrawingColorDefaults.SafeGreen else DrawingColorDefaults.UnsafeRed
@@ -1499,22 +1501,25 @@ fun DrawScope.drawSheetAnnotations(
     y: Float,
     cfg: DrawingDimensionsConfig,
     summary: DrawingResultSummary? = null,
-    color: Color = DrawingColorDefaults.DimensionWhite
+    color: Color = DrawingColorDefaults.DimensionWhite,
+    stackedSummary: Boolean = false
 ) {
     val blockWidth = cfg.titleBlockWidth
     val small = cfg.annotationTextSmall
     if (summary != null) {
+        val stripY = if (stackedSummary) y - small * 1.35f * SUMMARY_STRIP_ROWS - small * 0.4f else y - small * 2.7f
         drawResultSummaryStrip(
             summary = summary,
             x = x,
-            y = y - small * 2.7f,
+            y = stripY,
             width = blockWidth,
             cfg = cfg,
-            color = color
+            color = color,
+            stacked = stackedSummary
         )
         drawNorthArrow(
             x = x + blockWidth * 0.5f,
-            y = y - small * 6.2f,
+            y = if (stackedSummary) stripY - small * 2.8f else y - small * 6.2f,
             size = small * 1.4f,
             color = color
         )
@@ -1527,3 +1532,47 @@ fun DrawScope.drawSheetAnnotations(
         )
     }
 }
+
+/** Footing-only layout: one short line per row so STATUS, UTIL and CODE do not overprint in the narrow strip. */
+private fun DrawScope.drawStackedResultSummaryStrip(
+    summary: DrawingResultSummary,
+    x: Float,
+    y: Float,
+    width: Float,
+    cfg: DrawingDimensionsConfig,
+    color: Color = DrawingColorDefaults.DimensionWhite,
+    borderColor: Color = DrawingColorDefaults.ExtensionGray
+) {
+    val small = cfg.annotationTextSmall
+    val rowHeight = small * 1.35f
+    val height = rowHeight * SUMMARY_STRIP_ROWS
+    val statusColor = if (summary.listedChecksFailed || !summary.codeAcceptanceComplete) DrawingColorDefaults.UnsafeRed else if (summary.isSafe) DrawingColorDefaults.SafeGreen else DrawingColorDefaults.UnsafeRed
+    val pad = small * 0.4f
+
+    drawRect(Color(0x22FFFFFF), Offset(x, y), Size(width, height))
+    drawRect(borderColor, Offset(x, y), Size(width, height), style = Stroke(cfg.strokeTable))
+
+    val status = if (summary.listedChecksFailed) "UNSAFE" else if (!summary.codeAcceptanceComplete) "UNVERIFIED" else if (summary.isSafe) "SAFE" else "UNSAFE"
+    val total = summary.safetyChecks.size
+    val passed = total - summary.failedCheckCount - summary.notAssessedCheckCount
+    val checks = if (total == 0) "CHECKS: N/A"
+        else if (summary.notAssessedCheckCount > 0) "CHECKS: $passed/$total PASS, ${summary.notAssessedCheckCount} N/A"
+        else "CHECKS: $passed/$total PASS"
+    // One short line per row: the old two-row layout put STATUS, UTIL and CODE side by side and they overprinted each other.
+    val lines = listOf(
+        "STATUS: $status",
+        checks,
+        summary.utilizationText ?: "UTIL: ${summary.utilizationPercent}",
+        if (summary.designCodeLabel.isNotBlank()) "CODE: ${summary.designCodeLabel}" else "",
+        "CONC: %.2f m3".format(summary.concreteVolume),
+        "STEEL: %.1f kg".format(summary.steelWeight)
+    )
+    lines.forEachIndexed { i, text ->
+        if (i > 0) drawLine(borderColor, Offset(x, y + rowHeight * i), Offset(x + width, y + rowHeight * i), cfg.strokeDefault)
+        drawTextAnnotated(text, x + pad, y + rowHeight * i + small * 1.05f, if (i == 0) statusColor else color, small, bold = i == 0)
+    }
+}
+
+/** Rows in the result summary strip (one short text line per row). */
+const val SUMMARY_STRIP_ROWS = 6
+

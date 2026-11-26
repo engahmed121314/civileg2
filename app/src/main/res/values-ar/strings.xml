@@ -1256,6 +1256,7 @@
     <string name="footing_column_width_mm">عرض العمود (مم)</string>
     <string name="footing_fcu_label">مقاومة الخرسانة fcu (MPa)</string>
     <string name="footing_fy_label">مقاومة الحديد fy (MPa)</string>
+    <string name="footing_ps_label">حمل الخدمة Ps (kN، غير مضروب)</string>
     <string name="footing_pu1_label">حمل محوري Pu1 (kN)</string>
     <string name="footing_soil_label">قدرة التربة (kN/m²)</string>
     <string name="footing_pu2_label">حمل محوري Pu2 (kN)</string>

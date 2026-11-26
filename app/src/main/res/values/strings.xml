@@ -1261,6 +1261,7 @@
     <string name="footing_column_width_mm">Column Width (mm)</string>
     <string name="footing_fcu_label">Concrete fcu (MPa)</string>
     <string name="footing_fy_label">Steel fy (MPa)</string>
+    <string name="footing_ps_label">Service Load Ps (kN, unfactored)</string>
     <string name="footing_pu1_label">Axial Load Pu1 (kN)</string>
     <string name="footing_soil_label">Soil Capacity (kN/m²)</string>
     <string name="footing_pu2_label">Axial Load Pu2 (kN)</string>

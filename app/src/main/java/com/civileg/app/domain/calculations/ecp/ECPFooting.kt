@@ -46,7 +46,8 @@ class ECPFooting : FootingDesign {
         soilBearingCapacity: Double,
         footingDepth: Double,
         loadCombination: LoadCombination,
-        constraints: BoundaryConstraints
+        constraints: BoundaryConstraints,
+        serviceAxialLoad: Double?
     ): FootingDesignResult {
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
@@ -64,7 +65,10 @@ class ECPFooting : FootingDesign {
 
         // 2. تحويل الأحمال للخدمة (لحساب أبعاد القاعدة)
         val factor = loadCombination.getFactorForCode(DesignCode.ECP)
-        val P_service = axialLoad / factor
+        require(serviceAxialLoad == null || (momentX == 0.0 && momentY == 0.0)) {
+            "Moments are not supported together with an entered service load: the service and factored moment components are not available, and dividing by a load factor is not a grounded conversion."
+        }
+        val P_service = serviceAxialLoad ?: (axialLoad / factor)
         val Mx_service = momentX / factor
         val My_service = momentY / factor
 
@@ -117,7 +121,8 @@ class ECPFooting : FootingDesign {
         )
 
         // Factored soil pressure for flexure and one-way shear design (ultimate level)
-        val q_factored = q_avg * factor
+        // With an explicit service load the factored pressure comes from the factored load, not from a ratio.
+        val q_factored = if (serviceAxialLoad != null && A_actual > 0) axialLoad / A_actual else q_avg * factor
 
         // ECP 203 §7-1: Bearing check — q_max ≤ SBC, q_min ≥ 0 (no uplift)
         if (q_max > soilBearingCapacity) {

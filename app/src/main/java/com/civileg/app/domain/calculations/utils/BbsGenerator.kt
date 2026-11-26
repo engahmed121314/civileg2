@@ -133,6 +133,20 @@ object BbsGenerator {
     }
 
     /**
+     * Comparison note only, not detailing: net straight bar lengths between the cover lines (no bends, hooks, anchorage or laps),
+     * with the cover the design used. The footing bar bending schedule itself is NOT ISSUED because those allowances have no verified basis.
+     */
+    fun footingNetLengthNote(result: FootingResult): String {
+        val c = result.coverMm
+        val netX = result.length - 2 * c
+        val netY = result.width - 2 * c
+        val kg = (result.barsX * netX + result.barsY * netY) / 1000.0 * (result.barDiameter.toDouble().pow(2) / 162.0)
+        return "Net straight lengths only (comparison, not a cutting schedule): X ${result.barsX} x ${"%.0f".format(netX)} mm, " +
+            "Y ${result.barsY} x ${"%.0f".format(netY)} mm, cover ${"%.0f".format(c)} mm; net steel ${"%.1f".format(kg)} kg. " +
+            "The quantity table steel uses the plan dimensions without cover, bends, hooks or laps, so the two figures are not expected to match."
+    }
+
+    /**
      * Generates a Bar Bending Schedule for a designed Isolated Footing.
      */
     fun generateFootingBbs(mark: String, result: FootingResult): List<BbsEntry> {

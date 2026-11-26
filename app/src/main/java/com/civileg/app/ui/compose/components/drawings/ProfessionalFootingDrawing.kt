@@ -690,7 +690,8 @@ fun ProfessionalFootingDrawing(
             x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
             y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,
             cfg = cfg,
-            summary = resultSummary
+            summary = resultSummary,
+            stackedSummary = true // Footing sheet only; other drawings keep the shared layout until it is visually regression-checked
         )
         drawResponsiveTitleBlock(
             x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
