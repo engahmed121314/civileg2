@@ -23,10 +23,12 @@ fun flatSlabCalculationSteps(
     punchingOk: Boolean,
     deflection: Double,
     allowableDeflection: Double,
-    deflectionOk: Boolean
+    deflectionOk: Boolean,
+    punchingStuds: Boolean = false,
+    deflectionAssessed: Boolean = true
 ): List<CalculationStep> {
     val ref = when (code) {
-        DesignCode.ECP -> DesignCode.ECP.version
+        DesignCode.ECP -> "ECP 203-2025 (flat slab: Eq 6-18, Table 6-5, punching Eq 4-46/4-47, Table 6-3; deflection NOT ASSESSED)"
         DesignCode.ACI -> DesignCode.ACI.version
         DesignCode.SBC -> DesignCode.SBC.version
     }
@@ -65,11 +67,17 @@ fun flatSlabCalculationSteps(
             stepNumber = 5, title = "Punching Shear",
             formula = "Vu ≤ Vc (perimeter at d/2)",
             formulaWithValues = "Vu = ${"%.1f".format(punchingVu)} kN vs Vc = ${"%.1f".format(punchingVc)} kN",
-            result = if (punchingOk) "OK" else "Shear reinforcement / drop required", unit = "kN",
+            result = if (!punchingOk) "Shear reinforcement / drop required" else if (punchingStuds) "OK with punching shear reinforcement (Vu > Vc without it)" else "OK", unit = if (punchingOk && punchingStuds) "" else "kN",
             codeReference = ref, isPass = punchingOk,
             status = if (punchingOk) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
         ),
-        CalculationStep(
+        if (!deflectionAssessed) CalculationStep(
+            stepNumber = 6, title = "Deflection",
+            formula = "", formulaWithValues = "",
+            result = "NOT ASSESSED (no verified clause for the empirical-method deflection check)", unit = "",
+            codeReference = ref, isPass = false,
+            status = StepStatus.WARNING
+        ) else CalculationStep(
             stepNumber = 6, title = "Deflection",
             formula = "Δ ≤ L/250",
             formulaWithValues = "Δ = ${"%.2f".format(deflection)} mm vs ${"%.2f".format(allowableDeflection)} mm",

@@ -437,6 +437,7 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
         ("حوائط السند", "cp-rw", ["تحليل"]),
         ("القواعد الشداد", "cp-strap", ["تحليل وحساب"]),
         ("الزلازل", "cp-seis", ["تحليل القص عند القاعدة"]),
+        ("المصمتة", "cp-slab", ["تصميم البلاطة", "تصميم البلاطات", "تحليل وحساب", "احسب"]),
     ]
     for label, prefix, calc in pages:
         try:
@@ -455,9 +456,9 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
             sweep(prefix + "-res", 4)
         except Exception as e:
             log.append((prefix + "_exception", repr(e)))
-    for blk in (footing_block, stair_block):
+    for blk in (footing_block, stair_block, pile_block):
         try:
-            restart_app(); blk()
+            blk()
         except Exception as e:
             log.append((blk.__name__ + "_exception", repr(e)))
     pull_exported_pdfs()

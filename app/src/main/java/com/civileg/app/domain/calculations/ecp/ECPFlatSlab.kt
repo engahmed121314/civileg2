@@ -399,7 +399,9 @@ class ECPFlatSlab : FlatSlabDesign {
                 punchingOk = punchingResult.isSafe,
                 deflection = 0.0,
                 allowableDeflection = 0.0,
-                deflectionOk = false
+                deflectionOk = false,
+                punchingStuds = punchingResult.needsReinforcement && punchingResult.studDia > 0,
+                deflectionAssessed = false
             ),
             columnStripTopRebarY = dirY.colTop,
             columnStripBotRebarY = dirY.colBot,

@@ -1843,7 +1843,7 @@ class CalculatorEngine @Inject constructor(
             val shearSafe = vu <= mainRes.shearCapacity
             val thicknessSafe = ts >= mainRes.minThickness
 
-            val ref = codeNoteRef(domainCode)
+            val ref = if (domainCode == DesignCode.ECP) "ECP 203-2025 (solid slab: Table 4-1 K limit, 6-2-1-2-3 minimum steel, Eq 6-6 minimum thickness; shear flagged unverified)" else codeNoteRef(domainCode)
             val steps = listOf(
                 CalculationStep(
                     stepNumber = 1, title = "Factored Load",
@@ -2035,7 +2035,7 @@ class CalculatorEngine @Inject constructor(
             DesignSafetyCheck("Flexure Steel", res.reinforcement.astProvided, res.reinforcement.astRequired, "mm²", res.reinforcement.isSafe)
         )
 
-        val ref = codeNoteRef(domainCode)
+        val ref = if (domainCode == DesignCode.ECP) "ECP 203-2025 (footing: Eq 4-29 shear, Eq 4-44/4-46 punching on net force, Table 4-1 K limit; plan size and bearing not compared)" else codeNoteRef(domainCode)
         val pService: Double = ps
         val steps = listOf(
             CalculationStep(
@@ -2225,8 +2225,8 @@ class CalculatorEngine @Inject constructor(
             calculationSteps = res.calculationSteps.mapIndexed { i, line ->
                 CalculationStep(
                     stepNumber = i + 1, title = "Strap Design ${i + 1}",
-                    formula = "", formulaWithValues = line, result = line,
-                    codeReference = codeNoteRef(code)
+                    formula = "", formulaWithValues = "", result = line,
+                    codeReference = if (code == DesignCode.ECP) "ECP 203-2025 (strap: Eq 4-46 punching, Eq 4-30 shear, Table 4-1 K-method; other clauses not compared)" else codeNoteRef(code)
                 )
             }
         )
