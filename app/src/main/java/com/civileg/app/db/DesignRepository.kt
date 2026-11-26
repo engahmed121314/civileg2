@@ -182,6 +182,11 @@ class DesignRepository @Inject constructor(
             put("height", result.height)
             put("wallThickness", result.wallThickness)
             put("baseThickness", result.baseThickness)
+            // Records saved before this flag carry a steel/cost figure of unknown basis. From here on the steel is a
+            // fixed kg/m3 ratio times concrete volume (not designed bars) and the cost uses fixed prices with no
+            // currency or date, so neither is a designed quantity or a current price.
+            put("steelBasis", "indicative_ratio_not_designed_bars")
+            put("costBasis", "unavailable_fixed_unit_prices_no_basis")
         }.toString()
         saveGeneralDesign(projectId, DesignType.WATER_TANK, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
         

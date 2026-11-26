@@ -112,6 +112,7 @@ fun tankDrawingSummary(result: CalculatorEngine.TankResult): DrawingResultSummar
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
+        codeNotes = listOf("Steel weight is an indicative ratio x concrete volume, not designed bars; cost unavailable"),
         designCodeLabel = result.code.version
     )
 
