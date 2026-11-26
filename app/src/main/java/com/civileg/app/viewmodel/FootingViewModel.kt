@@ -56,7 +56,7 @@ class FootingViewModel @Inject constructor(
     /** Everything the shown result was solved with. BOQ, PDF and save read this, never live UI fields. */
     data class FootingSolvedInputs(
         val type: CalculatorEngine.FootingType,
-        val pu: Double, val pu2: Double, val distanceMm: Double,
+        val pu: Double, val ps: Double?, val pu2: Double, val distanceMm: Double,
         val fcu: Double, val fy: Double, val soil: Double,
         val colB: Double, val colT: Double,
         val code: DesignCode,
@@ -70,6 +70,7 @@ class FootingViewModel @Inject constructor(
     fun calculateFooting(
         type: CalculatorEngine.FootingType,
         p: Double,
+        ps: Double?,
         fcu: Double,
         fy: Double,
         soil: Double,
@@ -105,6 +106,7 @@ class FootingViewModel @Inject constructor(
                 val res = calculatorEngine.calculateFooting(
                     type = type,
                     p = p,
+                    ps = ps,
                     fcu = fcu,
                     fy = fy,
                     soil = soil,
@@ -127,7 +129,7 @@ class FootingViewModel @Inject constructor(
                 _validationReport.value = report.copy(warnings = combinedWarnings)
                 
                 _solvedInputs.value = FootingSolvedInputs(
-                    type, p, p2, distance, fcu, fy, soil, colB, colT, code,
+                    type, p, ps, p2, distance, fcu, fy, soil, colB, colT, code,
                     preferredDiameter, preferredSpacing, maxLeft, maxRight,
                     excavationDepthM, workingSpaceM, blindingThicknessM
                 )
@@ -244,7 +246,8 @@ class FootingViewModel @Inject constructor(
                     "Blinding Thickness" to "${solved.blindingThicknessM} m",
                     // Entered load from the solved snapshot. The old line printed soil pressure x area,
                     // a derived service load, under the label "Applied Load".
-                    "Entered axial load Pu" to "${String.format("%.1f", solved.pu)} kN"
+                    "Entered axial load Pu" to "${String.format("%.1f", solved.pu)} kN",
+                    "Entered service load Ps" to (solved.ps?.let { "${String.format("%.1f", it)} kN" } ?: "not entered (combined or legacy record: basis unknown)")
                 )
                 val resultsMap = mapOf(
                     "Reinforcement" to res.reinforcementBottom.barString,

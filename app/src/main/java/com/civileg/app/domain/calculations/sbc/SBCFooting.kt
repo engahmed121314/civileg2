@@ -27,7 +27,8 @@ class SBCFooting : FootingDesign {
         fcu: Double, fy: Double, columnWidth: Double, columnDepth: Double,
         axialLoad: Double, momentX: Double, momentY: Double,
         soilBearingCapacity: Double, footingDepth: Double, loadCombination: LoadCombination,
-        constraints: BoundaryConstraints
+        constraints: BoundaryConstraints,
+        serviceAxialLoad: Double?
     ): FootingDesignResult {
         // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
@@ -47,7 +48,7 @@ class SBCFooting : FootingDesign {
         
         // 1. تحويل الأحمال للخدمة (لحساب أبعاد القاعدة)
         val factor = loadCombination.getFactorForCode(DesignCode.SBC)
-        val P_service = axialLoad / factor
+        val P_service = serviceAxialLoad ?: (axialLoad / factor)
         val Mx_service = momentX / factor
         val My_service = momentY / factor
         
@@ -98,7 +99,7 @@ class SBCFooting : FootingDesign {
         }
         
         // Factored soil pressure for flexure and one-way shear design (ultimate level)
-        val q_factored = q_avg * factor
+        val q_factored = if (serviceAxialLoad != null && actualArea > 0) axialLoad / actualArea else q_avg * factor
         
         // 5. السمك الفعال
         val d = footingDepth - getMinCover() - 10.0

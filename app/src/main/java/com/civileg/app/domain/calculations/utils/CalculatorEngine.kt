@@ -251,7 +251,9 @@ class CalculatorEngine @Inject constructor(
         val reinforcementTopY: Int = 0,
         val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
         /** Minimum cover (mm) the engine used for the effective depth; drawings must show the same value. */
-        val coverMm: Double = 70.0
+        val coverMm: Double = 70.0,
+        /** Entered unfactored column load (kN) the bearing check used. Null on a record saved before this input existed: the basis is unknown, not reinterpreted. */
+        val serviceLoadKn: Double? = null
     ) : Parcelable
 
     @Parcelize
@@ -1893,7 +1895,9 @@ class CalculatorEngine @Inject constructor(
         type: FootingType, p: Double, fcu: Double, fy: Double, soil: Double, colB: Double, colT: Double,
         code: DesignCode, preferredDiameter: Int = 16, preferredSpacing: Double = 150.0, p2: Double = 0.0, distance: Double = 0.0, 
         maxLeft: Double? = null, maxRight: Double? = null, maxTop: Double? = null, maxBottom: Double? = null,
-        numPiles: Int = 4, pileDia: Double = 500.0, pileCapacity: Double = 500.0
+        numPiles: Int = 4, pileDia: Double = 500.0, pileCapacity: Double = 500.0,
+        /** Explicit unfactored (service) column load, kN. Required for the single-column plan/bearing design; never derived from [p]. */
+        ps: Double? = null
     ): FootingResult {
         InputGuard.positive("p", p)
         InputGuard.positive("fcu", fcu)
@@ -1960,11 +1964,16 @@ class CalculatorEngine @Inject constructor(
             )
         }
 
+        // Plan size and bearing need the real unfactored load. No average factor or D/L split is assumed: without Ps no plan is designed.
+        require(ps != null && ps > 0.0) {
+            "Service load Ps (kN, unfactored) is required to design the plan and check bearing. Enter Ps; it is not derived from Pu."
+        }
         val res = footingEngine.designIsolatedFooting(
             fcu = fcu, fy = fy, columnWidth = colB, columnDepth = colT,
             axialLoad = p, momentX = 0.0, momentY = 0.0,
             soilBearingCapacity = soil, footingDepth = initialDepth,
-            loadCombination = LoadCombination.DEAD_LIVE
+            loadCombination = LoadCombination.DEAD_LIVE,
+            serviceAxialLoad = ps
         )
 
         val widthM = res.requiredWidth / 1000.0
@@ -1992,14 +2001,13 @@ class CalculatorEngine @Inject constructor(
         )
 
         val ref = codeNoteRef(domainCode)
-        val gammaAvg = LoadCombination.DEAD_LIVE.getFactorForCode(domainCode)
-        val pService = p / gammaAvg
+        val pService: Double = ps
         val steps = listOf(
             CalculationStep(
-                stepNumber = 1, title = "Service Load and Required Area",
-                formula = "P_service = Pu / γ_avg (γ_avg = ${"%.2f".format(gammaAvg)} assumed average factor, unverified); A ≈ P_service / q_net",
-                formulaWithValues = "P_service = ${"%.0f".format(p)} / ${"%.2f".format(gammaAvg)} = ${"%.0f".format(pService)} kN; plan area provided = ${"%.2f".format(res.requiredWidth * res.requiredLength / 1e6)} m²",
-                result = "P_service = ${"%.0f".format(pService)} kN (Pu input = ${"%.0f".format(p)} kN)", unit = "kN",
+                stepNumber = 1, title = "Service Load and Plan Area",
+                formula = "Plan area A = B x L sized from the entered service load Ps (net of overburden) and q_allow",
+                formulaWithValues = "Ps = ${"%.0f".format(pService)} kN (entered); Pu = ${"%.0f".format(p)} kN (entered); plan area provided = ${"%.2f".format(res.requiredWidth * res.requiredLength / 1e6)} m²",
+                result = "Ps = ${"%.0f".format(pService)} kN, Pu = ${"%.0f".format(p)} kN", unit = "kN",
                 codeReference = ref
             ),
             CalculationStep(
@@ -2048,7 +2056,8 @@ class CalculatorEngine @Inject constructor(
             safetyChecks = safetyChecks,
             column1Size = Pair(colB, colT),
             calculationSteps = steps,
-            coverMm = footingEngine.getMinCover()
+            coverMm = footingEngine.getMinCover(),
+            serviceLoadKn = ps
         )
     }
 

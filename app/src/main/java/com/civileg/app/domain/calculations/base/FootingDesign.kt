@@ -24,7 +24,9 @@ interface FootingDesign {
         soilBearingCapacity: Double, // kPa
         footingDepth: Double,     // mm
         loadCombination: LoadCombination,
-        constraints: BoundaryConstraints = BoundaryConstraints()
+        constraints: BoundaryConstraints = BoundaryConstraints(),
+        /** Explicit unfactored (service) column load in kN. When null the legacy conversion axialLoad / combination factor is used. */
+        serviceAxialLoad: Double? = null
     ): FootingDesignResult
 
     /**
