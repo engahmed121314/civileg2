@@ -118,8 +118,7 @@ object ProfessionalEnglishPdfReporter {
     /** Get a FRESH Helvetica regular font. Never cache across PdfDocuments. */
     private fun getFont(bold: Boolean = false): PdfFont {
         return try {
-            if (bold) PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD)
-            else PdfFontFactory.createFont(StandardFonts.HELVETICA)
+            PlexPdfFont.create(bold)
         } catch (e: Exception) {
             Log.e(TAG, "Font creation failed: ${e.message}")
             try { PdfFontFactory.createFont(StandardFonts.HELVETICA) }
@@ -1039,7 +1038,7 @@ object ProfessionalEnglishPdfReporter {
 
     private fun addPageNumbers(pdfDoc: PdfDocument) {
         val font = try {
-            PdfFontFactory.createFont(StandardFonts.HELVETICA)
+            PlexPdfFont.create()
         } catch (_: Exception) {
             return
         }
