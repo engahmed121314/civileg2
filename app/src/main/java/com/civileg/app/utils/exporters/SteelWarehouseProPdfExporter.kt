@@ -148,9 +148,13 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
                       else "Footing plan: ${f.reason}"
             document.add(Paragraph(txt).setFontSize(9f).setBold())
         }
-        document.add(Paragraph("\nCalculation Trace:").setBold().setUnderline())
-        result.calculationTrace.forEach { step ->
-            document.add(Paragraph("• $step").setFontSize(8f).setFontColor(ColorConstants.GRAY))
+        if (result.calculationTrace.isEmpty()) {
+            document.add(Paragraph("\nCalculation trace: none recorded for this design.").setFontSize(8f).setFontColor(ColorConstants.GRAY))
+        } else {
+            document.add(Paragraph("\nCalculation Trace:").setBold().setUnderline())
+            result.calculationTrace.forEach { step ->
+                document.add(Paragraph("• $step").setFontSize(8f).setFontColor(ColorConstants.GRAY))
+            }
         }
     }
 
@@ -166,7 +170,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         try {
             // Prefer the captured on-screen view (ProfessionalWarehouseDrawing) so the PDF
             // matches what the user is looking at; fall back to the independent renderer.
-            val bitmap = drawingBitmap ?: PdfDrawingGenerator.generateWarehouseDrawing(inputs, result)
+            val bitmap = cropToContent(drawingBitmap ?: PdfDrawingGenerator.generateWarehouseDrawing(inputs, result))
             val stream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
             document.add(Image(ImageDataFactory.create(stream.toByteArray())).setAutoScale(true).setHorizontalAlignment(HorizontalAlignment.CENTER))
@@ -181,12 +185,36 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         }
     }
 
+    /** Crops the uniform background margin of a captured view so a small drawing in a tall canvas is not shrunk to a sliver. */
+    private fun cropToContent(src: Bitmap): Bitmap {
+        val w = src.width; val h = src.height
+        if (w < 16 || h < 16) return src
+        val bg = src.getPixel(2, 2)
+        var minX = w; var minY = h; var maxX = -1; var maxY = -1
+        val row = IntArray(w)
+        for (y in 0 until h) {
+            src.getPixels(row, 0, w, 0, y, w, 1)
+            for (x in 0 until w) {
+                if (row[x] != bg) {
+                    if (x < minX) minX = x; if (x > maxX) maxX = x
+                    if (y < minY) minY = y; if (y > maxY) maxY = y
+                }
+            }
+        }
+        if (maxX < 0) return src
+        val pad = 12
+        val l = (minX - pad).coerceAtLeast(0); val t = (minY - pad).coerceAtLeast(0)
+        val r = (maxX + pad).coerceAtMost(w - 1); val b = (maxY + pad).coerceAtMost(h - 1)
+        if (r - l < 32 || b - t < 32) return src
+        return Bitmap.createBitmap(src, l, t, r - l + 1, b - t + 1)
+    }
+
     private fun addMemberSchedule(document: Document, inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
         document.add(Paragraph("Steel Member Schedule").setFontSize(14f).setBold().setFontColor(PRIMARY))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(8f, 20f, 27f, 23f, 22f))).useAllAvailableWidth()
-        table.addHeaderCell(headerCell("MARK")).addHeaderCell(headerCell("MEMBER")).addHeaderCell(headerCell("SECTION")).addHeaderCell(headerCell("QTY / COUNT")).addHeaderCell(headerCell("TOTAL WEIGHT"))
+        table.addHeaderCell(headerCell("MARK")).addHeaderCell(headerCell("MEMBER")).addHeaderCell(headerCell("SECTION")).addHeaderCell(headerCell("QTY / COUNT")).addHeaderCell(headerCell("WEIGHT (kg)"))
 
         val numBays = (inputs.length / inputs.baySpacing).toInt().coerceAtLeast(1)
         val members = mutableListOf(Triple("C1", "Main Columns", result.mainFrame.columnSection), Triple("R1", "Main Rafters", result.mainFrame.rafterSection))
@@ -210,8 +238,13 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
                 else -> "Full Bay Sets"
             }
             table.addCell(dataCell(qtyText, false, bg))
-            // No per-member capacity check backs this schedule; do not print SAFE.
-            table.addCell(dataCell("NOT ASSESSED", true, bg, NOT_ASSESSED_GRAY))
+            // Weights come from the design takeoff (section area x length x 7850, tons). A member without a computed weight
+            // reads NOT ASSESSED. No per-member capacity check backs this schedule; do not print SAFE.
+            val tons = result.materialTakeoff.entries.firstOrNull { e ->
+                when (m.first) { "C1" -> e.key.startsWith("Columns"); "R1" -> e.key.startsWith("Rafters"); "P1" -> e.key.startsWith("Purlins"); else -> false }
+            }?.value
+            if (tons != null) table.addCell(dataCell((tons * 1000.0).fmt(0), true, bg))
+            else table.addCell(dataCell("NOT ASSESSED", true, bg, NOT_ASSESSED_GRAY))
         }
         document.add(table)
     }
