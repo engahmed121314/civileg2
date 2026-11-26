@@ -314,11 +314,11 @@ fun ColumnScreen(
 
                 item { ColumnResultCard(result) }
 
-                val bbsEntries = runCatching {
-                    BbsGenerator.generateColumnBbs("C1", result)
-                }.getOrDefault(emptyList())
-                if (bbsEntries.isNotEmpty()) {
-                    item { BbsTableCard(bbsEntries, title = "Column Bar Bending Schedule") }
+                item {
+                    AppText(
+                        com.civileg.app.domain.calculations.column.ColumnOutputModel.bbsStatus(result),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
 
                 val boqRows = runCatching {
@@ -342,7 +342,7 @@ fun ColumnScreen(
                     }
                 }
 
-                rebarCardIndex[0] = 13 + (if (bbsEntries.isNotEmpty()) 1 else 0) +
+                rebarCardIndex[0] = 13 + /* BBS card is not issued for columns */ 0 +
                     (if (boqRows.isNotEmpty()) 1 else 0) + (if (result.mx != 0.0 || result.my != 0.0) 1 else 0)
                 item {
                     Row(
@@ -473,11 +473,12 @@ fun ColumnScreen(
                                     result.width.toDouble(), result.depth.toDouble(),
                                     result.reinforcement.numBars,
                                     result.reinforcement.diameter.toDouble(),
-                                    result.columnType.contains("CIRCULAR", ignoreCase = true)
+                                    result.columnType.contains("CIRCULAR", ignoreCase = true),
+                                    com.civileg.app.domain.calculations.column.ColumnCover.mm(result.code)
                                 ),
                                 tieDia = result.stirrups.diameter.toDouble(),
                                 tieSpacing = result.stirrups.spacing.toDouble(),
-                                cover = 40.0,
+                                cover = com.civileg.app.domain.calculations.column.ColumnCover.mm(result.code),
                                 isSpiral = false,
                                 sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
                                 zones = result.stirrups.zones.map { com.civileg.app.domain.entities.StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
@@ -507,11 +508,12 @@ fun ColumnScreen(
                             result.width.toDouble(), result.depth.toDouble(),
                             result.reinforcement.numBars,
                             result.reinforcement.diameter.toDouble(),
-                            result.columnType.contains("CIRCULAR", ignoreCase = true)
+                            result.columnType.contains("CIRCULAR", ignoreCase = true),
+                            com.civileg.app.domain.calculations.column.ColumnCover.mm(result.code)
                         ),
                         tieDia = result.stirrups.diameter.toDouble(),
                         tieSpacing = result.stirrups.spacing.toDouble(),
-                        cover = 40.0,
+                        cover = com.civileg.app.domain.calculations.column.ColumnCover.mm(result.code),
                         isSpiral = false,
                         sectionType = if (result.columnType.contains("CIRCULAR", ignoreCase = true)) "Circular" else "Rectangular",
                         zones = result.stirrups.zones.map { StirrupZone(it.name, it.startLocation, it.endLocation, it.spacing, it.numLegs, it.diameter, it.description) },
@@ -615,7 +617,7 @@ fun ColumnScreen(
 private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (result.isSafe)
+            containerColor = if (result.confirmedSafe)
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
             else
                 MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
@@ -631,13 +633,12 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
                     tint = if (result.confirmedSafe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                val preliminary = result.isSafe && !result.assessmentComplete
                 AppText(
-                    when {
-                        !result.axialAssessed -> stringResource(R.string.column_axial_not_assessed_label)
-                        preliminary -> stringResource(R.string.column_preliminary_label)
-                        result.isSafe -> stringResource(R.string.column_section_safe)
-                        else -> stringResource(R.string.column_section_unsafe_label)
+                    when (com.civileg.app.domain.calculations.column.ColumnStatus.of(result)) {
+                        com.civileg.app.domain.calculations.column.ColumnStatus.NOT_ASSESSED -> stringResource(R.string.column_axial_not_assessed_label)
+                        com.civileg.app.domain.calculations.column.ColumnStatus.PRELIMINARY -> stringResource(R.string.column_preliminary_label)
+                        com.civileg.app.domain.calculations.column.ColumnStatus.SAFE -> stringResource(R.string.column_section_safe)
+                        com.civileg.app.domain.calculations.column.ColumnStatus.FAIL -> stringResource(R.string.column_section_unsafe_label)
                     },
                     fontWeight = FontWeight.Bold,
                     color = if (result.confirmedSafe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
@@ -833,8 +834,7 @@ private fun LoadCombinationSelector(selected: LoadCombination, code: com.civileg
     }
 }
 
-private fun generateBarPositions(width: Double, depth: Double, numBars: Int, diameter: Double, isCircular: Boolean = false): List<BarInfo> {
-    val cover = 40.0
+private fun generateBarPositions(width: Double, depth: Double, numBars: Int, diameter: Double, isCircular: Boolean = false, cover: Double = 40.0): List<BarInfo> {
     val totalBars = maxOf(4, numBars)
     val positions = mutableListOf<BarInfo>()
 

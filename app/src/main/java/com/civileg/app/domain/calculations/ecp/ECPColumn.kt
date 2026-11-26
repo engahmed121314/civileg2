@@ -33,7 +33,8 @@ class ECPColumn : ColumnDesign {
         InputGuard.positive("depth", depth)
 
         val Ag = width * depth                          // مساحة المقطع الكلية (mm²)
-        val Ast = reinforcementArea.coerceAtMost(Ag * 0.08) // ECP 203 §4-2-3: حد أقصى 8%
+        // ECP 203-2025 p.6-55 (PDF 246): max 4% middle / 5% edge / 6% corner / 8% only at laps. No position input yet: MIDDLE (4%) used. UNTESTED.
+        val Ast = reinforcementArea.coerceAtMost(Ag * EcpColumnRules.maxSteelRatio(EcpColumnRules.Position.MIDDLE))
         
         // ECP 203-2020 Eq. [4-12-a] (tied columns, small eccentricity e <= max(0.05t, 20 mm)):
         // Pu = 0.35 fcu (Ac - Asc) + 0.67 fy Asc, fy not above 420 N/mm2.
@@ -76,7 +77,9 @@ class ECPColumn : ColumnDesign {
         // تصميم العزم المحوري — ECP 203 §4-2-3
         // Use P-M interaction diagram for proper combined axial-flexural check
         // Apply minimum eccentricity per ECP 203 §4-2-3: e_min = max(20mm, b/20, h/20)
-        val minEccentricity = maxOf(20.0, width / 20.0, depth / 20.0)
+        // ECP 203-2025 Eq 4-11 (p.4-11): max(0.05 t, 20 mm), t = dimension in bending direction. ASSUMPTION: Mx acts across depth, My across width.
+        val bendDim = if (abs(momentX) >= abs(momentY)) depth else width
+        val minEccentricity = EcpColumnRules.minEccentricity(bendDim)
         val designEccentricity = max(eccentricity, if (eccentricity > 0) minEccentricity else 0.0)
         val designMoment = Pu * designEccentricity  // N.mm
         
@@ -140,7 +143,7 @@ class ECPColumn : ColumnDesign {
         val astProvided = numberOfBars * barArea
         
         // حساب الكانات
-        val tiesDiameter = max(10.0, barDiameter / 4).coerceAtLeast(8.0)
+        val tiesDiameter = max(10.0, EcpColumnRules.tieMinDia(barDiameter)) // app keeps 10 mm floor (stricter than code 8 mm)
         val tiesSpacing = calculateTiesSpacing(barDiameter, tiesDiameter, width, depth)
         
         // P-M interaction safety check: generate diagram and verify (Pu, Mu) is inside
@@ -180,7 +183,8 @@ class ECPColumn : ColumnDesign {
 
     private fun calculateTiesSpacing(barDiameter: Double, tiesDiameter: Double, width: Double, depth: Double): Double {
         // حسب الكود المصري ECP 203 البند 4-2-6: أقل من (16×قطر السيخ، 48×قطر الكانة، أقل بعد في المقطع، 300 مم)
-        return minOf(16 * barDiameter, 48 * tiesDiameter, width, depth, 300.0).coerceIn(getMinSpacing(), getMaxSpacing())
+        // ECP 203-2025 p.6-55 (PDF 246): s <= min(15 x smallest bar dia, 200 mm). 48 dt and min-dimension rules removed (no source).
+        return EcpColumnRules.tieMaxSpacing(barDiameter).coerceAtMost(getMaxSpacing())
     }
 
     /**
@@ -206,13 +210,14 @@ class ECPColumn : ColumnDesign {
         InputGuard.positive("depth", depth)
 
         // ECP 203 §4-2-3: Radius of gyration for rectangular section
-        // r = h / √12 ≈ 0.289h (for buckling about depth axis)
-        val r = depth / sqrt(12.0)
+        // ECP 203-2025 Eq 6-32a (p.6-42): i = 0.30 t
+        val r = EcpColumnRules.radiusRect(depth)
         val slendernessRatio = effectiveLength / r.coerceAtLeast(1.0)
         InputGuard.finite("slendernessRatio", slendernessRatio)
 
         // ECP 203 §4-2-3: Threshold slenderness
-        val threshold = if (isBraced) 15.0 else 10.0
+        // Table 6-7 (p.6-43): lambda_i limit 50 braced / 35 unbraced (the 15/10 limits apply to He/t, not He/i)
+        val threshold = EcpColumnRules.shortLimitLambdaI(isBraced)
         val isShort = slendernessRatio <= threshold
 
         return SlendernessCheckResult(
@@ -345,7 +350,7 @@ class ECPColumn : ColumnDesign {
     }
 
     override fun getMinReinforcementRatio(): Double = 0.008  // 0.8%
-    override fun getMaxReinforcementRatio(): Double = 0.08   // 8% per ECP 203 Section 4-2-3 (4% typical, 6% at splices, 8% max)
+    override fun getMaxReinforcementRatio(): Double = EcpColumnRules.maxSteelRatio(EcpColumnRules.Position.MIDDLE) // 4% middle; edge 5%, corner 6%, 8% at laps (p.6-55)
     override fun getMinSpacing(): Double = 100.0
     override fun getMaxSpacing(): Double = 300.0
     override fun getMinCover(): Double = 40.0

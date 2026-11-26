@@ -112,17 +112,14 @@ class ECPAdvancedColumn : ColumnDesign {
         
         // نصف القطر الدوراني (Radius of Gyration)
         val radiusOfGyration = when (columnType) {
-            is ColumnType.Rectangular -> min(columnType.width, columnType.depth) / sqrt(12.0)
+            is ColumnType.Rectangular -> EcpColumnRules.radiusRect(min(columnType.width, columnType.depth))
             is ColumnType.Circular -> columnType.diameter / 4
             is ColumnType.LShaped -> columnType.thickness / sqrt(12.0)
             else -> sqrt(Ag / 12.0)
         }
         
         val slendernessRatio = effectiveLength / radiusOfGyration
-        val limit = when(columnType) {
-            is ColumnType.Circular -> 12.0
-            else -> 15.0
-        }
+        val limit = EcpColumnRules.shortLimitLambdaI(true) // Table 6-7 lambda_i, braced (p.6-43)
         
         val isSlender = slendernessRatio > limit
         if (isSlender) {
@@ -263,7 +260,7 @@ class ECPAdvancedColumn : ColumnDesign {
         val GAMMA_S = 1.15
         val ALPHA = 0.8
         // ECP 203 does NOT use a separate phi factor - gamma_c and gamma_s are sufficient
-        val ast = if (Ast > 0) Ast.coerceAtMost(Ag * 0.08) else 0.008 * Ag
+        val ast = if (Ast > 0) Ast.coerceAtMost(Ag * EcpColumnRules.maxSteelRatio(EcpColumnRules.Position.MIDDLE)) else 0.008 * Ag
         val concreteStress = 0.67 * fcu / GAMMA_C
         val steelStress = fy / GAMMA_S
         val designCapacity = ALPHA * (concreteStress * (Ag - ast) + steelStress * ast)
@@ -315,8 +312,7 @@ class ECPAdvancedColumn : ColumnDesign {
         val alpha = if (Mnx > 0 && Mny > 0) {
             val beta = min(abs(Mx) / Mnx, abs(My) / Mny).coerceAtMost(1.0)
             // α يتراوح بين 1.0 و 2.0 حسب نسبة الحمل المحوري
-            val r = (Pu / Pn).coerceIn(0.1, 0.9)
-            1.0 + (1.0 - r)  // α أكبر عندما يكون الحمل المحوري أقل
+            EcpColumnRules.alphaN(if (Pn > 0) Pu / Pn else 0.0)  // Table 6-12-c (p.6-54)
         } else 1.0
         
         val interactionFactor = if (Mnx > 0 && Mny > 0) {
@@ -353,7 +349,7 @@ class ECPAdvancedColumn : ColumnDesign {
     }
     
     override fun getMinReinforcementRatio(): Double = 0.008
-    override fun getMaxReinforcementRatio(): Double = 0.08 // ECP 203: 8% max
+    override fun getMaxReinforcementRatio(): Double = EcpColumnRules.maxSteelRatio(EcpColumnRules.Position.MIDDLE) // p.6-55
     override fun getMinSpacing(): Double = 100.0
     override fun getMaxSpacing(): Double = 300.0 // ECP 203 البند 4-2-6: min(16×db, min(b,h), 300mm)
     override fun getMinCover(): Double = 40.0
@@ -602,9 +598,9 @@ class ECPAdvancedColumn : ColumnDesign {
         val PcKn = Pc / 1000.0                  // kN
 
         // ── Slenderness check ──
-        val r = min(b, h) / sqrt(12.0)          // mm - radius of gyration
+        val r = EcpColumnRules.radiusRect(min(b, h))  // Eq 6-32a: i = 0.30 t
         val lambda = effectiveLength / r
-        val isSlender = lambda > 15.0           // rectangular column limit
+        val isSlender = lambda > EcpColumnRules.shortLimitLambdaI(true)  // Table 6-7 lambda_i braced 50 (sway not distinguished here)
 
         codeNotes.add("ECP 203 البند 4-2-7: تكبير العزم بسبب النحافة")
         codeNotes.add(String.format("Ec = 4400√fcu = %.0f MPa", Ec))
@@ -781,12 +777,12 @@ class ECPAdvancedColumn : ColumnDesign {
         // ── Slenderness check ──
         val k = max(endConditions.topCondition.effectiveLengthFactor,
                    endConditions.bottomCondition.effectiveLengthFactor)
-        val r = diameter / 4.0
+        val r = EcpColumnRules.radiusCircular(diameter)
         val effectiveLength = k * unsupportedLength * 1000.0
         val slendernessRatio = effectiveLength / r
-        val isSlender = slendernessRatio > 12.0  // circular column limit
+        val isSlender = slendernessRatio > EcpColumnRules.shortLimitLambdaI(true)  // Table 6-7 lambda_i
         if (isSlender) {
-            warnings.add(String.format("⚠️ عمود حلزوني نحيف! λ = %.1f > 12 — يجب مراعاة تأثيرات الدرجة الثانية", slendernessRatio))
+            warnings.add(String.format("⚠️ عمود حلزوني نحيف! λ = %.1f > 50 — يجب مراعاة تأثيرات الدرجة الثانية", slendernessRatio))
         }
 
         // ── Axial capacity with spiral φ ──
@@ -883,7 +879,7 @@ class ECPAdvancedColumn : ColumnDesign {
         // ── Radius of Gyration r ──
         val radiusOfGyration = when (columnType) {
             is ColumnType.Circular -> columnType.diameter / 4.0
-            is ColumnType.Rectangular -> min(columnType.width, columnType.depth) / sqrt(12.0)
+            is ColumnType.Rectangular -> EcpColumnRules.radiusRect(min(columnType.width, columnType.depth))
             is ColumnType.LShaped -> columnType.thickness / sqrt(12.0)
             is ColumnType.TShaped -> min(columnType.webWidth, columnType.flangeThickness) / sqrt(12.0)
             is ColumnType.Composite -> min(columnType.concreteWidth, columnType.concreteDepth) / sqrt(12.0)
@@ -897,10 +893,7 @@ class ECPAdvancedColumn : ColumnDesign {
         val slendernessRatio = effectiveLength / radiusOfGyration
 
         // ── Short column limits per ECP 203 ──
-        val shortColumnLimit = when (columnType) {
-            is ColumnType.Circular -> 12.0
-            else -> 15.0
-        }
+        val shortColumnLimit = EcpColumnRules.shortLimitLambdaI(true) // Table 6-7 lambda_i, braced (p.6-43)
 
         val isShortColumn = slendernessRatio <= shortColumnLimit
         val isLongColumn = !isShortColumn
@@ -1022,9 +1015,8 @@ class ECPAdvancedColumn : ColumnDesign {
         // (Mux/Mnx)^α + (Muy/Mny)^α ≤ 1
         // α = 1.0 for Pu ≈ 0, α → 2.0 for Pu → P平衡
         // Accurate α based on Pu/Po ratio
-        val r = if (Po > 0) (Pu / Po).coerceIn(0.05, 0.95) else 0.5
-        val alphaContour = ln(0.5) / ln(max(0.001, 1.0 - r))  // Hsu equation
-        val alphaEffective = alphaContour.coerceIn(1.0, 2.0)
+        // ECP 203-2025 Table 6-12-c (p.6-54): alpha_n from the table, replaces the Hsu fit
+        val alphaEffective = EcpColumnRules.alphaN(if (Po > 0) Pu / Po else 0.0)
 
         val contourFactor = if (Mnx > 0 && Mny > 0) {
             (abs(Mx) / Mnx).pow(alphaEffective) + (abs(My) / Mny).pow(alphaEffective)

@@ -1023,9 +1023,14 @@ class CalculatorEngine @Inject constructor(
         // ── Slenderness: λ = l0 / (h/√12) ──
         // ECP 203 §4-2-3 uses 15 for braced columns; ACI 318 §6.2.5 / SBC 304 use 22.
         val minDimension = if (isCircular) width else min(width, depth)
-        val radiusOfGyration = minDimension / sqrt(12.0)
+        // ECP 203-2025 Eq 6-32 (PDF 233, p.6-42): i = 0.30 b (rect), 0.25 D (circ); Table 6-7 (PDF 234, p.6-43) lambda_i limit 50 braced.
+        // Bracing is not an input here, so braced is assumed as before. UNTESTED.
+        val radiusOfGyration = if (domainCode == DesignCode.ECP) {
+            if (isCircular) com.civileg.app.domain.calculations.ecp.EcpColumnRules.radiusCircular(width)
+            else com.civileg.app.domain.calculations.ecp.EcpColumnRules.radiusRect(minDimension)
+        } else minDimension / sqrt(12.0)
         val slenderness = clearHeight / radiusOfGyration.coerceAtLeast(1.0)
-        val slendernessLimit = if (domainCode == DesignCode.ECP) 15.0 else 22.0
+        val slendernessLimit = if (domainCode == DesignCode.ECP) com.civileg.app.domain.calculations.ecp.EcpColumnRules.shortLimitLambdaI(true) else 22.0
         val isSlender = slenderness > slendernessLimit
 
         // First pass with the un-magnified moments.
@@ -1061,7 +1066,9 @@ class CalculatorEngine @Inject constructor(
         val axialDepth = if (isCircular) width * PI / 4.0 else depth
         // ECP 203-2020 Eq. 4-12-a only covers e <= max(0.05t, 20 mm): outside it the axial capacity is NOT ASSESSED.
         val ecpEccentricityMm = if (puDesign > 0) sqrt(designMx * designMx + designMy * designMy) * 1e3 / puDesign else 0.0
-        val ecpEccentricityLimitMm = max(20.0, 0.05 * max(width, depth))
+        // ECP 203-2025 Eq 4-11 (PDF 91, p.4-11): max(0.05 t, 20 mm), t = bending-side dimension. ASSUMPTION: mx across depth, my across width.
+        val ecpEccentricityLimitMm = com.civileg.app.domain.calculations.ecp.EcpColumnRules.minEccentricity(
+            if (isCircular) width else if (abs(designMx) >= abs(designMy)) depth else width)
         val axialAssessed = !(domainCode == DesignCode.ECP && ecpEccentricityMm > ecpEccentricityLimitMm + 1e-9)
         val axialCapacity = if (!axialAssessed) 0.0 else engine.calculateAxialCapacity(
             fcu = fcu, fy = fy, width = width, depth = axialDepth,
@@ -1099,7 +1106,7 @@ class CalculatorEngine @Inject constructor(
         val axialSafe = axialAssessed && puDesign <= axialCapacity + 1e-6
 
         val concreteVolume = grossArea * clearHeight / 1e9
-        val cover = if (domainCode == DesignCode.SBC) 50.0 else 40.0
+        val cover = com.civileg.app.domain.calculations.column.ColumnCover.mm(domainCode)
         val tiePerimeterMm = if (isCircular) {
             PI * (width - 2.0 * cover).coerceAtLeast(50.0)
         } else {
