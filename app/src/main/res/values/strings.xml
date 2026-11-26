@@ -2470,4 +2470,12 @@
     <string name="seismic_drift_exceeded">Drift limit exceeded - check stiffness</string>
     <string name="seismic_drift_unverified">Preliminary estimate only. The drift value comes from an equivalent single-degree-of-freedom approximation and the limit is an unverified reference, not a code drift check. No pass or fail is stated.</string>
     <string name="seismic_drift_above_reference">The estimate is above this reference. A full structural analysis is needed.</string>
+    <string name="seismic_sbc_ss">Ss (g)</string>
+    <string name="seismic_sbc_s1">S1 (g)</string>
+    <string name="seismic_sbc_tl">TL (s)</string>
+    <string name="seismic_sbc_site_class">Site class (SBC 301 Ch. 20)</string>
+    <string name="seismic_sbc_risk">Risk category (Table 1-3)</string>
+    <string name="seismic_sbc_system">Seismic force-resisting system (Table 12-1)</string>
+    <string name="seismic_sbc_inputs_note">Ss, S1 and TL are read from SBC 301-CR-2018 Figures 22-1, 22-2 and 22-4 for the site; Site Class D applies where soil data are not known (11.4.2.2). Equal story weights are assumed.</string>
+    <string name="seismic_sbc_not_assessed">Not assessed</string>
 </resources>

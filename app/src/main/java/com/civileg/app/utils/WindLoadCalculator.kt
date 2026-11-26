@@ -110,123 +110,73 @@ class WindLoadCalculator {
      * pressure coefficients for rectangular buildings.
      */
     fun calculate(input: WindLoadInput): WindLoadResult {
-        val floorHeight = input.buildingHeight / input.numberOfFloors
-        val hWdRatio = input.buildingHeight / input.buildingWidth
-        val hDdRatio = input.buildingHeight / input.buildingDepth
+        // SBC 301-CR-2018, MWFRS Directional Procedure, enclosed / partially enclosed rigid or flexible building (see SbcWind301 for page cites).
+        // Interpretation (labelled): building width = dimension normal to the wind (B), building depth = dimension parallel to the wind (L).
+        // Terrain mapping to the code exposure is the user's selection approximated: sea coast -> D, open -> C, suburban and urban -> B.
+        // The importance factor k1 is not applied: SBC 301 takes the risk category into account through the ultimate wind speed V (26.5).
+        val exposure = when (input.terrainCategory) {
+            TerrainCategory.SEA_COAST -> SbcExposure.D
+            TerrainCategory.OPEN_TERRAIN -> SbcExposure.C
+            TerrainCategory.SUBURBAN, TerrainCategory.URBAN -> SbcExposure.B
+        }
+        val v = input.basicWindSpeed
+        val kzt = input.topographyFactor
+        val h = input.buildingHeight
+        val bAcross = input.buildingWidth
+        val lAlong = input.buildingDepth
+        val floorHeight = h / input.numberOfFloors
 
-        // 1) Height-velocity profile at each floor level
-        val zVsHeightProfile = mutableListOf<Pair<Double, Double>>()
-        for (i in 1..input.numberOfFloors) {
+        val zVsHeightProfile = (1..input.numberOfFloors).map { i ->
             val z = i * floorHeight
-            val k2 = getTerrainHeightMultiplier(input.terrainCategory, z)
-            val vz = input.basicWindSpeed * input.importanceFactor * k2 * input.topographyFactor
-            zVsHeightProfile.add(Pair(z, vz))
+            z to v * sqrt(SbcWind301.kz(exposure, z) * kzt * SbcWind301.KD_BUILDING_MWFRS)
         }
+        val gustFactor = if (input.isFlexibleStructure && input.naturalFrequency > 0.0)
+            SbcWind301.gustFlexible(exposure, v, h, bAcross, lAlong, input.naturalFrequency, input.dampingRatio)
+        else SbcWind301.G_RIGID
 
-        // 2) Gust factor
-        val gustFactor = calculateGustFactor(input)
+        val qh = SbcWind301.qz(exposure, h, v, kzt)
+        val cpLee = SbcWind301.cpLeeward(lAlong / bAcross)
+        val cpRoof = SbcWind301.cpRoofMostNegative(if (input.roofType == RoofType.FLAT) 0.0 else input.roofSlope, h / lAlong)
+        val gcpi = if (input.openingsInWindward) SbcWind301.GCPI_PARTIALLY_ENCLOSED else SbcWind301.GCPI_ENCLOSED
+        val internalPressure = qh * gcpi
 
-        // 3) Pressure coefficients at roof level (design level)
-        val cpWindward = getExternalPressureCoefficient(
-            surface = "windward",
-            shape = input.buildingShape,
-            hwdRatio = hWdRatio,
-            roofSlope = input.roofSlope
-        )
-        val cpLeeward = getExternalPressureCoefficient(
-            surface = "leeward",
-            shape = input.buildingShape,
-            hwdRatio = hWdRatio,
-            roofSlope = input.roofSlope
-        ).let { base ->
-            // Leeward varies with h/d
-            interpolateLeewardCp(hDdRatio, base)
-        }
-        val cpSide = getExternalPressureCoefficient(
-            surface = "side",
-            shape = input.buildingShape,
-            hwdRatio = hWdRatio,
-            roofSlope = input.roofSlope
-        )
-        val cpRoof = getExternalPressureCoefficient(
-            surface = "roof",
-            shape = input.buildingShape,
-            hwdRatio = hWdRatio,
-            roofSlope = input.roofSlope
-        )
-        val cpi = getInternalPressureCoefficient(input.openingsInWindward)
+        val extWindTop = SbcWind301.qz(exposure, h, v, kzt) * gustFactor * SbcWind301.CP_WINDWARD
+        val extLee = qh * gustFactor * cpLee
+        val extSide = qh * gustFactor * SbcWind301.CP_SIDE
+        val extRoof = qh * gustFactor * cpRoof
 
-        // 4) Design wind speed and pressure at roof height
-        val designWindSpeed = zVsHeightProfile.lastOrNull()?.second ?: 0.0
-        val designDynamicPressure =
-            DYNAMIC_PRESSURE_COEFF * AIR_DENSITY * designWindSpeed.pow(2) / 1000.0 // kN/m²
-        val designWindPressure = designDynamicPressure * gustFactor
-
-        // 5) External pressures at roof level
-        val externalPressureWindward = designWindPressure * cpWindward
-        val externalPressureLeeward = designWindPressure * cpLeeward
-        val externalPressureSide = designWindPressure * cpSide
-        val externalPressureRoof = designWindPressure * cpRoof
-        val internalPressure = designWindPressure * cpi
-
-        // 6) Net pressures
-        val netPressureWindward = externalPressureWindward - internalPressure
-        val netPressureLeeward = externalPressureLeeward + internalPressure  // both suction → add
-
-        // 7) Pressure distribution per floor
         val pressureDistribution = zVsHeightProfile.map { (z, vz) ->
-            val dynPressure = DYNAMIC_PRESSURE_COEFF * AIR_DENSITY * vz.pow(2) / 1000.0
-            val designPressure = dynPressure * gustFactor
-            val extP = designPressure * cpWindward
-            val intP = designPressure * cpi
-            WindPressureAtHeight(
-                height = z,
-                velocity = vz,
-                dynamicPressure = designPressure,
-                externalPressure = extP,
-                internalPressure = intP,
-                netPressure = extP - intP
-            )
+            val qzz = SbcWind301.qz(exposure, z, v, kzt)
+            val ext = qzz * gustFactor * SbcWind301.CP_WINDWARD
+            WindPressureAtHeight(z, vz, qzz, ext, internalPressure, ext - internalPressure)
         }
-
-        // 8) Base shear - يشمل windward + leeward suction: F = (Cp_w - Cp_l)*pz*Area
-        // نحسب leeward pressures per floor بنفس توزيع الضغط
-        val pressureDistributionLeeward = zVsHeightProfile.map { (z, vz) ->
-            val dynPressure = DYNAMIC_PRESSURE_COEFF * AIR_DENSITY * vz.pow(2) / 1000.0
-            val designPressure = dynPressure * gustFactor
-            val extPLee = designPressure * cpLeeward
-            val intP = designPressure * cpi
-            extPLee + intP // suction + suction
+        // Whole-building force: windward (qz G Cp) minus leeward (qh G Cp), internal pressure cancels. Tributary height = floor height, z = top of floor.
+        var baseShear = 0.0
+        var moment = 0.0
+        for (pd in pressureDistribution) {
+            val f = (pd.externalPressure - extLee) * bAcross * floorHeight
+            baseShear += f
+            moment += f * (pd.height - floorHeight / 2.0)
         }
-        val totalBaseShear = calculateBaseShear(
-            pressures = pressureDistribution,
-            leewardPressures = pressureDistributionLeeward,
-            width = input.buildingWidth,
-            floorHeight = floorHeight
-        )
-
-        // 9) Overturning moment - مجموع Fi*hi لكل طابق
-        val shearPerFloor = pressureDistribution.mapIndexed { idx, pd ->
-            val netWind = abs(pd.netPressure)
-            val netLee = abs(pressureDistributionLeeward[idx])
-            val totalP = netWind + netLee
-            pd.height to (totalP * input.buildingWidth * floorHeight)
+        // 27.1.5.1 (p.249): not less than 0.8 kN/m2 on the wall area (roof area term not included: no roof area basis here).
+        val minShear = SbcWind301.MIN_WALL_KN_M2 * bAcross * h
+        if (baseShear < minShear) {
+            moment *= minShear / baseShear
+            baseShear = minShear
         }
-        val overturningMoment = calculateOverturningMoment(shearPerFloor)
-
         return WindLoadResult(
-            designWindSpeed = designWindSpeed,
-            designWindPressure = designWindPressure,
+            designWindSpeed = zVsHeightProfile.lastOrNull()?.second ?: 0.0,
+            designWindPressure = qh,
             gustFactor = gustFactor,
-            externalPressureWindward = externalPressureWindward,
-            externalPressureLeeward = externalPressureLeeward,
-            externalPressureSide = externalPressureSide,
-            externalPressureRoof = externalPressureRoof,
+            externalPressureWindward = extWindTop,
+            externalPressureLeeward = extLee,
+            externalPressureSide = extSide,
+            externalPressureRoof = extRoof,
             internalPressure = internalPressure,
-            netPressureWindward = netPressureWindward,
-            netPressureLeeward = netPressureLeeward,
-            totalBaseShear = totalBaseShear,
-            overturningMoment = overturningMoment,
+            netPressureWindward = extWindTop - internalPressure,
+            netPressureLeeward = extLee + internalPressure,
+            totalBaseShear = baseShear,
+            overturningMoment = moment,
             zVsHeightProfile = zVsHeightProfile,
             pressureDistribution = pressureDistribution
         )
