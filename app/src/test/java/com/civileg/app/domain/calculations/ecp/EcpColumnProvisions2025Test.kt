@@ -67,18 +67,18 @@ class EcpColumnProvisions2025Test {
     }
 
     @Test
-    fun table68WarningShownWithValueAndLimit_notFail() {
+    fun table68FailShownWithValueAndLimit() {
         val w = EcpColumnProvisions2025.maxSlendernessWarning(110.0, true)!!
-        assertTrue(w.startsWith("WARNING"))
-        assertTrue(w.contains("110.0") && w.contains("100") && w.contains("Table 6-8") && w.contains("تحذير"))
+        assertTrue(w.startsWith("FAIL"))
+        assertTrue(w.contains("110.0") && w.contains("100") && w.contains("Table 6-8") && w.contains("فشل"))
         assertNull(EcpColumnProvisions2025.maxSlendernessWarning(100.0, true))
         assertNotNull(EcpColumnProvisions2025.maxSlendernessWarning(71.0, false))
     }
 
     @Test
-    fun checkSlendernessCarriesTable68Warning() {
+    fun checkSlendernessCarriesTable68Fail() {
         val r = ECPColumn().checkSlenderness(20000.0, 300.0, 300.0, true)  // lambda_i = 20000/90 = 222
-        assertTrue(r.recommendation.startsWith("WARNING"))
+        assertTrue(r.recommendation.startsWith("FAIL"))
         assertFalse(r.isShortColumn)
     }
 }

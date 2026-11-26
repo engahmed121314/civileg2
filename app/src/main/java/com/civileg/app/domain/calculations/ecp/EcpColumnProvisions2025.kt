@@ -38,14 +38,14 @@ object EcpColumnProvisions2025 {
         else -> SlendernessClass.EXCEEDS_MAXIMUM
     }
 
-    /** WARNING text (EN + AR) when lambda_i exceeds the Table 6-8 maximum; null otherwise. A warning, not a FAIL (user decision). */
+    /** FAIL text (EN + AR) when lambda_i exceeds the Table 6-8 maximum; null otherwise. FAIL per the user decision, as in ColumnDesignEngine. */
     fun maxSlendernessWarning(lambdaI: Double, braced: Boolean): String? {
         if (classifyByLambdaI(lambdaI, braced) != SlendernessClass.EXCEEDS_MAXIMUM) return null
         val v = String.format(java.util.Locale.US, "%.1f", lambdaI)
         val m = fmt(maxLambdaI(braced))
         val kind = if (braced) "braced" else "unbraced"
-        return "WARNING: slenderness lambda_i = $v exceeds the ECP 203-2025 Table 6-8 maximum $m ($kind, p.6-43). " +
-            "Change the section or bracing. / تحذير: نسبة النحافة λ = $v تتجاوز الحد الأقصى $m في الجدول 6-8 من ECP 203-2025 (صفحة 6-43)، غيّر المقطع أو التدعيم."
+        return "FAIL: slenderness lambda_i = $v exceeds the ECP 203-2025 Table 6-8 maximum $m ($kind, p.6-43). " +
+            "Change the section or bracing. / فشل: نسبة النحافة λ = $v تتجاوز الحد الأقصى $m في الجدول 6-8 من ECP 203-2025 (صفحة 6-43)، غيّر المقطع أو التدعيم."
     }
 
     /**
