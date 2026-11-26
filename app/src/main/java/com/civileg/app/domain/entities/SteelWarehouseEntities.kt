@@ -159,5 +159,7 @@ data class BracingPreliminary(
     /** Result of the AISC 360-10 D2 tension check: "PASS", "FAIL" or null when NOT ASSESSED. */
     val tensionCheck: String? = null,
     val tensionUtilisation: Double? = null,
+    /** ECP 205 LRFD 2008 Table 2.3 slenderness limit result (ECP selection only), else null. */
+    val slendernessCheck: String? = null,
     val lines: List<String> = emptyList()
 ) : Parcelable
