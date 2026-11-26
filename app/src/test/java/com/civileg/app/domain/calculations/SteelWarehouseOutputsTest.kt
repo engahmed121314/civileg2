@@ -109,9 +109,21 @@ class SteelWarehouseBracingTest {
     @Test fun aiscD2NotAssessedWithoutInputsOrForOtherCodes() {
         assertNull(engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, null)).bracing!!.tensionCheck)
         assertNull(engine.designSteelWarehouse(aci(30.0, null, 400.0, 1500.0)).bracing!!.tensionCheck)
-        assertNull(engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, 1500.0, com.civileg.app.domain.entities.DesignCode.ECP)).bracing!!.tensionCheck)
         assertNull(engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, 1500.0, com.civileg.app.domain.entities.DesignCode.SBC)).bracing!!.tensionCheck)
         assertNull(engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, 5000.0)).bracing!!.tensionCheck)   // Ae > Ag
         assertNull(engine.designSteelWarehouse(aci(null, 250.0, 400.0, 1500.0)).bracing!!.tensionCheck)
+    }
+
+    @Test fun ecp205LrfdTensionAndSlendernessFollowHandValues() {
+        val ecp = com.civileg.app.domain.entities.DesignCode.ECP
+        val b = engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, 1500.0, ecp)).bracing!!
+        // ECP 205 LRFD 2008 3.1.1 (p.3-1): phi 0.85 yield = 0.85 x 250 x 1772.5 / 1000 = 376.65625 kN; phi 0.70 fracture = 0.70 x 400 x 1500 / 1000 = 420 kN
+        assertEquals("PASS", b.tensionCheck)
+        assertEquals(42.42640687 / 376.65625, b.tensionUtilisation!!, 1e-9)
+        // fracture governs with a small net area: 0.70 x 400 x 1000 / 1000 = 280 kN
+        assertEquals(42.42640687 / 280.0, engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, 1000.0, ecp)).bracing!!.tensionUtilisation!!, 1e-9)
+        // Table 2.3 (p.2-8): tension members 300; L/r = 8485.28 / 13.96 = 607.9 -> FAIL
+        assertEquals("FAIL", b.slendernessCheck)
+        assertNull(engine.designSteelWarehouse(aci(30.0, 250.0, 400.0, 1500.0)).bracing!!.slendernessCheck)   // American selection: no slenderness limit compared
     }
 }

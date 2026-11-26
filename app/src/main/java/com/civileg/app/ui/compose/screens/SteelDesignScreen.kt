@@ -287,9 +287,9 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                     SteelInputField(soilBearing, "Allowable soil bearing (kN/m2) - required for footing size", { soilBearing = it }, Modifier.fillMaxWidth())
                     SteelInputField(bracedBaysText, "Braced bays, e.g. 1,10 (blank = end bays, default)", { bracedBaysText = it }, Modifier.fillMaxWidth())
                     SteelInputField(bracingLoad, "Lateral load H per braced panel (kN), blank = brace force NOT ASSESSED", { bracingLoad = it }, Modifier.fillMaxWidth())
-                    if (selectedCode == DesignCode.ACI) {
-                        SteelInputField(braceFy, "Brace Fy (MPa) - AISC D2 tension check", { braceFy = it }, Modifier.fillMaxWidth())
-                        SteelInputField(braceFu, "Brace Fu (MPa) - AISC D2 tension check", { braceFu = it }, Modifier.fillMaxWidth())
+                    if (selectedCode == DesignCode.ACI || selectedCode == DesignCode.ECP) {
+                        SteelInputField(braceFy, "Brace Fy (MPa) - tension check", { braceFy = it }, Modifier.fillMaxWidth())
+                        SteelInputField(braceFu, "Brace Fu (MPa) - tension check", { braceFu = it }, Modifier.fillMaxWidth())
                         SteelInputField(braceAe, "Brace net area Ae (mm2, after bolt holes and shear lag)", { braceAe = it }, Modifier.fillMaxWidth())
                     }
                 }
@@ -479,11 +479,12 @@ fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
             }
             res.bracing?.let { br ->
                 if (br.issued) {
-                    AppText(if (res.resultsByCode == DesignCode.ACI.displayName) "Selected design code: ${res.resultsByCode}. Steel reference: AISC 360-10 (14th ed. Manual), Section D2 tension yielding/rupture only (p.16.1-26). Everything else NOT ASSESSED." else "Selected design code: ${res.resultsByCode}. Code-specific bracing checks are NOT ASSESSED (no sourced steel code text); geometry and statics only.", fontSize = 11.sp)
+                    AppText(if (res.resultsByCode == DesignCode.ACI.displayName) "Selected design code: ${res.resultsByCode}. Steel reference: AISC 360-10 (14th ed. Manual), Section D2 tension yielding/rupture only (p.16.1-26). Everything else NOT ASSESSED." else if (res.resultsByCode == DesignCode.ECP.displayName) "Selected design code: ${res.resultsByCode}. Steel reference: ECP 205 LRFD 2008, tension yielding/fracture (3.1.1, p.3-1) and slenderness limit (Table 2.3, p.2-8) only. Everything else NOT ASSESSED." else "Selected design code: ${res.resultsByCode}. Code-specific bracing checks are NOT ASSESSED (no sourced steel code text); geometry and statics only.", fontSize = 11.sp)
                     ResultRow("X-bracing B1 (bays ${br.bracedBays.joinToString(",")}${if (br.usedDefaultBays) ", default" else ""})", "${br.sectionName}, ${br.braceCount} diagonals")
                     ResultRow("Brace length / angle", "${String.format("%.2f", br.lengthM)} m / ${String.format("%.1f", br.angleDeg)} deg")
                     ResultRow("Bracing weight (geometry only)", "${String.format("%.0f", br.totalWeightKg)} kg")
-                    br.tensionCheck?.let { ResultRow("AISC D2 tension check", "$it (N / phi Pn = ${String.format(java.util.Locale.US, "%.3f", br.tensionUtilisation ?: 0.0)})") }
+                    br.tensionCheck?.let { ResultRow(if (res.resultsByCode == DesignCode.ACI.displayName) "AISC D2 tension check" else "ECP 205 tension check", "$it (N / phi Pn = ${String.format(java.util.Locale.US, "%.3f", br.tensionUtilisation ?: 0.0)})") }
+                    br.slendernessCheck?.let { ResultRow("Slenderness vs 300 (Table 2.3)", it) }
                     ResultRow("Brace force (tension-only)", br.braceForceKn?.let { "${String.format("%.1f", it)} kN" } ?: "NOT ASSESSED (enter H)")
                     br.lines.forEach { AppText(it, fontSize = 11.sp) }
                     val bmp = remember(br) { com.civileg.app.shared.reporting.PdfDrawingGenerator.generateBracingDrawing(br) }
