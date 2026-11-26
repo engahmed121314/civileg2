@@ -336,6 +336,13 @@ def edge_up(n=2):
 def edge_top(n=4):
     for _ in range(n):
         adb("shell", "input", "swipe", "30", "700", "30", "1900", "300"); time.sleep(0.4)
+def steel_up(n=2):
+    # Steel page: swipe near the right edge (the left edge is not scrolling this page, the middle can be taken by the drawing).
+    for _ in range(n):
+        adb("shell", "input", "swipe", "1000", "1900", "1000", "700", "300"); time.sleep(0.6)
+def steel_down(n=1):
+    for _ in range(n):
+        adb("shell", "input", "swipe", "1000", "700", "1000", "1900", "300"); time.sleep(0.4)
 def steel_block():
     """Steel page: open it from the Design tab, sweep the warehouse inputs, analyse with the defaults, sweep results, export the PDF, then sweep the member design tab."""
     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
@@ -346,18 +353,18 @@ def steel_block():
         scroll_up(2)
     log.append(("steel_open", ok)); time.sleep(3); shot("steel-open"); dump("steel-open")
     for k in range(3):
-        edge_up(2); shot(f"steel-in-{k}"); dump(f"steel-in-{k}")
+        steel_up(2); shot(f"steel-in-{k}"); dump(f"steel-in-{k}")
     for _ in range(8):
         if tap_text(["تحليل الهنجر"], "st-calc-find"): log.append(("steel_calc", True)); break
-        edge_up(2)
+        steel_up(2)
     else: log.append(("steel_calc", False))
     time.sleep(8)
     for k in range(10):
-        shot(f"steel-res-{k}"); dump(f"steel-res-{k}"); edge_up(2)
+        shot(f"steel-res-{k}"); dump(f"steel-res-{k}"); steel_up(2)
     pdf_ok = False
     for _ in range(14):
         if tap_text(["إنشاء تقرير PDF"], "st-pdf-find"): pdf_ok = True; break
-        edge_top(1)
+        steel_down(1)
     log.append(("steel_pdf_tap", pdf_ok)); time.sleep(2); shot("steel-pdf-dialog"); dump("steel-pdf-dialog")
     log.append(("steel_export_now", tap_text(["تصدير الآن"], "st-export-now"))); time.sleep(8)
     if not tap_text(["Got it", "حسنًا", "حسناً"], "st-pdf-gotit"):
@@ -374,7 +381,7 @@ def steel_block():
     edge_top(8)
     log.append(("steel_member_tab", tap_text(["تصميم القطاعات"], "st-member-tab"))); time.sleep(3)
     for k in range(6):
-        shot(f"steel-member-{k}"); dump(f"steel-member-{k}"); edge_up(2)
+        shot(f"steel-member-{k}"); dump(f"steel-member-{k}"); steel_up(2)
     open(f"{out}/steel-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
 if os.path.exists("tools/ci/STEEL_ONLY"):
     try:
