@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
+import com.civileg.app.domain.calculations.ecp.EcpColumnRules
 import kotlin.math.*
 
 /**
@@ -251,17 +252,16 @@ object ColumnDesignEngine {
                 val magnification = 1.0 + 2.0 * eRatio.coerceIn(0.0, 1.0)
                 val Pu_eff = Pu_N * magnification
                 val asReqCalc = ((Pu_eff) - 0.35 * fcu * ag) / (0.67 * fs)
-                val asMinECP = when(classification) {
-                    "Long" -> ((0.25 + 0.05 * lambdaMax) / 100.0) * ag
-                    else -> 0.008 * ag
-                }
-                val asMaxECP = 0.08 * ag  // ECP allows 8%
+                // ECP 203-2025 p.6-55 (PDF 246). ASSUMPTION: required concrete area = Ag (no calculated area in app).
+                val asMinECP = EcpColumnRules.minSteelArea(ag, ag, classification == "Long", lambdaB = lambdaMax)
+                // Max: 4% middle (no position input yet), 5% edge, 6% corner, 8% only at laps
+                val asMaxECP = EcpColumnRules.maxSteelRatio(EcpColumnRules.Position.MIDDLE) * ag
                 val asReqFinal = max(asMinECP, asReqCalc)
                 val asProv = calculateBarSelection(asReqFinal, preferredDia, min(b, t), 4)
                 val actualAs = asProv.second
                 // Recalculate capacity
                 val pu0 = (0.35 * fcu * (ag - actualAs) + 0.67 * fs * actualAs) / 1000.0
-                ReinforcementReq(asReqFinal, 0.0, 0.0, pu0, asMinECP, asMaxECP, asMinECP/ag*100, 8.0, actualAs/ag*100, asProv)
+                ReinforcementReq(asReqFinal, 0.0, 0.0, pu0, asMinECP, asMaxECP, asMinECP/ag*100, 4.0, actualAs/ag*100, asProv)
             }
             else -> {
                 val fcPrime = fcu * 0.8
@@ -316,7 +316,7 @@ object ColumnDesignEngine {
         stepNum++
         val tieD = 8
         val sMax = when(code) {
-            DesignCode.ECP -> minOf(200.0, 16.0 * preferredDia, 48.0 * tieD, min(b, t) / 2.0)
+            DesignCode.ECP -> EcpColumnRules.tieMaxSpacing(preferredDia) // p.6-55: min(15 db, 200)
             else -> minOf(16.0 * preferredDia, 48.0 * tieD, min(b, t))
         }
         val condLen = min(max(b, t), H * 0.15)  // condensation zone = min(dimension, 15% of height)
@@ -329,7 +329,7 @@ object ColumnDesignEngine {
         steps_s.add(CalculationStep(
             stepNum, "Tie/Stirrup Design",
             codeReference = when(code) { DesignCode.ECP -> "ECP 203 §7-9-2"; else -> "ACI 318 §25.7" },
-            formula = when(code) { DesignCode.ECP -> "s_max = min(200, 16*db, 48*dt, min(b,t)/2)"; else -> "s_max = min(16*db, 48*dt, min(b,t))" },
+            formula = when(code) { DesignCode.ECP -> "s_max = min(200, 15*db)  [ECP 203-2025 p.6-55]"; else -> "s_max = min(16*db, 48*dt, min(b,t))" },
             formulaWithValues = "s_max = $sMax mm\nCondensation zone = ${String.format("%.0f", condLen)} mm\nDense: ${nDense}x${sDense.toInt()}mm, Normal: ${nNormal}x${sMax.toInt()}mm\nTie weight = ${String.format("%.1f", tieWeight)} kg",
             result = tieDesc, unit = "-"
         ))

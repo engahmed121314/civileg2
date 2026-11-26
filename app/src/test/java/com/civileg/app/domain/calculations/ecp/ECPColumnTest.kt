@@ -50,7 +50,7 @@ class ECPColumnTest {
         val maxRatio = column.getMaxReinforcementRatio()
         
         assertEquals(0.008, minRatio, 0.0001) // 0.8%
-        assertEquals(0.08, maxRatio, 0.0001)   // 8%
+        assertEquals(0.04, maxRatio, 0.0001)   // ECP 203-2025 p.6-55 (PDF 246): 4% middle column
         assertTrue("Min should be less than max", minRatio < maxRatio)
     }
     
