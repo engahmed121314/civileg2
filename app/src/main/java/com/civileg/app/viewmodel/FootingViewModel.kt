@@ -257,9 +257,9 @@ class FootingViewModel @Inject constructor(
                 // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم قاعدة - ${res.type.displayName}",
-                    titleEn = "Footing Design Report — ${res.type.displayName}",
+                    titleEn = "Footing Design Report — ${res.type.displayNameEn}",
                     subtitle = "Code: $codeName  •  ${res.width}×${res.length}×${res.thickness}mm",
-                    designType = "Footing (${res.type.displayName})",
+                    designType = "Footing (${res.type.displayNameEn})",
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = res.safetyChecks.map {
