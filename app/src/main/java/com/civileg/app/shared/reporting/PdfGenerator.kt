@@ -352,10 +352,10 @@ object PdfGenerator {
         
         addSummaryRow("Total Steel Weight", "%.2f Tons".format(result.totalWeight))
         addSummaryRow("Weight per Square Meter", "%.1f kg/m²".format(result.weightPerM2))
-        addSummaryRow("Cost per Square Meter", "%.0f EGP/m²".format(result.costPerM2))
-        addSummaryRow("Total Estimated Cost", "%,.0f EGP".format(result.estimatedTotalCost))
-        addSummaryRow("Estimated Net Profit", "%,.0f EGP".format(result.netProfit))
-        addSummaryRow("Expected ROI", "%.1f %%".format(result.roi))
+        addSummaryRow("Cost per Square Meter", "NOT ISSUED (no verified unit rates)")
+        addSummaryRow("Total Estimated Cost", "NOT ISSUED (no verified unit rates)")
+        addSummaryRow("Estimated Net Profit", "NOT ISSUED")
+        addSummaryRow("Expected ROI", "NOT ISSUED")
         summaryCell.add(summaryTable)
         topSection.addCell(summaryCell)
         
