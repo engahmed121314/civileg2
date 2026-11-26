@@ -105,6 +105,11 @@ fun AppText(
         }
     }
 
+    // Resolve the paragraph direction from the text itself (first strong character); Compose otherwise follows the layout direction,
+    // which reversed English values such as "700 x 700 mm" inside the Arabic (RTL) screens.
+    if (effectiveStyle.textDirection == androidx.compose.ui.text.style.TextDirection.Unspecified) {
+        effectiveStyle = effectiveStyle.merge(TextStyle(textDirection = androidx.compose.ui.text.style.TextDirection.Content))
+    }
     // Arabic reads RTL and sits on the right, English reads LTR and sits on the left, whatever the layout direction.
     // Only an unset or default (Start) alignment is resolved from the first strong character; an explicit alignment is kept.
     val contentAlign = if (textAlign == null || textAlign == TextAlign.Start) alignmentFromText(text) else textAlign
