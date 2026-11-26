@@ -76,7 +76,10 @@ def open_stair_from_hub(tag):
     The card title is matched exactly (the subtitle also contains the word) so the tap lands on the card."""
     hub = False
     for _ in range(4):
+        # a "Viewing full screen" tip left over by the PDF viewer hides the hub until it is dismissed
+        tap_text(["Got it", "حسنًا", "حسناً"], tag + "-gotit")
         adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+        tap_text(["Got it", "حسنًا", "حسناً"], tag + "-gotit2")
         tap_text(["التصميم"], tag + "-design", exact=True)
         if any("اختر وحدة التصميم" in t for t, b in nodes(dump(tag + "-hubcheck"))): hub = True; break
     log.append((tag + "_hub", hub))
