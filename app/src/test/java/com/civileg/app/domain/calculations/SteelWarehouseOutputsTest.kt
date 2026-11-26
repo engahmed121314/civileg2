@@ -37,3 +37,26 @@ class SteelWarehouseOutputsTest {
         assertTrue(run().connections.isEmpty())
     }
 }
+
+class SteelWarehouseFootingTest {
+    private val engine = CalculatorEngine(mockk(relaxed = true))
+    private fun inp(q: Double?) = SteelWarehouseInputs(span = 20.0, length = 60.0, eaveHeight = 6.0, ridgeHeight = 7.0,
+        baySpacing = 6.0, deadLoad = 0.25, liveLoad = 0.5, allowableSoilBearingKnM2 = q)
+
+    @Test fun noSoilBearingMeansNotIssued() {
+        val f = engine.designSteelWarehouse(inp(null)).footingPreliminary!!
+        assertFalse(f.issued)
+    }
+
+    @Test fun planSizeFollowsHandFormula() {
+        val r = engine.designSteelWarehouse(inp(200.0))
+        val f = r.footingPreliminary!!
+        // hand: (0.25+0.5)*6*10 = 45 kN gravity + steel share (tons*9.80665/11)/2
+        val p = 45.0 + r.totalWeight * 9.80665 / 11 / 2
+        assertEquals(p, f.serviceLoadPerColumnKn, 1e-9)
+        val side = Math.ceil(Math.sqrt(p / 200.0) * 1000 / 50) * 50
+        assertEquals(side, f.squareSideMm, 1e-9)
+        // lower bearing must give a larger footing
+        assertTrue(engine.designSteelWarehouse(inp(100.0)).footingPreliminary!!.squareSideMm > f.squareSideMm)
+    }
+}

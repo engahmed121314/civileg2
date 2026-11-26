@@ -77,6 +77,8 @@ class SteelWarehouseInputGuardTest {
     fun `calculateSteelWarehousePro produces a bill of materials for valid inputs`() {
         val res = engine.calculateSteelWarehousePro(valid())
         assertTrue("BoM must not be empty", res.billOfMaterials.isNotEmpty())
-        assertTrue("total cost must be > 0", res.totalCost > 0.0)
+        assertTrue("BoM weights come from the member takeoff", res.billOfMaterials.all { it.weightKg > 0.0 })
+        assertTrue("cost is NOT ISSUED (no verified unit rates)", res.totalCost == 0.0 && res.billOfMaterials.all { it.totalCost == 0.0 })
+        assertTrue("notes state cost NOT ISSUED", res.notes.any { it.contains("NOT ISSUED") })
     }
 }

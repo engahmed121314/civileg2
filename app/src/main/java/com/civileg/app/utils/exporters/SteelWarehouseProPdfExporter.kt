@@ -143,6 +143,11 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         data.addCell(dataCell("Estimated Total Cost", true)).addCell(dataCell("NOT ISSUED (no verified price source)", true, null, MUTED))
         document.add(data)
         
+        result.footingPreliminary?.let { f ->
+            val txt = if (f.issued) "PRELIMINARY column footing plan: ${f.squareSideMm.toInt()} x ${f.squareSideMm.toInt()} mm (service load ${f.serviceLoadPerColumnKn.fmt(1)} kN per column incl. steel self-weight, allowable bearing ${f.allowableBearingKnM2.fmt(0)} kN/m2 as entered, gravity only). Wind uplift, horizontal thrust, overturning, sliding, thickness and reinforcement: NOT ASSESSED."
+                      else "Footing plan: ${f.reason}"
+            document.add(Paragraph(txt).setFontSize(9f).setBold())
+        }
         document.add(Paragraph("\nCalculation Trace:").setBold().setUnderline())
         result.calculationTrace.forEach { step ->
             document.add(Paragraph("• $step").setFontSize(8f).setFontColor(ColorConstants.GRAY))

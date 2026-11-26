@@ -217,6 +217,7 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
     var deadLoad by rememberSaveable { mutableStateOf("0.25") }
     var liveLoad by rememberSaveable { mutableStateOf("0.60") }
     var windSpeed by rememberSaveable { mutableStateOf("150") }
+    var soilBearing by rememberSaveable { mutableStateOf("") }
     var numberOfStories by rememberSaveable { mutableIntStateOf(1) }
     var selectedCode by rememberSaveable { mutableStateOf(defaultDesignCode()) }
 
@@ -276,6 +277,7 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                         SteelInputField(windSpeed, stringResource(R.string.steel_wind_kmh), { windSpeed = it }, Modifier.weight(1f))
                         SteelInputField(roofSlope, stringResource(R.string.steel_roof_slope_deg), { roofSlope = it }, Modifier.weight(1f))
                     }
+                    SteelInputField(soilBearing, "Allowable soil bearing (kN/m2) - required for footing size", { soilBearing = it }, Modifier.fillMaxWidth())
                 }
             }
         }
@@ -283,6 +285,7 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
         item {
             val warehouseInputsValid = listOf(span, spacing, eaveHeight, totalLength, roofSlope, deadLoad, liveLoad, windSpeed)
                 .all { it.trim().toDoubleOrNull() != null } &&
+                (soilBearing.isBlank() || (soilBearing.trim().toDoubleOrNull() ?: 0.0) > 0.0) &&
                 listOf(span, spacing, eaveHeight, totalLength).all { (it.trim().toDoubleOrNull() ?: 0.0) > 0.0 }
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -313,7 +316,8 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                             deadLoad = deadLoad.toDoubleOrNull() ?: return@AppButton,
                             liveLoad = liveLoad.toDoubleOrNull() ?: return@AppButton,
                             windLoad = windSpeed.toDoubleOrNull() ?: return@AppButton,
-                            numberOfStories = numberOfStories
+                            numberOfStories = numberOfStories,
+                            allowableSoilBearingKnM2 = soilBearing.trim().toDoubleOrNull()
                         )
                         viewModel.calculateWarehouse(inputs)
                     },
@@ -446,6 +450,13 @@ fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
             // Sections and per-member weights actually used by the analysis (tons).
             res.materialTakeoff.forEach { (k, v) -> ResultRow(k, "${String.format("%.2f", v)} Tons") }
             ResultRow("Base plate / anchor bolts", "NOT ASSESSED (not designed)")
+            res.footingPreliminary?.let { f ->
+                if (f.issued) {
+                    ResultRow("Footing plan (PRELIMINARY)", "${f.squareSideMm.toInt()} x ${f.squareSideMm.toInt()} mm")
+                    ResultRow("Service load per column", "${String.format("%.1f", f.serviceLoadPerColumnKn)} kN")
+                    AppText("Gravity only. Uplift, horizontal thrust, overturning, sliding, thickness and reinforcement: NOT ASSESSED.", fontSize = 11.sp)
+                } else ResultRow("Footing plan", f.reason ?: "NOT ISSUED")
+            }
             if (res.mainFrame.floorBeamSection != null) {
                 ResultRow(stringResource(R.string.steel_intermediate_floor_beam), res.mainFrame.floorBeamSection.sectionName)
                 ResultRow(stringResource(R.string.steel_floor_beam_moment), "${String.format("%.1f", res.mainFrame.floorBeamMaxMoment)} kN.m")
