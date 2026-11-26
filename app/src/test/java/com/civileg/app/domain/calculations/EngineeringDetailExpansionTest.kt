@@ -130,7 +130,12 @@ class EngineeringDetailExpansionTest {
         for ((name, r) in results) {
             val asX = r.columnStripTopRebar.providedArea + r.columnStripBotRebar.providedArea +
                 r.middleStripTopRebar.providedArea + r.middleStripBotRebar.providedArea
-            val expectedKg = 2.0 * asX * (6000.0 + 6000.0) / 1e9 * 7850.0
+            // ECP 203-2025 designs the Y direction separately (its own effective depth); the other codes mirror X.
+            val asY = if (r.columnStripTopRebarY != null) {
+                r.columnStripTopRebarY!!.providedArea + r.columnStripBotRebarY!!.providedArea +
+                    r.middleStripTopRebarY!!.providedArea + r.middleStripBotRebarY!!.providedArea
+            } else asX
+            val expectedKg = (asX * 6000.0 + asY * 6000.0) / 1e9 * 7850.0
             assertEquals("$name steel kg/panel", expectedKg, r.steelWeightPerPanel, 1e-6 * expectedKg + 1e-9)
             assertTrue("$name steel must be a few hundred kg for a 36 m2 panel, not 1000x", r.steelWeightPerPanel < 5000.0)
         }
