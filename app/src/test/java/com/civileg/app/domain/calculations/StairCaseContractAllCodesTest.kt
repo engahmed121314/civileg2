@@ -52,7 +52,10 @@ class StairCaseContractAllCodesTest {
             )) {
                 assertEquals(name, StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED, r.analysisStatus)
                 assertEquals(name, straight.maxMoment, r.maxMoment, 1e-9)
-                assertEquals(name, "", r.flightTopRebar)
+                // ECP designs the code-minimum support top steel (Eq. 6-2 partial fixity +
+                // the t>160 mm top-mesh rule); that is not a credited landing restraint.
+                if (name == "ECP") assertTrue(name, r.flightTopRebar.isNotEmpty())
+                else assertEquals(name, "", r.flightTopRebar)
                 assertEquals(name, "", r.landingRebar)
             }
         }

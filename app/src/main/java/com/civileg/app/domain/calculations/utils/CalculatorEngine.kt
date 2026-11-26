@@ -2282,7 +2282,7 @@ class CalculatorEngine @Inject constructor(
             val cost = concreteVolume * 120.0 + steelWeight * 1.5
 
             val ref = when (code) {
-                DesignCode.ECP -> "Reference supplied: ECP 203-2020; equation coverage incomplete"
+                DesignCode.ECP -> "Reference supplied: ECP 203-2025 (scanned); stair equation coverage incomplete"
                 DesignCode.ACI -> "Reference supplied: ACI 318M-14; equation coverage incomplete"
                 DesignCode.SBC -> "Reference supplied: SBC 304-CR-2018; equation coverage incomplete"
             }
@@ -2325,7 +2325,7 @@ class CalculatorEngine @Inject constructor(
                 ),
                 CalculationStep(
                     stepNumber = 5, title = "Distribution Steel",
-                    formula = if(code == DesignCode.ECP) "As,dist = max(0.20*As,main; 0.0015*b*h)" else "As,dist = max(0.20*As,main; 0.0018*b*h)",
+                    formula = if(code == DesignCode.ECP) "As,dist = max(0.20*As,main; 4 bars/m floor, spacing <= 250 mm)" else "As,dist = max(0.20*As,main; 0.0018*b*h)",
                     formulaWithValues = "As,dist,provided = ${"%.0f".format(java.util.Locale.US,result.distributionRebarArea)} mm2/m; dia ${distBar.diameter} mm at ${"%.0f".format(java.util.Locale.US,distBar.spacing)} mm",
                     result = distBar.barString, unit = "",
                     codeReference = ref
