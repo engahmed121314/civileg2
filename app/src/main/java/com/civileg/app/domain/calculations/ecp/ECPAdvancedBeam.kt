@@ -67,6 +67,8 @@ class ECPAdvancedBeam {
         InputGuard.positive("fy", fy)
         InputGuard.positive("width", width)
         InputGuard.positive("depth", depth)
+        // The flexure and shear designs below use d = depth - 50 mm; a section no deeper than that has no effective depth.
+        require(depth > 50.0) { "depth must exceed the 50 mm cover assumed by this beam design" }
         InputGuard.nonNegative("deadLoad", deadLoad)
         InputGuard.nonNegative("liveLoad", liveLoad)
         InputGuard.notNull("beamType", beamType)

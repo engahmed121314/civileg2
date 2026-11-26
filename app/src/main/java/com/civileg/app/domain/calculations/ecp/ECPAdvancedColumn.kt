@@ -90,6 +90,11 @@ class ECPAdvancedColumn : ColumnDesign {
         InputGuard.positive("unsupportedLength", unsupportedLength)
         InputGuard.nonNegative("axialLoad", axialLoad)
         InputGuard.notNull("columnType", columnType)
+        when (columnType) {
+            is ColumnType.Rectangular -> { InputGuard.positive("width", columnType.width); InputGuard.positive("depth", columnType.depth) }
+            is ColumnType.Circular -> InputGuard.positive("diameter", columnType.diameter)
+            else -> {}
+        }
         InputGuard.notNull("loadCombination", loadCombination)
 
         val warnings = mutableListOf<String>()
