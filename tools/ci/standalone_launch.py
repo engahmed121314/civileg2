@@ -352,13 +352,13 @@ def steel_block():
         if tap_text(["المنشآت المعدنية"], "st-find"): ok = True; break
         scroll_up(2)
     log.append(("steel_open", ok)); time.sleep(3); shot("steel-open"); dump("steel-open")
+    ac = tap_text(["American Code"], "st-code-aci"); time.sleep(1.0)   # chip is at the top of the first screen
+    log.append(("steel_code_american", ac)); shot("steel-code-american")
     for k in range(3):
         steel_up(2); shot(f"steel-in-{k}"); dump(f"steel-in-{k}")
     # Required footing input: allowable soil bearing 150 kN/m2 typed by the evidence run (a stated test value, not an app default).
     # Bracing inputs typed as stated test values (braced bays 1,5,10 and H = 40 kN per braced panel); the app has no defaults for H.
     # American Code selected so the AISC 360-10 (14th ed. Manual) D2 tension inputs appear; Fy 250, Fu 400, Ae 1500 are stated test values.
-    ac = tap_text(["American Code"], "st-code-aci"); time.sleep(1.0)
-    log.append(("steel_code_american", ac))
     for lab, val, nm in (("Brace Fy", "250", "st-fy"), ("Brace Fu", "400", "st-fu"), ("Brace net area", "1500", "st-ae")):
         if tap_text([lab], nm):
             adb("shell", "input", "text", val); time.sleep(0.8)
