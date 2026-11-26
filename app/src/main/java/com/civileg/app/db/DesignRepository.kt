@@ -254,7 +254,7 @@ class DesignRepository @Inject constructor(
             utilizationRatio = 0.0, // Warehouse usually has multiple ratios, using 0.0 for general
             concreteVolume = 0.0,
             steelWeight = result.totalWeight * 1000.0, // Convert Tons to Kg
-            totalCost = result.totalWeight * 50000.0, // Estimated cost per ton
+            totalCost = result.estimatedTotalCost, // from the warehouse engine itself; no hard-coded per-ton price
             result = result,
             codeUsed = "Steel Code",
             inputData = inputData

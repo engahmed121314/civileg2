@@ -213,7 +213,7 @@ class DesignRepositoryImpl(
             utilizationRatio = 0.0,
             concreteVolume = 0.0,
             steelWeight = result.totalWeight * 1000.0,
-            totalCost = result.totalWeight * 50000.0,
+            totalCost = result.estimatedTotalCost,
             result = result,
             codeUsed = "Steel Code"
         )

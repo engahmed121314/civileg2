@@ -93,6 +93,7 @@ class ProjectViewModel @Inject constructor(
                 totalSteel = totalSteel,
                 totalCost = totalCost,
                 designCount = designs.size,
+                pricedDesignCount = designs.count { it.totalCost > 0.0 },
                 costEfficiencyIndex = 1.0,
                 costBreakdown = breakdown
             )
@@ -111,7 +112,15 @@ class ProjectViewModel @Inject constructor(
                 val breakdown = designsList.groupBy { it.type.name }
                     .mapValues { entry -> entry.value.sumOf { d -> d.totalCost } }
                 
-                val summary = ProjectSummary(totalConcrete, totalSteel, totalCost, designsList.size, 1.0, breakdown)
+                val summary = ProjectSummary(
+                    totalConcrete = totalConcrete,
+                    totalSteel = totalSteel,
+                    totalCost = totalCost,
+                    designCount = designsList.size,
+                    pricedDesignCount = designsList.count { it.totalCost > 0.0 },
+                    costEfficiencyIndex = 1.0,
+                    costBreakdown = breakdown
+                )
                 
                 val fileName = "ProjectSummary_${System.currentTimeMillis()}.pdf"
                 val file = File(context.cacheDir, fileName)
@@ -122,7 +131,8 @@ class ProjectViewModel @Inject constructor(
                 val resultsMap = mapOf(
                     "Total Concrete" to String.format("%.2f", totalConcrete) + " m³",
                     "Total Steel" to String.format("%.1f", totalSteel) + " kg",
-                    "Total Cost" to String.format("%.2f", totalCost),
+                    "Total Cost (priced designs only)" to String.format("%.2f", totalCost),
+                    "Designs With Cost Estimate" to "${summary.pricedDesignCount} of ${designsList.size}",
                     "Design Count" to "${designsList.size}",
                     "Safe Designs" to "${designsList.count { it.isSafe }}"
                 )
