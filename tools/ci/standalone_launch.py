@@ -355,6 +355,17 @@ def steel_block():
     for k in range(3):
         steel_up(2); shot(f"steel-in-{k}"); dump(f"steel-in-{k}")
     # Required footing input: allowable soil bearing 150 kN/m2 typed by the evidence run (a stated test value, not an app default).
+    # Bracing inputs typed as stated test values (braced bays 1,5,10 and H = 40 kN per braced panel); the app has no defaults for H.
+    bb = tap_text(["Braced bays"], "st-bb")
+    if bb:
+        adb("shell", "input", "text", "1,5,10"); time.sleep(0.8)
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.0)
+    hl = tap_text(["Lateral load H"], "st-hl")
+    if hl:
+        adb("shell", "input", "text", "40"); time.sleep(0.8)
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.0)
+    shot("steel-bracing-typed"); dump("steel-bracing-typed")
+    log.append(("steel_bracing_typed", bool(bb) and bool(hl)))
     soil = tap_text(["Allowable soil bearing"], "st-soil")
     if soil:
         adb("shell", "input", "text", "150"); time.sleep(0.8)
