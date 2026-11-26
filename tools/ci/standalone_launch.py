@@ -343,7 +343,7 @@ def steel_block():
     ok = False
     for _ in range(6):
         if tap_text(["المنشآت المعدنية"], "st-find"): ok = True; break
-        edge_up(2)
+        scroll_up(2)
     log.append(("steel_open", ok)); time.sleep(3); shot("steel-open"); dump("steel-open")
     for k in range(3):
         edge_up(2); shot(f"steel-in-{k}"); dump(f"steel-in-{k}")
