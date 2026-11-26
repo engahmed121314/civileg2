@@ -919,7 +919,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.columnContent(
     result?.let { r ->
         item {
             ResultCard("Status / الحالة") {
-                ResultRow("Overall", "PRELIMINARY - NOT FULLY CHECKED / نتيجة أولية: لم يكتمل التحقق", bold = true)
+                if (r.slendernessMaxExceeded) ResultRow("Overall", "FAIL - slenderness exceeds ECP 203-2025 Table 6-8 maximum / فشل: النحافة تتجاوز الحد الأقصى", bold = true)
+                else ResultRow("Overall", "PRELIMINARY - NOT FULLY CHECKED / نتيجة أولية: لم يكتمل التحقق", bold = true)
                 ResultRow("Reinforcement check", if (r.reinforcementResult.isSafe) "Passes engine check / يجتاز فحص المحرك" else "Fails engine check / لا يجتاز فحص المحرك")
                 ResultRow("Note", "Moment capacity is not validated for the actual bar positions / لم تُراجع قدرة العزم على مواضع الأسياخ الفعلية")
             }
@@ -936,6 +937,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.columnContent(
                 ResultRow("Effective length", "%.2f m".format(r.effectiveLength))
                 ResultRow("Slenderness ratio", "%.1f".format(r.slendernessRatio), bold = true)
                 ResultRow("Slender?", if (r.isSlender) "Yes / نعم" else "No / لا")
+                if (r.slendernessMaxLimit > 0.0) ResultRow("Maximum slenderness (Table 6-8)", if (r.slendernessMaxExceeded) "FAIL: %.1f > %.0f / فشل".format(r.slendernessRatio, r.slendernessMaxLimit) else "OK: %.1f <= %.0f / مقبول".format(r.slendernessRatio, r.slendernessMaxLimit))
             }
         }
         item {

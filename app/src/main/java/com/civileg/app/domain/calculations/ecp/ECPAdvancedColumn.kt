@@ -122,6 +122,9 @@ class ECPAdvancedColumn : ColumnDesign {
         val limit = EcpColumnRules.shortLimitLambdaI(true) // Table 6-7 lambda_i, braced (p.6-43)
         
         val isSlender = slendernessRatio > limit
+        // ECP 203-2025 Table 6-8 (p.6-43): above the maximum lambda_i the column FAILS (braced assumed, as for the limit above).
+        val maxSlendernessFail = EcpColumnProvisions2025.maxSlendernessWarning(slendernessRatio, true)
+        if (maxSlendernessFail != null) warnings.add(maxSlendernessFail)
         if (isSlender) {
             warnings.add("⚠️ Slender column! Second-order effects (P-Delta) must be considered")
             codeNotes.add("ECP 203-4.2.7: Slenderness ratio λ=$slendernessRatio > $limit")
@@ -224,7 +227,9 @@ class ECPAdvancedColumn : ColumnDesign {
             warnings = warnings,
             codeNotes = codeNotes,
             steelWeightPerMeter = steelWeight / unsupportedLength,
-            concreteVolumePerMeter = Ag / 1e6
+            concreteVolumePerMeter = Ag / 1e6,
+            slendernessMaxExceeded = maxSlendernessFail != null,
+            slendernessMaxLimit = EcpColumnProvisions2025.maxLambdaI(true)
         )
     }
     

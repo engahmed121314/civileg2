@@ -1,6 +1,8 @@
 package com.civileg.app.domain.calculations.ecp
 
 import com.civileg.app.domain.entities.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -82,5 +84,28 @@ class ECPAdvancedColumnTest {
 
         assertNotNull(result)
         assertTrue(result.axialCapacity > 0.0)
+    }
+
+    private fun design300(lengthM: Double) = engine.designAdvancedColumn(
+        columnType = ColumnType.Rectangular(300.0, 300.0),
+        fcu = 30.0, fy = 400.0, axialLoad = 600.0, momentX = 20.0, momentY = 10.0,
+        unsupportedLength = lengthM, endConditions = endConditions,
+        connectedSlab = ConnectedSlabType.SOLID, hasCap = false, inventory = null,
+        loadCombination = LoadCombination.DEAD_LIVE
+    )
+
+    @Test
+    fun table68_veryLongColumnFails_verdictFlagAndFailWarning() {
+        val r = design300(30.0)  // lambda_i >= 0.5 * 30000 / 90 = 166 > 100 (Table 6-8, p.6-43)
+        assertTrue(r.slendernessMaxExceeded)
+        assertEquals(100.0, r.slendernessMaxLimit, 0.0)
+        assertTrue(r.warnings.any { it.startsWith("FAIL") && it.contains("Table 6-8") })
+    }
+
+    @Test
+    fun table68_shortColumnDoesNotFail() {
+        val r = design300(3.0)   // lambda_i <= 2.2 * 3000 / 90 = 73 < 100
+        assertFalse(r.slendernessMaxExceeded)
+        assertTrue(r.warnings.none { it.startsWith("FAIL") })
     }
 }
