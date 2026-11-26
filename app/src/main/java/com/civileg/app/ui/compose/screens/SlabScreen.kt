@@ -987,10 +987,12 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
 
 @Composable
 private fun ResultItem(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Column {
         AppText(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         AppText(value, fontWeight = FontWeight.Bold)
     }
+}
 }
 
 @Composable

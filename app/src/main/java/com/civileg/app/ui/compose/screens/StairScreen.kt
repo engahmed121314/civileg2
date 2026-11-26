@@ -1097,6 +1097,7 @@ private fun StairFormulasCard(result:CalculatorEngine.StairResult) {
 
 @Composable
 private fun ResultRow(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         AppText(label, modifier = Modifier.weight(1f).padding(end = 8.dp))
         // LTR isolate keeps bar notation and numbers intact inside RTL rows; value wraps only at spaces.
@@ -1107,6 +1108,7 @@ private fun ResultRow(label: String, value: String) {
             textAlign = androidx.compose.ui.text.style.TextAlign.End
         )
     }
+}
 }
 
 @Composable

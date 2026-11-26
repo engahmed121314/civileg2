@@ -831,10 +831,12 @@ private fun SectionHeader(title: String, iconRes: Int) {
 
 @Composable
 private fun ResultRow(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         AppText(label)
         AppText(value, fontWeight = FontWeight.Bold)
     }
+}
 }
 
 /**

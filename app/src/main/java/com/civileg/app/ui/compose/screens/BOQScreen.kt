@@ -488,10 +488,12 @@ fun ProfessionalEstimationCard(res: EstimationEngine.EstimationResult, onExport:
 
 @Composable
 fun ResultSummaryRow(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         AppText(label, style = MaterialTheme.typography.bodySmall)
         AppText(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
     }
+}
 }
 
 @Composable

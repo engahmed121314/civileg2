@@ -173,3 +173,21 @@ fun AppTextBlock(
     color = color, fontSize = fontSize, fontStyle = fontStyle, fontWeight = fontWeight, fontFamily = fontFamily,
     lineHeight = lineHeight, maxLines = maxLines, style = style
 )
+
+/**
+ * Lays a label/value row out by the language of its label: an English label sits on the left with
+ * its value on the right (LTR), an Arabic label sits on the right with its value on the left (RTL),
+ * whatever the screen's own layout direction.
+ */
+@Composable
+fun ContentDirection(text: String, content: @Composable () -> Unit) {
+    val dir = when (alignmentFromText(text)) {
+        TextAlign.Right -> androidx.compose.ui.unit.LayoutDirection.Rtl
+        TextAlign.Left -> androidx.compose.ui.unit.LayoutDirection.Ltr
+        else -> androidx.compose.ui.platform.LocalLayoutDirection.current
+    }
+    androidx.compose.runtime.CompositionLocalProvider(
+        androidx.compose.ui.platform.LocalLayoutDirection provides dir,
+        content = content
+    )
+}

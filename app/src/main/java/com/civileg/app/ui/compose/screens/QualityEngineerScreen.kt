@@ -3061,6 +3061,7 @@ fun QualityCheckRow(
     passed: Boolean,
     detail: String = ""
 ) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -3082,9 +3083,11 @@ fun QualityCheckRow(
         }
     }
 }
+}
 
 @Composable
 private fun ResultRow(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -3094,6 +3097,7 @@ private fun ResultRow(label: String, value: String) {
         AppText(label, style = MaterialTheme.typography.bodyMedium)
         AppText(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
     }
+}
 }
 
 @Composable

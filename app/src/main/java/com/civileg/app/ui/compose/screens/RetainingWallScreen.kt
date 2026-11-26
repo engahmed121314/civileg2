@@ -618,6 +618,7 @@ fun RetainingWallScreen(
 
 @Composable
 private fun ResultRow(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -627,4 +628,5 @@ private fun ResultRow(label: String, value: String) {
         AppText(label)
         AppText(value, fontWeight = FontWeight.Bold)
     }
+}
 }

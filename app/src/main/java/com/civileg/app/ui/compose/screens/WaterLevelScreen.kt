@@ -448,6 +448,7 @@ private fun TableRow(
 
 @Composable
 private fun SummaryRow(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -455,6 +456,7 @@ private fun SummaryRow(label: String, value: String) {
         AppText(label, color = Color.Gray, fontSize = 13.sp)
         AppText(value, fontWeight = FontWeight.Bold, fontSize = 13.sp)
     }
+}
 }
 
 // ========== PDF Export ==========

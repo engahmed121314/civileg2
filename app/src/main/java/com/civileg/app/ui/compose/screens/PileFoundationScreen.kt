@@ -998,6 +998,7 @@ private fun PileInputField(
 
 @Composable
 private fun ResultRow(label: String, value: String, valueColor: Color = Color.Unspecified) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -1005,6 +1006,7 @@ private fun ResultRow(label: String, value: String, valueColor: Color = Color.Un
         AppText(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         AppText(value, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = valueColor)
     }
+}
 }
 
 @Composable

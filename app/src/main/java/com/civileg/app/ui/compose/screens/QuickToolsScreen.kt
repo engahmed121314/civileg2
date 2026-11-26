@@ -118,11 +118,13 @@ private fun QInput(label: String, value: String, onChange: (String) -> Unit, kt:
 
 @Composable
 private fun QRow(label: String, value: String, bold: Boolean = false) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         AppText(label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         AppText(value, fontSize = 14.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.SemiBold,
             color = if (bold) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
     }
+}
 }
 
 @Composable

@@ -263,6 +263,7 @@ private fun DrawingToolbar(
 
 @Composable
 private fun InfoRow(label: String, value: String, fontSize: androidx.compose.ui.unit.TextUnit = 12.sp) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -270,4 +271,5 @@ private fun InfoRow(label: String, value: String, fontSize: androidx.compose.ui.
         AppText(label, color = Color(0xAAFFFFFF), fontSize = fontSize)
         AppText(value, color = Color.White, fontSize = fontSize)
     }
+}
 }

@@ -519,6 +519,7 @@ private fun ResultCard(title: String, content: @Composable () -> Unit) {
 
 @Composable
 private fun ResultRow(label: String, value: String, bold: Boolean = false) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -535,6 +536,7 @@ private fun ResultRow(label: String, value: String, bold: Boolean = false) {
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium
         )
     }
+}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

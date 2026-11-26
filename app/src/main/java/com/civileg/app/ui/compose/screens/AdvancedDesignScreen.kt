@@ -1702,6 +1702,7 @@ private fun ResultCard(title: String, content: @Composable () -> Unit) {
 
 @Composable
 private fun ResultRow(label: String, value: String, bold: Boolean = false) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         AppText(
             label,
@@ -1715,6 +1716,7 @@ private fun ResultRow(label: String, value: String, bold: Boolean = false) {
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium
         )
     }
+}
 }
 
 @Composable

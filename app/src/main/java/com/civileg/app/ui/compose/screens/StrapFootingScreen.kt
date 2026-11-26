@@ -523,10 +523,12 @@ fun StrapInputField(value: String, label: String, onValueChange: (String) -> Uni
 
 @Composable
 private fun ResultRow(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         AppText(label, style = MaterialTheme.typography.bodyMedium)
         AppText(value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
     }
+}
 }
 
 @Composable

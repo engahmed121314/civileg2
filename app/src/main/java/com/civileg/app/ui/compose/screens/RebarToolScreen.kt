@@ -853,6 +853,7 @@ private fun InputField(
 
 @Composable
 private fun ResultRow(label: String, value: String, bold: Boolean = false) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -864,6 +865,7 @@ private fun ResultRow(label: String, value: String, bold: Boolean = false) {
             color = if (bold) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
         )
     }
+}
 }
 
 @Composable

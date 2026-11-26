@@ -628,10 +628,12 @@ fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWare
 
 @Composable
 fun SummaryLine(label: String, value: String, isPrimary: Boolean = false) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         AppText(label, style = if (isPrimary) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium)
         AppText(value, fontWeight = FontWeight.Bold, color = if (isPrimary) MaterialTheme.colorScheme.primary else Color.Unspecified)
     }
+}
 }
 
 @Composable
@@ -2584,10 +2586,12 @@ fun SteelInputField(value: String, label: String, onValueChange: (String) -> Uni
 
 @Composable
 private fun ResultRow(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         AppText(label, style = MaterialTheme.typography.bodyMedium)
         AppText(value, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
     }
+}
 }
 
 @Composable
@@ -2622,6 +2626,7 @@ private fun UtilizationBar(label: String, utilization: Double) {
 
 @Composable
 fun PropertyLine(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
         Box(modifier = Modifier.size(6.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)))
         Spacer(Modifier.width(6.dp))
@@ -2629,6 +2634,7 @@ fun PropertyLine(label: String, value: String) {
         Spacer(Modifier.weight(1f))
         AppText(value, fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
+}
 }
 
 private fun Color.toArgbInt(): Int {
