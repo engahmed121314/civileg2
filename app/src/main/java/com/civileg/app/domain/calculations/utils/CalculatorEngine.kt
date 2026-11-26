@@ -923,7 +923,20 @@ class CalculatorEngine @Inject constructor(
         // 400 kN / 1.2*M capacity with isSafe=true. Report none rather than invented values.
         val connections = emptyList<SteelConnectionDetail>()
 
+        // Preliminary footing plan size: service vertical load per column / user bearing capacity.
+        // P = (dead + live) kN/m2 x bay x span/2 + (steel weight per frame)/2, g = 9.80665 m/s2.
+        // Steel weight per frame = total tons / frames; footing self-weight and cladding are not included.
+        val soilQ = inputs.allowableSoilBearingKnM2
+        val footing = if (soilQ == null || soilQ <= 0.0) {
+            FootingPlanPreliminary(issued = false, reason = "NOT ISSUED: allowable soil bearing (kN/m2) is required")
+        } else {
+            val pService = (inputs.deadLoad + inputs.liveLoad) * bay * span / 2.0 + (totalWeightTons * 9.80665 / numFrames) / 2.0
+            val area = pService / soilQ
+            FootingPlanPreliminary(true, null, pService, soilQ, area, ceil(sqrt(area) * 1000.0 / 50.0) * 50.0)
+        }
+
         return SteelWarehouseAnalysisResult(
+            footingPreliminary = footing,
             mainFrame = mainFrame, secondaryMembers = secondary, connections = connections,
             totalWeight = totalWeightTons, totalCladdingArea = claddingArea, weightPerM2 = weightPerM2,
             resultsByCode = inputs.code.displayName, safetyStatus = maxDeflection <= allowableDef,
