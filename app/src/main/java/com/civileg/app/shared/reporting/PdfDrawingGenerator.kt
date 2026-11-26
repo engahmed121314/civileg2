@@ -167,6 +167,24 @@ object PdfDrawingGenerator {
         fun line(x1: Float, y1: Float, z1: Float, x2: Float, y2: Float, z2: Float, p: Paint) =
             canvas.drawLine(sx(x1, y1), sy(x1, y1, z1), sx(x2, y2), sy(x2, y2, z2), p)
 
+        // Shaded faces (translucent, back to front) so the building reads as a solid, not a bare wireframe.
+        fun face(alpha: Int, r: Int, g: Int, b: Int, vararg v: Triple<Float, Float, Float>) {
+            val path = Path()
+            v.forEachIndexed { i, t ->
+                val x = sx(t.first, t.second); val y = sy(t.first, t.second, t.third)
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            path.close()
+            canvas.drawPath(path, fillPaint(Color.argb(alpha, r, g, b)))
+        }
+        face(60, 90, 90, 90, Triple(0f, 0f, 0f), Triple(s, 0f, 0f), Triple(s, l, 0f), Triple(0f, l, 0f))      // floor
+        face(35, 120, 150, 190, Triple(0f, 0f, 0f), Triple(0f, l, 0f), Triple(0f, l, eh), Triple(0f, 0f, eh)) // far side wall
+        face(35, 120, 150, 190, Triple(0f, 0f, 0f), Triple(s, 0f, 0f), Triple(s, 0f, eh), Triple(s / 2f, 0f, rh), Triple(0f, 0f, eh)) // far gable
+        face(55, 150, 180, 220, Triple(s, 0f, 0f), Triple(s, l, 0f), Triple(s, l, eh), Triple(s, 0f, eh))    // near side wall
+        face(55, 150, 180, 220, Triple(0f, l, 0f), Triple(s, l, 0f), Triple(s, l, eh), Triple(s / 2f, l, rh), Triple(0f, l, eh)) // near gable
+        face(85, 200, 120, 70, Triple(0f, 0f, eh), Triple(0f, l, eh), Triple(s / 2f, l, rh), Triple(s / 2f, 0f, rh)) // roof, left slope
+        face(110, 220, 140, 80, Triple(s, 0f, eh), Triple(s, l, eh), Triple(s / 2f, l, rh), Triple(s / 2f, 0f, rh)) // roof, right slope
+
         // Portal frames at each bay line
         for (i in 0..numBays) {
             val y = l * i / numBays
