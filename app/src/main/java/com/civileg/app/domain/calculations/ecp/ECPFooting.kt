@@ -127,19 +127,35 @@ class ECPFooting : FootingDesign {
             warnings.add("انفصال القاعدة عن التربة (q_min < 0) — زِد الأبعاد حسب ECP 203 §7-1")
         }
 
-        // 8. السمك الفعال
-        val d = footingDepth - getMinCover() - 10.0
-        // Guard: effective depth must be positive
-        if (d <= 0) {
-            warnings.add("Effective depth ≤ 0 — increase footing thickness")
-        }
-        val dSafe = d.coerceAtLeast(50.0)  // Minimum 50mm effective depth for calculations
-
-        // 9. عزم الانحناء في الاتجاه القصير والطويل (factored pressure)
+        // 9. cantilever moments (factored pressure), needed to size the bars before the effective depth is final
         val cantX = (B - columnWidth) / 2.0 / 1000.0  // م
         val cantY = (L - columnDepth) / 2.0 / 1000.0  // م
         val Mu_x = q_factored * (L / 1000.0) * cantX * cantX / 2.0  // kN.m
         val Mu_y = q_factored * (B / 1000.0) * cantY * cantY / 2.0  // kN.m
+        val Mu_x_per_m = Mu_x / (L / 1000.0)
+        val Mu_y_per_m = Mu_y / (B / 1000.0)
+
+        // 8. Effective depth from the bar diameter actually selected. The layout applies one diameter both ways, with the
+        // short-direction layer lower: d_x = t - cover - dia/2, d_y = t - cover - dia - dia/2. Shear and punching use the mean.
+        // (Layer order is an engine convention, not a verified clause. Earlier code assumed a fixed 10 mm allowance.)
+        val cover = getMinCover()
+        var barDia = 12.0
+        var reinfX = calculateFootingReinforcement(fcu, fy, B, L, (footingDepth - cover - barDia / 2.0).coerceAtLeast(50.0), Mu_x_per_m, FootingDirection.SHORT)
+        var reinfY = calculateFootingReinforcement(fcu, fy, B, L, (footingDepth - cover - 1.5 * barDia).coerceAtLeast(50.0), Mu_y_per_m, FootingDirection.LONG)
+        var stable = false
+        for (iter in 0 until 5) {
+            val selected = max(reinfX.barDiameter, reinfY.barDiameter)
+            if (selected == barDia) { stable = true; break }
+            barDia = selected
+            reinfX = calculateFootingReinforcement(fcu, fy, B, L, (footingDepth - cover - barDia / 2.0).coerceAtLeast(50.0), Mu_x_per_m, FootingDirection.SHORT)
+            reinfY = calculateFootingReinforcement(fcu, fy, B, L, (footingDepth - cover - 1.5 * barDia).coerceAtLeast(50.0), Mu_y_per_m, FootingDirection.LONG)
+        }
+        if (!stable) warnings.add("Bar diameter did not settle with the effective depth; flexure result is not consistent with the layout")
+        val d = footingDepth - cover - 0.75 * barDia
+        if (d <= 0) {
+            warnings.add("Effective depth ≤ 0 — increase footing thickness")
+        }
+        val dSafe = d.coerceAtLeast(50.0)
 
         // 10. فحص القص الأحادي عند بعد d/2 من وجه العمود (ECP 203 البند 4-3-1-2) — factored pressure
         val Vu_x = q_factored * (L / 1000.0) * max(cantX - dSafe / 2000.0, 0.0)  // kN
@@ -159,13 +175,6 @@ class ECPFooting : FootingDesign {
 
         // 11. فحص قص الاختراق
         val punchingCheck = checkPunchingShear(fcu, columnWidth, columnDepth, dSafe, axialLoad, loadCombination)
-
-        // 12. تصميم التسليح
-        val Mu_x_per_m = Mu_x / (L / 1000.0)
-        val Mu_y_per_m = Mu_y / (B / 1000.0)
-
-        val reinfX = calculateFootingReinforcement(fcu, fy, B, L, dSafe, Mu_x_per_m, FootingDirection.SHORT)
-        val reinfY = calculateFootingReinforcement(fcu, fy, B, L, dSafe, Mu_y_per_m, FootingDirection.LONG)
 
         // 13. التسليح التوزيعي (distribution steel) - 20% من التسليح الرئيسي
         val mainAs = max(reinfX.astRequired, reinfY.astRequired)
