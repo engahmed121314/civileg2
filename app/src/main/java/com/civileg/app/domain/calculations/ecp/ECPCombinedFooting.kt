@@ -104,6 +104,7 @@ class ECPCombinedFooting {
         InputGuard.nonNegative("p1", p1)
         InputGuard.nonNegative("p2", p2)
         val warnings = mutableListOf<String>()
+        overReinforced = false
 
         // ==================== 1. Service Loads ====================
         // Approximate service loads (assuming dominant dead load; use average factor)
@@ -125,7 +126,11 @@ class ECPCombinedFooting {
         // Net SBC accounting for footing self-weight
         val tMeters = footingThickness / 1000.0
         val netSBC = soilBearingCapacity - GAMMA_CONCRETE * tMeters
-        val effectiveSBC = max(netSBC, soilBearingCapacity * 0.8)
+        // A footing weight that uses up the allowable bearing is a failed input; the former silent 0.8*SBC floor hid it.
+        require(netSBC > 0.001) {
+            "soilBearingCapacity: allowable bearing ${String.format("%.1f", soilBearingCapacity)} kPa is not larger than the footing weight pressure ${String.format("%.1f", GAMMA_CONCRETE * tMeters)} kPa at footingThickness ${String.format("%.0f", footingThickness)} mm"
+        }
+        val effectiveSBC = netSBC
 
         // Required area with 10% margin for eccentricity
         val areaRequired = totalService * 1.1 / effectiveSBC
@@ -138,8 +143,9 @@ class ECPCombinedFooting {
         // Length: must accommodate centroid with projections on both sides
         // Minimum projection beyond columns: 150 mm (0.15 m)
         val minProjection = 0.15
-        val minLengthFromCentroid = centroidFromCol1 + minProjection
-        val minProjectionRight = (Lcol - centroidFromCol1) + minProjection
+        // Projection is measured from the column FACE, so the column half-depth is added to the centre distance.
+        val minLengthFromCentroid = centroidFromCol1 + minProjection + col1Depth / 2000.0
+        val minProjectionRight = (Lcol - centroidFromCol1) + minProjection + col2Depth / 2000.0
         val minLength = 2.0 * max(minLengthFromCentroid, minProjectionRight)
         val lengthM = max(sqrt(areaRequired * 2.5), minLength)  // L/B ~ 2.5
         val length = ceil(lengthM * 20.0) / 20.0  // Round up to 50 mm
@@ -153,9 +159,10 @@ class ECPCombinedFooting {
         val actualNetSBC = totalService / actualArea
 
         // Projections from centroid
-        val projLeft = centroidFromCol1          // m (left edge to col1 center)
-        val projRight = length - centroidFromCol1 // m (col1 center to right edge, includes col2)
-        val col2FromLeft = Lcol                   // col2 position from left edge reference
+        // The footing is centred on the load resultant (resultant is centroidFromCol1 from column 1), so column 1
+        // sits (length/2 - centroidFromCol1) from the left edge and column 2 sits Lcol further along.
+        val col1X = length / 2.0 - centroidFromCol1   // m, left edge to col1 centre
+        val col2X = col1X + Lcol                      // m, left edge to col2 centre
 
         // ==================== 6. Effective Depth ====================
         val effectiveDepth = footingThickness - MIN_COVER - 10.0  // mm (cover + half bar)
@@ -171,7 +178,7 @@ class ECPCombinedFooting {
         // For eccentric loading, compute max/min pressure
         // Resultant location relative to footing centroid
         val footingCentroid = length / 2.0
-        val eccentricity = abs(footingCentroid - centroidFromCol1)
+        val eccentricity = abs(footingCentroid - (col1X + centroidFromCol1))
         val momentAboutBase = totalUltimate * eccentricity  // kN.m
         val sectionModulus = width * length * length / 6.0   // m^3
         val qMax = qSoilUlt + momentAboutBase / sectionModulus
@@ -192,10 +199,9 @@ class ECPCombinedFooting {
         // --- Positive moment (bottom steel) ---
         // Critical sections at column faces (cantilever portions)
         // Cantilever left of col1
-        val cantLeft = centroidFromCol1 - col1Depth / 2000.0  // m (from left edge to col1 face)
+        val cantLeft = col1X - col1Depth / 2000.0  // m (from left edge to col1 face)
         // Cantilever right of col2
-        val col2FromRightEdge = length - col2FromLeft
-        val cantRight = col2FromRightEdge - col2Depth / 2000.0  // m (from col2 face to right edge)
+        val cantRight = (length - col2X) - col2Depth / 2000.0  // m (from col2 face to right edge)
 
         // Positive moment at cantilever tips (worst case)
         val muPosLeft = qSoilUlt * width * cantLeft * cantLeft / 2.0   // kN.m
@@ -216,7 +222,16 @@ class ECPCombinedFooting {
         // Approximate negative moment at mid-span between columns as:
         // M_neg ~ q * B * (cantilever)^2 / 2 (cantilever of the longer side)
         // Or more accurately, the moment between columns using cantilever analogy
-        val muNeg = qSoilUlt * width * cantLeft * cantLeft / 2.0  // kN.m
+        // Beam analysis of the strip: upward line load w = q*B, point loads P1 at x=col1X and P2 at x=col2X.
+        // Between the columns V(x) = w*x - P1; the hogging moment peaks where V = 0, at x0 = P1/w, if x0 lies
+        // between the columns. M(x0) = w*x0^2/2 - P1*(x0 - col1X) (negative = top tension).
+        val wLine = qSoilUlt * width  // kN/m
+        val x0 = if (wLine > 0) p1 / wLine else col1X
+        val muNeg = if (x0 > col1X && x0 < col2X) {
+            max(0.0, -(wLine * x0 * x0 / 2.0 - p1 * (x0 - col1X)))
+        } else {
+            0.0
+        }
 
         val longTopAsMm2 = if (muNeg > 0) {
             designFlexuralSteel(
@@ -258,19 +273,25 @@ class ECPCombinedFooting {
         )
 
         // ==================== 10. One-Way Shear Check ====================
-        // Critical section at d/2 from column face (in longitudinal direction)
-        // Check at the column with larger cantilever
-        val criticalShearDist = d / 2000.0  // m (d/2 converted to meters)
-
-        // Shear at left cantilever (col1 face + d/2)
-        val shearSectionLeft = max(cantLeft - criticalShearDist, 0.0)
-        val vuLeft = qSoilUlt * width * shearSectionLeft  // kN
-
-        // Shear at right cantilever (col2 face + d/2)
-        val shearSectionRight = max(cantRight - criticalShearDist, 0.0)
-        val vuRight = qSoilUlt * width * shearSectionRight  // kN
-
-        val vuMax = max(vuLeft, vuRight)
+        // Beam-type shear at d from each column face (the previous d/2 is the punching distance and under-estimated
+        // shear). ECP 203-2025 page for the footing section location NOT located in the scan: NOT ASSESSED vs 2025 text.
+        // V(x) = w*x - P1*[x > col1X] - P2*[x > col2X], strip analysis with the same line load as above.
+        val dM = d / 1000.0
+        fun shearAt(x: Double): Double {
+            var v = wLine * x
+            if (x > col1X) v -= p1
+            if (x > col2X) v -= p2
+            return abs(v)
+        }
+        val xFace1L = col1X - col1Depth / 2000.0
+        val xFace1R = col1X + col1Depth / 2000.0
+        val xFace2L = col2X - col2Depth / 2000.0
+        val xFace2R = col2X + col2Depth / 2000.0
+        val vuLeft = if (xFace1L - dM > 0) shearAt(xFace1L - dM) else 0.0
+        val vuInnerL = shearAt(min(xFace1R + dM, (col1X + col2X) / 2.0))
+        val vuInnerR = shearAt(max(xFace2L - dM, (col1X + col2X) / 2.0))
+        val vuRight = if (xFace2R + dM < length) shearAt(xFace2R + dM) else 0.0
+        val vuMax = max(max(vuLeft, vuRight), max(vuInnerL, vuInnerR))
 
         // One-way shear capacity: Vc = qcu * B * d
         // ECP 203-2025 Eq 4-29 (PDF p.105, printed 4-25): qcu = 0.16 sqrt(fcu/gc)
@@ -283,28 +304,34 @@ class ECPCombinedFooting {
         }
 
         // ==================== 11. Punching Shear Check ====================
-        // ECP 203 Clause 4-3-2: Punching at each column
-        // Punching capacity: qp = 0.316 * sqrt(fcu / gamma_c) (MPa)
-
-        // --- Column 1 punching ---
+        // ECP 203-2025 Eq 4-44/4-46: critical perimeter at d/2 from the face, truncated at the footing edge
+        // (edge / corner columns), net of the soil reaction inside the perimeter.
+        val widthMm = width * 1000.0
         val punchingCol1Safe = checkPunchingShear(
             columnWidth = col1Width,
             columnDepth = col1Depth,
             d = d,
             load = p1,
-            fcu = fcu
+            fcu = fcu,
+            marginLeftMm = (col1X - col1Depth / 2000.0) * 1000.0,
+            marginRightMm = Double.MAX_VALUE,
+            marginSideMm = (widthMm - col1Width) / 2.0,
+            qSoil = qSoilUlt
         )
         if (!punchingCol1Safe) {
             warnings.add("Punching shear at Column 1 not satisfied - increase thickness")
         }
 
-        // --- Column 2 punching ---
         val punchingCol2Safe = checkPunchingShear(
             columnWidth = col2Width,
             columnDepth = col2Depth,
             d = d,
             load = p2,
-            fcu = fcu
+            fcu = fcu,
+            marginLeftMm = Double.MAX_VALUE,
+            marginRightMm = (length - col2X - col2Depth / 2000.0) * 1000.0,
+            marginSideMm = (widthMm - col2Width) / 2.0,
+            qSoil = qSoilUlt
         )
         if (!punchingCol2Safe) {
             warnings.add("Punching shear at Column 2 not satisfied - increase thickness")
@@ -340,8 +367,9 @@ class ECPCombinedFooting {
         val steelWeight = longBottomWeight + longTopWeight + transWeight
 
         // ==================== 14. Final Safety Assessment ====================
+        if (overReinforced) warnings.add("Flexure: K exceeds Rmax/gamma_c (ECP 203-2025 Eq 4-4, Table 4-1) in at least one section; increase the thickness")
         val isSafe = oneWayShearSafe && punchingCol1Safe && punchingCol2Safe
-                && qMin >= 0 && longBottomAsMm2 > 0
+                && qMin >= 0 && longBottomAsMm2 > 0 && !overReinforced
 
         return CombinedFootingResult(
             footingLength = length,
@@ -383,6 +411,9 @@ class ECPCombinedFooting {
      * @param isFooting If true, uses footing-specific min steel ratio (0.15%)
      * @return Required steel area (mm^2)
      */
+    // Set by designFlexuralSteel when K exceeds Rmax/gamma_c (ECP 203-2025 Eq 4-4); read once per design() call.
+    private var overReinforced = false
+
     private fun designFlexuralSteel(
         mu: Double,
         b: Double,
@@ -403,13 +434,8 @@ class ECPCombinedFooting {
         val kBal = calculateKBalForFooting(fcu, fy)
 
         // Lever arm: z = d * (0.5 + sqrt(0.25 - K/0.893)) — 0.893 = γc/(2×0.67) per ECP 203
-        val discriminant = 0.25 - K / 0.893
-        val z = if (discriminant >= 0) {
-            d * (0.5 + sqrt(discriminant))
-        } else {
-            // Over-reinforced: use maximum lever arm limited by K_bal
-            d * (0.5 + sqrt(max(0.0, 0.25 - kBal / 0.893)))
-        }
+        val z = ECP2025Flexure.leverArm(min(K, kBal), d)
+        if (K > kBal) overReinforced = true
 
         // Required steel
         var asRequired = Mu / (fs * z)
@@ -431,45 +457,51 @@ class ECPCombinedFooting {
      * Uses strain compatibility per ECP 203 Clause 4-2-2-1.
      * For fcu=25, fy=360: K_bal ~ 0.186
      */
-    private fun calculateKBalForFooting(fcu: Double, fy: Double): Double {
-        val Es = 200000.0
-        val epsilonCu = 0.003
-        val epsilonY = fy / (Es * GAMMA_S)
-        val cOverD = epsilonCu / (epsilonCu + epsilonY)
-        val beta = 0.9  // ECP 203 K-method factor (consistent with K_bal derivation)
-        val aOverD = beta * cOverD
-        return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
-    }
+    private fun calculateKBalForFooting(fcu: Double, fy: Double): Double = ECP2025Flexure.kLimit(fy)
 
     /**
      * Check punching shear at a column per ECP 203 Clause 4-3-2.
      *
      * Critical perimeter at d/2 from column face.
      * Perimeter bo = 2 * (col_w + col_d) + 4 * d (for rectangular column)
-     * Applied stress: qp_applied = V * 0.9 / (bo * d)   [0.9 accounts for soil relief]
-     * Capacity: qp = 0.316 * sqrt(fcu / gamma_c)
+     * Applied stress: qp_applied = (P - q * area inside perimeter) / (bo * d), perimeter cut at the footing edge
+     * Capacity: ECP 203-2025 Eq 4-46 a/b/c via ECP2025ConcreteShear (alpha 4/3/2 interior/edge/corner)
      *
      * @return true if punching shear is adequate
      */
     private fun checkPunchingShear(
-        columnWidth: Double,
-        columnDepth: Double,
+        columnWidth: Double,   // mm, across the footing width
+        columnDepth: Double,   // mm, along the footing length
         d: Double,
-        load: Double,         // kN - ultimate column load
-        fcu: Double           // MPa
+        load: Double,          // kN - ultimate column load
+        fcu: Double,           // MPa
+        marginLeftMm: Double,  // column face to footing edge, along length, left
+        marginRightMm: Double, // same, right
+        marginSideMm: Double,  // column face to footing edge, across the width (each side)
+        qSoil: Double          // kPa factored soil reaction
     ): Boolean {
-        // Critical punching perimeter at d/2 from column face
-        val bo = 2.0 * (columnWidth + columnDepth) + 4.0 * d  // mm
-
-        // Net punching force (reduced by soil pressure inside critical perimeter)
-        val punchArea = (columnWidth + 2.0 * d) * (columnDepth + 2.0 * d)  // mm^2
-        val Vpunch = load * 0.90  // kN (10% reduction for soil pressure inside perimeter)
-
-        // Applied punching stress
-        val qpApplied = (Vpunch * 1000.0) / (bo * d)  // MPa
-
-        // ECP 203-2025 Eq 4-46 a/b/c (PDF p.107-108); interior column assumed
-        val qpCapacity = ECP2025ConcreteShear.punchingQcup(fcu, d, bo, columnWidth, columnDepth)
+        val half = d / 2.0
+        val eL = min(marginLeftMm.coerceAtLeast(0.0), half)
+        val eR = min(marginRightMm.coerceAtLeast(0.0), half)
+        val eS = min(marginSideMm.coerceAtLeast(0.0), half)
+        val along = columnDepth + eL + eR
+        val across = columnWidth + 2.0 * eS
+        var bo = 2.0 * (along + across)
+        var cut = 0
+        if (marginLeftMm < half) { bo -= across; cut++ }
+        if (marginRightMm < half) { bo -= across; cut++ }
+        if (marginSideMm < half) { bo -= 2.0 * along; cut += 2 }
+        val position = when {
+            cut <= 0 -> ECP2025ConcreteShear.ColumnPosition.INTERIOR
+            cut == 1 -> ECP2025ConcreteShear.ColumnPosition.EDGE
+            else -> ECP2025ConcreteShear.ColumnPosition.CORNER
+        }
+        // Net force: column load minus the factored soil reaction inside the critical perimeter (statics; replaces the flat 0.9).
+        val areaM2 = along * across / 1e6
+        val net = (load - qSoil * areaM2).coerceAtLeast(0.0)
+        if (bo <= 0.0) return false
+        val qpApplied = net * 1000.0 / (bo * d)  // MPa
+        val qpCapacity = ECP2025ConcreteShear.punchingQcup(fcu, d, bo, columnWidth, columnDepth, position)
         return qpApplied <= qpCapacity
     }
 

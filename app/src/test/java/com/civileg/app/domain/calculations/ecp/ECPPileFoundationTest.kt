@@ -375,3 +375,37 @@ class ECPPileFoundationTest {
         assertTrue("Utilization ratio should be >= 0", result.utilizationRatio >= 0)
     }
 }
+
+/** Pile cap statics (review/foundations-20261126). */
+class ECPPileCapStaticsTest {
+    private val pile = ECPPileFoundation()
+
+    @Test
+    fun fourPileCapMomentUsesLeverArmFromColumnFaceToPileCentre() {
+        // 2x2, spacing 1800, column 400: pile centre at 900, face at 200 -> arm 0.7 m; 2 piles per side, R = 2000/4 = 500
+        // Mu = 2 * 500 * 0.7 = 700 kN.m across the 2 m wide section; steel must exceed the 0.15% minimum.
+        val r = pile.designPileCap(
+            com.civileg.app.domain.PileCapInput(
+                axialLoad = 2000.0, numberOfPiles = 4, pileDiameter = 600.0, pileSpacing = 1800.0,
+                columnWidth = 400.0, columnLength = 400.0, fcu = 30.0, fy = 400.0
+            )
+        )
+        val d = r.capThickness - 75.0 - 10.0
+        val asReq = 700e6 / (400.0 / 1.15 * d)  // z <= d, so this is a lower bound on required steel
+        assertTrue("provided ${r.flexuralReinforcement.area} must cover at least the lower bound $asReq",
+            r.flexuralReinforcement.area >= asReq * 0.99)
+    }
+
+    @Test
+    fun pilesOutsideCriticalPerimeterGiveFullColumnLoadForPunching() {
+        val r = pile.designPileCap(
+            com.civileg.app.domain.PileCapInput(
+                axialLoad = 2000.0, numberOfPiles = 4, pileDiameter = 600.0, pileSpacing = 1800.0,
+                columnWidth = 400.0, columnLength = 400.0, fcu = 30.0, fy = 400.0
+            )
+        )
+        val d = r.capThickness - 75.0 - 10.0
+        val bo = 4.0 * 400.0 + 4.0 * d
+        assertEquals(2000.0 * 1000.0 / (bo * d), r.punchingShearStress, 1e-6)
+    }
+}
