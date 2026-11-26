@@ -2297,34 +2297,52 @@ object PdfDrawingGenerator {
         val pH = width.toFloat() * planScale
         val pwt = wallThickness.toFloat() * planScale
 
-        // Outer wall outline
-        canvas.drawRect(planLeft, planTop, planLeft + pW, planTop + pH, fillPaint(CONCRETE))
-        canvas.drawRect(planLeft, planTop, planLeft + pW, planTop + pH, outlineP)
-        canvas.drawHatch(planLeft, planTop, pW, pH, 15f)
+        val isCircularTank = tankType.contains("Circular", true) || tankType.contains("دائري")
+        if (isCircularTank) {
+            // Circular plan: wall ring, water area, hoop bars as concentric circles, diameter dimension.
+            val dPx = minOf(pW, pH)
+            val cxp = planLeft + dPx / 2f
+            val cyp = planTop + dPx / 2f
+            canvas.drawCircle(cxp, cyp, dPx / 2f, fillPaint(CONCRETE))
+            canvas.drawCircle(cxp, cyp, dPx / 2f, outlineP)
+            canvas.drawCircle(cxp, cyp, dPx / 2f - pwt, fillPaint(Color.parseColor("#11224466")))
+            canvas.drawCircle(cxp, cyp, dPx / 2f - pwt, outlineP)
+            val hoopP = createPaint(TOP_REBAR, 1.5f).apply { style = Paint.Style.STROKE }
+            canvas.drawCircle(cxp, cyp, dPx / 2f - pwt * 0.8f, hoopP)
+            canvas.drawCircle(cxp, cyp, dPx / 2f - pwt * 0.2f, hoopP)
+            canvas.drawHDim(planLeft, planLeft + dPx, planTop + dPx + 15f, "Ø ${length.toInt()} mm")
+            canvas.drawTextCentered("PLAN VIEW", cxp, planTop - 25f, titleP)
+        } else {
+            // Outer wall outline
+            canvas.drawRect(planLeft, planTop, planLeft + pW, planTop + pH, fillPaint(CONCRETE))
+            canvas.drawRect(planLeft, planTop, planLeft + pW, planTop + pH, outlineP)
+            canvas.drawHatch(planLeft, planTop, pW, pH, 15f)
 
-        // Inner opening (water area)
-        canvas.drawRect(planLeft + pwt, planTop + pwt, planLeft + pW - pwt, planTop + pH - pwt, fillPaint(Color.parseColor("#11224466")))
+            // Inner opening (water area)
+            canvas.drawRect(planLeft + pwt, planTop + pwt, planLeft + pW - pwt, planTop + pH - pwt, fillPaint(Color.parseColor("#11224466")))
 
-        // Reinforcement pattern along X (vertical blue lines)
-        val rebarP = createPaint(REBAR_BLUE, 1.5f)
-        var rx = planLeft + pwt + 15f
-        while (rx < planLeft + pW - pwt - 5f) {
-            canvas.drawLine(rx, planTop + 5f, rx, planTop + pH - 5f, rebarP)
-            rx += maxOf(verticalRebarSpacing.toFloat() * planScale / 4f, 15f)
+            // Reinforcement pattern along X (vertical blue lines)
+            val rebarP = createPaint(REBAR_BLUE, 1.5f)
+            var rx = planLeft + pwt + 15f
+            while (rx < planLeft + pW - pwt - 5f) {
+                canvas.drawLine(rx, planTop + 5f, rx, planTop + pH - 5f, rebarP)
+                rx += maxOf(verticalRebarSpacing.toFloat() * planScale / 4f, 15f)
+            }
+
+            // Reinforcement pattern along Y (horizontal light blue lines)
+            val rebarP2 = createPaint(TOP_REBAR, 1.2f)
+            var ry = planTop + pwt + 15f
+            while (ry < planTop + pH - pwt - 5f) {
+                canvas.drawLine(planLeft + 5f, ry, planLeft + pW - 5f, ry, rebarP2)
+                ry += maxOf(horizontalRebarSpacing.toFloat() * planScale / 4f, 15f)
+            }
+
+            canvas.drawHDim(planLeft, planLeft + pW, planTop + pH + 15f, "${length.toInt()} mm")
+            canvas.drawVDim(planTop, planTop + pH, planLeft + pW + 15f, "${width.toInt()} mm")
+
+
+            canvas.drawTextCentered("PLAN VIEW", planLeft + pW / 2f, planTop - 25f, titleP)
         }
-
-        // Reinforcement pattern along Y (horizontal light blue lines)
-        val rebarP2 = createPaint(TOP_REBAR, 1.2f)
-        var ry = planTop + pwt + 15f
-        while (ry < planTop + pH - pwt - 5f) {
-            canvas.drawLine(planLeft + 5f, ry, planLeft + pW - 5f, ry, rebarP2)
-            ry += maxOf(horizontalRebarSpacing.toFloat() * planScale / 4f, 15f)
-        }
-
-        canvas.drawHDim(planLeft, planLeft + pW, planTop + pH + 15f, "${length.toInt()} mm")
-        canvas.drawVDim(planTop, planTop + pH, planLeft + pW + 15f, "${width.toInt()} mm")
-
-        canvas.drawTextCentered("PLAN VIEW", planLeft + pW / 2f, planTop - 25f, titleP)
 
         // === Rebar Schedule Table ===
         drawRebarTable(canvas,

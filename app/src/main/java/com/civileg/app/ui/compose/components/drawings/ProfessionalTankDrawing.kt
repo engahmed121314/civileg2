@@ -95,8 +95,8 @@ fun ProfessionalTankDrawing(
         val cw = size.width
         val ch = size.height
 
-        val isCircular = tankType.contains("Circular")
-        val isElevated = tankType.contains("Elevated")
+        val isCircular = tankType.contains("Circular") || tankType.contains("دائري")
+        val isElevated = tankType.contains("Elevated") || tankType.contains("علوي")
         val isUnderground = foundationDepth > 0
 
         // ── Layout zones (adjusted per viewMode) ──
@@ -221,7 +221,8 @@ fun ProfessionalTankDrawing(
 
         // Zone 3: Reinforcement details + table (viewMode 0 or 3)
         if (viewMode == 0 || viewMode == 3) {
-            drawZoneLabel(mainLeft, ch * 0.65f + cfg.margin * 0.3f, "REINFORCEMENT", cfg)
+            // In the full sheet the separator above already carries this label; a second one sat on the schedule title.
+            if (viewMode != 0) drawZoneLabel(mainLeft, ch * 0.65f + cfg.margin * 0.3f, "REINFORCEMENT", cfg)
             // Reinforcement on elevation
             drawElevationReinforcement(
                 tankLeft, tankTop, tankRight, tankBottom, baseBottom,
