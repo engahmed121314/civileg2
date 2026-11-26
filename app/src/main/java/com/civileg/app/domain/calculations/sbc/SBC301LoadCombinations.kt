@@ -12,11 +12,13 @@ package com.civileg.app.domain.calculations.sbc
  *      (1.2 + 0.2 SDS) D + rho QE + L         (0.9 - 0.2 SDS) D + rho QE
  *      Ev = 0.2 SDS D may be taken as zero when SDS <= 0.125 (12.4.2.2 exceptions, p.76).
  *  12.4.3.2.1, Eq 12-10 (p.77), overstrength: replace rho QE by Omega0 QE.
+ *  2.4.1, Eq 2-3 (p.14-15), allowable stress design basic combinations [allowableStress].
+ *  12.4.2.3.2, Eq 12-6 (p.77), ASD seismic combinations in lieu of combinations 5, 6b and 8 of Eq 2-3 [seismicAsd].
  *
  * Effects are signed member effects (axial, moment or shear at the same section), computed separately for each unfactored load. The
  * engine does not apply a lumped "average" factor to D + L: each load keeps its own factor.
- * NOT ASSESSED: flood (2.3.3), self-straining T (2.3.5), H and F loads (2.3.2.1, 2.3.2.2), ice (not applicable in KSA), allowable stress
- * design (2.4), ECP 201 and ACI 318 combinations (those codes are not in hand and are handled elsewhere).
+ * NOT ASSESSED: flood (2.3.3), self-straining T (2.3.5), H and F loads (2.3.2.1, 2.3.2.2), ice (not applicable in KSA), ECP 201 and
+ * ACI 318 combinations (those codes are not in hand and are handled elsewhere).
  */
 data class SbcLoadEffects(
     val d: Double,
@@ -86,6 +88,57 @@ object SbcLoadCombinations301 {
             val s = if (sg > 0) "+" else "-"
             out += SbcCombo("5 (${s}E)", "(1.2 + 0.2 SDS) D $s $qName + $lfTxt", (1.2 + k) * e.d + sg * q * e.qe + lf * e.l)
             out += SbcCombo("7 (${s}E)", "(0.9 - 0.2 SDS) D $s $qName", (0.9 - k) * e.d + sg * q * e.qe)
+        }
+        return out
+    }
+
+    /**
+     * Allowable stress design basic combinations, Eq 2-3 (2.4.1, p.14-15):
+     * 1) D   2) D + L   3) D + (Lr or R)   4) D + 0.75L + 0.75(Lr or R)   5) D + (0.6W or 0.7E)
+     * 6a) D + 0.75L + 0.75(0.6W) + 0.75(Lr or R)   6b) D + 0.75L + 0.75(0.7E)   7) 0.6D + 0.6W   8) 0.6D + 0.7E
+     * Where earthquake load is prescribed, combinations 5, 6b and 8 are replaced by Eq 12-6 ([seismicAsd], 12.4.2.3.2), so the
+     * seismic variants of 5 and 7 (with E) are not emitted here.
+     */
+    fun allowableStress(e: SbcLoadEffects): List<SbcCombo> {
+        val out = mutableListOf<SbcCombo>()
+        out += SbcCombo("1", "D", e.d)
+        out += SbcCombo("2", "D + L", e.d + e.l)
+        val roofVariants = listOf("Lr" to e.lr, "R" to e.r)
+        for ((nm, x) in roofVariants) {
+            if (nm == "R" && e.r == 0.0) continue
+            if (nm == "Lr" && e.lr == 0.0 && e.r != 0.0) continue
+            out += SbcCombo("3 ($nm)", "D + $nm", e.d + x)
+            out += SbcCombo("4 ($nm)", "D + 0.75L + 0.75$nm", e.d + 0.75 * e.l + 0.75 * x)
+            for (sg in listOf(1.0, -1.0)) {
+                if (e.w == 0.0 && sg < 0) continue
+                out += SbcCombo("6a ($nm, ${if (sg > 0) "+" else "-"}0.6W)", "D + 0.75L ${if (sg > 0) "+" else "-"} 0.75(0.6W) + 0.75$nm", e.d + 0.75 * e.l + sg * 0.45 * e.w + 0.75 * x)
+            }
+        }
+        for (sg in listOf(1.0, -1.0)) {
+            if (e.w == 0.0 && sg < 0) continue
+            out += SbcCombo("5 (${if (sg > 0) "+" else "-"}0.6W)", "D ${if (sg > 0) "+" else "-"} 0.6W", e.d + sg * 0.6 * e.w)
+            out += SbcCombo("7 (${if (sg > 0) "+" else "-"}0.6W)", "0.6D ${if (sg > 0) "+" else "-"} 0.6W", 0.6 * e.d + sg * 0.6 * e.w)
+        }
+        return out
+    }
+
+    /**
+     * ASD seismic combinations, Eq 12-6 (12.4.2.3.2, p.77), in lieu of combinations 5, 6b and 8 of Eq 2-3:
+     * 5) (1.0 + 0.14 SDS) D + 0.7 Omega0 QE   6b) (1.0 + 0.10 SDS) D + 0.525 Omega0 QE + 0.75 L   8) (0.6 - 0.14 SDS) D + 0.7 Omega0 QE
+     * As printed in SBC 301-CR-2018 these use the overstrength factor Omega0 (ASCE 7-10 Eq 12.4-6 uses rho; the printed value is
+     * kept, nothing is substituted). The SDS terms drop where SDS <= 0.125 (Ev = 0, 12.4.2.2 exceptions, p.76).
+     */
+    fun seismicAsd(e: SbcLoadEffects, sds: Double, omega0: Double): List<SbcCombo> {
+        require(sds.isFinite() && sds >= 0.0) { "SDS must be non-negative / SDS غير سالب" }
+        require(omega0.isFinite() && omega0 >= 1.0) { "Overstrength factor Omega0 (Table 12-1) must be entered / معامل المقاومة الزائدة Ω0 مطلوب" }
+        val k14 = if (sds > 0.125) 0.14 * sds else 0.0
+        val k10 = if (sds > 0.125) 0.10 * sds else 0.0
+        val out = mutableListOf<SbcCombo>()
+        for (sg in listOf(1.0, -1.0)) {
+            val s = if (sg > 0) "+" else "-"
+            out += SbcCombo("5 (${s}E)", "(1.0 + 0.14 SDS) D $s 0.7 Ω0 QE", (1.0 + k14) * e.d + sg * 0.7 * omega0 * e.qe)
+            out += SbcCombo("6b (${s}E)", "(1.0 + 0.10 SDS) D $s 0.525 Ω0 QE + 0.75L", (1.0 + k10) * e.d + sg * 0.525 * omega0 * e.qe + 0.75 * e.l)
+            out += SbcCombo("8 (${s}E)", "(0.6 - 0.14 SDS) D $s 0.7 Ω0 QE", (0.6 - k14) * e.d + sg * 0.7 * omega0 * e.qe)
         }
         return out
     }
