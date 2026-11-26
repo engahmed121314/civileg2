@@ -71,15 +71,25 @@ def press_calc(name):
         scroll_up(2)
     return False
 
+def open_stair_from_hub(tag):
+    """Reach the Design hub (retry BACK until its title is on screen, no blind single BACK), then open the stair card.
+    The card title is matched exactly (the subtitle also contains the word) so the tap lands on the card."""
+    hub = False
+    for _ in range(4):
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+        tap_text(["التصميم"], tag + "-design", exact=True)
+        if any("اختر وحدة التصميم" in t for t, b in nodes(dump(tag + "-hubcheck"))): hub = True; break
+    log.append((tag + "_hub", hub))
+    scroll_top(3)
+    ok = False
+    for _ in range(8):
+        if tap_text(["السلالم"], tag + "-find", exact=True): ok = True; break
+        scroll_up(1)
+    return ok
+
 # Stair: open from the Design tab, design with the defaults, open the drawing's reinforcement tab
 def stair_block():
-    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
-    ok = False
-    log.append(("stair_design_tab", tap_text(["التصميم"], "stair-d-design", exact=True)))
-    scroll_top(3)
-    for _ in range(5):
-        if tap_text(["السلالم"], "stair-find"): ok = True; break
-        scroll_up(2)
+    ok = open_stair_from_hub("stair")
     log.append(("stair_open", ok)); time.sleep(2); shot("stair-open")
     for _ in range(6):
         if tap_text(["تصميم السلم الآن"], "stair-calc-find"): log.append(("stair_calc", True)); break
@@ -95,12 +105,7 @@ def stair_block():
         log.append(("stair_tab_" + t, tap_text([t], "stair-tab-" + t, exact=True))); time.sleep(2); shot("stair-tab-" + t)
 def stair_unsupported():
     """Re-open Stair, pick the cantilever type (not implemented) and design; capture what is offered."""
-    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
-    tap_text(["التصميم"], "su-design", exact=True); scroll_top(3)
-    ok = False
-    for _ in range(5):
-        if tap_text(["السلالم"], "su-find"): ok = True; break
-        scroll_up(2)
+    ok = open_stair_from_hub("su")
     log.append(("su_open", ok)); time.sleep(2)
     log.append(("su_type_menu", tap_text(["قلبة واحدة", "Single Flight"], "su-type"))); time.sleep(1); shot("su-menu")
     log.append(("su_pick_cantilever", tap_text(["درج كابولي", "Cantilever"], "su-pick"))); time.sleep(1); shot("su-picked")
@@ -116,12 +121,7 @@ def stair_unsupported():
         scroll_up(2); shot(f"su-res-{k}"); dump(f"su-res-{k}")
 def stair_codes():
     """Open Stair again and design the default flight under the American and then the Saudi code."""
-    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
-    tap_text(["التصميم"], "sc-design", exact=True); scroll_top(3)
-    ok = False
-    for _ in range(5):
-        if tap_text(["السلالم"], "sc-find"): ok = True; break
-        scroll_up(2)
+    ok = open_stair_from_hub("sc")
     log.append(("sc_open", ok)); time.sleep(2)
     for label, tag in (("American Code", "ACI"), ("Saudi Code", "SBC")):
         scroll_top(8)
@@ -166,12 +166,7 @@ def stair_codes():
     open(f"{out}/sc-crash-log.txt", "wb").write(adb("logcat", "-b", "crash", "-d").stdout)
 def stair_invalid():
     """Re-open Stair, set the flight width to 0 (invalid) and press design; capture the field error and whether a result appears."""
-    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
-    tap_text(["التصميم"], "inv-design", exact=True); scroll_top(3)
-    ok = False
-    for _ in range(5):
-        if tap_text(["السلالم"], "inv-find"): ok = True; break
-        scroll_up(2)
+    ok = open_stair_from_hub("inv")
     log.append(("inv_open", ok)); time.sleep(2); scroll_top(4)
     log.append(("inv_edit_width_0", edit_field("1200", "0", "inv-edit"))); time.sleep(1); shot("inv-field")
     for _ in range(6):
