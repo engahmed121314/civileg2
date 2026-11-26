@@ -37,6 +37,8 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     private val LIGHT_BLUE = DeviceRgb(227, 242, 253)
     private val ROW_ALT = DeviceRgb(248, 249, 250)
     private val WHITE = DeviceRgb(255, 255, 255)
+    private val NOT_ASSESSED_GRAY = DeviceRgb(128, 128, 128)
+    private val MUTED = NOT_ASSESSED_GRAY
 
     private fun helvetica(bold: Boolean = false): PdfFont = PdfFontFactory.createFont(
         if (bold) StandardFonts.HELVETICA_BOLD else StandardFonts.HELVETICA
@@ -76,7 +78,9 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         // 1. Cover
         addCoverPage(document, inputs, result, clientName, projectName)
-        document.add(AreaBreak())
+        // No page break here: the cover block and the summary are each about a third of a page, and a
+        // forced break left page 2 mostly blank.
+        document.add(Paragraph("\n"))
 
         // 2. Summary & Analysis
         addProjectSummary(document, inputs, result)
@@ -88,6 +92,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         // 4. Schedules
         addMemberSchedule(document, inputs, result)
+        addBracingSection(document, result)
         addConnectionSchedule(document, result)
         
         // 5. BOQ & Cost
@@ -115,15 +120,25 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         }
         addRow("Project Name", project)
         addRow("Client Name", client)
-        addRow("Design Code", inputs.code.version)
+        run {
+            val sel = result.resultsByCode
+            val ref = when (sel) {
+                com.civileg.app.domain.entities.DesignCode.ECP.displayName -> "steel reference ECP 205 LRFD 2008 (tension and slenderness of bracing only)"
+                com.civileg.app.domain.entities.DesignCode.ACI.displayName -> "steel reference AISC 360-10 (14th ed. Manual) D2 (bracing tension only)"
+                else -> "no sourced steel code text: code checks NOT ASSESSED"
+            }
+            addRow("Design Code", "$sel, $ref")
+        }
         addRow("Span / Length", "${inputs.span.fmt()}m / ${inputs.length.fmt()}m")
         addRow("Eave / Ridge Height", "${inputs.eaveHeight.fmt()}m / ${inputs.ridgeHeight.fmt()}m")
         addRow("Report Date", SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date()))
         document.add(info)
 
-        val statusColor = if (result.safetyStatus) SUCCESS else ERROR
+        // safetyStatus currently reflects the deflection check only (see CalculatorEngine);
+        // member capacity is not confirmed, so a pass must not read as an overall approval.
+        val statusColor = if (result.safetyStatus) DeviceRgb(239, 108, 0) else ERROR
         document.add(Paragraph("\n"))
-        document.add(Paragraph(if (result.safetyStatus) "STATUS: STRUCTURAL ANALYSIS PASSED" else "STATUS: REVIEW REQUIRED")
+        document.add(Paragraph(if (result.safetyStatus) "STATUS: PRELIMINARY - deflection check passes; member capacity NOT ASSESSED" else "STATUS: REVIEW REQUIRED")
             .setFont(helvetica(true)).setFontSize(12f).setFontColor(statusColor).setTextAlignment(TextAlignment.CENTER)
             .setPadding(10f).setBorder(SolidBorder(statusColor, 1f)))
     }
@@ -136,12 +151,21 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         data.addCell(dataCell("Total Steel Weight", true, LIGHT_BLUE)).addCell(dataCell("${result.totalWeight.fmt(1)} Tons"))
         data.addCell(dataCell("Weight per Area", true)).addCell(dataCell("${result.weightPerM2.fmt(1)} kg/m\u00B2"))
         data.addCell(dataCell("Total Cladding Area", true, LIGHT_BLUE)).addCell(dataCell("${result.totalCladdingArea.fmt(1)} m\u00B2"))
-        data.addCell(dataCell("Estimated Total Cost", true)).addCell(dataCell("${result.estimatedTotalCost.fmt(0)} EGP", true, null, PRIMARY))
+        data.addCell(dataCell("Estimated Total Cost", true)).addCell(dataCell("NOT ISSUED (no verified price source)", true, null, MUTED))
         document.add(data)
         
-        document.add(Paragraph("\nCalculation Trace:").setBold().setUnderline())
-        result.calculationTrace.forEach { step ->
-            document.add(Paragraph("• $step").setFontSize(8f).setFontColor(ColorConstants.GRAY))
+        result.footingPreliminary?.let { f ->
+            val txt = if (f.issued) "PRELIMINARY column footing plan: ${f.squareSideMm.toInt()} x ${f.squareSideMm.toInt()} mm (service load ${f.serviceLoadPerColumnKn.fmt(1)} kN per column incl. steel self-weight, allowable bearing ${f.allowableBearingKnM2.fmt(0)} kN/m2 as entered, gravity only). Wind uplift, horizontal thrust, overturning, sliding, thickness and reinforcement: NOT ASSESSED."
+                      else "Footing plan: ${f.reason}"
+            document.add(Paragraph(txt).setFontSize(9f).setBold())
+        }
+        if (result.calculationTrace.isEmpty()) {
+            document.add(Paragraph("\nCalculation trace: none recorded for this design.").setFontSize(8f).setFontColor(ColorConstants.GRAY))
+        } else {
+            document.add(Paragraph("\nCalculation Trace:").setBold().setUnderline())
+            result.calculationTrace.forEach { step ->
+                document.add(Paragraph("• $step").setFontSize(8f).setFontColor(ColorConstants.GRAY))
+            }
         }
     }
 
@@ -157,7 +181,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         try {
             // Prefer the captured on-screen view (ProfessionalWarehouseDrawing) so the PDF
             // matches what the user is looking at; fall back to the independent renderer.
-            val bitmap = drawingBitmap ?: PdfDrawingGenerator.generateWarehouseDrawing(inputs, result)
+            val bitmap = cropToContent(drawingBitmap ?: PdfDrawingGenerator.generateWarehouseDrawing(inputs, result))
             val stream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
             document.add(Image(ImageDataFactory.create(stream.toByteArray())).setAutoScale(true).setHorizontalAlignment(HorizontalAlignment.CENTER))
@@ -172,12 +196,49 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         }
     }
 
+    /**
+     * Removes long empty horizontal bands from a captured view (a small drawing in a tall canvas) by collapsing every run of
+     * background-only rows longer than [maxGap] to [keepGap] rows. Pixels are copied unchanged; nothing is scaled or redrawn.
+     */
+    private fun cropToContent(input: Bitmap): Bitmap {
+        // Captured views can be HARDWARE bitmaps, whose pixels cannot be read: work on a software copy.
+        val src = if (input.config == Bitmap.Config.HARDWARE) (input.copy(Bitmap.Config.ARGB_8888, false) ?: return input) else input
+        val w = src.width; val h = src.height
+        if (w < 16 || h < 16) return src
+        val bg = src.getPixel(2, 2)
+        val row = IntArray(w)
+        val blank = BooleanArray(h)
+        for (y in 0 until h) {
+            src.getPixels(row, 0, w, 0, y, w, 1)
+            blank[y] = row.all { it == bg }
+        }
+        val maxGap = (h * 0.06f).toInt().coerceAtLeast(24)
+        val keepGap = (maxGap / 3).coerceAtLeast(8)
+        // Source row ranges to keep, in order.
+        val keep = mutableListOf<IntArray>()
+        var y = 0
+        while (y < h) {
+            if (!blank[y]) { val s0 = y; while (y < h && !blank[y]) y++; keep.add(intArrayOf(s0, y)); continue }
+            val s0 = y; while (y < h && blank[y]) y++
+            val len = y - s0
+            keep.add(intArrayOf(s0, s0 + if (len > maxGap) keepGap else len))
+        }
+        val outH = keep.sumOf { it[1] - it[0] }
+        if (outH >= h || outH < 32) return src
+        val out = Bitmap.createBitmap(w, outH, Bitmap.Config.ARGB_8888)
+        var oy = 0
+        for (r in keep) {
+            for (yy in r[0] until r[1]) { src.getPixels(row, 0, w, 0, yy, w, 1); out.setPixels(row, 0, w, 0, oy++, w, 1) }
+        }
+        return out
+    }
+
     private fun addMemberSchedule(document: Document, inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
         document.add(Paragraph("Steel Member Schedule").setFontSize(14f).setBold().setFontColor(PRIMARY))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
-        val table = Table(UnitValue.createPercentArray(floatArrayOf(8f, 22f, 30f, 25f, 15f))).useAllAvailableWidth()
-        table.addHeaderCell(headerCell("MARK")).addHeaderCell(headerCell("MEMBER")).addHeaderCell(headerCell("SECTION")).addHeaderCell(headerCell("QTY / COUNT")).addHeaderCell(headerCell("STATUS"))
+        val table = Table(UnitValue.createPercentArray(floatArrayOf(8f, 20f, 27f, 23f, 22f))).useAllAvailableWidth()
+        table.addHeaderCell(headerCell("MARK")).addHeaderCell(headerCell("MEMBER")).addHeaderCell(headerCell("SECTION")).addHeaderCell(headerCell("QTY / COUNT")).addHeaderCell(headerCell("WEIGHT (kg)"))
 
         val numBays = (inputs.length / inputs.baySpacing).toInt().coerceAtLeast(1)
         val members = mutableListOf(Triple("C1", "Main Columns", result.mainFrame.columnSection), Triple("R1", "Main Rafters", result.mainFrame.rafterSection))
@@ -190,7 +251,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
             val bg = if (i % 2 != 0) ROW_ALT else null
             table.addCell(dataCell(m.first, true, bg))
             table.addCell(dataCell(m.second, false, bg))
-            table.addCell(dataCell(m.third.displayName, true, bg))
+            table.addCell(dataCell(m.third.sectionName, true, bg))
             
             val qtyText = when(m.first) {
                 "C1" -> "${(numBays + 1) * 2} Units"
@@ -198,12 +259,39 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
                 "FB1" -> "${numBays + 1} Units"
                 "P1" -> "${result.secondaryMembers.purlinCount} Lines"
                 "G1" -> "${(inputs.length / inputs.baySpacing).toInt() * 4} Units"
-                else -> "Full Bay Sets"
+                else -> result.bracing?.takeIf { it.issued }?.let { "${it.braceCount} diagonals" } ?: "not issued"
             }
             table.addCell(dataCell(qtyText, false, bg))
-            table.addCell(dataCell("SAFE", true, bg, SUCCESS))
+            // Weights come from the design takeoff (section area x length x 7850, tons). A member without a computed weight
+            // reads NOT ASSESSED. No per-member capacity check backs this schedule; do not print SAFE.
+            val tons = result.materialTakeoff.entries.firstOrNull { e ->
+                when (m.first) { "C1" -> e.key.startsWith("Columns"); "R1" -> e.key.startsWith("Rafters"); "P1" -> e.key.startsWith("Purlins"); else -> false }
+            }?.value
+            val bracing = if (m.first == "B1") result.bracing?.takeIf { it.issued } else null
+            if (bracing != null) table.addCell(dataCell("${bracing.totalWeightKg.fmt(0)} (geometry only)", true, bg))
+            else if (tons != null) table.addCell(dataCell((tons * 1000.0).fmt(0), true, bg))
+            else table.addCell(dataCell("NOT ASSESSED", true, bg, NOT_ASSESSED_GRAY))
         }
         document.add(table)
+    }
+
+    private fun addBracingSection(document: Document, result: SteelWarehouseAnalysisResult) {
+        val b = result.bracing ?: return
+        document.add(Paragraph("\nX-Bracing (B1)").setFontSize(12f).setBold().setFontColor(PRIMARY))
+        document.add(LineSeparator(SolidLine(0.5f)).setMarginBottom(5f))
+        if (!b.issued) { document.add(Paragraph(b.reason ?: "NOT ISSUED").setFontSize(9f)); return }
+        val american = result.resultsByCode == com.civileg.app.domain.entities.DesignCode.ACI.displayName
+        val ecp = result.resultsByCode == com.civileg.app.domain.entities.DesignCode.ECP.displayName
+        document.add(Paragraph(if (ecp) "Selected design code: ${result.resultsByCode}. Steel reference: ECP 205 LRFD 2008, tension yielding/fracture (3.1.1, p.3-1) and slenderness limit (Table 2.3, p.2-8) only. Load combinations, connections, bolts, block shear and frame stability are NOT ASSESSED." else if (american) "Selected design code: ${result.resultsByCode}. Steel reference: AISC 360-10 (14th ed. Manual), Section D2 tension yielding and rupture only (Specification p.16.1-26). Load combinations, slenderness limit, connections (J3, J4.3) and frame stability are NOT ASSESSED." else "Selected design code: ${result.resultsByCode}. Code-specific bracing checks (load combinations, brace slenderness limit, capacity, connections) are NOT ASSESSED: no sourced steel code text is available for this code. The lines below are geometry and statics only.").setFontSize(8f).setBold())
+        b.lines.forEach { document.add(Paragraph(it).setFontSize(8f)) }
+        try {
+            val bmp = PdfDrawingGenerator.generateBracingDrawing(b)
+            val st = ByteArrayOutputStream()
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, st)
+            document.add(Image(ImageDataFactory.create(st.toByteArray())).setAutoScale(true).setHorizontalAlignment(HorizontalAlignment.CENTER))
+        } catch (e: Exception) {
+            document.add(Paragraph("Bracing drawing error: ${e.message}").setFontColor(ERROR))
+        }
     }
 
     private fun addConnectionSchedule(document: Document, result: SteelWarehouseAnalysisResult) {
@@ -213,35 +301,34 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         val table = Table(UnitValue.createPercentArray(floatArrayOf(25f, 40f, 15f, 20f))).useAllAvailableWidth()
         table.addHeaderCell(headerCell("COMPONENT")).addHeaderCell(headerCell("SPECIFICATIONS / DETAILING")).addHeaderCell(headerCell("UNIT")).addHeaderCell(headerCell("STATUS"))
         
-        table.addCell(dataCell("Base Plates (PL)", true)).addCell(dataCell("Thickness: ${result.mainFrame.basePlateThickness.toInt()}mm, Grade: S355")).addCell(dataCell("mm")).addCell(dataCell("PASS", true, null, SUCCESS))
-        table.addCell(dataCell("Anchor Bolts", true, ROW_ALT)).addCell(dataCell("Type: M24 Grade 8.8, Qty: ${result.mainFrame.basePlateBoltsCount} per base", false, ROW_ALT)).addCell(dataCell("Nos", false, ROW_ALT)).addCell(dataCell("SAFE", true, ROW_ALT, SUCCESS))
-        table.addCell(dataCell("End Plates (PL)")).addCell(dataCell("Thickness: 20mm, Grade: S355, High-Strength Bolted")).addCell(dataCell("mm")).addCell(dataCell("PASS", true, null, SUCCESS))
+        // These rows mix result values with typical placeholders and no capacity check is
+        // run behind them, so none may carry PASS/SAFE.
+        table.addCell(dataCell("Base Plates (PL)", true)).addCell(dataCell("Thickness: ${result.mainFrame.basePlateThickness.toInt()}mm, Grade: S355")).addCell(dataCell("mm")).addCell(dataCell("NOT ASSESSED", true, null, NOT_ASSESSED_GRAY))
+        table.addCell(dataCell("Anchor Bolts", true, ROW_ALT)).addCell(dataCell("Type: M24 Grade 8.8, Qty: ${result.mainFrame.basePlateBoltsCount} per base", false, ROW_ALT)).addCell(dataCell("Nos", false, ROW_ALT)).addCell(dataCell("NOT ASSESSED", true, ROW_ALT, NOT_ASSESSED_GRAY))
+        table.addCell(dataCell("End Plates (PL)")).addCell(dataCell("Thickness: 20mm, Grade: S355, High-Strength Bolted (typical, not designed)")).addCell(dataCell("mm")).addCell(dataCell("NOT ASSESSED", true, null, NOT_ASSESSED_GRAY))
 
+        // The note is the last row of the table so it cannot be orphaned onto the next page.
+        table.addCell(Cell(1, 4).setBorder(null).add(Paragraph("Connection details above are typical values, not designed against the calculated forces.").setFontSize(7f).setFontColor(ColorConstants.GRAY)))
         document.add(table)
     }
 
     private fun addMaterialTakeoff(document: Document, result: SteelWarehouseAnalysisResult, inputs: SteelWarehouseInputs) {
-        document.add(Paragraph("\nProject Bill of Quantities (BOQ) & Estimated Costing").setFontSize(12f).setBold().setFontColor(PRIMARY))
+        document.add(Paragraph("\nQuantity Take-off (weights from section area x length x 7850 kg/m3)").setFontSize(12f).setBold().setFontColor(PRIMARY))
         document.add(LineSeparator(SolidLine(0.5f)).setMarginBottom(5f))
 
-        val table = Table(UnitValue.createPercentArray(floatArrayOf(5f, 40f, 15f, 15f, 25f))).useAllAvailableWidth()
-        table.addHeaderCell(headerCell("#")).addHeaderCell(headerCell("ITEM DESCRIPTION")).addHeaderCell(headerCell("QTY")).addHeaderCell(headerCell("UNIT")).addHeaderCell(headerCell("EST. COST (EGP)"))
-        
+        val table = Table(UnitValue.createPercentArray(floatArrayOf(6f, 54f, 20f, 20f))).useAllAvailableWidth()
+        table.addHeaderCell(headerCell("#")).addHeaderCell(headerCell("ITEM DESCRIPTION")).addHeaderCell(headerCell("QTY")).addHeaderCell(headerCell("UNIT"))
+        // materialTakeoff values are TONS (CalculatorEngine).
         var idx = 1
         result.materialTakeoff.forEach { (k, v) ->
             val bg = if (idx % 2 == 0) ROW_ALT else null
-            table.addCell(dataCell("${idx++}", false, bg)).addCell(dataCell("Structural Steel: $k", false, bg)).addCell(dataCell(v.fmt(0), false, bg)).addCell(dataCell("kg", false, bg)).addCell(dataCell((v * 45.0).fmt(0), false, bg))
+            table.addCell(dataCell("${idx++}", false, bg)).addCell(dataCell("Structural Steel: $k", false, bg)).addCell(dataCell((v * 1000.0).fmt(0), false, bg)).addCell(dataCell("kg", false, bg))
         }
-
-        val secWeight = result.totalWeight * 0.15 * 1000 
-        table.addCell(dataCell("${idx++}", false, ROW_ALT)).addCell(dataCell("Accessories (Plates, Bracing, Bolts)", false, ROW_ALT)).addCell(dataCell(secWeight.fmt(0), false, ROW_ALT)).addCell(dataCell("kg", false, ROW_ALT)).addCell(dataCell((secWeight * 65.0).fmt(0), false, ROW_ALT))
-
-        table.addCell(dataCell("${idx++}")).addCell(dataCell("Roof & Wall Cladding (Sandwich Panels)")).addCell(dataCell(result.totalCladdingArea.fmt(0))).addCell(dataCell("m\u00B2")).addCell(dataCell((result.totalCladdingArea * 350.0).fmt(0)))
-
-        val totalRowBg = LIGHT_BLUE
-        table.addCell(Cell(1, 4).add(Paragraph("GRAND TOTAL ESTIMATED PROJECT COST").setBold().setTextAlignment(TextAlignment.RIGHT)).setBackgroundColor(totalRowBg))
-        table.addCell(dataCell("${result.estimatedTotalCost.fmt(0)} EGP", true, totalRowBg, PRIMARY))
+        table.addCell(dataCell("${idx++}")).addCell(dataCell("Roof & Wall Cladding area")).addCell(dataCell(result.totalCladdingArea.fmt(0))).addCell(dataCell("m\u00B2"))
+        table.addCell(Cell(1, 2).add(Paragraph("TOTAL (columns, rafters, purlins in this take-off; bracing listed in schedule, not included)").setBold().setTextAlignment(TextAlignment.RIGHT)).setBackgroundColor(LIGHT_BLUE))
+        table.addCell(dataCell((result.materialTakeoff.values.sum() * 1000.0).fmt(0), true, LIGHT_BLUE)).addCell(dataCell("kg", true, LIGHT_BLUE))
         document.add(table)
+        document.add(Paragraph("Cost: NOT ISSUED. No verified, dated unit-price source is available, so no rates or totals are printed. Plates, bolts and bracing are not designed and are not included in the weights.").setFontSize(8f).setFontColor(ColorConstants.GRAY))
     }
 
     private fun addTitleBlock(document: Document, client: String, project: String, inputs: SteelWarehouseInputs) {
@@ -250,7 +337,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
             SolidBorder(1f)
         )
         fun addC(l: String, v: String) = tb.addCell(Cell().setPadding(5f).add(Paragraph(l).setFontSize(6f).setBold().setFontColor(ColorConstants.GRAY)).add(Paragraph(v).setFontSize(8f).setBold()))
-        addC("PROJECT", project); addC("CLIENT", client); addC("DESIGNER", "Civil EG Pro"); addC("CODE", inputs.code.version)
+        addC("PROJECT", project.ifBlank { "Not entered" }); addC("CLIENT", client.ifBlank { "Not entered" }); addC("DESIGNER", "Civil EG Pro"); addC("CODE", inputs.code.version)
         document.add(tb)
         document.add(Paragraph("Generated by Civil EG Pro Engine - Corporate Structural Design Report").setFontSize(7f).setTextAlignment(TextAlignment.CENTER).setFontColor(ColorConstants.GRAY))
     }

@@ -117,7 +117,8 @@ object PdfExportHelper {
         safetyChecks: List<GenericSafetyCheck> = emptyList(),
         isSafe: Boolean = true,
         drawingBitmap: android.graphics.Bitmap? = null,
-        fileName: String
+        fileName: String,
+        assessmentPending: Boolean = false
     ): String? {
         return try {
             val directory = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
@@ -134,6 +135,7 @@ object PdfExportHelper {
                 results = results,
                 safetyChecks = safetyChecks,
                 isSafe = isSafe,
+                assessmentPending = assessmentPending,
                 drawingBitmap = drawingBitmap,
                 outputPath = file.absolutePath
             ).pdfFile
@@ -161,11 +163,12 @@ object PdfExportHelper {
         safetyChecks: List<GenericSafetyCheck> = emptyList(),
         isSafe: Boolean = true,
         drawingBitmap: android.graphics.Bitmap? = null,
-        fileName: String
+        fileName: String,
+        assessmentPending: Boolean = false
     ): String? = withContext(Dispatchers.IO) {
         exportDesignReport(
             context, title, subtitle, designType, inputs, results,
-            safetyChecks, isSafe, drawingBitmap, fileName
+            safetyChecks, isSafe, drawingBitmap, fileName, assessmentPending
         )
     }
 

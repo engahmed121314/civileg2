@@ -537,6 +537,7 @@ private fun ResultRow(
     value: String,
     highlight: Boolean = false
 ) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -556,6 +557,7 @@ private fun ResultRow(
             else MaterialTheme.colorScheme.onSurface
         )
     }
+}
 }
 
 // ============================================================

@@ -96,6 +96,8 @@ fun RetainingWallScreen(
     // Site quantities (trench excavation)
     var excavationDepth by remember { mutableStateOf("2.0") }
     var trenchWidth by remember { mutableStateOf("1.0") }
+    // An edited input makes the shown result stale: drop it so it cannot be read, exported or saved as the new case.
+    LaunchedEffect(height, wallLength, soilDensity, frictionAngle, surcharge, fcu, fy, selectedCode, excavationDepth, trenchWidth) { viewModel.clearResult() }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     LaunchedEffect(vmError) {
@@ -376,7 +378,7 @@ fun RetainingWallScreen(
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        AppText(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        AppText(check.name, modifier = Modifier.weight(1f).padding(end = 12.dp), fontSize = 13.sp)
                                         AppText(
                                             "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
                                             fontSize = 12.sp,
@@ -616,6 +618,7 @@ fun RetainingWallScreen(
 
 @Composable
 private fun ResultRow(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -625,4 +628,5 @@ private fun ResultRow(label: String, value: String) {
         AppText(label)
         AppText(value, fontWeight = FontWeight.Bold)
     }
+}
 }

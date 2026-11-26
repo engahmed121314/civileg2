@@ -7,7 +7,7 @@ import com.civileg.app.domain.entities.ReinforcementResult
 import kotlin.math.*
 
 /**
- * تصميم خزانات المياه حسب ACI 318-25 / ACI 350-06 (Environmental Concrete Structures)
+ * تصميم خزانات المياه حسب ACI 318 / ACI 350-06 (Environmental Concrete Structures)
  * يغطي الخزانات المستطيلة والدائرية (أرضية، مرتفعة، تحت الأرض)
  *
  * الاختلافات عن ECP:
@@ -170,7 +170,7 @@ class ACITank : TankDesign {
         val maxMoment = GAMMA_W * hW * hW * hW / 6.0 * FLUID_LOAD_FACTOR
         val maxShear = GAMMA_W * hW * hW / 2.0 * FLUID_LOAD_FACTOR
 
-        // Rn-ρ method (ACI 318-25)
+        // Rn-ρ method (ACI 318)
         val Mu_Nmm = maxMoment * 1e6
         val Rn = Mu_Nmm / (PHI_FLEXURE * b * d * d)
 
@@ -234,7 +234,7 @@ class ACITank : TankDesign {
         ))
 
         codeNotes.add(CodeReference.ACI.TANK_HYDROSTATIC)
-        codeNotes.add("ACI 350-06 / ACI 318-25: Water-Retaining Structure")
+        codeNotes.add("ACI 350-06 / ACI 318: Water-Retaining Structure")
         codeNotes.add(String.format("f'c=%.0f MPa (0.8×fcu), φ_flex=%.2f", fcPrime, PHI_FLEXURE))
         codeNotes.add(String.format("Fluid load factor: %.1f", FLUID_LOAD_FACTOR))
         codeNotes.add(String.format("Vertical: %dØ%d @ %dmm", barsPerMeter, barDiameter.toInt(), spacing.toInt()))
@@ -385,13 +385,9 @@ class ACITank : TankDesign {
         val b0 = if (isCircular) 2 * PI * (wallThickness / 1000.0 + d / 1000.0)
             else 2.0 * (2.0 * wallThickness / 1000.0 + 2.0 * d / 1000.0)
         val vc_punch = 0.33 * sqrt(fcPrime)  // MPa
-        val punchingCap = PHI_SHEAR * vc_punch * b0 * d / 1000.0
+        val punchingCap = PHI_SHEAR * vc_punch * (b0 * 1000.0) * d / 1000.0 // b0 m -> mm
         val punchingLoad = totalPressure * L * B * 0.5
-        val punchingSafe = punchingLoad <= punchingCap
-        safetyChecks.add(TankSafetyCheck(
-            "Punching Shear (Base)", punchingLoad, punchingCap, "kN",
-            punchingSafe, "ACI 318: vc = 0.33√f'c × b₀ × d"
-        ))
+        codeNotes.add(String.format(java.util.Locale.US, "Base punching shear: NOT ASSESSED (surrogate only; applicability, load model and critical perimeter unverified). Computed load=%.2f kN, capacity=%.2f kN, not a pass/fail verdict", punchingLoad, punchingCap))
 
         codeNotes.add(String.format("Base: %dØ%d @ %dmm (each way)", 
             barsPerMeter, barDiameter.toInt(), spacing.toInt()))
@@ -403,7 +399,7 @@ class ACITank : TankDesign {
             numberOfBars = barsPerMeter,
             tiesDiameter = barDiameter,
             tiesSpacing = spacing,
-            isSafe = punchingSafe,
+            isSafe = asProvided >= asRequired - 1e-6, // flexural steel coverage; punching surrogate carries no verdict
             utilizationRatio = asRequired / asProvided,
             spacing = spacing,
             warnings = warnings,

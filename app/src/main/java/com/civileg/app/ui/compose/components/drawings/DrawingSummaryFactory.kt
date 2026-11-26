@@ -13,7 +13,8 @@ fun CalculatorEngine.DesignSafetyCheck.asDrawingCheck(): GenericSafetyCheck =
         calculated = value,
         limit = limit,
         unit = unit,
-        passed = isSafe
+        passed = isSafe,
+        notAssessed = notAssessed
     )
 
 private fun List<CalculatorEngine.DesignSafetyCheck>.asDrawingChecks(): List<GenericSafetyCheck> =
@@ -21,24 +22,29 @@ private fun List<CalculatorEngine.DesignSafetyCheck>.asDrawingChecks(): List<Gen
 
 fun beamDrawingSummary(result: CalculatorEngine.BeamResult): DrawingResultSummary =
     DrawingResultSummary(
-        isSafe = result.isSafe,
+        isSafe = result.isSafe && result.codeAcceptanceComplete,
         utilizationRatio = result.utilizationRatio,
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
-        codeNotes = result.codeNotes,
-        designCodeLabel = result.code.version
+        codeNotes = result.codeNotes + result.warnings,
+        designCodeLabel = result.shearCodeReview?.basis ?: "Unverified edition"
     )
 
 fun columnDrawingSummary(result: CalculatorEngine.ColumnResult): DrawingResultSummary =
     DrawingResultSummary(
         isSafe = result.isSafe,
+        codeAcceptanceComplete = result.assessmentComplete,
         utilizationRatio = result.utilizationRatio,
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
-        codeNotes = result.codeNotes,
-        designCodeLabel = result.code.version,
+        codeNotes = (if (!result.axialAssessed)
+            listOf("AXIAL CAPACITY NOT ASSESSED / لم تُقيَّم القدرة المحورية: eccentricity outside ECP 203-2020 Eq. 4-12-a domain / اللامركزية خارج نطاق المعادلة 4-12-أ")
+            else emptyList()) + (if (result.isSafe && !result.assessmentComplete)
+            listOf("PRELIMINARY - NOT FULLY CHECKED / نتيجة أولية لم يكتمل التحقق منها: moment capacity not validated for the actual bar positions / لم تُراجع قدرة العزم على مواضع الأسياخ الفعلية")
+            else emptyList()) + result.codeNotes,
+        designCodeLabel = result.code.version + (if (!result.axialAssessed) " (axial not assessed)" else if (result.isSafe && !result.assessmentComplete) " (preliminary)" else ""),
         axialLoadRatio = if (result.axialCapacity > 0.0) result.appliedAxial / result.axialCapacity else 0.0
     )
 
@@ -49,12 +55,16 @@ fun footingDrawingSummary(result: CalculatorEngine.FootingResult): DrawingResult
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
-        designCodeLabel = result.code.version
+        designCodeLabel = ecp2025Label(result.code),
+        // The listed footing checks do not make a full assessment (service-load basis, punching demand model, minimum spacing and the
+        // BBS/BOQ scope are unverified), so a passing result reads UNVERIFIED on the drawing, as in the PDF. A failed check is carried separately and reads UNSAFE.
+        codeAcceptanceComplete = false,
+        listedChecksFailed = !result.isSafe
     )
 
 fun slabDrawingSummary(result: CalculatorEngine.SlabResult): DrawingResultSummary =
     DrawingResultSummary(
-        isSafe = result.isSafe,
+        isSafe = if(result.type == CalculatorEngine.SlabType.HOLLOW_BLOCK) result.engineeringAcceptance else result.isSafe,
         utilizationRatio = result.utilizationRatio,
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
@@ -85,12 +95,19 @@ fun flatSlabDrawingSummary(result: com.civileg.app.domain.FlatSlabResult): Drawi
 fun stairDrawingSummary(result: CalculatorEngine.StairResult): DrawingResultSummary =
     DrawingResultSummary(
         isSafe = result.isSafe,
-        utilizationRatio = result.utilizationRatio,
+        codeAcceptanceComplete = result.codeAcceptanceComplete,
+        codeNotes = result.qualificationNotes,
+        utilizationRatio = result.flexureRatio ?: 0.0,
+        utilizationText = stairFlexureStripText(result.flexureRatio, result.flexureRatioBasis),
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
         designCodeLabel = result.code.version
     )
+
+/** Drawing-strip text for the stair: one named flexure check, or n/a. Never a generic utilization. */
+fun stairFlexureStripText(ratio: Double?, basis: String): String =
+    if (ratio == null) "FLEXURE: n/a" else "FLEXURE $basis: ${"%.0f".format(ratio * 100.0)}%"
 
 fun tankDrawingSummary(result: CalculatorEngine.TankResult): DrawingResultSummary =
     DrawingResultSummary(
@@ -99,6 +116,7 @@ fun tankDrawingSummary(result: CalculatorEngine.TankResult): DrawingResultSummar
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
+        codeNotes = listOf("Steel weight is an indicative ratio x concrete volume, not designed bars; cost unavailable"),
         designCodeLabel = result.code.version
     )
 
@@ -128,7 +146,7 @@ fun strapFootingDrawingSummary(result: CalculatorEngine.StrapFootingResult): Dra
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
-        designCodeLabel = result.footing1.code.version
+        designCodeLabel = ecp2025Label(result.footing1.code)
     )
 
 fun waffleSlabDrawingSummary(
@@ -153,3 +171,7 @@ fun hordiSlabDrawingSummary(
         utilizationRatio = result.utilizationRatio,
         codeNotes = result.warnings + result.codeNotes
     )
+
+/** Footing and strap engines follow ECP 203-2025 for the clauses named on their steps; other clauses are not compared. */
+private fun ecp2025Label(code: com.civileg.app.domain.entities.DesignCode): String =
+    if (code == com.civileg.app.domain.entities.DesignCode.ECP) "ECP 203-2025 (partial: clauses on steps)" else code.version

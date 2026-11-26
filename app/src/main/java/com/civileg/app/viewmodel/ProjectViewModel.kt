@@ -93,6 +93,7 @@ class ProjectViewModel @Inject constructor(
                 totalSteel = totalSteel,
                 totalCost = totalCost,
                 designCount = designs.size,
+                pricedDesignCount = designs.count { it.totalCost > 0.0 },
                 costEfficiencyIndex = 1.0,
                 costBreakdown = breakdown
             )
@@ -105,13 +106,24 @@ class ProjectViewModel @Inject constructor(
                 val designsList = designDao.getDesignsForProjectList(projectId)
                 if (designsList.isEmpty()) return@launch
                 
+                // Mix, soil-bearing and wind calculators are saved with isSafe=true but have no code pass/fail check.
+                val noVerdictTypes = setOf("CONCRETE_MIX", "SOIL_BEARING", "WIND_LOAD")
+                val verdictDesigns = designsList.filter { it.type.name !in noVerdictTypes }
                 val totalConcrete = designsList.sumOf { it.concreteVolume }
                 val totalSteel = designsList.sumOf { it.steelWeight }
                 val totalCost = designsList.sumOf { it.totalCost }
                 val breakdown = designsList.groupBy { it.type.name }
                     .mapValues { entry -> entry.value.sumOf { d -> d.totalCost } }
                 
-                val summary = ProjectSummary(totalConcrete, totalSteel, totalCost, designsList.size, 1.0, breakdown)
+                val summary = ProjectSummary(
+                    totalConcrete = totalConcrete,
+                    totalSteel = totalSteel,
+                    totalCost = totalCost,
+                    designCount = designsList.size,
+                    pricedDesignCount = designsList.count { it.totalCost > 0.0 },
+                    costEfficiencyIndex = 1.0,
+                    costBreakdown = breakdown
+                )
                 
                 val fileName = "ProjectSummary_${System.currentTimeMillis()}.pdf"
                 val file = File(context.cacheDir, fileName)
@@ -122,9 +134,11 @@ class ProjectViewModel @Inject constructor(
                 val resultsMap = mapOf(
                     "Total Concrete" to String.format("%.2f", totalConcrete) + " m³",
                     "Total Steel" to String.format("%.1f", totalSteel) + " kg",
-                    "Total Cost" to String.format("%.2f", totalCost),
+                    "Total Cost (priced designs only)" to String.format("%.2f", totalCost),
+                    "Designs With Cost Estimate" to "${summary.pricedDesignCount} of ${designsList.size}",
                     "Design Count" to "${designsList.size}",
-                    "Safe Designs" to "${designsList.count { it.isSafe }}"
+                    "Safe Designs" to "${verdictDesigns.count { it.isSafe }} of ${verdictDesigns.size} with a pass/fail verdict",
+                    "Calculators Without Verdict (not counted)" to "${designsList.size - verdictDesigns.size}"
                 )
                 val safetyChecks = emptyList<GenericSafetyCheck>()
                 val exported = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
@@ -135,7 +149,7 @@ class ProjectViewModel @Inject constructor(
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
-                    isSafe = designsList.all { it.isSafe },
+                    isSafe = verdictDesigns.isNotEmpty() && verdictDesigns.all { it.isSafe },
                     drawingBitmap = null,
                     outputPath = file.absolutePath
                 ).pdfFile

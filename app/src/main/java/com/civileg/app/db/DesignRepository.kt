@@ -73,8 +73,10 @@ class DesignRepository @Inject constructor(
             put("load", result.pu)
             put("width", result.width)
             put("depth", result.depth)
+            put("axialAssessed", result.axialAssessed)
+            if (result.axialAssessed) put("axialCapacity", result.axialCapacity)
         }.toString()
-        saveGeneralDesign(projectId, DesignType.COLUMN, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
+        saveGeneralDesign(projectId, DesignType.COLUMN, name, result.confirmedSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
         
         val column = ColumnEntity(
             projectId = projectId, load = result.pu, fcu = fcu, fy = fy,
@@ -124,7 +126,7 @@ class DesignRepository @Inject constructor(
             put("load", result.totalLoad)
             put("type", result.type.toString())
         }.toString()
-        saveGeneralDesign(projectId, DesignType.SLAB, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
+        saveGeneralDesign(projectId, DesignType.SLAB, name, if(result.type == CalculatorEngine.SlabType.HOLLOW_BLOCK) result.engineeringAcceptance else result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
         
         val slab = Slab(
             projectId = projectId, type = result.type.toString(), spanX = spanX, spanY = spanY,
@@ -147,8 +149,19 @@ class DesignRepository @Inject constructor(
             put("thickness", result.thickness)
             put("wu", result.wu)
             put("type", result.type.toString())
+            put("stairWidthMm", result.stairWidthMm)
+            put("supportCondition", result.supportCondition.name)
+            put("landingLengthMm", result.landingLengthMm ?: JSONObject.NULL)
+            put("landingWidthMm", result.landingWidthMm ?: JSONObject.NULL)
+            put("landingThicknessMm", result.landingThicknessMm ?: JSONObject.NULL)
+            put("analysisStatus", result.analysisStatus.name)
+            put("codeAcceptanceComplete", result.codeAcceptanceComplete)
+            put("qualificationNotes", org.json.JSONArray(result.qualificationNotes))
+            put("quantityScope", "NET_FLIGHT_ONLY_NOT_FINAL")
+            put("finalSteelKg", JSONObject.NULL)
+            put("fabricationScheduleAvailable", false)
         }.toString()
-        saveGeneralDesign(projectId, DesignType.STAIRCASE, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
+        saveGeneralDesign(projectId, DesignType.STAIRCASE, name, result.isSafe && result.codeAcceptanceComplete, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
         
         val stair = Stair(
             projectId = projectId, thickness = result.thickness, load = result.wu, fcu = result.fcu, fy = result.fy,
@@ -169,6 +182,11 @@ class DesignRepository @Inject constructor(
             put("height", result.height)
             put("wallThickness", result.wallThickness)
             put("baseThickness", result.baseThickness)
+            // Records saved before this flag carry a steel/cost figure of unknown basis. From here on the steel is a
+            // fixed kg/m3 ratio times concrete volume (not designed bars) and the cost uses fixed prices with no
+            // currency or date, so neither is a designed quantity or a current price.
+            put("steelBasis", "indicative_ratio_not_designed_bars")
+            put("costBasis", "unavailable_fixed_unit_prices_no_basis")
         }.toString()
         saveGeneralDesign(projectId, DesignType.WATER_TANK, name, result.isSafe, result.utilizationRatio, result.concreteVolume, result.steelWeight, result.cost, result, result.code.displayName, inputData)
         
@@ -241,7 +259,7 @@ class DesignRepository @Inject constructor(
             utilizationRatio = 0.0, // Warehouse usually has multiple ratios, using 0.0 for general
             concreteVolume = 0.0,
             steelWeight = result.totalWeight * 1000.0, // Convert Tons to Kg
-            totalCost = result.totalWeight * 50000.0, // Estimated cost per ton
+            totalCost = 0.0, // NOT ISSUED: no verified steel unit rate; the BOQ shows NOT ISSUED for this design
             result = result,
             codeUsed = "Steel Code",
             inputData = inputData

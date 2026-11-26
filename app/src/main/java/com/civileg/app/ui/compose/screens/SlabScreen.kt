@@ -7,6 +7,14 @@ import com.civileg.app.domain.entities.DesignCode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.civileg.app.domain.validation.FieldKind
+import com.civileg.app.domain.validation.FieldSpec
+import com.civileg.app.domain.validation.FormValidator
+import com.civileg.app.ui.compose.validation.FormErrorSummary
+import com.civileg.app.ui.compose.validation.ValidatedNumberField
+import com.civileg.app.ui.compose.validation.rememberFormValidationState
+import com.civileg.app.ui.compose.validation.scrollItemToCenter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -42,6 +50,7 @@ import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
 import com.civileg.app.ui.compose.components.drawings.ProfessionalSlabDrawing
 import com.civileg.app.ui.compose.components.drawings.slabDrawingSummary
 import com.civileg.app.ui.compose.components.drawings.ProfessionalWaffleSlabDrawing
+import com.civileg.app.domain.calculations.base.HordiSlabDesign
 import com.civileg.app.ui.compose.components.drawings.ProfessionalHordiSlabDrawing
 import com.civileg.app.viewmodel.SlabViewModel
 import com.civileg.app.viewmodel.WaffleSlabViewModel
@@ -85,12 +94,19 @@ fun SlabScreen(
     var ribSpacing by remember { mutableStateOf("500") }
     var ribSpacingY by remember { mutableStateOf("500") }
 
+    val form = rememberFormValidationState()
+    val listState = rememberLazyListState()
+    // Item index of each field row, recorded by the list builder below (rows shift with the slab type).
+    val fieldItemIndex = remember { mutableMapOf<String, Int>() }
     var selectedType by remember { mutableStateOf(CalculatorEngine.SlabType.SOLID) }
     var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
     var expandedType by remember { mutableStateOf(false) }
     var expandedCode by remember { mutableStateOf(false) }
     
     val result by viewModel.result.observeAsState()
+    val solved by viewModel.solvedInputs.observeAsState()
+    // Any edit makes the shown result stale: drop it and that field's old error.
+    fun touch(id: String) { form.clear(id); viewModel.clearResult() }
     val isLoading by viewModel.isLoading.observeAsState(false)
     val isExporting by viewModel.isExporting.observeAsState(false)
     val projects by projectViewModel.allProjects.observeAsState(emptyList())
@@ -115,13 +131,9 @@ fun SlabScreen(
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
     val defaultSlabName = stringResource(R.string.slab_default_name)
     var designName by remember { mutableStateOf(defaultSlabName) }
-    var inputError by remember { mutableStateOf<String?>(null) }
     val configuration = LocalConfiguration.current
     val screenW = configuration.screenWidthDp.dp
 
-    // Validation messages (captured in composable scope for use in onClick)
-    val slabInvalidMsg = stringResource(R.string.slab_err_invalid_values)
-    val slabRangeMsg = stringResource(R.string.slab_err_range_check)
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -145,12 +157,17 @@ fun SlabScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            var itemCounter = 0
+            fun reg(vararg ids: String) { ids.forEach { fieldItemIndex[it] = itemCounter }; itemCounter++ }
+            fieldItemIndex.clear()
+            reg()
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ExposedDropdownMenuBox(
@@ -172,6 +189,7 @@ fun SlabScreen(
                                 DropdownMenuItem(
                                     text = { AppText(type.displayName) },
                                     onClick = {
+                                        if (selectedType != type) { form.clearAll(); viewModel.clearResult() }
                                         selectedType = type
                                         expandedType = false
                                     }
@@ -199,6 +217,7 @@ fun SlabScreen(
                                 DropdownMenuItem(
                                     text = { AppText(code.displayName) },
                                     onClick = {
+                                        if (selectedCode != code) viewModel.clearResult()
                                         selectedCode = code
                                         expandedCode = false
                                     }
@@ -211,6 +230,7 @@ fun SlabScreen(
 
             // --- Advanced Inputs Section ---
             if (selectedType == CalculatorEngine.SlabType.FLAT || selectedType == CalculatorEngine.SlabType.POST_TENSION) {
+                reg("openingWidth", "openingLength")
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
@@ -218,191 +238,182 @@ fun SlabScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             AppText(stringResource(R.string.slab_advanced_detailing_pro), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                            if (selectedType == CalculatorEngine.SlabType.FLAT) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedTextField(
-                                        value = dropPanelThickness,
-                                        onValueChange = { dropPanelThickness = it },
-                                        label = { AppText(stringResource(R.string.slab_drop_thick_mm)) },
-                                        modifier = Modifier.weight(1f),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    OutlinedTextField(
-                                        value = columnSize,
-                                        onValueChange = { columnSize = it },
-                                        label = { AppText(stringResource(R.string.slab_col_width_mm)) },
-                                        modifier = Modifier.weight(1f),
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                }
-                            }
-                            if (selectedType == CalculatorEngine.SlabType.POST_TENSION) {
-                                OutlinedTextField(
-                                    value = prestressForce,
-                                    onValueChange = { prestressForce = it },
-                                    label = { AppText(stringResource(R.string.slab_prestress_force_kn)) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                            }
+                            // Drop panel, column size and prestress are entered once, in the main inputs below.
 
                             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                             AppText(stringResource(R.string.slab_openings_shafts), style = MaterialTheme.typography.labelSmall)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedTextField(
-                                    value = openingWidth,
-                                    onValueChange = { openingWidth = it },
-                                    label = { AppText(stringResource(R.string.slab_open_width_mm)) },
-                                    modifier = Modifier.weight(1f),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                OutlinedTextField(
-                                    value = openingLength,
-                                    onValueChange = { openingLength = it },
-                                    label = { AppText(stringResource(R.string.slab_open_length_mm)) },
-                                    modifier = Modifier.weight(1f),
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
+                                ValidatedNumberField(form, "openingWidth", openingWidth, stringResource(R.string.slab_open_width_mm), { openingWidth = it; touch("openingWidth") }, Modifier.weight(1f))
+                                ValidatedNumberField(form, "openingLength", openingLength, stringResource(R.string.slab_open_length_mm), { openingLength = it; touch("openingLength") }, Modifier.weight(1f))
                             }
                         }
                     }
                 }
             }
 
+            reg()
             item { SectionHeader(stringResource(R.string.slab_dimensions_loading), R.drawable.ic_slab) }
 
+            reg("shortSpan", "longSpan")
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SlabInputField(shortSpan, stringResource(R.string.span_x_label), { shortSpan = it }, Modifier.weight(1f))
-                    SlabInputField(longSpan, stringResource(R.string.span_y_label), { longSpan = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "shortSpan", shortSpan, stringResource(R.string.span_x_label), { shortSpan = it; touch("shortSpan") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "longSpan", longSpan, stringResource(R.string.span_y_label), { longSpan = it; touch("longSpan") }, Modifier.weight(1f))
                 }
             }
 
+            reg("deadLoad", "liveLoad")
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    SlabInputField(deadLoad, stringResource(R.string.slab_dl_label), { deadLoad = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "deadLoad", deadLoad, stringResource(R.string.slab_dl_label), { deadLoad = it; touch("deadLoad") }, Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
-                    SlabInputField(liveLoad, stringResource(R.string.slab_ll_label), { liveLoad = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "liveLoad", liveLoad, stringResource(R.string.slab_ll_label), { liveLoad = it; touch("liveLoad") }, Modifier.weight(1f))
                 }
             }
 
+            reg()
             item { SectionHeader(stringResource(R.string.beam_material_props), R.drawable.ic_calculator) }
 
+            reg("fcu", "fy")
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    SlabInputField(fcu, stringResource(R.string.fcu_label), { fcu = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "fcu", fcu, stringResource(R.string.fcu_label), { fcu = it; touch("fcu") }, Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
-                    SlabInputField(fy, stringResource(R.string.fy_label), { fy = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "fy", fy, stringResource(R.string.fy_label), { fy = it; touch("fy") }, Modifier.weight(1f))
                 }
             }
             
+            reg("thickness", "preferredDiameter")
             item {
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    SlabInputField(thickness, stringResource(R.string.slab_thickness_mm), { thickness = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "thickness", thickness, stringResource(R.string.slab_thickness_mm), { thickness = it; touch("thickness") }, Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
-                    SlabInputField(preferredDiameter, stringResource(R.string.slab_bar_diameter_mm), { preferredDiameter = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "preferredDiameter", preferredDiameter, stringResource(R.string.slab_bar_diameter_mm), { preferredDiameter = it; touch("preferredDiameter") }, Modifier.weight(1f))
                 }
             }
 
             if (selectedType == CalculatorEngine.SlabType.FLAT) {
+                reg("columnSize", "dropPanelThickness")
                 item {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SlabInputField(columnSize, stringResource(R.string.slab_column_width_mm), { columnSize = it }, Modifier.weight(1f))
-                        SlabInputField(dropPanelThickness, stringResource(R.string.slab_drop_thickness_mm), { dropPanelThickness = it }, Modifier.weight(1f))
+                        ValidatedNumberField(form, "columnSize", columnSize, stringResource(R.string.slab_column_width_mm), { columnSize = it; touch("columnSize") }, Modifier.weight(1f))
+                        ValidatedNumberField(form, "dropPanelThickness", dropPanelThickness, stringResource(R.string.slab_drop_thickness_mm), { dropPanelThickness = it; touch("dropPanelThickness") }, Modifier.weight(1f))
                     }
                 }
             }
 
             if (selectedType == CalculatorEngine.SlabType.POST_TENSION) {
+                reg("prestressForce")
                 item {
-                    SlabInputField(prestressForce, stringResource(R.string.slab_compressive_force), { prestressForce = it }, Modifier.fillMaxWidth())
+                    ValidatedNumberField(form, "prestressForce", prestressForce, stringResource(R.string.slab_compressive_force), { prestressForce = it; touch("prestressForce") }, Modifier.fillMaxWidth())
                 }
             }
 
             if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK) {
+                reg()
                 item {
                     SectionHeader(stringResource(R.string.slab_ribbed_dims), R.drawable.ic_slab)
                 }
+                reg("ribWidth", "ribSpacing")
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SlabInputField(ribWidth, stringResource(R.string.slab_rib_width_mm), { ribWidth = it }, Modifier.weight(1f))
-                        SlabInputField(ribSpacing, stringResource(R.string.slab_rib_spacing_mm), { ribSpacing = it }, Modifier.weight(1f))
+                        ValidatedNumberField(form, "ribWidth", ribWidth, stringResource(R.string.slab_rib_width_mm), { ribWidth = it; touch("ribWidth") }, Modifier.weight(1f))
+                        ValidatedNumberField(form, "ribSpacing", ribSpacing, stringResource(R.string.slab_rib_spacing_mm), { ribSpacing = it; touch("ribSpacing") }, Modifier.weight(1f))
                     }
                 }
             }
 
             if (selectedType == CalculatorEngine.SlabType.WAFFLE) {
+                reg()
                 item {
                     SectionHeader(stringResource(R.string.slab_waffle_dims), R.drawable.ic_slab)
                 }
+                reg("ribWidth", "ribSpacing")
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SlabInputField(ribWidth, stringResource(R.string.slab_rib_width_mm), { ribWidth = it }, Modifier.weight(1f))
-                        SlabInputField(ribSpacing, stringResource(R.string.slab_waffle_spacing_x_mm), { ribSpacing = it }, Modifier.weight(1f))
+                        ValidatedNumberField(form, "ribWidth", ribWidth, stringResource(R.string.slab_rib_width_mm), { ribWidth = it; touch("ribWidth") }, Modifier.weight(1f))
+                        ValidatedNumberField(form, "ribSpacing", ribSpacing, stringResource(R.string.slab_waffle_spacing_x_mm), { ribSpacing = it; touch("ribSpacing") }, Modifier.weight(1f))
                     }
                 }
+                reg("ribSpacingY")
                 item {
-                    SlabInputField(ribSpacingY, stringResource(R.string.slab_waffle_spacing_y_mm), { ribSpacingY = it }, Modifier.fillMaxWidth())
+                    ValidatedNumberField(form, "ribSpacingY", ribSpacingY, stringResource(R.string.slab_waffle_spacing_y_mm), { ribSpacingY = it; touch("ribSpacingY") }, Modifier.fillMaxWidth())
+                }
+                reg("columnSize")
+                item {
+                    // WAFFLE solid head uses the column size; it used to be an unseen 400 mm default.
+                    ValidatedNumberField(form, "columnSize", columnSize, stringResource(R.string.slab_column_width_mm), { columnSize = it; touch("columnSize") }, Modifier.fillMaxWidth())
                 }
             }
 
+            reg()
             item {
-                // Input validation error display
-                inputError?.let { err ->
-                    AppText(
-                        err,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    )
-                }
+                FormErrorSummary(form)
                 AppButton(
                     label = stringResource(R.string.slab_design_now),
                     onClick = {
-                        // Validate inputs
-                        val lxVal = shortSpan.toDoubleOrNull()
-                        val lyVal = longSpan.toDoubleOrNull()
-                        val dlVal = deadLoad.toDoubleOrNull()
-                        val llVal = liveLoad.toDoubleOrNull()
-                        val fcuVal = fcu.toDoubleOrNull()
-                        val fyVal = fy.toDoubleOrNull()
-                        val tVal = thickness.toDoubleOrNull()
-
-                        if (lxVal == null || lyVal == null || dlVal == null || llVal == null ||
-                            fcuVal == null || fyVal == null || tVal == null) {
-                            inputError = slabInvalidMsg
+                        viewModel.clearResult() // never leave a stale result on screen
+                        val groups = buildSet {
+                            when (selectedType) {
+                                CalculatorEngine.SlabType.FLAT -> { add("flat"); add("openings") }
+                                CalculatorEngine.SlabType.POST_TENSION -> { add("pt"); add("openings") }
+                                CalculatorEngine.SlabType.HOLLOW_BLOCK -> add("rib")
+                                CalculatorEngine.SlabType.WAFFLE -> { add("rib"); add("waffle") }
+                                else -> {}
+                            }
+                        }
+                        // Physical rules only (positive / non-negative / whole). The old fcu 15-60, fy 200-700
+                        // and thickness 50-500 cut-offs had no recorded code source and are not enforced.
+                        val checked = FormValidator.validate(
+                            listOf(
+                                FieldSpec("openingWidth", openingWidth, FieldKind.NON_NEGATIVE, group = "openings"),
+                                FieldSpec("openingLength", openingLength, FieldKind.NON_NEGATIVE, group = "openings"),
+                                FieldSpec("shortSpan", shortSpan, FieldKind.POSITIVE),
+                                FieldSpec("longSpan", longSpan, FieldKind.POSITIVE),
+                                FieldSpec("deadLoad", deadLoad, FieldKind.NON_NEGATIVE),
+                                FieldSpec("liveLoad", liveLoad, FieldKind.NON_NEGATIVE),
+                                FieldSpec("fcu", fcu, FieldKind.POSITIVE),
+                                FieldSpec("fy", fy, FieldKind.POSITIVE),
+                                FieldSpec("thickness", thickness, FieldKind.POSITIVE),
+                                FieldSpec("preferredDiameter", preferredDiameter, FieldKind.POSITIVE_INT),
+                                FieldSpec("columnSize", columnSize, FieldKind.POSITIVE, group = "flat"),
+                                FieldSpec("dropPanelThickness", dropPanelThickness, FieldKind.NON_NEGATIVE, group = "flat"),
+                                FieldSpec("prestressForce", prestressForce, FieldKind.NON_NEGATIVE, group = "pt"),
+                                FieldSpec("ribWidth", ribWidth, FieldKind.POSITIVE, group = "rib"),
+                                FieldSpec("ribSpacing", ribSpacing, FieldKind.POSITIVE, group = "rib"),
+                                FieldSpec("ribSpacingY", ribSpacingY, FieldKind.POSITIVE, group = "waffle"),
+                                FieldSpec("columnSize", columnSize, FieldKind.POSITIVE, group = "waffle")
+                            ),
+                            activeGroups = groups
+                        )
+                        form.apply(checked)
+                        if (!checked.isValid) {
+                            scope.launch {
+                                form.focusFirstInvalid(checked) { id ->
+                                    fieldItemIndex[id]?.let { listState.scrollItemToCenter(it) }
+                                }
+                            }
                             return@AppButton
                         }
-                        if (lxVal <= 0 || lyVal <= 0 || dlVal < 0 || llVal < 0 ||
-                            fcuVal < 15 || fcuVal > 60 || fyVal < 200 || fyVal > 700 ||
-                            tVal < 50 || tVal > 500) {
-                            inputError = slabRangeMsg
-                            return@AppButton
-                        }
-                        inputError = null
                         viewModel.calculateSlabPro(
-                            lx = lxVal,
-                            ly = lyVal,
-                            deadLoad = dlVal,
-                            liveLoad = llVal,
-                            fcu = fcuVal,
-                            fy = fyVal,
-                            ts = tVal,
-                            preferredDiameter = preferredDiameter.toIntOrNull() ?: 12,
+                            lx = checked.value("shortSpan"),
+                            ly = checked.value("longSpan"),
+                            deadLoad = checked.value("deadLoad"),
+                            liveLoad = checked.value("liveLoad"),
+                            fcu = checked.value("fcu"),
+                            fy = checked.value("fy"),
+                            ts = checked.value("thickness"),
+                            preferredDiameter = checked.value("preferredDiameter").toInt(),
                             type = selectedType,
                             code = selectedCode,
-                            prestressForce = prestressForce.toDoubleOrNull() ?: 0.0,
-                            dropPanelThickness = dropPanelThickness.toDoubleOrNull() ?: 0.0,
-                            columnSize = columnSize.toDoubleOrNull() ?: 400.0,
-                            openingWidth = openingWidth.toDoubleOrNull() ?: 0.0,
-                            openingLength = openingLength.toDoubleOrNull() ?: 0.0,
-                            ribWidth = ribWidth.toDoubleOrNull() ?: 100.0,
-                            ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0
+                            // Not applicable for this type: the engine ignores them; 0.0 means "not used".
+                            prestressForce = checked.valueOrNull("prestressForce") ?: 0.0,
+                            dropPanelThickness = checked.valueOrNull("dropPanelThickness") ?: 0.0,
+                            columnSize = checked.valueOrNull("columnSize") ?: 0.0,
+                            openingWidth = checked.valueOrNull("openingWidth") ?: 0.0,
+                            openingLength = checked.valueOrNull("openingLength") ?: 0.0,
+                            ribWidth = checked.valueOrNull("ribWidth") ?: 0.0,
+                            ribSpacing = checked.valueOrNull("ribSpacing") ?: 0.0
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -413,6 +424,7 @@ fun SlabScreen(
             }
 
             result?.let { res ->
+                val sol = solved ?: return@let
                 item { SectionHeader(stringResource(R.string.slab_results), R.drawable.ic_calculator) }
                 
                 item { SlabResultCard(res) }
@@ -424,8 +436,8 @@ fun SlabScreen(
                         BbsGenerator.generateSlabBbs(
                             mark = "S1",
                             result = res,
-                            lxMm = (shortSpan.toDoubleOrNull() ?: 4.0) * 1000.0,
-                            lyMm = (longSpan.toDoubleOrNull() ?: 5.0) * 1000.0
+                            lxMm = (sol.lx) * 1000.0,
+                            lyMm = (sol.ly) * 1000.0
                         )
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty()) {
@@ -435,8 +447,8 @@ fun SlabScreen(
                     val boqRows = runCatching {
                         BoqEstimator.slabRows(
                             res,
-                            shortSpan.toDoubleOrNull() ?: 4.0,
-                            longSpan.toDoubleOrNull() ?: 5.0,
+                            sol.lx,
+                            sol.ly,
                             "S1"
                         )
                     }.getOrDefault(emptyList())
@@ -460,6 +472,71 @@ fun SlabScreen(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
+                                if (res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            if (res.bondClassAssessed) Icons.Default.CheckCircle else Icons.Default.Error,
+                                            contentDescription = null,
+                                            tint = if (res.bondClassAssessed) Color(0xFF2E7D32) else Color.Red,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        AppText("Material assessment (bar surface/bond)", modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        AppText(
+                                            if (res.bondClassAssessed) "declared" else "UNASSESSED - estimate only",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (res.bondClassAssessed) Color(0xFF2E7D32) else Color.Red
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            if (res.serviceabilityAssessed) Icons.Default.CheckCircle else Icons.Default.Error,
+                                            contentDescription = null,
+                                            tint = if (res.serviceabilityAssessed) Color(0xFF2E7D32) else Color.Red,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        AppText("Serviceability (deflection)", modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        AppText(
+                                            if (res.serviceabilityAssessed) "assessed" else "NOT ASSESSED - no deflection check",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (res.serviceabilityAssessed) Color(0xFF2E7D32) else Color.Red
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            if (res.engineeringAcceptance) Icons.Default.CheckCircle else Icons.Default.Error,
+                                            contentDescription = null,
+                                            tint = if (res.engineeringAcceptance) Color(0xFF2E7D32) else Color.Red,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        AppText("Engineering acceptance", modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        AppText(
+                                            if (res.engineeringAcceptance) "ACCEPTED" else "NO - qualification incomplete",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (res.engineeringAcceptance) Color(0xFF2E7D32) else Color.Red
+                                        )
+                                    }
+                                }
                                 res.safetyChecks.forEach { check ->
                                     Row(
                                         modifier = Modifier
@@ -474,7 +551,7 @@ fun SlabScreen(
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        AppText(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        AppText(check.name, modifier = Modifier.weight(1f).padding(end = 12.dp), fontSize = 13.sp)
                                         AppText(
                                             "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
                                             fontSize = 12.sp,
@@ -537,7 +614,7 @@ fun SlabScreen(
                         onExportDxf = { viewModel.exportToDxf(context) },
                         title = stringResource(R.string.slab_drawing_title),
                         subtitle = stringResource(R.string.slab_reinforcement_subtitle),
-                        viewModes = when (selectedType) {
+                        viewModes = when (sol.type) {
                             CalculatorEngine.SlabType.WAFFLE, CalculatorEngine.SlabType.HOLLOW_BLOCK -> listOf("All", "Plan", "Section", "Detail")
                             else -> listOf(stringResource(R.string.view_all), stringResource(R.string.slab_view_plan), stringResource(R.string.view_section), stringResource(R.string.view_reinforcement))
                         },
@@ -545,13 +622,13 @@ fun SlabScreen(
                         onViewModeChanged = { selectedViewMode = it },
                         drawingHeightDp = drawingHeight,
                         drawingContent = {
-                            when (selectedType) {
+                            when (sol.type) {
                                 CalculatorEngine.SlabType.WAFFLE -> {
                                     ProfessionalWaffleSlabDrawing(
-                                        lx = (shortSpan.toDoubleOrNull() ?: 4.0) * 1000.0,
-                                        ly = (longSpan.toDoubleOrNull() ?: 5.0) * 1000.0,
-                                        ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
-                                        ribWidth = ribWidth.toDoubleOrNull() ?: 100.0,
+                                        lx = (sol.lx) * 1000.0,
+                                        ly = (sol.ly) * 1000.0,
+                                        ribSpacing = sol.ribSpacing,
+                                        ribWidth = sol.ribWidth,
                                         ribHeight = res.thickness.toDouble() - 50.0,
                                         toppingThickness = 50.0,
                                         solidHeadSize = 800.0,
@@ -564,49 +641,49 @@ fun SlabScreen(
                                         headBottomCount = 6,
                                         cover = 25.0,
                                         viewMode = selectedViewMode,
-                                        designCode = selectedCode,
+                                        designCode = sol.code,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
                                 CalculatorEngine.SlabType.HOLLOW_BLOCK -> {
                                     ProfessionalHordiSlabDrawing(
-                                        span = (shortSpan.toDoubleOrNull() ?: 4.0) * 1000.0,
-                                        ribWidth = ribWidth.toDoubleOrNull() ?: 100.0,
-                                        ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
+                                        span = (sol.lx) * 1000.0,
+                                        ribWidth = sol.ribWidth,
+                                        ribSpacing = sol.ribSpacing,
                                         totalThickness = res.thickness.toDouble(),
                                         toppingThickness = 50.0,
                                         ribBottomDia = res.reinforcementMain.diameter.toDouble(),
                                         ribBottomCount = res.reinforcementMain.numBars.coerceAtLeast(2),
-                                        stirrupDia = 8.0,
+                                        stirrupDia = HordiSlabDesign.DEFAULT_LINK_DIA_MM,
                                         stirrupSpacing = 200.0,
-                                        cover = 25.0,
+                                        cover = HordiSlabDesign.DEFAULT_COVER_MM,
                                         viewMode = selectedViewMode,
-                                        designCode = selectedCode,
+                                        designCode = sol.code,
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
                                 else -> {
                                     ProfessionalSlabDrawing(
-                                        slabType = selectedType.displayName,
+                                        slabType = sol.type.displayName,
                                         slabThickness = res.thickness.toDouble(),
-                                        spanX = shortSpan.toDoubleOrNull() ?: 4.0,
-                                        spanY = longSpan.toDoubleOrNull() ?: 5.0,
+                                        spanX = sol.lx,
+                                        spanY = sol.ly,
                                         mainRebarDia = res.reinforcementMain.diameter.toDouble(),
                                         mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
                                         distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
                                         distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
                                         cover = 25.0,
-                                        dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
-                                        ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
-                                        ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
+                                        dropPanelSize = 0.0, // thickness is not a plan size; the slab screen has no plan-size input
+                                        ribWidth = if (sol.type == CalculatorEngine.SlabType.HOLLOW_BLOCK || sol.type == CalculatorEngine.SlabType.WAFFLE) sol.ribWidth else 0.0,
+                                        ribSpacing = if (sol.type == CalculatorEngine.SlabType.HOLLOW_BLOCK || sol.type == CalculatorEngine.SlabType.WAFFLE) sol.ribSpacing else 0.0,
                                         viewMode = selectedViewMode,
                                         resultSummary = slabDrawingSummary(res),
                                         modifier = Modifier.fillMaxWidth(),
                                         momentX = res.momentX,
                                         momentY = res.momentY,
                                         factoredLoad = res.totalLoad,
-                                        fcu = fcu.toDoubleOrNull() ?: 25.0,
-                                        fy = fy.toDoubleOrNull() ?: 360.0,
+                                        fcu = sol.fcu,
+                                        fy = sol.fy,
                                         isSafe = res.isSafe,
                                         utilizationRatio = res.utilizationRatio
                                     )
@@ -619,19 +696,20 @@ fun SlabScreen(
         }
         // PDF drawing capture area (invisible, renders at viewMode=0)
         result?.let { res ->
+            val sol = solved ?: return@let
             ComposeDrawingCaptureUtil.DrawingCaptureArea(
                 captureLayer = pdfCaptureLayer,
                 widthPx = screenWidthPx,
                 heightPx = screenHeightPx
             ) {
                 Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
-                    when (selectedType) {
+                    when (sol.type) {
                         CalculatorEngine.SlabType.WAFFLE -> {
                             ProfessionalWaffleSlabDrawing(
-                                lx = (shortSpan.toDoubleOrNull() ?: 4.0) * 1000.0,
-                                ly = (longSpan.toDoubleOrNull() ?: 5.0) * 1000.0,
-                                ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
-                                ribWidth = ribWidth.toDoubleOrNull() ?: 100.0,
+                                lx = (sol.lx) * 1000.0,
+                                ly = (sol.ly) * 1000.0,
+                                ribSpacing = sol.ribSpacing,
+                                ribWidth = sol.ribWidth,
                                 ribHeight = res.thickness.toDouble() - 50.0,
                                 toppingThickness = 50.0,
                                 solidHeadSize = 800.0,
@@ -644,49 +722,49 @@ fun SlabScreen(
                                 headBottomCount = 6,
                                 cover = 25.0,
                                 viewMode = 0,
-                                designCode = selectedCode,
+                                designCode = sol.code,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
                         CalculatorEngine.SlabType.HOLLOW_BLOCK -> {
                             ProfessionalHordiSlabDrawing(
-                                span = (shortSpan.toDoubleOrNull() ?: 4.0) * 1000.0,
-                                ribWidth = ribWidth.toDoubleOrNull() ?: 100.0,
-                                ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
+                                span = (sol.lx) * 1000.0,
+                                ribWidth = sol.ribWidth,
+                                ribSpacing = sol.ribSpacing,
                                 totalThickness = res.thickness.toDouble(),
                                 toppingThickness = 50.0,
                                 ribBottomDia = res.reinforcementMain.diameter.toDouble(),
                                 ribBottomCount = res.reinforcementMain.numBars.coerceAtLeast(2),
-                                stirrupDia = 8.0,
+                                stirrupDia = HordiSlabDesign.DEFAULT_LINK_DIA_MM,
                                 stirrupSpacing = 200.0,
-                                cover = 25.0,
+                                cover = HordiSlabDesign.DEFAULT_COVER_MM,
                                 viewMode = 0,
-                                designCode = selectedCode,
+                                designCode = sol.code,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
                         else -> {
                             ProfessionalSlabDrawing(
-                                slabType = selectedType.displayName,
+                                slabType = sol.type.displayName,
                                 slabThickness = res.thickness.toDouble(),
-                                spanX = shortSpan.toDoubleOrNull() ?: 4.0,
-                                spanY = longSpan.toDoubleOrNull() ?: 5.0,
+                                spanX = sol.lx,
+                                spanY = sol.ly,
                                 mainRebarDia = res.reinforcementMain.diameter.toDouble(),
                                 mainRebarSpacing = res.reinforcementMain.spacing.toDouble(),
                                 distRebarDia = res.reinforcementSecondary.diameter.toDouble(),
                                 distRebarSpacing = res.reinforcementSecondary.spacing.toDouble(),
                                 cover = 25.0,
-                                dropPanelSize = if (selectedType == CalculatorEngine.SlabType.FLAT) (dropPanelThickness.toDoubleOrNull() ?: 0.0) else 0.0,
-                                ribWidth = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribWidth.toDoubleOrNull() ?: 100.0) else 0.0,
-                                ribSpacing = if (selectedType == CalculatorEngine.SlabType.HOLLOW_BLOCK || selectedType == CalculatorEngine.SlabType.WAFFLE) (ribSpacing.toDoubleOrNull() ?: 500.0) else 0.0,
+                                dropPanelSize = 0.0, // thickness is not a plan size; the slab screen has no plan-size input
+                                ribWidth = if (sol.type == CalculatorEngine.SlabType.HOLLOW_BLOCK || sol.type == CalculatorEngine.SlabType.WAFFLE) sol.ribWidth else 0.0,
+                                ribSpacing = if (sol.type == CalculatorEngine.SlabType.HOLLOW_BLOCK || sol.type == CalculatorEngine.SlabType.WAFFLE) sol.ribSpacing else 0.0,
                                 viewMode = 0,
                                 resultSummary = slabDrawingSummary(res),
                                 modifier = Modifier.fillMaxWidth(),
                                 momentX = res.momentX,
                                 momentY = res.momentY,
                                 factoredLoad = res.totalLoad,
-                                fcu = fcu.toDoubleOrNull() ?: 25.0,
-                                fy = fy.toDoubleOrNull() ?: 360.0,
+                                fcu = sol.fcu,
+                                fy = sol.fy,
                                 isSafe = res.isSafe,
                                 utilizationRatio = res.utilizationRatio
                             )
@@ -832,23 +910,23 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            if (res.isSafe) Icons.Default.CheckCircle else Icons.Default.Warning,
+                            if (res.type != CalculatorEngine.SlabType.HOLLOW_BLOCK && res.isSafe || res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK && res.engineeringAcceptance) Icons.Default.CheckCircle else Icons.Default.Warning,
                             contentDescription = null,
-                            tint = if (res.isSafe) Color(0xFF2E7D32) else Color.Red,
+                            tint = if (if(res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK) res.engineeringAcceptance else res.isSafe) Color(0xFF2E7D32) else Color.Red,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(4.dp))
                         AppText(
-                            if (res.isSafe) stringResource(R.string.slab_safe) else stringResource(R.string.slab_unsafe),
+                            if(res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK && !res.engineeringAcceptance) "INCOMPLETE - not accepted" else if (res.isSafe) stringResource(R.string.slab_safe) else stringResource(R.string.slab_unsafe),
                             fontWeight = FontWeight.Bold,
-                            color = if (res.isSafe) Color(0xFF2E7D32) else Color.Red
+                            color = if (if(res.type == CalculatorEngine.SlabType.HOLLOW_BLOCK) res.engineeringAcceptance else res.isSafe) Color(0xFF2E7D32) else Color.Red
                         )
                     }
                 }
 
                 Box(contentAlignment = Alignment.Center) {
                     val animatedRatio by animateFloatAsState(
-                        targetValue = res.utilizationRatio.toFloat(),
+                        targetValue = com.civileg.app.utils.DesignNumberFormat.progress(res.utilizationRatio),
                         animationSpec = tween(1000), label = ""
                     )
                     CircularProgressIndicator(
@@ -859,7 +937,7 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                     AppText(
-                        "${(res.utilizationRatio * 100).toInt()}%",
+                        com.civileg.app.utils.DesignNumberFormat.percent(res.utilizationRatio),
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp
                     )
@@ -909,10 +987,12 @@ private fun SlabResultCard(res: CalculatorEngine.SlabResult) {
 
 @Composable
 private fun ResultItem(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Column {
         AppText(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         AppText(value, fontWeight = FontWeight.Bold)
     }
+}
 }
 
 @Composable
@@ -935,18 +1015,6 @@ private fun SectionHeader(title: String, iconRes: Int) {
         Spacer(modifier = Modifier.width(8.dp))
         AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
     }
-}
-
-@Composable
-private fun SlabInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { AppText(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp)
-    )
 }
 
 @Composable

@@ -30,16 +30,22 @@ data class DrawingResultSummary(
     val deflectionRatio: Double = 0.0,      // actual / allowable (should be ≤ 1.0)
     val axialLoadRatio: Double = 0.0,       // P_u / φP_n for columns (should be ≤ 1.0)
     val crackWidth: Double = 0.0,           // mm (serviceability check)
-    val formworkArea: Double = 0.0          // m² (for BOQ/costing)
+    val codeAcceptanceComplete: Boolean = true,
+    val formworkArea: Double = 0.0,         // m² (for BOQ/costing)
+    /** When set, the drawing strip shows this instead of the generic "UTIL" percentage (a single named check, or n/a). */
+    val utilizationText: String? = null,
+    /** A listed check actually failed. Independent of [codeAcceptanceComplete]: a failure outranks an incomplete assessment on the label. */
+    val listedChecksFailed: Boolean = false
 ) {
     /** Formatted utilization percentage, e.g. "65.3%" */
     val utilizationPercent: String get() = "%.1f%%".format(utilizationRatio * 100.0)
 
     /** PASS/FAIL label for safety status */
-    val safetyLabel: String get() = if (isSafe) "PASS" else "FAIL"
+    val safetyLabel: String get() = if (listedChecksFailed) "FAIL" else if (!codeAcceptanceComplete) "UNVERIFIED" else if (isSafe) "PASS" else "FAIL"
 
     /** Number of failed safety checks */
-    val failedCheckCount: Int get() = safetyChecks.count { !it.passed }
+    val failedCheckCount: Int get() = safetyChecks.count { !it.passed && !it.notAssessed }
+    val notAssessedCheckCount: Int get() = safetyChecks.count { it.notAssessed }
 
     /** Formatted punching shear status */
     val punchingShearStatus: String get() = when {

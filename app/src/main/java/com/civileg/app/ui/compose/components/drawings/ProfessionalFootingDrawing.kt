@@ -37,6 +37,8 @@ fun ProfessionalFootingDrawing(
     rebarYDia: Double,
     rebarYCount: Int,
     cover: Double,
+    rebarXSpacingMm: Double? = null,
+    rebarYSpacingMm: Double? = null,
     col1X: Double = 0.0,
     col2X: Double = 0.0,
     soilPressureMax: Double = 0.0,
@@ -124,7 +126,12 @@ fun ProfessionalFootingDrawing(
             else -> h * 0.10f
         }
 
-        val planTop = h * 0.05f
+        // Footing sheet: the shared config uses fixed pixel heights (header 40, table rows 22) while text scales with density,
+        // so on a dense screen text overran its bands. Heights here follow the text size instead.
+        val hdrH = maxOf(cfg.headerHeight, cfg.headerTextSize * 2.0f)
+        val dimOff = maxOf(cfg.dimOffset, cfg.dimTextSize * 2.4f)
+        val zoneLabelY = hdrH + cfg.annotationTextSmall * 1.2f
+        val planTop = maxOf(h * 0.05f, zoneLabelY + cfg.sectionLabelTextSize * 2.2f + dimOff)
         val planBottom = planTop + planH
         val secTop = planBottom + h * 0.02f
         val secBottom = secTop + sectionH
@@ -141,17 +148,17 @@ fun ProfessionalFootingDrawing(
         // ══════════════════════════════════════════════════════════
         // HEADER
         // ══════════════════════════════════════════════════════════
-        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, cfg.headerHeight))
+        drawRect(color = headerBg, topLeft = Offset(0f, 0f), size = Size(w, hdrH))
         drawTextAnnotated(
             "FOOTING DETAIL — ${footingType.uppercase()}",
-            w / 2f, cfg.headerHeight * 0.65f, textColor, cfg.headerTextSize, center = true, bold = true
+            w / 2f, hdrH * 0.66f, textColor, cfg.headerTextSize, center = true, bold = true
         )
 
         // ── Responsive section separators & zone labels ───────
         if (viewMode == 0) {
             val sections = if (hasPressure) listOf("Plan", "Section", "Pressure", "Table") else listOf("Plan", "Section", "Table")
-            drawCombinedSectionLabel(h * 0.015f, w, sections, cfg)
-            drawSectionSeparator(planTop - h * 0.01f, w, "PLAN / SECTION", cfg)
+            drawCombinedSectionLabel(zoneLabelY, w, sections, cfg)
+            drawSectionSeparator(zoneLabelY + cfg.sectionLabelTextSize * 1.8f, w, "PLAN / SECTION", cfg)
         } else if (viewMode == 1) {
             drawZoneLabel(margin, planTop + 4f, "PLAN", cfg)
         } else if (viewMode == 2) {
@@ -414,8 +421,8 @@ fun ProfessionalFootingDrawing(
 
         // ── Dimension lines using DrawingUtils ────────────────────
         // Footing L × B
-        drawHorizontalDimension(fLeft, fRight, fTop, "L=${lxMm.toInt()}", dimColor, cfg.dimTextSize, offset = -cfg.dimOffset)
-        drawVerticalDimension(fTop, fBottom, fLeft, "B=${lyMm.toInt()}", dimColor, cfg.dimTextSize, offset = -cfg.dimOffset)
+        drawHorizontalDimension(fLeft, fRight, fTop, "L=${lxMm.toInt()}", dimColor, cfg.dimTextSize, offset = -dimOff)
+        drawVerticalDimension(fTop, fBottom, fLeft, "B=${lyMm.toInt()}", dimColor, cfg.dimTextSize, offset = -dimOff)
 
         // Column b × h (for isolated)
         if (footingType == "Isolated") {
@@ -642,7 +649,7 @@ fun ProfessionalFootingDrawing(
 
         // ── Section separator: section → table ────────────────
         if (viewMode == 0) {
-            drawSectionSeparator(tblTop - h * 0.01f, w, "REINFORCEMENT TABLE", cfg)
+            drawSectionSeparator(tblTop - h * 0.01f - cfg.sectionLabelTextSize * 0.6f, w, "REINFORCEMENT TABLE", cfg)
         }
 
         // ══════════════════════════════════════════════════════════
@@ -650,50 +657,61 @@ fun ProfessionalFootingDrawing(
         // ══════════════════════════════════════════════════════════
         if (viewMode == 0 || viewMode == 3) {
         val tblLeft = margin
+        val tblRowH = maxOf(cfg.tableRowHeight, cfg.tableTextSize * 2.0f)
+        val tblHeadH = maxOf(cfg.tableHeaderHeight, cfg.tableTextSize * 2.3f)
+        val tblTopSafe = tblTop + cfg.sectionLabelTextSize * 0.8f
         val tblWidth = w - 2 * margin
 
-        val xSpacing = if (rebarXCount > 1) (lxMm / (rebarXCount - 1)).toInt() else lxMm.toInt()
-        val ySpacing = if (rebarYCount > 1) (lyMm / (rebarYCount - 1)).toInt() else lyMm.toInt()
+        // Spacing is the designed centre-to-centre value passed by the caller. It used to be recomputed as length/(count-1) over the
+        // wrong dimension (169 and 68 mm for a design of 100 mm), so without a designed value the cell reads "-" instead of a derived number.
+        val xSpacing = rebarXSpacingMm?.toInt()?.toString() ?: "-"
+        val ySpacing = rebarYSpacingMm?.toInt()?.toString() ?: "-"
         val barLengthX = lxMm.toInt()
         val barLengthY = lyMm.toInt()
 
-        val headers = listOf("Mark", "Direction", "Dia (mm)", "Count", "Spacing (mm)", "Length (mm)")
+        val headers = listOf("Mark", "Direction", "Dia (mm)", "Count", "Spacing (mm)", "Plan length (mm)")
         val colWidths = listOf(
-            tblWidth * 0.10f, tblWidth * 0.22f, tblWidth * 0.16f,
-            tblWidth * 0.16f, tblWidth * 0.18f, tblWidth * 0.18f
+            tblWidth * 0.08f, tblWidth * 0.18f, tblWidth * 0.14f,
+            tblWidth * 0.14f, tblWidth * 0.20f, tblWidth * 0.26f
         )
         val rows = listOf(
-            listOf("\u2460", "X-bottom", rebarXDia.toInt().toString(), rebarXCount.toString(), xSpacing.toString(), barLengthX.toString()),
-            listOf("\u2461", "Y-bottom", rebarYDia.toInt().toString(), rebarYCount.toString(), ySpacing.toString(), barLengthY.toString())
+            listOf("\u2460", "X-bottom", rebarXDia.toInt().toString(), rebarXCount.toString(), xSpacing, barLengthX.toString()),
+            listOf("\u2461", "Y-bottom", rebarYDia.toInt().toString(), rebarYCount.toString(), ySpacing, barLengthY.toString())
         )
 
         drawReinforcementTable(
-            x = tblLeft, y = tblTop,
+            x = tblLeft, y = tblTopSafe,
             colWidths = colWidths,
             headers = headers,
             rows = rows,
-            rowHeight = cfg.tableRowHeight,
-            headerHeight = cfg.tableHeaderHeight,
+            rowHeight = tblRowH,
+            headerHeight = tblHeadH,
             headerBg = tableHeaderBg,
             altRowBg = Color(0x1AFFFFFF),
             textColor = textColor,
             textSize = cfg.tableTextSize
         )
+        drawTextAnnotated(
+            "Plan length = footing plan dimension. Not a cutting length (no cover, laps, hooks or bends).",
+            tblLeft, tblTopSafe + tblHeadH + 2 * tblRowH + cfg.annotationTextSmall * 1.6f,
+            textColor, cfg.annotationTextSmall
+        )
         } // end reinforcement table
 
-        // ── Responsive title block ─────────────────────────────
-        drawSheetAnnotations(
-            x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
-            y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,
-            cfg = cfg,
-            summary = resultSummary
-        )
-        drawResponsiveTitleBlock(
-            x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
-            y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,
-            cfg = cfg,
+        // ── Result strip and title block (measured, Footing sheet only) ─────────────────────────────
+        val blockTopLeft = drawMeasuredSheetBlock(
+            summary = resultSummary,
             drawingTitle = "Footing Detail",
-            designCode = codeLabel
+            designCode = codeLabel,
+            right = w - cfg.margin * 0.3f,
+            bottom = h - cfg.margin * 0.3f,
+            cfg = cfg
+        )
+        drawNorthArrow(
+            x = blockTopLeft.x - cfg.annotationTextSmall * 2.6f,
+            y = blockTopLeft.y + cfg.annotationTextSmall * 2.2f,
+            size = cfg.annotationTextSmall * 1.4f,
+            color = textColor
         )
     }
 }

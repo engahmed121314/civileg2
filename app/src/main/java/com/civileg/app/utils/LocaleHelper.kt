@@ -16,6 +16,8 @@ object LocaleHelper {
         // Apply locale to the activity's resources directly
         val locale = Locale(language)
         Locale.setDefault(locale)
+        // Numbers format with Western digits in every UI language (String.format and "%.2f".format use this category).
+        Locale.setDefault(Locale.Category.FORMAT, Locale.US)
 
         val config = Configuration(context.resources.configuration)
         config.setLocale(locale)
@@ -79,8 +81,12 @@ object LocaleHelper {
         val lang = getLocale(base)
         val locale = Locale(lang)
         Locale.setDefault(locale)
+        // Numbers format with Western digits in every UI language (String.format and "%.2f".format use this category).
+        Locale.setDefault(Locale.Category.FORMAT, Locale.US)
 
-        val config = Configuration(base.resources.configuration)
+        // Override locale only. Copying the entire display configuration freezes
+        // orientation/screen dimensions when MainActivity handles configChanges.
+        val config = Configuration()
         config.setLocale(locale)
         config.setLayoutDirection(locale)
 
@@ -95,6 +101,8 @@ object LocaleHelper {
         val lang = getLocale(context)
         val locale = Locale(lang)
         Locale.setDefault(locale)
+        // Numbers format with Western digits in every UI language (String.format and "%.2f".format use this category).
+        Locale.setDefault(Locale.Category.FORMAT, Locale.US)
 
         val config = Configuration(context.resources.configuration)
         config.setLocale(locale)

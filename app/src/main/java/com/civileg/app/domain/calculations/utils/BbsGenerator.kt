@@ -28,8 +28,29 @@ data class BbsEntry(
 
 object BbsGenerator {
 
+    /** Builds rows only from explicitly adopted physical groups. No extra
+     * topping steel, hooks, laps or stirrups are invented here. Review-only
+     * schedules must be labeled by the caller, never issued as final detailing.
+     */
+    fun fromAdoptedSchedule(memberMark: String, schedule: AdoptedReinforcementSchedule): List<BbsEntry> {
+        InputGuard.notBlank("memberMark", memberMark)
+        return schedule.groups.map { group ->
+            require(group.startExtensionMm == 0.0 && group.endExtensionMm == 0.0) {
+                "Non-straight adopted bars require an explicit shape-code adapter"
+            }
+            BbsEntry(
+                memberMark = memberMark, barMark = group.mark,
+                diameter = group.diameterMm, shapeCode = 0,
+                count = group.totalCount, lengthA = group.bodyLengthMm,
+                lengthB = group.startExtensionMm, lengthC = group.endExtensionMm,
+                totalLengthPerBar = group.cutLengthMm, totalWeightKg = group.totalWeightKg
+            )
+        }
+    }
+
+
     /**
-     * Generates a Bar Bending Schedule for a designed Beam.
+     * Beam bar bending schedule. Currently always empty, see the comment in the body.
      * @param storyHeight_mm Column/beam story height in mm (default 3000mm = 3m)
      */
     fun generateBeamBbs(mark: String, result: BeamResult, storyHeight_mm: Double = 3000.0): List<BbsEntry> {
@@ -42,50 +63,18 @@ object BbsGenerator {
         InputGuard.positive("stirrups.diameter", result.stirrups.diameter)
         InputGuard.inRange("storyHeight", storyHeight_mm, 1000.0, 20000.0)  // mm
 
-        val entries = mutableListOf<BbsEntry>()
-
-        // Span derivation: use result.span if present, otherwise storyHeight_mm
-        val spanMm = if (result.span > 0.0) result.span * 1000.0 else if (storyHeight_mm > 0.0) storyHeight_mm else result.width * 1000.0
-
-        // Main Bottom Rebar — computed span + 9φ hook each end (ECP 203 clause)
-        val hookLen = 2 * 9 * result.reinforcementBottom.diameter  // 9φ hook per end × 2 ends
-        val mainBarLen = spanMm + hookLen
-        entries.add(BbsEntry(
-            memberMark = mark, barMark = "01",
-            diameter = result.reinforcementBottom.diameter,
-            shapeCode = 0, count = result.reinforcementBottom.numBars,
-            lengthA = mainBarLen, totalLengthPerBar = mainBarLen,
-            totalWeightKg = result.reinforcementBottom.numBars * mainBarLen / 1000.0 * (result.reinforcementBottom.diameter.toDouble().pow(2) / 162.0)
-        ))
-
-        // Stirrups (Shape Code 51 - Rectangular link)
-        val s = result.stirrups
-        val a = result.width - 80.0 // clear width inside stirrup (2×40mm cover)
-        val b = result.depth - 80.0 // clear depth inside stirrup
-        InputGuard.require(a > 0.0, "Stirrup clear width must be positive (width=${result.width} > 80mm)")
-        InputGuard.require(b > 0.0, "Stirrup clear depth must be positive (depth=${result.depth} > 80mm)")
-        val stirrupLen = 2 * (a + b) + 200.0 // 2×(a+b) + 2×9φ hooks (≈200mm for φ8-φ10)
-
-        var stirrupCount = 0
-        result.stirrups.zones.forEach { zone ->
-            val zoneLen = zone.endLocation - zone.startLocation
-            if (zoneLen > 0 && zone.spacing > 0) {
-                stirrupCount += (zoneLen / zone.spacing).toInt() + 1
-            }
-        }
-        InputGuard.require(stirrupCount > 0, "Beam must have at least 1 stirrup zone with valid spacing")
-
-        entries.add(BbsEntry(
-            memberMark = mark, barMark = "02",
-            diameter = result.stirrups.diameter,
-            shapeCode = 51, count = stirrupCount,
-            lengthA = a, lengthB = b,
-            totalLengthPerBar = stirrupLen,
-            totalWeightKg = stirrupCount * stirrupLen / 1000.0 * (result.stirrups.diameter.toDouble().pow(2) / 162.0)
-        ))
-
-        return entries
+        // No beam schedule is issued. Cutting lengths need verified hook, anchorage, lap and bend rules
+        // for the selected code edition (ECP 203-2020, ACI 318M-14, SBC 304-CR-2018), and the primary
+        // clauses have not been checked against the references. The earlier version applied a flat 9*phi hook
+        // labelled as an ECP clause, a fixed 40 mm cover that disagrees with the 50 mm used by the design and
+        // drawing, a flat 200 mm stirrup hook, and left out the top steel entirely, so it looked like a
+        // complete BBS and was not. Callers (screen, PDF, DXF) already treat an empty list as "no schedule".
+        return emptyList()
     }
+
+    /** Why [generateBeamBbs] returns no schedule; shown to the user next to the missing table. */
+    const val BEAM_BBS_UNAVAILABLE_REASON =
+        "Beam bar bending schedule not issued: cutting lengths (hooks, anchorage, laps, bends) have no verified code basis yet."
 
     /**
      * Generates a Bar Bending Schedule for a designed Column.
@@ -141,6 +130,20 @@ object BbsGenerator {
             totalWeightKg = tieCount * tieLen / 1000.0 * (result.stirrups.diameter.toDouble().pow(2)/162.0)
         ))
         return entries
+    }
+
+    /**
+     * Comparison note only, not detailing: net straight bar lengths between the cover lines (no bends, hooks, anchorage or laps),
+     * with the cover the design used. The footing bar bending schedule itself is NOT ISSUED because those allowances have no verified basis.
+     */
+    fun footingNetLengthNote(result: FootingResult): String {
+        val c = result.coverMm
+        val netX = result.length - 2 * c
+        val netY = result.width - 2 * c
+        val kg = (result.barsX * netX + result.barsY * netY) / 1000.0 * (result.barDiameter.toDouble().pow(2) / 162.0)
+        return "Net straight lengths only (comparison, not a cutting schedule): X ${result.barsX} x ${"%.0f".format(netX)} mm, " +
+            "Y ${result.barsY} x ${"%.0f".format(netY)} mm, cover ${"%.0f".format(c)} mm; net steel ${"%.1f".format(kg)} kg. " +
+            "The quantity table steel uses the plan dimensions without cover, bends, hooks or laps, so the two figures are not expected to match."
     }
 
     /**
@@ -256,6 +259,12 @@ object BbsGenerator {
         stairWidthMm: Double,
         coverMm: Double = 25.0
     ): List<BbsEntry> {
+        require(com.civileg.app.utils.StairResultGate.isDesignUsable(result.analysisStatus)) {
+            "Stair BBS is not available: the case is not an assessed design (${result.analysisStatus})"
+        }
+        // A net flight review has no approved cutting geometry. Never convert it
+        // into straight bars with invented hooks/tails or a final fabrication BBS.
+        if (result.quantityReview?.fabricationScheduleAvailable == false) return emptyList()
         InputGuard.notBlank("memberMark", mark)
         InputGuard.positive("stairWidth", stairWidthMm)
         InputGuard.positive("span", result.span)
@@ -265,9 +274,9 @@ object BbsGenerator {
         InputGuard.positive("mainDiameter", result.reinforcement.diameter)
         InputGuard.positive("mainSpacing", result.reinforcement.spacing)
 
-        val runMm = result.span * 1000.0
-        val nRisers = (runMm / result.tread).toInt().coerceAtLeast(1)
-        val totalRiseMm = nRisers * result.riser
+        val geometry = StairFlightGeometry.from(result.span, result.riser, result.tread)
+        val runMm = geometry.runMm
+        val totalRiseMm = geometry.riseMm
         val inclineMm = sqrt(runMm * runMm + totalRiseMm * totalRiseMm)
         val tailMm = (result.thickness - coverMm).coerceAtLeast(0.0)
 
@@ -316,6 +325,9 @@ object BbsGenerator {
         coverMm: Double = 40.0
     ): List<BbsEntry> {
         InputGuard.notBlank("memberMark", mark)
+        require(!result.type.name.contains("CIRCULAR")) {
+            "Bar schedule for circular tanks is not implemented (hoop and radial layouts are not modelled); no schedule is issued."
+        }
         InputGuard.positive("tankLength", result.length)
         InputGuard.positive("tankWidth", result.width)
         InputGuard.positive("tankHeight", result.height)

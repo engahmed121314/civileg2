@@ -11,9 +11,9 @@ import kotlin.math.*
  * SBC 304 Pile Foundation Design Implementation
  *
  * References:
- *  - SBC 304 §7: Deep foundations (piles)
- *  - SBC 304 §3-2: Load factors (1.4DL + 1.6LL)
- *  - SBC 304 §4: Material safety factors (γc = 1.5, γs = 1.15)
+ *  - geotechnical method, no SBC 304 clause supplied: Deep foundations (piles)
+ *  - Load factors 1.4DL + 1.6LL (SBC clause not verified here)
+ *  - Material safety factors (SBC clause not verified here) (γc = 1.5, γs = 1.15)
  *
  * Key SBC differences from ACI 318:
  *  - Geotechnical: uses fcu directly (cube strength) for bearing capacity
@@ -64,7 +64,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun designPile(input: PileInput): PileDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.fcu", input.fcu)
         InputGuard.positive("input.fy", input.fy)
@@ -78,7 +78,7 @@ class SBCPileFoundation : PileFoundationDesign {
         val codeNotes = mutableListOf<String>()
 
         codeNotes.add(CodeReference.SBC.PILE_CAPACITY)
-        codeNotes.add("SBC 304 §7: Pile Foundation Design")
+        codeNotes.add("Pile foundation design: geotechnical rows are estimates (no SBC 304 geotechnical clause supplied)")
         codeNotes.add("Pile Type: ${input.pileType.displayName}, Soil: ${input.soilType.displayName}")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S, φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")
 
@@ -213,7 +213,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculatePileCapacity(input: PileInput): PileCapacityResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.pileDiameter", input.pileDiameter)
         InputGuard.positive("input.pileLength", input.pileLength)
@@ -229,13 +229,13 @@ class SBCPileFoundation : PileFoundationDesign {
 
         when (input.soilType) {
             com.civileg.app.domain.SoilType.CLAY -> {
-                // Alpha method — SBC 304 §7-3-2
+                // Alpha method — geotechnical method, no SBC 304 clause supplied
                 val alpha = calculateAlphaFactor(input.cu, input.pileType)
                 Qs = alpha * input.cu * PI * D * L
                 Qb = 9.0 * input.cu * PI * D * D / 4.0  // Nc = 9
             }
             com.civileg.app.domain.SoilType.SAND -> {
-                // Beta method — SBC 304 §7-3-3
+                // Beta method — geotechnical method, no SBC 304 clause supplied
                 val K = calculateKFactor(input.pileType)
                 val beta = K * tan(input.phi * PI / 180.0)
                 val avgEffStress = input.gammaSoil * L / 2.0
@@ -246,7 +246,7 @@ class SBCPileFoundation : PileFoundationDesign {
                 Qb = Nq * input.gammaSoil * L * PI * D * D / 4.0
             }
             com.civileg.app.domain.SoilType.ROCK -> {
-                // Socket capacity — SBC 304 §7-3-5
+                // Socket capacity — geotechnical method, no SBC 304 clause supplied
                 Qs = 0.2 * input.cu * PI * D * input.embedmentDepth  // side friction in socket
                 Qb = input.cu * 5.0 * PI * D * D / 4.0  // end bearing on rock
             }
@@ -268,7 +268,7 @@ class SBCPileFoundation : PileFoundationDesign {
             else -> {}
         }
 
-        // Water table correction — SBC 304 §7-4
+        // Water table correction — geotechnical method, no SBC 304 clause supplied
         if (input.waterTableDepth < L) {
             val submergedLength = maxOf(0.0, L - input.waterTableDepth)
             val correction = submergedLength / L
@@ -291,7 +291,7 @@ class SBCPileFoundation : PileFoundationDesign {
 
     /**
      * Calculate alpha adhesion factor for clay.
-     * SBC 304 Table 7.1: alpha depends on cu and pile installation method.
+     * engine table, source not supplied: alpha depends on cu and pile installation method.
      */
     private fun calculateAlphaFactor(cu: Double, pileType: PileType): Double {
         val baseAlpha = when {
@@ -311,7 +311,7 @@ class SBCPileFoundation : PileFoundationDesign {
 
     /**
      * Calculate earth pressure coefficient K for sand.
-     * SBC 304 Table 7.2.
+     * engine table, source not supplied.
      */
     private fun calculateKFactor(pileType: PileType): Double {
         return when (pileType) {
@@ -327,7 +327,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun designPileCap(input: PileCapInput): PileCapResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.pileDiameter", input.pileDiameter)
         InputGuard.positive("input.pileSpacing", input.pileSpacing)
@@ -447,7 +447,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculateSettlement(input: PileInput): PileSettlementResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.pileDiameter", input.pileDiameter)
         InputGuard.positive("input.pileLength", input.pileLength)
@@ -493,7 +493,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun checkGroupEfficiency(input: PileGroupInput): PileGroupResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.pileDiameter", input.pileDiameter)
         InputGuard.positive("input.numberOfPiles", input.numberOfPiles.toDouble())
@@ -532,7 +532,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculateLateralCapacity(input: PileInput): LateralLoadResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.pileDiameter", input.pileDiameter)
         InputGuard.positive("input.pileLength", input.pileLength)
@@ -583,7 +583,7 @@ class SBCPileFoundation : PileFoundationDesign {
     // ══════════════════════════════════════════════════════════════
 
     override fun calculateNegativeSkinFriction(input: PileInput): Double {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.pileDiameter", input.pileDiameter)
         InputGuard.positive("input.pileLength", input.pileLength)
@@ -616,7 +616,7 @@ class SBCPileFoundation : PileFoundationDesign {
         axialLoad: Double,
         moment: Double
     ): PileReinforcementResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.fcu", input.fcu)
         InputGuard.positive("input.fy", input.fy)

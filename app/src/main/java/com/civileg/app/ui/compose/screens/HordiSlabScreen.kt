@@ -13,13 +13,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -32,21 +31,16 @@ import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.domain.entities.LoadCombination
 import com.civileg.app.domain.entities.SlabDesignResult
 import com.civileg.app.ui.compose.components.*
-import com.civileg.app.ui.compose.components.drawings.InteractiveDrawingScreen
-import com.civileg.app.ui.compose.components.drawings.ProfessionalHordiSlabDrawing
-import com.civileg.app.ui.compose.components.drawings.hordiSlabDrawingSummary
 import com.civileg.app.ui.compose.components.common.BbsTableCard
 import com.civileg.app.ui.compose.components.common.BoqTableCard
 import com.civileg.app.domain.calculations.utils.BoqEstimator
 import com.civileg.app.domain.calculations.utils.BbsGenerator
 import com.civileg.app.viewmodel.HordiSlabViewModel
-import com.civileg.app.utils.ComposeDrawingCaptureUtil
-import com.civileg.app.utils.captureToAndroidBitmap
-import kotlinx.coroutines.launch
 import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 
@@ -63,13 +57,6 @@ fun HordiSlabScreen(
 ) {
     val context = LocalContext.current
 
-    val pdfCaptureLayer = ComposeDrawingCaptureUtil.rememberDrawingCaptureLayer()
-    val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
-    val config = LocalConfiguration.current
-    val screenWidthPx = (config.screenWidthDp * density.density).toInt()
-    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
-
     // ── Input state ────────────────────────────────────────────────
     var designCode by remember { mutableStateOf(defaultDesignCode().name) }
     var fcu by remember { mutableStateOf("30") }
@@ -83,11 +70,19 @@ fun HordiSlabScreen(
     var designShear by remember { mutableStateOf("30") }
     var loadCombination by remember { mutableStateOf(LoadCombination.DEAD_LIVE) }
     var loadCombinationExpanded by remember { mutableStateOf(false) }
-    var cover by remember { mutableStateOf("25") }
-
-    // Drawing view mode: 0=All, 1=Plan, 2=Section, 3=Detail
-    var viewMode by remember { mutableStateOf(0) }
-    val viewModeLabels = listOf("All", "Plan", "Section", "Detail")
+    var cover by remember { mutableStateOf("") }
+    var barBondClass by remember { mutableStateOf(com.civileg.app.domain.entities.BarBondClass.UNKNOWN) }
+    var bondClassExpanded by remember { mutableStateOf(false) }
+    // UNSPECIFIED: no support system presumed (simply-supported would be
+    // UNconservative against a cantilever); the deemed deflection check does
+    // not run until the user selects the actual condition.
+    var supportCondition by rememberSaveable { mutableStateOf(com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED) }
+    var supportExpanded by remember { mutableStateOf(false) }
+    // UNDECLARED: the deemed check also requires the user's declaration that
+    // loading is ordinary and no deflection-sensitive elements are supported.
+    var loadingApplicability by rememberSaveable { mutableStateOf(com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED) }
+    var loadingExpanded by remember { mutableStateOf(false) }
+    var detailDraft by remember { mutableStateOf(com.civileg.app.domain.calculations.utils.JoistDetailDraft()) }
 
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
@@ -138,8 +133,9 @@ fun HordiSlabScreen(
                 item {
                     CodeSelectorChips(
                         selectedCode = designCode,
-                        codes = listOf("ECP" to "ECP 203", "ACI" to "ACI 318", "SBC" to "SBC 304"),
+                        codes = com.civileg.app.domain.calculations.utils.RcReferenceBasis.entries.map { it.code to it.edition },
                         onCodeSelected = { newCode ->
+                            viewModel.clearResult()
                             designCode = newCode
                             val combos = LoadCombination.getByCode(
                                 runCatching { DesignCode.valueOf(newCode) }.getOrDefault(DesignCode.ECP)
@@ -156,8 +152,8 @@ fun HordiSlabScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        PremiumInputField(fcu, "fcu (MPa)", { fcu = it }, modifier = Modifier.weight(1f))
-                        PremiumInputField(fy, "fy (MPa)", { fy = it }, modifier = Modifier.weight(1f))
+                        PremiumInputField(fcu, "fcu (MPa)", { viewModel.clearResult(); fcu = it }, modifier = Modifier.weight(1f))
+                        PremiumInputField(fy, "fy (MPa)", { viewModel.clearResult(); fy = it }, modifier = Modifier.weight(1f))
                     }
                 }
 
@@ -169,11 +165,11 @@ fun HordiSlabScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         PremiumInputField(
-                            ribWidth, "Rib Width (mm)", { ribWidth = it },
+                            ribWidth, "Rib Width (mm)", { viewModel.clearResult(); ribWidth = it },
                             modifier = Modifier.weight(1f)
                         )
                         PremiumInputField(
-                            ribSpacing, "Rib Spacing (mm)", { ribSpacing = it },
+                            ribSpacing, "Rib Spacing (mm)", { viewModel.clearResult(); ribSpacing = it },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -184,18 +180,18 @@ fun HordiSlabScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         PremiumInputField(
-                            totalThickness, "Total Thickness (mm)", { totalThickness = it },
+                            totalThickness, "Total Thickness (mm)", { viewModel.clearResult(); totalThickness = it },
                             modifier = Modifier.weight(1f)
                         )
                         PremiumInputField(
-                            toppingThickness, "Topping Thk (mm)", { toppingThickness = it },
+                            toppingThickness, "Topping Thk (mm)", { viewModel.clearResult(); toppingThickness = it },
                             modifier = Modifier.weight(1f)
                         )
                     }
                 }
                 item {
                     PremiumInputField(
-                        span, "Span (mm)", { span = it },
+                        span, "البحر الصافي mm / Clear span between support faces", { viewModel.clearResult(); span = it },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -208,11 +204,11 @@ fun HordiSlabScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         PremiumInputField(
-                            designMoment, "Moment (kN.m/rib)", { designMoment = it },
+                            designMoment, "Moment (kN.m/rib)", { viewModel.clearResult(); designMoment = it },
                             modifier = Modifier.weight(1f)
                         )
                         PremiumInputField(
-                            designShear, "Shear (kN/rib)", { designShear = it },
+                            designShear, "Shear (kN/rib)", { viewModel.clearResult(); designShear = it },
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -220,9 +216,149 @@ fun HordiSlabScreen(
 
                 item {
                     PremiumInputField(
-                        cover, "Clear Cover (mm)", { cover = it },
+                        cover, "Actual cover to outermost reinforcement (mm)", { viewModel.clearResult(); cover = it },
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+
+                // Bar surface/bond classification. UNKNOWN keeps the result a
+                // conservative estimate (isSafe=false); a declared surface is
+                // required for case-qualified acceptance.
+                item {
+                    ExposedDropdownMenuBox(
+                        expanded = bondClassExpanded,
+                        onExpandedChange = { bondClassExpanded = !bondClassExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = when (barBondClass) {
+                                com.civileg.app.domain.entities.BarBondClass.DEFORMED -> "Deformed (ribbed) bars"
+                                com.civileg.app.domain.entities.BarBondClass.PLAIN -> "Plain (smooth) bars"
+                                com.civileg.app.domain.entities.BarBondClass.UNKNOWN -> "Unknown — estimate only"
+                            },
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { AppText("Bar Surface / Bond Class", fontSize = 12.sp) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = bondClassExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            shape = PremiumDesignSystem.InputShape,
+                            singleLine = true
+                        )
+                        ExposedDropdownMenu(
+                            expanded = bondClassExpanded,
+                            onDismissRequest = { bondClassExpanded = false }
+                        ) {
+                            com.civileg.app.domain.entities.BarBondClass.values().forEach { option ->
+                                DropdownMenuItem(
+                                    text = {
+                                        AppText(when (option) {
+                                            com.civileg.app.domain.entities.BarBondClass.DEFORMED -> "Deformed (ribbed) bars"
+                                            com.civileg.app.domain.entities.BarBondClass.PLAIN -> "Plain (smooth) bars"
+                                            com.civileg.app.domain.entities.BarBondClass.UNKNOWN -> "Unknown — estimate only"
+                                        }, fontSize = 13.sp)
+                                    },
+                                    onClick = {
+                                        viewModel.clearResult()
+                                        barBondClass = option
+                                        bondClassExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Support/continuity condition — drives the deemed-to-satisfy
+                // deflection check (ECP Table 4-10 / SBC Table 9.3.1.1).
+                item {
+                    ExposedDropdownMenuBox(
+                        expanded = supportExpanded,
+                        onExpandedChange = { supportExpanded = !supportExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = when (supportCondition) {
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED -> "غير محدد - لم يتم تقييم الترخيم"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED -> "بسيط الارتكاز"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.ONE_END_CONTINUOUS -> "مستمر من طرف واحد"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS -> "مستمر من الطرفين"
+                                com.civileg.app.domain.calculations.base.SlabSupportCondition.CANTILEVER -> "كابولي"
+                            },
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { AppText("حالة الارتكاز (فحص الترخيم)", fontSize = 12.sp) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = supportExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            shape = PremiumDesignSystem.InputShape,
+                            singleLine = true
+                        )
+                        ExposedDropdownMenu(
+                            expanded = supportExpanded,
+                            onDismissRequest = { supportExpanded = false }
+                        ) {
+                            com.civileg.app.domain.calculations.base.SlabSupportCondition.values().forEach { option ->
+                                DropdownMenuItem(
+                                    text = {
+                                        AppText(when (option) {
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED -> "غير محدد - لم يتم تقييم الترخيم"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED -> "بسيط الارتكاز"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.ONE_END_CONTINUOUS -> "مستمر من طرف واحد"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS -> "مستمر من الطرفين"
+                                            com.civileg.app.domain.calculations.base.SlabSupportCondition.CANTILEVER -> "كابولي"
+                                        }, fontSize = 13.sp)
+                                    },
+                                    onClick = {
+                                        viewModel.clearResult()
+                                        supportCondition = option
+                                        supportExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Loading/deflection-sensitivity declaration — Table 4-10 notes
+                // (ج/د) / SBC 9.3.1.1 scope gate the deemed deflection check.
+                item {
+                    ExposedDropdownMenuBox(
+                        expanded = loadingExpanded,
+                        onExpandedChange = { loadingExpanded = !loadingExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = when (loadingApplicability) {
+                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED -> "غير مُعلن - لم يتم تقييم الترخيم"
+                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS -> "أحمال عادية، خرسانة طبيعية الوزن، بدون عناصر حساسة للتلف"
+                                com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.SENSITIVE_OR_IRREGULAR -> "عناصر حساسة أو غير منتظمة - يلزم حساب ترخيم تفصيلي"
+                            },
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { AppText("الأحمال / العناصر المحمولة (فحص الترخيم)", fontSize = 12.sp) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = loadingExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            shape = PremiumDesignSystem.InputShape,
+                            singleLine = true
+                        )
+                        ExposedDropdownMenu(
+                            expanded = loadingExpanded,
+                            onDismissRequest = { loadingExpanded = false }
+                        ) {
+                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.values().forEach { option ->
+                                DropdownMenuItem(
+                                    text = {
+                                        AppText(when (option) {
+                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED -> "غير مُعلن - لم يتم تقييم الترخيم"
+                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS -> "أحمال عادية، خرسانة طبيعية الوزن، بدون عناصر حساسة للتلف"
+                                            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.SENSITIVE_OR_IRREGULAR -> "عناصر حساسة أو غير منتظمة - يلزم حساب ترخيم تفصيلي"
+                                        }, fontSize = 13.sp)
+                                    },
+                                    onClick = {
+                                        viewModel.clearResult()
+                                        loadingApplicability = option
+                                        loadingExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // Load Combination Dropdown
@@ -251,6 +387,7 @@ fun HordiSlabScreen(
                                 DropdownMenuItem(
                                     text = { AppText(combo.description, fontSize = 13.sp) },
                                     onClick = {
+                                        viewModel.clearResult()
                                         loadCombination = combo
                                         loadCombinationExpanded = false
                                     }
@@ -260,6 +397,10 @@ fun HordiSlabScreen(
                     }
                 }
 
+                if (designCode == "ECP") {
+                    item { JoistDetailInputCard(detailDraft) { viewModel.clearResult(); detailDraft = it } }
+                }
+
                 // ── Calculate Button ──────────────────────────────────
                 item {
                     AppButton(
@@ -267,17 +408,27 @@ fun HordiSlabScreen(
                         onClick = {
                             viewModel.clearResult()
                             viewModel.calculateHordiSlab(
-                                fcu = fcu.toDoubleOrNull() ?: 30.0,
-                                fy = fy.toDoubleOrNull() ?: 400.0,
-                                ribWidth = ribWidth.toDoubleOrNull() ?: 120.0,
-                                ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
-                                totalThickness = totalThickness.toDoubleOrNull() ?: 350.0,
-                                toppingThickness = toppingThickness.toDoubleOrNull() ?: 50.0,
-                                span = span.toDoubleOrNull() ?: 6000.0,
-                                designMoment = designMoment.toDoubleOrNull() ?: 80.0,
-                                designShear = designShear.toDoubleOrNull() ?: 30.0,
+                                fcu = fcu.toDoubleOrNull() ?: Double.NaN,
+                                fy = fy.toDoubleOrNull() ?: Double.NaN,
+                                ribWidth = ribWidth.toDoubleOrNull() ?: Double.NaN,
+                                ribSpacing = ribSpacing.toDoubleOrNull() ?: Double.NaN,
+                                totalThickness = totalThickness.toDoubleOrNull() ?: Double.NaN,
+                                toppingThickness = toppingThickness.toDoubleOrNull() ?: Double.NaN,
+                                span = span.toDoubleOrNull() ?: Double.NaN,
+                                designMoment = designMoment.toDoubleOrNull() ?: Double.NaN,
+                                designShear = designShear.toDoubleOrNull() ?: Double.NaN,
                                 loadCombination = loadCombination,
-                                designCode = designCode
+                                designCode = designCode,
+                                coverMm = cover.toDoubleOrNull() ?: Double.NaN,
+                                barBondClass = barBondClass,
+                                supportCondition = supportCondition,
+                                loadingApplicability = loadingApplicability,
+                                detailCase = detailDraft.toCase(
+                                    span.toDoubleOrNull() ?: Double.NaN,
+                                    designMoment.toDoubleOrNull() ?: Double.NaN,
+                                    designShear.toDoubleOrNull() ?: Double.NaN,
+                                    cover.toDoubleOrNull() ?: Double.NaN
+                                )
                             )
                         },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -307,50 +458,75 @@ fun HordiSlabScreen(
 
                 // ── Results ───────────────────────────────────────────
                 result?.let { res ->
-                    val bbsEntries = runCatching {
-                        BbsGenerator.generateHordiSlabBbs(
-                            mark = "H1",
-                            result = res,
-                            spanMm = span.toDoubleOrNull() ?: 6000.0,
-                            ribSpacingMm = ribSpacing.toDoubleOrNull() ?: 500.0,
-                            coverMm = cover.toDoubleOrNull() ?: 25.0
-                        )
-                    }.getOrDefault(emptyList())
-                    if (bbsEntries.isNotEmpty()) {
-                        item { BbsTableCard(bbsEntries, title = "Hordi Slab Bar Bending Schedule") }
-                    }
-
-                    val boqRows = runCatching {
-                        BoqEstimator.hordiSlabRows(
-                            (span.toDoubleOrNull() ?: 6000.0) / 1000.0,
-                            (totalThickness.toDoubleOrNull() ?: 350.0) / 1000.0,
-                            bbsEntries.sumOf { it.totalWeightKg },
-                            "H1"
-                        )
-                    }.getOrDefault(emptyList())
-                    if (boqRows.isNotEmpty()) {
-                        item { BoqTableCard(boqRows, title = "Hordi Slab Bill of Quantities") }
-                    }
-
-                    // Safety Status Gauge
+                    val params = viewModel.calculatedInput ?: return@let
+                    val bbsEntries = viewModel.reviewBbsEntries()
                     item {
-                        SafetyStatusCard(
-                            utilizationRatio = res.utilizationRatio,
-                            isSafe = res.isSafe,
-                            title = stringResource(R.string.hordi_slab_safety_title, designCode)
+                        ResultDataCard(
+                            "غير مكتمل للتنفيذ / INCOMPLETE FOR CONSTRUCTION",
+                            listOf("Status" to "${params.referenceBasis.edition}: method rebuild and complete adopted detailing pending",
+                                "Takeoff basis" to com.civileg.app.domain.calculations.utils.HordiReviewTakeoff.LIMITATION),
+                            icon = Icons.Default.Warning, accentColor = Color(0xFFE53935)
                         )
+                    }
+                    val codeReview = viewModel.codeSpecificReview()
+                    codeReview?.let { review ->
+                        item {
+                            val rows = buildList {
+                                add("Engineering status" to "NOT ISSUED. Bounded section review only")
+                                add("Unverified requirements" to review.limitations)
+                                if (review.missingInputs.isNotEmpty()) add("Missing inputs" to review.missingInputs.joinToString("; "))
+                                if (review.unsupported.isNotEmpty()) add("Unsupported" to review.unsupported.joinToString("; "))
+                                review.section?.let { check ->
+                                    add("Effective depth" to "${check.effectiveDepthMm} mm")
+                                    add("Required area incl minimum" to (check.requiredAreaWithMinimumMm2?.let { "$it mm2" } ?: "No singly reinforced solution"))
+                                    add("Provided area" to "${check.providedAreaMm2} mm2")
+                                    add("Section check only" to if (check.sectionPasses) "PASS, not full design" else "FAIL")
+                                }
+                                review.concreteOnlyShearKn?.let { add("Concrete-only shear threshold" to "$it kN") }
+                                review.shearDemandWithinConcreteThreshold?.let { add("Shear threshold check" to if (it) "Within threshold, detailing still unchecked" else "Exceeds threshold") }
+                                review.bottomStraightDevelopmentMm?.let { add("Straight bottom development" to "$it mm") }
+                                review.leftAnchorageFits?.let { add("Left straight anchorage fits" to it.toString()) }
+                                review.rightAnchorageFits?.let { add("Right straight anchorage fits" to it.toString()) }
+                                review.effectiveSpanMm?.let { add("Effective span, demand NOT reanalysed" to "${String.format(java.util.Locale.US, "%.2f", it)} mm, 6-2-1-1-1 via 6-2-2-4") }
+                                review.crossRibsRequired?.let { add("Cross ribs required, not designed" to it.toString()) }
+                                review.crossRibMinimums?.let { minimum ->
+                                    add("Cross-rib minima ONLY, 6-2-2-2" to "Width >= ${minimum.minimumWebWidthMm} mm; total depth >= ${minimum.minimumTotalDepthMm} mm; bottom As >= ${minimum.minimumBottomAreaMm2} mm2")
+                                    add("Cross-rib top steel rule" to "As top >= 0.5 x ACTUAL cross-rib bottom As. Cross-rib demand, bars and anchorage NOT designed or counted")
+                                }
+                            }
+                            ResultDataCard("ECP 203-2020 partial case review", rows,
+                                icon = Icons.Default.Warning, accentColor = Color(0xFFE53935))
+                        }
+                    }
+                    val panelBottom = viewModel.panelBottomTakeoff()
+                    val panelEntries = viewModel.panelBottomEntries()
+                    if (panelEntries.isNotEmpty()) {
+                        item { ResultDataCard("Partial panel bottom steel only",
+                            listOf("Limitations" to com.civileg.app.domain.calculations.ecp.ECP2020JoistBottomTakeoff.LIMITATION),
+                            icon = Icons.Default.Warning, accentColor = Color(0xFFE53935)) }
+                        item { BbsTableCard(panelEntries, title = "Partial panel bottom bars incl straight development, NOT complete BBS") }
+                    } else if (panelBottom != null && panelBottom.reasons.isNotEmpty()) {
+                        item { ResultDataCard("Partial panel takeoff not available", listOf("Reason" to panelBottom.reasons.joinToString("; ")),
+                            icon = Icons.Default.Warning, accentColor = Color(0xFFE53935)) }
+                    }
+                    if (bbsEntries.isNotEmpty() && panelEntries.isEmpty()) {
+                        item { BbsTableCard(bbsEntries, title = "Review only: main bar bodies for ONE RIB, no end anchorage") }
+                    }
+                    val boqRows = runCatching { viewModel.reviewBoqRows() }.getOrDefault(emptyList())
+                    if (boqRows.isNotEmpty()) {
+                        item { BoqTableCard(boqRows, title = "Partial review quantities, not total member takeoff") }
                     }
 
                     // Reinforcement Result
                     item {
                         ResultDataCard(
-                            stringResource(R.string.hordi_slab_reinforcement),
+                            "Legacy engine reinforcement - NOT selected-edition design",
                             listOf(
-                                stringResource(R.string.hordi_slab_required_as) to String.format("%.1f mm²", res.requiredReinforcement),
+                                stringResource(R.string.hordi_slab_required_as) to com.civileg.app.utils.DesignNumberFormat.areaMm2(res.requiredReinforcement),
                                 stringResource(R.string.hordi_slab_provided_as) to String.format("%.1f mm²", res.providedReinforcement),
                                 "Bar Diameter" to String.format("φ%.0f mm", res.barDiameter),
-                                "Bar Spacing" to String.format("@%.0f mm", res.barSpacing),
-                                "Bar String" to String.format("φ%.0f @%.0f mm", res.barDiameter, res.barSpacing)
+                                "Bars per rib (review)" to (com.civileg.app.domain.calculations.utils.HordiBarAdoption.adoptedCount(res.providedReinforcement, res.barDiameter)?.toString() ?: "Not resolved"),
+                                "Rib pitch (not bar spacing)" to String.format("%.0f mm", params.ribSpacing)
                             ),
                             icon = Icons.Default.Build,
                             accentColor = Color(0xFF1565C0)
@@ -360,15 +536,21 @@ fun HordiSlabScreen(
                     // Shear Check
                     item {
                         ResultDataCard(
-                            stringResource(R.string.hordi_slab_shear_check),
+                            "Legacy engine shear - NOT selected-edition design",
                             listOf(
                                 "Shear Capacity" to String.format("%.1f kN", res.shearCapacity),
                                 "Min Thickness" to String.format("%.0f mm", res.minThickness),
-                                "Utilization" to String.format("%.1f%%", res.utilizationRatio * 100),
-                                "Status" to if (res.isSafe) "PASS ✓" else "FAIL ✗"
+                                "Utilization" to com.civileg.app.utils.DesignNumberFormat.percent(res.utilizationRatio, 1),
+                                "Engine Check (unverified)" to when {
+                                    !res.bondClassAssessed -> "ESTIMATE ONLY - bar surface undeclared, cannot be accepted"
+                                    res.isSafe -> "PASS - method not verified"
+                                    else -> "FAIL"
+                                },
+                                "Serviceability (deflection)" to if (res.serviceabilityAssessed) "assessed" else "NOT ASSESSED - no code-grounded deflection check (see notes)",
+                                "Engineering acceptance" to if (res.engineeringAcceptance) "ACCEPTED" else "NO - qualification incomplete"
                             ),
                             icon = Icons.Default.Shield,
-                            accentColor = if (res.isSafe) Color(0xFF2E7D32) else Color(0xFFE53935)
+                            accentColor = Color(0xFFE53935)
                         )
                     }
 
@@ -387,81 +569,19 @@ fun HordiSlabScreen(
                                     }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     res.warnings.forEach { w ->
-                                        AppText("• $w", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                                        AppTextBlock("• $w", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
                                     }
                                 }
                             }
                         }
                     }
 
-                    // ── Drawing Section ────────────────────────────────
+                    // No default mesh, stirrups or support bars are presented
+                    // as adopted design. The shared drawing awaits a real layout.
                     item {
-                        val drawingHeight = if (config.smallestScreenWidthDp >= 600) 580 else 480
-                        InteractiveDrawingScreen(
-                            onExportDxf = { viewModel.exportToDxf(context) },
-                            title = stringResource(R.string.hordi_slab_title),
-                            subtitle = "Ribbed Slab Detail",
-                            viewModes = viewModeLabels,
-                            selectedViewMode = viewMode,
-                            onViewModeChanged = { viewMode = it },
-                            drawingHeightDp = drawingHeight,
-                            onExportPdf = {
-                                scope.launch {
-                                    val captureBitmap = try {
-                                        pdfCaptureLayer.captureToAndroidBitmap()
-                                    } catch (_: Exception) { null }
-                                    viewModel.pendingDrawingBitmap = captureBitmap
-                                    viewModel.exportToPdf(context) { file -> }
-                                }
-                            },
-                            designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
-                            drawingContent = {
-                                ProfessionalHordiSlabDrawing(
-                                    span = span.toDoubleOrNull() ?: 6000.0,
-                                    ribWidth = ribWidth.toDoubleOrNull() ?: 120.0,
-                                    ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
-                                    totalThickness = totalThickness.toDoubleOrNull() ?: 350.0,
-                                    toppingThickness = toppingThickness.toDoubleOrNull() ?: 50.0,
-                                    ribBottomDia = res.barDiameter,
-                                    ribBottomCount = if (res.barDiameter > 0) maxOf(2, (res.providedReinforcement / (kotlin.math.PI / 4.0 * res.barDiameter * res.barDiameter)).toInt()) else 2,
-                                    stirrupDia = 8.0,
-                                    stirrupSpacing = 200.0,
-                                    cover = cover.toDoubleOrNull() ?: 25.0,
-                                    viewMode = viewMode,
-                                    resultSummary = hordiSlabDrawingSummary(res),
-                                    designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        )
-                    }
-
-                    // Invisible capture layer for PDF export
-                    item {
-                        ComposeDrawingCaptureUtil.DrawingCaptureArea(
-                            captureLayer = pdfCaptureLayer,
-                            widthPx = screenWidthPx,
-                            heightPx = screenHeightPx
-                        ) {
-                            Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
-                                ProfessionalHordiSlabDrawing(
-                                    span = span.toDoubleOrNull() ?: 6000.0,
-                                    ribWidth = ribWidth.toDoubleOrNull() ?: 120.0,
-                                    ribSpacing = ribSpacing.toDoubleOrNull() ?: 500.0,
-                                    totalThickness = totalThickness.toDoubleOrNull() ?: 350.0,
-                                    toppingThickness = toppingThickness.toDoubleOrNull() ?: 50.0,
-                                    ribBottomDia = res.barDiameter,
-                                    ribBottomCount = 2,
-                                    stirrupDia = 8.0,
-                                    stirrupSpacing = 200.0,
-                                    cover = 25.0,
-                                    viewMode = viewMode,
-                                    resultSummary = hordiSlabDrawingSummary(res),
-                                    designCode = com.civileg.app.domain.entities.DesignCode.valueOf(designCode),
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        }
+                        ResultDataCard("Reinforcement drawing not issued",
+                            listOf("Reason" to "Anchorage, topping steel, stirrups, supports and cross ribs are not adopted by this engine"),
+                            icon = Icons.Default.Warning, accentColor = Color(0xFFE53935))
                     }
 
                     // Code Notes
@@ -474,15 +594,7 @@ fun HordiSlabScreen(
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             AppButton(
                                 label = "Export PDF",
-                                onClick = {
-                                    scope.launch {
-                                        val captureBitmap = try {
-                                            pdfCaptureLayer.captureToAndroidBitmap()
-                                        } catch (_: Exception) { null }
-                                        viewModel.pendingDrawingBitmap = captureBitmap
-                                        viewModel.exportToPdf(context) { file -> }
-                                    }
-                                },
+                                onClick = { viewModel.exportToPdf(context) { } },
                                 modifier = Modifier.weight(1f),
                                 enabled = !isExporting,
                                 loading = isExporting,

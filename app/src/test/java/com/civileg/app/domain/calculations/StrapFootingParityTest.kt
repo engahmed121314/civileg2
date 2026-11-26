@@ -59,7 +59,7 @@ class StrapFootingParityTest {
     // ═════════════════════════════════════════════════════════════════════════════
 
     @Test
-    fun allCodesProduceIdenticalDimensionsAndSteelForSameInputs() {
+    fun allCodesShareStaticsAndPlanDimensionsForSameInputs() {
         val ecp = ECPStrapFooting().design(baseInputs)
         val aci = ACIStrapFooting().design(baseInputs)
         val sbc = SBCStrapFooting().design(baseInputs)
@@ -68,13 +68,12 @@ class StrapFootingParityTest {
         assertEquals("footing1 width must match across codes", ecp.footing1.width, sbc.footing1.width, 0.001)
         assertEquals("footing1 length must match across codes", ecp.footing1.length, aci.footing1.length, 0.001)
         assertEquals("footing1 length must match across codes", ecp.footing1.length, sbc.footing1.length, 0.001)
-        assertEquals("footing1 thickness must match", ecp.footing1.thickness, aci.footing1.thickness, 0.001)
+        // ECP now uses its own punching (Eq 4-46), K-method flexure and shear stress, so thickness, steel and
+        // strap depth are no longer expected to equal the ACI-style engine. Statics and plan sizes still match.
         assertEquals("footing2 width must match across codes", ecp.footing2.width, aci.footing2.width, 0.001)
         assertEquals("footing2 length must match across codes", ecp.footing2.length, aci.footing2.length, 0.001)
-        assertEquals("strap depth must match across codes", ecp.strapBeam.depth, aci.strapBeam.depth, 0.001)
-        assertEquals("strap top bars must match across codes", ecp.strapBeam.topReinforcement.numberOfBars, aci.strapBeam.topReinforcement.numberOfBars)
-        assertEquals("strap top bars must match across codes", ecp.strapBeam.topReinforcement.numberOfBars, sbc.strapBeam.topReinforcement.numberOfBars)
-        assertEquals("strap area provided must match", ecp.strapBeam.topReinforcement.areaProvided, aci.strapBeam.topReinforcement.areaProvided, 1.0)
+        assertEquals("ACI and SBC share the engine: thickness", aci.footing1.thickness, sbc.footing1.thickness, 0.001)
+        assertEquals("ACI and SBC share the engine: strap bars", aci.strapBeam.topReinforcement.numberOfBars, sbc.strapBeam.topReinforcement.numberOfBars)
         assertEquals("reactions must match across codes", ecp.reactions.first, aci.reactions.first, 0.5)
         assertEquals("reactions must match across codes", ecp.reactions.first, sbc.reactions.first, 0.5)
     }

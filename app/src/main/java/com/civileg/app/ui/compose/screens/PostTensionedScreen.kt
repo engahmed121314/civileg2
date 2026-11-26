@@ -477,7 +477,7 @@ private fun ExportButton(
 
 @Composable
 private fun StatusBanner(isSafe: Boolean) {
-    val color = if (isSafe) Color(0xFF2E7D32) else Color(0xFFC62828)
+    val color = if (isSafe) Color(0xFFEF6C00) else Color(0xFFC62828)
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)),
@@ -489,12 +489,12 @@ private fun StatusBanner(isSafe: Boolean) {
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Icon(
-                if (isSafe) Icons.Default.CheckCircle else Icons.Default.Warning,
+                Icons.Default.Warning,
                 contentDescription = null,
                 tint = color
             )
             AppText(
-                if (isSafe) "Design is SAFE / التصميم آمن" else "Design is UNSAFE / التصميم غير آمن",
+                if (isSafe) "PRELIMINARY: checks run passed; assessment not complete / أولي: الفحوص المنفذة اجتازت والتقييم غير مكتمل" else "A check did not pass / أحد الفحوص لم يجتز",
                 color = color,
                 fontWeight = FontWeight.Bold
             )
@@ -519,6 +519,7 @@ private fun ResultCard(title: String, content: @Composable () -> Unit) {
 
 @Composable
 private fun ResultRow(label: String, value: String, bold: Boolean = false) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -535,6 +536,7 @@ private fun ResultRow(label: String, value: String, bold: Boolean = false) {
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium
         )
     }
+}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

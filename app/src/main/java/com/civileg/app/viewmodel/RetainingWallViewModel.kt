@@ -99,12 +99,21 @@ class RetainingWallViewModel @Inject constructor(
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {
+                _result.value = null; _validationReport.value = null  // a failed attempt must not leave the previous design on screen
                 _error.value = "Error: ${e.message}"
                 _errorMessage.value = "Calculation error / خطأ في الحساب: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    /** Drop the shown result (an input changed or the last attempt failed). */
+    fun clearResult() {
+        _result.value = null
+        _validationReport.value = null
+        _error.value = null
+        pendingDrawingBitmap = null
     }
 
     // Legacy method for backward compatibility

@@ -86,10 +86,109 @@ class ECPFlatSlabTest {
     }
 
     @Test
-    fun `design_deflectionValuesAreSet`() {
+    fun `design_deflectionIsReportedNotAssessed`() {
         val result = flatSlab.design(defaultInput())
-        assertTrue("Deflection > 0", result.deflection > 0)
-        assertTrue("Allowable deflection > 0", result.allowableDeflection > 0)
+        assertFalse("Deflection must not be reported as assessed", result.deflectionAssessed)
+        assertFalse("No false deflection pass", result.deflectionOk)
+        assertTrue(result.warnings.any { it.contains("NOT ASSESSED") })
+    }
+
+    // ECP 203-2025 hand checks (defaultInput: 6.0 x 7.5 m, h=250, col 400, fcu 30, fy 400, LL 3, finish 2)
+    // wu = 1.4 x (6.25 + 2) + 1.6 x 3 = 16.35 kN/m2
+
+    @Test
+    fun `eq618_totalMoment_matchesHandValue`() {
+        // M0X = (16.35 x 7.5 / 8)(6 - 2 x 0.4 / 3)^2 = 503.9 kN.m (Eq 6-18, p.6-24)
+        val r = flatSlab.design(defaultInput())
+        assertEquals(503.9, r.panelMomentX, 0.5)
+        // M0Y = (16.35 x 6 / 8)(7.5 - 0.2667)^2 = 641.6
+        assertEquals(641.6, r.panelMomentY, 0.5)
+    }
+
+    @Test
+    fun `table65_interiorBay_columnStripMoments`() {
+        // col strip +0.25 M0, -0.45 M0 (Table 6-5, p.6-25)
+        val r = flatSlab.design(defaultInput())
+        assertEquals(0.25 * r.panelMomentX, r.columnStripMomentPos, 0.01)
+        assertEquals(0.45 * r.panelMomentX, r.columnStripMomentNeg, 0.01)
+        assertEquals(0.15 * r.panelMomentX, r.middleStripMomentPos, 0.01)
+    }
+
+    @Test
+    fun `table65_exteriorBay_totalsMatchFig69`() {
+        val t = ECPFlatSlab.BAY_EXTERIOR
+        assertEquals(0.30, t.colNegExt + t.midNegExt, 1e-9)
+        assertEquals(0.50, t.colPos + t.midPos, 1e-9)
+        assertEquals(0.70, t.colNegInt + t.midNegInt, 1e-9)
+        val i = ECPFlatSlab.BAY_INTERIOR
+        assertEquals(0.60, i.colNegExt + i.midNegExt, 1e-9)
+        assertEquals(0.40, i.colPos + i.midPos, 1e-9)
+    }
+
+    @Test
+    fun `stripWidth_isLminOverTwo_bothDirections`() {
+        val r = flatSlab.design(defaultInput())
+        assertEquals(3000.0, r.columnStripWidthX, 0.1)
+        assertEquals(3000.0, r.columnStripWidthY, 0.1)
+    }
+
+    @Test
+    fun `design_yDirectionReinforcementIsDesigned`() {
+        val r = flatSlab.design(defaultInput())
+        assertNotNull(r.columnStripTopRebarY)
+        assertTrue(r.columnStripTopRebarY!!.providedArea >= r.columnStripTopRebarY!!.requiredArea)
+        assertTrue(r.columnStripTopRebarY!!.requiredArea > r.columnStripTopRebar.requiredArea) // MoY > MoX
+    }
+
+    @Test
+    fun `punching_interior_matchesEq446c_andEq625`() {
+        // d = 250 - 25 - 6 = 219; b1 = b2 = 619; bo = 2476
+        // q_cup = 0.316 sqrt(30/1.5) = 1.413 N/mm2 -> Vc = 766 kN; Vu = 16.35 x 45 x 1.15 = 846 kN
+        val r = flatSlab.design(defaultInput())
+        assertEquals(2476.0, r.punchingPerimeter, 1.0)
+        assertEquals(766.3, r.punchingShearVc, 1.0)
+        assertEquals(846.1, r.punchingShearVu, 1.0)
+        assertNotNull("Vu > Vc needs punching reinforcement (h >= 250 mm)", r.punchingReinforcement)
+    }
+
+    @Test
+    fun `punching_columnLoadDependsOnPanelType`() {
+        val i = flatSlab.design(defaultInput(panelType = PanelType.INTERIOR)).punchingShearVu
+        val e = flatSlab.design(defaultInput(panelType = PanelType.EDGE)).punchingShearVu
+        val c = flatSlab.design(defaultInput(panelType = PanelType.CORNER)).punchingShearVu
+        assertEquals(16.35 * 45.0 * 1.15, i, 0.5)
+        assertEquals(16.35 * 22.5 * 1.30, e, 0.5)
+        assertEquals(16.35 * 11.25 * 1.50, c, 0.5)
+    }
+
+    @Test
+    fun `punching_thinSlabWithoutStudThickness_fails`() {
+        val r = flatSlab.design(defaultInput(slabThickness = 180.0))
+        assertFalse(r.punchingShearOk)
+        assertFalse(r.isSafe)
+    }
+
+    @Test
+    fun `minThickness_table63`() {
+        // fy 400 -> 350 row. interior no drop Ln/35, exterior no edge beam Ln/32; Ln(long) = 7100
+        assertEquals(7100.0 / 35.0, flatSlab.design(defaultInput()).let { 7100.0 / ECPFlatSlab.table63Divisor(400.0, false, false) }, 1e-9)
+        assertEquals(7100.0 / 32.0, flatSlab.getMinimumThickness(5600.0, 7100.0, false, 30.0, 400.0, true), 1e-6)
+        assertEquals(7100.0 / 35.0, flatSlab.getMinimumThickness(5600.0, 7100.0, false, 30.0, 400.0, false), 1e-6)
+        assertEquals(38.0, ECPFlatSlab.table63Divisor(350.0, false, true), 0.0)
+        assertEquals(22.0, ECPFlatSlab.table63Divisor(700.0, false, false), 0.0)
+    }
+
+    @Test
+    fun `steelWeight_isPlausible`() {
+        val r = flatSlab.design(defaultInput())
+        assertTrue("kg/panel should be a few hundred to few thousand, was ${r.steelWeightPerPanel}", r.steelWeightPerPanel in 200.0..5000.0)
+    }
+
+    @Test
+    fun `empirical_notApplicable_whenAspectAbove1_3`() {
+        val r = flatSlab.design(defaultInput(lx = 5000.0, ly = 8000.0))
+        assertFalse(r.isSafe)
+        assertTrue(r.warnings.any { it.contains("aspect ratio") })
     }
 
     @Test

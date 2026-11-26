@@ -196,6 +196,7 @@ fun DesignResultRow(
     valueColor: Color = MaterialTheme.colorScheme.onSurface,
     modifier: Modifier = Modifier
 ) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -205,6 +206,7 @@ fun DesignResultRow(
         AppText(label, fontSize = 13.sp, color = labelColor)
         AppText(value, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = valueColor)
     }
+}
 }
 
 // ============================================================================
@@ -283,8 +285,9 @@ fun DesignInputField(
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChange,
-        label = { AppText(label, fontSize = 13.sp) },
+        onValueChange = { onValueChange(normalizeNumericInput(it)) },
+        label = { AppText(label, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+        singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
@@ -481,6 +484,7 @@ fun SafetyCheckRow(
     detail: String = "",
     modifier: Modifier = Modifier
 ) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -500,6 +504,7 @@ fun SafetyCheckRow(
                 color = if (isSafe) Color(0xFF2E7D32) else Color(0xFFE53935))
         }
     }
+}
 }
 
 // ============================================================================

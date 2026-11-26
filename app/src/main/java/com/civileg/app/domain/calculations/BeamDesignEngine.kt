@@ -243,6 +243,7 @@ object BeamDesignEngine {
         allWarnings.addAll(shearResult.warnings)
         if (deflResult.longTerm > deflResult.allowable) allWarnings.add("Deflection exceeds allowable limit")
         if (crackResult.calculated > crackResult.allowable) allWarnings.add("Crack width exceeds ${crackResult.allowable} mm")
+        allWarnings.add("Development and lap lengths are code-formula lengths only (straight bottom bar); available anchorage, curtailment and hook/bend cutting lengths were not checked")
 
         val isSafe = safetyChecks.all { it.isSafe }
         val flexUtil = mu / max(MR, 0.001)
@@ -262,9 +263,9 @@ object BeamDesignEngine {
         val codeNotesList = mutableListOf<String>()
         codeNotesList.addAll(flexureResult.codeNotes)
         codeNotesList.addAll(shearResult.codeNotes)
-        if (code == DesignCode.ECP) codeNotesList.add("Design per ECP 203-2025")
-        else if (code == DesignCode.ACI) codeNotesList.add("Design per ACI 318-25")
-        else codeNotesList.add("Design per SBC 304-2024")
+        if (code == DesignCode.ECP) codeNotesList.add("Design per ECP 203")
+        else if (code == DesignCode.ACI) codeNotesList.add("Design per ACI 318")
+        else codeNotesList.add("Design per SBC 304")
 
         return BeamDesignResult(
             beamWidth = b, beamDepth = h, span = span, clearSpan = clearSpan,
@@ -332,7 +333,7 @@ object BeamDesignEngine {
             effectiveModularRatio = alphaE, neutralAxisRatio = if (d > 0) flexureResult.neutralAxisDepth / d else 0.0,
             developmentLengthRequired = devResult.required, developmentLengthProvided = devResult.provided,
             bondStress = devResult.fbd, lapLength = devResult.lapLength,
-            developmentIsSafe = devResult.required <= devResult.provided,
+            developmentIsSafe = false, // no verified development check was performed
             isSafe = isSafe, utilizationRatio = overallUtil,
             flexureUtilization = flexUtil, shearUtilization = shearUtil,
             concreteVolume = vol, steelWeight = totalSteel,

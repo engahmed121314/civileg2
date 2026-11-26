@@ -71,7 +71,13 @@ data class SeismicBaseShearResult(
     val allowableDrift: Double = 0.0,     // mm
     val driftRatio: Double = 0.0,         // Δ/h
     val driftIsSafe: Boolean = true
-)
+) {
+    /**
+     * True only when the engine produced a drift estimate. [driftIsSafe] defaults to true, so on its own it
+     * cannot tell "drift passed" from "drift was never computed". The screen uses the same signal.
+     */
+    val driftAssessed: Boolean get() = maxStoryDrift > 0.0 && allowableDrift > 0.0
+}
 
 data class SpectrumValue(
     val spectralAcceleration: Double,     // g أو m/s²

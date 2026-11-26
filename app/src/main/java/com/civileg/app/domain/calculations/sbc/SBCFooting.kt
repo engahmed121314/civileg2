@@ -27,9 +27,10 @@ class SBCFooting : FootingDesign {
         fcu: Double, fy: Double, columnWidth: Double, columnDepth: Double,
         axialLoad: Double, momentX: Double, momentY: Double,
         soilBearingCapacity: Double, footingDepth: Double, loadCombination: LoadCombination,
-        constraints: BoundaryConstraints
+        constraints: BoundaryConstraints,
+        serviceAxialLoad: Double?
     ): FootingDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("columnWidth", columnWidth)
@@ -47,7 +48,10 @@ class SBCFooting : FootingDesign {
         
         // 1. تحويل الأحمال للخدمة (لحساب أبعاد القاعدة)
         val factor = loadCombination.getFactorForCode(DesignCode.SBC)
-        val P_service = axialLoad / factor
+        require(serviceAxialLoad == null || (momentX == 0.0 && momentY == 0.0)) {
+            "Moments are not supported together with an entered service load: the service and factored moment components are not available, and dividing by a load factor is not a grounded conversion."
+        }
+        val P_service = serviceAxialLoad ?: (axialLoad / factor)
         val Mx_service = momentX / factor
         val My_service = momentY / factor
         
@@ -98,7 +102,7 @@ class SBCFooting : FootingDesign {
         }
         
         // Factored soil pressure for flexure and one-way shear design (ultimate level)
-        val q_factored = q_avg * factor
+        val q_factored = if (serviceAxialLoad != null && actualArea > 0) axialLoad / actualArea else q_avg * factor
         
         // 5. السمك الفعال
         val d = footingDepth - getMinCover() - 10.0
@@ -151,7 +155,7 @@ class SBCFooting : FootingDesign {
             200.0
         }
 
-        codeNotes.add("SBC 304-2024: Isolated Footing Design (ACI 318 based)")
+        codeNotes.add("SBC 304: Isolated Footing Design (ACI 318 based)")
         codeNotes.add(CodeReference.SBC.FOOTING_BEARING)
         codeNotes.add(CodeReference.SBC.FOOTING_SHEAR_PUNCHING)
         codeNotes.add(CodeReference.SBC.FOOTING_REINFORCEMENT)
@@ -194,7 +198,7 @@ class SBCFooting : FootingDesign {
         InputGuard.positive("punchingShearForce", punchingShearForce)
         InputGuard.notNull("loadCombination", loadCombination)
 
-        // SBC 304-2024 / ACI 318: فحص قص الاختراق
+        // SBC 304 / ACI 318: فحص قص الاختراق
         // محيط الاختراق عند بعد d/2 من وجه العمود
         val b0 = 2.0 * (columnWidth + columnDepth) + 4.0 * effectiveDepth
         // ACI 318-22: vc = min(0.33√f'c, 0.17(1+2/β)√f'c, 0.083(2+αs·d/bo)√f'c)
@@ -326,7 +330,7 @@ class SBCFooting : FootingDesign {
         col2Width: Double,   // col2 width passed from ViewModel
         col2Depth: Double    // col2 depth passed from ViewModel
     ): FootingDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("axialLoad1", axialLoad1)
@@ -399,7 +403,7 @@ class SBCFooting : FootingDesign {
         soilBearingCapacity: Double,
         raftThickness: Double
     ): FootingDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("totalLoads", totalLoads)
@@ -443,7 +447,7 @@ class SBCFooting : FootingDesign {
         pileDiameter: Double,
         columnLoads: Double
     ): FootingDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("pileLoad", pileLoad)
@@ -525,7 +529,7 @@ class SBCFooting : FootingDesign {
     override fun getMinFootingThickness(): Double = 300.0
     override fun getMinCover(): Double = 75.0
     override fun getPunchingShearCapacity(fcu: Double, perimeter: Double, effectiveDepth: Double): Double {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("perimeter", perimeter)
         InputGuard.positive("effectiveDepth", effectiveDepth)

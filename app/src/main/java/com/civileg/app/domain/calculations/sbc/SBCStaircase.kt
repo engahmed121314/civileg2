@@ -6,20 +6,20 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تصميم السلالم حسب الكود السعودي SBC 304-2024
+ * تصميم السلالم حسب الكود السعودي SBC 304
  *
  * SBC 304 يعتمد على ACI 318 مع تعديلات سعودية محددة:
  * - معاملات تحميل: 1.2D + 1.6L (SBC 304)
- * - نسبة التسليح الأدنى أعلى: ρmin = 0.002 × b × d (المناخ الحار)
+ * - ρmin = 0.0020 (SBC 304-CR-2018 Table 7.6.1.1 for fy < 420); not a climate-based rule
  * - غطاء خرساني أكبر: 40mm داخلي، 65mm خارجي (بيئة مالحة/تآكل)
  * - في المناطق الساحلية: زيادة الغطاء 10mm، مراعاة أسياك مطليمة بالإيبوكسي
  * - فحص زلزالي إضافي إن وجد
  *
  * المراجع:
- * - SBC 304-2024 البند 9 (الانحناء)
- * - SBC 304-2024 البند 11 (القص)
- * - SBC 304-2024 البند 7.7 (الغطاء الخرساني)
- * - SBC 304-2024 البند 21 (متطلبات زلزالية)
+ * - SBC 304 البند 9 (الانحناء)
+ * - SBC 304 البند 11 (القص)
+ * - SBC 304 البند 7.7 (الغطاء الخرساني)
+ * - SBC 304 البند 21 (متطلبات زلزالية)
  */
 class SBCStaircase : StaircaseDesign {
 
@@ -31,17 +31,17 @@ class SBCStaircase : StaircaseDesign {
         private const val COVER_INTERIOR = 40.0   // mm - SBC (أعلى من ACI)
         private const val COVER_EXTERIOR = 65.0   // mm - بيئة مالحة
         private const val COVER_COASTAL = 75.0    // mm - مناطق ساحلية
-        private const val MIN_WAIST = 130.0        // mm (SBC أقل سماكة أعلى)
+        const val MIN_WAIST = 130.0        // mm (SBC أقل سماكة أعلى)
         private const val MAX_RISER = 178.0        // mm (7")
         private const val MIN_GOING = 279.0        // mm (11")
         private const val COMFORT_2R_PLUS_G_MIN = 580.0  // mm
         private const val COMFORT_2R_PLUS_G_MAX = 640.0  // mm
-        private const val SBC_MIN_STEEL_RATIO = 0.002  // ρmin = 0.002 (أعلى من ACI بسبب المناخ)
+        private const val SBC_MIN_STEEL_RATIO = 0.002  // 0.0020 = SBC 304-CR-2018 Table 7.6.1.1 (fy < 420); not a climate rule
         private const val E_S = 200000.0
     }
 
     override fun designStaircase(input: StaircaseInput): StaircaseResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.notNull("input", input)
         InputGuard.positive("input.fcu", input.fcu)
         InputGuard.positive("input.fy", input.fy)
@@ -117,10 +117,18 @@ class SBCStaircase : StaircaseDesign {
         codeNotes.add(CodeReference.SBC.STAIRCASE_DEFLECTION)
 
         // ========== 2. مقاومة الخرسانة (SBC) ==========
-        val waistThickness = max(input.waistThickness, MIN_WAIST)
+        // No silent clamp: the supplied thickness is analysed as given; below the minimum the
+        // "Waist Thickness" check fails. A non-positive thickness is rejected with a field-specific message.
+        require(input.waistThickness.isFinite() && input.waistThickness > 0.0) {
+            "waistThickness must be a positive thickness in mm (was ${input.waistThickness})"
+        }
+        val waistThickness = input.waistThickness
         val cover = COVER_INTERIOR // SBC: 40mm interior
         val stirrupEstimate = 10.0
         val effectiveDepth = waistThickness - cover - stirrupEstimate / 2 - 6.0
+        require(effectiveDepth > 0.0) {
+            "waistThickness ${"%.0f".format(waistThickness)} mm leaves no effective depth after cover and bar allowance"
+        }
 
         // SBC 304 follows ACI 318: f'c = 0.8 × fcu (cube-to-cylinder conversion)
         val fc = 0.8 * input.fcu
@@ -128,7 +136,7 @@ class SBCStaircase : StaircaseDesign {
 
         codeNotes.add("f'c = 0.8 × fcu = ${String.format("%.1f", fc)} MPa (SBC/ACI conversion)")
         codeNotes.add("β₁ = ${String.format("%.2f", beta1)}")
-        codeNotes.add("SBC cover = ${cover.toInt()}mm (interior, exceeds ACI for hot climate)")
+        codeNotes.add("Cover = ${cover.toInt()}mm is a practical assumption, not a verified code value")
 
         safetyChecks.add(StairSafetyCheck(
             name = "Waist Thickness",
@@ -142,19 +150,49 @@ class SBCStaircase : StaircaseDesign {
         val factoredOnSlope = horizontalLoad * cosTheta
 
         codeNotes.add("Factored horizontal load = ${String.format("%.2f", horizontalLoad)} kN/m²")
-        codeNotes.add("Load factors: 1.2D + 1.6L per SBC 304-2024")
+        codeNotes.add("Load factors: 1.2D + 1.6L per SBC 304")
 
         // ========== 4. التحليل الإنشائي ==========
         val span = input.span
-        val momentCoefficient = if (input.stairType == StairType.DOG_LEG) 1.0 / 10.0 else 1.0 / 8.0
+        // Case contract. No landing restraint is credited in this lane: a declared CONTINUOUS_OVER_LANDING with
+        // landing dimensions does not by itself justify a reduced moment coefficient, and no supplied code text
+        // for this lane grounds one (ACI 318M-14 Table 6.5.2 approximate coefficients are for continuous beams and
+        // one-way slabs with two or more spans, not a stair flight over a landing). The conservative simply
+        // supported wL²/8 is therefore used and the result is marked as an unverified model, never as implemented.
+        val caseSupported = input.stairType == StairType.STRAIGHT || input.stairType == StairType.DOG_LEG
+        val analysisStatus = when {
+            !caseSupported -> StairAnalysisStatus.UNSUPPORTED_CASE
+            input.stairType == StairType.STRAIGHT && input.supportCondition == StairSupportCondition.SIMPLY_SUPPORTED ->
+                StairAnalysisStatus.CASE_MODEL_IMPLEMENTED
+            else -> StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED
+        }
+        when (analysisStatus) {
+            StairAnalysisStatus.CASE_MODEL_IMPLEMENTED -> codeNotes.add(
+                "Case model: single flight, simply supported one-way inclined strip, M = wL²/8 on the horizontal projection"
+            )
+            StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED -> codeNotes.add(
+                "Case model: analyzed simply supported (M = wL²/8). Declared support ${input.supportCondition}" +
+                    (if (input.stairType == StairType.DOG_LEG) " and landing continuity" else "") +
+                    " is NOT credited: no grounded restraint coefficient for this lane. Preliminary, restraint not verified"
+            )
+            else -> codeNotes.add("WARNING: no implemented analysis model for ${input.stairType}; not a verified design for this case")
+        }
+        safetyChecks.add(StairSafetyCheck(
+            name = "Case model support",
+            value = if (caseSupported) 1.0 else 0.0, limit = 1.0, unit = "",
+            isSafe = analysisStatus == StairAnalysisStatus.CASE_MODEL_IMPLEMENTED,
+            notAssessed = analysisStatus != StairAnalysisStatus.CASE_MODEL_IMPLEMENTED,
+            description = if (caseSupported) "Analysis model available for this stair case (see status for verification level)" else "No implemented analysis model for ${input.stairType}"
+        ))
+        if (input.stairType == StairType.DOG_LEG) {
+            codeNotes.add("The landing slab itself and the top steel over the landing are NOT designed by this engine")
+        }
+        val momentCoefficient = 1.0 / 8.0
         val adjustedMoment = horizontalLoad * span * span * momentCoefficient
         val adjustedShear = horizontalLoad * span / 2.0
         val reactionA = adjustedShear
         val reactionB = adjustedShear
 
-        if (input.stairType == StairType.DOG_LEG) {
-            codeNotes.add("Dog-leg stair: landing provides partial fixity, M = wL²/10")
-        }
         codeNotes.add("Design moment Mu = ${String.format("%.2f", adjustedMoment)} kN.m/m")
         codeNotes.add("Design shear Vu = ${String.format("%.2f", adjustedShear)} kN/m")
 
@@ -167,7 +205,9 @@ class SBCStaircase : StaircaseDesign {
         val Rn = if (denominator > 0) Mu / denominator else 0.0
 
         val m = if (fc > 0) input.fy / (0.85 * fc) else 0.0
-        val rho = if (m > 0 && (1 - 2 * m * Rn / input.fy) >= 0) {
+        val flexureDiscriminant = 1 - 2 * m * Rn / input.fy
+        val flexureSolutionExists = m > 0 && d > 0 && flexureDiscriminant.isFinite() && flexureDiscriminant >= 0
+        val rho = if (flexureSolutionExists) {
             (1 - sqrt(1 - 2 * m * Rn / input.fy)) / m
         } else {
             0.0
@@ -183,27 +223,40 @@ class SBCStaircase : StaircaseDesign {
 
         var astRequired = rho * b * d
 
-        // SBC 304: الحد الأدنى أعلى - 0.002 × b × d (مناخ حار)
+        // Table 7.6.1.1 value 0.0020 (fy < 420), applied to b*d
         val minSteelRatio = SBC_MIN_STEEL_RATIO
         val minSteelArea = minSteelRatio * b * d
 
         if (astRequired < minSteelArea) {
             astRequired = minSteelArea
             codeNotes.add("SBC minimum steel applied: ${String.format("%.0f", minSteelArea)} mm²/m (0.002 × b × d)")
-            codeNotes.add("SBC 304-2024: Higher ρmin for hot/arid climate durability")
+            codeNotes.add("Minimum steel ratio 0.0020 is the SBC 304-CR-2018 Table 7.6.1.1 value for deformed bars with fy < 420 MPa (one-way slab analogy); the engine applies it to b*d, not gross area, and does not use the fy >= 420 expression")
         }
 
         safetyChecks.add(StairSafetyCheck(
             name = "Flexure (ρ ≤ ρ_max_tc)",
             value = rho, limit = rhoMaxTc, unit = "",
-            isSafe = rho <= rhoMaxTc,
-            description = "SBC 304-2024 Section 9.3.3.1"
+            isSafe = flexureSolutionExists && rho <= rhoMaxTc,
+            description = "SBC 304-CR-18 7.3.3.1 (nonprestressed slabs: epsilon_t >= 0.004). The limit used is the stricter epsilon_t = 0.005 (c/d <= 0.375). 9.3.3.1 applies to beams, not slabs"
         ))
 
         // اختيار حديد رئيسي
+        if (!flexureSolutionExists) codeNotes.add("No singly reinforced flexural solution: demand exceeds the implemented section model; minimum steel is not a valid design for this demand")
         val mainRebar = selectBars(astRequired)
         val mainRebarArea = parseBarArea(mainRebar)
         val rhoProvided = mainRebarArea / (b * d)
+        run {
+            val ag = b * waistThickness
+            val providedRatioAg = mainRebarArea / ag
+            val tableRatio = if (input.fy < 420.0) 0.0020 else max(0.0018 * 420.0 / input.fy, 0.0014)
+            safetyChecks.add(StairSafetyCheck(
+                name = "Minimum main steel NOT ASSESSED: SBC 304-CR-2018 Table 7.6.1.1 (one-way slab) not established for stair flights; engine floor uses 0.0020 x b x d for every fy",
+                value = providedRatioAg, limit = tableRatio, unit = "",
+                isSafe = false,
+                notAssessed = true,
+                description = "NOT ASSESSED. Table 7.6.1.1 gives As,min = 0.0020 Ag for deformed bars with fy < 420 MPa and max(0.0018 x 420 / fy, 0.0014) Ag for fy >= 420 MPa. This engine applies 0.0020 x b x d (effective depth, not gross area) for every fy, and the table's applicability to a stair waist slab is not established here. Provided ${"%.3f".format(providedRatioAg * 100)}% of b x h; table ratio for this fy ${"%.3f".format(tableRatio * 100)}% (informational, not a compliance result)"
+            ))
+        }
 
         // حديد التوزيع = 20% من الرئيسي
         val distAreaRequired = 0.2 * mainRebarArea
@@ -225,10 +278,16 @@ class SBCStaircase : StaircaseDesign {
 
         val shearSafe = (Vu / 1000.0) <= maxShearCapacity
         safetyChecks.add(StairSafetyCheck(
-            name = "Shear Capacity",
+            name = "Shear section limit (22.5.1.2)",
             value = adjustedShear, limit = maxShearCapacity, unit = "kN/m",
             isSafe = shearSafe,
-            description = "SBC 304-2024 Section 11"
+            description = "SBC 304-CR-18 22.5.1.2: upper limit on the section size, Vu <= phi(Vc + 0.66 sqrt(fc') b d). It is not the shear strength check; see the next row"
+        ))
+        safetyChecks.add(StairSafetyCheck(
+            name = "Shear Vu <= phi*Vc (no stirrups)",
+            value = adjustedShear, limit = phiVc, unit = "kN/m",
+            isSafe = (Vu / 1000.0) <= phiVc,
+            description = "SBC 304-CR-18 22.5.5.1(a): Vc = 0.17 lambda sqrt(fc') b d, lambda = 1.0; slab flight without stirrups. Fails when stirrups would be needed (not designed for a slab flight)"
         ))
 
         val requiredStirrups: String
@@ -267,24 +326,30 @@ class SBCStaircase : StaircaseDesign {
         }
 
         // ========== 7. فحص الانحراف (SBC = ACI) ==========
-        val basicRatio = 16.0
+        // Source: SBC 304-CR-18 Table 7.3.1.1 and 7.3.1.1.1 (sbc.txt, ch. 7).
+        // Table 7.3.1.1 (solid nonprestressed one-way slab, simply supported): minimum h = l/20 for fy = 420 MPa,
+        // multiplied by (0.4 + fy/700) for other fy (7.3.1.1.1). Applied by treating the inclined waist as a solid
+        // one-way slab (analogy, PRELIMINARY); no landing continuity is credited. Deemed-to-satisfy only: when it is
+        // not met the code requires a computed deflection (7.3.2), which is NOT implemented, so the check is
+        // reported as NOT ASSESSED and does not pass.
+        val fyFactor = 0.4 + input.fy / 700.0
         val actualRatio = (span * 1000) / waistThickness
-        val allowableRatio = basicRatio
-        val deflectionRatio = actualRatio / allowableRatio
-
-        val allowableDeflection = (span * 1000) / 240.0
-        val calculatedDeflection = if (deflectionRatio > 1.0) {
-            allowableDeflection * deflectionRatio * 1.2
-        } else {
-            allowableDeflection * 0.7
-        }
-        val deflectionOk = deflectionRatio <= 1.0
+        val allowableRatio = 20.0 / fyFactor
+        val minThicknessMm = span * 1000 / allowableRatio
+        val deflectionOk = actualRatio <= allowableRatio
+        val calculatedDeflection = 0.0     // not computed in this version
+        val allowableDeflection = 0.0      // not computed in this version
 
         safetyChecks.add(StairSafetyCheck(
-            name = "Deflection (Span/Depth)",
+            name = "Deflection NOT ASSESSED: SBC Table 7.3.1.1 l/h deemed-to-satisfy applicability unverified (no computed deflection)",
             value = actualRatio, limit = allowableRatio, unit = "",
-            isSafe = deflectionOk,
-            description = "SBC 304-2024 Section 9.5: L/d ≤ ${String.format("%.1f", allowableRatio)}"
+            isSafe = false,
+            notAssessed = true,
+            description = if (deflectionOk) {
+                "NOT ASSESSED: table applicability (no partitions or other construction likely to be damaged by deflection) is not verified. SBC 304-CR-18 Table 7.3.1.1: l/h = ${"%.1f".format(actualRatio)} <= ${"%.1f".format(allowableRatio)} (solid one-way slab analogy, simply supported l/20, fy-modified); the adopted waist meets the table value only, no computed deflection"
+            } else {
+                "NOT ASSESSED: Table 7.3.1.1 is deemed-to-satisfy only. l/h = ${"%.1f".format(actualRatio)} > ${"%.1f".format(allowableRatio)}; h of at least ${"%.0f".format(minThicknessMm)} mm meets the table, otherwise a computed deflection (7.3.2) is required and is not implemented. Not a computed failure"
+            }
         ))
 
         // ========== 8. فحوصات هندسية ==========
@@ -309,18 +374,18 @@ class SBCStaircase : StaircaseDesign {
 
         // ========== 9. SBC-specific: ملاحظات البيئة المالحة ==========
         codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
-        codeNotes.add("SBC 304-2024: Section 9 (Flexure)")
-        codeNotes.add("SBC 304-2024: Section 11 (Shear)")
-        codeNotes.add("SBC 304-2024: Section 7.7 (Cover requirements)")
-        codeNotes.add("SBC 304-2024: Higher ρmin = 0.002 for hot/arid climate durability")
-        codeNotes.add("Note: For coastal areas, increase cover to ${COVER_COASTAL.toInt()}mm")
-        codeNotes.add("Note: Epoxy-coated bars recommended in corrosive environments per SBC 304")
-        codeNotes.add("Note: Seismic provisions (SBC 304 Section 21) may require additional checks")
+        codeNotes.add("Flexure rows: implemented engine check, edition clause not verified for stairs")
+        codeNotes.add("Shear rows: implemented engine check, edition clause not verified for stairs")
+        codeNotes.add("Cover: practical assumption, edition clause not verified")
+        codeNotes.add("Minimum steel ratio 0.0020: see Table 7.6.1.1 note above; no climate-based rule is supplied in the reference")
+        codeNotes.add("Cover for aggressive environments: not assessed; no coastal cover value is taken from the supplied reference")
+        codeNotes.add("Corrosion protection measures are not assessed")
+        codeNotes.add("Seismic detailing is not assessed")
 
         // ========== 10. فحص زلزالي أساسي ==========
         // SBC 304 البند 21: فحص بسيط للنسب الزلزالية
         if (input.stairWidth < 1000.0) {
-            codeNotes.add("SBC 304 Seismic: Stair width < 1.0m may need special detailing")
+            codeNotes.add("Seismic detailing for narrow stairs is not assessed")
         }
 
         return StaircaseResult(
@@ -352,8 +417,15 @@ class SBCStaircase : StaircaseDesign {
             deflection = calculatedDeflection,
             allowableDeflection = allowableDeflection,
             deflectionOk = deflectionOk,
+            deflectionComputed = false,
             safetyChecks = safetyChecks,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            analysisStatus = analysisStatus,
+            analysisSpanM = span,
+            adoptedRunMm = numTreads * goingMm,
+            flightBottomRebar = mainRebar,
+            flightTopRebar = "",
+            landingRebar = ""
         )
     }
 

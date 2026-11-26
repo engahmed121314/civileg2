@@ -94,4 +94,15 @@
     <color name="splash_bg_start">#FFFFFF</color>
     <color name="splash_bg_end">#F8FAFC</color>
     <color name="splash_accent">#FF9800</color>
+
+    <!-- Approved splash Treatment B overlays (full-bleed artwork) -->
+    <color name="splash_b_name">#D9B36A</color>
+    <color name="splash_b_prayer">#EAF6FA</color>
+    <color name="splash_b_caption">#9FD8E8</color>
+    <color name="splash_b_text_shadow">#73000000</color>
+    <color name="splash_b_bar_track">#96081A2A</color>
+    <color name="splash_b_bar_track_outline">#595BC2DC</color>
+    <color name="splash_b_bar_fill_start">#5BC2DC</color>
+    <color name="splash_b_bar_fill_end">#7FD4E8</color>
+    <color name="splash_b_bar_tip">#D9B36A</color>
 </resources>

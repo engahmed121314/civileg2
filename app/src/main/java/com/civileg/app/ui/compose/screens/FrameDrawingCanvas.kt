@@ -212,29 +212,47 @@ private fun DrawScope.drawFrameView(
         val midX = (p1.x + p2.x) / 2
         val midY = (p1.y + p2.y) / 2
         val angle = atan2(p2.y - p1.y, p2.x - p1.x)
-        val labelOffset = 15.dp.toPx()
+        // A member carrying a load shows its load arrows and value on the +normal side (about 33 px); push the
+        // name block clear of them so the load value and the member name never overlap.
+        val hasLoad = memberLoads.any { it.memberId == member.id }
+        val labelOffset = if (hasLoad) 15.dp.toPx() + 38f else 15.dp.toPx()
         val labelX = midX + cos(angle + PI / 2) * labelOffset
         val labelY = midY + sin(angle + PI / 2) * labelOffset
 
-        if (member.name.isNotEmpty()) {
-            drawText(
-                textMeasurer = textMeasurer,
-                text = member.name,
-                topLeft = Offset((labelX - 20).toFloat(), (labelY - 8).toFloat()),
-                style = TextStyle(
-                    color = if (isSelected) Color(0xFF1565C0) else Color.DarkGray,
-                    fontSize = 12.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                )
-            )
-        }
-
-        drawText(
-            textMeasurer = textMeasurer,
-            text = context.getString(R.string.frame_member_id_format, member.id),
-            topLeft = Offset((labelX - 8).toFloat(), (labelY + 4).toFloat()),
-            style = TextStyle(color = Color.Gray, fontSize = 9.sp)
+        // Labels are measured unconstrained (no per-character wrapping at the canvas edge), kept inside the
+        // canvas, and stacked: the id sits below the name using the measured height so they never overlap.
+        val nameStyle = TextStyle(
+            color = if (isSelected) Color(0xFF1565C0) else Color.DarkGray,
+            fontSize = 12.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
+        val idStyle = TextStyle(color = Color.Gray, fontSize = 9.sp)
+        val idText = context.getString(R.string.frame_member_id_format, member.id)
+        val nameLayout = if (member.name.isNotEmpty()) textMeasurer.measure(member.name, nameStyle, softWrap = false) else null
+        val idLayout = textMeasurer.measure(idText, idStyle, softWrap = false)
+        val blockW = maxOf(nameLayout?.size?.width ?: 0, idLayout.size.width).toFloat()
+        // Anchor the block on the side of the member it was pushed to, so a vertical member's name sits beside
+        // the member instead of centred on top of it.
+        fun anchorFor(lx: Float, nxs: Float): Float = when {
+            nxs > 0.3f -> lx - 6f
+            nxs < -0.3f -> lx - blockW + 6f
+            else -> lx - blockW / 2f
+        }
+        val nxName = cos(angle + PI / 2).toFloat()
+        var anchoredX = anchorFor(labelX.toFloat(), nxName)
+        if (anchoredX < 2f || anchoredX + blockW > size.width - 2f) {
+            // The outer side would leave the canvas: mirror the block to the other side of the member.
+            val mirroredLx = 2f * midX.toFloat() - labelX.toFloat()
+            val alt = anchorFor(mirroredLx, -nxName)
+            if (alt >= 2f && alt + blockW <= size.width - 2f) anchoredX = alt
+        }
+        val blockX = anchoredX.coerceIn(2f, (size.width - blockW - 2f).coerceAtLeast(2f))
+        var yy = (labelY.toFloat() - 8f).coerceIn(2f, (size.height - 2f).coerceAtLeast(2f))
+        if (nameLayout != null) {
+            drawText(textLayoutResult = nameLayout, topLeft = Offset(blockX, yy))
+            yy += nameLayout.size.height
+        }
+        drawText(textLayoutResult = idLayout, topLeft = Offset(blockX, yy))
     }
 
     // === Draw Member Loads (UDL arrows) ===
@@ -1395,7 +1413,9 @@ private fun DrawScope.drawDiagrams(
 
         val maxPt = points.maxByOrNull { abs(it.value) }
         if (maxPt != null && abs(maxPt.value) > 0.01) {
-            val tMax = if (memberLength > 0) (maxPt.x / memberLength).toFloat() else 0.5f
+            val tMaxRaw = if (memberLength > 0) (maxPt.x / memberLength).toFloat() else 0.5f
+            // Keep the annotation off the end nodes (node markers/ids sit there): slide it inward along the member.
+            val tMax = tMaxRaw.coerceIn(0.18f, 0.82f)
             val offsetMax = maxPt.value * diagramScale
             val annX = p1.x + dx * L * tMax + nx * offsetMax.toFloat()
             val annY = p1.y + dy * L * tMax + ny * offsetMax.toFloat()
@@ -1405,12 +1425,43 @@ private fun DrawScope.drawDiagrams(
                     DiagramType.SFD, DiagramType.AFD -> context.getString(R.string.frame_unit_kn)
                 }
                 val label = "${abs(maxPt.value).formatValue(2)} $unit"
-                drawText(
-                    textMeasurer = textMeasurer,
+                // Measured unwrapped and clamped inside the canvas so a label at the right edge neither wraps
+                // one character per line nor clips; pushed outward along the diagram side to clear the member name.
+                val layout = textMeasurer.measure(
                     text = label,
-                    topLeft = Offset(annX + 4, annY - 14),
-                    style = TextStyle(color = diagramColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    style = TextStyle(color = diagramColor, fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                    softWrap = false,
+                    maxLines = 1
                 )
+                val side = if (offsetMax >= 0.0) 1f else -1f
+                // Place the label outside the diagram on its own side so it never sits on the fill or the member.
+                val sx = nx * side
+                val sy = ny * side
+                val ax = annX + sx * 6f
+                val ay = annY + sy * 6f
+                var rawX = when {
+                    sx > 0.3f -> ax
+                    sx < -0.3f -> ax - layout.size.width
+                    else -> ax - layout.size.width / 2f
+                }
+                if (rawX < 2f || rawX + layout.size.width > size.width - 2f) {
+                    // Outer side leaves the canvas: put the label on the inner side of the diagram instead.
+                    val ax2 = annX - sx * 6f
+                    val alt = when {
+                        sx > 0.3f -> ax2 - layout.size.width
+                        sx < -0.3f -> ax2
+                        else -> rawX
+                    }
+                    if (alt >= 2f && alt + layout.size.width <= size.width - 2f) rawX = alt
+                }
+                val rawY = when {
+                    sy > 0.3f -> ay
+                    sy < -0.3f -> ay - layout.size.height
+                    else -> ay - layout.size.height / 2f
+                }
+                val lx = rawX.coerceIn(2f, (size.width - layout.size.width - 2f).coerceAtLeast(2f))
+                val ly = rawY.coerceIn(2f, (size.height - layout.size.height - 2f).coerceAtLeast(2f))
+                drawText(textLayoutResult = layout, topLeft = Offset(lx, ly))
             }
         }
     }

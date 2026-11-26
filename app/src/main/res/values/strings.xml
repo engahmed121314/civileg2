@@ -535,8 +535,8 @@
     <string name="save_design_in_project">Save in Project Vault</string>
     <string name="select_project">Select Project</string>
     <string name="no_projects_available">No Projects Available</string>
-    <string name="safe_check">SAFE ✓</string>
-    <string name="unsafe_check">UNSAFE ✗</string>
+    <string name="safe_check">Check passes (PRELIMINARY)</string>
+    <string name="unsafe_check">Check fails ✗</string>
     <string name="safety_checks">Safety Checks</string>
     <string name="status">Status</string>
     <string name="type">Type</string>
@@ -911,7 +911,7 @@
     <string name="steel_max_shear">Max Shear</string>
     <string name="steel_max_axial">Max Axial</string>
     <string name="steel_deflection">Max Deflection</string>
-    <string name="steel_safety_analysis_safe">ANALYSIS STATUS: SAFE ✓</string>
+    <string name="steel_safety_analysis_safe">ANALYSIS: checks run pass (PRELIMINARY)</string>
     <string name="steel_safety_analysis_unsafe">ANALYSIS STATUS: FAIL ✗</string>
     <string name="steel_structural_perspective">Structural Perspective</string>
     <string name="steel_front_view">Front Elevation</string>
@@ -1132,6 +1132,8 @@
     <string name="beam_rebar_selection">Rebar Selection</string>
     <string name="beam_design_now">Design Beam Now</string>
     <string name="beam_results_economy">Economy Check</string>
+    <string name="beam_bbs_unavailable_title">Bar bending schedule not issued</string>
+    <string name="beam_bbs_unavailable_body">Cutting lengths depend on hook, anchorage, lap and bend rules of the selected code edition. Those rules are not verified yet, so no cutting lengths or bar weights are shown, and the drawing and PDF omit the schedule. Bar counts, diameters and stirrup spacing above are unaffected.</string>
     <string name="beam_section_unsafe">Section is Unsafe</string>
     <string name="beam_section_ideal">Ideal Section</string>
     <string name="beam_section_large">Conservative (Large)</string>
@@ -1173,6 +1175,8 @@
     <string name="view_perspective">3D Perspective</string>
     <string name="column_name_hint">Column Name</string>
     <string name="column_section_safe">Section is Safe</string>
+    <string name="column_preliminary_label">Preliminary: moment capacity not fully checked for the actual bar layout</string>
+    <string name="column_axial_not_assessed_label">Not assessed: eccentricity is outside the ECP 203-2020 Eq. 4-12-a axial formula domain</string>
     <string name="column_section_unsafe_label">Unsafe Status</string>
     <string name="column_provided_reinforcement">Provided Reinforcement</string>
     <string name="column_reinforcement_ratio">Reinforcement Ratio</string>
@@ -1257,6 +1261,7 @@
     <string name="footing_column_width_mm">Column Width (mm)</string>
     <string name="footing_fcu_label">Concrete fcu (MPa)</string>
     <string name="footing_fy_label">Steel fy (MPa)</string>
+    <string name="footing_ps_label">Service Load Ps (kN, unfactored)</string>
     <string name="footing_pu1_label">Axial Load Pu1 (kN)</string>
     <string name="footing_soil_label">Soil Capacity (kN/m²)</string>
     <string name="footing_pu2_label">Axial Load Pu2 (kN)</string>
@@ -1270,7 +1275,8 @@
     <string name="footing_design_now">Design Footing Now</string>
     <string name="slab_results">Design Results</string>
     <string name="footing_safe_economical">Safe &amp; Economical</string>
-    <string name="footing_safe_review">Safe - Review Design</string>
+    <string name="footing_safe_review">Preliminary - listed checks passed, not a full assessment</string>
+    <string name="footing_unsafe_review">UNSAFE - one or more checks failed, review design</string>
     <string name="footing_dims">Foundation Dims</string>
     <string name="footing_thickness_label2">Thickness (t) mm</string>
     <string name="footing_drawing_title">Reinforcement Plan</string>
@@ -1448,7 +1454,7 @@
     <string name="steel_block_shear_cap">Block Shear Cap.</string>
     <string name="steel_block_shear_capacity">Block Shear Capacity</string>
     <string name="steel_block_shear_utilization">Block Shear Utilization</string>
-    <string name="steel_weld_result_safe">Weld Safe</string>
+    <string name="steel_weld_result_safe">Weld check passes (PRELIMINARY)</string>
     <string name="steel_weld_result_fail">Weld Failed</string>
     
     <!-- Connection Design - Additional Labels -->
@@ -1561,6 +1567,8 @@
     <string name="converter_moment">Moment</string>
     <string name="converter_input_value">Input Value</string>
     <string name="converter_result">Result</string>
+    <string name="converter_invalid_number">Enter a valid number</string>
+    <string name="converter_result_out_of_range">Result is too large to represent</string>
 
     <!-- Water Level -->
     <string name="water_level_tool">Level Tool Pro</string>
@@ -1766,8 +1774,8 @@
     <string name="steel_ll_knm2">L.L (kN/m²)</string>
     <string name="steel_wind_kmh">Wind (km/h)</string>
     <string name="steel_max_deflection">Max Deflection</string>
-    <string name="steel_status_safe">SAFE ✓</string>
-    <string name="steel_status_unsafe">UNSAFE ✗</string>
+    <string name="steel_status_safe">Check passes (PRELIMINARY)</string>
+    <string name="steel_status_unsafe">Check fails ✗</string>
 
     <!-- ExecutionLogScreen migrated strings -->
     <string name="exec_inspection_format">Inspection: %s</string>
@@ -2405,6 +2413,69 @@
     <string name="settings_support_title">Support the app</string>
     <string name="settings_support_message">Civil Engineer Pro is free and ad-free. Voluntary donations fund new design codes, tests and drawings.</string>
     <string name="settings_support_button">Donate via GitHub Sponsors</string>
+
+    <!-- Shared field validation -->
+    <string name="validation_required">Required: enter a value</string>
+    <string name="validation_not_number">Not a valid number</string>
+    <string name="validation_must_be_positive">Must be a number greater than zero</string>
+    <string name="validation_must_not_be_negative">Must be zero or more</string>
+    <string name="validation_must_be_whole">Must be a whole number</string>
+    <string name="validation_out_of_range">Must be between %1$s and %2$s</string>
+    <string name="validation_invalid_combination">This value conflicts with other inputs</string>
+    <string name="validation_summary">Fix %1$d field(s) marked in red</string>
+    <string name="tool_spirit_level">Spirit Level</string>
+    <string name="tool_spirit_level_sub">Phone sensor level (flat, face up)</string>
+    <string name="tool_ruler">Ruler</string>
+    <string name="tool_ruler_sub">mm and cm, calibrate with a bank card</string>
+    <string name="level_sensor_unavailable">This device has no gravity or accelerometer sensor, so the spirit level is unavailable.</string>
+    <string name="level_face_up_hint">Lay the phone flat, screen facing up.</string>
+    <string name="level_sensor_unreliable">The device reports its sensor as unreliable. Readings may be wrong.</string>
+    <string name="level_readout">X: %1$s°  Y: %2$s°  (%3$s%%, %4$s%%)</string>
+    <string name="level_waiting">Waiting for sensor data…</string>
+    <string name="level_zero_none">Zero: factory sensor (not zeroed)</string>
+    <string name="level_zero_set">Zero: user-set on a surface you treat as level</string>
+    <string name="level_set_zero">Set zero here</string>
+    <string name="level_reset_zero">Reset zero</string>
+    <string name="level_note">Accuracy depends on this device\'s sensor calibration. Zero the phone on a surface you know is level and check it by turning the phone 180°. This is not the survey Water Level (RL/HI) tool.</string>
+    <string name="ruler_calibrated">Calibrated with a card reference</string>
+    <string name="ruler_uncalibrated">Not calibrated: uses the device-reported screen density, which is not accurate on every device</string>
+    <string name="ruler_calibrate">Calibrate</string>
+    <string name="ruler_reset">Reset calibration</string>
+    <string name="ruler_save">Save</string>
+    <string name="ruler_cancel">Cancel</string>
+    <string name="ruler_calibrate_help">Lay a bank card (ID-1, 85.60 mm long) along the screen from the top edge of the ruler. Drag the rectangle until its length equals the card length, then save.</string>
+    <string name="calc_err_syntax">Syntax error</string>
+    <string name="calc_err_div0">Division by zero</string>
+    <string name="calc_err_domain">Math error (outside the function domain)</string>
+    <string name="calc_err_overflow">Result too large</string>
+    <string name="calc_err_limit">Expression too long or nested too deeply</string>
+    <string name="toolbox_title">Toolbox</string>
+    <string name="toolbox_subtitle">Calculator, converter, ruler and spirit level</string>
+    <string name="building_plan_title">2D Plan</string>
+    <string name="steel_err_bolt_shear">Enter the applied shear Vu (0 or more) before designing the bolted connection.</string>
+    <string name="steel_err_bolt_tension">Enter the applied tension Tu (0 or more) before designing the bolted connection.</string>
+    <string name="steel_err_bolt_zero_load">The applied bolt load is zero, so there is nothing to check. Enter Vu or Tu above zero.</string>
+    <string name="steel_err_weld_force">Enter the applied weld force (above zero) before designing the weld.</string>
+    <string name="steel_err_bolt_diameter">Enter the bolt diameter (above zero) before designing.</string>
+    <string name="steel_err_bolt_count">Enter the number of bolts (a whole number, 1 or more) before designing.</string>
+    <string name="steel_err_plate_thickness">Enter the plate thickness (above zero) before designing.</string>
+    <string name="steel_err_fu_plate">Enter the plate tensile strength Fu (above zero) before designing.</string>
+    <string name="steel_err_weld_size">Enter the weld size (above zero) before designing the weld.</string>
+    <string name="steel_err_weld_length">Enter the weld length (above zero) before designing the weld.</string>
+    <string name="seismic_stability_title">Building Stability &amp; Story Drift</string>
+    <string name="seismic_drift_not_computed">Story drift was not computed for this result.</string>
+    <string name="seismic_max_story_drift">Indicative drift estimate (Δ)</string>
+    <string name="seismic_allowable_drift">Reference limit (unverified)</string>
+    <string name="seismic_drift_passed">Drift requirement passed</string>
+    <string name="seismic_drift_exceeded">Drift limit exceeded - check stiffness</string>
+    <string name="seismic_drift_unverified">Preliminary estimate only. The drift value comes from an equivalent single-degree-of-freedom approximation and the limit is an unverified reference, not a code drift check. No pass or fail is stated.</string>
+    <string name="seismic_drift_above_reference">The estimate is above this reference. A full structural analysis is needed.</string>
+    <string name="seismic_sbc_ss">Ss (g)</string>
+    <string name="seismic_sbc_s1">S1 (g)</string>
+    <string name="seismic_sbc_tl">TL (s)</string>
+    <string name="seismic_sbc_site_class">Site class (SBC 301 Ch. 20)</string>
+    <string name="seismic_sbc_risk">Risk category (Table 1-3)</string>
+    <string name="seismic_sbc_system">Seismic force-resisting system (Table 12-1)</string>
+    <string name="seismic_sbc_inputs_note">Ss, S1 and TL are read from SBC 301-CR-2018 Figures 22-1, 22-2 and 22-4 for the site; Site Class D applies where soil data are not known (11.4.2.2). Equal story weights are assumed.</string>
+    <string name="seismic_sbc_not_assessed">Not assessed</string>
 </resources>
-
-

@@ -47,6 +47,7 @@ import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 
@@ -83,6 +84,8 @@ fun FlatSlabScreen(
     var floorFinish by remember { mutableStateOf("2.0") }
     var clearCover by remember { mutableStateOf("25") }
     var showDropInputs by remember { mutableStateOf(false) }
+    // An edited input makes the shown result stale: drop it so it cannot be read, exported or saved as the new case.
+    LaunchedEffect(panelType, designMethod, designCode, lx, ly, slabThickness, dropThickness, dropSizeX, dropSizeY, columnWidth, columnDepth, fcu, fy, liveLoad, floorFinish, clearCover, showDropInputs) { viewModel.clearResult() }
 
     val result by viewModel.result.observeAsState()
     val isLoading by viewModel.isLoading.observeAsState(false)
@@ -288,21 +291,36 @@ item {
                         label = stringResource(R.string.fs_design_button),
                         onClick = {
                             viewModel.clearResult()
+                            // Blank or non-numeric fields are rejected, never replaced by a default value.
+                            fun num(v: String): Double? = v.trim().toDoubleOrNull()?.takeIf { it.isFinite() }
+                            val nLx = num(lx); val nLy = num(ly); val nT = num(slabThickness)
+                            val nCw = num(columnWidth); val nCd = num(columnDepth)
+                            val nFcu = num(fcu); val nFy = num(fy); val nLive = num(liveLoad)
+                            val nFin = num(floorFinish); val nCover = num(clearCover)
+                            val nDropT = if (showDropInputs) num(dropThickness) else 0.0
+                            val nDropX = if (showDropInputs) num(dropSizeX) else 0.0
+                            val nDropY = if (showDropInputs) num(dropSizeY) else 0.0
+                            val positives = listOf(nLx, nLy, nT, nCw, nCd, nFcu, nFy, nCover)
+                            val nonNegatives = listOf(nLive, nFin, nDropT, nDropX, nDropY)
+                            if (positives.any { it == null || it <= 0.0 } || nonNegatives.any { it == null || it < 0.0 }) {
+                                viewModel.reportInputError("Check the inputs: every field must be a number (dimensions, strengths and cover greater than zero) / تأكد من إدخال أرقام صحيحة في كل الحقول")
+                                return@AppButton
+                            }
                             viewModel.calculateFlatSlab(
                                 panelType = panelType, designMethod = designMethod,
-                                lx = (lx.toDoubleOrNull() ?: 0.0) * 1000.0,
-                                ly = (ly.toDoubleOrNull() ?: 0.0) * 1000.0,
-                                slabThickness = slabThickness.toDoubleOrNull() ?: 250.0,
-                                dropThickness = if (showDropInputs) (dropThickness.toDoubleOrNull() ?: 0.0) else 0.0,
-                                dropSizeX = if (showDropInputs) (dropSizeX.toDoubleOrNull() ?: 0.0) else 0.0,
-                                dropSizeY = if (showDropInputs) (dropSizeY.toDoubleOrNull() ?: 0.0) else 0.0,
-                                columnWidth = columnWidth.toDoubleOrNull() ?: 400.0,
-                                columnDepth = columnDepth.toDoubleOrNull() ?: 400.0,
-                                fcu = fcu.toDoubleOrNull() ?: 30.0,
-                                fy = fy.toDoubleOrNull() ?: 400.0,
-                                liveLoad = liveLoad.toDoubleOrNull() ?: 3.0,
-                                floorFinish = floorFinish.toDoubleOrNull() ?: 2.0,
-                                numberOfFloors = 10, clearCover = clearCover.toDoubleOrNull() ?: 25.0,
+                                lx = nLx!! * 1000.0,
+                                ly = nLy!! * 1000.0,
+                                slabThickness = nT!!,
+                                dropThickness = nDropT!!,
+                                dropSizeX = nDropX!!,
+                                dropSizeY = nDropY!!,
+                                columnWidth = nCw!!,
+                                columnDepth = nCd!!,
+                                fcu = nFcu!!,
+                                fy = nFy!!,
+                                liveLoad = nLive!!,
+                                floorFinish = nFin!!,
+                                numberOfFloors = 10, clearCover = nCover!!,
                                 storyHeight = 3.0, designCode = designCode
                             )
                         },
@@ -450,13 +468,15 @@ item {
                     item {
                         ResultDataCard(
                             stringResource(R.string.fs_deflection),
-                            listOf(
+                            if (res.deflectionAssessed) listOf(
                                 stringResource(R.string.fs_long_term_delta) to String.format("%.2f mm", res.deflection),
                                 stringResource(R.string.pile_allowable_set) to String.format("%.2f mm", res.allowableDeflection),
                                 stringResource(R.string.status) to if (res.deflectionOk) "PASS ✓" else "FAIL ✗"
+                            ) else listOf(
+                                stringResource(R.string.status) to "NOT ASSESSED"
                             ),
                             icon = Icons.Default.Straighten,
-                            accentColor = if (res.deflectionOk) Color(0xFF2E7D32) else Color(0xFFE53935)
+                            accentColor = if (!res.deflectionAssessed) Color(0xFFF57C00) else if (res.deflectionOk) Color(0xFF2E7D32) else Color(0xFFE53935)
                         )
                     }
 
@@ -507,7 +527,7 @@ item {
                                     }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     res.warnings.forEach { w ->
-                                        AppText("• $w", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+                                        AppTextBlock("• $w", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
                                     }
                                 }
                             }

@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -135,7 +136,7 @@ private fun StepRow(step: CalculationStep) {
                 }
             }
             if (step.formula.isNotBlank()) {
-                AppText(
+                AppTextBlock(
                     text = step.formula,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
@@ -143,14 +144,14 @@ private fun StepRow(step: CalculationStep) {
                 )
             }
             if (step.formulaWithValues.isNotBlank()) {
-                AppText(
+                AppTextBlock(
                     text = step.formulaWithValues,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            AppText(
+            AppTextBlock(
                 text = buildString {
                     append(step.result)
                     if (step.unit.isNotBlank()) append("  [${step.unit}]")
@@ -160,7 +161,7 @@ private fun StepRow(step: CalculationStep) {
                 color = statusColor
             )
             if (step.codeReference.isNotBlank()) {
-                AppText(
+                AppTextBlock(
                     text = step.codeReference,
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

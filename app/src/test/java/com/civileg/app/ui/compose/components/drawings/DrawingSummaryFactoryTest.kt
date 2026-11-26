@@ -2,6 +2,7 @@ package com.civileg.app.ui.compose.components.drawings
 
 import com.civileg.app.domain.entities.DesignCode
 import com.civileg.app.domain.calculations.utils.CalculatorEngine
+import com.civileg.app.domain.calculations.utils.BeamShearCodeReview
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -31,12 +32,29 @@ class DrawingSummaryFactoryTest {
 
         assertFalse(summary.isSafe)
         assertEquals("125.0%", summary.utilizationPercent)
-        assertEquals("ACI 318-25", summary.designCodeLabel)
+        assertEquals("Unverified edition", summary.designCodeLabel)
         assertEquals(2, summary.safetyChecks.size)
         assertEquals(1, summary.failedCheckCount)
         assertEquals(2.4, summary.concreteVolume, 0.0)
         assertEquals(180.0, summary.steelWeight, 0.0)
         assertEquals(listOf("note"), summary.codeNotes)
+    }
+
+    @Test
+    fun `beam summary keeps reviewed edition separate from incomplete acceptance`() {
+        val review = BeamShearCodeReview.review(
+            DesignCode.ACI, 25.0, 360.0, 300.0, 600.0, 550.0, 20.0, 8.0, 2, 150.0
+        )
+        assertTrue(review.numericChecksPass)
+        assertFalse(review.codeAcceptanceComplete)
+        val result = CalculatorEngine.BeamResult(
+            isSafe = true, code = DesignCode.ACI, shearCodeReview = review,
+            codeAcceptanceComplete = false, warnings = listOf("Anchorage not verified")
+        )
+        val summary = beamDrawingSummary(result)
+        assertEquals("ACI318M-14", summary.designCodeLabel)
+        assertFalse(summary.isSafe)
+        assertTrue(summary.codeNotes.contains("Anchorage not verified"))
     }
 
     @Test
@@ -87,10 +105,10 @@ class DrawingSummaryFactoryTest {
         val slabSummary = slabDrawingSummary(slab)
 
         assertTrue(footingSummary.isSafe)
-        assertEquals("ECP 203-2025", footingSummary.designCodeLabel)
+        assertEquals("ECP 203-2025 (partial: clauses on steps)", footingSummary.designCodeLabel)
         assertEquals(0, footingSummary.failedCheckCount)
         assertTrue(slabSummary.isSafe)
-        assertEquals("SBC 304-2024", slabSummary.designCodeLabel)
+        assertEquals(com.civileg.app.domain.entities.DesignCode.SBC.version, slabSummary.designCodeLabel)
         assertEquals(1, slabSummary.safetyChecks.size)
     }
 
@@ -107,14 +125,20 @@ class DrawingSummaryFactoryTest {
             cost = 0.0,
             code = DesignCode.ECP,
             utilizationRatio = 0.55,
+            flexureRatio = 0.55, flexureRatioBasis = "K/K_bal",
             safetyChecks = listOf(check("Flexure", 30.0, 45.0, true))
         )
 
         val summary = stairDrawingSummary(result)
 
         assertTrue(summary.isSafe)
-        assertEquals("ECP 203-2025", summary.designCodeLabel)
+        assertEquals(com.civileg.app.domain.entities.DesignCode.ECP.version, summary.designCodeLabel)
         assertEquals("55.0%", summary.utilizationPercent)
+        assertEquals("FLEXURE K/K_bal: 55%", summary.utilizationText)
         assertEquals(0, summary.failedCheckCount)
+        // No measured flexure ratio: the legacy clamped scalar must not reach the strip.
+        val none = stairDrawingSummary(result.copy(flexureRatio = null, flexureRatioBasis = ""))
+        assertEquals("FLEXURE: n/a", none.utilizationText)
+        assertEquals(0.0, none.utilizationRatio, 0.0)
     }
 }

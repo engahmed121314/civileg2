@@ -6,13 +6,12 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
  /**
- * تصميم السلالم حسب الكود الأمريكي ACI 318-25
+ * تصميم السلالم حسب الكود الأمريكي ACI 318
  *
  * المراجع:
- * - ACI 318-25 Chapter 9 (Flexure - One-way slabs)
- * - ACI 318-25 Chapter 22 (Shear)
- * - ACI 318-25 Table 24.2.2 (Deflection)
- * - ACI 318-25 Table 24.4.3.2 (Shrinkage and temperature reinforcement)
+ * - ACI 318 Chapter 9 (Flexure - One-way slabs)
+ * - ACI 318 Chapter 22 (Shear)
+ * - ACI 318 Table 24.4.3.2 (Shrinkage and temperature reinforcement)
  * - IBC Section 1011 (Geometric requirements)
  * - ASCE 7 (Stair loads: Live 4.8 kN/m² = 100 psf)
  *
@@ -22,7 +21,6 @@ import kotlin.math.*
  * - Reduction φ = 0.9 (flexure), φ = 0.75 (shear)
  * - Rn-ρ method instead of K-method
  * - Minimum steel ratio based on fy (Table 24.4.3.2)
- * - Deflection: L/240 for floors
  */
 class ACIStaircase : StaircaseDesign {
 
@@ -33,7 +31,7 @@ class ACIStaircase : StaircaseDesign {
         private const val GAMMA_L = 1.6       // معامل حمل الحي
         private const val COVER_INTERIOR = 38.0  // mm
         private const val COVER_EXTERIOR = 50.0  // mm
-        private const val MIN_WAIST = 125.0     // mm (5" minimum practical)
+        const val MIN_WAIST = 125.0     // mm (5" minimum practical)
         private const val MAX_RISER = 178.0     // mm (7")
         private const val MIN_GOING = 279.0     // mm (11")
         private const val COMFORT_2R_PLUS_G_MIN = 580.0  // mm (IBC)
@@ -119,10 +117,18 @@ class ACIStaircase : StaircaseDesign {
         codeNotes.add(CodeReference.ACI.STAIRCASE_DEFLECTION)
 
         // ========== 2. مقاومة الخرسانة ==========
-        val waistThickness = max(input.waistThickness, MIN_WAIST)
+        // No silent clamp: the supplied thickness is analysed as given; below the minimum the
+        // "Waist Thickness" check fails. A non-positive thickness is rejected with a field-specific message.
+        require(input.waistThickness.isFinite() && input.waistThickness > 0.0) {
+            "waistThickness must be a positive thickness in mm (was ${input.waistThickness})"
+        }
+        val waistThickness = input.waistThickness
         val cover = COVER_INTERIOR
         val stirrupEstimate = 10.0
         val effectiveDepth = waistThickness - cover - stirrupEstimate / 2 - 6.0
+        require(effectiveDepth > 0.0) {
+            "waistThickness ${"%.0f".format(waistThickness)} mm leaves no effective depth after cover and bar allowance"
+        }
 
         // ACI: f'c = 0.8 × fcu (cube → cylinder conversion)
         val fc = 0.8 * input.fcu
@@ -144,19 +150,49 @@ class ACIStaircase : StaircaseDesign {
         val factoredOnSlope = horizontalLoad * cosTheta
 
         codeNotes.add("Factored horizontal load = ${String.format("%.2f", horizontalLoad)} kN/m²")
-        codeNotes.add("Load factors: 1.2D + 1.6L per ACI 318-25")
+        codeNotes.add("Load factors: 1.2D + 1.6L per ACI 318")
 
         // ========== 4. التحليل الإنشائي ==========
         val span = input.span
-        val momentCoefficient = if (input.stairType == StairType.DOG_LEG) 1.0 / 10.0 else 1.0 / 8.0
+        // Case contract. No landing restraint is credited in this lane: a declared CONTINUOUS_OVER_LANDING with
+        // landing dimensions does not by itself justify a reduced moment coefficient, and no supplied code text
+        // for this lane grounds one (ACI 318M-14 Table 6.5.2 approximate coefficients are for continuous beams and
+        // one-way slabs with two or more spans, not a stair flight over a landing). The conservative simply
+        // supported wL²/8 is therefore used and the result is marked as an unverified model, never as implemented.
+        val caseSupported = input.stairType == StairType.STRAIGHT || input.stairType == StairType.DOG_LEG
+        val analysisStatus = when {
+            !caseSupported -> StairAnalysisStatus.UNSUPPORTED_CASE
+            input.stairType == StairType.STRAIGHT && input.supportCondition == StairSupportCondition.SIMPLY_SUPPORTED ->
+                StairAnalysisStatus.CASE_MODEL_IMPLEMENTED
+            else -> StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED
+        }
+        when (analysisStatus) {
+            StairAnalysisStatus.CASE_MODEL_IMPLEMENTED -> codeNotes.add(
+                "Case model: single flight, simply supported one-way inclined strip, M = wL²/8 on the horizontal projection"
+            )
+            StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED -> codeNotes.add(
+                "Case model: analyzed simply supported (M = wL²/8). Declared support ${input.supportCondition}" +
+                    (if (input.stairType == StairType.DOG_LEG) " and landing continuity" else "") +
+                    " is NOT credited: no grounded restraint coefficient for this lane. Preliminary, restraint not verified"
+            )
+            else -> codeNotes.add("WARNING: no implemented analysis model for ${input.stairType}; not a verified design for this case")
+        }
+        safetyChecks.add(StairSafetyCheck(
+            name = "Case model support",
+            value = if (caseSupported) 1.0 else 0.0, limit = 1.0, unit = "",
+            isSafe = analysisStatus == StairAnalysisStatus.CASE_MODEL_IMPLEMENTED,
+            notAssessed = analysisStatus != StairAnalysisStatus.CASE_MODEL_IMPLEMENTED,
+            description = if (caseSupported) "Analysis model available for this stair case (see status for verification level)" else "No implemented analysis model for ${input.stairType}"
+        ))
+        if (input.stairType == StairType.DOG_LEG) {
+            codeNotes.add("The landing slab itself and the top steel over the landing are NOT designed by this engine")
+        }
+        val momentCoefficient = 1.0 / 8.0
         val adjustedMoment = horizontalLoad * span * span * momentCoefficient
         val adjustedShear = horizontalLoad * span / 2.0
         val reactionA = adjustedShear
         val reactionB = adjustedShear
 
-        if (input.stairType == StairType.DOG_LEG) {
-            codeNotes.add("Dog-leg stair: landing provides partial fixity, M = wL²/10")
-        }
         codeNotes.add("Design moment Mu = ${String.format("%.2f", adjustedMoment)} kN.m/m")
         codeNotes.add("Design shear Vu = ${String.format("%.2f", adjustedShear)} kN/m")
 
@@ -171,7 +207,9 @@ class ACIStaircase : StaircaseDesign {
 
         // ρ from Rn: ρ = (1 - √(1 - 2mRn/fy)) / m, where m = fy/(0.85×fc')
         val m = if (fc > 0) input.fy / (0.85 * fc) else 0.0
-        val rho = if (m > 0 && (1 - 2 * m * Rn / input.fy) >= 0) {
+        val flexureDiscriminant = 1 - 2 * m * Rn / input.fy
+        val flexureSolutionExists = m > 0 && d > 0 && flexureDiscriminant.isFinite() && flexureDiscriminant >= 0
+        val rho = if (flexureSolutionExists) {
             (1 - sqrt(1 - 2 * m * Rn / input.fy)) / m
         } else {
             0.0
@@ -193,7 +231,7 @@ class ACIStaircase : StaircaseDesign {
         // Required steel area
         var astRequired = rho * b * d
 
-        // Minimum steel per ACI 318-25 Table 24.4.3.2 (Shrinkage & Temp)
+        // Minimum steel per ACI 318 Table 24.4.3.2 (Shrinkage & Temp)
         // - fy < 420 MPa: 0.0020
         // - fy ≥ 420 MPa: max(0.0018 * 420 / fy, 0.0014)
         val minSteelRatio = if (input.fy < 420.0) {
@@ -211,14 +249,27 @@ class ACIStaircase : StaircaseDesign {
         safetyChecks.add(StairSafetyCheck(
             name = "Flexure (ρ ≤ ρ_max_tc)",
             value = rho, limit = rhoMaxTc, unit = "",
-            isSafe = rho <= rhoMaxTc,
-            description = "ACI 318-25 Section 9.3.3.1 (tension-controlled)"
+            isSafe = flexureSolutionExists && rho <= rhoMaxTc,
+            description = "ACI 318M-14 7.3.3.1 (nonprestressed slabs: epsilon_t >= 0.004). The limit used is the stricter epsilon_t = 0.005 (c/d <= 0.375). 9.3.3.1 applies to beams, not slabs"
         ))
 
         // اختيار حديد رئيسي (مقاسات أمريكية: 12, 16, 19, 22, 25 mm)
+        if (!flexureSolutionExists) codeNotes.add("No singly reinforced flexural solution: demand exceeds the implemented section model; minimum steel is not a valid design for this demand")
         val mainRebar = selectBars(astRequired)
         val mainRebarArea = parseBarArea(mainRebar)
         val rhoProvided = mainRebarArea / (b * d)
+        run {
+            val ag = b * waistThickness
+            val providedRatioAg = mainRebarArea / ag
+            val tableRatio = if (input.fy < 420.0) 0.0020 else max(0.0018 * 420.0 / input.fy, 0.0014)
+            safetyChecks.add(StairSafetyCheck(
+                name = "Minimum main steel NOT ASSESSED: ACI 318M-14 Table 7.6.1.1 (one-way slab) not established for stair flights",
+                value = providedRatioAg, limit = tableRatio, unit = "",
+                isSafe = false,
+                notAssessed = true,
+                description = "NOT ASSESSED. ACI 318M-14 Table 7.6.1.1 gives As,min = 0.0020 Ag for deformed bars with fy < 420 MPa and max(0.0018 x 420 / fy, 0.0014) Ag for fy >= 420 MPa (one-way slabs). The engine applies that ratio to b x h when raising the required steel, but the table's applicability to a stair waist slab is not established here. Provided ${"%.3f".format(providedRatioAg * 100)}% of b x h; table ratio for this fy ${"%.3f".format(tableRatio * 100)}% (informational, not a compliance result)"
+            ))
+        }
 
         // حديد التوزيع = 20% من الرئيسي (ACI)
         val distAreaRequired = 0.2 * mainRebarArea
@@ -242,10 +293,16 @@ class ACIStaircase : StaircaseDesign {
 
         val shearSafe = (Vu / 1000.0) <= maxShearCapacity
         safetyChecks.add(StairSafetyCheck(
-            name = "Shear Capacity",
+            name = "Shear section limit (22.5.1.2)",
             value = adjustedShear, limit = maxShearCapacity, unit = "kN/m",
             isSafe = shearSafe,
-            description = "ACI 318-25 Section 22.5.1.2"
+            description = "ACI 318M-14 22.5.1.2: upper limit on the section size, Vu <= phi(Vc + 0.66 sqrt(fc') b d). It is not the shear strength check; see the next row"
+        ))
+        safetyChecks.add(StairSafetyCheck(
+            name = "Shear Vu <= phi*Vc (no stirrups)",
+            value = adjustedShear, limit = phiVc, unit = "kN/m",
+            isSafe = (Vu / 1000.0) <= phiVc,
+            description = "ACI 318M-14 22.5.5.1(a): Vc = 0.17 lambda sqrt(fc') b d, lambda = 1.0; slab flight without stirrups. Fails when stirrups would be needed (not designed for a slab flight)"
         ))
 
         val requiredStirrups: String
@@ -272,7 +329,7 @@ class ACIStaircase : StaircaseDesign {
                 stirrupDiameter = 0.0
                 stirrupSpacing = 0.0
                 codeNotes.add("φVc = ${String.format("%.2f", phiVc)} kN/m ≥ Vu = ${String.format("%.2f", adjustedShear)} kN/m")
-                codeNotes.add("No shear reinforcement required per ACI 318-25")
+                codeNotes.add("No shear reinforcement required per ACI 318")
             }
         } else {
             // Calculate required stirrups
@@ -290,27 +347,30 @@ class ACIStaircase : StaircaseDesign {
         }
 
         // ========== 7. فحص الانحراف ==========
-        // ACI Table 24.2.2: L/d = 16 (simply supported) for floors
-        val basicRatio = 16.0
-        // Modification factor for fy (ACI Table 7.3.1.1)
-        val fyFactor = minOf(1.0, 0.4 + 420.0 / 420.0)  // Grade 420 (60 ksi) default
+        // Source: ACI 318M-14 Table 7.3.1.1 and 7.3.1.1.1 (reference-volume-1: table on printed p.137, PDF 146; clause 7.3.1.1.1 on printed p.138, PDF 147), cross-checked against SBC 304-CR-18 ch. 7.
+        // Table 7.3.1.1 (solid nonprestressed one-way slab, simply supported): minimum h = l/20 for fy = 420 MPa,
+        // multiplied by (0.4 + fy/700) for other fy (7.3.1.1.1). Applied by treating the inclined waist as a solid
+        // one-way slab (analogy, PRELIMINARY); no landing continuity is credited. Deemed-to-satisfy only: when it is
+        // not met the code requires a computed deflection (7.3.2), which is NOT implemented, so the check is
+        // reported as NOT ASSESSED and does not pass.
+        val fyFactor = 0.4 + input.fy / 700.0
         val actualRatio = (span * 1000) / waistThickness
-        val allowableRatio = basicRatio * fyFactor
-        val deflectionRatio = actualRatio / allowableRatio
-
-        val allowableDeflection = (span * 1000) / 240.0  // L/240 for floors
-        val calculatedDeflection = if (deflectionRatio > 1.0) {
-            allowableDeflection * deflectionRatio * 1.2
-        } else {
-            allowableDeflection * 0.7
-        }
-        val deflectionOk = deflectionRatio <= 1.0
+        val allowableRatio = 20.0 / fyFactor
+        val minThicknessMm = span * 1000 / allowableRatio
+        val deflectionOk = actualRatio <= allowableRatio
+        val calculatedDeflection = 0.0     // not computed in this version
+        val allowableDeflection = 0.0      // not computed in this version
 
         safetyChecks.add(StairSafetyCheck(
-            name = "Deflection (Span/Depth)",
+            name = "Deflection NOT ASSESSED: ACI Table 7.3.1.1 l/h deemed-to-satisfy applicability unverified (no computed deflection)",
             value = actualRatio, limit = allowableRatio, unit = "",
-            isSafe = deflectionOk,
-            description = "ACI 318-25 Table 24.2.2: L/d ≤ ${String.format("%.1f", allowableRatio)}"
+            isSafe = false,
+            notAssessed = true,
+            description = if (deflectionOk) {
+                "NOT ASSESSED: table applicability (no partitions or other construction likely to be damaged by deflection) is not verified. ACI 318M-14 Table 7.3.1.1: l/h = ${"%.1f".format(actualRatio)} <= ${"%.1f".format(allowableRatio)} (solid one-way slab analogy, simply supported l/20, fy-modified); the adopted waist meets the table value only, no computed deflection"
+            } else {
+                "NOT ASSESSED: Table 7.3.1.1 is deemed-to-satisfy only. l/h = ${"%.1f".format(actualRatio)} > ${"%.1f".format(allowableRatio)}; h of at least ${"%.0f".format(minThicknessMm)} mm meets the table, otherwise a computed deflection (7.3.2) is required and is not implemented. Not a computed failure"
+            }
         ))
 
         // ========== 8. فحوصات هندسية (IBC) ==========
@@ -335,9 +395,9 @@ class ACIStaircase : StaircaseDesign {
 
         // ========== 9. ملاحظات الكود ==========
         codeNotes.add(CodeReference.ACI.SLAB_ONE_WAY)
-        codeNotes.add("ACI 318-25: Chapter 9 (Flexure - one-way slab)")
-        codeNotes.add("ACI 318-25: Chapter 22 (Shear)")
-        codeNotes.add("ACI 318-25: Table 24.2.2 (Deflection L/240)")
+        codeNotes.add("ACI 318: Chapter 9 (Flexure - one-way slab)")
+        codeNotes.add("ACI 318: Chapter 22 (Shear)")
+        codeNotes.add("ACI 318M-14 Table 7.3.1.1 deflection is deemed-to-satisfy only when no partitions or other construction likely to be damaged by deflection is supported; that condition is not verified, and no computed deflection is reported")
         codeNotes.add("IBC Section 1011 (Stair geometry requirements)")
         codeNotes.add("f'c = 0.8 × fcu (cube to cylinder conversion)")
         codeNotes.add("φ = $PHI_FLEXURE flexure, φ = $PHI_SHEAR shear")
@@ -371,8 +431,15 @@ class ACIStaircase : StaircaseDesign {
             deflection = calculatedDeflection,
             allowableDeflection = allowableDeflection,
             deflectionOk = deflectionOk,
+            deflectionComputed = false,
             safetyChecks = safetyChecks,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            analysisStatus = analysisStatus,
+            analysisSpanM = span,
+            adoptedRunMm = numTreads * goingMm,
+            flightBottomRebar = mainRebar,
+            flightTopRebar = "",
+            landingRebar = ""
         )
     }
 

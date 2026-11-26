@@ -13,7 +13,7 @@ import com.civileg.app.domain.calculations.base.posttensioned.AnchorageZoneResul
 import com.civileg.app.domain.calculations.base.posttensioned.PTDeflectionResult
 
 /**
- * تصميم العناصر مسبقة الإجهاد وفق الكود الأمريكي ACI 318-25.
+ * تصميم العناصر مسبقة الإجهاد وفق الكود الأمريكي ACI 318.
  */
 class ACIPostTensioned : PostTensionedDesign {
 

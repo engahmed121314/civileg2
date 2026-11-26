@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Layers
@@ -731,24 +733,38 @@ fun FrameModelerTab(
                 fitRequest = fitRequest
             )
 
+            var hintExpanded by rememberSaveable { mutableStateOf(false) }
             Surface(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(8.dp),
+                    .padding(4.dp)
+                    .clickable { hintExpanded = !hintExpanded },
                 shape = RoundedCornerShape(8.dp),
-                color = Color.White.copy(alpha = 0.92f),
-                shadowElevation = 2.dp
+                color = Color.White.copy(alpha = if (hintExpanded) 0.92f else 0.6f),
+                shadowElevation = 1.dp
             ) {
-                Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-                    AppText(hint, fontSize = 11.sp, color = Color(0xFF37474F), fontWeight = FontWeight.Medium)
-                    AppText(
-                        text = t(
-                            "الشبكة: ${gridLabel(gridMm)} • الالتقاط: ${snapLabel(snapMm)}",
-                            "Grid: ${gridLabel(gridMm)} • Snap: ${snapLabel(snapMm)}"
-                        ),
-                        fontSize = 9.sp,
-                        color = Color.Gray
-                    )
+                if (hintExpanded) {
+                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                        AppText(hint, fontSize = 11.sp, color = Color(0xFF37474F), fontWeight = FontWeight.Medium)
+                        AppText(
+                            text = t(
+                                "الشبكة: ${gridLabel(gridMm)} • الالتقاط: ${snapLabel(snapMm)}",
+                                "Grid: ${gridLabel(gridMm)} • Snap: ${snapLabel(snapMm)}"
+                            ),
+                            fontSize = 9.sp,
+                            color = Color.Gray
+                        )
+                        AppText(t("اضغط للإخفاء", "Tap to hide"), fontSize = 9.sp, color = Color(0xFF1565C0))
+                    }
+                } else {
+                    Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = t("إظهار تلميح الأداة", "Show tool hint"),
+                            tint = Color(0xFF546E7A),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 

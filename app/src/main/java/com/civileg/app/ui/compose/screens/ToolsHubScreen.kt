@@ -43,17 +43,18 @@ private data class ToolItem(
 private val toolsList = listOf(
     ToolItem(R.string.home_calculator,    R.string.tool_calculator_sub,    Icons.Default.Calculate, Color(0xFF1B5E20).copy(alpha = 0.12f), Color(0xFF2E7D32), AppScreen.Calculator.route),
     ToolItem(R.string.home_unit_converter, R.string.tool_converter_sub,   Icons.Default.SwapHoriz, Color(0xFF0D47A1).copy(alpha = 0.12f), Color(0xFF1565C0), AppScreen.UnitConverter.route),
+    ToolItem(R.string.tool_spirit_level, R.string.tool_spirit_level_sub, Icons.Default.RadioButtonChecked, Color(0xFF00695C).copy(alpha = 0.12f), Color(0xFF00897B), AppScreen.SpiritLevel.route),
+    ToolItem(R.string.tool_ruler, R.string.tool_ruler_sub, Icons.Default.Straighten, Color(0xFF6A1B9A).copy(alpha = 0.12f), Color(0xFF7B1FA2), AppScreen.Ruler.route),
     ToolItem(R.string.home_steel_tables,  R.string.tool_steel_tables_sub, Icons.Default.TableChart, Color(0xFF4E342E).copy(alpha = 0.12f), Color(0xFF5D4037), AppScreen.SteelTables.route),
     ToolItem(R.string.home_boq,           R.string.tool_boq_sub,          Icons.AutoMirrored.Filled.Assignment, Color(0xFFE65100).copy(alpha = 0.12f), Color(0xFFEF6C00), AppScreen.BOQ.route),
     ToolItem(R.string.home_inventory,     R.string.tool_inventory_sub,    Icons.Default.Inventory2, Color(0xFFB71C1C).copy(alpha = 0.12f), Color(0xFFD32F2F), AppScreen.Inventory.route),
     ToolItem(R.string.home_site_layout_title, R.string.home_site_layout_sub, Icons.Default.Map, Color(0xFF00796B).copy(alpha = 0.12f), Color(0xFF00796B), AppScreen.SiteLayout.route),
     ToolItem(R.string.nav_inventory, R.string.tool_execution_logs_sub, Icons.Default.History, Color(0xFF7B1FA2).copy(alpha = 0.12f), Color(0xFF7B1FA2), AppScreen.ExecutionLog.route),
     ToolItem(R.string.home_rebar_tool,   R.string.home_rebar_sub,        Icons.Default.LinearScale, Color(0xFF33691E).copy(alpha = 0.12f), Color(0xFF558B2F), AppScreen.RebarTool.route),
-    ToolItem(R.string.home_quick_tools, R.string.home_quick_tools_sub, Icons.Default.Build, Color(0xFF1565C0).copy(alpha = 0.12f), Color(0xFF1976D2), AppScreen.QuickTools.route),
     ToolItem(R.string.home_concrete_mix, R.string.home_concrete_mix_sub,  Icons.Default.Science, Color(0xFF004D40).copy(alpha = 0.12f), Color(0xFF00695C), AppScreen.ConcreteMix.route),
     ToolItem(R.string.home_quality_engineer, R.string.home_quality_engineer_sub, Icons.Default.Landscape, Color(0xFF4E342E).copy(alpha = 0.12f), Color(0xFF6D4C41), AppScreen.QualityEngineer.route),
     ToolItem(R.string.home_wind_load,    R.string.home_wind_load_sub,     Icons.Default.Air, Color(0xFF0D47A1).copy(alpha = 0.12f), Color(0xFF1565C0), AppScreen.WindLoad.route),
-    ToolItem(R.string.home_section_tools_title, R.string.home_site_layout_sub, Icons.Default.Architecture, Color(0xFFC2185B).copy(alpha = 0.12f), Color(0xFFC2185B), AppScreen.BuildingDesigner.route)
+    ToolItem(R.string.building_plan_title, R.string.home_site_layout_sub, Icons.Default.Architecture, Color(0xFFC2185B).copy(alpha = 0.12f), Color(0xFFC2185B), AppScreen.BuildingDesigner.route)
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,7 +69,7 @@ fun ToolsHubScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { AppText(stringResource(R.string.home_section_tools_title), fontWeight = FontWeight.Bold) },
+                title = { AppText(stringResource(R.string.toolbox_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))

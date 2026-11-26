@@ -2,6 +2,7 @@ package com.civileg.app.domain.calculations
 
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.*
+import com.civileg.app.domain.calculations.beam.RcDevelopmentLength
 import kotlin.math.*
 
 /**
@@ -416,30 +417,35 @@ object BeamDesignEnginePart2 {
         InputGuard.positive("span", span)
         InputGuard.positive("d", d)
 
-        val fbd = when(code) {
-            DesignCode.ECP -> 0.6 * sqrt(fcu) // ECP 203 §5-2-2: fbd =0.6√fcu for deformed bars (high bond)
-            else -> {
-                // FIX: ACI 318-25 §25.4.2.2 (metric): Ld = (fy × ψt × ψe) / (1.7 × λ × √f'c) × db
-                // Simplified for ψt=ψe=λ=1: fbd_equiv = 1.7×√f'c / 4, using 4×fbd form
-                1.7 * sqrt(fcu * 0.8) / 4.0  // bond stress equivalent for ACI Ld formula
-            }
-        }
-        val fs = when(code) { DesignCode.ECP -> fy / 1.15 else -> fy }
-        val Ld = (fs * dia.toDouble()) / (4.0 * fbd)
-        val LdMin = max(Ld, 350.0) // ECP minimum
-        val provided = span * 1000.0 / 3.0 // assume L/3 available (simplified)
-        val lapLength = 1.3 * LdMin // 30% extra for lapping
+        // ECP only: lengths from RcDevelopmentLength (ECP 203-2020 Eq. 4-66/4-67). Bottom bar (eta = 1.0), straight end,
+        // uncoated, normalweight, not bundled; these are stated in the step. ACI/SBC need cylinder strength fc' and the
+        // app input is not confirmed to be fc', so they are reported as not computed (required = 0.0).
+        val ecp = code == DesignCode.ECP
+        val r = if (ecp) RcDevelopmentLength.ecpTension(fcu, fy, dia.toDouble()) else null
+        val fbd = if (ecp) 0.30 * sqrt(fcu / RcDevelopmentLength.ECP_GAMMA_C) else 0.0
+        val LdMin = r?.length ?: 0.0
+        // Available anchorage is not computed. A span/3 stand-in was used before and produced a fake pass/fail.
+        val provided = 0.0 // 0.0 = not computed
+        val lapLength = if (ecp) RcDevelopmentLength.ecpTensionLap(LdMin, null, null) else 0.0
 
-        val step = CalculationStep(
-            1, "Development & Lap Length",
-            codeReference = when(code) { DesignCode.ECP -> "ECP 203 §4-2-5" else -> "ACI 318 §25.4" },
-            formula = when(code) {
-                DesignCode.ECP -> "Ld = (fy/γs × Ø) / (4 × fbd)\nfbd = 0.3√f'cu"
-                else -> "Ld = (fy × db) / (4 × fbd)"
-            },
-            formulaWithValues = "fbd = 0.3×√$fcu = ${String.format("%.2f", fbd)} MPa\nLd = ($fs × $dia) / (4 × ${String.format("%.2f", fbd)}) = ${String.format("%.0f", Ld)} mm\nLd,min = ${String.format("%.0f", LdMin)} mm\nLap = 1.3 × ${String.format("%.0f", LdMin)} = ${String.format("%.0f", lapLength)} mm",
-            result = "Ld = ${String.format("%.0f", LdMin)} mm, Lap = ${String.format("%.0f", lapLength)} mm",
-            unit = "mm"
+        val f0 = { v: Double -> String.format("%.0f", v) }
+        val step = if (r != null) CalculationStep(
+            1, "Development & Lap Length (tension, straight bottom bar; available anchorage not evaluated)",
+            codeReference = "ECP 203-2020 section 4-2-5-1 Eq. 4-66/4-67, Tables 4-7/4-8; lap 4-2-5-4-1",
+            formula = r.basis,
+            formulaWithValues = "Ld,formula = ${f0(r.formulaLength)} mm; minimum ${f0(r.minimum)} mm; Ld = ${f0(LdMin)} mm\n" +
+                "Lap = ${f0(lapLength)} mm (1.3 Ld case: area ratio and lapped fraction not known)",
+            result = "Ld = ${f0(LdMin)} mm, Lap = ${f0(lapLength)} mm (bottom bar, eta 1.0, no end hook, uncoated, normalweight, not bundled)",
+            unit = "mm",
+            status = com.civileg.app.domain.entities.StepStatus.WARNING
+        ) else CalculationStep(
+            1, "Development & Lap Length (not computed; available anchorage not evaluated)",
+            codeReference = "${code.displayName}: not computed, cylinder strength fc' basis not resolved",
+            formula = "Not computed",
+            formulaWithValues = "Not computed",
+            result = "Development and lap lengths not computed for this code",
+            unit = "mm",
+            status = com.civileg.app.domain.entities.StepStatus.WARNING
         )
 
         return DevLengthResult(LdMin, provided, fbd, lapLength, step)

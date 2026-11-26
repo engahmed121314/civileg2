@@ -70,7 +70,8 @@ object ProfessionalEnglishPdfReporter {
         val limit: Double,
         val unit: String,
         val passed: Boolean,
-        val reference: String? = null
+        val reference: String? = null,
+        val notAssessed: Boolean = false
     )
 
     data class BbsRow(
@@ -105,7 +106,11 @@ object ProfessionalEnglishPdfReporter {
         val projectNumber: String = "",
         val date: String = SimpleDateFormat("dd MMM yyyy", Locale.US).format(Date()),
         val revision: String = "Rev. A",
-        val showSignature: Boolean = false
+        val showSignature: Boolean = false,
+        val incompleteReview: Boolean = false,
+        val includeDiagnosticDrawing: Boolean = false,
+        /** Component checks are shown, but the overall verdict is "not confirmed" (neither SAFE nor UNSAFE). */
+        val assessmentPending: Boolean = false
     )
 
     // ==================== Font Helpers (English Only) ====================
@@ -139,7 +144,16 @@ object ProfessionalEnglishPdfReporter {
     private fun createBoldFont(): PdfFont = getFont(bold = true)
 
     private fun text(text: String, font: PdfFont, size: Float = 10f, color: DeviceRgb? = null): Text {
-        val t = Text(text).setFont(font).setFontSize(size)
+        // Android's Arabic locale formats numbers with Arabic-Indic digits.
+        // Reports are English-only; normalize digits before passing to Latin fonts.
+        val latinText = text.map { ch -> when (ch) {
+            in '\u0660'..'\u0669' -> ('0'.code + ch.code - '\u0660'.code).toChar()
+            in '\u06F0'..'\u06F9' -> ('0'.code + ch.code - '\u06F0'.code).toChar()
+            '\u066B' -> '.'
+            '\u066C' -> ','
+            else -> ch
+        } }.joinToString("")
+        val t = Text(latinText).setFont(font).setFontSize(size)
         color?.let { t.setFontColor(it) }
         return t
     }
@@ -221,7 +235,7 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
 
         // Design Code Badge
-        document.add(Paragraph().add(text("Design Code: $designCode", boldFont, 11f, PRIMARY))
+        document.add(Paragraph().add(text(if (config.incompleteReview) "Selected Reference Basis: $designCode" else "Design Code: $designCode", boldFont, 11f, PRIMARY))
             .setTextAlignment(TextAlignment.CENTER))
 
         // Line separator
@@ -635,13 +649,13 @@ object ProfessionalEnglishPdfReporter {
         document.add(emptyLine())
     }
 
-    private fun addSafetyChecks(document: Document, safetyChecks: List<SafetyCheck>, isSafe: Boolean) {
+    private fun addSafetyChecks(document: Document, safetyChecks: List<SafetyCheck>, isSafe: Boolean, assessmentPending: Boolean = false) {
         document.add(sectionTitle("4. Safety Verification"))
         document.add(separator())
 
         // Status Banner
-        val statusText = if (isSafe) "STATUS: SAFE - Design Complies with Code" else "STATUS: UNSAFE - Design Review Required"
-        val statusColor = if (isSafe) SUCCESS else ERROR
+        val statusText = if (assessmentPending) "STATUS: PRELIMINARY - NOT FULLY CHECKED. The overall result is not confirmed; individual checks below are shown as calculated." else if (isSafe) "STATUS: SAFE - Design Complies with Code" else "STATUS: UNSAFE - Design Review Required"
+        val statusColor = if (assessmentPending) SECONDARY else if (isSafe) SUCCESS else ERROR
         val banner = Paragraph().add(text(statusText, createBoldFont(), 11f, statusColor))
             .setTextAlignment(TextAlignment.CENTER)
             .setPadding(8f)
@@ -652,6 +666,8 @@ object ProfessionalEnglishPdfReporter {
         if (safetyChecks.isNotEmpty()) {
             val table = Table(UnitValue.createPercentArray(floatArrayOf(35f, 18f, 18f, 10f, 19f))).useAllAvailableWidth()
 
+            // Keep a short check table together instead of orphaning its last rows.
+            table.setKeepTogether(true)
             // Header Row
             table.addHeaderCell(headerCell("Check"))
             table.addHeaderCell(headerCell("Calculated"))
@@ -679,22 +695,25 @@ object ProfessionalEnglishPdfReporter {
 
                 table.addCell(dataCell(check.unit, 8f, false, bg))
 
-                val statusStr = if (check.passed) "PASS" else "FAIL"
-                val statusClr = if (check.passed) SUCCESS else ERROR
-                table.addCell(dataCell(statusStr, 9f, true, bg).also {
-                    // Color the cell text
-                    it.add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr)).setTextAlignment(TextAlignment.CENTER))
-                })
+                val statusStr = if (check.passed) "PASS" else if (check.notAssessed) "NOT ASSESSED" else "FAIL"
+                val statusClr = if (check.passed) SUCCESS else if (check.notAssessed) WARNING else ERROR
+                val statusCell = Cell().setPadding(4f)
+                    .add(Paragraph().add(text(statusStr, createBoldFont(), 9f, statusClr))
+                        .setTextAlignment(TextAlignment.CENTER))
+                if (bg != null) statusCell.setBackgroundColor(bg)
+                table.addCell(statusCell)
             }
             document.add(table)
         }
-        document.add(emptyLine())
+        // A spacer paragraph here spilled onto a new page when the table ended at the page bottom, and the page break
+        // before the drawing then left a blank page. A bottom margin cannot spill.
+        document.add(Paragraph().setMargin(0f).setPadding(0f).setFixedLeading(0f))
     }
 
-    private fun addBbsSection(document: Document, rows: List<BbsRow>) {
+    private fun addBbsSection(document: Document, rows: List<BbsRow>, incompleteReview: Boolean = false) {
         if (rows.isEmpty()) return
         document.add(AreaBreak())
-        document.add(sectionTitle("6. Bar Bending Schedule"))
+        document.add(sectionTitle(if (incompleteReview) "6. Partial Bar Review Schedule" else "6. Bar Bending Schedule"))
         document.add(separator())
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(12f, 12f, 9f, 9f, 9f, 20f, 14f, 15f)))
@@ -724,15 +743,15 @@ object ProfessionalEnglishPdfReporter {
         }
         document.add(table)
         document.add(Paragraph().add(
-            text(String.format(Locale.US, "Total steel: %.2f kg", totalWeight), createBoldFont(), 9f, PRIMARY)
+            text(String.format(Locale.US, if (incompleteReview) "Partial weight of the listed bars only (includes laps, hooks and ties where listed; not reconciled with the net BOQ steel): %.2f kg" else "Total steel: %.2f kg", totalWeight), createBoldFont(), 9f, PRIMARY)
         ).setTextAlignment(TextAlignment.RIGHT))
         document.add(emptyLine())
     }
 
-    private fun addBoqSection(document: Document, rows: List<BoqRow>) {
+    private fun addBoqSection(document: Document, rows: List<BoqRow>, incompleteReview: Boolean = false, sectionNumber: Int = 7) {
         if (rows.isEmpty()) return
-        document.add(sectionTitle("7. Bill of Quantities"))
-        document.add(separator())
+        document.add(sectionTitle("$sectionNumber. Bill of Quantities").setKeepWithNext(true))
+        document.add(separator().setKeepWithNext(true))
 
         val table = Table(UnitValue.createPercentArray(floatArrayOf(10f, 55f, 15f, 20f))).useAllAvailableWidth()
         table.addHeaderCell(headerCell("Item"))
@@ -745,14 +764,14 @@ object ProfessionalEnglishPdfReporter {
             table.addCell(dataCell(row.item, 8f, false, bg, TextAlignment.LEFT))
             table.addCell(dataCell(row.description, 8f, false, bg, TextAlignment.LEFT))
             table.addCell(dataCell(row.unit, 8f, false, bg))
-            table.addCell(dataCell(String.format(Locale.US, "%.2f", row.quantity), 8f, false, bg))
+            table.addCell(dataCell(String.format(Locale.US, if (incompleteReview) "%.3f" else "%.2f", row.quantity), 8f, false, bg))
         }
         document.add(table)
         document.add(emptyLine())
     }
 
-    private fun addDrawingSection(document: Document, bitmap: Bitmap?, title: String) {
-        document.add(sectionTitle("5. Engineering Drawing"))
+    private fun addDrawingSection(document: Document, bitmap: Bitmap?, title: String, diagnostic: Boolean = false) {
+        document.add(sectionTitle(if(diagnostic) "Captured Screen Review" else "5. Engineering Drawing"))
         document.add(separator())
 
         if (bitmap == null) {
@@ -768,8 +787,9 @@ object ProfessionalEnglishPdfReporter {
             val stream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
             val img = Image(ImageDataFactory.create(stream.toByteArray()))
-            img.setAutoScale(true)
-            img.setMaxWidth(480f)
+            // Reserve room for the section heading, caption and page footer.
+            // AutoScale previously filled the page then orphaned its caption.
+            img.scaleToFit(480f, 620f)
             img.setHorizontalAlignment(HorizontalAlignment.CENTER)
             document.add(img)
             document.add(Paragraph().add(text(title, createPdfFont(), 9f, SECONDARY))
@@ -885,31 +905,52 @@ object ProfessionalEnglishPdfReporter {
             addDesignParameters(document, inputs)
 
             // 3. Calculation Methodology
-            addCalculationMethodology(document, designCode, reportType, calculationSteps)
+            if (config.incompleteReview) {
+                document.add(sectionTitle("2. Calculation Scope - Incomplete Review"))
+                document.add(Paragraph("Legacy engine results are not verified to the selected reference edition. No design compliance or construction detailing is issued."))
+            } else {
+                addCalculationMethodology(document, designCode, reportType, calculationSteps)
+            }
 
             // 4. Results
             addResultsSection(document, results)
 
             // 5. Safety Checks
-            addSafetyChecks(document, safetyChecks, isSafe)
+            if (config.incompleteReview) {
+                document.add(sectionTitle("4. Engineering Status: NOT ISSUED"))
+                document.add(Paragraph("Required design, serviceability and detailing checks remain incomplete. Engine PASS/FAIL is not engineering approval."))
+            } else {
+                addSafetyChecks(document, safetyChecks, isSafe, config.assessmentPending)
+            }
 
             // 6. Engineering Drawing
             if (drawingBitmap != null) {
                 document.add(AreaBreak())
             }
-            addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
+            if (config.incompleteReview) {
+                document.add(sectionTitle("5. Construction Drawing: NOT ISSUED"))
+                document.add(Paragraph("No adopted reinforcement geometry has been verified. No construction design is issued."))
+                if(config.includeDiagnosticDrawing && drawingBitmap != null) {
+                    document.add(Paragraph("Captured screen review only. Unverified geometry and reinforcement, not for fabrication or construction."))
+                    addDrawingSection(document,drawingBitmap,"Captured screen review - NOT FOR CONSTRUCTION",diagnostic=true)
+                }
+            } else {
+                addDrawingSection(document, drawingBitmap, "$title - Engineering Detail")
+            }
 
             // 6. Bar Bending Schedule
-            addBbsSection(document, bbsRows)
+            addBbsSection(document, bbsRows, config.incompleteReview)
 
+            // Keep the diagnostic capture and quantity table as separate readable pages.
+            if(config.includeDiagnosticDrawing && drawingBitmap != null && boqRows.isNotEmpty()) document.add(AreaBreak())
             // 7. Bill of Quantities
-            addBoqSection(document, boqRows)
+            addBoqSection(document, boqRows, config.incompleteReview, if (bbsRows.isEmpty()) 6 else 7)
 
             // 8. Site Photographs (optional)
             addPhotoGallery(document, photos)
 
             // 9. Approval & Signature (optional)
-            if (config.showSignature) {
+            if (config.showSignature && !config.incompleteReview) {
                 addSignatureBlock(document, config)
             }
 
@@ -947,10 +988,13 @@ object ProfessionalEnglishPdfReporter {
         outputPath: String,
         calculationSteps: List<CalculationStep> = emptyList(),
         bbsRows: List<BbsRow> = emptyList(),
-        boqRows: List<BoqRow> = emptyList()
+        boqRows: List<BoqRow> = emptyList(),
+        incompleteReview: Boolean = false,
+        includeDiagnosticDrawing: Boolean = false,
+        assessmentPending: Boolean = false
     ): File? {
         val convertedChecks = safetyChecks.map {
-            SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference)
+            SafetyCheck(it.name, it.calculated, it.limit, it.unit, it.passed, it.reference, it.notAssessed)
         }
 
         // Determine report type from designType string
@@ -969,8 +1013,8 @@ object ProfessionalEnglishPdfReporter {
         }
 
         // Extract design code from inputs if available
-        val defaultCode = if (reportType == ReportType.STEEL) "AISC 360-16 / ECP 205-2007" else "ACI 318-19 / ECP 203-2025"
-        val codeStr = inputs["Design Code"]
+        val defaultCode = "Not specified (code edition not verified)"
+        val codeStr = inputs["Selected Reference Basis"] ?: inputs["Design Code"]
             ?: defaultCode
 
         return generateReport(
@@ -986,6 +1030,7 @@ object ProfessionalEnglishPdfReporter {
             calculationSteps = calculationSteps,
             bbsRows = bbsRows,
             boqRows = boqRows,
+            config = ReportConfig(incompleteReview = incompleteReview, includeDiagnosticDrawing=includeDiagnosticDrawing, assessmentPending = assessmentPending),
             outputPath = outputPath
         )
     }
@@ -1009,7 +1054,7 @@ object ProfessionalEnglishPdfReporter {
                     page.resources,
                     docEvent.document
                 )
-                val pageNumber = docEvent.document.numberOfPages
+                val pageNumber = docEvent.document.getPageNumber(page)
                 canvas.beginText()
                     .setFontAndSize(font, 8f)
                     .setColor(footerColor, true)

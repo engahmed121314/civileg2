@@ -41,6 +41,7 @@ import com.civileg.app.ui.components.drawings.ProfessionalShearWallDrawing
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 import com.civileg.app.viewmodel.ShearWallViewModel
@@ -299,7 +300,7 @@ fun ShearWallScreen(
                                 Icon(Icons.Default.Warning, contentDescription = null,
                                     tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(8.dp))
-                                AppText(warning, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                                AppTextBlock(warning, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -447,7 +448,7 @@ fun ShearWallScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 result.codeNotes.forEach { note ->
-                                    AppText(note, fontSize = 11.sp,
+                                    AppTextBlock(note, fontSize = 11.sp,
                                         fontFamily = FontFamily.Monospace,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(vertical = 1.dp))

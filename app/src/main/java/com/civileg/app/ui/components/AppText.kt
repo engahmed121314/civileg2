@@ -1,5 +1,6 @@
 package com.civileg.app.ui.components
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -105,8 +106,17 @@ fun AppText(
         }
     }
 
+    // Resolve the paragraph direction from the text itself (first strong character); Compose otherwise follows the layout direction,
+    // which reversed English values such as "700 x 700 mm" inside the Arabic (RTL) screens.
+    if (effectiveStyle.textDirection == androidx.compose.ui.text.style.TextDirection.Unspecified) {
+        effectiveStyle = effectiveStyle.merge(TextStyle(textDirection = androidx.compose.ui.text.style.TextDirection.Content))
+    }
+    // Arabic reads RTL and sits on the right, English reads LTR and sits on the left, whatever the layout direction.
+    // Only an unset or default (Start) alignment is resolved from the first strong character; an explicit alignment is kept.
+    val contentAlign = if (textAlign == null || textAlign == TextAlign.Start) alignmentFromText(text) else textAlign
+
     Text(
-        text = text,
+        text = com.civileg.app.ui.theme.arabicUiText(text),
         modifier = modifier,
         color = effectiveColor,
         fontSize = fontSize,
@@ -119,7 +129,65 @@ fun AppText(
         overflow = effectiveOverflow,
         softWrap = effectiveSoftWrap,
         maxLines = effectiveMaxLines,
-        textAlign = textAlign,
+        textAlign = contentAlign,
         style = effectiveStyle
+    )
+}
+
+/** First strong character decides: Arabic-script letter gives Right, Latin letter gives Left, anything else keeps the default. */
+internal fun alignmentFromText(text: String): TextAlign? {
+    var i = 0
+    while (i < text.length) {
+        val cp = Character.codePointAt(text, i)
+        when (Character.getDirectionality(cp)) {
+            Character.DIRECTIONALITY_RIGHT_TO_LEFT, Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC -> return TextAlign.Right
+            Character.DIRECTIONALITY_LEFT_TO_RIGHT -> return TextAlign.Left
+            else -> {}
+        }
+        i += Character.charCount(cp)
+    }
+    return null
+}
+
+/**
+ * A standalone line or paragraph inside a calculation result panel (formula step, warning, note). It takes the full width of its
+ * column so that English text sits at the left edge and Arabic at the right edge in both layout directions; a wrap-content text
+ * would otherwise be placed at the column's start edge (the right edge on Arabic screens) and look indented. Use it only for lines that
+ * are not side by side with a value in a Row.
+ */
+@Composable
+fun AppTextBlock(
+    text: String,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
+    color: Color = Color.Unspecified,
+    fontSize: TextUnit = TextUnit.Unspecified,
+    fontStyle: FontStyle? = null,
+    fontWeight: FontWeight? = null,
+    fontFamily: FontFamily? = null,
+    lineHeight: TextUnit = TextUnit.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
+    style: TextStyle = LocalTextStyle.current
+) = AppText(
+    text = text,
+    modifier = androidx.compose.ui.Modifier.fillMaxWidth().then(modifier),
+    color = color, fontSize = fontSize, fontStyle = fontStyle, fontWeight = fontWeight, fontFamily = fontFamily,
+    lineHeight = lineHeight, maxLines = maxLines, style = style
+)
+
+/**
+ * Lays a label/value row out by the language of its label: an English label sits on the left with
+ * its value on the right (LTR), an Arabic label sits on the right with its value on the left (RTL),
+ * whatever the screen's own layout direction.
+ */
+@Composable
+fun ContentDirection(text: String, content: @Composable () -> Unit) {
+    val dir = when (alignmentFromText(text)) {
+        TextAlign.Right -> androidx.compose.ui.unit.LayoutDirection.Rtl
+        TextAlign.Left -> androidx.compose.ui.unit.LayoutDirection.Ltr
+        else -> androidx.compose.ui.platform.LocalLayoutDirection.current
+    }
+    androidx.compose.runtime.CompositionLocalProvider(
+        androidx.compose.ui.platform.LocalLayoutDirection provides dir,
+        content = content
     )
 }

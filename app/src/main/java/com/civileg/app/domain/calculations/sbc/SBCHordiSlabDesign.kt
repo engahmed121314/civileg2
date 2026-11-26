@@ -1,12 +1,16 @@
 package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
+import com.civileg.app.domain.calculations.base.HordiDeemedToSatisfy
+import com.civileg.app.domain.calculations.base.SlabSupportCondition
+import com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تصميم البلاطة الهوردي حسب الكود السعودي SBC 304-2024
+ * تصميم البلاطة الهوردي حسب الكود السعودي SBC 304
  * SBC 304 Hordi (Ribbed/Joist) Slab Design — تطبيق مستقل وليس fallback لـ ACI
  *
  * الاختلافات الرئيسية عن ACI 318:
@@ -14,15 +18,15 @@ import kotlin.math.*
  * - أقل سماكة للـ topping: 50 مم (SBC) مقابل 38 مم (ACI) — للمناخ الحار
  * - أقل عرض للضلع: 100 مم (SBC) في المناطق الزلزالية
  * - تباعد أقصى للأسياخ مختلف: min(3d, 450mm) مع تعديل زلزالي min(2d, 250mm)
- * - نسبة تسليح أدنى أعلى: ρmin = 0.002 في المناطق الحارة (SBC)
+ * - نسبة تسليح أدنى: 0.002 قيمة محرك قديمة؛ لا يوجد في نص SBC 304 المرجعي قاعدة مناخية لها (انظر الجدول 7.6.1.1 لبلاطات اتجاه واحد)
  * - غطاء خرساني أكبر: 40 مم داخلي، 65 مم خارجي/ساحلي
  *
  * المراجع:
- * - SBC 304-2024 البند 6.4 (البلاطات المصمتة والهوردي)
- * - SBC 304-2024 البند 4.2 (الانحناء)
- * - SBC 304-2024 البند 4.3 (القص)
- * - SBC 304-2024 البند 21 (متطلبات الزلازل)
- * - SBC 304-2024 البند 7.7 (الغطاء الخرساني)
+ * - SBC 304 البند 6.4 (البلاطات المصمتة والهوردي)
+ * - SBC 304 البند 4.2 (الانحناء)
+ * - SBC 304 البند 4.3 (القص)
+ * - SBC 304 البند 21 (متطلبات الزلازل)
+ * - SBC 304 البند 7.7 (الغطاء الخرساني)
  */
 class SBCHordiSlabDesign : HordiSlabDesign {
 
@@ -35,11 +39,11 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         private const val PHI_FLEXURE = 0.9
         private const val PHI_SHEAR = 0.75
 
-        // SBC 304-2024 limits
+        // SBC 304 limits
         private const val MIN_RIB_WIDTH = 100.0        // mm — SBC 304 §6.4
         private const val MIN_TOPPING = 50.0            // mm — SBC (أعلى من ACI بسبب المناخ الحار)
         private const val MAX_RIB_SPACING = 700.0       // mm
-        private const val MIN_REIN_RATIO = 0.002        // SBC 304 (أعلى من ACI بسبب المناخ)
+        private const val MIN_REIN_RATIO = 0.002        // legacy engine value; not a climate rule in the supplied SBC 304 text (cf. Table 7.6.1.1, fy < 420); applicability to hordi ribs unverified
         private const val COVER_INTERIOR = 40.0         // mm — SBC 304 §7.7
         private const val COVER_CORROSIVE = 65.0        // mm — المناطق الساحلية
         private const val COVER_SEISMIC = 50.0          // mm — المناطق الزلزالية
@@ -57,9 +61,15 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        coverMm: Double,
+        linkDiaMm: Double,
+        mainBarDiaMm: Double,
+        barBondClass: BarBondClass,
+        supportCondition: SlabSupportCondition,
+        loadingApplicability: DeflectionLoadingApplicability
     ): SlabDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304-CR-2018 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("ribWidth", ribWidth)
@@ -86,6 +96,12 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         if (ribSpacing > MAX_RIB_SPACING) {
             warnings.add("SBC 304-6.4: تباعد الضلوع ${ribSpacing}مم > ${MAX_RIB_SPACING}مم (الحد الأقصى)")
         }
+        // SBC 304-CR-2018 9.8.1.3: rib overall depth <= 3.5 x minimum rib width; 9.8.1.8 routes
+        // construction outside 9.8.1.1-4 to slab-and-beam design, so this stays a warning and the
+        // Table 9.3.1.1 deemed l/h check below still governs as beams.
+        if (totalThickness - toppingThickness > 3.5 * ribWidth) {
+            warnings.add("SBC 304 9.8.1.3: عمق الضلع (${totalThickness - toppingThickness}مم) > 3.5 × عرض الضلع (${3.5 * ribWidth}مم) — يُعامل كبلاطات وجسور وفق 9.8.1.8")
+        }
 
         // ══════════════════════════════════════════════════════════════════
         // 2. Material Properties (SBC 304)
@@ -95,14 +111,19 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         val fcDesign = fc / GAMMA_C
         val fsDesign = fy / GAMMA_S
 
-        val cover = when (loadCombination) {
+        val codeCover = when (loadCombination) {
             LoadCombination.DEAD_LIVE_EARTHQUAKE, LoadCombination.DEAD_EARTHQUAKE -> COVER_SEISMIC
             else -> COVER_INTERIOR
         }
+        // Input contract: the caller-supplied cover drives the geometry. The
+        // §7.7 interior/seismic value is a reported minimum, not a substitute.
+        if (coverMm < codeCover) {
+            warnings.add("Supplied cover ${coverMm.toInt()} mm is below the SBC 304 §7.7 ${if (codeCover == COVER_SEISMIC) "seismic" else "interior"} minimum ${codeCover.toInt()} mm — geometry uses the supplied cover; increase cover")
+        }
 
-        // Effective depth
+        // Effective depth from the caller-supplied cover and main-bar diameter
         val ribHeight = totalThickness - toppingThickness
-        val d = ribHeight - cover - 10.0  // deduct cover + half bar dia
+        val d = ribHeight - coverMm - mainBarDiaMm / 2.0
         val b = ribWidth
 
         // ══════════════════════════════════════════════════════════════════
@@ -132,7 +153,7 @@ class SBCHordiSlabDesign : HordiSlabDesign {
             rhoBal * 0.9  // fallback to near-balanced
         }
 
-        // SBC 304 minimum reinforcement (higher for hot climate)
+        // Legacy minimum reinforcement; the supplied SBC 304 text has no climate basis for 0.002 and its applicability to this member is unverified
         val rhoMin = max(MIN_REIN_RATIO, 0.25 * sqrt(fc) / fy)
         val rhoFinal = max(rho, rhoMin)
         val asRequired = rhoFinal * b * d
@@ -181,7 +202,7 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         // ══════════════════════════════════════════════════════════════════
         // 6. Topping Design (SBC 304-6.4.3)
         // ══════════════════════════════════════════════════════════════════
-        val toppingD = toppingThickness - 20.0 - 4.0  // cover + half bar
+        val toppingD = toppingThickness - coverMm - 4.0  // caller cover + half of assumed 8 mm mesh bar
         val toppingMinAs = MIN_REIN_RATIO * 1000.0 * toppingD  // mm²/m
         val toppingBarDia = 8.0  // typical topping mesh
         val toppingBarArea = PI * toppingBarDia * toppingBarDia / 4.0
@@ -192,7 +213,17 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         // 7. Code Notes & Results
         // ══════════════════════════════════════════════════════════════════
         codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
-        codeNotes.add("SBC 304-2024 §6.4: Hordi Slab Design (independent SBC implementation)")
+        codeNotes.add("SBC 304-CR-2018 §6.4: Hordi Slab Design (independent SBC implementation)")
+
+        // ── Serviceability — Table 9.3.1.1 deemed-to-satisfy l/h (joist per §9.8.1) ──
+        val serv = HordiDeemedToSatisfy.sbc(span, totalThickness, fy, supportCondition, loadingApplicability)
+        if (!serv.evaluated) {
+            codeNotes.add("Deflection/serviceability NOT assessed: ${serv.summary}")
+        } else if (!serv.safe) {
+            warnings.add("Deflection deemed-to-satisfy FAILED: ${serv.summary} — increase depth or satisfy the calculated deflection limits of SBC 304 9.3.2")
+        } else {
+            codeNotes.add("Deflection deemed-to-satisfy PASS: ${serv.summary}")
+        }
         codeNotes.add("f'c = 0.8 × fcu = ${String.format("%.1f", fc)} MPa (SBC 304/ACI conversion)")
         codeNotes.add("γc = $GAMMA_C, γs = $GAMMA_S, φ_flex = $PHI_FLEXURE, φ_shear = $PHI_SHEAR")
         codeNotes.add("Rib: ${ribWidth.toInt()}×${ribHeight.toInt()}mm, d=${String.format("%.0f", d)}mm")
@@ -200,7 +231,7 @@ class SBCHordiSlabDesign : HordiSlabDesign {
         codeNotes.add("Topping: Ø${toppingBarDia.toInt()} @ ${toppingSpacing.toInt()}mm mesh")
         codeNotes.add("ρ = ${String.format("%.4f", rhoFinal)}, ρ_min = ${String.format("%.4f", rhoMin)}, ρ_bal = ${String.format("%.4f", rhoBal)}")
         codeNotes.add("Vc = ${String.format("%.1f", Vc)} kN, φVc = ${String.format("%.1f", phiVc)} kN")
-        codeNotes.add("Cover = ${cover.toInt()}mm (${if (isSeismic) "seismic" else "interior"} per SBC 304 §7.7)")
+        codeNotes.add("Cover = ${coverMm.toInt()}mm (caller input; SBC 304 §7.7 ${if (isSeismic) "seismic" else "interior"} minimum ${codeCover.toInt()}mm${if (coverMm < codeCover) " — BELOW MINIMUM" else " satisfied"})")
 
         if (isSeismic) {
             codeNotes.add("SBC 304-21: Seismic provisions applied")
@@ -213,10 +244,13 @@ class SBCHordiSlabDesign : HordiSlabDesign {
             barSpacing = if (numBars > 1) ribWidth / (numBars - 1) else ribWidth,
             minThickness = totalThickness,
             shearCapacity = Vc,
-            isSafe = discriminant > 0 && isShearSafe && rhoFinal <= rhoBal * 1.5,
+            isSafe = discriminant > 0 && isShearSafe && rhoFinal <= rhoBal * 1.5 && (!serv.evaluated || serv.safe),
             utilizationRatio = if (RnBal > 0) Rn / RnBal else 2.0,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            bondClassAssessed = false, // bar surface/bond not assessed by this engine
+            barBondClass = barBondClass, // caller selection carried for traceability, NOT assessed
+            serviceabilityAssessed = serv.assessed // Table 9.3.1.1 deemed-to-satisfy performed
         )
     }
 }

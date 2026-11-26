@@ -29,8 +29,8 @@ data class RebarStock(
 ) : Parcelable
 
 enum class StirrupType(val displayName: String, val codeReference: String) {
-    CLOSED("Closed Stirrups (135° hooks)", "ECP 203-4.2.6 / ACI 318-25.7.1"),
-    OPEN("Open Stirrups (90° hooks)", "ECP 203-4.2.6 / ACI 318-25.7.1"),
+    CLOSED("Closed Stirrups (135° hooks)", "ECP 203-4.2.6 / ACI 318.7.1"),
+    OPEN("Open Stirrups (90° hooks)", "ECP 203-4.2.6 / ACI 318.7.1"),
     SEISMIC("Seismic Stirrups (135° + 10d)", "ECP 203-AppB / ACI 318-18.7.5"),
     SPIRAL("Spiral Reinforcement", "ACI 318-10.7.6")
 }

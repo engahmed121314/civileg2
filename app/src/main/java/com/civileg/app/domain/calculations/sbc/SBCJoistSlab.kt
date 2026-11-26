@@ -1,21 +1,25 @@
 package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.entities.BarBondClass
 import com.civileg.app.domain.calculations.base.HordiSlabDesign
+import com.civileg.app.domain.calculations.base.HordiDeemedToSatisfy
+import com.civileg.app.domain.calculations.base.SlabSupportCondition
+import com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability
 import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تصميم البلاطات الهوردي (Joist / Ribbed Slab) حسب الكود السعودي SBC 304-2024
+ * تصميم البلاطات الهوردي (Joist / Ribbed Slab) حسب الكود السعودي SBC 304
  *
- * تنفيذ كامل لـ SBC 304-2024 مع مراعاة الفروق الجوهرية عن ECP و ACI:
- *  - SBC 304-2024 §8.4: Ribbed / Joist slab provisions
- *  - SBC 304-2024 §4.2: Flexural design (partial-factor format γc=1.5, γs=1.15)
- *  - SBC 304-2024 §4.3: Shear design (معامل 0.25 بدل 0.24)
- *  - SBC 304-2024 §8.4.5: Effective flange width للـ T-section
- *  - SBC 304-2024 §8.4.6: Joist shear enhancement factor
- *  - SBC 304-2024 §8.4.7: Minimum topping thickness
- *  - SBC 304-2024 §4.2.2: Maximum reinforcement ratio
+ * تنفيذ كامل لـ SBC 304 مع مراعاة الفروق الجوهرية عن ECP و ACI:
+ *  - SBC 304 §8.4: Ribbed / Joist slab provisions
+ *  - SBC 304 §4.2: Flexural design (partial-factor format γc=1.5, γs=1.15)
+ *  - SBC 304 §4.3: Shear design (معامل 0.25 بدل 0.24)
+ *  - SBC 304 §8.4.5: Effective flange width للـ T-section
+ *  - SBC 304 §8.4.6: Joist shear enhancement factor
+ *  - SBC 304 §8.4.7: Minimum topping thickness
+ *  - SBC 304 §4.2.2: Maximum reinforcement ratio
  *
  * الفروق الرئيسية عن ECP 203:
  *  - معامل القص: 0.25 بدل 0.24 (SBC 304 §4.3.2)
@@ -27,7 +31,7 @@ import kotlin.math.*
 class SBCJoistSlab : HordiSlabDesign {
 
     companion object {
-        // SBC 304 partial safety factors (mandated by SBC 304-2024 §4.2)
+        // SBC 304 partial safety factors (mandated by SBC 304 §4.2)
         private const val GAMMA_C = 1.5    // SBC 304-4.2.2: γc for concrete
         private const val GAMMA_S = 1.15   // SBC 304-4.2.2: γs for steel
 
@@ -70,7 +74,13 @@ class SBCJoistSlab : HordiSlabDesign {
         span: Double,
         designMoment: Double,
         designShear: Double,
-        loadCombination: LoadCombination
+        loadCombination: LoadCombination,
+        coverMm: Double,
+        linkDiaMm: Double,
+        mainBarDiaMm: Double,
+        barBondClass: BarBondClass,
+        supportCondition: SlabSupportCondition,
+        loadingApplicability: DeflectionLoadingApplicability
     ): SlabDesignResult {
         // ── InputGuard: loud failures, no silent zeros (ADR-010) ──
         InputGuard.positive("fcu", fcu)
@@ -90,6 +100,7 @@ class SBCJoistSlab : HordiSlabDesign {
         val fc = fcu / GAMMA_C          // fcd = fcu / γc  (SBC 304-4.2.2)
         val fsd = fy / GAMMA_S          // fsd = fy  / γs  (SBC 304-4.2.2)
         val d = totalThickness - MIN_COVER - HALF_BAR_DIA  // effective depth
+        codeNotes.add("Effective-depth convention fixed: d = t − ${MIN_COVER.toInt()} (cover) − ${HALF_BAR_DIA.toInt()} (half bar); caller coverMm=${coverMm.toInt()}/linkDiaMm=${linkDiaMm.toInt()}/mainBarDiaMm=${mainBarDiaMm.toInt()} accepted, not threaded. NOTE: this engine is NOT the live factory SBC path — CalculationFactory returns SBCHordiSlabDesign")
         val ribDepth = totalThickness - toppingThickness
         val hf = toppingThickness       // flange (topping) thickness
 
@@ -220,12 +231,22 @@ class SBCJoistSlab : HordiSlabDesign {
             warnings.add("SBC 304-4.3: Design shear ${String.format("%.1f", designShear)} kN exceeds capacity ${String.format("%.1f", Vc)} kN")
         }
 
-        val isSafe = isGeometrySafe && isShearSafe && rho <= rhoMax
+        // ── Serviceability — Table 9.3.1.1 deemed-to-satisfy l/h (joist per §9.8.1) ──
+        // NB: this engine's span arrives in METERS (see beff line below) — convert to mm.
+        val serv = HordiDeemedToSatisfy.sbc(span * 1000.0, totalThickness, fy, supportCondition, loadingApplicability)
+        if (!serv.evaluated) {
+            codeNotes.add("Deflection/serviceability NOT assessed: ${serv.summary}")
+        } else if (!serv.safe) {
+            warnings.add("Deflection deemed-to-satisfy FAILED: ${serv.summary} — increase depth or satisfy the calculated deflection limits of SBC 304 9.3.2")
+        } else {
+            codeNotes.add("Deflection deemed-to-satisfy PASS: ${serv.summary}")
+        }
+        val isSafe = isGeometrySafe && isShearSafe && rho <= rhoMax && (!serv.evaluated || serv.safe)
         val utilizationRatio = if (Vc > 0) designShear / Vc else 2.0
 
         // ── Code notes ──
         codeNotes.add(CodeReference.SBC.SLAB_ONE_WAY)
-        codeNotes.add("SBC 304-2024 §8.4: Hordi/Joist Slab Design")
+        codeNotes.add("SBC 304 §8.4: Hordi/Joist Slab Design")
         codeNotes.add(String.format("γc=%.2f, γs=%.2f (SBC 304-4.2.2)", GAMMA_C, GAMMA_S))
         codeNotes.add(String.format("fcu=%.0f MPa → fcd=%.1f MPa, fsd=%.1f MPa", fcu, fc, fsd))
         codeNotes.add(String.format("beff=%.0f mm (SBC 304-8.4.5), bw=%.0f mm", beff, bw))
@@ -242,7 +263,10 @@ class SBCJoistSlab : HordiSlabDesign {
             isSafe = isSafe,
             utilizationRatio = utilizationRatio,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            bondClassAssessed = false, // bar surface/bond not assessed by this engine
+            barBondClass = barBondClass, // caller selection carried for traceability, NOT assessed
+            serviceabilityAssessed = serv.assessed // Table 9.3.1.1 deemed-to-satisfy performed
         )
     }
 

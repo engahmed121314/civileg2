@@ -233,7 +233,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         AppText(stringResource(R.string.settings_version), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                        AppText("v2.0.0", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        AppText("v${com.civileg.app.BuildConfig.VERSION_NAME}", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                     HorizontalDivider()
                     Row(

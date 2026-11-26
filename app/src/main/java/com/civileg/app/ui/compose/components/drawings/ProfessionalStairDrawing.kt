@@ -109,6 +109,8 @@ fun ProfessionalStairDrawing(
     cover: Double = 25.0,         // mm
     numberOfRisers: Int = 0,      // calculated from totalHeight/riserHeight if 0
     stairType: String = "Straight Stair", // stair type label shown in the drawing title
+    quantityReview: com.civileg.app.domain.calculations.utils.StairQuantityReview? = null,
+    documentaryBasisLabel: String? = null,
     viewMode: Int = 0,
     designCode: DesignCode = DesignCode.ECP,
     resultSummary: DrawingResultSummary? = null,
@@ -129,7 +131,7 @@ fun ProfessionalStairDrawing(
     // ECP 203-2020: stair waist slab per ECP, load per ECP 201
     // ACI 318-19:  Chapter 7 — one-way slabs (stair waist slab)
     // SBC 304-2018: adopts ACI provisions with SBC live load factors
-    val codeLabel = designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
+    val codeLabel = documentaryBasisLabel ?: designCode.version  // e.g. "ECP 203-2020", "ACI 318-19", "SBC 304-2018"
     // ── Responsive config ──────────────────────────────────────────────────
     val cfg = drawingDimensionsConfig()
 
@@ -184,23 +186,19 @@ fun ProfessionalStairDrawing(
             else -> 0f
         }
 
-        // ── Combined section indicator ──
-        if (viewMode == 0) {
-            drawCombinedSectionLabel(
-                y = cfg.margin * 0.5f,
-                width = cw,
-                sections = listOf("Elevation", "Section", "Plan", "Reinforcement"),
-                cfg = cfg
-            )
-        }
+        // Each zone owns its own heading. Do not overlay a full-width heading
+        // or separator across the adjacent elevation/section drawings.
 
         // ── Draw zones based on viewMode ──────────────────────────
         // 1. Main elevation view (left)
-        if (viewMode == 0 || viewMode == 1) {
-            drawZoneLabel(cfg.margin, cfg.margin * 0.3f, "ELEVATION", cfg)
+        // Reinforcement-only tab: the net-flight review text is placed at the top, so the elevation
+        // (with the adopted bars) is drawn below it instead of leaving the sheet blank.
+        val reinfElevation = viewMode == 3 && quantityReview != null
+        if (viewMode == 0 || viewMode == 1 || reinfElevation) {
         drawElevationView(
-            zoneLeft = cfg.margin, zoneTop = cfg.margin * 0.5f,
-            zoneRight = elevZoneRight - 10f, zoneBottom = tableTop - 16f,
+            zoneLeft = cfg.margin, zoneTop = if (reinfElevation) ch * 0.34f else cfg.margin * 0.5f,
+            zoneRight = (if (reinfElevation) cw else elevZoneRight) - 10f,
+            zoneBottom = if (reinfElevation) ch * 0.94f else tableTop - 16f,
             cw = cw, ch = ch,
             nRisers = nRisers, nTreads = nTreads,
             riserHeight = riserHeight, treadWidth = treadWidth,
@@ -216,18 +214,8 @@ fun ProfessionalStairDrawing(
         )
         } // end elevation view
 
-        if (viewMode == 0) {
-            drawSectionSeparator(
-                y = rightZoneTop - cfg.margin * 0.3f,
-                width = cw,
-                label = "SECTION & PLAN",
-                cfg = cfg
-            )
-        }
-
         // 2. Cross-section view A-A (right-top) + 3. Plan view (right-bottom)
         if (viewMode == 0 || viewMode == 2) {
-            drawZoneLabel(cfg.margin, rightZoneTop, "CROSS SECTION", cfg)
         val secZoneLeft = if (viewMode == 2) cfg.margin else elevZoneRight + 10f
         drawCrossSectionView(
             zoneLeft = secZoneLeft, zoneTop = rightZoneTop,
@@ -252,19 +240,22 @@ fun ProfessionalStairDrawing(
         )
         } // end section/plan views
 
-        if (viewMode == 0) {
-            drawSectionSeparator(
-                y = tableTop - cfg.margin * 0.3f,
-                width = cw,
-                label = "REINFORCEMENT",
-                cfg = cfg
-            )
-        }
-
         // 4. Reinforcement schedule table (bottom)
         if (viewMode == 0 || viewMode == 3) {
-            drawZoneLabel(cfg.margin, tableTop, "REINFORCEMENT", cfg)
-        drawReinforcementScheduleTable(
+        if (quantityReview != null) {
+            val left = cfg.margin
+            val textSize = cfg.annotationTextSmall
+            var y = tableTop + textSize
+            fun line(value: String) {
+                drawTextAnnotated(value, left, y, DimensionWhite, textSize)
+                y += textSize * 1.6f
+            }
+            line("NET FLIGHT REVIEW ONLY, NOT CUTTING LENGTHS")
+            line("Main: ${quantityReview.main.count} x dia ${quantityReview.main.diameterMm}, net ${quantityReview.main.netFlightLengthMm.toInt()} mm")
+            line("Dist: ${quantityReview.distribution.count} x dia ${quantityReview.distribution.diameterMm}, net ${quantityReview.distribution.netFlightLengthMm.toInt()} mm")
+            line("No support ends / bends / laps / top / landing bars")
+            line("FINAL STEEL / FABRICATION BBS NOT AVAILABLE")
+        } else drawReinforcementScheduleTable(
             cw = cw, ch = ch, tableTop = tableTop,
             nRisers = nRisers, nTreads = nTreads,
             totalLength = totalLength, totalHeight = totalHeight,
@@ -279,26 +270,18 @@ fun ProfessionalStairDrawing(
         )
         } // end reinforcement table
 
-        // 5. Title block (always visible)
-        drawTitleBlock(cw, ch, tableTop, nRisers, riserHeight, treadWidth, totalHeight, totalLength, stairType)
+        // One full-width footer. The former fixed-width summary/title blocks
+        // overprinted each other and were clipped on a phone-width canvas.
+        val footerY = ch - cfg.margin * 2.2f
+        val sheetBasis = if (documentaryBasisLabel != null) documentaryBasisLabel.substringAfter("Reference supplied: ").substringBefore(';') + " | REVIEW ONLY" else codeLabel
+        drawTextAnnotated("Stair | $sheetBasis | NTS", cfg.margin, footerY,
+            DimensionWhite, cfg.annotationTextSmall)
+        resultSummary?.let { summary ->
+            drawTextAnnotated("Implemented checks: ${summary.safetyLabel}; review required",
+                cfg.margin, footerY + cfg.annotationTextSmall * 1.3f,
+                DimensionWhite, cfg.annotationTextSmall)
+        }
 
-        // ── Responsive title block ──
-        drawSheetAnnotations(
-            x = cw - cfg.titleBlockWidth - cfg.margin,
-            y = ch - cfg.titleBlockHeight - cfg.margin,
-            cfg = cfg,
-            summary = resultSummary
-        )
-        drawResponsiveTitleBlock(
-            x = cw - cfg.titleBlockWidth - cfg.margin,
-            y = ch - cfg.titleBlockHeight - cfg.margin,
-            cfg = cfg,
-            projectName = "CivilEG",
-            drawingTitle = "Stair Detail",
-            scale = "NTS",
-            drawingNo = "1",
-            designCode = codeLabel
-        )
     }
 }
 
@@ -346,7 +329,8 @@ private fun DrawScope.drawElevationView(
     // Origin: bottom-left of stair (where first riser meets floor)
     // Reserve 62f at bottom for supports + horizontal length dimension
     val originX = zoneLeft + 50f
-    val originY = zoneBottom - 62f
+    val fittedHeight = totalHeight.toFloat() * scale
+    val originY = zoneTop + (zoneH + fittedHeight) / 2f
 
     // Stair top-right corner (end of last tread at top)
     val stairEndX = originX + nTreads * stepW

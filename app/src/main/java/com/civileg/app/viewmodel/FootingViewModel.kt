@@ -53,15 +53,24 @@ class FootingViewModel @Inject constructor(
     var pendingDrawingBitmap: Bitmap? = null
 
     // Store actual inputs for save
-    private var lastFcu: Double = 25.0
-    private var lastFy: Double = 360.0
-    var excavationDepthM: Double = 0.0
-    var workingSpaceM: Double = 0.5
-    var blindingThicknessM: Double = 0.0
+    /** Everything the shown result was solved with. BOQ, PDF and save read this, never live UI fields. */
+    data class FootingSolvedInputs(
+        val type: CalculatorEngine.FootingType,
+        val pu: Double, val ps: Double?, val pu2: Double, val distanceMm: Double,
+        val fcu: Double, val fy: Double, val soil: Double,
+        val colB: Double, val colT: Double,
+        val code: DesignCode,
+        val preferredDiameter: Int, val preferredSpacing: Double,
+        val maxLeftMm: Double?, val maxRightMm: Double?,
+        val excavationDepthM: Double, val workingSpaceM: Double, val blindingThicknessM: Double
+    )
+    private val _solvedInputs = MutableLiveData<FootingSolvedInputs?>()
+    val solvedInputs: LiveData<FootingSolvedInputs?> = _solvedInputs
 
     fun calculateFooting(
         type: CalculatorEngine.FootingType,
         p: Double,
+        ps: Double?,
         fcu: Double,
         fy: Double,
         soil: Double,
@@ -70,10 +79,13 @@ class FootingViewModel @Inject constructor(
         code: DesignCode,
         preferredDiameter: Int,
         preferredSpacing: Double,
-        p2: Double = 0.0,
-        distance: Double = 0.0,
-        maxLeft: Double? = null,
-        maxRight: Double? = null
+        p2: Double,
+        distance: Double,
+        maxLeft: Double?,
+        maxRight: Double?,
+        excavationDepthM: Double,
+        workingSpaceM: Double,
+        blindingThicknessM: Double
     ) {
         InputGuard.positive("p", p)
         InputGuard.positive("fcu", fcu)
@@ -83,17 +95,18 @@ class FootingViewModel @Inject constructor(
         InputGuard.positive("colT", colT)
         InputGuard.positive("preferredDiameter", preferredDiameter)
         InputGuard.positive("preferredSpacing", preferredSpacing)
+        InputGuard.nonNegative("excavationDepthM", excavationDepthM)
+        InputGuard.nonNegative("workingSpaceM", workingSpaceM)
+        InputGuard.nonNegative("blindingThicknessM", blindingThicknessM)
 
         viewModelScope.launch {
             _isLoading.value = true
             pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
             try {
-                lastFcu = fcu
-                lastFy = fy
-
                 val res = calculatorEngine.calculateFooting(
                     type = type,
                     p = p,
+                    ps = ps,
                     fcu = fcu,
                     fy = fy,
                     soil = soil,
@@ -115,6 +128,11 @@ class FootingViewModel @Inject constructor(
                 val combinedWarnings = report.warnings + dlReport.warnings
                 _validationReport.value = report.copy(warnings = combinedWarnings)
                 
+                _solvedInputs.value = FootingSolvedInputs(
+                    type, p, ps, p2, distance, fcu, fy, soil, colB, colT, code,
+                    preferredDiameter, preferredSpacing, maxLeft, maxRight,
+                    excavationDepthM, workingSpaceM, blindingThicknessM
+                )
                 _result.value = res
                 _error.value = null
             } catch (e: Exception) {
@@ -126,9 +144,23 @@ class FootingViewModel @Inject constructor(
         }
     }
 
+    /** Drop the current result (inputs changed or a new attempt started). */
+    fun clearResult() {
+        _result.value = null
+        _validationReport.value = null
+        _error.value = null
+        _solvedInputs.value = null
+        pendingDrawingBitmap = null
+    }
+
     fun saveFooting(projectId: Long, name: String, result: CalculatorEngine.FootingResult) {
+        val solved = _solvedInputs.value
+        if (solved == null) {
+            _errorMessage.value = "No solved inputs for this result; design again before saving / أعد التصميم قبل الحفظ"
+            return
+        }
         viewModelScope.launch {
-            repository.saveFootingDesign(projectId, name, result, lastFcu, lastFy)
+            repository.saveFootingDesign(projectId, name, result, solved.fcu, solved.fy)
         }
     }
 
@@ -136,10 +168,10 @@ class FootingViewModel @Inject constructor(
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val res = _result.value ?: return null
         return com.civileg.app.utils.ElementDxfDrawings.footingSection(
-            title = "FOOTING ${res.type.displayName}",
+            title = "FOOTING ${res.type.displayNameEn}",
             widthMm = res.width.toDouble(),
             thicknessMm = res.thickness.toDouble(),
-            coverMm = 70.0,
+            coverMm = res.coverMm,
             barDiaMm = res.barDiameter.toDouble(),
             barSpacingMm = res.reinforcementBottom.spacing.toDouble(),
             columnWidthMm = res.column1Size.first.toDouble()
@@ -159,6 +191,7 @@ class FootingViewModel @Inject constructor(
 
     fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
         val res = _result.value ?: return
+        val solved = _solvedInputs.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
             withContext(Dispatchers.Main) { _isExporting.value = true }
             try {
@@ -185,7 +218,7 @@ class FootingViewModel @Inject constructor(
                         rebarYDia = res.barDiameter.toDouble(),
                         rebarYSpatial = res.reinforcementBottom.spacing,
                         footingType = res.type.displayName,
-                        cover = 70.0,
+                        cover = res.coverMm,
                         soilPressureMax = res.soilPressure,
                         soilPressureMin = res.soilPressure
                     )
@@ -198,7 +231,7 @@ class FootingViewModel @Inject constructor(
                     else -> "ECP 203"
                 }
                 val inputsMap = mapOf(
-                    "Footing Type" to res.type.displayName,
+                    "Footing Type" to res.type.displayNameEn, // the English-only PDF printed a blank for the Arabic name
                     "Width" to "${res.width} mm",
                     "Length" to "${res.length} mm",
                     "Thickness" to "${res.thickness} mm",
@@ -206,28 +239,32 @@ class FootingViewModel @Inject constructor(
                     "Soil Pressure" to "${String.format("%.2f", res.soilPressure)} kN/m²",
                     "Allowable Pressure" to "${String.format("%.2f", res.allowablePressure)} kN/m²",
                     "Design Code" to codeName,
-                    "fcu" to "$lastFcu MPa",
-                    "fy" to "$lastFy MPa",
-                    "Excavation Depth" to "$excavationDepthM m",
-                    "Working Space" to "$workingSpaceM m",
-                    "Blinding Thickness" to "$blindingThicknessM m",
-                    "Applied Load" to "${String.format("%.1f", res.soilPressure * res.width * res.length / 1e6)} kN"
+                    "fcu" to "${solved.fcu} MPa",
+                    "fy" to "${solved.fy} MPa",
+                    "Excavation Depth" to "${solved.excavationDepthM} m",
+                    "Working Space" to "${solved.workingSpaceM} m",
+                    "Blinding Thickness" to "${solved.blindingThicknessM} m",
+                    // Entered load from the solved snapshot. The old line printed soil pressure x area,
+                    // a derived service load, under the label "Applied Load".
+                    "Entered axial load Pu" to "${String.format("%.1f", solved.pu)} kN",
+                    "Entered service load Ps" to (solved.ps?.let { "${String.format("%.1f", it)} kN" } ?: "not entered (combined or legacy record: basis unknown)")
                 )
                 val resultsMap = mapOf(
                     "Reinforcement" to res.reinforcementBottom.barString,
                     "Bars X" to "${res.barsX} Ø${res.barDiameter}",
                     "Bars Y" to "${res.barsY} Ø${res.barDiameter}",
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
-                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg",
-                    "Efficiency" to "${String.format("%.0f", res.efficiencyScore)}%",
-                    "Optimal" to if (res.isOptimal) "Yes" else "No"
+                    "Bar bending schedule" to "NOT ISSUED - cutting lengths (bends, hooks, anchorage, laps) have no verified code basis",
+                    "Net bar lengths" to com.civileg.app.domain.calculations.utils.BbsGenerator.footingNetLengthNote(res),
+                    "Steel Weight (plan dimensions, no cover, laps, hooks or bends)" to "${String.format("%.1f", res.steelWeight)} kg",
+                    // Efficiency and Optimal were unassessed defaults (100% / Yes) printed beside an UNSAFE verdict
                 )
                 // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم قاعدة - ${res.type.displayName}",
-                    titleEn = "Footing Design Report — ${res.type.displayName}",
+                    titleEn = "Footing Design Report — ${res.type.displayNameEn}",
                     subtitle = "Code: $codeName  •  ${res.width}×${res.length}×${res.thickness}mm",
-                    designType = "Footing (${res.type.displayName})",
+                    designType = "Footing (${res.type.displayNameEn})",
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = res.safetyChecks.map {
@@ -236,11 +273,11 @@ class FootingViewModel @Inject constructor(
                         )
                     },
                     isSafe = res.isSafe,
+                    // Passing checks do not make a complete assessment (punching demand model, constants and layer order are unverified)
+                    assessmentPending = res.isSafe,
                     calculationSteps = res.calculationSteps,
-                    bbsEntries = runCatching {
-                        com.civileg.app.domain.calculations.utils.BbsGenerator.generateFootingBbs("F1", res)
-                    }.getOrDefault(emptyList()),
-                    boqRows = BoqEstimator.footingRows(res, "F1", excavationDepthM, workingSpaceM, blindingThicknessM),
+                    bbsEntries = emptyList(), // bar bending schedule NOT ISSUED, see the results table
+                    boqRows = BoqEstimator.footingRows(res, "F1", solved.excavationDepthM, solved.workingSpaceM, solved.blindingThicknessM),
                     drawingBitmap = drawingBitmap,
                     drawing = buildDxfDrawing(),
                     outputPath = file.absolutePath

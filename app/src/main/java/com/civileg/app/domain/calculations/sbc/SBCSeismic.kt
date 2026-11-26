@@ -7,6 +7,13 @@ import com.civileg.app.domain.entities.DesignCode
 import kotlin.math.*
 
 /**
+ * UNVERIFIED LEGACY ENGINE - DO NOT USE FOR DESIGN.
+ * The zone factors (0.05-0.35 by city/zone), the Fa/Fv tables, T = 0.08 H^0.75, the SDOF drift estimate and the "SBC 301-2020" citations below
+ * were NOT checked against SBC 301-CR-2018 and several contradict it (the code uses Ss/S1 map values, Tables 11-1/11-2, Eq 12-8 Ct/x).
+ * The SBC seismic screen uses [SBC301SeismicElf] (Tables and equations cited by page) instead.
+ * Kept only because CalculationFactory and legacy tests still reference it; remove together with SBCSeismicTest once the SBC path is accepted.
+ */
+/**
  * تنفيذ التصميم الزلزالي حسب الكود السعودي SBC 301-2020 — مستقل بالكامل عن ACI
  *
  * فروقات SBC 301 عن ASCE 7-16:

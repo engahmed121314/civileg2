@@ -100,6 +100,8 @@ fun TankScreen(
     // Site quantities (pit excavation / blinding)
     var excavationDepth by remember { mutableStateOf("2.0") }
     var blindingThickness by remember { mutableStateOf("0.1") }
+    // An edited input makes the shown result stale: drop it so it cannot be read, exported or saved as the new case.
+    LaunchedEffect(selectedType, capacity, height, fcu, fy, selectedCode, excavationDepth, blindingThickness) { viewModel.clearResult() }
 
     // Input validation states
     var capacityError by remember { mutableStateOf("") }
@@ -366,8 +368,8 @@ fun TankScreen(
                             ResultRow(stringResource(R.string.tank_max_water_pressure), "${"%.1f".format(res.waterPressure)} kN/m²")
                             ResultRow(stringResource(R.string.tank_wall_reinforcement), res.wallReinforcement.barString)
                             ResultRow("Concrete Volume", "${"%.3f".format(res.concreteVolume)} m³")
-                            ResultRow("Steel Weight", "${"%.1f".format(res.steelWeight)} kg")
-                            ResultRow("Cost", "${"%.2f".format(res.cost)}")
+                            ResultRow("Steel (indicative ratio, not designed bars)", "${"%.1f".format(res.steelWeight)} kg")
+                            ResultRow("Cost", "Unavailable (no price basis)")
                         }
                     }
                 }
@@ -375,9 +377,8 @@ fun TankScreen(
                 if (res.calculationSteps.isNotEmpty()) {
                     item { CalculationStepsCard(res.calculationSteps, title = "Tank Calculation Steps") }
 
-                    val bbsEntries = runCatching {
-                        BbsGenerator.generateTankBbs("T1", res)
-                    }.getOrDefault(emptyList())
+                    // Not issued: generator omits horizontal wall bars and the top base layer (unverified, incomplete).
+                    val bbsEntries = emptyList<com.civileg.app.domain.calculations.utils.BbsEntry>()
                     if (bbsEntries.isNotEmpty()) {
                         item { BbsTableCard(bbsEntries, title = "Tank Bar Bending Schedule") }
                     }
@@ -386,6 +387,7 @@ fun TankScreen(
                         BoqEstimator.tankRows(
                             res.concreteVolume, res.steelWeight, res.length, res.width, res.height,
                             "T1", viewModel.excavationDepthM, viewModel.blindingThicknessM,
+                        isCircular = res.type.name.contains("CIRCULAR"),
                             waterproofingAreaM2 = if (res.type.name.contains("UNDERGROUND")) {
                                 BoqEstimator.tankWaterproofingArea(
                                     isCircular = res.type.name.contains("CIRCULAR"),
@@ -425,7 +427,7 @@ fun TankScreen(
                                             fontSize = 14.sp
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        AppText(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        AppText(check.name, modifier = Modifier.weight(1f).padding(end = 12.dp), fontSize = 13.sp)
                                         AppText(
                                             "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
                                             fontSize = 12.sp,
@@ -665,8 +667,10 @@ private fun TankInputField(value: String, label: String, onValueChange: (String)
 
 @Composable
 private fun ResultRow(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         AppText(label)
         AppText(value, fontWeight = FontWeight.Bold)
     }
+}
 }

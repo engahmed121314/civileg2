@@ -189,10 +189,7 @@ class ECPTank : TankDesign {
         // K-method حسب ECP 203 البند 4-2-2-1
         // K = Mu / (fcu * b * d^2)
         val K = Mu_Nmm / (fcu * b * d * d)
-        val epsilonCu = 0.003
-        val epsilonY = fy / (200000.0 * GAMMA_S)
-        val aOverDBal = 0.9 * epsilonCu / (epsilonCu + epsilonY)
-        val K_bal = (0.67 / GAMMA_C) * aOverDBal * (1.0 - aOverDBal / 2.0)
+        val K_bal = ECP2025FlexureLimits.kMax(fy)   // ECP 203-2025 Table 4-1 (p.4-6), a = 0.8 c; replaces the 0.9 factor
 
         if (K > K_bal) {
             warnings.add("المقطع مفرط التسليح - يُنصح بزيادة سمك الجدار")
@@ -219,14 +216,14 @@ class ECPTank : TankDesign {
         val barDiameter = selectBarDiameter(asRequired, wallThickness)
         val barArea = PI * barDiameter * barDiameter / 4
         val barsPerMeter = ceil(asRequired / barArea).toInt().coerceIn(7, 20)
-        val spacing = (1000.0 / barsPerMeter).let { ceil(it / 10.0) * 10.0 }
+        val spacing = (1000.0 / barsPerMeter).let { floor(it / 10.0) * 10.0 } // round spacing DOWN: rounding up delivered less steel than required
         val asProvided = (1000.0 / spacing) * barArea
 
         // التسليح الأفقي (تقريبي: 25-50% من العمودي)
         val asHorizontal = asProvided * 0.35
         val hBarDia = selectBarDiameter(asHorizontal, wallThickness)
         val hBarsPerMeter = ceil(asHorizontal / (PI * hBarDia * hBarDia / 4)).toInt().coerceIn(6, 16)
-        val hSpacing = (1000.0 / hBarsPerMeter).let { ceil(it / 10.0) * 10.0 }
+        val hSpacing = (1000.0 / hBarsPerMeter).let { floor(it / 10.0) * 10.0 } // round spacing DOWN: rounding up delivered less steel than required
 
         // فحص القص
         val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // ECP 203 §4-3-1-2
@@ -253,7 +250,7 @@ class ECPTank : TankDesign {
         ))
 
         codeNotes.add(CodeReference.ECP.TANK_HYDROSTATIC)
-        codeNotes.add("ECP 203-2025: Section 8-1 (Water-Retaining Structures)")
+        codeNotes.add("ECP 203: Section 8-1 (Water-Retaining Structures)")
         codeNotes.add("Wall: Cantilever method, M = γw×h³/6")
         codeNotes.add("Vertical: ${barsPerMeter}Ø${barDiameter.toInt()} @ ${spacing.toInt()}mm")
         codeNotes.add("Horizontal: ${hBarsPerMeter}Ø${hBarDia.toInt()} @ ${hSpacing.toInt()}mm")
@@ -320,21 +317,21 @@ class ECPTank : TankDesign {
         val hoopBarDia = selectBarDiameter(asHoopRequired, wallThickness)
         val hoopBarArea = PI * hoopBarDia * hoopBarDia / 4
         val hoopBarsPerMeter = ceil(asHoopRequired / hoopBarArea).toInt().coerceIn(7, 20)
-        val hoopSpacing = (1000.0 / hoopBarsPerMeter).let { ceil(it / 10.0) * 10.0 }
+        val hoopSpacing = (1000.0 / hoopBarsPerMeter).let { floor(it / 10.0) * 10.0 } // round spacing DOWN: rounding up delivered less steel than required
         val asHoopProvided = (1000.0 / hoopSpacing) * hoopBarArea
 
         // اختيار الأسياخ العمودية
         val vertBarDia = selectBarDiameter(asVerticalRequired, wallThickness)
         val vertBarArea = PI * vertBarDia * vertBarDia / 4
         val vertBarsPerMeter = ceil(asVerticalRequired / vertBarArea).toInt().coerceIn(6, 16)
-        val vertSpacing = (1000.0 / vertBarsPerMeter).let { ceil(it / 10.0) * 10.0 }
+        val vertSpacing = (1000.0 / vertBarsPerMeter).let { floor(it / 10.0) * 10.0 } // round spacing DOWN: rounding up delivered less steel than required
 
         val steelStress = maxHoopTension / (hoopBarsPerMeter / 1000.0 * (PI * hoopBarDia * hoopBarDia / 4)) // MPa
         val fct = 0.6 * sqrt(fcu)
         val isCrackSafe = steelStress <= fct * 1000.0
 
         codeNotes.add(CodeReference.ECP.TANK_HYDROSTATIC)
-        codeNotes.add("ECP 203-2025: Section 8-1 (Circular Tank - Hoop Tension)")
+        codeNotes.add("ECP 203: Section 8-1 (Circular Tank - Hoop Tension)")
         codeNotes.add("Max Hoop Tension T = γw×H×R = ${String.format("%.1f", maxHoopTension)} kN/m")
         codeNotes.add("Hoop: ${hoopBarsPerMeter}Ø${hoopBarDia.toInt()} @ ${hoopSpacing.toInt()}mm")
         codeNotes.add("Vertical: ${vertBarsPerMeter}Ø${vertBarDia.toInt()} @ ${vertSpacing.toInt()}mm")
@@ -413,7 +410,7 @@ class ECPTank : TankDesign {
         val barDiameter = selectBarDiameter(asRequired, baseThickness)
         val barArea = PI * barDiameter * barDiameter / 4
         val barsPerMeter = ceil(asRequired / barArea).toInt().coerceIn(6, 20)
-        val spacing = (1000.0 / barsPerMeter).let { ceil(it / 10.0) * 10.0 }
+        val spacing = (1000.0 / barsPerMeter).let { floor(it / 10.0) * 10.0 } // round spacing DOWN: rounding up delivered less steel than required
         val asProvided = (1000.0 / spacing) * barArea
 
         // فحص قص الاختراق
@@ -422,16 +419,12 @@ class ECPTank : TankDesign {
         } else {
             2 * (wallThickness / 1000.0 + d / 1000.0 + wallThickness / 1000.0 + d / 1000.0)
         }
-        val punchingShearCapacity = 0.316 * sqrt(fcu / GAMMA_C) * punchingPerimeter * d / 1000.0 // kN (ECP 203 §4-3-2)
+        val punchingShearCapacity = 0.316 * sqrt(fcu / GAMMA_C) * (punchingPerimeter * 1000.0) * d / 1000.0 // kN; perimeter m -> mm (was 1000x too small)
         val soilPressure = totalPressure / (L * B) // kPa
         val criticalArea = (wallThickness / 1000.0 + d / 1000.0) * (wallThickness / 1000.0 + d / 1000.0)
         val punchingLoad = totalPressure * L * B - soilPressure * criticalArea // kN
-        val punchingCheck = punchingLoad <= punchingShearCapacity
 
-        safetyChecks.add(TankSafetyCheck(
-            "Punching Shear (Base)", punchingLoad * 0.5, punchingShearCapacity, "kN",
-            punchingCheck, "ECP 203: qp = 0.316×√(fcu/γc)×b₀×d"
-        ))
+        codeNotes.add(String.format(java.util.Locale.US, "Base punching shear: NOT ASSESSED (surrogate only; applicability, load model and critical perimeter unverified). Computed load=%.2f kN, capacity=%.2f kN, not a pass/fail verdict", punchingLoad, punchingShearCapacity))
 
         codeNotes.add("Base: ${barsPerMeter}Ø${barDiameter.toInt()} @ ${spacing.toInt()}mm (each way)")
 
@@ -442,7 +435,7 @@ class ECPTank : TankDesign {
             numberOfBars = barsPerMeter,
             tiesDiameter = barDiameter, // same both ways
             tiesSpacing = spacing,
-            isSafe = punchingCheck,
+            isSafe = asProvided >= asRequired - 1e-6, // flexural steel coverage; punching surrogate is NOT ASSESSED and carries no verdict
             utilizationRatio = asRequired / asProvided,
             spacing = spacing,
             warnings = warnings,

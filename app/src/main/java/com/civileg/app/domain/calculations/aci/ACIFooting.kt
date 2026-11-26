@@ -29,7 +29,8 @@ class ACIFooting : FootingDesign {
         soilBearingCapacity: Double,
         footingDepth: Double,
         loadCombination: LoadCombination,
-        constraints: BoundaryConstraints
+        constraints: BoundaryConstraints,
+        serviceAxialLoad: Double?
     ): FootingDesignResult {
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
@@ -47,7 +48,10 @@ class ACIFooting : FootingDesign {
 
         // 2. تحويل الأحمال للخدمة (لحساب أبعاد القاعدة)
         val factor = loadCombination.getFactorForCode(DesignCode.ACI)
-        val P_service = axialLoad / factor
+        require(serviceAxialLoad == null || (momentX == 0.0 && momentY == 0.0)) {
+            "Moments are not supported together with an entered service load: the service and factored moment components are not available, and dividing by a load factor is not a grounded conversion."
+        }
+        val P_service = serviceAxialLoad ?: (axialLoad / factor)
         val Mx_service = momentX / factor
         val My_service = momentY / factor
 
@@ -100,7 +104,7 @@ class ACIFooting : FootingDesign {
         }
 
         // Factored soil pressure for flexure and one-way shear design (ultimate level)
-        val q_factored = q_avg * factor
+        val q_factored = if (serviceAxialLoad != null && A_actual > 0) axialLoad / A_actual else q_avg * factor
 
         // 8. السمك الفعال
         val d = footingDepth - getMinCover() - 10.0
@@ -157,7 +161,7 @@ class ACIFooting : FootingDesign {
             200.0
         }
 
-        codeNotes.add("ACI 318-25: Isolated Footing Design")
+        codeNotes.add("ACI 318: Isolated Footing Design")
         codeNotes.add(CodeReference.ACI.FOOTING_BEARING)
         codeNotes.add(CodeReference.ACI.FOOTING_SHEAR_PUNCHING)
         codeNotes.add(CodeReference.ACI.FOOTING_REINFORCEMENT)
@@ -265,7 +269,7 @@ class ACIFooting : FootingDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
         
-        // ACI 318-25 طريقة Rn-ρ (التعادل)
+        // ACI 318 طريقة Rn-ρ (التعادل)
         val Mu = designMoment * 1e6  // N.mm/m
         val b = 1000.0  // mm/م
         val d = effectiveDepth

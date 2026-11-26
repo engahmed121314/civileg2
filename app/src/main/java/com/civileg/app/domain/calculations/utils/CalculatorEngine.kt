@@ -9,6 +9,11 @@ import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.calculations.aci.AISCSteelDesignEngine
 import com.civileg.app.domain.calculations.aci.SteelWindEngine
 import com.civileg.app.domain.calculations.base.RetainingWallInput
+import com.civileg.app.domain.calculations.base.StairSupportCondition
+import com.civileg.app.domain.calculations.base.StairAnalysisStatus
+import com.civileg.app.domain.calculations.base.StairCheckKind
+import com.civileg.app.domain.calculations.base.mainSteelStepPass
+import com.civileg.app.domain.calculations.base.flexureRatioOf
 import com.civileg.app.domain.calculations.base.StaircaseInput
 import com.civileg.app.domain.calculations.base.SeismicZone
 import com.civileg.app.domain.calculations.base.SoilType
@@ -132,7 +137,7 @@ class CalculatorEngine @Inject constructor(
     }
 
     @Parcelize
-    data class DesignSafetyCheck(val name: String, val value: Double, val limit: Double, val unit: String, val isSafe: Boolean) : Parcelable
+    data class DesignSafetyCheck(val name: String, val value: Double, val limit: Double, val unit: String, val isSafe: Boolean, val notAssessed: Boolean = false) : Parcelable
 
     @Parcelize
     data class BOQSummary(val concreteM3: Double, val steelKg: Double, val totalCost: Double, val currency: String = "USD") : Parcelable
@@ -166,7 +171,9 @@ class CalculatorEngine @Inject constructor(
         val steelWasteTons: Double = 0.0,
         val neutralAxisDepth: Double = 0.0,
         val warnings: List<String> = emptyList(),
-        val codeNotes: List<String> = emptyList()
+        val codeNotes: List<String> = emptyList(),
+        val shearCodeReview: @RawValue BeamShearCodeReview.Review? = null,
+        val codeAcceptanceComplete: Boolean = false
     ) : Parcelable
 
     @Parcelize
@@ -193,8 +200,23 @@ class CalculatorEngine @Inject constructor(
         val confinementLength: Double = 0.0,
         val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
         val warnings: List<String> = emptyList(),
-        val codeNotes: List<String> = emptyList()
-    ) : Parcelable
+        val codeNotes: List<String> = emptyList(),
+        /** False until the moment-capacity model is checked against hand cases for the selected code edition
+         *  and the actual bar positions. While false, no consumer may present isSafe as a confirmed safe result. */
+        val assessmentComplete: Boolean = false,
+        /** False when the axial formula's own domain does not cover the case (ECP 203-2020 Eq. 4-12-a needs
+         *  e <= max(0.05t, 20 mm)). Then axialCapacity is 0 only as a placeholder and must be shown as "not assessed". */
+        val axialAssessed: Boolean = true
+    ) : Parcelable {
+        /** Text for any consumer that prints the axial capacity. */
+        val axialCapacityLabel: String get() =
+            if (axialAssessed) "%.1f kN".format(java.util.Locale.US, axialCapacity)
+            else "Not assessed (outside ECP 203-2020 Eq. 4-12-a domain)"
+        /** The only value screens, exports, drawings and saved records may call "safe". */
+        val confirmedSafe: Boolean get() = isSafe && assessmentComplete
+        /** Informational: 2 bars per face, where the half-steel-per-face model has the same geometry. Not a validation. */
+        val layoutModelApplicable: Boolean get() = columnType == "RECTANGULAR" && reinforcement.numBars <= 4
+    }
 
     enum class FootingType(val displayNameAr: String, val displayNameEn: String) {
         ISOLATED("منفصلة", "Isolated"),
@@ -227,7 +249,11 @@ class CalculatorEngine @Inject constructor(
         val reinforcementTopX: Int = 0,
         val topBarDiameter: Int = 16,
         val reinforcementTopY: Int = 0,
-        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
+        /** Minimum cover (mm) the engine used for the effective depth; drawings must show the same value. */
+        val coverMm: Double = 70.0,
+        /** Entered unfactored column load (kN) the bearing check used. Null on a record saved before this input existed: the basis is unknown, not reinterpreted. */
+        val serviceLoadKn: Double? = null
     ) : Parcelable
 
     @Parcelize
@@ -268,8 +294,29 @@ class CalculatorEngine @Inject constructor(
         val dropPanelWidth: Double = 0.0,
         val dropPanelThick: Double = 0.0,
         val punchingStressAtDrop: Double = 0.0,
-        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
-    ) : Parcelable
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
+        val warnings: List<String> = emptyList(),
+        val codeNotes: List<String> = emptyList(),
+        /** Machine-readable material qualification carried through the generic
+         * result and its persistence. Default FALSE (fail-closed): old saved
+         * results and non-assessing branches read as unassessed, never as
+         * qualified. Separate from the numeric flexure/shear checks. */
+        val bondClassAssessed: Boolean = false,
+        /** The caller's selected bar surface/bond class, carried for
+         * traceability. NULL = predates this contract (legacy payload).
+         * A non-null value is the SELECTION, not an assessment. */
+        val barBondClass: com.civileg.app.domain.entities.BarBondClass? = null,
+        /** Deflection/serviceability qualification; FALSE = not assessed
+         * (explicit absence, not a pass), even with a declared bond class. */
+        val serviceabilityAssessed: Boolean = false
+    ) : Parcelable {
+        /** Engineering acceptance: numeric aggregate AND every qualification
+         * dimension. Derived, never persisted — it cannot drift from its
+         * components and legacy payloads can never carry it. FALSE for all
+         * current results because serviceability is unassessed. */
+        val engineeringAcceptance: Boolean
+            get() = isSafe && bondClassAssessed && serviceabilityAssessed && barBondClass != null && barBondClass != com.civileg.app.domain.entities.BarBondClass.UNKNOWN
+    }
 
     @Parcelize
     data class StairResult(
@@ -287,7 +334,25 @@ class CalculatorEngine @Inject constructor(
         val fcu: Double = 25.0,
         val fy: Double = 400.0,
         val suggestions: List<String> = emptyList(),
-        val calculationSteps: @RawValue List<CalculationStep> = emptyList()
+        val calculationSteps: @RawValue List<CalculationStep> = emptyList(),
+        val stairWidthMm: Double = 1200.0,
+        val supportCondition: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
+        val landingLengthMm: Double? = null,
+        val landingWidthMm: Double? = null,
+        val landingThicknessMm: Double? = null,
+        val analysisStatus: StairAnalysisStatus = StairAnalysisStatus.UNSUPPORTED_CASE,
+        val analysisSpanM: Double = 0.0,
+        val adoptedRunMm: Double = 0.0,
+        val flightTopRebar: String = "",
+        val landingRebar: String = "",
+        val codeAcceptanceComplete: Boolean = false,
+        val qualificationNotes: List<String> = emptyList(),
+        val quantityReview: StairQuantityReview? = null,
+        val barMaterialClassification: String = "UNDECLARED: fy alone does not identify bar surface/grade",
+        val documentaryBasisLabel: String = "Edition verification incomplete",
+        /** Measured flexure-row ratio (unclamped) or null; utilizationRatio below is a clamped legacy scalar and is not engineering data. */
+        val flexureRatio: Double? = null,
+        val flexureRatioBasis: String = ""
     ) : Parcelable
 
     @Parcelize
@@ -618,7 +683,11 @@ class CalculatorEngine @Inject constructor(
             weight = section.weight,
             cost = 0.0,
             warnings = warnings,
-            codeNotes = codeNotes
+            codeNotes = codeNotes,
+            // Propagate the engine's completeness flag: a noncompact/slender section whose
+            // flexure used Zx without a local-buckling reduction is not fully assessed.
+            assessmentComplete = beam.assessmentComplete,
+            incompleteReasons = beam.incompleteReasons
         )
     }
 
@@ -814,6 +883,9 @@ class CalculatorEngine @Inject constructor(
         val totalPurlinLen = purlinsPerRafter * length
 
         val frameWeightTons = (2 * eave * colSection.area * 7850.0 + 2 * rafterLen * rafSection.area * 7850.0) / 1e9 * numFrames
+        // Real per-member weights from section area (mm2) x length (mm) x 7850 kg/m3 -> tons
+        val columnWeightTons = 2 * eave * colSection.area * 7850.0 / 1e9 * numFrames
+        val rafterWeightTons = 2 * rafterLen * rafSection.area * 7850.0 / 1e9 * numFrames
         val purlinWeightTons = totalPurlinLen * (purlinSection.area * 7850.0 / 1e6) / 1000.0
         val totalWeightTons = frameWeightTons + purlinWeightTons
 
@@ -834,9 +906,9 @@ class CalculatorEngine @Inject constructor(
             maxMoment = maxMoment, maxShear = maxShear, maxAxial = maxAxial,
             maxDeflection = maxDeflection, allowableDeflection = allowableDef,
             isSafe = maxDeflection <= allowableDef,
-            utilizationMoment = rafFlexUtil.coerceIn(0.1, 1.5),
-            utilizationShear = max(rafShearUtil, colShearUtil).coerceIn(0.1, 1.5),
-            utilizationAxial = colAxialUtil.coerceIn(0.1, 1.5)
+            utilizationMoment = rafFlexUtil, // measured ratio, not clamped
+            utilizationShear = max(rafShearUtil, colShearUtil),
+            utilizationAxial = colAxialUtil
         )
 
         val secondary = SecondaryMembersResult(
@@ -847,17 +919,32 @@ class CalculatorEngine @Inject constructor(
         val weldedConn = ConnectionType.Welded(weldType = WeldType.FILLET, weldSize = 8.0, weldLength = 200.0, electrodeType = ElectrodeType.E70XX)
         val boltedConn = ConnectionType.Bolted(boltDiameter = 20.0, boltGrade = BoltGrade.GRADE_8_8, numberOfBolts = 6, boltPattern = BoltPattern.DOUBLE_ROW, connectionType = BoltConnectionType.BEARING)
 
-        val connections = listOf(
-            SteelConnectionDetail("Base Plate Connection", boltedConn, 400.0, maxAxial, true),
-            SteelConnectionDetail("Apex Haunch Connection", weldedConn, maxMoment * 1.2, maxMoment, true)
-        )
+        // Connections are not designed by this analysis; the former list used a hardcoded
+        // 400 kN / 1.2*M capacity with isSafe=true. Report none rather than invented values.
+        val connections = emptyList<SteelConnectionDetail>()
+
+        // Preliminary footing plan size: service vertical load per column / user bearing capacity.
+        // P = (dead + live) kN/m2 x bay x span/2 + (steel weight per frame)/2, g = 9.80665 m/s2.
+        // Steel weight per frame = total tons / frames; footing self-weight and cladding are not included.
+        val soilQ = inputs.allowableSoilBearingKnM2
+        val footing = if (soilQ == null || soilQ <= 0.0) {
+            FootingPlanPreliminary(issued = false, reason = "NOT ISSUED: allowable soil bearing (kN/m2) is required")
+        } else {
+            val pService = (inputs.deadLoad + inputs.liveLoad) * bay * span / 2.0 + (totalWeightTons * 9.80665 / numFrames) / 2.0
+            val area = pService / soilQ
+            FootingPlanPreliminary(true, null, pService, soilQ, area, ceil(sqrt(area) * 1000.0 / 50.0) * 50.0)
+        }
 
         return SteelWarehouseAnalysisResult(
+            footingPreliminary = footing,
+            bracing = com.civileg.app.domain.calculations.steel.WarehouseBracing.compute(
+                bay, eave, numBays, secondary.bracingSection, inputs.bracedBays, inputs.bracingLateralLoadKn,
+                inputs.code, inputs.braceFyMpa, inputs.braceFuMpa, inputs.braceNetAreaMm2),
             mainFrame = mainFrame, secondaryMembers = secondary, connections = connections,
             totalWeight = totalWeightTons, totalCladdingArea = claddingArea, weightPerM2 = weightPerM2,
             resultsByCode = inputs.code.displayName, safetyStatus = maxDeflection <= allowableDef,
             recommendations = if (maxDeflection > allowableDef) listOf("Increase rafter section height to control deflection") else emptyList(),
-            materialTakeoff = mapOf("Columns (${colSection.displayName})" to frameWeightTons * 0.5, "Rafters (${rafSection.displayName})" to frameWeightTons * 0.5, "Purlins (${purlinSection.displayName})" to purlinWeightTons),
+            materialTakeoff = mapOf("Columns (${colSection.sectionName})" to columnWeightTons, "Rafters (${rafSection.sectionName})" to rafterWeightTons, "Purlins (${purlinSection.sectionName})" to purlinWeightTons),
             estimatedTotalCost = cost, costPerM2 = cost / (span * length)
         )
     }
@@ -871,11 +958,17 @@ class CalculatorEngine @Inject constructor(
      */
     fun calculateSteelWarehousePro(inputs: SteelWarehouseInputs): SteelWarehouseProResult {
         val basicRes = designSteelWarehouse(inputs)
-        val bom = listOf(
-            BOMItem("Main Columns (${basicRes.mainFrame.columnSection.displayName})", "Structural Columns", basicRes.totalWeight * 0.4 * 1000.0 / 100.0, "Tons", basicRes.totalWeight * 0.4 * 1000.0, basicRes.estimatedTotalCost * 0.4),
-            BOMItem("Roof Rafters (${basicRes.mainFrame.rafterSection.displayName})", "Structural Beams", basicRes.totalWeight * 0.4 * 1000.0 / 100.0, "Tons", basicRes.totalWeight * 0.4 * 1000.0, basicRes.estimatedTotalCost * 0.4),
-            BOMItem("Purlins & Girts (${basicRes.secondaryMembers.purlinSection.displayName})", "Secondary Members", basicRes.totalWeight * 0.2 * 1000.0 / 100.0, "Tons", basicRes.totalWeight * 0.2 * 1000.0, basicRes.estimatedTotalCost * 0.2)
-        )
+        // Weights come from the per-member takeoff of the design (tons). No unit rate is verified, so every BOM cost is 0.0 and
+        // the cost is reported as NOT ISSUED in the notes; the former fixed 40/40/20 weight split and cost shares are removed.
+        val takeoff = basicRes.materialTakeoff.entries.toList()
+        val bom = takeoff.map { e ->
+            val cat = when {
+                e.key.startsWith("Columns") -> "Structural Columns"
+                e.key.startsWith("Rafters") -> "Structural Beams"
+                else -> "Secondary Members"
+            }
+            BOMItem(e.key, cat, e.value, "Tons", e.value * 1000.0, 0.0)
+        }
         return SteelWarehouseProResult(
             codeName = inputs.code.displayName,
             tributaryAreaM2 = inputs.span * inputs.length,
@@ -889,9 +982,9 @@ class CalculatorEngine @Inject constructor(
             utilization = basicRes.mainFrame.utilizationMoment,
             compressionZone = "Top Flange in Midspan",
             tensionZone = "Bottom Flange in Midspan",
-            notes = listOf("Design performed according to ${inputs.code.displayName}"),
+            notes = listOf("Design performed according to ${inputs.code.displayName}", "Cost: NOT ISSUED (no verified unit rates)"),
             billOfMaterials = bom,
-            totalCost = basicRes.estimatedTotalCost,
+            totalCost = 0.0, // NOT ISSUED: no verified unit rates
             durationWeeks = 8,
             safetyScore = if (basicRes.safetyStatus) 95.0 else 60.0
         )
@@ -912,6 +1005,9 @@ class CalculatorEngine @Inject constructor(
         InputGuard.nonNegative("my", my)
         InputGuard.positive("clearHeight", clearHeight)
 
+        require(autoOptimize && manualNumBars == null) {
+            "Manual column reinforcement is not implemented on this calculation path. No automatic result may be issued as a manual-bar check."
+        }
         val domainCode = code
         val engine = CalculationFactory.getColumnDesign(domainCode)
 
@@ -927,9 +1023,14 @@ class CalculatorEngine @Inject constructor(
         // ── Slenderness: λ = l0 / (h/√12) ──
         // ECP 203 §4-2-3 uses 15 for braced columns; ACI 318 §6.2.5 / SBC 304 use 22.
         val minDimension = if (isCircular) width else min(width, depth)
-        val radiusOfGyration = minDimension / sqrt(12.0)
+        // ECP 203-2025 Eq 6-32 (PDF 233, p.6-42): i = 0.30 b (rect), 0.25 D (circ); Table 6-7 (PDF 234, p.6-43) lambda_i limit 50 braced.
+        // Bracing is not an input here, so braced is assumed as before. UNTESTED.
+        val radiusOfGyration = if (domainCode == DesignCode.ECP) {
+            if (isCircular) com.civileg.app.domain.calculations.ecp.EcpColumnRules.radiusCircular(width)
+            else com.civileg.app.domain.calculations.ecp.EcpColumnRules.radiusRect(minDimension)
+        } else minDimension / sqrt(12.0)
         val slenderness = clearHeight / radiusOfGyration.coerceAtLeast(1.0)
-        val slendernessLimit = if (domainCode == DesignCode.ECP) 15.0 else 22.0
+        val slendernessLimit = if (domainCode == DesignCode.ECP) com.civileg.app.domain.calculations.ecp.EcpColumnRules.shortLimitLambdaI(true) else 22.0
         val isSlender = slenderness > slendernessLimit
 
         // First pass with the un-magnified moments.
@@ -949,7 +1050,7 @@ class CalculatorEngine @Inject constructor(
                 fcu = fcu, width = width, depth = depth,
                 reinforcementArea = res.astProvided, isCircular = isCircular
             )
-            if (momentMagnifier > 1.0) {
+            if (momentMagnifier > 1.0 && momentMagnifier.isFinite()) {
                 designMx *= momentMagnifier
                 designMy *= momentMagnifier
                 res = engine.calculateReinforcement(
@@ -963,7 +1064,13 @@ class CalculatorEngine @Inject constructor(
         // ── Axial capacity (kN). For circular columns the engine uses b×h, so pass an
         // equivalent depth that reproduces πD²/4 instead of D².
         val axialDepth = if (isCircular) width * PI / 4.0 else depth
-        val axialCapacity = engine.calculateAxialCapacity(
+        // ECP 203-2020 Eq. 4-12-a only covers e <= max(0.05t, 20 mm): outside it the axial capacity is NOT ASSESSED.
+        val ecpEccentricityMm = if (puDesign > 0) sqrt(designMx * designMx + designMy * designMy) * 1e3 / puDesign else 0.0
+        // ECP 203-2025 Eq 4-11 (PDF 91, p.4-11): max(0.05 t, 20 mm), t = bending-side dimension. ASSUMPTION: mx across depth, my across width.
+        val ecpEccentricityLimitMm = com.civileg.app.domain.calculations.ecp.EcpColumnRules.minEccentricity(
+            if (isCircular) width else if (abs(designMx) >= abs(designMy)) depth else width)
+        val axialAssessed = !(domainCode == DesignCode.ECP && ecpEccentricityMm > ecpEccentricityLimitMm + 1e-9)
+        val axialCapacity = if (!axialAssessed) 0.0 else engine.calculateAxialCapacity(
             fcu = fcu, fy = fy, width = width, depth = axialDepth,
             reinforcementArea = res.astProvided, loadCombination = LoadCombination.DEAD_LIVE
         )
@@ -986,10 +1093,9 @@ class CalculatorEngine @Inject constructor(
         )
 
         // Bresler load-contour check for biaxial bending.
-        val biaxialUtilization = if (mxCapacity > 0 && myCapacity > 0) {
-            (designMx / mxCapacity).pow(1.5) + (designMy / myCapacity).pow(1.5)
-        } else 0.0
-        val momentSafe = biaxialUtilization <= 1.0 + 1e-9
+        val momentReview = ColumnMomentReview.assess(designMx,designMy,mxCapacity,myCapacity)
+        val biaxialUtilization = momentReview.utilization
+        val momentSafe = momentReview.passed
 
         val reinforcementRatio = res.astProvided / grossArea            // fraction
         val reinforcementPercent = reinforcementRatio * 100.0            // %
@@ -997,10 +1103,10 @@ class CalculatorEngine @Inject constructor(
         val maxReinforcement = engine.getMaxReinforcementRatio() * grossArea
         val ratioSafe = res.astProvided >= minReinforcement - 1e-6 &&
             res.astProvided <= maxReinforcement + 1e-6
-        val axialSafe = puDesign <= axialCapacity + 1e-6
+        val axialSafe = axialAssessed && puDesign <= axialCapacity + 1e-6
 
         val concreteVolume = grossArea * clearHeight / 1e9
-        val cover = if (domainCode == DesignCode.SBC) 50.0 else 40.0
+        val cover = com.civileg.app.domain.calculations.column.ColumnCover.mm(domainCode)
         val tiePerimeterMm = if (isCircular) {
             PI * (width - 2.0 * cover).coerceAtLeast(50.0)
         } else {
@@ -1015,15 +1121,25 @@ class CalculatorEngine @Inject constructor(
         val steelWeight = mainSteelWeight + tieWeight
         val cost = concreteVolume * 120.0 + steelWeight * 1.5
 
+        // Second-order validity: an unstable column (Pu >= Pcr) has no valid design. ACI 318M-14 / SBC 304
+        // 6.2.6 also limit Mu with second-order effects to 1.4 x the first-order Mu.
+        val secondOrderStable = momentMagnifier.isFinite()
+        // The 1.4 limit (ACI 318 / SBC 304 6.2.6) applies only when slenderness effects cannot be neglected under 6.2.5.
+        // Bracing and M1/M2 are not inputs here, so applicability is unverified: warn, do not decide the verdict.
+        val secondOrderWithinLimit = secondOrderStable
         val warnings = (res.warnings + buildList {
             if (isSlender) {
-                add("Slender column (λ=${"%.1f".format(slenderness)} > ${"%.0f".format(slendernessLimit)}): moments magnified by δ=${"%.2f".format(momentMagnifier)}")
+                add("Slender column (λ=${"%.1f".format(slenderness)} > ${"%.0f".format(slendernessLimit)})" + if (secondOrderStable) ": moments magnified by δ=${"%.2f".format(momentMagnifier)}" else "")
             }
+            if (!axialAssessed) add("AXIAL CAPACITY NOT ASSESSED: e=${"%.1f".format(ecpEccentricityMm)} mm exceeds max(0.05t, 20 mm)=${"%.1f".format(ecpEccentricityLimitMm)} mm, outside ECP 203-2020 Eq. 4-12-a. Use a full P-M interaction check.")
+            if (!secondOrderStable) add("UNSTABLE: Pu is not below the elastic buckling load Pcr, so no second-order moment exists. Increase the section; no passing result.")
+            else if (domainCode != DesignCode.ECP && momentMagnifier > 1.4 + 1e-9) add("CHECK NOT ASSESSED: delta=${"%.2f".format(momentMagnifier)} exceeds 1.4. ACI/SBC 6.2.6 limits second-order Mu to 1.4 x first-order Mu when slenderness cannot be neglected; bracing and M1/M2 are not modelled, so applicability is unverified and this does not change the result.")
+            if (!momentReview.assessed) add("Moment capacity unavailable: interaction check not assessed, no passing result")
             if (!momentSafe) add("Biaxial moment demand exceeds the section capacity — increase the section or reinforcement")
             if (!ratioSafe) add("Reinforcement ratio ${"%.2f".format(reinforcementPercent)}% is outside the code limits")
         }).distinct()
 
-        val isSafe = res.isSafe && axialSafe && momentSafe && ratioSafe
+        val isSafe = res.isSafe && axialSafe && momentSafe && ratioSafe && secondOrderWithinLimit
 
         return ColumnResult(
             width = width, depth = depth, pu = puDesign, mx = designMx, my = designMy,
@@ -1036,8 +1152,9 @@ class CalculatorEngine @Inject constructor(
                 spacing = tieSpacing,
                 weightKg = tieWeight
             ),
-            safetyChecks = listOf(
-                DesignSafetyCheck("Axial Capacity", puDesign, axialCapacity, "kN", axialSafe),
+            safetyChecks = listOfNotNull(
+                // No row at all when not assessed: a fabricated pass/fail row would be a verdict.
+                if (axialAssessed) DesignSafetyCheck("Axial Capacity", puDesign, axialCapacity, "kN", axialSafe) else null,
                 DesignSafetyCheck("Biaxial Moment", biaxialUtilization * 100.0, 100.0, "%", momentSafe),
                 DesignSafetyCheck("Reinforcement Ratio", reinforcementPercent,
                     engine.getMaxReinforcementRatio() * 100.0, "%", ratioSafe),
@@ -1064,13 +1181,14 @@ class CalculatorEngine @Inject constructor(
             maxReinforcementArea = maxReinforcement,
             reinforcementRatio = reinforcementPercent,
             momentCapacity = minOf(mxCapacity, myCapacity),
-            utilizationRatio = maxOf(biaxialUtilization, if (axialCapacity > 0) puDesign / axialCapacity else 2.0),
+            utilizationRatio = if (!axialAssessed) biaxialUtilization else maxOf(biaxialUtilization, if (axialCapacity > 0) puDesign / axialCapacity else 2.0),
             isDuctile = isSafe && ratioSafe,
             // ACI 18.7.5.5 / SBC 304-21: max(6db, 450mm) in seismic zones.
             confinementLength = if (isSeismic) max(6.0 * res.barDiameter, 450.0)
                 else max(6.0 * res.barDiameter, 300.0),
             warnings = warnings,
-            codeNotes = res.codeNotes,
+            axialAssessed = axialAssessed,
+            codeNotes = res.codeNotes + "Limitation: the moment capacity is a simplified strain-compatibility check that places half of the steel on each face. It does not use the real bar positions, so it can overestimate capacity for layouts with many intermediate bars. Treat the safe/unsafe label as a screening result, not a final interaction check.",
             calculationSteps = columnSteps(
                 code, pu, puDesign, selfWeightKn, designMx, designMy, fcu, fy, res,
                 width, depth, clearHeight, slenderness, slendernessLimit,
@@ -1107,8 +1225,10 @@ class CalculatorEngine @Inject constructor(
         val steelInertia = reinforcementArea / 2.0 * ((d - dPrime) / 2.0).pow(2) * 2.0
         val ei = 0.4 * ec * ig + 200000.0 * steelInertia
         val pcrKn = PI.pow(2) * ei / (clearHeightMm * clearHeightMm) / 1000.0
-        if (pcrKn <= 0.0 || puKn >= pcrKn) return 2.5
-        return (1.0 / (1.0 - puKn / pcrKn)).coerceIn(1.0, 2.5)
+        // Pu >= Pcr means the column is unstable: there is no finite magnifier, so return infinity
+        // (a capped value would read as a measured, passing second-order result).
+        if (pcrKn <= 0.0 || puKn >= pcrKn) return Double.POSITIVE_INFINITY
+        return (1.0 / (1.0 - puKn / pcrKn)).coerceAtLeast(1.0)
     }
 
     /**
@@ -1137,7 +1257,7 @@ class CalculatorEngine @Inject constructor(
             DesignCode.ACI, DesignCode.SBC -> 0.85 * 0.8 * fcu
         }
         val fsDesign = when (code) {
-            DesignCode.ECP -> fy / 1.15
+            DesignCode.ECP -> minOf(fy,420.0) / 1.15
             DesignCode.ACI, DesignCode.SBC -> fy
         }
         val phi = if (code == DesignCode.ECP) 1.0 else 0.65
@@ -1244,8 +1364,8 @@ class CalculatorEngine @Inject constructor(
             CalculationStep(
                 stepNumber = 5, title = "Slenderness", subtitle = "λ = l0 / i",
                 formula = "λ = l0 / (h/√12)",
-                formulaWithValues = "λ = ${"%.1f".format(slenderness)} vs ${"%.0f".format(slendernessLimit)}; δ = ${"%.2f".format(momentMagnifier)}",
-                result = if (slender) "Slender — second-order effects applied (δ=${"%.2f".format(momentMagnifier)})" else "Short column",
+                formulaWithValues = "λ = ${"%.1f".format(slenderness)} vs ${"%.0f".format(slendernessLimit)}; δ = ${if (momentMagnifier.isFinite()) "%.2f".format(momentMagnifier) else "none (Pu ≥ Pcr, unstable)"}",
+                result = if (!slender) "Short column" else if (momentMagnifier.isFinite()) "Slender — second-order effects applied (δ=${"%.2f".format(momentMagnifier)})" else "Slender — UNSTABLE, no second-order result",
                 unit = "", codeReference = ref,
                 status = if (slender) StepStatus.WARNING else StepStatus.CHECK_PASS,
                 isPass = !slender
@@ -1365,16 +1485,22 @@ class CalculatorEngine @Inject constructor(
         // ── Provided shear capacity: Vc + Vs (or φ(Vc + Vs) for ACI/SBC) ──
         val stirrupSpacing = shearRes.stirrupSpacing.takeIf { it > 0.0 } ?: 200.0
         val stirrupDia = shearRes.stirrupDiameter.takeIf { it > 0.0 } ?: stirrupDiameter
-        val asvPerS = shearRes.providedShearReinforcement.takeIf { it > 0.0 }
-            ?: (shearRes.numLegs * PI / 4.0 * stirrupDia * stirrupDia / stirrupSpacing)
+        // Factory field is mm2/m. Derive mm2/mm from the actual adopted links
+        // instead of silently treating that field as1000x larger Av/s.
+        val asvPerS = shearRes.numLegs * PI / 4.0 * stirrupDia * stirrupDia / stirrupSpacing
         val steelShearStrength = when (code) {
-            DesignCode.ECP -> fy / 1.15
-            DesignCode.ACI, DesignCode.SBC -> fy
+            DesignCode.ECP -> minOf(fy,420.0) / 1.15
+            DesignCode.ACI, DesignCode.SBC -> minOf(fy,420.0)
         }
         val vsKn = asvPerS * steelShearStrength * effectiveDepth / 1000.0
         val shearPhi = if (code == DesignCode.ECP) 1.0 else 0.75
-        val totalShearCapacity = shearPhi * (shearRes.concreteShearCapacity + vsKn)
-        val shearSafe = vu <= totalShearCapacity + 1e-6
+        // ECP cracked concrete contribution where links contribute, Eq4-30.
+        val vcWithLinks = if(code==DesignCode.ECP) 0.12*sqrt(fcu/1.5)*width*effectiveDepth/1000.0 else shearRes.concreteShearCapacity
+        val linkCapacity = shearPhi * (vcWithLinks + vsKn)
+        val codeMaximum = if(shearRes.utilizationRatio>0 && vu>0) vu/shearRes.utilizationRatio else Double.POSITIVE_INFINITY
+        val shearReview=BeamShearCodeReview.review(code,fcu,fy,width,height,effectiveDepth,vu,stirrupDia,shearRes.numLegs,stirrupSpacing)
+        val totalShearCapacity = minOf(linkCapacity,codeMaximum,shearReview.capacityKn)
+        val shearSafe = shearRes.isSafe && shearReview.numericChecksPass && vu <= totalShearCapacity + 1e-6
 
         // ── Moment capacity from the provided steel (engine's own capacity) ──
         fun capacityOf(res: com.civileg.app.domain.entities.ReinforcementResult, moment: Double, d: Double): Double {
@@ -1390,7 +1516,7 @@ class CalculatorEngine @Inject constructor(
         }
         val topCapacity = capacityOf(topRes, topMoment, effectiveDepth)
         val bottomCapacity = capacityOf(bottomRes, bottomMoment, effectiveDepth)
-        val flexureSafe = topMoment <= topCapacity + 1e-6 && bottomMoment <= bottomCapacity + 1e-6
+        val flexureSafe = topRes.isSafe && bottomRes.isSafe && topMoment <= topCapacity + 1e-6 && bottomMoment <= bottomCapacity + 1e-6
 
         val concreteVolume = (width / 1000.0) * (height / 1000.0) * span
         val topBarWeight = topRes.astProvided * span * 7850.0 / 1e6
@@ -1412,11 +1538,13 @@ class CalculatorEngine @Inject constructor(
         )
 
         val warnings = (topRes.warnings + bottomRes.warnings + shearRes.warnings + defCheck.warnings +
-            listOfNotNull(defCheck.message.takeIf { it.isNotBlank() })).distinct()
+            listOfNotNull(defCheck.message.takeIf { it.isNotBlank() }) +
+            shearReview.checks.filterNot { it.passed }.map { "${it.name}: ${it.value} ${it.unit}; limit ${it.limit}. ${it.redesign} [${it.clause}]" } +
+            shearReview.unresolved.map { "PRELIMINARY: $it" }).distinct()
         val codeNotes = (topRes.codeNotes + bottomRes.codeNotes + shearRes.codeNotes).distinct()
         val ref = when (code) {
             DesignCode.ECP -> "ECP 203-2020 §4"
-            DesignCode.ACI -> "ACI 318-19 §9"
+            DesignCode.ACI -> "ACI 318M-14 §9"
             DesignCode.SBC -> "SBC 304-2018 §9"
         }
         val steps = listOf(
@@ -1457,7 +1585,7 @@ class CalculatorEngine @Inject constructor(
             CalculationStep(
                 stepNumber = 5, title = "Shear Reinforcement",
                 formula = "V = φ(Vc + Vs); Vs = Asv/s·fy·d",
-                formulaWithValues = "Vc = ${"%.1f".format(shearRes.concreteShearCapacity)} kN, Vs = ${"%.1f".format(vsKn)} kN, ø${stirrupDia.toInt()}@${"%.0f".format(stirrupSpacing)} mm",
+                formulaWithValues = "Vc = ${"%.1f".format(vcWithLinks)} kN, Vs = ${"%.1f".format(vsKn)} kN, ø${stirrupDia.toInt()}@${"%.0f".format(stirrupSpacing)} mm",
                 result = "V = ${"%.1f".format(totalShearCapacity)} kN vs Vu = ${"%.1f".format(vu)} kN", unit = "kN",
                 codeReference = ref,
                 isPass = shearSafe,
@@ -1476,6 +1604,8 @@ class CalculatorEngine @Inject constructor(
 
         return BeamResult(
             width = width, depth = height, mu = mu, vu = vu,
+            shearCodeReview = shearReview,
+            codeAcceptanceComplete = false,
             reinforcementBottom = ReinforcementBar(
                 numBars = bottomRes.numberOfBars, diameter = bottomRes.barDiameter.toInt(),
                 weightKg = bottomBarWeight
@@ -1486,6 +1616,7 @@ class CalculatorEngine @Inject constructor(
             ),
             stirrups = StirrupReinforcement(
                 diameter = stirrupDia.toInt(), spacing = stirrupSpacing,
+                description = "${shearRes.numLegs}-leg ${stirrupDia.toInt()} mm @ ${stirrupSpacing} mm",
                 numLegs = shearRes.numLegs, weightKg = stirrupWeight
             ),
             safetyChecks = safetyChecks,
@@ -1553,7 +1684,24 @@ class CalculatorEngine @Inject constructor(
                     reinforcementMain = ReinforcementBar(spacing = res.barSpacing, diameter = res.barDiameter.toInt()),
                     momentX = muRib, utilizationRatio = res.utilizationRatio,
                     concreteVolume = concreteVol, steelWeight = steelW, cost = costVal,
-                    safetyChecks = listOf(DesignSafetyCheck("Flexure", res.requiredReinforcement, res.providedReinforcement, "mm²", res.isSafe))
+                    safetyChecks = listOf(DesignSafetyCheck("Engine aggregate verdict (flexure + shear + adoption + material)", res.requiredReinforcement, res.providedReinforcement, "mm²", res.isSafe)),
+                    warnings = res.warnings + buildList {
+                        add("ASSUMED INPUT: topping thickness is fixed at 50 mm on this screen (not entered by the user). The result is not an engineering acceptance. Use the Hordi slab screen with the real topping.")
+                        val clearRibSpacing = ribSpacing - ribWidth
+                        if (domainCode == DesignCode.ECP) {
+                            // ECP 203-2020 6-2-2-1 (printed p. 6-15): the same rules the dedicated Hordi screen enforces.
+                            if (ribWidth > 0 && ribSpacing > 0 && ts > 50.0) {
+                                com.civileg.app.domain.calculations.ecp.ECP2020JoistRules.geometry(ribWidth, ribSpacing, ts, 50.0)
+                                    .filterNot { it.passed }
+                                    .forEach { add("${it.clause} NOT MET with the assumed 50 mm topping: ${it.requirement}") }
+                            }
+                        } else if (clearRibSpacing / 12.0 > 50.0) add("The assumed 50 mm topping is below clear rib spacing/12 = ${"%.1f".format(clearRibSpacing / 12.0)} mm (SBC 304 9.8.2.1.1, applies only if permanent fillers are used; filler type not declared).")
+                    },
+                    codeNotes = res.codeNotes,
+                    bondClassAssessed = res.bondClassAssessed,
+                    barBondClass = res.barBondClass,
+                    // Topping is assumed, so no qualification can be complete on this path.
+                    serviceabilityAssessed = false
                 )
             }
 
@@ -1695,7 +1843,7 @@ class CalculatorEngine @Inject constructor(
             val shearSafe = vu <= mainRes.shearCapacity
             val thicknessSafe = ts >= mainRes.minThickness
 
-            val ref = codeNoteRef(domainCode)
+            val ref = if (domainCode == DesignCode.ECP) "ECP 203-2025 (solid slab: Table 4-1 K limit, 6-2-1-2-3 minimum steel, Eq 6-6 minimum thickness; shear flagged unverified)" else codeNoteRef(domainCode)
             val steps = listOf(
                 CalculationStep(
                     stepNumber = 1, title = "Factored Load",
@@ -1782,7 +1930,9 @@ class CalculatorEngine @Inject constructor(
         type: FootingType, p: Double, fcu: Double, fy: Double, soil: Double, colB: Double, colT: Double,
         code: DesignCode, preferredDiameter: Int = 16, preferredSpacing: Double = 150.0, p2: Double = 0.0, distance: Double = 0.0, 
         maxLeft: Double? = null, maxRight: Double? = null, maxTop: Double? = null, maxBottom: Double? = null,
-        numPiles: Int = 4, pileDia: Double = 500.0, pileCapacity: Double = 500.0
+        numPiles: Int = 4, pileDia: Double = 500.0, pileCapacity: Double = 500.0,
+        /** Explicit unfactored (service) column load, kN. Required for the single-column plan/bearing design; never derived from [p]. */
+        ps: Double? = null
     ): FootingResult {
         InputGuard.positive("p", p)
         InputGuard.positive("fcu", fcu)
@@ -1792,6 +1942,11 @@ class CalculatorEngine @Inject constructor(
         InputGuard.positive("colT", colT)
 
         val domainCode = code
+        maxLeft?.let { InputGuard.positive("maxLeft", it) }
+        maxRight?.let { InputGuard.positive("maxRight", it) }
+        require(maxLeft == null && maxRight == null) {
+            "Property-line limits (Max Left / Max Right) are not supported: the footing/column offset and the axis of left/right are not modelled, so the limit cannot be checked. Clear the limit fields; no result is issued with an unchecked limit."
+        }
         val footingEngine = CalculationFactory.getFootingDesign(domainCode)
 
         val initialDepth = 600.0
@@ -1822,7 +1977,7 @@ class CalculatorEngine @Inject constructor(
             val cost = concreteVolume * 120.0 + steelWeight * 1.5
             val safetyChecks = listOf(
                 DesignSafetyCheck("Soil Bearing", combinedRes.soilPressure, soil, "kPa", combinedRes.soilPressure <= soil),
-                DesignSafetyCheck("Punching Shear", combinedRes.punchingShearCheck.appliedShear, combinedRes.punchingShearCheck.shearCapacity, "kN", combinedRes.punchingShearCheck.isSafe),
+                DesignSafetyCheck("Punching Shear", combinedRes.punchingShearCheck.appliedShear, combinedRes.punchingShearCheck.shearCapacity, if (code == DesignCode.ACI) "kN" else "MPa", combinedRes.punchingShearCheck.isSafe),
                 DesignSafetyCheck("Flexure Steel", combinedRes.reinforcement.astProvided, combinedRes.reinforcement.astRequired, "mm²", combinedRes.reinforcement.isSafe)
             )
             return FootingResult(
@@ -1834,20 +1989,26 @@ class CalculatorEngine @Inject constructor(
                 isSafe = combinedRes.isSafe, code = code,
                 concreteVolume = concreteVolume, steelWeight = steelWeight, cost = cost,
                 barsX = numBarsX, barsY = numBarsY, barDiameter = barDia,
-                utilizationRatio = (combinedRes.soilPressure / soil).coerceIn(0.1, 1.5),
+                utilizationRatio = combinedRes.soilPressure / soil,
                 safetyChecks = safetyChecks,
                 column1Size = Pair(colB, colT),
                 column2Size = Pair(colB, colT),
                 isCombined = true,
-                distanceBetweenColumns = distance
+                distanceBetweenColumns = distance,
+                coverMm = footingEngine.getMinCover()
             )
         }
 
+        // Plan size and bearing need the real unfactored load. No average factor or D/L split is assumed: without Ps no plan is designed.
+        require(ps != null && ps > 0.0) {
+            "Service load Ps (kN, unfactored) is required to design the plan and check bearing. Enter Ps; it is not derived from Pu."
+        }
         val res = footingEngine.designIsolatedFooting(
             fcu = fcu, fy = fy, columnWidth = colB, columnDepth = colT,
             axialLoad = p, momentX = 0.0, momentY = 0.0,
             soilBearingCapacity = soil, footingDepth = initialDepth,
-            loadCombination = LoadCombination.DEAD_LIVE
+            loadCombination = LoadCombination.DEAD_LIVE,
+            serviceAxialLoad = ps
         )
 
         val widthM = res.requiredWidth / 1000.0
@@ -1870,17 +2031,18 @@ class CalculatorEngine @Inject constructor(
 
         val safetyChecks = listOf(
             DesignSafetyCheck("Soil Bearing", res.soilPressure, soil, "kPa", res.soilPressure <= soil),
-            DesignSafetyCheck("Punching Shear", res.punchingShearCheck.appliedShear, res.punchingShearCheck.shearCapacity, "kN", res.punchingShearCheck.isSafe),
+            DesignSafetyCheck("Punching Shear", res.punchingShearCheck.appliedShear, res.punchingShearCheck.shearCapacity, if (code == DesignCode.ACI) "kN" else "MPa", res.punchingShearCheck.isSafe),
             DesignSafetyCheck("Flexure Steel", res.reinforcement.astProvided, res.reinforcement.astRequired, "mm²", res.reinforcement.isSafe)
         )
 
-        val ref = codeNoteRef(domainCode)
+        val ref = if (domainCode == DesignCode.ECP) "ECP 203-2025 (footing: Eq 4-29 shear, Eq 4-44/4-46 punching on net force, Table 4-1 K limit; plan size and bearing not compared)" else codeNoteRef(domainCode)
+        val pService: Double = ps
         val steps = listOf(
             CalculationStep(
-                stepNumber = 1, title = "Required Area",
-                formula = "A = P / q_allow",
-                formulaWithValues = "A = ${"%.0f".format(p)} / ${"%.0f".format(soil)} = ${"%.2f".format(p / soil)} m²",
-                result = "A = ${"%.2f".format(p / soil)} m²", unit = "m²",
+                stepNumber = 1, title = "Service Load and Plan Area",
+                formula = "Plan area A = B x L sized from the entered service load Ps (net of overburden) and q_allow",
+                formulaWithValues = "Ps = ${"%.0f".format(pService)} kN (entered); Pu = ${"%.0f".format(p)} kN (entered); plan area provided = ${"%.2f".format(res.requiredWidth * res.requiredLength / 1e6)} m²",
+                result = "Ps = ${"%.0f".format(pService)} kN, Pu = ${"%.0f".format(p)} kN", unit = "kN",
                 codeReference = ref
             ),
             CalculationStep(
@@ -1892,8 +2054,8 @@ class CalculatorEngine @Inject constructor(
             ),
             CalculationStep(
                 stepNumber = 3, title = "Soil Bearing Check",
-                formula = "q = P/A ≤ q_allow",
-                formulaWithValues = "q = ${"%.1f".format(res.soilPressure)} kPa vs ${"%.1f".format(soil)} kPa",
+                formula = "q = P_service / A ≤ q_allow",
+                formulaWithValues = "q = ${"%.0f".format(pService)} / ${"%.2f".format(res.requiredWidth * res.requiredLength / 1e6)} = ${"%.1f".format(res.soilPressure)} kPa vs ${"%.1f".format(soil)} kPa",
                 result = if (res.soilPressure <= soil) "OK" else "Exceeds allowable", unit = "kPa",
                 codeReference = ref, isPass = res.soilPressure <= soil,
                 status = if (res.soilPressure <= soil) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
@@ -1901,8 +2063,8 @@ class CalculatorEngine @Inject constructor(
             CalculationStep(
                 stepNumber = 4, title = "Punching Shear",
                 formula = "Vp ≤ Vc (u1 at d/2)",
-                formulaWithValues = "Vp = ${"%.1f".format(res.punchingShearCheck.appliedShear)} kN vs Vc = ${"%.1f".format(res.punchingShearCheck.shearCapacity)} kN",
-                result = if (res.punchingShearCheck.isSafe) "OK" else "Increase thickness", unit = "kN",
+                formulaWithValues = "Vp = ${"%.2f".format(res.punchingShearCheck.appliedShear)} ${if (code == DesignCode.ACI) "kN" else "MPa"} vs Vc = ${"%.2f".format(res.punchingShearCheck.shearCapacity)} ${if (code == DesignCode.ACI) "kN" else "MPa"}",
+                result = if (res.punchingShearCheck.isSafe) "OK" else "Increase thickness", unit = if (code == DesignCode.ACI) "kN" else "MPa",
                 codeReference = ref, isPass = res.punchingShearCheck.isSafe,
                 status = if (res.punchingShearCheck.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
             ),
@@ -1925,10 +2087,12 @@ class CalculatorEngine @Inject constructor(
             isSafe = res.isSafe, code = code,
             concreteVolume = concreteVolume, steelWeight = steelWeight, cost = cost,
             barsX = numBarsX, barsY = numBarsY, barDiameter = barDia,
-            utilizationRatio = (res.soilPressure / soil).coerceIn(0.1, 1.5),
+            utilizationRatio = res.soilPressure / soil,
             safetyChecks = safetyChecks,
             column1Size = Pair(colB, colT),
-            calculationSteps = steps
+            calculationSteps = steps,
+            coverMm = footingEngine.getMinCover(),
+            serviceLoadKn = ps
         )
     }
 
@@ -1988,16 +2152,19 @@ class CalculatorEngine @Inject constructor(
             DesignSafetyCheck("Punching Shear - Footing 1", res.punchingShear1, res.punchingCapacity1, "kN", res.punchingShear1 <= res.punchingCapacity1),
             DesignSafetyCheck("Punching Shear - Footing 2", res.punchingShear2, res.punchingCapacity2, "kN", res.punchingShear2 <= res.punchingCapacity2),
             DesignSafetyCheck("Strap Beam Flexure (As)", res.strapAsRequired, res.strapAsProvided, "mm²", res.strapAsRequired <= res.strapAsProvided),
-            DesignSafetyCheck("Strap Beam Shear", res.strapShear, res.strapShearCapacity, "kN", res.strapShear <= res.strapShearCapacity)
+            DesignSafetyCheck("Strap Beam Shear", res.strapShear, res.strapShearCapacity, "kN", res.strapShear <= res.strapShearCapacity),
+            // Footing flexure steel is judged by the engine (reinforcement.isSafe); it was missing from this verdict.
+            DesignSafetyCheck("Flexure Steel - Footing 1", res.footing1.reinforcement.areaProvided, res.footing1.reinforcement.areaRequired, "mm²", res.footing1.reinforcement.isSafe),
+            DesignSafetyCheck("Flexure Steel - Footing 2", res.footing2.reinforcement.areaProvided, res.footing2.reinforcement.areaRequired, "mm²", res.footing2.reinforcement.isSafe)
         )
-        val isSafe = safetyChecks.all { it.isSafe }
+        val isSafe = safetyChecks.all { it.isSafe } && res.isSafe
         val utilization = maxOf(
             if (soil > 0) maxOf(q1, q2) / soil else 0.0,
             if (res.punchingCapacity1 > 0) res.punchingShear1 / res.punchingCapacity1 else 0.0,
             if (res.punchingCapacity2 > 0) res.punchingShear2 / res.punchingCapacity2 else 0.0,
             if (res.strapAsProvided > 0) res.strapAsRequired / res.strapAsProvided else 0.0,
             if (res.strapShearCapacity > 0) res.strapShear / res.strapShearCapacity else 0.0
-        ).coerceIn(0.0, 1.5)
+        ).coerceAtLeast(0.0) // not capped: a ratio above 1.0 is a failure and is shown as computed
 
         val footing1Safe = q1 <= soil * 1.001 && res.punchingShear1 <= res.punchingCapacity1
         val footing2Safe = q2 <= soil * 1.001 && res.punchingShear2 <= res.punchingCapacity2
@@ -2058,46 +2225,76 @@ class CalculatorEngine @Inject constructor(
             calculationSteps = res.calculationSteps.mapIndexed { i, line ->
                 CalculationStep(
                     stepNumber = i + 1, title = "Strap Design ${i + 1}",
-                    formula = "", formulaWithValues = line, result = line,
-                    codeReference = codeNoteRef(code)
+                    formula = "", formulaWithValues = "", result = line,
+                    codeReference = if (code == DesignCode.ECP) "ECP 203-2025 (strap: Eq 4-46 punching, Eq 4-30 shear, Table 4-1 K-method; other clauses not compared)" else codeNoteRef(code)
                 )
             }
         )
     }
 
     private fun codeNoteRef(code: DesignCode): String = when (code) {
-        DesignCode.ECP -> "ECP 203-2025"
-        DesignCode.ACI -> "ACI 318-25"
-        DesignCode.SBC -> "SBC 304-2024"
+        DesignCode.ECP -> DesignCode.ECP.version
+        DesignCode.ACI -> DesignCode.ACI.version
+        DesignCode.SBC -> DesignCode.SBC.version
     }
 
     private fun barAreaMm2(diameter: Double): Double = Math.PI / 4.0 * diameter * diameter
 
-    fun designStaircase(type: StairType, span: Double, riser: Double, tread: Double, deadLoad: Double, liveLoad: Double, fcu: Double, fy: Double, preferredDiameter: Int, code: DesignCode): StairResult {
+    fun designStaircase(type: StairType, span: Double, riser: Double, tread: Double, deadLoad: Double, liveLoad: Double, fcu: Double, fy: Double, preferredDiameter: Int, code: DesignCode, stairWidthMm: Double = 1200.0,
+        supportCondition: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
+        landingLengthMm: Double? = null, landingWidthMm: Double? = null, landingThicknessMm: Double? = null
+    ): StairResult {
+        InputGuard.positive("stairWidthMm", stairWidthMm)
         InputGuard.positive("span", span)
         InputGuard.positive("riser", riser)
         InputGuard.positive("tread", tread)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
 
+        if (type == StairType.CANTILEVER) return StairResult(
+            type = type, thickness = 0.0, reinforcement = ReinforcementBar(),
+            distributionReinforcement = ReinforcementBar(), isSafe = false,
+            concreteVolume = 0.0, steelWeight = 0.0, cost = 0.0, code = code,
+            span = span, riser = riser, tread = tread, stairWidthMm = stairWidthMm,
+            supportCondition = supportCondition,
+            qualificationNotes = listOf("Cantilever stair model is not implemented; no design issued")
+        )
         return try {
-            val nTreads = max(1, (span * 1000.0 / tread).roundToInt())
-            val nRisers = nTreads + 1
-            val totalRise = riser * nRisers / 1000.0
-            val defaultThickness = max(span * 1000.0 / 25.0, 120.0).coerceIn(120.0, 300.0)
+            val geometry = StairFlightGeometry.from(span, riser, tread)
+            val nTreads = geometry.treadCount
+            val nRisers = geometry.riserCount
+            val totalRise = geometry.riseMm / 1000.0
+            // Adopted waist thickness (the app has no thickness input). Sized so the code's deemed-to-satisfy
+            // span/thickness table is met (ECP Table 4-10: Ln/t <= 25*(0.40+fy/700); ACI/SBC Table 7.3.1.1:
+            // h >= l/20 * (0.4+fy/700)), rounded up to 10 mm, and never below the lane's own minimum waist.
+            // No upper clamp: a thicker result is reported as is.
+            val requiredWaistMm = when (code) {
+                DesignCode.ECP -> span * 1000.0 / (25.0 * (0.40 + fy / 700.0))
+                DesignCode.ACI, DesignCode.SBC -> span * 1000.0 / 20.0 * (0.4 + fy / 700.0)
+            }
+            val laneMinWaistMm = when (code) {
+                DesignCode.ECP -> com.civileg.app.domain.calculations.ecp.ECPStaircase.MIN_WAIST
+                DesignCode.ACI -> com.civileg.app.domain.calculations.aci.ACIStaircase.MIN_WAIST
+                DesignCode.SBC -> com.civileg.app.domain.calculations.sbc.SBCStaircase.MIN_WAIST
+            }
+            val defaultThickness = max(kotlin.math.ceil(requiredWaistMm / 10.0) * 10.0, laneMinWaistMm)
 
             val input = StaircaseInput(
                 stairType = type.toDomain(),
                 span = span,
                 totalRise = totalRise,
-                stairWidth = 1.2,
+                stairWidth = stairWidthMm / 1000.0,
                 waistThickness = defaultThickness,
                 fcu = fcu,
                 fy = fy,
                 deadLoad = deadLoad,
                 liveLoad = liveLoad,
                 riserCount = nRisers,
-                going = tread
+                going = tread,
+                supportCondition = supportCondition,
+                landingLengthMm = landingLengthMm,
+                landingWidthMm = landingWidthMm,
+                landingThicknessMm = landingThicknessMm
             )
 
             val result = CalculationFactory.getStaircaseDesign(code).designStaircase(input)
@@ -2109,56 +2306,79 @@ class CalculatorEngine @Inject constructor(
                 it.name.contains("Flexure", ignoreCase = true) || it.name.contains("K ", ignoreCase = true)
             }?.let { if (it.limit > 0) (it.value / it.limit).coerceIn(0.1, 1.5) else 0.7 } ?: 0.7
 
-            val concreteVolume = result.inclinedLength * 1.2 * defaultThickness / 1000.0
-            val steelWeight = (result.inclinedLength + 0.6) * result.mainRebarArea * 7850.0 / 1e6 +
-                (result.distributionRebarArea / 1000.0) * 1.2 * 7850.0 / 1e6
+            val concreteVolume = result.inclinedLength * (stairWidthMm / 1000.0) * defaultThickness / 1000.0
+            val quantityReview = StairQuantityReviewer.review(
+                stairWidthMm, geometry.runMm, geometry.riseMm,
+                when (code) { DesignCode.ACI -> 38.0; DesignCode.SBC -> 40.0; else -> 25.0 },
+                mainBar.diameter, mainBar.spacing, distBar.diameter, distBar.spacing
+            )
+            // Compatibility scalar is explicitly a partial net-flight quantity, never final steel.
+            val steelWeight = quantityReview.netFlightSteelKg
             val cost = concreteVolume * 120.0 + steelWeight * 1.5
 
-            val ref = codeNoteRef(code)
+            val ref = when (code) {
+                DesignCode.ECP -> "Reference supplied: ECP 203-2025 (scanned); stair equation coverage incomplete"
+                DesignCode.ACI -> "Reference supplied: ACI 318M-14; equation coverage incomplete"
+                DesignCode.SBC -> "Reference supplied: SBC 304-CR-2018; equation coverage incomplete"
+            }
             val steps = listOf(
                 CalculationStep(
                     stepNumber = 1, title = "Geometry",
-                    formula = "n = L/tread; total rise = riser·(n+1)",
-                    formulaWithValues = "${nRisers} risers × ${"%.0f".format(riser)} mm, ${nTreads} treads × ${"%.0f".format(tread)} mm",
-                    result = "Total rise ${"%.2f".format(totalRise)} m", unit = "m",
+                    formula = "nt = round(1000*span/tread); nr = nt+1; rise = nr*riser",
+                    formulaWithValues = "${nRisers} risers × ${"%.0f".format(riser)} mm, ${nTreads} treads × ${"%.0f".format(tread)} mm; waist h = ${"%.0f".format(defaultThickness)} mm ADOPTED by the app (not a user input)",
+                    result = "Total rise ${"%.2f".format(totalRise)}", unit = "m",
                     codeReference = ref
                 ),
                 CalculationStep(
                     stepNumber = 2, title = "Factored Load",
-                    formula = "wu = γD·DL + γL·LL (per m width)",
-                    formulaWithValues = "wu = ${"%.2f".format(result.horizontalLoad)} kN/m",
-                    result = "${"%.2f".format(result.horizontalLoad)} kN/m", unit = "kN/m",
+                    formula = if(code == DesignCode.ECP) "wu = 1.4*DL/cos(theta) + 1.6*LL" else "wu = 1.2*DL/cos(theta) + 1.6*LL",
+                    formulaWithValues = "wu = ${"%.2f".format(result.horizontalLoad)} kN/m2",
+                    result = "${"%.2f".format(result.horizontalLoad)}", unit = "kN/m2",
                     codeReference = ref
                 ),
                 CalculationStep(
                     stepNumber = 3, title = "Design Moment",
-                    formula = "Mu = wu·L²/8",
+                    formula = "Mu = wu*L^2*coefficient; coefficient = " + "%.4f".format(java.util.Locale.US,result.maxMoment/(result.horizontalLoad*span*span)),
                     formulaWithValues = "Mu = ${"%.1f".format(result.maxMoment)} kN·m/m",
-                    result = "${"%.1f".format(result.maxMoment)} kN·m/m", unit = "kN·m/m",
+                    result = "${"%.1f".format(result.maxMoment)}", unit = "kN·m/m",
                     codeReference = ref
                 ),
                 CalculationStep(
                     stepNumber = 4, title = "Main Steel",
-                    formula = "As = Mu / (0.87fy·j·d)",
-                    formulaWithValues = "As = ${"%.0f".format(result.mainRebarArea)} mm²/m → ${mainBar.barString}",
-                    result = mainBar.barString, unit = "mm²/m",
-                    codeReference = ref, isPass = result.isSafe,
-                    status = if (result.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                    formula = if(code == DesignCode.ECP) "K = Mu/(fcu*b*d^2); As,req = Mu/((fy/1.15)*z), with minimum" else "Rn = Mu/(0.9*b*d^2); As,req = rho*b*d, with minimum",
+                    formulaWithValues = "As,provided = ${"%.0f".format(java.util.Locale.US,result.mainRebarArea)} mm2/m; dia ${mainBar.diameter} mm at ${"%.0f".format(java.util.Locale.US,mainBar.spacing)} mm",
+                    result = mainBar.barString, unit = "",
+                    codeReference = ref,
+                    // The step reflects the flexure strength row only. The overall result is not a pass while any row is
+                    // NOT ASSESSED, and that must not paint main steel as a failed design.
+                    isPass = mainSteelStepPass(result.safetyChecks) == true,
+                    status = when (mainSteelStepPass(result.safetyChecks)) {
+                        true -> StepStatus.CHECK_PASS
+                        false -> StepStatus.CHECK_FAIL
+                        null -> StepStatus.WARNING
+                    }
                 ),
                 CalculationStep(
                     stepNumber = 5, title = "Distribution Steel",
-                    formula = "As,dist = ρmin·b·h",
-                    formulaWithValues = "As = ${"%.0f".format(result.distributionRebarArea)} mm²/m → ${distBar.barString}",
-                    result = distBar.barString, unit = "mm²/m",
+                    formula = if(code == DesignCode.ECP) "As,dist = max(0.20*As,main; 4 bars/m floor, spacing <= 250 mm)" else "As,dist = max(0.20*As,main; 0.0018*b*h)",
+                    formulaWithValues = "As,dist,provided = ${"%.0f".format(java.util.Locale.US,result.distributionRebarArea)} mm2/m; dia ${distBar.diameter} mm at ${"%.0f".format(java.util.Locale.US,distBar.spacing)} mm",
+                    result = distBar.barString, unit = "",
                     codeReference = ref
                 ),
                 CalculationStep(
-                    stepNumber = 6, title = "Safety Checks",
+                    stepNumber = 6, title = "Implemented Checks (not code acceptance)",
                     formula = "Flexure · shear · deflection",
-                    formulaWithValues = "${result.safetyChecks.count { it.isSafe }}/${result.safetyChecks.size} checks passed",
-                    result = if (result.isSafe) "SAFE" else "UNSAFE", unit = "",
+                    formulaWithValues = result.safetyChecks.groupBy { it.kind }.toSortedMap().entries.joinToString("; ") { (k, v) ->
+                        (when (k) { StairCheckKind.CODE -> "Code checks"; StairCheckKind.GEOMETRY -> "Geometry limits"; StairCheckKind.ASSUMPTION -> "Assumption/model flags" }) +
+                            ": ${v.count { it.isSafe }}/${v.size} passed, ${v.count { !it.isSafe && !it.notAssessed }} failed, ${v.count { it.notAssessed }} not assessed"
+                    },
+                    result = if (result.safetyChecks.any { !it.isSafe && !it.notAssessed }) "Checks fail"
+                             else if (result.safetyChecks.any { it.notAssessed }) "Not assessed items remain; acceptance incomplete"
+                             else if (result.isSafe) "Checks pass; acceptance incomplete" else "Checks fail", unit = "",
                     codeReference = ref, isPass = result.isSafe,
-                    status = if (result.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                    status = if (result.safetyChecks.any { !it.isSafe && !it.notAssessed }) StepStatus.CHECK_FAIL
+                             else if (result.safetyChecks.any { it.notAssessed }) StepStatus.WARNING
+                             else if (result.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
                 )
             )
 
@@ -2167,15 +2387,17 @@ class CalculatorEngine @Inject constructor(
                 thickness = defaultThickness,
                 reinforcement = mainBar,
                 distributionReinforcement = distBar,
-                isSafe = result.isSafe,
+                isSafe = result.isSafe, // Implemented checks only; acceptance remains separate.
                 concreteVolume = concreteVolume,
                 steelWeight = steelWeight,
                 cost = cost,
                 code = code,
                 safetyChecks = result.safetyChecks.map {
-                    DesignSafetyCheck(name = it.name, value = it.value, limit = it.limit, unit = it.unit, isSafe = it.isSafe)
+                    DesignSafetyCheck(name = it.displayName, value = it.value, limit = it.limit, unit = it.unit, isSafe = it.isSafe, notAssessed = it.notAssessed)
                 },
                 utilizationRatio = utilization,
+                flexureRatio = flexureRatioOf(result.safetyChecks)?.ratio,
+                flexureRatioBasis = flexureRatioOf(result.safetyChecks)?.basis ?: "",
                 mu = result.maxMoment,
                 wu = result.horizontalLoad,
                 span = span,
@@ -2184,11 +2406,32 @@ class CalculatorEngine @Inject constructor(
                 fcu = fcu,
                 fy = fy,
                 suggestions = result.safetyChecks.filterNot { it.isSafe }.map { it.description },
-                calculationSteps = steps
+                calculationSteps = steps,
+                stairWidthMm = stairWidthMm,
+                supportCondition = supportCondition,
+                landingLengthMm = landingLengthMm,
+                landingWidthMm = landingWidthMm,
+                landingThicknessMm = landingThicknessMm,
+                analysisStatus = if (type == StairType.CANTILEVER) StairAnalysisStatus.UNSUPPORTED_CASE else result.analysisStatus,
+                analysisSpanM = result.analysisSpanM,
+                adoptedRunMm = result.adoptedRunMm,
+                flightTopRebar = result.flightTopRebar,
+                landingRebar = result.landingRebar,
+                codeAcceptanceComplete = false,
+                quantityReview = quantityReview,
+                documentaryBasisLabel = ref,
+                qualificationNotes = quantityReview.qualifications +
+                    result.codeNotes.filterNot { Regex("(?:ECP|ACI|SBC)[^;]*20(?:19|21|24|25)").containsMatchIn(it) } +
+                    "Legacy edition-specific citations omitted, not verified against supplied reference" +
+                    "Complete stair detailing acceptance is not implemented" +
+                    ("Waist thickness ${"%.0f".format(defaultThickness)} mm is a calculated design choice by the app, not a user input: " +
+                        "smallest 10 mm multiple meeting the deemed-to-satisfy span/thickness table (${if (code == DesignCode.ECP) "ECP 203-2020 Table 4-10, solid slab, simply supported" else "ACI 318M-14 / SBC 304-CR-18 Table 7.3.1.1, simply supported"}; slab analogy, preliminary), " +
+                        "not below the lane minimum ${"%.0f".format(laneMinWaistMm)} mm, which is a practical assumption and not a code check") +
+                    if (type == StairType.CANTILEVER) listOf("Cantilever model is not implemented; single-flight fallback is not valid for this case") else emptyList()
             )
         } catch (e: Exception) {
             // ADR-010: لا تُرجع isSafe=true عند الفشل — loud failure, no silent safe
-            StairResult(type = type, thickness = 150.0, reinforcement = ReinforcementBar(), distributionReinforcement = ReinforcementBar(), isSafe = false, concreteVolume = 0.0, steelWeight = 0.0, cost = 0.0, code = code, riser = riser, tread = tread,
+            StairResult(type = type, thickness = 150.0, reinforcement = ReinforcementBar(), distributionReinforcement = ReinforcementBar(), isSafe = false, concreteVolume = 0.0, steelWeight = 0.0, cost = 0.0, code = code, riser = riser, tread = tread, stairWidthMm = stairWidthMm,
                 suggestions = listOf("Calculation failed: ${e.message?.take(200) ?: "Unknown error"} / فشل الحساب"))
         }
     }
@@ -2239,17 +2482,26 @@ class CalculatorEngine @Inject constructor(
         )
     }
 
-    fun designTank(type: TankType, capacity: Double, height: Double, fcu: Double, fy: Double, preferredDiameter: Int = 12, code: DesignCode = DesignCode.ECP): TankResult {
-        InputGuard.positive("height", height)
+    /** [heightM] is the wall height in METRES (as entered on the screen); the result length/width/height are metres too. */
+    fun designTank(type: TankType, capacity: Double, heightM: Double, fcu: Double, fy: Double, preferredDiameter: Int = 12, code: DesignCode = DesignCode.ECP): TankResult {
+        InputGuard.positive("height", heightM)
         InputGuard.positive("capacity", capacity)
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
+        val height = heightM * 1000.0 // mm for the base engine
 
         val domainCode = code
         val tankEngine = CalculationFactory.getTankDesign(domainCode)
 
+        require(height > 300.0) { "Tank height must exceed the 300 mm freeboard assumed by this design." }
         val hM = height / 1000.0
-        val sideM = sqrt(capacity / max(0.5, hM))
+        // Size the plan area for the requested capacity at the depth the design actually uses
+        // (water depth = height - 300 mm freeboard). Sizing on the full height delivered less than requested.
+        val waterDepthMm = max(100.0, height - 300.0)
+        val planAreaM2 = capacity / (waterDepthMm / 1000.0)
+        val isCircularType = type == TankType.CIRCULAR_GROUND || type == TankType.CIRCULAR_ELEVATED ||
+            type == TankType.CIRCULAR_UNDERGROUND
+        val sideM = if (isCircularType) sqrt(4.0 * planAreaM2 / PI) else sqrt(planAreaM2)
         val sideMm = sideM * 1000.0
 
         val baseType = when(type) {
@@ -2262,7 +2514,7 @@ class CalculatorEngine @Inject constructor(
         }
 
         val res = tankEngine.calculateTank(
-            length = sideMm, width = sideMm, height = height, waterDepth = max(100.0, height - 300.0),
+            length = sideMm, width = sideMm, height = height, waterDepth = waterDepthMm,
             fcu = fcu, fy = fy, type = baseType
         )
 
@@ -2290,7 +2542,7 @@ class CalculatorEngine @Inject constructor(
                 stepNumber = 1, title = "Tank Geometry",
                 formula = "V = L·W·H",
                 formulaWithValues = "L = W = ${"%.2f".format(sideM)} m, H = ${"%.2f".format(hM)} m",
-                result = "V = ${"%.2f".format(res.capacityM3)} m³", unit = "m³",
+                result = "V = ${"%.2f".format(planAreaM2 * waterDepthMm / 1000.0)} m³ at water depth ${"%.2f".format(waterDepthMm / 1000.0)} m", unit = "m³",
                 codeReference = ref
             ),
             CalculationStep(
@@ -2310,18 +2562,18 @@ class CalculatorEngine @Inject constructor(
             CalculationStep(
                 stepNumber = 4, title = "Wall Reinforcement",
                 formula = "As = M / (0.87fy·j·d)",
-                formulaWithValues = "As = ${"%.0f".format(res.wallReinforcement.astRequired)} mm²/m → ${wallBar.barString}",
-                result = wallBar.barString, unit = "mm²/m",
-                codeReference = ref, isPass = res.wallReinforcement.isSafe,
-                status = if (res.wallReinforcement.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                formulaWithValues = "As,req = ${"%.0f".format(res.wallReinforcement.astRequired)} mm²/m; provided ${"%.0f".format(res.wallReinforcement.astProvided)} mm²/m at ${"%.0f".format(res.wallReinforcement.spacing)} mm spacing (${wallBar.barString})",
+                result = wallBar.barString, unit = "",
+                codeReference = ref, isPass = res.wallReinforcement.astProvided >= res.wallReinforcement.astRequired - 1e-6,
+                status = if (res.wallReinforcement.astProvided >= res.wallReinforcement.astRequired - 1e-6) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
             ),
             CalculationStep(
                 stepNumber = 5, title = "Base Reinforcement",
                 formula = "As = M / (0.87fy·j·d)",
-                formulaWithValues = "As = ${"%.0f".format(res.baseReinforcement.astRequired)} mm²/m → ${baseBar.barString}",
-                result = baseBar.barString, unit = "mm²/m",
-                codeReference = ref, isPass = res.baseReinforcement.isSafe,
-                status = if (res.baseReinforcement.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                formulaWithValues = "As,req = ${"%.0f".format(res.baseReinforcement.astRequired)} mm²/m; provided ${"%.0f".format(res.baseReinforcement.astProvided)} mm²/m at ${"%.0f".format(res.baseReinforcement.spacing)} mm spacing (${baseBar.barString})",
+                result = baseBar.barString, unit = "",
+                codeReference = ref, isPass = res.baseReinforcement.astProvided >= res.baseReinforcement.astRequired - 1e-6,
+                status = if (res.baseReinforcement.astProvided >= res.baseReinforcement.astRequired - 1e-6) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
             ),
             CalculationStep(
                 stepNumber = 6, title = "Safety Checks",
@@ -2330,16 +2582,23 @@ class CalculatorEngine @Inject constructor(
                 result = if (res.isSafe) "SAFE" else "UNSAFE", unit = "",
                 codeReference = ref, isPass = res.isSafe,
                 status = if (res.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+            ),
+            CalculationStep(
+                stepNumber = 7, title = "Base punching shear (surrogate)",
+                formula = "Not assessed",
+                formulaWithValues = "Applicability, load model and critical perimeter unverified; no verdict",
+                result = "NOT ASSESSED", unit = "",
+                codeReference = ref, status = StepStatus.INFO
             )
         )
 
         return TankResult(
-            type = type, length = sideMm, width = sideMm, height = height,
+            type = type, length = sideM, width = sideM, height = heightM,
             wallThickness = res.wallThickness, baseThickness = res.baseThickness,
             wallReinforcement = wallBar, baseReinforcement = baseBar,
             isSafe = res.isSafe, concreteVolume = res.concreteVolume, steelWeight = res.steelWeight,
             cost = res.cost, code = code, waterPressure = res.pressure,
-            capacity = res.capacityM3, safetyChecks = checks, fcu = fcu, fy = fy,
+            capacity = planAreaM2 * waterDepthMm / 1000.0, safetyChecks = checks, fcu = fcu, fy = fy,
             calculationSteps = steps
         )
     }
@@ -2431,7 +2690,7 @@ class CalculatorEngine @Inject constructor(
             ),
             CalculationStep(
                 stepNumber = 3, title = "Stem Steel",
-                formula = "As = Mu / (0.87fy·j·d)",
+                formula = if(code == DesignCode.ECP) "K = Mu/(fcu*b*d^2); As,req = Mu/((fy/1.15)*z), with minimum" else "Rn = Mu/(0.9*b*d^2); As,req = rho*b*d, with minimum",
                 formulaWithValues = "As = ${"%.0f".format(res.stemMainRebarArea)} mm²/m → ${res.stemMainRebar}",
                 result = res.stemMainRebar, unit = "mm²/m",
                 codeReference = ref

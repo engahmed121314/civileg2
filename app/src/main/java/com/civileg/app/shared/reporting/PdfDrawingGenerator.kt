@@ -10,6 +10,7 @@ import android.text.TextPaint
 import androidx.compose.ui.geometry.Offset
 import com.civileg.app.domain.entities.SteelWarehouseAnalysisResult
 import com.civileg.app.domain.entities.SteelWarehouseInputs
+import kotlin.math.roundToInt
 import kotlin.math.*
 
 /**
@@ -90,7 +91,8 @@ object PdfDrawingGenerator {
         val span = inputs.span
         val eh = inputs.eaveHeight
         val rh = inputs.ridgeHeight
-        val scale = (w * 0.8f) / span.toFloat()
+        // fit-to-content: limited by both width and height so a tall building cannot overflow
+        val scale = min((w * 0.8f) / span.toFloat(), (h - 130f) / rh.toFloat())
         
         val dw = span.toFloat() * scale
         val deh = eh.toFloat() * scale
@@ -111,6 +113,7 @@ object PdfDrawingGenerator {
         
         canvas.drawBilingualText("FRONT ELEVATION", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
         canvas.drawBilingualText("${span}m", cx, yBase + 30f, DIM_TEXT, 20f, true)
+        canvas.drawBilingualText("eave ${eh}m / ridge ${rh}m", cx, yBase + 56f, DIM_TEXT, 18f, false)
     }
 
     private fun drawWarehousePlanCanvas(canvas: Canvas, inputs: SteelWarehouseInputs, cx: Float, cy: Float, w: Float, h: Float, pMain: Paint, pDim: Paint, pText: Paint) {
@@ -142,32 +145,108 @@ object PdfDrawingGenerator {
         val l = inputs.length.toFloat()
         val eh = inputs.eaveHeight.toFloat()
         val rh = inputs.ridgeHeight.toFloat()
-        
-        val scale = min(w / s, h / eh) * 0.4f
-        val ds = s * scale
-        val dl = l * scale * 0.5f
-        val deh = eh * scale
-        val drh = rh * scale
-        
-        val ang = Math.toRadians(30.0)
-        val dx = (cos(ang) * ds).toFloat()
-        val dy = (sin(ang) * ds).toFloat()
-        val dzx = (cos(ang) * dl).toFloat()
-        val dzy = (sin(ang) * dl).toFloat()
-        
-        val b1 = Offset(cx, cy + 50f)
-        val e1 = Offset(b1.x, b1.y - deh)
-        val a1 = Offset(b1.x + dx/2, e1.y - (drh - deh))
-        
-        val b2 = Offset(b1.x + dx, b1.y - dy)
-        val e2 = Offset(b2.x, b2.y - deh)
-        
-        canvas.drawLine(b1.x, b1.y, e1.x, e1.y, pMain)
-        canvas.drawLine(b2.x, b2.y, e2.x, e2.y, pMain)
-        canvas.drawLine(e1.x, e1.y, a1.x, a1.y, pMain)
-        canvas.drawLine(e2.x, e2.y, a1.x, a1.y, pMain)
-        
-        canvas.drawBilingualText("3D WIREFRAME", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
+        val numBays = (l / inputs.baySpacing.toFloat()).roundToInt().coerceIn(1, 40)
+
+        // Isometric projection: x across span, y along length, z up.
+        val c30 = cos(Math.toRadians(30.0)).toFloat()
+        val s30 = 0.5f
+        fun px(x: Float, y: Float) = (x - y) * c30
+        fun py(x: Float, y: Float, z: Float) = (x + y) * s30 - z
+
+        // Fit-to-content: bounding box of all corner points scaled into the drawing area.
+        val pts = listOf(
+            0f to 0f, s to 0f, 0f to l, s to l
+        ).flatMap { (x, y) -> listOf(Pair(px(x, y), py(x, y, 0f)), Pair(px(x, y), py(x, y, rh))) }
+        val minX = pts.minOf { it.first }; val maxX = pts.maxOf { it.first }
+        val minY = pts.minOf { it.second }; val maxY = pts.maxOf { it.second }
+        val scale = min((w * 0.9f) / (maxX - minX), (h - 90f) / (maxY - minY))
+        val ox = cx - (minX + maxX) / 2f * scale
+        val oy = cy + 25f - (minY + maxY) / 2f * scale
+        fun sx(x: Float, y: Float) = ox + px(x, y) * scale
+        fun sy(x: Float, y: Float, z: Float) = oy + py(x, y, z) * scale
+        fun line(x1: Float, y1: Float, z1: Float, x2: Float, y2: Float, z2: Float, p: Paint) =
+            canvas.drawLine(sx(x1, y1), sy(x1, y1, z1), sx(x2, y2), sy(x2, y2, z2), p)
+
+        // Shaded faces (translucent, back to front) so the building reads as a solid, not a bare wireframe.
+        fun face(alpha: Int, r: Int, g: Int, b: Int, vararg v: Triple<Float, Float, Float>) {
+            val path = Path()
+            v.forEachIndexed { i, t ->
+                val x = sx(t.first, t.second); val y = sy(t.first, t.second, t.third)
+                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            path.close()
+            canvas.drawPath(path, fillPaint(Color.argb(alpha, r, g, b)))
+        }
+        face(60, 90, 90, 90, Triple(0f, 0f, 0f), Triple(s, 0f, 0f), Triple(s, l, 0f), Triple(0f, l, 0f))      // floor
+        face(35, 120, 150, 190, Triple(0f, 0f, 0f), Triple(0f, l, 0f), Triple(0f, l, eh), Triple(0f, 0f, eh)) // far side wall
+        face(35, 120, 150, 190, Triple(0f, 0f, 0f), Triple(s, 0f, 0f), Triple(s, 0f, eh), Triple(s / 2f, 0f, rh), Triple(0f, 0f, eh)) // far gable
+        face(55, 150, 180, 220, Triple(s, 0f, 0f), Triple(s, l, 0f), Triple(s, l, eh), Triple(s, 0f, eh))    // near side wall
+        face(55, 150, 180, 220, Triple(0f, l, 0f), Triple(s, l, 0f), Triple(s, l, eh), Triple(s / 2f, l, rh), Triple(0f, l, eh)) // near gable
+        face(85, 200, 120, 70, Triple(0f, 0f, eh), Triple(0f, l, eh), Triple(s / 2f, l, rh), Triple(s / 2f, 0f, rh)) // roof, left slope
+        face(110, 220, 140, 80, Triple(s, 0f, eh), Triple(s, l, eh), Triple(s / 2f, l, rh), Triple(s / 2f, 0f, rh)) // roof, right slope
+
+        // Portal frames at each bay line
+        for (i in 0..numBays) {
+            val y = l * i / numBays
+            line(0f, y, 0f, 0f, y, eh, pMain)
+            line(s, y, 0f, s, y, eh, pMain)
+            line(0f, y, eh, s / 2f, y, rh, pMain)
+            line(s, y, eh, s / 2f, y, rh, pMain)
+        }
+        // Longitudinal lines: eaves, ridge and base
+        line(0f, 0f, eh, 0f, l, eh, pDim); line(s, 0f, eh, s, l, eh, pDim)
+        line(s / 2f, 0f, rh, s / 2f, l, rh, pDim)
+        line(0f, 0f, 0f, 0f, l, 0f, pDim); line(s, 0f, 0f, s, l, 0f, pDim)
+        line(0f, 0f, 0f, s, 0f, 0f, pDim); line(0f, l, 0f, s, l, 0f, pDim)
+
+        canvas.drawBilingualText("3D VIEW (isometric, schematic)", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
+        canvas.drawBilingualText("span ${s}m x length ${l}m, eave ${eh}m, ridge ${rh}m, ${numBays} bays", cx, cy + h/2 - 10f, DIM_TEXT, 18f, false)
+    }
+
+    /**
+     * Side-wall X-bracing elevation (tag B1): braced bays hatched with both diagonals,
+     * brace length and angle dimensioned, bay and eave dimensions. Scaled to fit the sheet.
+     */
+    fun generateBracingDrawing(b: com.civileg.app.domain.entities.BracingPreliminary): Bitmap {
+        val (bitmap, canvas) = createCanvas(1200, 400)
+        val pMain = createPaint(Color.WHITE, 3f)
+        val pDim = createPaint(DIM_LINE, 1.5f)
+        val pBrace = createPaint(Color.parseColor("#F39C12"), 5f)
+        val pHatch = createPaint(Color.parseColor("#55F39C12"), 2f)
+        canvas.drawBilingualText("SIDE WALL X-BRACING (B1)", 600f, 40f, DIM_TEXT, 24f, true)
+        if (!b.issued) {
+            canvas.drawBilingualText(b.reason ?: "NOT ISSUED", 600f, 200f, DIM_TEXT, 22f, true)
+            return bitmap
+        }
+        val totalW = b.numBays * b.bayM.toFloat()
+        val scale = min(900f / totalW, 160f / b.eaveM.toFloat())
+        val x0 = 600f - totalW * scale / 2f
+        val yBase = 140f + b.eaveM.toFloat() * scale
+        val yEave = yBase - b.eaveM.toFloat() * scale
+        val bw = b.bayM.toFloat() * scale
+        canvas.drawLine(x0, yBase, x0 + totalW * scale, yBase, pMain)
+        canvas.drawLine(x0, yEave, x0 + totalW * scale, yEave, pMain)
+        for (i in 0..b.numBays) canvas.drawLine(x0 + i * bw, yBase, x0 + i * bw, yEave, pMain)
+        for (bay in b.bracedBays) {
+            val xl = x0 + (bay - 1) * bw
+            val xr = xl + bw
+            // hatch
+            var hx = xl
+            while (hx < xr) { canvas.drawLine(hx, yBase, min(hx + (yBase - yEave), xr), yBase - (min(hx + (yBase - yEave), xr) - hx), pHatch); hx += 18f }
+            canvas.drawLine(xl, yBase, xr, yEave, pBrace)
+            canvas.drawLine(xl, yEave, xr, yBase, pBrace)
+            canvas.drawBilingualText("B1", (xl + xr) / 2f, (yBase + yEave) / 2f - 10f, Color.WHITE, 22f, true, Paint.Align.CENTER)
+        }
+        // dimensions: bay, eave height, brace length and angle (first braced bay)
+        canvas.drawLine(x0, yBase + 25f, x0 + bw, yBase + 25f, pDim)
+        val loc = java.util.Locale.US
+        canvas.drawBilingualText(String.format(loc, "bay %.2f m", b.bayM), x0 + bw / 2f, yBase + 50f, DIM_TEXT, 18f, false, Paint.Align.CENTER)
+        canvas.drawLine(x0 - 25f, yBase, x0 - 25f, yEave, pDim)
+        canvas.drawBilingualText(String.format(loc, "H %.2f m", b.eaveM), x0 - 35f, (yBase + yEave) / 2f, DIM_TEXT, 18f, false, Paint.Align.RIGHT)
+        canvas.drawBilingualText(String.format(loc, "Brace length L = %.2f m, angle to horizontal %.1f deg", b.lengthM, b.angleDeg), 600f, 85f, Color.WHITE, 20f, true, Paint.Align.CENTER)
+        canvas.drawBilingualText("Braced bays: ${b.bracedBays.joinToString(", ")}${if (b.usedDefaultBays) " (default: end bays)" else ""}   |   B1 = ${b.sectionName}, tension-only X", 600f, yBase + 85f, DIM_TEXT, 20f, false)
+        canvas.drawBilingualText("Both side walls are braced identically. Schematic: not a shop drawing; connections not designed.", 600f, yBase + 115f, DIM_TEXT, 18f, false)
+        return bitmap
     }
 
     fun generateBasePlateDrawing(
@@ -957,19 +1036,26 @@ object PdfDrawingGenerator {
         distDia: Double, distSpacing: Double,
         cover: Double = 25.0,
         dropPanelSize: Double = 0.0,
+        dropPanelThickness: Double = 0.0,
         ribWidth: Double = 100.0,
         ribSpacing: Double = 500.0,
-        columnSize: Double = 400.0
+        columnSize: Double = 400.0,
+        spansInMm: Boolean = false
     ): Bitmap {
+        // Unit contract: spanX/spanY are metres unless spansInMm is true. The flat,
+        // hollow-block and waffle drawings work in millimetres (column, drop panel,
+        // rib width and spacing are mm), so spans are normalised to mm for them.
+        val spanXmm = SlabDrawingUnits.spanToMm(spanX, spansInMm)
+        val spanYmm = SlabDrawingUnits.spanToMm(spanY, spansInMm)
         return when (slabType) {
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.SOLID ->
                 generateSolidSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover)
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.FLAT ->
-                generateFlatSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, dropPanelSize, columnSize)
+                generateFlatSlabDrawing(spanXmm, spanYmm, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, dropPanelSize, dropPanelThickness, columnSize)
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK ->
-                generateHordiSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
+                generateHordiSlabDrawing(spanXmm, spanYmm, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.WAFFLE ->
-                generateWaffleSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
+                generateWaffleSlabDrawing(spanXmm, spanYmm, thickness, mainDia, mainSpacing, distDia, distSpacing, cover, ribWidth, ribSpacing)
             com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.POST_TENSION ->
                 generatePostTensionSlabDrawing(spanX, spanY, thickness, mainDia, mainSpacing, distDia, distSpacing, cover)
         }
@@ -991,7 +1077,7 @@ object PdfDrawingGenerator {
         spanX: Double, spanY: Double, thickness: Double,
         mainDia: Double, mainSpacing: Double,
         distDia: Double, distSpacing: Double,
-        cover: Double, dropPanelSize: Double, columnSize: Double
+        cover: Double, dropPanelSize: Double, dropPanelThickness: Double, columnSize: Double
     ): Bitmap {
         val W = 1400; val H = 900
         val (bitmap, canvas) = createCanvas(W, H)
@@ -1010,7 +1096,8 @@ object PdfDrawingGenerator {
         canvas.drawHatch(planL, planT, planW, planH, 22f)
 
         // Drop panels at column locations (4 corners + center if span > 1 bay)
-        val dpSize = (dropPanelSize.toFloat() * scale).coerceAtLeast(40f)
+        val hasDropPanel = dropPanelSize > 0.0
+        val dpSize = if (hasDropPanel) (dropPanelSize.toFloat() * scale).coerceAtLeast(40f) else 0f
         val colSize = (columnSize.toFloat() * scale).coerceAtLeast(15f)
         val dpColor = Color.parseColor("#8A8A8A")
         val colColor = Color.parseColor("#505050")
@@ -1025,8 +1112,10 @@ object PdfDrawingGenerator {
         )
         dropPositions.forEach { (cx, cy) ->
             // Drop panel (lighter shade)
-            canvas.drawRect(cx - dpSize / 2f, cy - dpSize / 2f, cx + dpSize / 2f, cy + dpSize / 2f, fillPaint(dpColor))
-            canvas.drawRect(cx - dpSize / 2f, cy - dpSize / 2f, cx + dpSize / 2f, cy + dpSize / 2f, outlineP)
+            if (hasDropPanel) {
+                canvas.drawRect(cx - dpSize / 2f, cy - dpSize / 2f, cx + dpSize / 2f, cy + dpSize / 2f, fillPaint(dpColor))
+                canvas.drawRect(cx - dpSize / 2f, cy - dpSize / 2f, cx + dpSize / 2f, cy + dpSize / 2f, outlineP)
+            }
             // Column (darker shade, smaller)
             canvas.drawRect(cx - colSize / 2f, cy - colSize / 2f, cx + colSize / 2f, cy + colSize / 2f, fillPaint(colColor))
             canvas.drawRect(cx - colSize / 2f, cy - colSize / 2f, cx + colSize / 2f, cy + colSize / 2f, outlineP)
@@ -1055,8 +1144,8 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
-        canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${SlabDrawingUnits.mmLabel(spanX)} (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${SlabDrawingUnits.mmLabel(spanY)} (Ly)", offset = 25f)
         canvas.drawTextCentered("FLAT SLAB PLAN — DROP PANELS", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
@@ -1074,12 +1163,14 @@ object PdfDrawingGenerator {
         val secL = W * 0.55f; val secT = 100f
         val secViewW = planW * 0.75f
         val secScale = secViewW / spanX.toFloat()
-        val secH = maxOf(thickness.toFloat() / 1000f * secScale * 4f, 40f)
-        val dpH = maxOf((dropPanelSize.toFloat() / 1000f * secScale * 4f), 20f)
+        val secH = maxOf(thickness.toFloat() * secScale * 4f, 40f)
+        val dpH = if (dropPanelThickness > 0.0) maxOf(dropPanelThickness.toFloat() * secScale * 4f, 20f) else 0f
 
         // Drop panel zone (left + right — represents column strip)
-        canvas.drawRect(secL, secT, secL + 60f, secT + secH + dpH, fillPaint(Color.parseColor("#8A8A8A")))
-        canvas.drawRect(secL + secViewW - 60f, secT, secL + secViewW, secT + secH + dpH, fillPaint(Color.parseColor("#8A8A8A")))
+        if (dpH > 0f) {
+            canvas.drawRect(secL, secT, secL + 60f, secT + secH + dpH, fillPaint(Color.parseColor("#8A8A8A")))
+            canvas.drawRect(secL + secViewW - 60f, secT, secL + secViewW, secT + secH + dpH, fillPaint(Color.parseColor("#8A8A8A")))
+        }
 
         // Slab body
         canvas.drawRect(secL, secT + dpH, secL + secViewW, secT + secH + dpH, fillPaint(CONCRETE))
@@ -1092,7 +1183,7 @@ object PdfDrawingGenerator {
 
         // Bottom bars in section
         val barR = maxOf(mainDia.toFloat() * 0.4f, 4f)
-        val numBars = minOf((spanX * 1000 / mainSpacing).toInt(), 12)
+        val numBars = minOf((spanX / mainSpacing).toInt(), 12)
         val barStartX = secL + 10f + barR
         val barEndX = secL + secViewW - 10f - barR
         for (i in 0 until numBars) {
@@ -1102,8 +1193,8 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(secL, secL + secViewW, secT + secH + dpH + 50f, "${(spanX * 1000).toInt()} mm")
-        canvas.drawVDim(secT, secT + secH + dpH, secL + secViewW + 20f, "t=${thickness.toInt()}mm + DP=${dropPanelSize.toInt()}mm", offset = 25f)
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + dpH + 50f, "${SlabDrawingUnits.mmLabel(spanX)}")
+        canvas.drawVDim(secT, secT + secH + dpH, secL + secViewW + 20f, if (dropPanelThickness > 0.0) "t=${thickness.toInt()}mm + DP=${dropPanelThickness.toInt()}mm" else "t=${thickness.toInt()}mm", offset = 25f)
         canvas.drawTextCentered("SECTION A-A (WITH DROP PANEL)", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
         // ===== TABLE =====
@@ -1111,8 +1202,8 @@ object PdfDrawingGenerator {
             x = 80f, y = H * 0.6f,
             data = listOf(
                 listOf("Mark", "Dia", "Direction", "Spacing", "Layer", "Length"),
-                listOf("M1", "${mainDia.toInt()}", "Short span Lx", "@ ${mainSpacing.toInt()} c/c", "Bottom", "${(spanX * 1000).toInt()}"),
-                listOf("D1", "${distDia.toInt()}", "Long span Ly", "@ ${distSpacing.toInt()} c/c", "Bottom", "${(spanY * 1000).toInt()}")
+                listOf("M1", "${mainDia.toInt()}", "Short span Lx", "@ ${mainSpacing.toInt()} c/c", "Bottom", "${spanX.toInt()}"),
+                listOf("D1", "${distDia.toInt()}", "Long span Ly", "@ ${distSpacing.toInt()} c/c", "Bottom", "${spanY.toInt()}")
             )
         )
         drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Flat Slab Detail")
@@ -1201,8 +1292,8 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
-        canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${SlabDrawingUnits.mmLabel(spanX)} (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${SlabDrawingUnits.mmLabel(spanY)} (Ly)", offset = 25f)
         canvas.drawTextCentered("HORDI SLAB PLAN — RIBS & VOID BLOCKS", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
@@ -1252,7 +1343,7 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${(spanX * 1000).toInt()} mm")
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${SlabDrawingUnits.mmLabel(spanX)}")
         canvas.drawVDim(secT, secT + secH, secL + secViewW + 20f, "t=${thickness.toInt()}mm", offset = 25f)
         canvas.drawTextCentered("SECTION A-A — RIBS & BLOCKS", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
@@ -1261,9 +1352,9 @@ object PdfDrawingGenerator {
             x = 80f, y = H * 0.6f,
             data = listOf(
                 listOf("Mark", "Dia", "Location", "Spacing", "Length"),
-                listOf("R1", "${mainDia.toInt()}", "Rib bottom", "@ ${ribSpacing.toInt()} mm", "${(spanX * 1000).toInt()}"),
-                listOf("T1", "${distDia.toInt()}", "Slab top", "@ ${distSpacing.toInt()} mm", "${(spanY * 1000).toInt()}"),
-                listOf("S1", "8", "Rib stirrups", "@ 200 mm", "${(spanX * 1000).toInt()}")
+                listOf("R1", "${mainDia.toInt()}", "Rib bottom", "ribs @ ${ribSpacing.toInt()} mm", "${spanX.toInt()}"),
+                listOf("T1", if (distDia > 0.0) "${distDia.toInt()}" else "-", "Slab top", if (distDia > 0.0) "@ ${distSpacing.toInt()} mm" else "not designed", "${spanY.toInt()}"),
+                listOf("S1", "-", "Rib stirrups", "not designed", "-")
             )
         )
         drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Hordi Slab Detail")
@@ -1325,8 +1416,8 @@ object PdfDrawingGenerator {
         canvas.drawRect(planL, planT, planL + planW, planT + planH, outlineP)
 
         // Dimensions
-        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${(spanX * 1000).toInt()} mm (Lx)", offset = 25f)
-        canvas.drawVDim(planT, planT + planH, planL - 25f, "${(spanY * 1000).toInt()} mm (Ly)", offset = 25f)
+        canvas.drawHDim(planL, planL + planW, planT + planH + 25f, "${SlabDrawingUnits.mmLabel(spanX)} (Lx)", offset = 25f)
+        canvas.drawVDim(planT, planT + planH, planL - 25f, "${SlabDrawingUnits.mmLabel(spanY)} (Ly)", offset = 25f)
         canvas.drawTextCentered("WAFFLE SLAB PLAN — TWO-WAY RIBS", planL + planW / 2f, planT - 35f, textPaint(DIM_TEXT, 22f, true))
 
         // Legend
@@ -1364,7 +1455,7 @@ object PdfDrawingGenerator {
         }
 
         // Dimensions
-        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${(spanX * 1000).toInt()} mm")
+        canvas.drawHDim(secL, secL + secViewW, secT + secH + 20f, "${SlabDrawingUnits.mmLabel(spanX)}")
         canvas.drawVDim(secT, secT + secH, secL + secViewW + 20f, "t=${thickness.toInt()}mm", offset = 25f)
         canvas.drawTextCentered("SECTION A-A — WAFFLE", secL + secViewW / 2f, secT - 20f, textPaint(DIM_TEXT, 18f, true))
 
@@ -1373,9 +1464,9 @@ object PdfDrawingGenerator {
             x = 80f, y = H * 0.6f,
             data = listOf(
                 listOf("Mark", "Dia", "Direction", "Spacing", "Layer"),
-                listOf("RX", "${mainDia.toInt()}", "X-direction", "@ ${ribSpacing.toInt()} mm", "Bottom"),
-                listOf("RY", "${mainDia.toInt()}", "Y-direction", "@ ${ribSpacing.toInt()} mm", "Bottom"),
-                listOf("T", "${distDia.toInt()}", "Top flange", "@ ${distSpacing.toInt()} mm", "Top")
+                listOf("RX", "${mainDia.toInt()}", "X-direction", "ribs @ ${ribSpacing.toInt()} mm", "Bottom"),
+                listOf("RY", "${mainDia.toInt()}", "Y-direction", "ribs @ ${ribSpacing.toInt()} mm", "Bottom"),
+                listOf("T", if (distDia > 0.0) "${distDia.toInt()}" else "-", "Top flange", if (distDia > 0.0) "@ ${distSpacing.toInt()} mm" else "not designed", "Top")
             )
         )
         drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Waffle Slab Detail")
@@ -2903,10 +2994,12 @@ object PdfDrawingGenerator {
         )
 
         // Status badge
-        val statusColor = if (isSafe) Color.parseColor("#2ECC71") else SECONDARY_RED
-        val statusText = if (isSafe) "SAFE" else "UNSAFE"
-        canvas.drawText(statusText, W - 130f, 480f, textPaint(statusColor, 24f, true))
-        canvas.drawText("UR: ${"%.0f".format(if (maxMoment > 0) 0.0 else 0.0)}%", W - 140f, 500f, textPaint(DIM_TEXT, 14f))
+        val statusColor = if (isSafe) Color.parseColor("#EF6C00") else SECONDARY_RED
+        // The fallback drawing only knows the flexure/shear pass flag. It does not know that bar
+        // layout, anchorage, deflection and cracking are unchecked, so it must not claim SAFE.
+        val statusText = if (isSafe) "PRELIMINARY" else "CHECK FAILED"
+        canvas.drawText(statusText, W - 160f, 480f, textPaint(statusColor, 20f, true))
+        canvas.drawText("Not for construction", W - 160f, 500f, textPaint(DIM_TEXT, 14f))
 
         // ============ PART 2: BENDING MOMENT DIAGRAM ============
         val bmdTop = 580f
@@ -3124,7 +3217,7 @@ object PdfDrawingGenerator {
 
                 // Floor label
                 canvas.drawBilingualText(
-                    "F${ff.floorIndex}: ${"%.1f".format(ff.lateralForce)} kN",
+                    "F${ff.floorIndex}: ${"%.1f".format(java.util.Locale.US, ff.lateralForce)} kN",
                     arrowEndX + 8f, arrowY + 5f,
                     DIM_TEXT, 13f
                 )
@@ -3150,13 +3243,13 @@ object PdfDrawingGenerator {
             close()
         }, fillPaint(SECONDARY_RED))
         canvas.drawBilingualText(
-            t("V = ${"%.1f".format(baseShear)} kN", "V = ${"%.1f".format(baseShear)} kN"),
+            t("V = ${"%.1f".format(java.util.Locale.US, baseShear)} kN", "V = ${"%.1f".format(java.util.Locale.US, baseShear)} kN"),
             bsStartX - 5f, baseY - 30f,
             SECONDARY_RED, 16f, true
         )
 
         // Elevation dimensions
-        canvas.drawVDim(elevT, baseY, elevL + elevW + 25f, "H = ${"%.1f".format(totalHeight)} m", offset = 25f)
+        canvas.drawVDim(elevT, baseY, elevL + elevW + 25f, "H = ${"%.1f".format(java.util.Locale.US, totalHeight)} m", offset = 25f)
 
         // Title
         canvas.drawTextCentered(
@@ -3220,7 +3313,7 @@ object PdfDrawingGenerator {
 
                 // Value label above bar
                 canvas.drawBilingualText(
-                    "${"%.0f".format(ff.lateralForce)}",
+                    "${"%.0f".format(java.util.Locale.US, ff.lateralForce)}",
                     barX + barW / 2f, barTop - 8f,
                     DIM_TEXT, 12f, true,
                     align = android.graphics.Paint.Align.CENTER
@@ -3236,7 +3329,7 @@ object PdfDrawingGenerator {
             }
 
             // Y-axis max value
-            canvas.drawText("${"%.0f".format(maxF)}", axisOriginX - 30f, axisMaxY + 8f, textPaint(DIM_TEXT, 12f))
+            canvas.drawText("${"%.0f".format(java.util.Locale.US, maxF)}", axisOriginX - 30f, axisMaxY + 8f, textPaint(DIM_TEXT, 12f))
             canvas.drawText("0", axisOriginX - 20f, axisOriginY + 5f, textPaint(DIM_TEXT, 12f))
         } else {
             // Empty state
@@ -3319,7 +3412,7 @@ object PdfDrawingGenerator {
             }
             canvas.drawLine(tPx, spOriginY, tPx, spMaxY, dashP)
             canvas.drawBilingualText(
-                "T₁ = ${"%.3f".format(fundamentalPeriod)} s",
+                "T₁ = ${"%.3f".format(java.util.Locale.US, fundamentalPeriod)} s",
                 tPx + 5f, spMaxY + 15f,
                 DIM_LINE, 12f
             )
@@ -3328,15 +3421,15 @@ object PdfDrawingGenerator {
             val saY = spOriginY - (spectralAccel / maxSa).toFloat() * spDrawH
             canvas.drawCircle(tPx, saY, 5f, fillPaint(SECONDARY_RED))
             canvas.drawBilingualText(
-                "Sa = ${"%.3f".format(spectralAccel)} g",
+                "Sa = ${"%.3f".format(java.util.Locale.US, spectralAccel)} g",
                 tPx + 8f, saY - 8f,
                 SECONDARY_RED, 12f, true
             )
 
             // Axis labels
             canvas.drawText("0", spOriginX - 15f, spOriginY + 5f, textPaint(DIM_TEXT, 12f))
-            canvas.drawText("${"%.2f".format(maxT)}", spMaxX - 25f, spOriginY + 18f, textPaint(DIM_TEXT, 12f))
-            canvas.drawText("${"%.2f".format(maxSa)}", spOriginX - 35f, spMaxY + 8f, textPaint(DIM_TEXT, 12f))
+            canvas.drawText("${"%.2f".format(java.util.Locale.US, maxT)}", spMaxX - 25f, spOriginY + 18f, textPaint(DIM_TEXT, 12f))
+            canvas.drawText("${"%.2f".format(java.util.Locale.US, maxSa)}", spOriginX - 35f, spMaxY + 8f, textPaint(DIM_TEXT, 12f))
             canvas.drawText("0", spOriginX - 15f, spOriginY + 5f, textPaint(DIM_TEXT, 12f))
         }
 
@@ -3348,9 +3441,10 @@ object PdfDrawingGenerator {
         )
 
         // ===== STATUS BADGE =====
-        val statusColor = if (isSafe) Color.parseColor("#2ECC71") else SECONDARY_RED
-        val statusText = if (isSafe) "SAFE" else "REVIEW"
-        canvas.drawText(statusText, W - 130f, 50f, textPaint(statusColor, 28f, true))
+        val statusColor = if (isSafe) Color.parseColor("#F39C12") else SECONDARY_RED
+        // The drawing only knows the drift flag. It must not claim the building is SAFE.
+        val statusText = if (isSafe) "PRELIMINARY" else "REVIEW"
+        canvas.drawText(statusText, W - 190f, 50f, textPaint(statusColor, 28f, true))
 
         // ===== TITLE BLOCK =====
         drawTitleBlock(canvas, W - 320f, H - 70f, 320f, 70f, "Seismic Analysis")

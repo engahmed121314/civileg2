@@ -57,7 +57,7 @@ materials.forEach { item ->
 writer.write("Design Report: ${escapeCsv(design.name)}\n")
             writer.write("Type: ${escapeCsv(design.type.name)}\n")
             writer.write("Code: ${escapeCsv(design.codeUsed)}\n")
-            writer.write("Safety Status: ${if (design.isSafe) "SAFE" else "UNSAFE"}\n\n")
+            writer.write("Status: ${DesignVerdictLabel.label(design.type, design.isSafe)}\n\n")
             
             writer.write("Input Data\n")
             writer.write("${escapeCsv(design.inputData.replace(",", ";"))}\n\n") // Simple JSON dump

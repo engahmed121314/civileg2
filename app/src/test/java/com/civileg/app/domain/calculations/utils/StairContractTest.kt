@@ -1,0 +1,124 @@
+package com.civileg.app.domain.calculations.utils
+
+import com.civileg.app.domain.calculations.base.StairAnalysisStatus
+import com.civileg.app.domain.calculations.base.StairSupportCondition
+import com.civileg.app.domain.entities.DesignCode
+import org.junit.Assert.*
+import org.junit.Test
+
+class StairContractTest {
+    // This path does not consult SettingsManager; isolate the production wrapper from Android storage.
+ private fun engine(): CalculatorEngine {
+  // No SettingsManager field is used by the path under test. Avoid a compile-time
+  // dependency on JDK-internal packages that Android's unit-test bootclasspath hides.
+  val type=Class.forName("sun.misc.Unsafe")
+  val field=type.getDeclaredField("theUnsafe").apply { isAccessible=true }
+  return type.getMethod("allocateInstance",Class::class.java)
+   .invoke(field.get(null),CalculatorEngine::class.java) as CalculatorEngine
+ }
+
+    private fun design(type: CalculatorEngine.StairType = CalculatorEngine.StairType.SINGLE_FLIGHT,
+                       width: Double = 1400.0,
+                       support: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
+                       landing: Double? = null) = engine().designStaircase(
+        type, 4.0, 150.0, 300.0, 5.0, 4.0, 25.0, 360.0, 12,
+        DesignCode.ECP, width, support, landing, landing, landing)
+
+    @Test fun traceUsesSelectedEngineFormsAndAreaLoadUnits() {
+        for (code in DesignCode.entries) {
+            val r = engine().designStaircase(CalculatorEngine.StairType.SINGLE_FLIGHT,
+                4.0,150.0,300.0,5.0,4.0,25.0,360.0,12,code,1400.0,
+                StairSupportCondition.SIMPLY_SUPPORTED)
+            assertEquals("kN/m2",r.calculationSteps[1].unit)
+            assertTrue(r.calculationSteps[3].formula.contains(if(code==DesignCode.ECP) "fy/1.15" else "0.9*b*d^2"))
+            assertTrue(r.calculationSteps[3].formulaWithValues.contains("mm2/m; dia"))
+            assertTrue(r.calculationSteps[4].formula.contains("0.20*As,main"))
+            assertTrue(r.calculationSteps[2].formula.contains("0.1250"))
+            assertFalse(r.codeAcceptanceComplete)
+        }
+    }
+
+    @Test fun invalidFlexuralRootCannotPassAsZeroRequiredRatio() {
+        for (designer in listOf(com.civileg.app.domain.calculations.aci.ACIStaircase(),com.civileg.app.domain.calculations.sbc.SBCStaircase())) {
+            val result=designer.designStaircase(com.civileg.app.domain.calculations.base.StaircaseInput(
+                stairType=com.civileg.app.domain.calculations.base.StairType.STRAIGHT,
+                span=8.0,totalRise=3.0,stairWidth=1.2,waistThickness=120.0,
+                fcu=25.0,fy=400.0,deadLoad=1000.0,liveLoad=500.0))
+            assertFalse(result.safetyChecks.first { it.name.startsWith("Flexure") }.isSafe)
+            assertFalse(result.isSafe)
+            assertTrue(result.codeNotes.any { it.contains("No singly reinforced") })
+        }
+    }
+
+    @Test fun cantileverDoesNotIssueSingleFlightFallback() {
+        val result = design(type = CalculatorEngine.StairType.CANTILEVER)
+        assertFalse(result.isSafe)
+        assertFalse(result.codeAcceptanceComplete)
+        assertEquals(StairAnalysisStatus.UNSUPPORTED_CASE, result.analysisStatus)
+        assertEquals(0.0, result.concreteVolume, 0.0)
+        assertEquals(0.0, result.steelWeight, 0.0)
+        assertTrue(result.qualificationNotes.any { it.contains("no design issued") })
+    }
+    @Test fun absentLandingIsNotInvented() {
+        val result = design()
+        assertNull(result.landingLengthMm)
+        assertNull(result.landingWidthMm)
+        assertNull(result.landingThicknessMm)
+        assertEquals(StairSupportCondition.UNSPECIFIED, result.supportCondition)
+        assertFalse(result.codeAcceptanceComplete)
+        assertEquals(1400.0, result.stairWidthMm, 0.0)
+    }
+    @Test fun declaredGeometryAndSupportStayInSnapshot() {
+        val result = design(support = StairSupportCondition.SIMPLY_SUPPORTED, landing = 1600.0)
+        assertEquals(StairSupportCondition.SIMPLY_SUPPORTED, result.supportCondition)
+        assertEquals(1600.0, result.landingLengthMm!!, 0.0)
+        assertEquals(1600.0, result.landingWidthMm!!, 0.0)
+        assertEquals(1600.0, result.landingThicknessMm!!, 0.0)
+        assertFalse(result.codeAcceptanceComplete)
+    }
+    @Test fun widthScalesConcreteWithoutLiveFormAccess() {
+        val narrow = design(width = 1000.0)
+        val wide = design(width = 2000.0)
+        assertTrue(narrow.concreteVolume > 0.0)
+        assertEquals(2.0 * narrow.concreteVolume, wide.concreteVolume, 1e-8)
+        assertEquals(1000.0, narrow.stairWidthMm, 0.0)
+    }
+    @Test fun quantitySnapshotDoesNotInventFinalCuttingLengths() {
+        val r = design()
+        val q = r.quantityReview!!
+        assertNull(q.finalSteelKg)
+        assertFalse(q.fabricationScheduleAvailable)
+        assertEquals(q.main.totalNetWeightKg + q.distribution.totalNetWeightKg, r.steelWeight, 1e-8)
+        assertTrue(q.distribution.totalNetWeightKg > 1.0)
+        assertEquals(StairFlightGeometry.from(r.span, r.riser, r.tread).let {
+            kotlin.math.sqrt(it.runMm * it.runMm + it.riseMm * it.riseMm)
+        }, q.main.netFlightLengthMm, 1e-8)
+    }
+    @Test fun quantityReviewUsesCeilingAndCoverToBarSurface() {
+        val q = StairQuantityReviewer.review(1200.0,3900.0,2100.0,25.0,12,125.0,8,250.0)
+        assertEquals(11,q.main.count)
+        assertEquals(1150.0,q.distribution.netFlightLengthMm,0.0)
+        assertTrue((1200.0 - 50.0 - 12.0) / (q.main.count - 1) <= 125.0)
+        assertNull(q.finalSteelKg)
+    }
+    @Test fun unresolvedCuttingShapeNeverBecomesFabricationBbs() {
+        val r = design()
+        assertTrue(BbsGenerator.generateStairBbs("ST1", r, r.stairWidthMm).isEmpty())
+        val steel = BoqEstimator.stairRows(r, r.stairWidthMm / 1000.0, "ST1")[1]
+        assertTrue(steel.description.contains("Net flight steel only"))
+        assertEquals(r.quantityReview!!.netFlightSteelKg, steel.quantity, 1e-8)
+    }
+    @Test fun persistedResultRetainsGeometryAndPartialQuantityScope() {
+        val original = design(support = StairSupportCondition.SIMPLY_SUPPORTED, landing = 1600.0)
+        val gson = com.google.gson.Gson()
+        val saved = gson.toJson(original)
+        val restored = gson.fromJson(saved, CalculatorEngine.StairResult::class.java)
+        assertEquals(original.stairWidthMm, restored.stairWidthMm, 0.0)
+        assertEquals(original.supportCondition, restored.supportCondition)
+        assertEquals(original.landingLengthMm, restored.landingLengthMm)
+        assertEquals(original.quantityReview, restored.quantityReview)
+        assertNull(restored.quantityReview!!.finalSteelKg)
+        assertFalse(restored.codeAcceptanceComplete)
+        assertFalse(restored.quantityReview!!.fabricationScheduleAvailable)
+    }
+}

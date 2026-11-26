@@ -26,7 +26,7 @@ object BoqEstimator {
         val formwork = result.span * (2 * result.depth + result.width) / 1000.0
         return listOf(
             item(1, "Concrete - $mark", "m3", result.concreteVolume),
-            item(2, "Reinforcement steel - $mark", "kg", result.steelWeight),
+            item(2, "Reinforcement steel (rough estimate, not for procurement: no hooks, anchorage, laps or bends; uniform stirrups; full-span top steel) - $mark", "kg", result.steelWeight),
             item(3, "Formwork - $mark (sides + soffit)", "m2", formwork)
         )
     }
@@ -82,23 +82,23 @@ object BoqEstimator {
         widthM: Double,
         mark: String = "Stair"
     ): List<BoqRow> {
-        val runM = result.span
-        val risers = if (result.tread > 0.0) (runM * 1000.0 / result.tread).toInt().coerceAtLeast(1) else 0
-        val riseM = risers * result.riser / 1000.0
+        require(com.civileg.app.utils.StairResultGate.isDesignUsable(result.analysisStatus)) {
+            "Stair BOQ is not available: the case is not an assessed design (${result.analysisStatus})"
+        }
+        val geometry = StairFlightGeometry.from(result.span, result.riser, result.tread)
+        val runM = geometry.runMm / 1000.0
+        val riseM = geometry.riseMm / 1000.0
         val inclinedLengthM = sqrt(runM * runM + riseM * riseM)
         return listOf(
             item(1, "Concrete - $mark", "m3", result.concreteVolume),
-            item(2, "Reinforcement steel - $mark", "kg", result.steelWeight),
+            item(2, "Net flight steel only - $mark (excludes anchorage, bends, laps, top and landing steel)", "kg", result.quantityReview?.netFlightSteelKg ?: result.steelWeight),
             item(3, "Formwork - $mark (inclined soffit)", "m2", inclinedLengthM * widthM)
         )
     }
 
-    fun tankRows(result: TankResult, mark: String = "Tank"): List<BoqRow> = listOf(
-        item(1, "Concrete - $mark", "m3", result.concreteVolume),
-        item(2, "Reinforcement steel - $mark", "kg", result.steelWeight),
-        item(3, "Formwork - $mark (wall faces)", "m2", 2 * (result.length + result.width) * result.height),
-        item(4, "Formwork - $mark (base soffit)", "m2", result.length * result.width)
-    )
+    fun tankRows(result: TankResult, mark: String = "Tank"): List<BoqRow> =
+        tankRows(result.concreteVolume, result.steelWeight, result.length, result.width, result.height, mark,
+            isCircular = result.type.name.contains("CIRCULAR"))
 
     fun retainingWallRows(
         result: RetainingWallResult,
@@ -166,7 +166,7 @@ object BoqEstimator {
         val cap = result.capResult
         val rows = mutableListOf(
             item(1, "Concrete - $mark (piles + cap)", "m3", pileConcrete + cap.concreteVolume),
-            item(2, "Reinforcement steel - $mark", "kg", pileSteel + cap.steelWeight),
+            item(2, "Reinforcement steel - $mark (net pile longitudinal + cap only; excludes ties, laps, hooks and development; not a bar schedule total)", "kg", pileSteel + cap.steelWeight),
             item(3, "Formwork - $mark (pile shafts)", "m2", n * Math.PI * d * pileLengthMm / 1_000_000.0),
             item(4, "Formwork - cap sides", "m2", 2 * (cap.capWidth + cap.capLength) * cap.capThickness / 1_000_000.0)
         )
@@ -228,19 +228,24 @@ object BoqEstimator {
         mark: String = "Water tank",
         excavationDepthM: Double = 0.0,
         blindingThicknessM: Double = 0.0,
-        waterproofingAreaM2: Double = 0.0
+        waterproofingAreaM2: Double = 0.0,
+        isCircular: Boolean = false
     ): List<BoqRow> {
+        // Circular tank: lengthM is the diameter.
+        val wallFormArea = if (isCircular) Math.PI * lengthM * heightM else 2 * (lengthM + widthM) * heightM
+        val baseArea = if (isCircular) Math.PI * lengthM * lengthM / 4.0 else lengthM * widthM
+        val pitArea = if (isCircular) Math.PI * (lengthM + 0.5) * (lengthM + 0.5) / 4.0 else (lengthM + 0.5) * (widthM + 0.5)
         val rows = mutableListOf(
             item(1, "Concrete - $mark", "m3", concreteVolumeM3),
-            item(2, "Reinforcement steel - $mark", "kg", steelWeightKg),
-            item(3, "Formwork - $mark (walls)", "m2", 2 * (lengthM + widthM) * heightM),
-            item(4, "Formwork - $mark (base)", "m2", lengthM * widthM)
+            item(2, "Reinforcement steel - $mark (indicative ratio, not designed bars)", "kg", steelWeightKg),
+            item(3, "Formwork - $mark (walls)", "m2", wallFormArea),
+            item(4, "Formwork - $mark (base)", "m2", baseArea)
         )
         if (blindingThicknessM > 0.0) {
-            rows.add(item(rows.size + 1, "Blinding concrete - $mark", "m3", (lengthM + 0.5) * (widthM + 0.5) * blindingThicknessM))
+            rows.add(item(rows.size + 1, "Blinding concrete - $mark", "m3", pitArea * blindingThicknessM))
         }
         if (excavationDepthM > 0.0) {
-            rows.add(item(rows.size + 1, "Excavation - $mark (pit)", "m3", (lengthM + 0.5) * (widthM + 0.5) * excavationDepthM))
+            rows.add(item(rows.size + 1, "Excavation - $mark (pit)", "m3", pitArea * excavationDepthM))
         }
         if (waterproofingAreaM2 > 0.0) {
             rows.add(item(rows.size + 1, "Waterproofing - $mark (base + walls)", "m2", waterproofingAreaM2))
@@ -249,6 +254,22 @@ object BoqEstimator {
     }
 
     /** Per-metre-width quantities for a hordi (hollow-block) slab strip. */
+    /** Explicit review quantities, never a full panel or total steel claim. */
+    fun hordiReviewRows(
+        spanMm: Double, totalMm: Double, toppingMm: Double, ribWidthMm: Double,
+        spacingMm: Double, mainBarBodiesWeightKg: Double?, partialPanelBottomWeightKg: Double? = null
+    ): List<BoqRow> = buildList {
+        add(item(1, "Net ribs+topping concrete per 1 m periodic strip; excludes support/cross-rib zones", "m3",
+            HordiReviewTakeoff.concreteM3(spanMm, totalMm, toppingMm, ribWidthMm, spacingMm)))
+        if (partialPanelBottomWeightKg != null) {
+            require(partialPanelBottomWeightKg.isFinite() && partialPanelBottomWeightKg >= 0)
+            add(item(2, "Partial PANEL bottom straight bars incl development; same as partial schedule; NOT same basis as concrete; other steel excluded", "kg", partialPanelBottomWeightKg))
+        } else mainBarBodiesWeightKg?.let {
+            add(item(2, "Main straight bar bodies for ONE RIB ONLY; NOT same basis as concrete; incomplete steel takeoff", "kg", it))
+        }
+        add(item(size + 1, "Soffit plan area per 1 m strip; not a shuttering system takeoff", "m2", spanMm / 1000))
+    }
+
     fun hordiSlabRows(
         spanM: Double,
         totalThicknessM: Double,

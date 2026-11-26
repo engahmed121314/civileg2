@@ -4,6 +4,7 @@ import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 
@@ -393,6 +394,7 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
             val live = form.bLive.num("live load")
             val width = form.bWidth.num("width")
             val depth = form.bDepth.num("depth")
+            requireValidBeamGeometry(form.beamCode, width, depth)
             when (form.beamCode) {
                 DesignCode.ECP -> ECPAdvancedBeam().designBeam(
                     beamType, BeamSectionType.RECTANGULAR, fcu, fy, dead, live, width, depth,
@@ -418,10 +420,10 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
         columnResult = null
         columnResultSignature = null
         runCatching {
-            val section = ColumnType.Rectangular(
-                width = form.colWidth.num("column width"),
-                depth = form.colDepth.num("column depth")
-            )
+            val colWidth = form.colWidth.num("column width")
+            val colDepth = form.colDepth.num("column depth")
+            requireValidColumnGeometry(colWidth, colDepth)
+            val section = ColumnType.Rectangular(width = colWidth, depth = colDepth)
             val fcu = form.colFcu.num("fcu")
             val fy = form.colFy.num("fy")
             val axial = form.colAxial.num("axial load")
@@ -760,7 +762,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.beamContent(
         CodeChips(
             options = DesignCode.entries,
             selected = form.beamCode,
-            label = { it.version },
+            label = { it.name },
             onSelected = { form.beamCode = it }
         )
         Spacer(Modifier.height(8.dp))
@@ -851,7 +853,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.columnContent(
         CodeChips(
             options = DesignCode.entries,
             selected = form.colCode,
-            label = { it.version },
+            label = { it.name },
             onSelected = { form.colCode = it }
         )
     }
@@ -915,7 +917,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.columnContent(
     }
     item { CalculateButton(onCalculate) }
     result?.let { r ->
-        item { StatusBanner(isSafe = r.reinforcementResult.isSafe) }
+        item {
+            ResultCard("Status / الحالة") {
+                ResultRow("Overall", "PRELIMINARY - NOT FULLY CHECKED / نتيجة أولية: لم يكتمل التحقق", bold = true)
+                ResultRow("Reinforcement check", if (r.reinforcementResult.isSafe) "Passes engine check / يجتاز فحص المحرك" else "Fails engine check / لا يجتاز فحص المحرك")
+                ResultRow("Note", "Moment capacity is not validated for the actual bar positions / لم تُراجع قدرة العزم على مواضع الأسياخ الفعلية")
+            }
+        }
         item {
             ResultCard("Capacity / القدرة") {
                 ResultRow("Axial capacity", "%.0f kN".format(r.axialCapacity), bold = true)
@@ -1404,7 +1412,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
         CodeChips(
             options = DesignCode.entries,
             selected = form.slabCode,
-            label = { it.version },
+            label = { it.name },
             onSelected = { form.slabCode = it }
         )
         Spacer(Modifier.height(8.dp))
@@ -1557,7 +1565,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
                 ResultRow("Applied", "%.1f kN".format(r.shearCheck.appliedShear))
                 ResultRow("Capacity", "%.1f kN".format(r.shearCheck.shearCapacity), bold = true)
                 ResultRow("Utilization", "%.2f".format(r.shearCheck.utilizationRatio))
-                ResultRow("Safe?", if (r.shearCheck.isSafe) "Yes / نعم" else "No / لا")
+                ResultRow("Check passed?", if (r.shearCheck.isSafe) "Yes / نعم" else "No / لا")
             }
         }
         item {
@@ -1565,7 +1573,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
                 ResultRow("Calculated", "%.2f mm".format(r.deflectionCheck.calculatedDeflection))
                 ResultRow("Allowable", "%.2f mm".format(r.deflectionCheck.allowableDeflection))
                 ResultRow("Ratio", "%.2f".format(r.deflectionCheck.ratio), bold = true)
-                ResultRow("Safe?", if (r.deflectionCheck.isSafe) "Yes / نعم" else "No / لا")
+                ResultRow("Check passed?", if (r.deflectionCheck.isSafe) "Yes / نعم" else "No / لا")
             }
         }
         r.punchingShearCheck?.let { p ->
@@ -1574,7 +1582,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.slabContent(
                     ResultRow("Applied", "%.1f kN".format(p.appliedShear))
                     ResultRow("Capacity", "%.1f kN".format(p.shearCapacity), bold = true)
                     ResultRow("Utilization", "%.2f".format(p.utilizationRatio))
-                    ResultRow("Safe?", if (p.isSafe) "Yes / نعم" else "No / لا")
+                    ResultRow("Check passed?", if (p.isSafe) "Yes / نعم" else "No / لا")
                 }
             }
         }
@@ -1650,7 +1658,7 @@ private fun CalculateButton(onClick: () -> Unit) {
 private fun StatusBanner(isSafe: Boolean, incomplete: Boolean = false) {
     val color = when {
         incomplete -> Color(0xFFEF6C00)
-        isSafe -> Color(0xFF2E7D32)
+        isSafe -> Color(0xFFEF6C00) // passing checks are never shown green: the assessment is not complete
         else -> Color(0xFFC62828)
     }
     Card(
@@ -1664,15 +1672,15 @@ private fun StatusBanner(isSafe: Boolean, incomplete: Boolean = false) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
-                if (isSafe && !incomplete) Icons.Default.CheckCircle else Icons.Default.Warning,
+                Icons.Default.Warning,
                 contentDescription = null,
                 tint = color
             )
             AppText(
                 when {
                     incomplete -> "INCOMPLETE / غير مكتمل"
-                    isSafe -> "SAFE / آمن"
-                    else -> "UNSAFE / غير آمن"
+                    isSafe -> "PRELIMINARY: the checks run passed; assessment not complete / أولي: الفحوص المنفذة اجتازت والتقييم غير مكتمل"
+                    else -> "A check did not pass / أحد الفحوص لم يجتز"
                 },
                 color = color,
                 fontWeight = FontWeight.Bold
@@ -1694,6 +1702,7 @@ private fun ResultCard(title: String, content: @Composable () -> Unit) {
 
 @Composable
 private fun ResultRow(label: String, value: String, bold: Boolean = false) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         AppText(
             label,
@@ -1707,6 +1716,7 @@ private fun ResultRow(label: String, value: String, bold: Boolean = false) {
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium
         )
     }
+}
 }
 
 @Composable
@@ -1741,12 +1751,12 @@ private fun NotesCard(warnings: List<String>, notes: List<String>) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (warnings.isNotEmpty()) {
                 AppText("Warnings / تحذيرات", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFFC62828))
-                warnings.forEach { AppText("• $it", style = MaterialTheme.typography.bodySmall) }
+                warnings.forEach { AppTextBlock("• $it", style = MaterialTheme.typography.bodySmall) }
                 HorizontalDivider()
             }
             if (notes.isNotEmpty()) {
                 AppText("Notes / ملاحظات", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                notes.forEach { AppText("• $it", style = MaterialTheme.typography.bodySmall) }
+                notes.forEach { AppTextBlock("• $it", style = MaterialTheme.typography.bodySmall) }
             }
         }
     }
@@ -1757,15 +1767,70 @@ private fun fmt(value: Double, decimals: Int = 2): String =
 
 private fun yesNo(value: Boolean): String = if (value) "Yes / نعم" else "No / لا"
 
-private fun String.num(name: String): Double =
-    trim().toDoubleOrNull() ?: throw IllegalArgumentException("Invalid number for $name")
+/** The ECP advanced beam engine fixes the effective depth at (depth - 50 mm); a shallower section gives d <= 0. */
+internal fun requireValidBeamGeometry(code: DesignCode, widthMm: Double, depthMm: Double) {
+    require(widthMm > 0.0) { "width must be positive" }
+    require(depthMm > 0.0) { "depth must be positive" }
+    if (code == DesignCode.ECP) {
+        require(depthMm > 50.0) { "depth must exceed the 50 mm cover the ECP beam design assumes" }
+    }
+}
 
-private fun String.int(name: String): Int =
-    trim().toIntOrNull() ?: throw IllegalArgumentException("Invalid integer for $name")
+/** A zero section gives zero area and radius of gyration, so slenderness divides by zero. */
+internal fun requireValidColumnGeometry(widthMm: Double, depthMm: Double) {
+    require(widthMm > 0.0) { "column width must be positive" }
+    require(depthMm > 0.0) { "column depth must be positive" }
+}
 
-private fun String.intOrNull(name: String): Int? {
-    val text = trim()
+/** Western digits and a dot decimal separator, from Arabic-Indic digits and Arabic/comma separators. */
+internal fun normalizeNumericText(raw: String): String {
+    val sb = StringBuilder()
+    for (c in raw.trim()) {
+        val piece: String = when (c) {
+            in '\u0660'..'\u0669' -> ('0' + (c - '\u0660')).toString()
+            in '\u06F0'..'\u06F9' -> ('0' + (c - '\u06F0')).toString()
+            '\u066B' -> "."
+            '\u066C' -> ""
+            else -> c.toString()
+        }
+        sb.append(piece)
+    }
+    val t = sb.toString()
+    // A single comma with no dot: "2,5" is a decimal comma. "1,250" is ambiguous (1.25 or 1250), so it is
+    // left unchanged and fails to parse instead of silently guessing. With a dot, commas are thousands separators.
+    if (t.contains('.')) {
+        // Dot decimal with comma thousands only: every comma group must be exactly 3 digits and precede the dot.
+        // "1.250,5" (European) or "1,25.0" is ambiguous or malformed, so it is left unchanged and fails to parse.
+        val intPart = t.substringBefore('.')
+        val ok = !t.substringAfter('.').contains(',') && intPart.split(',').drop(1).all { it.length == 3 }
+        return if (ok) t.replace(",", "") else t
+    }
+    if (t.count { it == ',' } == 1) {
+        val after = t.substringAfter(',')
+        return if (after.length == 3) t else t.replace(',', '.')
+    }
+    return t
+}
+
+internal fun String.num(name: String): Double {
+    val n = normalizeNumericText(this)
+    // Kotlin/Java also accept "2.5f", "1d", "1e5" and hex floats; none of those are valid entries here.
+    if (!Regex("[+-]?(\\d+(\\.\\d*)?|\\.\\d+)").matches(n)) throw IllegalArgumentException("Invalid number for $name")
+    val v = n.toDoubleOrNull()
+        ?: throw IllegalArgumentException("Invalid number for $name")
+    // "NaN" and "Infinity" parse as doubles but are never valid inputs.
+    if (!v.isFinite()) throw IllegalArgumentException("Invalid number for $name")
+    return v
+}
+
+internal fun String.int(name: String): Int =
+    normalizeNumericText(this).toIntOrNull() ?: throw IllegalArgumentException("Invalid integer for $name")
+
+internal fun String.intOrNull(name: String): Int? {
+    val text = normalizeNumericText(this)
     if (text.isEmpty()) return null
     val value = text.toIntOrNull() ?: throw IllegalArgumentException("Invalid integer for $name")
-    return if (value <= 0) null else value
+    // Blank or 0 means "not provided". A negative count is a mistake and must not be ignored silently.
+    if (value < 0) throw IllegalArgumentException("$name must not be negative")
+    return if (value == 0) null else value
 }

@@ -21,6 +21,16 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 
+/**
+ * Overall status label for a steel member result, shared by the PDF export. A failed check
+ * outranks incompleteness; an incomplete assessment (patch3) must never read as an all-clear.
+ */
+internal fun steelMemberPdfStatus(res: SteelMemberResult): String = when {
+    !res.isSafe -> "CHECK FAILS"
+    !res.assessmentComplete -> "NOT ASSESSED - a governing check is not implemented for this section"
+    else -> "CHECK PASSES (PRELIMINARY)"
+}
+
 @HiltViewModel
 class SteelViewModel @Inject constructor(
     private val repository: DesignRepository,
@@ -232,7 +242,7 @@ class SteelViewModel @Inject constructor(
                 "Pu = ${String.format("%.1f", stored.inputs.axialLoad)} kN / ${String.format("%.1f", res.axialCapacity)} kN",
                 "Mu = ${String.format("%.1f", stored.inputs.moment)} kN.m / ${String.format("%.1f", res.flexuralCapacity)} kN.m",
                 "Vu = ${String.format("%.1f", stored.inputs.shear)} kN / ${String.format("%.1f", res.shearCapacity)} kN",
-                "Utilization = ${(res.utilizationRatio * 100).toInt()}% - ${if (res.isSafe) "SAFE" else "UNSAFE"}"
+                "Utilization = ${(res.utilizationRatio * 100).toInt()}% - ${if (res.isSafe) "CHECK PASSES (PRELIMINARY)" else "CHECK FAILS"}"
             )
         )
     }
@@ -338,7 +348,7 @@ class SteelViewModel @Inject constructor(
                     "Moment Capacity" to "${String.format("%.2f", res.flexuralCapacity)} kN.m",
                     "Shear Capacity" to "${String.format("%.2f", res.shearCapacity)} kN",
                     "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
-                    "Status" to if (res.isSafe) "SAFE" else "UNSAFE"
+                    "Status" to steelMemberPdfStatus(res)
                 )
                 val memberTypeLabel = when (stored.memberType) {
                     com.civileg.app.domain.entities.SteelMemberType.COLUMN -> "Column"
@@ -409,7 +419,8 @@ class SteelViewModel @Inject constructor(
                     isSafe = res.isSafe,
                     drawingBitmap = drawingBitmap,
                     drawing = buildDxfDrawing(),
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    assessmentPending = !res.assessmentComplete
                 ).pdfFile
 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -444,7 +455,12 @@ class SteelViewModel @Inject constructor(
         return calculatorEngine.calculateBoltCapacity(diameter, grade, count, code)
     }
 
-    fun exportWeldToPdf(context: Context, size: Double, length: Double, electrode: ElectrodeType, code: DesignCode, capacity: Double) {
+    /**
+     * [utilizationRatio] and [designIsSafe] come from a full design run that had a real applied force.
+     * When they are null the export is a capacity-only report: no demand was supplied, so nothing
+     * is assessed and the report must not say SAFE.
+     */
+    fun exportWeldToPdf(context: Context, size: Double, length: Double, electrode: ElectrodeType, code: DesignCode, capacity: Double, utilizationRatio: Double? = null, designIsSafe: Boolean? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val fileName = "Weld_Report_${System.currentTimeMillis()}.pdf"
@@ -458,11 +474,9 @@ class SteelViewModel @Inject constructor(
                 )
                 val resultsMap = mapOf(
                     "Total Capacity" to "${String.format("%.1f", capacity)} kN",
-                    "Status" to if (capacity > 0) "SAFE" else "UNSAFE"
+                    "Status" to ConnectionExportStatus.statusText(utilizationRatio, designIsSafe)
                 )
-                val safetyChecks = listOf(
-                    GenericSafetyCheck("Weld Capacity", 0.0, capacity, "kN", capacity > 0)
-                )
+                val safetyChecks = ConnectionExportStatus.checks("Weld Capacity", capacity, utilizationRatio, designIsSafe)
 
                 val exported = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم وصلة ملحومة",
@@ -472,7 +486,8 @@ class SteelViewModel @Inject constructor(
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
-                    isSafe = capacity > 0,
+                    isSafe = ConnectionExportStatus.isSafe(utilizationRatio, designIsSafe),
+                    assessmentPending = !ConnectionExportStatus.isAssessed(utilizationRatio, designIsSafe),
                     drawingBitmap = null,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.generic(
                         title = "WELDED CONNECTION",
@@ -497,7 +512,7 @@ class SteelViewModel @Inject constructor(
         }
     }
 
-    fun exportBoltToPdf(context: Context, dia: Double, grade: BoltGrade, count: Int, code: DesignCode, capacity: Double) {
+    fun exportBoltToPdf(context: Context, dia: Double, grade: BoltGrade, count: Int, code: DesignCode, capacity: Double, utilizationRatio: Double? = null, designIsSafe: Boolean? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val fileName = "Bolt_Report_${System.currentTimeMillis()}.pdf"
@@ -511,11 +526,9 @@ class SteelViewModel @Inject constructor(
                 )
                 val resultsMap = mapOf(
                     "Total Capacity" to "${String.format("%.1f", capacity)} kN",
-                    "Status" to if (capacity > 0) "SAFE" else "UNSAFE"
+                    "Status" to ConnectionExportStatus.statusText(utilizationRatio, designIsSafe)
                 )
-                val safetyChecks = listOf(
-                    GenericSafetyCheck("Bolt Capacity", 0.0, capacity, "kN", capacity > 0)
-                )
+                val safetyChecks = ConnectionExportStatus.checks("Bolt Capacity", capacity, utilizationRatio, designIsSafe)
 
                 val exported = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم وصلة مسمارية",
@@ -525,7 +538,8 @@ class SteelViewModel @Inject constructor(
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
-                    isSafe = capacity > 0,
+                    isSafe = ConnectionExportStatus.isSafe(utilizationRatio, designIsSafe),
+                    assessmentPending = !ConnectionExportStatus.isAssessed(utilizationRatio, designIsSafe),
                     drawingBitmap = null,
                     drawing = com.civileg.app.utils.ElementDxfDrawings.generic(
                         title = "BOLTED CONNECTION",
@@ -585,7 +599,7 @@ class SteelViewModel @Inject constructor(
                     "Plate Thickness" to "${String.format("%.1f", result.plateThickness)} mm",
                     "Anchor Bolt Dia" to "${result.anchorBolts.boltDiameter} mm",
                     "Number of Bolts" to "${result.anchorBolts.numberOfBolts}",
-                    "Status" to if (result.isSafe) "SAFE" else "UNSAFE"
+                    "Status" to if (result.isSafe) "CHECK PASSES (PRELIMINARY)" else "CHECK FAILS"
                 )
                 val safetyChecks = listOf(
                     GenericSafetyCheck("Base Plate", 0.0, 1.0, "-", result.isSafe)

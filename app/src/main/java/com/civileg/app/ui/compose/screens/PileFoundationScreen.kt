@@ -49,6 +49,7 @@ import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 
@@ -622,7 +623,12 @@ fun PileFoundationScreen(
                     }
                 }
                 item {
-                    val statusColor = if (res.isSafe) Color(0xFF2E7D32) else Color(0xFFF57C00)
+                    val pileStatus = com.civileg.app.domain.PileQualification.status(res.isSafe, res.codeAcceptanceComplete)
+                    val statusColor = when (pileStatus) {
+                        com.civileg.app.domain.PileStatus.ACCEPTED -> Color(0xFF2E7D32)
+                        com.civileg.app.domain.PileStatus.PRELIMINARY -> Color(0xFFEF6C00)
+                        com.civileg.app.domain.PileStatus.CHECKS_FAILED -> Color(0xFFC62828)
+                    }
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
@@ -638,18 +644,22 @@ fun PileFoundationScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            if (res.isSafe) Icons.Default.Verified else Icons.Default.Warning,
+                                            if (pileStatus == com.civileg.app.domain.PileStatus.ACCEPTED) Icons.Default.Verified else Icons.Default.Warning,
                                             contentDescription = null, tint = statusColor
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         AppText(
-                                            if (res.isSafe) stringResource(R.string.pile_safe) else stringResource(R.string.pile_unsafe),
+                                            when (pileStatus) {
+                                                com.civileg.app.domain.PileStatus.ACCEPTED -> stringResource(R.string.pile_safe)
+                                                com.civileg.app.domain.PileStatus.PRELIMINARY -> "PRELIMINARY: estimates pass, not a code-accepted design"
+                                                com.civileg.app.domain.PileStatus.CHECKS_FAILED -> "CHECK FAILED (approximate estimate): resolve inputs and soil data; not a final engineering verdict"
+                                            },
                                             fontWeight = FontWeight.Bold,
                                             color = statusColor
                                         )
                                     }
                                     AppText(
-                                        "ECP 203-2025 • ${res.pileType}",
+                                        "${calculatedCode.displayName} • ${res.pileType}",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -681,6 +691,13 @@ fun PileFoundationScreen(
                                 }
                             }
 
+                            if (!res.codeAcceptanceComplete) {
+                                Spacer(Modifier.height(8.dp))
+                                res.qualificationNotes.forEach { n ->
+                                    AppText(n, fontSize = 12.sp, color = Color(0xFFEF6C00))
+                                    Spacer(Modifier.height(2.dp))
+                                }
+                            }
                             // Warnings
                             if (res.warnings.isNotEmpty()) {
                                 Spacer(Modifier.height(8.dp))
@@ -690,7 +707,7 @@ fun PileFoundationScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         AppText("⚠", color = Color(0xFFFF9800), fontSize = 13.sp)
                                         Spacer(Modifier.width(4.dp))
-                                        AppText(w, fontSize = 12.sp, color = Color(0xFFFF9800))
+                                        AppTextBlock(w, fontSize = 12.sp, color = Color(0xFFFF9800))
                                     }
                                     Spacer(Modifier.height(2.dp))
                                 }
@@ -981,6 +998,7 @@ private fun PileInputField(
 
 @Composable
 private fun ResultRow(label: String, value: String, valueColor: Color = Color.Unspecified) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -988,6 +1006,7 @@ private fun ResultRow(label: String, value: String, valueColor: Color = Color.Un
         AppText(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         AppText(value, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = valueColor)
     }
+}
 }
 
 @Composable

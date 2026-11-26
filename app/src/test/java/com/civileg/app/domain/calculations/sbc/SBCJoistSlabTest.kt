@@ -33,9 +33,16 @@ class SBCJoistSlabTest {
         ribSpacing: Double = 600.0,
         totalThickness: Double = 250.0,
         toppingThickness: Double = 60.0,
-        span: Double = 6.0,
+        // default 3.0 m (was 6.0): l/h = 3000/250 = 12 <= 16 (Table 9.3.1.1 SS,
+        // fy=420 factor 1.0) so characterization tests stay on the passing side;
+        // beff is min(ribSpacing, span*250+bw) and unchanged for span >= 1.8 m.
+        span: Double = 3.0,
         designMoment: Double = 45.0,
-        designShear: Double = 25.0
+        designShear: Double = 25.0,
+        supportCondition: com.civileg.app.domain.calculations.base.SlabSupportCondition =
+            com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED,
+        loadingApplicability: com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability =
+            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS
     ) = SBCJoistSlab().designHordiSlab(
         fcu = fcu,
         fy = fy,
@@ -46,7 +53,9 @@ class SBCJoistSlabTest {
         span = span,
         designMoment = designMoment,
         designShear = designShear,
-        loadCombination = LoadCombination.DEAD_LIVE
+        loadCombination = LoadCombination.DEAD_LIVE,
+        supportCondition = supportCondition,
+        loadingApplicability = loadingApplicability
     )
 
     private fun expectGuard(name: String, block: () -> Unit) {
@@ -177,25 +186,39 @@ class SBCJoistSlabTest {
         val aciResult = run(aci, 600.0)
         val ecpResult = run(ecp, 600.0)
 
-        // 0.25 (SBC) vs 0.24 (ECP) shear coefficient, same fc/d/bw/phi.
-        assertEquals(0.25 / 0.24, sbcResult.shearCapacity / ecpResult.shearCapacity, 1e-9)
-        assertTrue(aciResult.shearCapacity < ecpResult.shearCapacity)
+        // Per-code shear formats with their own hand-computed expectations:
+        // SBC 0.25·√(fcu/γc)·bw·d·φ with d=220 (fixed cover20+halfBar10, non-live engine);
+        // ACI 0.17·√(0.8fcu)·bw·d with d=250−25−6=219 (caller cover+bar radius) and φ·1.1
+        // joist factor; ECP Eq.4-29 concrete-only 0.16·√(fcu/γc)·bw·d with NO φ factor
+        // and d=211 from interface defaults (cover25+link8+bar12/2).
+        assertEquals(0.25 * sqrt(30.0 / 1.5) * 150.0 * 220.0 / 1000.0 * 0.75, sbcResult.shearCapacity, 1e-9)
+        assertEquals(0.17 * sqrt(30.0 * 0.8) * 150.0 * 219.0 / 1000.0 * 0.75 * 1.1, aciResult.shearCapacity, 1e-9)
+        assertEquals(0.16 * sqrt(30.0 / 1.5) * 150.0 * 211.0 / 1000.0, ecpResult.shearCapacity, 1e-9)
         assertTrue("SBC shear=${sbcResult.shearCapacity}, ACI shear=${aciResult.shearCapacity}",
             sbcResult.shearCapacity > aciResult.shearCapacity)
 
-        // Different flexural widths: ECP rib only, SBC effective flange, ACI full spacing.
-        assertTrue(ecpResult.requiredReinforcement > sbcResult.requiredReinforcement)
+        // Different flexural widths: ECP web-only estimate (no flange credit) cannot
+        // solve this demand on a 150 mm rib and must say so; SBC effective flange and
+        // ACI full-spacing estimates stay finite with SBC > ACI.
+        assertTrue(ecpResult.requiredReinforcement.isInfinite())
+        assertFalse(ecpResult.isSafe)
+        assertTrue(ecpResult.warnings.any { it.contains("Flexure") })
         assertTrue(sbcResult.requiredReinforcement > aciResult.requiredReinforcement)
 
-        // 750 mm clear spacing: SBC's 700 mm cap (2024 claim) rejects it, ACI's
-        // 30 in (~762 mm) and ECP's unbounded check accept it (S-02/S-03).
+        // Geometry characterization: SBC rejects 750 mm clear spacing, while
+        // ACI accepts it. The ECP estimate reports the unsolvable web-only
+        // flexure demand explicitly (infinite required area, zero provided).
+        // The separate ECP2020 validator covers verified geometry boundaries.
         val sbcWide = run(sbc, 900.0)
         val aciWide = run(aci, 900.0)
         val ecpWide = run(ecp, 900.0)
         assertTrue(sbcWide.warnings.any { it.contains("8.4.1") })
         assertFalse(sbcWide.isSafe)
         assertTrue(aciWide.isSafe)
-        assertTrue(ecpWide.isSafe)
+        assertFalse(ecpWide.isSafe)
+        assertTrue(ecpWide.providedReinforcement < ecpWide.requiredReinforcement)
+        assertTrue(ecpWide.utilizationRatio > 1.0)
+        assertTrue(ecpWide.warnings.any { it.contains("less than") })
     }
 
     @Test
@@ -206,6 +229,43 @@ class SBCJoistSlabTest {
 
         val longSpan = design(span = 6.0)
         assertTrue(longSpan.codeNotes.any { it.contains("beff=600 mm") })
+    }
+
+    @Test
+    fun `Table 9-3-1-1 deemed-to-satisfy failure gates isSafe`() {
+        // l/h = 6000/250 = 24 > 16 (simply supported, fy=420) -> fail
+        val r = design(span = 6.0)
+        assertFalse(r.serviceabilityAssessed)
+        assertFalse(r.isSafe)
+        assertTrue(r.warnings.any { it.contains("Table 9.3.1.1") })
+        // both ends continuous: limit 21; l/h = 4000/250 = 16 <= 21 -> pass
+        val cont = design(span = 4.0,
+            supportCondition = com.civileg.app.domain.calculations.base.SlabSupportCondition.BOTH_ENDS_CONTINUOUS)
+        assertFalse(cont.serviceabilityAssessed)
+        assertTrue(cont.warnings.none { it.contains("Table 9.3.1.1") })
+    }
+
+    @Test
+    fun `ACI deemed-to-satisfy applies Table 9-3-1-1 with own citation and gate`() {
+        val aci = ACIJoistSlab()
+        val fail = aci.designHordiSlab(
+            fcu = 30.0, fy = 420.0, ribWidth = 150.0, ribSpacing = 600.0,
+            totalThickness = 250.0, toppingThickness = 60.0, span = 6000.0,
+            designMoment = 45.0, designShear = 10.0, loadCombination = LoadCombination.DEAD_LIVE,
+            supportCondition = com.civileg.app.domain.calculations.base.SlabSupportCondition.SIMPLY_SUPPORTED,
+            loadingApplicability = com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS
+        )
+        assertFalse(fail.serviceabilityAssessed)
+        assertFalse(fail.isSafe)
+        assertTrue(fail.warnings.any { it.contains("ACI 318M-14 Table 9.3.1.1") })
+        val unselected = aci.designHordiSlab(
+            fcu = 30.0, fy = 420.0, ribWidth = 150.0, ribSpacing = 600.0,
+            totalThickness = 250.0, toppingThickness = 60.0, span = 6000.0,
+            designMoment = 45.0, designShear = 10.0, loadCombination = LoadCombination.DEAD_LIVE,
+            supportCondition = com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED,
+            loadingApplicability = com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.ORDINARY_NO_SENSITIVE_ELEMENTS
+        )
+        assertFalse(unselected.serviceabilityAssessed)
     }
 
     @Test

@@ -1,5 +1,9 @@
 package com.civileg.app.ui.compose.screens
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,7 +28,10 @@ import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
-import com.civileg.app.utils.UnitConverter
+import com.civileg.app.domain.validation.FormValidator
+import com.civileg.app.utils.QuickToolsEngine
+import com.civileg.app.utils.QuickToolsEngine.QuantityType
+import com.civileg.app.utils.UnitConversionFormat
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
 
@@ -33,33 +40,23 @@ import androidx.compose.ui.res.stringResource
 fun UnitConverterScreen(
     onNavigateBack: () -> Unit = {}
 ) {
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val snackbarHostState = remember { SnackbarHostState() }
-    var selectedCategory by remember { mutableStateOf<UnitConverter.UnitCategory>(UnitConverter.UnitCategory.Length) }
+    var selectedCategory by remember { mutableStateOf(QuantityType.LENGTH) }
     var inputValue by remember { mutableStateOf("1.0") }
-    var fromUnit by remember { mutableStateOf("m") }
-    var toUnit by remember { mutableStateOf("cm") }
-    
-    val units = remember(selectedCategory) {
-        when(selectedCategory) {
-            is UnitConverter.UnitCategory.Length -> listOf("m", "cm", "mm", "km", "ft", "in", "yd", "mi")
-            is UnitConverter.UnitCategory.Area -> listOf("m²", "cm²", "mm²", "ft²", "in²", "yd²", "acre")
-            is UnitConverter.UnitCategory.Volume -> listOf("m³", "cm³", "L", "ft³", "gal")
-            is UnitConverter.UnitCategory.Weight -> listOf("kg", "g", "ton", "lb", "oz")
-            is UnitConverter.UnitCategory.Force -> listOf("N", "kN", "MN", "kgf", "tonf", "lbf", "kip")
-            is UnitConverter.UnitCategory.Pressure -> listOf("Pa", "kPa", "MPa", "bar", "psi", "ksf", "tsf")
-            is UnitConverter.UnitCategory.Moment -> listOf("N.m", "kN.m", "ton.m", "kgf.m", "lb.ft", "kip.ft")
-        }
-    }
+    // Units are keyed by category so a category switch never pairs a unit with the wrong table.
+    val units = remember(selectedCategory) { QuickToolsEngine.unitsFor(selectedCategory) }
+    var fromUnit by remember(selectedCategory) { mutableStateOf(units.first()) }
+    var toUnit by remember(selectedCategory) { mutableStateOf(if (units.size > 1) units[1] else units.first()) }
 
-    LaunchedEffect(selectedCategory) {
-        fromUnit = units.first()
-        toUnit = if (units.size > 1) units[1] else units.first()
+    // Blank or invalid input has no result. It used to be read as 0 and shown as a result.
+    val parsed = FormValidator.parseNumber(inputValue)
+    val result: Double? = remember(parsed, fromUnit, toUnit, selectedCategory) {
+        parsed?.let { QuickToolsEngine.convertUnit(selectedCategory, it, fromUnit, toUnit) }
     }
-
-    val result = remember(inputValue, fromUnit, toUnit, selectedCategory) {
-        val value = inputValue.toDoubleOrNull() ?: 0.0
-        UnitConverter.convert(value, fromUnit, toUnit, selectedCategory)
-    }
+    val inputInvalid = parsed == null
+    // A finite input can still overflow in the conversion (e.g. km to mm): say so on the result field.
+    val resultOutOfRange = result != null && !result.isFinite()
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -83,23 +80,28 @@ fun UnitConverterScreen(
                 .widthIn(max = MaterialTheme.dimens.formMaxWidth)
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = MaterialTheme.dimens.screenHorizontalPadding, vertical = MaterialTheme.dimens.screenVerticalPadding),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.dimens.sectionSpacing)
         ) {
             // Category Selector
             ScrollableTabRow(
-                selectedTabIndex = getCategoryIndex(selectedCategory),
+                selectedTabIndex = QuantityType.values().indexOf(selectedCategory),
                 edgePadding = 0.dp,
                 containerColor = Color.Transparent,
                 divider = {}
             ) {
-                CategoryTab(stringResource(R.string.converter_length), selectedCategory is UnitConverter.UnitCategory.Length) { selectedCategory = UnitConverter.UnitCategory.Length }
-                CategoryTab(stringResource(R.string.converter_area), selectedCategory is UnitConverter.UnitCategory.Area) { selectedCategory = UnitConverter.UnitCategory.Area }
-                CategoryTab(stringResource(R.string.converter_volume), selectedCategory is UnitConverter.UnitCategory.Volume) { selectedCategory = UnitConverter.UnitCategory.Volume }
-                CategoryTab(stringResource(R.string.steel_tables_weight_label), selectedCategory is UnitConverter.UnitCategory.Weight) { selectedCategory = UnitConverter.UnitCategory.Weight }
-                CategoryTab(stringResource(R.string.converter_force), selectedCategory is UnitConverter.UnitCategory.Force) { selectedCategory = UnitConverter.UnitCategory.Force }
-                CategoryTab(stringResource(R.string.converter_pressure), selectedCategory is UnitConverter.UnitCategory.Pressure) { selectedCategory = UnitConverter.UnitCategory.Pressure }
-                CategoryTab(stringResource(R.string.converter_moment), selectedCategory is UnitConverter.UnitCategory.Moment) { selectedCategory = UnitConverter.UnitCategory.Moment }
+                listOf(
+                    QuantityType.LENGTH to R.string.converter_length,
+                    QuantityType.AREA to R.string.converter_area,
+                    QuantityType.VOLUME to R.string.converter_volume,
+                    QuantityType.MASS to R.string.steel_tables_weight_label,
+                    QuantityType.FORCE to R.string.converter_force,
+                    QuantityType.STRESS to R.string.converter_pressure,
+                    QuantityType.MOMENT to R.string.converter_moment
+                ).forEach { (type, label) ->
+                    CategoryTab(stringResource(label), selectedCategory == type) { selectedCategory = type }
+                }
             }
 
             Card(
@@ -107,7 +109,7 @@ fun UnitConverterScreen(
                 shape = RoundedCornerShape(24.dp),
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
-                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(modifier = Modifier.padding(if (landscape) 8.dp else 24.dp), verticalArrangement = Arrangement.spacedBy(if (landscape) 0.dp else 16.dp)) {
                     // From Input
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
@@ -116,6 +118,10 @@ fun UnitConverterScreen(
                             label = { AppText(stringResource(R.string.converter_input_value)) },
                             modifier = Modifier.weight(1f),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            isError = inputInvalid,
+                            supportingText = if (inputInvalid) {
+                                { AppText(stringResource(R.string.converter_invalid_number), color = MaterialTheme.colorScheme.error) }
+                            } else null,
                             shape = RoundedCornerShape(12.dp)
                         )
                         Spacer(Modifier.width(12.dp))
@@ -123,7 +129,7 @@ fun UnitConverterScreen(
                     }
 
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        IconButton(onClick = {
+                        IconButton(modifier = Modifier.size(if (landscape) 28.dp else 48.dp), onClick = {
                             val temp = fromUnit
                             fromUnit = toUnit
                             toUnit = temp
@@ -135,7 +141,11 @@ fun UnitConverterScreen(
                     // To Output
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
-                            value = "%.4f".format(result),
+                            value = if (resultOutOfRange) "" else result?.let { UnitConversionFormat.format(it) } ?: "",
+                            isError = resultOutOfRange,
+                            supportingText = if (resultOutOfRange) {
+                                { AppText(stringResource(R.string.converter_result_out_of_range), color = MaterialTheme.colorScheme.error) }
+                            } else null,
                             onValueChange = {},
                             readOnly = true,
                             label = { AppText(stringResource(R.string.converter_result)) },
@@ -161,7 +171,7 @@ fun UnitConverterScreen(
                     Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.secondary)
                     Spacer(Modifier.width(12.dp))
                     AppText(
-                        "1 $fromUnit = ${"%.4f".format(UnitConverter.convert(1.0, fromUnit, toUnit, selectedCategory))} $toUnit",
+                        "1 $fromUnit = ${UnitConversionFormat.format(QuickToolsEngine.convertUnit(selectedCategory, 1.0, fromUnit, toUnit))} $toUnit",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
@@ -211,14 +221,4 @@ private fun UnitDropdown(selected: String, options: List<String>, onSelect: (Str
             }
         }
     }
-}
-
-private fun getCategoryIndex(category: UnitConverter.UnitCategory): Int = when(category) {
-    is UnitConverter.UnitCategory.Length -> 0
-    is UnitConverter.UnitCategory.Area -> 1
-    is UnitConverter.UnitCategory.Volume -> 2
-    is UnitConverter.UnitCategory.Weight -> 3
-    is UnitConverter.UnitCategory.Force -> 4
-    is UnitConverter.UnitCategory.Pressure -> 5
-    is UnitConverter.UnitCategory.Moment -> 6
 }

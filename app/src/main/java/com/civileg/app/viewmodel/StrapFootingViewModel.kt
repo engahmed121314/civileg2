@@ -48,6 +48,19 @@ class StrapFootingViewModel @Inject constructor(
     @Volatile
     var pendingDrawingBitmap: Bitmap? = null
 
+    /** Surface an input problem found by the screen; no result is shown and nothing is calculated. */
+    fun reportInputError(message: String) {
+        _result.value = null
+        _error.value = message
+    }
+
+    /** Drop the shown result (an input changed or the last attempt failed). */
+    fun clearResult() {
+        _result.value = null
+        _error.value = null
+        pendingDrawingBitmap = null
+    }
+
     fun calculate(
         col1Load: Double, col2Load: Double, distance: Double,
         col1W: Double, col1D: Double, col2W: Double, col2D: Double,
@@ -91,6 +104,7 @@ class StrapFootingViewModel @Inject constructor(
                 _error.value = null
                 _errorMessage.value = null
             } catch (e: Exception) {
+                _result.value = null  // a failed attempt must not leave the previous design on screen
                 _error.value = "Error: ${e.message}"
                 _errorMessage.value = "Strap footing calculation error / خطأ في حساب القاعدة الشريطية: ${e.message}"
             } finally {

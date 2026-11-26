@@ -31,7 +31,19 @@ data class SteelWarehouseInputs(
     // Manual Overrides
     val overrideColumnSection: SteelSectionType? = null,
     val overrideRafterSection: SteelSectionType? = null,
-    val overridePurlinSection: SteelSectionType? = null
+    val overridePurlinSection: SteelSectionType? = null,
+
+    // Allowable soil bearing, kN/m2. Required for the footing plan size; no default is assumed.
+    val allowableSoilBearingKnM2: Double? = null,
+
+    // X-bracing: braced bay numbers (1-based along the length); null = default end bays.
+    val bracedBays: List<Int>? = null,
+    // Lateral load carried by ONE braced panel (kN), entered by the user; null = force NOT ASSESSED.
+    val bracingLateralLoadKn: Double? = null,
+    // Brace material and net section, entered by the user (AISC D2 tension check). No defaults are assumed.
+    val braceFyMpa: Double? = null,
+    val braceFuMpa: Double? = null,
+    val braceNetAreaMm2: Double? = null
 ) : Parcelable
 
 @Parcelize
@@ -57,7 +69,9 @@ data class SteelWarehouseAnalysisResult(
     // Mezzanine Result
     val mezzanineArea: Double = 0.0,
     val mezzanineSteelWeight: Double = 0.0,
-    val calculationTrace: @RawValue List<String> = emptyList()
+    val calculationTrace: @RawValue List<String> = emptyList(),
+    val footingPreliminary: FootingPlanPreliminary? = null,
+    val bracing: BracingPreliminary? = null
 ) : Parcelable
 
 @Parcelize
@@ -104,4 +118,48 @@ data class SteelConnectionDetail(
     val capacity: Double,
     val demand: Double,
     val isSafe: Boolean
+) : Parcelable
+
+/**
+ * Preliminary column footing PLAN size from vertical gravity service load only.
+ * Wind uplift, horizontal thrust, overturning, sliding, punching/flexure, thickness and
+ * reinforcement are NOT ASSESSED. Null soil bearing => issued=false with a reason.
+ */
+@Parcelize
+data class FootingPlanPreliminary(
+    val issued: Boolean,
+    val reason: String? = null,
+    val serviceLoadPerColumnKn: Double = 0.0,   // kN, (dead+live) tributary + steel self-weight
+    val allowableBearingKnM2: Double = 0.0,     // kN/m2, user input
+    val requiredAreaM2: Double = 0.0,
+    val squareSideMm: Double = 0.0              // rounded up to 50 mm
+) : Parcelable
+
+@Parcelize
+data class BracingPreliminary(
+    val issued: Boolean,
+    val reason: String? = null,
+    val numBays: Int = 0,
+    val bracedBays: List<Int> = emptyList(),
+    val usedDefaultBays: Boolean = false,
+    val bayM: Double = 0.0,
+    val eaveM: Double = 0.0,
+    val lengthM: Double = 0.0,
+    val angleDeg: Double = 0.0,
+    val sectionName: String = "",
+    val areaMm2: Double = 0.0,
+    val weightKgM: Double = 0.0,
+    val weightPerBraceKg: Double = 0.0,
+    val braceCount: Int = 0,
+    val totalWeightKg: Double = 0.0,
+    val slenderness: Double? = null,
+    val lateralLoadPerPanelKn: Double? = null,
+    val braceForceKn: Double? = null,
+    val stressMpa: Double? = null,
+    /** Result of the AISC 360-10 D2 tension check: "PASS", "FAIL" or null when NOT ASSESSED. */
+    val tensionCheck: String? = null,
+    val tensionUtilisation: Double? = null,
+    /** ECP 205 LRFD 2008 Table 2.3 slenderness limit result (ECP selection only), else null. */
+    val slendernessCheck: String? = null,
+    val lines: List<String> = emptyList()
 ) : Parcelable

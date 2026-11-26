@@ -566,11 +566,13 @@ object QuickToolsEngine {
         MOMENT("Moment")
     }
 
+    private const val KSF_IN_MPA = 0.04788025898033584
+
     /** Factor of each unit relative to its SI base (m, m2, m3, kg, kN, MPa, kN.m). */
     private val UNIT_TABLE: Map<QuantityType, Map<String, Double>> = mapOf(
         QuantityType.LENGTH to mapOf(
             "m" to 1.0, "cm" to 0.01, "mm" to 0.001, "km" to 1000.0,
-            "in" to 0.0254, "ft" to 0.3048, "yd" to 0.9144
+            "in" to 0.0254, "ft" to 0.3048, "yd" to 0.9144, "mi" to 1609.344
         ),
         QuantityType.AREA to mapOf(
             "m²" to 1.0, "cm²" to 0.0001, "mm²" to 0.000001,
@@ -580,23 +582,26 @@ object QuickToolsEngine {
         QuantityType.VOLUME to mapOf(
             "m³" to 1.0, "cm³" to 0.000001, "L" to 0.001,
             "ft³" to 0.028316846592, "yd³" to 0.764554857984,
-            "US gal" to 0.003785411784
+            "US gal" to 0.003785411784, "UK gal" to 0.00454609
         ),
         QuantityType.MASS to mapOf(
-            "kg" to 1.0, "g" to 0.001, "ton" to 1000.0, "lb" to 0.45359237
+            "kg" to 1.0, "g" to 0.001, "tonne" to 1000.0, // metric tonne (1000 kg)
+            "lb" to 0.45359237, "oz" to 0.028349523125
         ),
         QuantityType.FORCE to mapOf(
-            "kN" to 1.0, "N" to 0.001, "kgf" to 0.00980665, "tonf" to 9.80665,
+            "kN" to 1.0, "N" to 0.001, "MN" to 1000.0, "kgf" to 0.00980665, "tonf" to 9.80665,
             "lbf" to 0.0044482216152605, "kip" to 4.4482216152605
         ),
         QuantityType.STRESS to mapOf(
-            "MPa" to 1.0, "N/mm²" to 1.0, "kPa" to 0.001, "bar" to 0.1,
-            "kg/cm²" to 0.0980665, "psi" to 0.006894757293168361, "ksi" to 6.894757293168361,
-            "tonf/m²" to 0.00980665
+            "MPa" to 1.0, "N/mm²" to 1.0, "kPa" to 0.001, "Pa" to 0.000001, "bar" to 0.1,
+            "kgf/cm²" to 0.0980665, "psi" to 0.006894757293168361, "ksi" to 6.894757293168361,
+            "tonf/m²" to 0.00980665, // tonne-force per m2
+            // ksf = 1000 lbf/ft2, tsf = 2000 lbf/ft2 (lbf = 0.45359237 kg x 9.80665 m/s2, ft = 0.3048 m)
+            "ksf" to KSF_IN_MPA, "tsf" to 2.0 * KSF_IN_MPA
         ),
         QuantityType.MOMENT to mapOf(
-            "kN.m" to 1.0, "N.m" to 0.001, "N.mm" to 0.000001, "t.m" to 9.80665,
-            "kN.cm" to 0.01, "lb.ft" to 0.0013558179483314, "kip.ft" to 1.3558179483314
+            "kN.m" to 1.0, "N.m" to 0.001, "N.mm" to 0.000001, "tonf.m" to 9.80665,
+            "kN.cm" to 0.01, "kgf.m" to 0.00980665, "lb.ft" to 0.0013558179483314, "kip.ft" to 1.3558179483314
         )
     )
 

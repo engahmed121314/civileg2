@@ -54,7 +54,36 @@ class BeamViewModel @Inject constructor(
     private var lastLiveLoad: Double = 10.0
     private var lastFcu: Double = 25.0
     private var lastFy: Double = 360.0
+    val solvedFcu: Double get() = lastFcu
+    val solvedFy: Double get() = lastFy
+
+    /**
+     * Development length (mm) of the bottom bar for the drawing bracket. ECP only: Eq. 4-66/4-67 for a straight
+     * deformed bottom bar (eta = 1.0, alpha = 1.0, beta = 0.75), no coating, normalweight concrete, not bundled.
+     * Returns 0.0 ("not computed") for SBC/ACI: their formulas need the cylinder strength fc' and the app input is
+     * not confirmed to be fc' (the repo's 0.8 x fcu conversion is not from either code).
+     */
+    fun drawingDevelopmentLengthMm(code: com.civileg.app.domain.entities.DesignCode, dbMm: Double): Double =
+        if (code == com.civileg.app.domain.entities.DesignCode.ECP)
+            com.civileg.app.domain.calculations.beam.RcDevelopmentLength.ecpTension(
+                lastFcu, lastFy, dbMm, topBarWithMoreThan300mmBelow = false
+            ).length
+        else 0.0
+
+    /** ECP tension lap at the 1.3 Ld case (As ratio and lapped fraction not available). 0.0 = not computed. */
+    fun drawingLapLengthMm(code: com.civileg.app.domain.entities.DesignCode, dbMm: Double): Double {
+        val ld = drawingDevelopmentLengthMm(code, dbMm)
+        return if (ld > 0.0) com.civileg.app.domain.calculations.beam.RcDevelopmentLength.ecpTensionLap(ld, null, null) else 0.0
+    }
+
     private var lastSupportType: CalculatorEngine.SupportType = CalculatorEngine.SupportType.HINGED_HINGED
+
+    fun clearResult() {
+        _result.value = null
+        _validationReport.value = null
+        _error.value = null
+        pendingDrawingBitmap = null
+    }
 
     fun calculateBeamPro(
         width: Double,
@@ -143,7 +172,8 @@ class BeamViewModel @Inject constructor(
     /** Standalone DXF sheet for the current beam design (null when no result). */
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val res = _result.value ?: return null
-        return com.civileg.app.utils.ElementDxfDrawings.beamSection(
+        if (!res.codeAcceptanceComplete) return null
+        val section = com.civileg.app.utils.ElementDxfDrawings.beamSection(
             title = "BEAM ${lastSupportType.displayName}",
             widthMm = res.width.toDouble(),
             depthMm = res.depth.toDouble(),
@@ -153,10 +183,21 @@ class BeamViewModel @Inject constructor(
             stirrupDiaMm = res.stirrups.diameter.toDouble(),
             stirrupSpacingMm = res.stirrups.spacing.toDouble()
         )
+        // The beam BBS is not issued (no verified cutting-length basis); say so inside the DXF itself.
+        return com.civileg.app.utils.DxfDrawable { exporter ->
+            section.exportToDxf(exporter)
+            exporter.addText(0.0, -2500.0, "BAR BENDING SCHEDULE NOT ISSUED - cutting lengths (hooks, anchorage, laps, bends) have no verified code basis", 120.0, "0_BBS_TABLE")
+            exporter.addText(0.0, -2750.0, "Section shows bar counts, diameters and stirrup spacing only. Not a complete reinforcement detail.", 100.0, "0_BBS_TABLE")
+        }
     }
 
     /** Export just the CAD drawing (no PDF) for the current design. */
     fun exportToDxf(context: android.content.Context, onComplete: (java.io.File?) -> Unit = {}) {
+        if (_result.value?.codeAcceptanceComplete != true) {
+            _errorMessage.value = "Export pending: complete the listed case/code checks before issuing drawings or BBS."
+            onComplete(null)
+            return
+        }
         val res = _result.value
         val spanMm = ((if (res != null && res.span > 0) res.span else lastSpan) * 1000.0)
         val bbs = if (res != null) {
@@ -176,6 +217,11 @@ class BeamViewModel @Inject constructor(
 
     fun exportToPdf(context: android.content.Context, onComplete: (java.io.File?) -> Unit) {
         val res = _result.value ?: return
+        if (!res.codeAcceptanceComplete) {
+            _errorMessage.value = "Export pending: complete the listed case/code checks before issuing drawings or BBS."
+            onComplete(null)
+            return
+        }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { _isExporting.value = true }
             try {
@@ -188,24 +234,12 @@ class BeamViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = java.io.File(directory, fileName)
 
-                // Generate moment/shear point arrays for PDF diagrams
-                // Simply supported beam with UDL: M(x) = w*x*(L-x)/2, V(x) = w*(L/2-x)
-                val L = lastSpan // span in meters
-                val maxM = res.appliedMoment  // kN.m
-                val maxV = res.appliedShear    // kN
-                // Derive UDL from max moment: M_max = w*L²/8 → w = 8*M_max/L²
-                val wUDL = if (L > 0) 8.0 * maxM / (L * L) else 0.0
-                val numPoints = 21
-                val momentPoints = (0..numPoints).map { i ->
-                    val x = L * i / numPoints
-                    val m = wUDL * x * (L - x) / 2.0
-                    Pair(x, m)
-                }
-                val shearPoints = (0..numPoints).map { i ->
-                    val x = L * i / numPoints
-                    val v = wUDL * (L / 2.0 - x)
-                    Pair(x, v)
-                }
+                // Same solved-case UDL equilibrium samples as the design screen.
+                val maxM = res.appliedMoment
+                val maxV = res.appliedShear
+                val diagram = com.civileg.app.domain.calculations.utils.BeamUdlDiagram.samples(res.span,res.appliedShear,res.supportType)
+                val momentPoints = diagram.map { it.xM to it.momentKnM }
+                val shearPoints = diagram.map { it.xM to it.shearKn }
 
                 // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
                 val drawingBitmap = pendingDrawingBitmap ?: try {
@@ -261,7 +295,8 @@ class BeamViewModel @Inject constructor(
                     "Allowable Deflection" to "${String.format("%.2f", res.allowableDeflection)} mm",
                     "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
-                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
+                    "Steel Weight (rough estimate, not for procurement: no hooks, anchorage, laps or bends; uniform stirrups; full-span top steel)" to "${String.format("%.1f", res.steelWeight)} kg",
+                    "Bar Bending Schedule" to com.civileg.app.domain.calculations.utils.BbsGenerator.BEAM_BBS_UNAVAILABLE_REASON
                 )
                 
                 if (res.stirrups.zones.isNotEmpty()) {

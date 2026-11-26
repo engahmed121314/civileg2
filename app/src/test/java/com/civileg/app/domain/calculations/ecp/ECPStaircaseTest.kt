@@ -245,4 +245,124 @@ class ECPStaircaseTest {
         val deflectionCheck = result.safetyChecks.find { it.name.contains("Deflection") }
         assertNotNull("Should have deflection check", deflectionCheck)
     }
+
+    @Test
+    fun `ECP minimum main steel is assessed per 6-2-1-3-2 and the issued steel meets it`() {
+        for (fy in listOf(240.0, 360.0, 400.0)) {
+            val result = stair.designStaircase(defaultInput(fy = fy))
+            val row = result.safetyChecks.single { it.name.startsWith("Minimum main steel") }
+            assertFalse("fy=$fy must be assessed, not flagged", row.notAssessed)
+            assertTrue("fy=$fy provided >= required", row.isSafe)
+            assertTrue("fy=$fy provided >= limit", row.value >= row.limit - 1e-6)
+        }
+    }
+
+    @Test
+    fun `ECP minimum main steel ratio follows the slab clause max of 0-6 over fy and class floor`() {
+        // fy=360, fcu=25: max(0.6/360, 0.0015) = 0.001667 of b*d
+        val r = stair.designStaircase(defaultInput(fy = 360.0, fcu = 25.0))
+        val row = r.safetyChecks.single { it.name.startsWith("Minimum main steel") }
+        assertEquals(maxOf(0.6 / 360.0, 0.0015) * 1000.0 * r.effectiveDepth, row.limit, 1e-6)
+        // mild steel fy=240: floor 0.25% (= 0.6/240 anyway)
+        val mild = stair.designStaircase(defaultInput(fy = 240.0, fcu = 25.0))
+        val mildRow = mild.safetyChecks.single { it.name.startsWith("Minimum main steel") }
+        assertEquals(0.0025 * 1000.0 * mild.effectiveDepth, mildRow.limit, 1e-6)
+        // high-strength with fcu >= 40: floor 0.18%
+        val strong = stair.designStaircase(defaultInput(fy = 400.0, fcu = 45.0))
+        val strongRow = strong.safetyChecks.single { it.name.startsWith("Minimum main steel") }
+        assertEquals(maxOf(0.6 / 400.0, 0.0018) * 1000.0 * strong.effectiveDepth, strongRow.limit, 1e-6)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 6. ECP 203-2025 Table 4-1 flexure cap (was unconservative K_bal)
+    // ═══════════════════════════════════════════════════════════════
+
+    @Test
+    fun `flexure limit is Table 4-1 Rmax over gamma_c, not the old balanced K`() {
+        // fy=420: Rmax = 0.186 (no redistribution) → K_max = 0.186/1.5 = 0.124
+        val row = stair.designStaircase(defaultInput(fy = 420.0))
+            .safetyChecks.single { it.name.startsWith("Flexure") }
+        assertEquals(0.186 / 1.5, row.limit, 1e-9)
+        // fy=360: interpolated between 350 (0.196) and 400 (0.189) → 0.1946
+        val row360 = stair.designStaircase(defaultInput(fy = 360.0))
+            .safetyChecks.single { it.name.startsWith("Flexure") }
+        assertEquals((0.196 + (0.189 - 0.196) * 10.0 / 50.0) / 1.5, row360.limit, 1e-9)
+    }
+
+    @Test
+    fun `section between old K_bal and the Table 4-1 cap now fails flexure`() {
+        // span 5.3 m, waist 150 mm, fy=420, fcu=25 gives K ≈ 0.15:
+        // old K_bal ≈ 0.180 passed it; Table 4-1 caps K at 0.124.
+        val result = stair.designStaircase(
+            defaultInput(span = 5.3, totalRise = 1.8, waistThickness = 150.0, fy = 420.0)
+        )
+        val row = result.safetyChecks.single { it.name.startsWith("Flexure") }
+        assertTrue("K should sit in the previously-passing band: ${row.value}", row.value in 0.13..0.18)
+        assertTrue("K exceeds the Table 4-1 cap", row.value > row.limit)
+        assertFalse("must fail flexure", row.isSafe)
+        assertFalse("result not safe", result.isSafe)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 7. Support top steel (Eq. 6-2 + top mesh for t > 160 mm)
+    // ═══════════════════════════════════════════════════════════════
+
+    @Test
+    fun `support top steel is designed and meets Eq 6-2 plus the top mesh floor`() {
+        // waist 200 mm > 160 mm → mesh floor max(20% main, 5Ø8/m = 251 mm²/m)
+        val result = stair.designStaircase(defaultInput(waistThickness = 200.0))
+        assertTrue("flightTopRebar filled", result.flightTopRebar.isNotEmpty())
+        val row = result.safetyChecks.single { it.name.startsWith("Support top steel") }
+        assertTrue(row.isSafe)
+        assertTrue("top steel >= 5Ø8/m", row.value >= 251.0 - 1e-6)
+    }
+
+    @Test
+    fun `support top steel exists for a thin waist governed by Eq 6-2 only`() {
+        val result = stair.designStaircase(defaultInput(waistThickness = 140.0))
+        assertTrue(result.flightTopRebar.isNotEmpty())
+        val row = result.safetyChecks.single { it.name.startsWith("Support top steel") }
+        assertTrue(row.isSafe)
+        assertTrue(row.value >= row.limit - 1e-6)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 8. Distribution steel: 20% of main, ≥ 4 bars/m (spacing ≤ 250)
+    // ═══════════════════════════════════════════════════════════════
+
+    @Test
+    fun `distribution steel meets 20 percent of main and the 4 bars per metre rule`() {
+        val result = stair.designStaircase(defaultInput())
+        assertTrue("20% of main", result.distributionRebarArea >= 0.2 * result.mainRebarArea - 1e-6)
+        val spacing = Regex("@ (\\d+)").find(result.distributionRebar)!!.groupValues[1].toInt()
+        assertTrue("spacing <= 250 mm (≥ 4 bars/m): $spacing", spacing <= 250)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 9. Thickness minimum a/35 (Eq. 6-6a), analysis-span consistency
+    // ═══════════════════════════════════════════════════════════════
+
+    @Test
+    fun `waist minimum thickness follows Eq 6-6a a over 35`() {
+        val row = stair.designStaircase(defaultInput(span = 3.5))
+            .safetyChecks.single { it.name.startsWith("Waist >=") }
+        assertEquals(3500.0 / 35.0, row.limit, 1e-6)
+    }
+
+    @Test
+    fun `going follows the entered span when only the riser count is given`() {
+        val r = stair.designStaircase(defaultInput(span = 3.0, riserCount = 10))
+        assertEquals(3000.0 / 9.0, r.going, 1e-6)
+        assertEquals(3000.0, r.adoptedRunMm, 1e-6)
+    }
+
+    @Test
+    fun `analysis span is the larger of entered span and adopted run`() {
+        val wider = stair.designStaircase(defaultInput(span = 3.05, riserCount = 11, going = 300.0))
+        assertEquals(3.05, wider.analysisSpanM, 1e-9)
+        val narrower = stair.designStaircase(defaultInput(span = 2.9, riserCount = 11, going = 300.0))
+        assertEquals(3.0, narrower.analysisSpanM, 1e-9)
+        assertEquals(3000.0, narrower.adoptedRunMm, 1e-9)
+        assertTrue(narrower.codeNotes.any { it.contains("Adopted discrete run") })
+    }
 }

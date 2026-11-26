@@ -82,12 +82,21 @@ class TankViewModel @Inject constructor(
                 _error.value = null
                 _errorMessage.value = null
             } catch (e: Exception) {
+                _result.value = null; _validationReport.value = null  // a failed attempt must not leave the previous design on screen
                 _error.value = "Error: ${e.message}"
                 _errorMessage.value = "Tank calculation error / خطأ في حساب الخزان: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    /** Drop the shown result (an input changed or the last attempt failed). */
+    fun clearResult() {
+        _result.value = null
+        _validationReport.value = null
+        _error.value = null
+        pendingDrawingBitmap = null
     }
 
     // Legacy method
@@ -188,7 +197,7 @@ class TankViewModel @Inject constructor(
                     "Base Reinforcement" to res.baseReinforcement.barString,
                     "Utilization" to String.format("%.2f", res.utilizationRatio),
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
-                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
+                    "Steel (indicative ratio, not designed bars)" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
                 val safetyChecks = res.safetyChecks.map { chk ->
                     GenericSafetyCheck(
@@ -208,12 +217,13 @@ class TankViewModel @Inject constructor(
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
                     calculationSteps = res.calculationSteps,
-                    bbsEntries = runCatching {
-                        BbsGenerator.generateTankBbs("T1", res)
-                    }.getOrDefault(emptyList()),
+                    // Tank bar schedule not issued: the generator schedules only vertical wall bars and one base mat
+                    // (no horizontal wall bars, no top base layer), so it is not a designed-bar schedule.
+                    bbsEntries = emptyList(),
                     boqRows = BoqEstimator.tankRows(
                         res.concreteVolume, res.steelWeight, res.length, res.width, res.height,
                         "T1", excavationDepthM, blindingThicknessM,
+                        isCircular = res.type.name.contains("CIRCULAR"),
                         waterproofingAreaM2 = if (res.type.name.contains("UNDERGROUND")) {
                             BoqEstimator.tankWaterproofingArea(
                                 isCircular = res.type.name.contains("CIRCULAR"),

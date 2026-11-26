@@ -33,18 +33,14 @@ class ECPColumn : ColumnDesign {
         InputGuard.positive("depth", depth)
 
         val Ag = width * depth                          // مساحة المقطع الكلية (mm²)
-        val Ast = reinforcementArea.coerceAtMost(Ag * 0.08) // ECP 203 §4-2-3: حد أقصى 8%
+        // ECP 203-2025 p.6-55 (PDF 246): max 4% middle / 5% edge / 6% corner / 8% only at laps. No position input yet: MIDDLE (4%) used. UNTESTED.
+        val Ast = reinforcementArea.coerceAtMost(Ag * EcpColumnRules.maxSteelRatio(EcpColumnRules.Position.MIDDLE))
         
-        // مقاومة الخرسانة: 0.67 * fcu / γc
-        val concreteStress = 0.67 * fcu / GAMMA_C
-        // مقاومة الحديد: fy / γs
-        val steelStress = fy / GAMMA_S
-        
-        // القدرة المحورية: Pu = α × [0.67×fcu/γc × (Ag-Ast) + fy/γs × Ast]
-        // ECP 203-2025 §4-2-3: α = 0.8 for tied columns
-        val concreteCapacity = concreteStress * (Ag - Ast)
-        val steelCapacity = steelStress * Ast
-        val designCapacity = ALPHA * (concreteCapacity + steelCapacity)
+        // ECP 203-2020 Eq. [4-12-a] (tied columns, small eccentricity e <= max(0.05t, 20 mm)):
+        // Pu = 0.35 fcu (Ac - Asc) + 0.67 fy Asc, fy not above 420 N/mm2.
+        // Pure-axial capacity only; it does not cover columns with larger eccentricity.
+        val fyEff = minOf(fy, 420.0)
+        val designCapacity = 0.35 * fcu * (Ag - Ast) + 0.67 * fyEff * Ast
         InputGuard.finite("axialCapacity", designCapacity / 1000.0)
         
         // التحويل من نيوتن إلى كيلو نيوتن
@@ -78,10 +74,12 @@ class ECPColumn : ColumnDesign {
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
 
-        // تصميم العزم المحوري — ECP 203-2025 §4-2-3
+        // تصميم العزم المحوري — ECP 203 §4-2-3
         // Use P-M interaction diagram for proper combined axial-flexural check
         // Apply minimum eccentricity per ECP 203 §4-2-3: e_min = max(20mm, b/20, h/20)
-        val minEccentricity = maxOf(20.0, width / 20.0, depth / 20.0)
+        // ECP 203-2025 Eq 4-11 (p.4-11): max(0.05 t, 20 mm), t = dimension in bending direction. ASSUMPTION: Mx acts across depth, My across width.
+        val bendDim = if (abs(momentX) >= abs(momentY)) depth else width
+        val minEccentricity = EcpColumnRules.minEccentricity(bendDim)
         val designEccentricity = max(eccentricity, if (eccentricity > 0) minEccentricity else 0.0)
         val designMoment = Pu * designEccentricity  // N.mm
         
@@ -90,13 +88,20 @@ class ECPColumn : ColumnDesign {
         }
         
         // طريقة مبسطة لحساب التسليح (لأعمدة قصيرة) — P-M interaction
-        val concreteStress = 0.67 * fcu / GAMMA_C
-        val steelStress = fy / GAMMA_S
+        // Eq. [4-12-a] coefficients (fy capped at 420 N/mm2)
+        val concreteStress = 0.35 * fcu
+        val steelStress = 0.67 * minOf(fy, 420.0)
         
-        // Initial As estimate from axial only
-        val numerator = Pu / ALPHA - concreteStress * Ag
+        // Eq. 4-12-a domain: e <= max(0.05 t, 20 mm) (equals e_min here). Outside it the formula
+        // does not apply: no axial estimate, no axial capacity ratio, and no pass.
+        val inEq412Domain = eccentricity <= minEccentricity + 1e-9
+        // Initial As estimate from axial only (only inside the Eq. 4-12-a domain)
+        val numerator = Pu - concreteStress * Ag
         val denominator = steelStress - concreteStress
-        var requiredSteelArea = if (abs(denominator) > 0.1) numerator / denominator else 0.0
+        var requiredSteelArea = if (inEq412Domain && abs(denominator) > 0.1) numerator / denominator else 0.0
+        if (!inEq412Domain) {
+            warnings.add("OUTSIDE FORMULA DOMAIN: e=${"%.1f".format(eccentricity)} mm exceeds max(0.05t, 20 mm)=${"%.1f".format(minEccentricity)} mm. ECP 203-2020 Eq. 4-12-a does not apply; axial capacity and required steel not computed (minimum steel shown only). Design by full P-M check.")
+        }
         InputGuard.finite("requiredSteelArea", requiredSteelArea)
         if (requiredSteelArea < 0) {
             requiredSteelArea = 0.0
@@ -110,7 +115,7 @@ class ECPColumn : ColumnDesign {
             // Simple approach: scale As by moment demand ratio
             val momentFactor = max(1.0, 1.0 + designMoment / (Pu * 0.1 * h).coerceAtLeast(1.0))
             requiredSteelArea *= momentFactor
-            codeNotes.add("ECP 203-2025: P-M interaction design with e=${"%.1f".format(designEccentricity)}mm, moment factor ${"%.2f".format(momentFactor)}")
+            codeNotes.add("ECP 203: P-M interaction design with e=${"%.1f".format(designEccentricity)}mm, moment factor ${"%.2f".format(momentFactor)}")
         }
         
         // تطبيق حدود التسليح
@@ -138,7 +143,7 @@ class ECPColumn : ColumnDesign {
         val astProvided = numberOfBars * barArea
         
         // حساب الكانات
-        val tiesDiameter = max(10.0, barDiameter / 4).coerceAtLeast(8.0)
+        val tiesDiameter = max(10.0, EcpColumnRules.tieMinDia(barDiameter)) // app keeps 10 mm floor (stricter than code 8 mm)
         val tiesSpacing = calculateTiesSpacing(barDiameter, tiesDiameter, width, depth)
         
         // P-M interaction safety check: generate diagram and verify (Pu, Mu) is inside
@@ -147,12 +152,12 @@ class ECPColumn : ColumnDesign {
         
         // Axial capacity as fallback
         val capacity = calculateAxialCapacity(fcu, fy, width, depth, astProvided, loadCombination)
-        val axialUtilization = if (capacity > 0) axialLoad / capacity else 2.0
+        val axialUtilization = if (!inEq412Domain) 0.0 else if (capacity > 0) axialLoad / capacity else 2.0
         InputGuard.finite("axialUtilization", axialUtilization)
         
         // Overall safety: P-M interaction AND axial capacity AND reinforcement limits
-        val isSafe = pmSafe && axialUtilization <= 1.0 && requiredSteelArea <= maxSteel
-        val utilizationRatio = if (capacity > 0) axialLoad / capacity else 2.0
+        val isSafe = inEq412Domain && pmSafe && axialUtilization <= 1.0 && requiredSteelArea <= maxSteel
+        val utilizationRatio = axialUtilization
         
         // ملاحظات الكود
         codeNotes.add(CodeReference.ECP.COLUMN_AXIAL)
@@ -178,11 +183,12 @@ class ECPColumn : ColumnDesign {
 
     private fun calculateTiesSpacing(barDiameter: Double, tiesDiameter: Double, width: Double, depth: Double): Double {
         // حسب الكود المصري ECP 203 البند 4-2-6: أقل من (16×قطر السيخ، 48×قطر الكانة، أقل بعد في المقطع، 300 مم)
-        return minOf(16 * barDiameter, 48 * tiesDiameter, width, depth, 300.0).coerceIn(getMinSpacing(), getMaxSpacing())
+        // ECP 203-2025 p.6-55 (PDF 246): s <= min(15 x smallest bar dia, 200 mm). 48 dt and min-dimension rules removed (no source).
+        return EcpColumnRules.tieMaxSpacing(barDiameter).coerceAtMost(getMaxSpacing())
     }
 
     /**
-     * Slenderness ratio check per ECP 203-2025 §4-2-3
+     * Slenderness ratio check per ECP 203 §4-2-3
      * λ = K × L / r, where r = sqrt(I/Ag) ≈ 0.3h for rectangular columns
      * Short column: λ ≤ 15 (braced) or λ ≤ 10 (unbraced)
      * Long column: λ > threshold → moment magnification required
@@ -203,14 +209,15 @@ class ECPColumn : ColumnDesign {
         InputGuard.positive("width", width)
         InputGuard.positive("depth", depth)
 
-        // ECP 203-2025 §4-2-3: Radius of gyration for rectangular section
-        // r = h / √12 ≈ 0.289h (for buckling about depth axis)
-        val r = depth / sqrt(12.0)
+        // ECP 203 §4-2-3: Radius of gyration for rectangular section
+        // ECP 203-2025 Eq 6-32a (p.6-42): i = 0.30 t
+        val r = EcpColumnRules.radiusRect(depth)
         val slendernessRatio = effectiveLength / r.coerceAtLeast(1.0)
         InputGuard.finite("slendernessRatio", slendernessRatio)
 
-        // ECP 203-2025 §4-2-3: Threshold slenderness
-        val threshold = if (isBraced) 15.0 else 10.0
+        // ECP 203 §4-2-3: Threshold slenderness
+        // Table 6-7 (p.6-43): lambda_i limit 50 braced / 35 unbraced (the 15/10 limits apply to He/t, not He/i)
+        val threshold = EcpColumnRules.shortLimitLambdaI(isBraced)
         val isShort = slendernessRatio <= threshold
 
         return SlendernessCheckResult(
@@ -227,7 +234,7 @@ class ECPColumn : ColumnDesign {
     }
 
     /**
-     * Moment magnification factor for slender columns per ECP 203-2025 §4-2-3
+     * Moment magnification factor for slender columns per ECP 203 §4-2-3
      * δ = 1 / (1 - Pu/Pcr) where Pcr = π²EI/(KL)²
      *
      * @param Pu factored axial load (kN)
@@ -249,7 +256,7 @@ class ECPColumn : ColumnDesign {
         InputGuard.positive("effectiveLength", effectiveLength)
         InputGuard.positive("fcu", fcu)
 
-        // ECP 203-2025 §4-2-3: EI ≈ 0.4 × Ec × Ig + Es × Is
+        // ECP 203 §4-2-3: EI ≈ 0.4 × Ec × Ig + Es × Is
         // Simplified: EI ≈ 0.4 × (4400√fcu) × (b×h³/12) + Es × [Ast/2 × (d-d')²/2]
         val Ec = 4400.0 * sqrt(fcu)  // MPa per ECP 203
         val Ig = width * depth.pow(3) / 12.0  // mm⁴
@@ -277,7 +284,7 @@ class ECPColumn : ColumnDesign {
     }
 
     /**
-     * Generate interaction diagram points per ECP 203-2025 §4-2-3
+     * Generate interaction diagram points per ECP 203 §4-2-3
      * Returns list of (Mu, Pu) points for the interaction curve
      *
      * @param fcu concrete cube strength (MPa)
@@ -309,7 +316,7 @@ class ECPColumn : ColumnDesign {
         val fc = 0.67 * fcu / GAMMA_C
         val points = mutableListOf<Pair<Double, Double>>()
 
-        // ECP 203-2025 §4-2-3: Vary neutral axis depth from 0 to h
+        // ECP 203 §4-2-3: Vary neutral axis depth from 0 to h
         for (i in 0..numPoints) {
             val c = (i.toDouble() / numPoints) * depth * 1.2  // Go slightly beyond h for pure tension
             val a = min(0.8 * c, depth)  // Whitney stress block, β₁=0.8 for ECP
@@ -343,7 +350,7 @@ class ECPColumn : ColumnDesign {
     }
 
     override fun getMinReinforcementRatio(): Double = 0.008  // 0.8%
-    override fun getMaxReinforcementRatio(): Double = 0.08   // 8% per ECP 203-2025 Section 4-2-3 (4% typical, 6% at splices, 8% max)
+    override fun getMaxReinforcementRatio(): Double = EcpColumnRules.maxSteelRatio(EcpColumnRules.Position.MIDDLE) // 4% middle; edge 5%, corner 6%, 8% at laps (p.6-55)
     override fun getMinSpacing(): Double = 100.0
     override fun getMaxSpacing(): Double = 300.0
     override fun getMinCover(): Double = 40.0
@@ -458,7 +465,7 @@ class ECPColumn : ColumnDesign {
 
     /**
      * Check if (Pu, Mu) point lies inside the P-M interaction diagram
-     * ECP 203-2025 §4-2-3: Use interaction diagram for combined axial-flexural design
+     * ECP 203 §4-2-3: Use interaction diagram for combined axial-flexural design
      */
     private fun checkPMInteraction(
         Pu: Double,  // kN

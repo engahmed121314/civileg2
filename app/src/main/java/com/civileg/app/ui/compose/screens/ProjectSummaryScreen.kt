@@ -126,7 +126,7 @@ fun SummaryKPIRow(summary: ProjectSummary) {
             val steelDensity = if (summary.totalConcrete > 0) summary.totalSteel / summary.totalConcrete else 0.0
             KPICard("Steel Density", "${String.format(Locale.US, "%.1f", steelDensity)}", "kg/m³", Modifier.weight(1f))
             KPICard("Design Count", "${summary.designCount}", "Elements", Modifier.weight(1f))
-            KPICard("Avg Cost/Elem", "${if(summary.designCount > 0) (summary.totalCost/summary.designCount).toInt() else 0}", "EGP", Modifier.weight(1f))
+            KPICard("Avg Cost/Priced Elem", "${if(summary.pricedDesignCount > 0) (summary.totalCost/summary.pricedDesignCount).toInt() else 0}", "EGP, ${summary.pricedDesignCount}/${summary.designCount} priced", Modifier.weight(1f))
         }
     }
 }

@@ -20,6 +20,19 @@ class ECPSlab : SlabDesign {
         designMoment: Double,
         designShear: Double,
         loadCombination: LoadCombination
+    ): SlabDesignResult = designSlabStrip(
+        fcu, fy, slabThickness, clearSpan, designMoment, designShear,
+        getMinSlabThickness(clearSpan, SupportCondition.SIMPLY_SUPPORTED)
+    )
+
+    private fun designSlabStrip(
+        fcu: Double,
+        fy: Double,
+        slabThickness: Double,
+        clearSpan: Double,
+        designMoment: Double,
+        designShear: Double,
+        minThickness: Double
     ): SlabDesignResult {
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
@@ -39,32 +52,30 @@ class ECPSlab : SlabDesign {
         val fs = fy / GAMMA_S
         
         // K = Mu / (fcu × b × d²) - نستخدم fcu مباشرة وليس fc
-        // K_bal محسوب ديناميكياً حسب fcu و fy - ECP 203 البند 4-2-2-1
-        // K_bal = (0.67/γc) × (a/d) × (1 - a/(2d))
-        // حيث a/d = 0.9 × εcu/(εcu + fy/(Es×γs))
-        val epsilonCu = 0.003
-        val epsilonY = fy / (200000.0 * GAMMA_S)
-        val aOverD = 0.9 * epsilonCu / (epsilonCu + epsilonY)
-        val K_bal = (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
+        // Single-reinforcement limit: K,max = Rmax/gamma_c from ECP 203-2025 Table 4-1 (p.4-6) and Eq 4-4
+        // (replaces the old undocumented 0.9-factor "balanced K", which was unconservative).
+        val K_bal = ECPBeam.kMax(fy)
         val K = if (fcu > 0 && effectiveDepth > 0) Mu / (fcu * width * effectiveDepth * effectiveDepth) else 0.0
         
+        var overReinforced = false
         if (K > K_bal) {
-            warnings.add(String.format("K=%.3f > K_bal=%.3f - Section is over-reinforced, increase slab thickness", K, K_bal))
+            warnings.add(String.format("K=%.3f > Kmax=%.3f (ECP 203-2025 Table 4-1) - compression steel needed, increase slab thickness", K, K_bal))
+            overReinforced = true
         }
         
         // ذراع القوة: z = d × (0.5 + √(0.25 - K/0.893)) حسب ECP 203 K-method
         // 0.893 = γc/(2×0.67) = 1.5/1.34
-        val leverArm = if (0.25 - K / 0.893 > 0) {
+        val leverArm = min(0.95 * effectiveDepth, if (0.25 - K / 0.893 > 0) {
             effectiveDepth * (0.5 + sqrt(0.25 - K / 0.893))
         } else {
-            effectiveDepth * 0.7  // تقريب آمن للحالات الحرجة
-        }
+            effectiveDepth * 0.7  // over-reinforced: flagged unsafe below
+        })  // z <= 0.95 d, ECP 203-2025 4-1-2-2-a (p.4-5)
         
         // As = Mu / (fy/γs × z) حسب ECP 203
         var astRequired = if (fs > 0 && leverArm > 0) Mu / (fs * leverArm) else 0.0 // mm²/m
         
-        // الحد الأدنى للتسليح للبلاطات (0.6/fy * b * d or 0.15% Ag)
-        val minSteel = max(0.26 * sqrt(fcu) / fy * width * effectiveDepth, 0.0013 * width * effectiveDepth)  // ECP 203: based on d
+        // Min. steel on gross area b x h: ECP 203-2025 6-2-1-2-3 (p.6-6): max(0.6/fy, 0.25 % mild | 0.15-0.18 % high grade)
+        val minSteel = max(0.6 / fy, ECPBeam.muMinFloor(fcu, fy)) * width * slabThickness
         if (astRequired < minSteel) {
             astRequired = minSteel
             warnings.add("Minimum reinforcement applied")
@@ -83,8 +94,8 @@ class ECPSlab : SlabDesign {
         val astProvided = barArea * 1000 / barSpacing
         
         // التحقق من القص - ECP 203 البند 4-3-1-2
-        // qcu = 0.24 × √(fcu) / γc per ECP 203 §4-3-1-2
-        val qcu = 0.24 * sqrt(fcu / GAMMA_C)  // MPa — ECP 203 §4-3-1-2 (includes γc)
+        // ECP 203-2025 Eq 4-29 (PDF p.105, printed 4-25): slabs resist shear by concrete only, qcu = 0.16 sqrt(fcu/gc)
+        val qcu = ECP2025ConcreteShear.oneWayQcu(fcu, GAMMA_C)  // MPa
         val shearCapacity = qcu * width * effectiveDepth / 1000.0  // kN/m
         
         // designShear بالفعل هو القوة القصية التصميمية (kN/m)
@@ -93,10 +104,10 @@ class ECPSlab : SlabDesign {
             warnings.add("Shear capacity exceeded - increase thickness")
         }
         
-        codeNotes.add(String.format("ECP 203: qcu = %.2f MPa", qcu))
+        codeNotes.add(String.format("qcu = %.2f MPa (slab shear formula 0.24 sqrt(fcu/gc) is from the earlier edition; ECP 203-2025 4-2-1 slab shear NOT VERIFIED)", qcu))
+        warnings.add("Slab shear check not verified against ECP 203-2025")
         
         // التحقق من السمك للانحراف
-        val minThickness = getMinSlabThickness(clearSpan, SupportCondition.SIMPLY_SUPPORTED)
         if (slabThickness < minThickness) {
             warnings.add("Thickness below minimum for deflection control")
         }
@@ -112,7 +123,7 @@ class ECPSlab : SlabDesign {
             barSpacing = barSpacing,
             minThickness = minThickness,
             shearCapacity = shearCapacity,
-            isSafe = isShearSafe && slabThickness >= minThickness,
+            isSafe = isShearSafe && slabThickness >= minThickness && !overReinforced,
             utilizationRatio = if (astProvided > 0) designMoment / (astProvided * fs * leverArm / 1e6) else 2.0,
             warnings = warnings,
             codeNotes = codeNotes
@@ -141,15 +152,21 @@ class ECPSlab : SlabDesign {
         val coefficients = calculateMomentCoefficients(aspectRatio, supportConditions)
         
         val MuShort = coefficients.positiveShort * totalLoad * shortSpan * shortSpan / 1_000_000.0 // kN.m/m
-        val resultShort = designOneWaySlab(
+        // ECP 203-2025 Eq 6-6a/b/c (p.6-7): t,min = a/35 (simple), a/40 (continuous one side), a/45 (two sides); a = short span.
+        // Mapping of 4 edges: no continuous edge -> 35; some -> 40; all four -> 45 (conservative). Floor 80 mm static loads (p.6-4).
+        val contEdges = listOf(supportConditions.edgeA, supportConditions.edgeB, supportConditions.edgeC, supportConditions.edgeD)
+            .count { it == EdgeCondition.FIXED || it == EdgeCondition.CONTINUOUS }
+        val twoWayDiv = when (contEdges) { 0 -> 35.0; 4 -> 45.0; else -> 40.0 }
+        val tMinTwo = max(shortSpan / twoWayDiv, 80.0)
+        val resultShort = designSlabStrip(
             fcu, fy, slabThickness, shortSpan,
-            MuShort, totalLoad * shortSpan / 2000.0, loadCombination
+            MuShort, totalLoad * shortSpan / 2000.0, tMinTwo
         )
 
         val MuLong = coefficients.positiveLong * totalLoad * longSpan * longSpan / 1_000_000.0 // kN.m/m
-        val resultLong = designOneWaySlab(
+        val resultLong = designSlabStrip(
             fcu, fy, slabThickness, longSpan,
-            MuLong, totalLoad * longSpan / 2000.0, loadCombination
+            MuLong, totalLoad * longSpan / 2000.0, tMinTwo
         )
         
         return TwoWaySlabResult(
@@ -241,13 +258,15 @@ class ECPSlab : SlabDesign {
     }
 
     override fun getMinSlabThickness(span: Double, supportCondition: SupportCondition): Double {
-        // حسب الكود المصري: نسب span/depth للبلاطات المصمتة
+        // ECP 203-2025 6-2-1-2-1 (p.6-4): one-way t,min = L/30 simple, L/35 continuous one end, L/40 continuous both ends;
+        // not less than 80 mm (static loads). CONTINUOUS has no end-count here, so L/35 is used (conservative vs L/40).
+        // CANTILEVER: clause not read, the earlier L/10 value is unsourced (NOT ASSESSED by the code).
         val ratio = when (supportCondition) {
-            SupportCondition.SIMPLY_SUPPORTED -> 25.0
-            SupportCondition.CONTINUOUS -> 30.0
+            SupportCondition.SIMPLY_SUPPORTED -> 30.0
+            SupportCondition.CONTINUOUS -> 35.0
             SupportCondition.CANTILEVER -> 10.0
         }
-        return max(span / ratio, 100.0)
+        return max(span / ratio, 80.0)
     }
 
     override fun getMinReinforcementRatio(): Double = 0.0013 // 0.13% Ag

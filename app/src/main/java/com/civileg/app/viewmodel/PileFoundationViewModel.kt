@@ -219,7 +219,8 @@ class PileFoundationViewModel @Inject constructor(
                     "Settlement" to "${"%.2f".format(settlement.totalSettlement)} mm",
                     "Lateral Capacity" to "${"%.1f".format(res.lateralCapacity)} kN",
                     "Cap Size" to "${cap.capWidth.toInt()}×${cap.capLength.toInt()}×${cap.capThickness.toInt()} mm",
-                    "Pile Rebar" to reinf.barString
+                    "Pile Rebar" to reinf.barString,
+                    "Qualification" to res.qualificationNotes.joinToString(" ")
                 )
 
                 val safetyChecks = res.warnings.map { w ->
@@ -287,7 +288,8 @@ class PileFoundationViewModel @Inject constructor(
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,
-                    isSafe = res.isSafe,
+                    isSafe = res.isSafe && res.codeAcceptanceComplete,
+                    incompleteReview = !res.codeAcceptanceComplete,
                     calculationSteps = res.calculationSteps,
                     bbsEntries = runCatching {
                         com.civileg.app.domain.calculations.utils.BbsGenerator.generatePileBbs("PG1", res)

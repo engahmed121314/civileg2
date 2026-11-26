@@ -20,6 +20,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 import android.graphics.Bitmap
 import javax.inject.Inject
+import com.civileg.app.domain.validation.FieldKind
+import com.civileg.app.domain.validation.FieldSpec
 import com.civileg.app.domain.calculations.InputGuard
 
 data class ColumnUiState(
@@ -44,7 +46,32 @@ data class ColumnUiState(
     val isLoading: Boolean = false,
     val isExporting: Boolean = false,
     val errors: List<String> = emptyList(),
-    val validationReport: CalculationValidator.ValidationReport? = null
+    val validationReport: CalculationValidator.ValidationReport? = null,
+    /** Outcome of the last Design attempt; the screen anchors each issue to its field. */
+    val validation: com.civileg.app.domain.validation.ValidationResult? = null,
+    /** Bumped on every failed attempt so the screen re-focuses even when the issue list is equal. */
+    val validationTick: Int = 0,
+    /** Parsed inputs, code, combination and adjusted Pu that [result] was solved with. Drives ALL outputs. */
+    val snapshot: ColumnCalcSnapshot? = null
+) {
+    val rebarDraftKey: String get() = "$autoOptimize|$manualNumBars|$preferredDiameter"
+    val solvedHeightM: Double? get() = snapshot?.heightM
+    /** True while the rebar draft differs from the adopted result: design/export/save must not use it. */
+    val resultIsStale: Boolean get() = result != null && (snapshot == null || snapshot.rebarKey != rebarDraftKey)
+}
+
+/** Everything the shown ColumnResult was computed from. Exports, BBS/BOQ and save read this, never live UI state. */
+data class ColumnCalcSnapshot(
+    val widthMm: Double, val depthMm: Double, val heightM: Double,
+    val fcu: Double, val fy: Double,
+    val axialLoad: Double, val mx: Double, val my: Double,
+    val isSeismic: Boolean, val isCircular: Boolean,
+    val connectedSlab: String, val hasCap: Boolean,
+    val designCode: DesignCode, val loadCombination: LoadCombination,
+    /** Pu actually sent to the engine = axialLoad x load-combination factor. */
+    val adjustedPu: Double,
+    val autoOptimize: Boolean, val manualNumBars: Int?, val preferredDiameter: Int,
+    val rebarKey: String
 )
 
 @HiltViewModel
@@ -88,6 +115,11 @@ class ColumnViewModel @Inject constructor(
         preferredDiameter: String? = null,
         manualNumBars: String? = null
     ) {
+        // Rebar-card edits (manualNumBars / preferredDiameter) keep the shown result until the
+        // "update rebar" action; every other edit makes the old result stale.
+        val invalidates = width != null || depth != null || height != null || fcu != null || fy != null ||
+            axialLoad != null || mx != null || my != null || isSeismic != null || isCircular != null ||
+            connectedSlab != null || hasCap != null
         _uiState.update { state ->
             val newManualNumBars = manualNumBars ?: state.manualNumBars
             val newPreferredDiameter = preferredDiameter ?: state.preferredDiameter
@@ -110,7 +142,10 @@ class ColumnViewModel @Inject constructor(
                 hasCap = hasCap ?: state.hasCap,
                 preferredDiameter = newPreferredDiameter,
                 manualNumBars = newManualNumBars,
-                autoOptimize = if (shouldDisableAuto) false else state.autoOptimize
+                autoOptimize = if (shouldDisableAuto) false else state.autoOptimize,
+                result = if (invalidates) null else state.result,
+                validationReport = if (invalidates) null else state.validationReport,
+                snapshot = if (invalidates) null else state.snapshot
             )
         }
     }
@@ -197,26 +232,73 @@ class ColumnViewModel @Inject constructor(
         calculate()
     }
 
+    /** Strict parse of the screen inputs. No field is defaulted: a blank or bad value is an issue. */
+    fun validateInputs(state: ColumnUiState = _uiState.value): com.civileg.app.domain.validation.ValidationResult {
+        // Only physical rules the engine itself enforces (InputGuard in designColumn):
+        // positive width/depth/fcu/fy/height, non-negative pu/mx/my. No code range is invented.
+        return com.civileg.app.domain.validation.FormValidator.validate(
+            listOf(
+                FieldSpec("width", state.width, FieldKind.POSITIVE),
+                FieldSpec("depth", state.depth, FieldKind.POSITIVE),
+                FieldSpec("fcu", state.fcu, FieldKind.POSITIVE),
+                FieldSpec("fy", state.fy, FieldKind.POSITIVE),
+                FieldSpec("axialLoad", state.axialLoad, FieldKind.NON_NEGATIVE),
+                FieldSpec("height", state.height, FieldKind.POSITIVE),
+                FieldSpec("mx", state.mx, FieldKind.NON_NEGATIVE),
+                FieldSpec("my", state.my, FieldKind.NON_NEGATIVE),
+                FieldSpec("preferredDiameter", state.preferredDiameter, FieldKind.POSITIVE_INT),
+                // Custom rebar (auto-optimise off): the bar count is required, not guessed.
+                FieldSpec("manualNumBars", state.manualNumBars, FieldKind.POSITIVE_INT, group = "manualRebar")
+            ),
+            activeGroups = if (state.autoOptimize) emptySet() else setOf("manualRebar")
+        )
+    }
+
     private fun calculate() {
         pendingDrawingBitmap = null  // Reset stale bitmap from previous calculation
         val state = _uiState.value
-        val w = state.width.toDoubleOrNull() ?: return
-        val d = state.depth.toDoubleOrNull() ?: return
-        val h = state.height.toDoubleOrNull() ?: 3.0
-        val fcuVal = state.fcu.toDoubleOrNull() ?: 25.0
-        val fyVal = state.fy.toDoubleOrNull() ?: 400.0
-        val load = state.axialLoad.toDoubleOrNull() ?: 0.0
-        val mxVal = state.mx.toDoubleOrNull() ?: 0.0
-        val myVal = state.my.toDoubleOrNull() ?: 0.0
-        val dia = state.preferredDiameter.toIntOrNull() ?: 16
-        val manualBars = state.manualNumBars.toIntOrNull()
+        val checked = validateInputs(state)
+        if (!checked.isValid) {
+            _uiState.update {
+                // Keep the shown result only when every issue is on the custom-rebar card
+                // (that card is part of the result view, so clearing it would hide the error).
+                val rebarOnly = checked.issues.all { i -> i.fieldId == "manualNumBars" || i.fieldId == "preferredDiameter" }
+                it.copy(
+                    result = if (rebarOnly) it.result else null,
+                    validationReport = if (rebarOnly) it.validationReport else null,
+                    snapshot = if (rebarOnly) it.snapshot else null,
+                    validation = checked, validationTick = it.validationTick + 1)
+            }
+            return
+        }
+        val w = checked.value("width")
+        val d = checked.value("depth")
+        val h = checked.value("height")
+        val fcuVal = checked.value("fcu")
+        val fyVal = checked.value("fy")
+        val load = checked.value("axialLoad")
+        val mxVal = checked.value("mx")
+        val myVal = checked.value("my")
+        val dia = checked.value("preferredDiameter").toInt()
+        val manualBars = checked.valueOrNull("manualNumBars")?.toInt()
+        val adjustedPu = load * state.loadCombination.getFactorForCode(state.designCode)
+        val snap = ColumnCalcSnapshot(
+            widthMm = w, depthMm = d, heightM = h, fcu = fcuVal, fy = fyVal,
+            axialLoad = load, mx = mxVal, my = myVal,
+            isSeismic = state.isSeismic, isCircular = state.isCircular,
+            connectedSlab = state.connectedSlab, hasCap = state.hasCap,
+            designCode = state.designCode, loadCombination = state.loadCombination,
+            adjustedPu = adjustedPu,
+            autoOptimize = state.autoOptimize, manualNumBars = manualBars, preferredDiameter = dia,
+            rebarKey = state.rebarDraftKey
+        )
 
         viewModelScope.launch {
             try {
                 val res = calculatorEngine.designColumn(
                     width = w,
                     depth = d,
-                    pu = load * state.loadCombination.getFactorForCode(state.designCode),
+                    pu = adjustedPu,
                     mx = mxVal,
                     my = myVal,
                     fcu = fcuVal,
@@ -238,9 +320,9 @@ class ColumnViewModel @Inject constructor(
                 val dlReport = CalculationValidator.inspectDeadLoadConsistency("COLUMN", mapOf("width" to w, "depth" to d, "height" to h), load)
                 
                 val combinedWarnings = report.warnings + dlReport.warnings
-                _uiState.update { it.copy(result = res, validationReport = report.copy(warnings = combinedWarnings), errors = emptyList()) }
+                _uiState.update { it.copy(result = res, validationReport = report.copy(warnings = combinedWarnings), errors = emptyList(), validation = null, snapshot = snap) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(errors = listOf(e.message ?: "Error")) }
+                _uiState.update { it.copy(result = null, snapshot = null, validationReport = null, errors = listOf(e.message ?: "Error")) }
                 _errorMessage.value = "Column calculation error / خطأ في حساب العمود: ${e.message}"
             }
         }
@@ -248,12 +330,13 @@ class ColumnViewModel @Inject constructor(
 
     /** Standalone DXF sheet for the current column design (null when no result). */
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
+        if (_uiState.value.resultIsStale) return null
         val res = _uiState.value.result ?: return null
         return com.civileg.app.utils.ElementDxfDrawings.columnSection(
             title = "COLUMN ${res.columnType}",
             widthMm = res.width.toDouble(),
             depthMm = res.depth.toDouble(),
-            coverMm = 40.0,
+            coverMm = com.civileg.app.domain.calculations.column.ColumnCover.mm(res.code),
             mainBarDiaMm = res.reinforcement.diameter.toDouble(),
             mainBarCount = res.reinforcement.numBars,
             tieDiaMm = res.stirrups.diameter.toDouble(),
@@ -274,7 +357,9 @@ class ColumnViewModel @Inject constructor(
 
     fun exportToPdf(context: Context, onComplete: (File?) -> Unit) {
         val state = _uiState.value
+        if (state.resultIsStale) return  // rebar draft not yet adopted by Update
         val res = state.result ?: return
+        val snap = state.snapshot ?: return
         _uiState.update { it.copy(isExporting = true) }
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
@@ -285,9 +370,10 @@ class ColumnViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = File(directory, fileName)
 
-                val h = state.height.toDoubleOrNull() ?: 3.0
-                val fcuVal = state.fcu.toDoubleOrNull() ?: 25.0
-                val fyVal = state.fy.toDoubleOrNull() ?: 400.0
+                // Use the inputs the shown result was solved with; no fallback values.
+                val h = snap.heightM
+                val fcuVal = snap.fcu
+                val fyVal = snap.fy
 
                 // Generate drawing for PDF
                 // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
@@ -301,15 +387,15 @@ class ColumnViewModel @Inject constructor(
                         barDia = res.reinforcement.diameter.toDouble(),
                         tieDia = res.stirrups.diameter.toDouble(),
                         tieSpacing = res.stirrups.spacing,
-                        cover = 40.0,
+                        cover = com.civileg.app.domain.calculations.column.ColumnCover.mm(res.code),
                         isSpiral = isSpiralTies,
                         spiralPitch = if (isSpiralTies) res.stirrups.spacing else 0.0,
-                        sectionType = if (state.isCircular) "Circular" else "Rectangular"
+                        sectionType = if (snap.isCircular) "Circular" else "Rectangular"
                     )
                 } catch (e: Exception) { e.printStackTrace(); null }
                 pendingDrawingBitmap = null  // consume after use
 
-                val codeName = when(state.designCode) {
+                val codeName = when(snap.designCode) {
                     com.civileg.app.domain.entities.DesignCode.ACI -> "ACI 318"
                     com.civileg.app.domain.entities.DesignCode.SBC -> "SBC 304"
                     else -> "ECP 203"
@@ -317,33 +403,45 @@ class ColumnViewModel @Inject constructor(
 
                 val inputsMap = mutableMapOf(
                     "Column Type" to res.columnType,
-                    "Shape" to if (state.isCircular) "Circular" else "Rectangular",
+                    "Shape" to if (snap.isCircular) "Circular" else "Rectangular",
                     "Width" to "${res.width} mm",
                     "Depth" to "${res.depth} mm",
                     "Height" to "${h} m",
-                    "Axial Load Pu" to "${String.format("%.1f", res.pu)} kN",
+                    "Axial Load (input)" to "${String.format("%.1f", snap.axialLoad)} kN",
+                    "Axial Load Pu (adjusted by combination)" to "${String.format("%.1f", snap.adjustedPu)} kN",
+                    "Moment Mx" to "${snap.mx} kN.m",
+                    "Moment My" to "${snap.my} kN.m",
+                    "Seismic Confinement" to if (snap.isSeismic) "Yes" else "No",
                     "f'cu" to "${fcuVal} MPa",
                     "fy" to "${fyVal} MPa",
-                    "Connected Slab" to state.connectedSlab,
-                    "Has Capital" to if (state.hasCap) "Yes" else "No",
+                    "Connected Slab" to snap.connectedSlab,
+                    "Has Capital" to if (snap.hasCap) "Yes" else "No",
                     "Design Code" to codeName,
-                    "Load Combination" to state.loadCombination.name
+                    "Load Combination" to snap.loadCombination.name
                 )
+                val out = com.civileg.app.domain.calculations.column.ColumnOutputModel.from(res)
                 val resultsMap = mutableMapOf(
-                    "Axial Capacity" to "${String.format("%.1f", res.axialCapacity)} kN",
+                    "Status" to out.status.label,
+                    "Axial Capacity" to out.axialCapacityText,
                     "Reinforcement" to res.reinforcement.barString,
                     "Stirrups" to res.stirrups.description,
                     "Slenderness Ratio" to String.format("%.1f", res.slenderness),
                     "Is Slender" to if (res.isSlender) "Yes" else "No",
-                    "Punching Safe" to if (res.punchingSafe) "Yes" else "No",
-                    "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
-                    "Steel Weight" to "${String.format("%.1f", res.steelWeight)} kg"
+                    "Concrete Volume" to out.concreteVolumeText,
+                    "Steel Weight (net)" to out.steelWeightText,
+                    "Bar Bending Schedule" to out.bbsStatusText
                 )
                 
                 if (res.stirrups.zones.isNotEmpty()) {
                     res.stirrups.zones.forEachIndexed { i, zone ->
                         resultsMap["Tie Distribution Zone ${i+1}"] = "${zone.name}: ${zone.description} [${String.format("%.1f", (zone.endLocation-zone.startLocation)/1000.0)}m]"
                     }
+                }
+                if (!res.axialAssessed) {
+                    resultsMap["Axial capacity status"] = "NOT ASSESSED: eccentricity is outside the ECP 203-2020 Eq. 4-12-a domain. No axial result and no safe conclusion is given."
+                }
+                if (!res.assessmentComplete) {
+                    resultsMap["Assessment status"] = "PRELIMINARY - NOT FULLY CHECKED: moment capacity is not validated for the actual bar positions. No safe conclusion is given."
                 }
                 val safetyChecks = res.safetyChecks.map { chk ->
                     GenericSafetyCheck(
@@ -354,7 +452,7 @@ class ColumnViewModel @Inject constructor(
 
                 // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
-                    titleAr = "????? ????? ????? - ${res.columnType}",
+                    titleAr = "Column Design Report - ${res.columnType}",
                     titleEn = "Column Design Report - ${res.columnType}",
                     subtitle = "Code: $codeName    ${res.width}x${res.depth}mm, H=${h}m",
                     designType = "Column (${res.columnType})",
@@ -362,10 +460,9 @@ class ColumnViewModel @Inject constructor(
                     results = resultsMap,
                     safetyChecks = safetyChecks,
                     isSafe = res.isSafe,
+                    assessmentPending = !res.assessmentComplete,
                     calculationSteps = res.calculationSteps,
-                    bbsEntries = runCatching {
-                        com.civileg.app.domain.calculations.utils.BbsGenerator.generateColumnBbs("C1", res, h * 1000.0)
-                    }.getOrDefault(emptyList()),
+                    bbsEntries = emptyList(),
                     boqRows = BoqEstimator.columnRows(res, h, "C1"),
                     drawingBitmap = drawingBitmap,
                     drawing = buildDxfDrawing(),
@@ -388,11 +485,14 @@ class ColumnViewModel @Inject constructor(
     }
 
     fun saveColumn(projectId: Long, name: String, result: CalculatorEngine.ColumnResult) {
+        val snap = _uiState.value.snapshot
+        if (snap == null || _uiState.value.resultIsStale) {
+            _errorMessage.value = "Update the rebar first: the shown design is out of date / حدّث التسليح أولاً"
+            return
+        }
         viewModelScope.launch {
             try {
-                val fcuVal = _uiState.value.fcu.toDoubleOrNull() ?: 25.0
-                val fyVal = _uiState.value.fy.toDoubleOrNull() ?: 400.0
-                repository.saveColumnDesign(projectId, name, result, fcuVal, fyVal)
+                repository.saveColumnDesign(projectId, name, result, snap.fcu, snap.fy)
             } catch (e: Exception) {
                 _errorMessage.value = "Save failed / فشل الحفظ: ${e.message}"
             }

@@ -13,20 +13,22 @@ import com.civileg.app.domain.calculations.base.FlatSlabDesign.DeflectionResult
 import kotlin.math.*
 
 /**
- * ECP 203-2025 Flat Slab Design Implementation
+ * ECP 203-2025 Flat Slab Design (empirical method, 6-2-5-5)
  *
- * References:
- *  - ECP 203 §6-5: Flat slabs (no beams)
- *  - ECP 203 §4-2-2-1: Flexural design (K-method)
- *  - ECP 203 §4-3-2: Punching shear
- *  - ECP 203 §6-5-2: Minimum thickness
- *  - ECP 203 §2-3-1: Load factors (γc=1.5, γs=1.15)
- *
- * DDM: Total static moment Mo = wu × l2 × ln² / 8
- * Distribution: column strip 60-75%, middle strip 25-40%
- * Positive/negative split per panel type
- * Punching shear: Vc = min of three expressions at d/2 perimeter
- * Deflection: Branson effective moment of inertia
+ * Sources (ECP 203-2025, Arabic edition, printed page numbers):
+ *  - Min. thickness: Table 6-3 (p.6-18); min. column size 6-2-5-2-b (p.6-18)
+ *  - Strips: Fig 6-7, column strip = Lmin/4 each side of the column axis (p.6-24)
+ *  - Total moment: Eq 6-18, M0 = (W L2 / 8)(L1 - 2D/3)^2 (p.6-24)
+ *  - Distribution: Table 6-5 and Fig 6-9 (p.6-25)
+ *  - Punching, concrete only: Eq 4-44, 4-46-a/b/c, cap 1.70 N/mm2 (p.4-25 to 4-29)
+ *  - Punching reinforcement: Eq 4-47-a/b/c, fy <= 350, h >= 250 mm (p.4-27 to 4-29)
+ *  - Moment-transfer shear (simplified): Eq 6-25, beta = 1.15 / 1.30 / 1.50 (p.6-31)
+ *  - Min. steel: 6-2-1-2-3 (p.6-6): 0.6/fy and 0.25 % (mild) or 0.15-0.18 % (high grade) of Ac
+ *  - Max. bar spacing 200 mm: 6-2-1-3-4-a (p.6-9)
+ *  - Flexure: K-method with Kmax from Table 4-1 (via ECPBeam.kMax), z <= 0.95 d (4-1-2-2-a p.4-5)
+ * NOT ASSESSED (clause not read or not implemented): deflection (4-3-1), second
+ * punching section outside a drop panel, column-head reinforcement (6-2-5-9),
+ * equivalent-frame analysis, edge-beam panels, openings (6-2-5-10).
  */
 class ECPFlatSlab : FlatSlabDesign {
 
@@ -37,6 +39,62 @@ class ECPFlatSlab : FlatSlabDesign {
         private const val ES = 200000.0      // MPa (steel modulus)
         private const val CONCRETE_UNIT_WEIGHT = 25.0  // kN/m3
         private const val STEEL_UNIT_WEIGHT = 7850.0  // kg/m3
+        private const val ASSUMED_BAR_DIA = 12.0       // d = h - cover - 6 assumes phi12
+        private const val STUD_FY_CAP = 350.0          // ECP 203-2025 p.4-27: fy of shear steel <= 350
+
+        /** ECP 203-2025 Table 6-3 (p.6-18): rows fy 350/420/500/600/700; Ln/value.
+         *  Columns: no drop (ext no edge beam, ext edge beam, interior), with drop (same). */
+        private val TABLE_6_3 = listOf(
+            350.0 to doubleArrayOf(32.0, 35.0, 35.0, 35.0, 38.0, 38.0),
+            420.0 to doubleArrayOf(30.0, 33.0, 33.0, 33.0, 36.0, 36.0),
+            500.0 to doubleArrayOf(28.0, 31.0, 31.0, 31.0, 34.0, 34.0),
+            600.0 to doubleArrayOf(24.0, 26.0, 26.0, 26.0, 29.0, 29.0),
+            700.0 to doubleArrayOf(20.0, 22.0, 22.0, 22.0, 24.0, 24.0)
+        )
+
+        /** Table 6-3 divisor; uses the highest tabulated fy not above the actual fy (conservative, no interpolation). */
+        fun table63Divisor(fy: Double, exterior: Boolean, hasDrop: Boolean): Double {
+            val row = TABLE_6_3.lastOrNull { it.first <= fy } ?: TABLE_6_3.first()
+            val col = (if (hasDrop) 3 else 0) + (if (exterior) 0 else 2)
+            return row.second[col]
+        }
+
+        /** Table 6-5 fractions of the total panel moment M0 (p.6-25). */
+        data class Table65(
+            val colNegExt: Double, val colPos: Double, val colNegInt: Double,
+            val midNegExt: Double, val midPos: Double, val midNegInt: Double
+        )
+        /** Interior bay (both supports interior). */
+        val BAY_INTERIOR = Table65(0.45, 0.25, 0.45, 0.15, 0.15, 0.15)
+        /** Exterior bay, type a (no edge beam): ext-neg 0.30, pos 0.50, int-neg 0.70 of M0 (Fig 6-9). */
+        val BAY_EXTERIOR = Table65(0.25, 0.30, 0.50, 0.05, 0.20, 0.20)
+
+        private fun env(a: Table65, b: Table65) = Table65(
+            max(a.colNegExt, b.colNegExt), max(a.colPos, b.colPos), max(a.colNegInt, b.colNegInt),
+            max(a.midNegExt, b.midNegExt), max(a.midPos, b.midPos), max(a.midNegInt, b.midNegInt)
+        )
+
+        /** Edge panel orientation is not an input: envelope of exterior and interior bay. Corner: exterior both ways. */
+        fun table65For(panelType: PanelType): Table65 = when (panelType) {
+            PanelType.INTERIOR -> BAY_INTERIOR
+            PanelType.EDGE -> env(BAY_INTERIOR, BAY_EXTERIOR)
+            PanelType.CORNER -> BAY_EXTERIOR
+        }
+
+        /** Eq 6-18: M0 = (W L2/8)(L1 - 2D/3)^2, W in kN/m2, lengths in m, result kN.m. */
+        fun totalMomentEq618(w: Double, l1: Double, l2: Double, d: Double): Double {
+            val e = l1 - 2.0 * d / 3.0
+            return w * l2 / 8.0 * e * e
+        }
+
+        /** Eq 6-25 beta: 1.15 interior, 1.30 edge, 1.50 corner (p.6-31). */
+        fun betaEq625(panelType: PanelType) = when (panelType) {
+            PanelType.INTERIOR -> 1.15; PanelType.EDGE -> 1.30; PanelType.CORNER -> 1.50
+        }
+        /** Share of the panel load carried by the column: 1, 1/2, 1/4. */
+        fun tributaryShare(panelType: PanelType) = when (panelType) {
+            PanelType.INTERIOR -> 1.0; PanelType.EDGE -> 0.5; PanelType.CORNER -> 0.25
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -112,260 +170,188 @@ class ECPFlatSlab : FlatSlabDesign {
             totalDeadLoad, input.liveLoad, wu
         ))
 
-        // ── 4. Clear spans (mm → m for Mo calc) ───────────────────
-        val lnX = input.lx - input.columnWidth   // mm
+        // ── 4. Spans, strips, applicability (ECP 203-2025 6-2-5-5-a, Fig 6-7) ─────
+        val lxM = input.lx / 1000.0
+        val lyM = input.ly / 1000.0
+        val lnX = input.lx - input.columnWidth   // mm, clear span (reporting / min. thickness)
         val lnY = input.ly - input.columnDepth   // mm
-        val lnXm = lnX / 1000.0                   // m
-        val lnYm = lnY / 1000.0
-        codeNotes.add(String.format(
-            "lnX = %.0f - %.0f = %.0f mm",
-            input.lx, input.columnWidth, lnX
-        ))
-        codeNotes.add(String.format(
-            "lnY = %.0f - %.0f = %.0f mm",
-            input.ly, input.columnDepth, lnY
-        ))
+        val lMin = min(input.lx, input.ly)
+        val lMax = max(input.lx, input.ly)
+        codeNotes.add(String.format("Clear spans: lnX = %.0f mm, lnY = %.0f mm", lnX, lnY))
 
-        // ── 5. Static moments Mo = wu × l2 × ln² / 8 ──────────────
-        val MoX = calculateStaticMoment(wu, lnXm, lnYm)
-        val MoY = calculateStaticMoment(wu, lnYm, lnXm)
-        codeNotes.add(String.format(
-            "MoX = %.2f × %.2f × %.2f² / 8 = %.1f kN.m", wu, lnYm, lnXm, MoX
-        ))
-        codeNotes.add(String.format(
-            "MoY = %.2f × %.2f × %.2f² / 8 = %.1f kN.m", wu, lnXm, lnYm, MoY
-        ))
+        var applicable = true
+        if (lMax / lMin > 1.3) {
+            applicable = false
+            warnings.add(String.format(
+                "Empirical method not applicable: aspect ratio %.2f > 1.3 (ECP 203-2025 6-2-5-5-a, p.6-24). Moments NOT ASSESSED by this method.",
+                lMax / lMin))
+        }
+        if (input.liveLoad > 2.0 * totalDeadLoad) {
+            applicable = false
+            warnings.add("Empirical method not applicable: live load > 2 x dead load (6-2-5-5-a, p.6-24).")
+        }
+        codeNotes.add("Applicability also needs >= 3 rows of panels and adjacent spans within 10 % (6-2-5-5-a); not an input, assumed by the user")
+        if (input.designMethod == DesignMethod.EFM) {
+            warnings.add("Equivalent-frame method (Table 6-4) is not implemented: results use the empirical method (6-2-5-5).")
+        }
+        if (input.panelType == PanelType.EDGE) {
+            codeNotes.add("Edge panel: orientation is not an input, so the larger of exterior-bay and interior-bay Table 6-5 shares is used per location (envelope); no edge beam assumed (type a)")
+        }
+        // Minimum column dimension, 6-2-5-2-b (p.6-18)
+        val hStoryMm = input.storyHeight * 1000.0
+        val minColX = max(max(input.lx / 20.0, hStoryMm / 15.0), 300.0)
+        val minColY = max(max(input.ly / 20.0, hStoryMm / 15.0), 300.0)
+        if (input.columnWidth < minColX || input.columnDepth < minColY) {
+            warnings.add(String.format(
+                "Column below ECP 203-2025 6-2-5-2-b minimum (max of L/20, H/15, 300 mm): need %.0f x %.0f mm, have %.0f x %.0f mm",
+                minColX, minColY, input.columnWidth, input.columnDepth))
+        }
 
-        // ── 6. Moment distribution coefficients ───────────────────
-        val coeffs = getMomentCoefficients(input.panelType)
-        codeNotes.add(String.format(
-            "Coefficients (col strip): -M_ext=%.0f%%, +M=%.0f%%, -M_int=%.0f%%",
-            coeffs.colNegExterior * 100, coeffs.colPositive * 100, coeffs.colNegInterior * 100
-        ))
-
-        // ── 7. Effective depths ────────────────────────────────────
-        val dSlab = input.slabThickness - input.clearCover - 6.0  // assume 12mm bar
-        val dNeg = if (input.dropThickness > 0) {
-            input.slabThickness + input.dropThickness - input.clearCover - 6.0
-        } else dSlab
+        // ── 5. Effective depths (phi12 assumed, as before) ────────────
+        val dSlab = input.slabThickness - input.clearCover - ASSUMED_BAR_DIA / 2.0
+        val dropOk = input.dropThickness > 0 && input.dropSizeX >= input.lx / 3.0 && input.dropSizeY >= input.ly / 3.0 &&
+            input.dropThickness >= input.slabThickness / 4.0 &&
+            input.dropSizeX <= lMin / 2.0 + 1e-6 && input.dropSizeY <= lMin / 2.0 + 1e-6
+        if (input.dropThickness > 0 && !dropOk) {
+            warnings.add("Drop panel does not meet 6-2-5-2-d (p.6-18): thickness below slab >= t/4, extent >= L/6 each side and <= L/4 of the smaller span (or extent not given). Drop is ignored for flexure.")
+        }
+        val dNeg = if (dropOk) dSlab + input.dropThickness else dSlab
         val dPos = dSlab
-        codeNotes.add(String.format("d (positive) = %.0f mm", dPos))
-        if (input.dropThickness > 0) {
-            codeNotes.add(String.format("d (negative, with drop) = %.0f mm", dNeg))
+        codeNotes.add(String.format("d (positive) = %.0f mm, d (negative column strip) = %.0f mm", dPos, dNeg))
+
+        // ── 6. Total moments, Eq 6-18 ─────────────────────────────
+        val m0X = totalMomentEq618(wu, lxM, lyM, input.columnWidth / 1000.0)
+        val m0Y = totalMomentEq618(wu, lyM, lxM, input.columnDepth / 1000.0)
+        codeNotes.add(String.format("M0X = (%.2f x %.2f / 8)(%.2f - 2x%.2f/3)^2 = %.1f kN.m (Eq 6-18)", wu, lyM, lxM, input.columnWidth / 1000.0, m0X))
+        codeNotes.add(String.format("M0Y = (%.2f x %.2f / 8)(%.2f - 2x%.2f/3)^2 = %.1f kN.m (Eq 6-18)", wu, lxM, lyM, input.columnDepth / 1000.0, m0Y))
+        val t65 = table65For(input.panelType)
+        codeNotes.add(String.format(
+            "Table 6-5 shares of M0: col strip -ext %.2f, +%.2f, -int %.2f; mid strip -ext %.2f, +%.2f, -int %.2f",
+            t65.colNegExt, t65.colPos, t65.colNegInt, t65.midNegExt, t65.midPos, t65.midNegInt))
+
+        // ── 7. Strip widths: column strip = Lmin/4 each side (Fig 6-7) ───
+        val colStripWidth = lMin / 2.0
+        val midStripWidthX = input.ly - colStripWidth   // strips for the X-direction span, width measured along Y
+        val midStripWidthY = input.lx - colStripWidth
+        codeNotes.add(String.format("Column strip = %.0f mm; middle strip X-dir = %.0f mm, Y-dir = %.0f mm (Fig 6-7)", colStripWidth, midStripWidthX, midStripWidthY))
+        if (dropOk) codeNotes.add("With a drop panel the column strip equals the drop width (6-2-5-3): not applied, Lmin/2 used")
+
+        val overReinf = mutableListOf<String>()
+        fun strips(m0: Double, dp: Double, dn: Double, midW: Double, tag: String): DirResult {
+            val cNE = m0 * t65.colNegExt; val cP = m0 * t65.colPos; val cNI = m0 * t65.colNegInt
+            val mNE = m0 * t65.midNegExt; val mP = m0 * t65.midPos; val mNI = m0 * t65.midNegInt
+            codeNotes.add(String.format("%s Col strip: -ext=%.1f, +=%.1f, -int=%.1f; Mid strip: -ext=%.1f, +=%.1f, -int=%.1f kN.m", tag, cNE, cP, cNI, mNE, mP, mNI))
+            val h = input.slabThickness
+            return DirResult(
+                cNE, cP, cNI, mNE, mP, mNI,
+                designRebarForResult(max(cNE, cNI), input.fcu, input.fy, dn, colStripWidth, h, input.clearCover, warnings, codeNotes, overReinf, "Col-Top-$tag"),
+                designRebarForResult(cP, input.fcu, input.fy, dp, colStripWidth, h, input.clearCover, warnings, codeNotes, overReinf, "Col-Bot-$tag"),
+                designRebarForResult(max(mNE, mNI), input.fcu, input.fy, dp, midW, h, input.clearCover, warnings, codeNotes, overReinf, "Mid-Top-$tag"),
+                designRebarForResult(mP, input.fcu, input.fy, dp, midW, h, input.clearCover, warnings, codeNotes, overReinf, "Mid-Bot-$tag")
+            )
         }
+        // X bars lie in the outer layer; Y bars sit one bar diameter deeper.
+        val dirX = strips(m0X, dPos, dNeg, midStripWidthX, "X")
+        val dirY = strips(m0Y, dPos - ASSUMED_BAR_DIA, dNeg - ASSUMED_BAR_DIA, midStripWidthY, "Y")
+        // Y mid-strip top uses slab depth minus one bar layer (no drop in the middle strip)
+        val colPosX = dirX.cP; val colNegExtX = dirX.cNE; val colNegIntX = dirX.cNI
+        val midPosX = dirX.mP; val midNegExtX = dirX.mNE; val midNegIntX = dirX.mNI
+        val colTopRebarX = dirX.colTop; val colBotRebarX = dirX.colBot
+        val midTopRebarX = dirX.midTop; val midBotRebarX = dirX.midBot
+        val colStripWidthX = colStripWidth
+        val colStripWidthY = colStripWidth
 
-        // ── 8. Column strip / middle strip widths ─────────────────
-        val colStripWidthX = getColumnStripWidth(lnY, input.columnDepth, input.panelType)
-        val midStripWidthX = lnY - colStripWidthX
-        val colStripWidthY = getColumnStripWidth(lnX, input.columnWidth, input.panelType)
-        val midStripWidthY = lnX - colStripWidthY
+        // ── 8. Punching shear (Eq 4-44/4-46, Eq 6-25 for moment transfer) ──
+        val share = tributaryShare(input.panelType)
+        val q = wu * lxM * lyM * share            // kN, design shear at the column (6-2-5-7-3)
+        val betaM = betaEq625(input.panelType)
+        val Vu = q * betaM
         codeNotes.add(String.format(
-            "Col strip width X = %.0f mm, Mid strip width X = %.0f mm",
-            colStripWidthX, midStripWidthX
-        ))
-
-        // ── 9. Design X-direction (primary — shorter span) ────────
-        // Moment factors for DDM per ECP 203 / ACI 318 Table 8.10.4.1
-        // Interior panel: -M_ext = 0.65Mo (but for col strip only)
-        // Positive: 0.35Mo, Negative: 0.65Mo
-        // Edge panel: different distribution
-        val momentFactorsX = getMomentFactorsForPanel(input.panelType)
-
-        val mNegExtX = MoX * momentFactorsX.negExterior  // total at exterior support
-        val mPosX = MoX * momentFactorsX.positive          // total at midspan
-        val mNegIntX = MoX * momentFactorsX.negInterior    // total at interior support
-
-        // Column strip X moments
-        val colNegExtX = mNegExtX * coeffs.colNegExterior
-        val colPosX = mPosX * coeffs.colPositive
-        val colNegIntX = mNegIntX * coeffs.colNegInterior
-
-        // Middle strip X moments
-        val midNegExtX = mNegExtX * coeffs.midNegExterior
-        val midPosX = mPosX * coeffs.midPositive
-        val midNegIntX = mNegIntX * coeffs.midNegInterior
-
-        codeNotes.add(String.format(
-            "X-dir Col strip: -M_ext=%.1f, +M=%.1f, -M_int=%.1f kN.m",
-            colNegExtX, colPosX, colNegIntX
-        ))
-        codeNotes.add(String.format(
-            "X-dir Mid strip: -M_ext=%.1f, +M=%.1f, -M_int=%.1f kN.m",
-            midNegExtX, midPosX, midNegIntX
-        ))
-
-        // Design reinforcement for column strip X
-        val colTopRebarX = designRebarForResult(
-            maxOf(colNegExtX, colNegIntX), input.fcu, input.fy,
-            dNeg, colStripWidthX, input.clearCover, warnings, codeNotes, "Col-Top-X"
-        )
-        val colBotRebarX = designRebarForResult(
-            colPosX, input.fcu, input.fy,
-            dPos, colStripWidthX, input.clearCover, warnings, codeNotes, "Col-Bot-X"
-        )
-
-        // Design reinforcement for middle strip X
-        val midTopRebarX = designRebarForResult(
-            maxOf(midNegExtX, midNegIntX), input.fcu, input.fy,
-            dSlab, midStripWidthX, input.clearCover, warnings, codeNotes, "Mid-Top-X"
-        )
-        val midBotRebarX = designRebarForResult(
-            midPosX, input.fcu, input.fy,
-            dSlab, midStripWidthX, input.clearCover, warnings, codeNotes, "Mid-Bot-X"
-        )
-
-        // ── 10. Punching shear ─────────────────────────────────────
-        // Tributary area at interior column = (lx/2 × ly/2)
-        val tributaryAreaX = (input.lx / 1000.0) / 2.0  // m
-        val tributaryAreaY = (input.ly / 1000.0) / 2.0
-        val Vu = wu * tributaryAreaX * tributaryAreaY  // kN (factored)
-        codeNotes.add(String.format(
-            "Tributary area = %.2f × %.2f = %.2f m²",
-            tributaryAreaX, tributaryAreaY, tributaryAreaX * tributaryAreaY
-        ))
-        codeNotes.add(String.format("Vu = %.2f × %.2f = %.1f kN", wu, tributaryAreaX * tributaryAreaY, Vu))
-
-        val punchingResult = checkPunchingShear(
+            "Column load Q = %.2f x %.2f x %.2f x %.2f = %.1f kN; beta = %.2f (Eq 6-25); Vu = Q x beta = %.1f kN",
+            wu, lxM, lyM, share, q, betaM, Vu))
+        val punchingResult = punchingCheck(
             vu = Vu, fcu = input.fcu, fy = input.fy,
-            slabThickness = input.slabThickness,
-            dropThickness = input.dropThickness,
-            columnWidth = input.columnWidth,
-            columnDepth = input.columnDepth,
-            cover = input.clearCover
+            slabThickness = input.slabThickness, dropThickness = if (dropOk) input.dropThickness else 0.0,
+            columnWidth = input.columnWidth, columnDepth = input.columnDepth,
+            cover = input.clearCover, panelType = input.panelType
         )
-
-        safetyChecks.add(SafetyCheckItem(
-            "Punching Shear", punchingResult.vu, punchingResult.vc,
-            "kN", punchingResult.isSafe
-        ))
-
+        safetyChecks.add(SafetyCheckItem("Punching Shear", punchingResult.vu, punchingResult.vc, "kN", punchingResult.isSafe))
         if (!punchingResult.isSafe) {
-            warnings.add("Punching shear FAILED — increase slab thickness, add drop panel, or shear studs")
+            warnings.add("Punching shear FAILED (ECP 203-2025 4-2-2-3): increase thickness or column size, add a drop panel (re-check its outer section), or revise reinforcement")
         }
         codeNotes.add(String.format(
-            "Punching: Vu=%.1f kN, Vc=%.1f kN, bo=%.0f mm, U=%.0f%%",
-            punchingResult.vu, punchingResult.vc, punchingResult.bo,
-            punchingResult.utilizationRatio * 100
-        ))
+            "Punching: Vu=%.1f kN, Vc(concrete)=%.1f kN, bo=%.0f mm, d=%.0f mm, U=%.0f%%",
+            punchingResult.vu, punchingResult.vc, punchingResult.bo, punchingResult.d, punchingResult.utilizationRatio * 100))
         if (punchingResult.needsReinforcement && punchingResult.studDia > 0) {
-            codeNotes.add(String.format(
-                "Shear studs: φ%d @ %.0f mm, %d rows",
-                punchingResult.studDia.toInt(), punchingResult.studSpacing, punchingResult.studRows
-            ))
+            codeNotes.add(String.format("Shear studs (Eq 4-47, fy<=350): phi%d @ %.0f mm, %d lines, total capacity %.0f kN",
+                punchingResult.studDia.toInt(), punchingResult.studSpacing, punchingResult.studRows, punchingResult.vsProvided))
         }
+        if (dropOk) warnings.add("Second punching section outside the drop panel is NOT ASSESSED")
+        codeNotes.add("Column-head reinforcement (6-2-5-9) and openings (6-2-5-10) are NOT ASSESSED")
 
-        // ── 11. Deflection check ────────────────────────────────────
-        val serviceMoment = colPosX / 1.4  // approximate service moment
-        val deflectionResult = checkDeflection(
-            span = lnX, slabThickness = input.slabThickness,
-            fcu = input.fcu, fy = input.fy,
-            serviceMoment = serviceMoment,
-            effectiveDepth = dSlab,
-            providedAs = colBotRebarX.providedArea
-        )
+        // ── 9. Deflection: NOT ASSESSED ───────────────────────────
+        warnings.add("Deflection NOT ASSESSED: ECP 203-2025 4-3-1 limits and effective-inertia method were not read; Table 6-3 thickness alone does not replace the 4-3-1 check")
 
-        safetyChecks.add(SafetyCheckItem(
-            "Deflection", deflectionResult.longTerm, deflectionResult.allowable,
-            "mm", deflectionResult.isSafe
-        ))
-        if (!deflectionResult.isSafe) warnings.add("Deflection exceeds allowable limit")
-        codeNotes.add(String.format(
-            "Deflection: δ_lt=%.2f mm, δ_allow=%.2f mm → %s",
-            deflectionResult.longTerm, deflectionResult.allowable,
-            if (deflectionResult.isSafe) "OK" else "FAIL"
-        ))
-
-        // ── 12. Minimum thickness check ─────────────────────────────
-        val minThk = getMinimumThickness(lnX, lnY, input.dropThickness > 0, input.fcu, input.fy)
+        // ── 10. Minimum thickness, Table 6-3 ──────────────────────
+        val exteriorPanel = input.panelType != PanelType.INTERIOR
+        val minThk = getMinimumThickness(lnX, lnY, dropOk, input.fcu, input.fy, exteriorPanel)
         val minThkOk = input.slabThickness >= minThk
-        safetyChecks.add(SafetyCheckItem(
-            "Min. Thickness", input.slabThickness, minThk,
-            "mm", minThkOk
-        ))
-        if (!minThkOk) warnings.add("Slab thickness below ECP 203 minimum")
+        safetyChecks.add(SafetyCheckItem("Min. Thickness", input.slabThickness, minThk, "mm", minThkOk))
+        if (!minThkOk) warnings.add("Slab thickness below ECP 203-2025 Table 6-3 minimum")
+        val divisor = table63Divisor(input.fy, exteriorPanel, dropOk)
         codeNotes.add(String.format(
-            "Min thickness = %.0f mm, provided = %.0f mm → %s",
-            minThk, input.slabThickness, if (minThkOk) "OK" else "FAIL"
-        ))
+            "Min thickness (Table 6-3 p.6-18) = Ln/%.0f = %.0f/%.0f = %.0f mm, provided %.0f mm -> %s (fy row %.0f used; no interpolation)",
+            divisor, max(lnX, lnY), divisor, minThk, input.slabThickness, if (minThkOk) "OK" else "FAIL",
+            TABLE_6_3.lastOrNull { it.first <= input.fy }?.first ?: TABLE_6_3.first().first))
 
-        // ── 13. Drop panel check ────────────────────────────────────
+        // ── 11. Drop panel ──────────────────────────────────────
         val dropRequired = !punchingResult.isSafe && !punchingResult.needsReinforcement
-        val recommendedDropThickness = if (dropRequired) {
-            max(input.slabThickness / 4.0, 50.0)
-        } else input.dropThickness
-
+        val recommendedDropThickness = if (dropRequired) max(input.slabThickness / 4.0, 50.0) else input.dropThickness
         if (input.dropThickness > 0) {
-            val minDropThk = input.slabThickness / 4.0
-            if (input.dropThickness < minDropThk) {
-                warnings.add(String.format(
-                    "Drop thickness %.0f < minimum %.0f mm",
-                    input.dropThickness, minDropThk
-                ))
-            }
-            codeNotes.add(String.format(
-                "Drop panel: h_d=%.0f mm (min=%.0f mm)",
-                input.dropThickness, minDropThk
-            ))
+            codeNotes.add(String.format("Drop panel: thickness below slab %.0f mm (min t/4 = %.0f mm, 6-2-5-2-d)", input.dropThickness, input.slabThickness / 4.0))
         }
 
-        // ── 14. Quantities ─────────────────────────────────────────
-        val panelArea = (input.lx / 1000.0) * (input.ly / 1000.0)  // m2
-        val slabVol = panelArea * input.slabThickness / 1000.0    // m3
+        // ── 12. Quantities (upper-bound estimate: no curtailment, laps or hooks) ──
+        val panelArea = lxM * lyM
+        val slabVol = panelArea * input.slabThickness / 1000.0
         val dropVol = if (input.dropThickness > 0 && input.dropSizeX > 0) {
             (input.dropSizeX / 1000.0) * (input.dropSizeY / 1000.0) * input.dropThickness / 1000.0
         } else 0.0
         val concreteVolume = slabVol + dropVol
+        val asX = colTopRebarX.providedArea + colBotRebarX.providedArea + midTopRebarX.providedArea + midBotRebarX.providedArea
+        val asY = dirY.colTop.providedArea + dirY.colBot.providedArea + dirY.midTop.providedArea + dirY.midBot.providedArea
+        // mm2 x mm = mm3; 1e9 mm3 per m3
+        val steelWeight = (asX * input.lx + asY * input.ly) / 1e9 * STEEL_UNIT_WEIGHT
+        codeNotes.add(String.format("Concrete volume = %.3f m3/panel; steel (upper bound) = %.1f kg/panel", concreteVolume, steelWeight))
 
-        // Steel weight estimate
-        val totalAsX = colTopRebarX.providedArea + colBotRebarX.providedArea +
-                       midTopRebarX.providedArea + midBotRebarX.providedArea
-        val totalAsY = totalAsX * (lnYm / lnXm).coerceAtLeast(0.5)  // approximate Y
-        val totalAs = totalAsX + totalAsY
-        val steelWeight = totalAs * (input.lx + input.ly) / 1e6 * STEEL_UNIT_WEIGHT  // kg
-
-        codeNotes.add(String.format(
-            "Concrete volume = %.3f m³/panel", concreteVolume
-        ))
-        codeNotes.add(String.format(
-            "Steel weight ≈ %.1f kg/panel", steelWeight
-        ))
-
-        // ── 15. Flexure (reinforcement) checks ──────────────────────
+        // ── 13. Flexure checks, both directions ───────────────────
         val flexGroups = listOf(
-            "Col-strip top (X)" to colTopRebarX,
-            "Col-strip bottom (X)" to colBotRebarX,
-            "Mid-strip top (X)" to midTopRebarX,
-            "Mid-strip bottom (X)" to midBotRebarX
+            "Col-strip top (X)" to colTopRebarX, "Col-strip bottom (X)" to colBotRebarX,
+            "Mid-strip top (X)" to midTopRebarX, "Mid-strip bottom (X)" to midBotRebarX,
+            "Col-strip top (Y)" to dirY.colTop, "Col-strip bottom (Y)" to dirY.colBot,
+            "Mid-strip top (Y)" to dirY.midTop, "Mid-strip bottom (Y)" to dirY.midBot
         )
         var flexUtil = 0.0
         flexGroups.forEach { (label, r) ->
             val u = if (r.providedArea > 0) r.requiredArea / r.providedArea else 0.0
             flexUtil = maxOf(flexUtil, u)
-            safetyChecks.add(SafetyCheckItem(label, r.requiredArea, r.providedArea, "mm²", r.providedArea >= r.requiredArea))
+            safetyChecks.add(SafetyCheckItem(label, r.requiredArea, r.providedArea, "mm2", r.providedArea >= r.requiredArea))
         }
-        val flexureOk = flexGroups.all { it.second.providedArea >= it.second.requiredArea }
-        if (!flexureOk) warnings.add("Reinforcement insufficient in one or more strips")
+        val flexureOk = flexGroups.all { it.second.providedArea >= it.second.requiredArea } && overReinf.isEmpty()
+        if (!flexureOk) warnings.add("Flexure not satisfied in one or more strips (reinforcement insufficient or K > Kmax: increase thickness)")
 
-        // ── 16. Overall utilization ─────────────────────────────────
-        val maxUtil = maxOf(
-            punchingResult.utilizationRatio,
-            deflectionResult.ratio,
-            flexUtil
-        )
-        val overallSafe = punchingResult.isSafe && deflectionResult.isSafe && minThkOk && flexureOk
+        val maxUtil = maxOf(punchingResult.utilizationRatio, flexUtil, if (minThk > 0) minThk / input.slabThickness else 0.0)
+        val overallSafe = punchingResult.isSafe && minThkOk && flexureOk && applicable
 
-        // Build punching reinforcement result
         val punchingReinforcement = if (punchingResult.needsReinforcement && punchingResult.studDia > 0) {
             val studArea = PI * punchingResult.studDia * punchingResult.studDia / 4
-            val studsPerRow = max(4, (punchingResult.bo / punchingResult.studSpacing).toInt())
+            val studsPerRow = max(4, ceil(punchingResult.bo / punchingResult.studSpacing).toInt())
             val totalStuds = studsPerRow * punchingResult.studRows
-            val totalAs = studArea * totalStuds
+            val totalAsStuds = studArea * totalStuds
             RebarResult(
-                bars = totalStuds,
-                diameter = punchingResult.studDia.toInt(),
+                bars = totalStuds, diameter = punchingResult.studDia.toInt(),
                 spacing = punchingResult.studSpacing.toInt(),
-                providedArea = totalAs,
-                requiredArea = totalAs * 0.9,
+                providedArea = totalAsStuds, requiredArea = totalAsStuds * 0.9,
                 ratio = 1.0 / punchingResult.utilizationRatio
             )
         } else null
@@ -375,8 +361,8 @@ class ECPFlatSlab : FlatSlabDesign {
             utilizationRatio = maxUtil,
             totalDeadLoad = totalDeadLoad,
             totalFactoredLoad = wu,
-            panelMomentX = MoX,
-            panelMomentY = MoY,
+            panelMomentX = m0X,
+            panelMomentY = m0Y,
             columnStripMomentPos = colPosX,
             columnStripMomentNeg = maxOf(colNegExtX, colNegIntX),
             middleStripMomentPos = midPosX,
@@ -394,9 +380,9 @@ class ECPFlatSlab : FlatSlabDesign {
             punchingReinforcement = punchingReinforcement,
             dropRequired = dropRequired,
             dropThickness = recommendedDropThickness,
-            deflectionOk = deflectionResult.isSafe,
-            deflection = deflectionResult.longTerm,
-            allowableDeflection = deflectionResult.allowable,
+            deflectionOk = false,
+            deflection = 0.0,
+            allowableDeflection = 0.0,
             concreteVolumePerPanel = concreteVolume,
             steelWeightPerPanel = steelWeight,
             warnings = warnings,
@@ -404,19 +390,33 @@ class ECPFlatSlab : FlatSlabDesign {
             safetyChecks = safetyChecks,
             calculationSteps = flatSlabCalculationSteps(
                 code = DesignCode.ECP,
-                wu = wu, moX = MoX, moY = MoY,
+                wu = wu, moX = m0X, moY = m0Y,
                 columnStripMomentNeg = maxOf(colNegExtX, colNegIntX),
                 columnStripMomentPos = colPosX,
                 columnStripTopRebar = colTopRebarX,
                 columnStripBotRebar = colBotRebarX,
                 punchingVu = punchingResult.vu, punchingVc = punchingResult.vc,
                 punchingOk = punchingResult.isSafe,
-                deflection = deflectionResult.longTerm,
-                allowableDeflection = deflectionResult.allowable,
-                deflectionOk = deflectionResult.isSafe
-            )
+                deflection = 0.0,
+                allowableDeflection = 0.0,
+                deflectionOk = false,
+                punchingStuds = punchingResult.needsReinforcement && punchingResult.studDia > 0,
+                deflectionAssessed = false
+            ),
+            columnStripTopRebarY = dirY.colTop,
+            columnStripBotRebarY = dirY.colBot,
+            middleStripTopRebarY = dirY.midTop,
+            middleStripBotRebarY = dirY.midBot,
+            deflectionAssessed = false
         )
     }
+
+    private data class DirResult(
+        val cNE: Double, val cP: Double, val cNI: Double,
+        val mNE: Double, val mP: Double, val mNI: Double,
+        val colTop: RebarResult, val colBot: RebarResult,
+        val midTop: RebarResult, val midBot: RebarResult
+    )
 
     // ══════════════════════════════════════════════════════════════
     // STATIC MOMENT — DDM  Mo = wu × l2 × ln² / 8
@@ -430,404 +430,220 @@ class ECPFlatSlab : FlatSlabDesign {
     }
 
     // ══════════════════════════════════════════════════════════════
-    // MOMENT FACTORS PER PANEL TYPE
+    // MOMENT SHARES (interface view of Table 6-5)
     // ══════════════════════════════════════════════════════════════
 
-    /**
-     * Total moment distribution: exterior neg, positive, interior neg
-     * as fractions of Mo. Per ACI 318 Table 8.10.4.1 (adapted for ECP).
-     * For flat slabs without beams (α = 0):
-     *   Interior: -M_ext=0, +M=0.35, -M_int=0.65
-     *   Edge:     -M_ext=0.26, +M=0.52, -M_int=0.70
-     *   Corner:   -M_ext=0.30, +M=0.50, -M_int=0.70
-     */
-    private data class MomentFactors(
-        val negExterior: Double,
-        val positive: Double,
-        val negInterior: Double
-    )
-
-    private fun getMomentFactorsForPanel(panelType: PanelType): MomentFactors {
-        return when (panelType) {
-            PanelType.INTERIOR -> MomentFactors(
-                negExterior = 0.00,   // no exterior support in interior
-                positive = 0.35,
-                negInterior = 0.65
-            )
-            PanelType.EDGE -> MomentFactors(
-                negExterior = 0.26,
-                positive = 0.52,
-                negInterior = 0.70
-            )
-            PanelType.CORNER -> MomentFactors(
-                negExterior = 0.30,
-                positive = 0.50,
-                negInterior = 0.70
-            )
-        }
-    }
-
-    // ══════════════════════════════════════════════════════════════
-    // MOMENT DISTRIBUTION COEFFICIENTS
-    // ══════════════════════════════════════════════════════════════
-
+    /** Column-strip share of each total negative/positive moment, from Table 6-5 (p.6-25). */
     override fun getMomentCoefficients(
         panelType: PanelType,
         hasBeams: Boolean
     ): FlatSlabDesign.MomentCoefficients {
-        // For flat slabs without beams (α = 0)
-        // Column strip takes larger portion: 60-75% of total moment
-        // Per ECP 203 / ACI 318 Table 8.10.4.2
-        return when (panelType) {
-            PanelType.INTERIOR -> {
-                // Interior panel, no beams
-                // Column strip: 75% of -M, 60% of +M
-                // Middle strip: remainder (25% of -M, 40% of +M)
-                MomentCoefficients(
-                    colNegExterior = 0.75,
-                    colPositive = 0.60,
-                    colNegInterior = 0.75,
-                    midNegExterior = 0.25,
-                    midPositive = 0.40,
-                    midNegInterior = 0.25
-                )
-            }
-            PanelType.EDGE -> {
-                // Edge panel — exterior edge without beams
-                // Exterior negative: 100% to column strip (no middle strip at edge)
-                // Positive: column 60%, mid 40%
-                // Interior negative: column 75%, mid 25%
-                MomentCoefficients(
-                    colNegExterior = 1.00,
-                    colPositive = 0.60,
-                    colNegInterior = 0.75,
-                    midNegExterior = 0.00,
-                    midPositive = 0.40,
-                    midNegInterior = 0.25
-                )
-            }
-            PanelType.CORNER -> {
-                // Corner panel — both edges exterior
-                // All negative moments to column strip
-                MomentCoefficients(
-                    colNegExterior = 1.00,
-                    colPositive = 0.60,
-                    colNegInterior = 1.00,
-                    midNegExterior = 0.00,
-                    midPositive = 0.40,
-                    midNegInterior = 0.00
-                )
-            }
-        }
+        val t = table65For(panelType)
+        fun sh(c: Double, m: Double) = if (c + m > 0) c / (c + m) else 1.0
+        return MomentCoefficients(
+            colNegExterior = sh(t.colNegExt, t.midNegExt),
+            colPositive = sh(t.colPos, t.midPos),
+            colNegInterior = sh(t.colNegInt, t.midNegInt),
+            midNegExterior = 1.0 - sh(t.colNegExt, t.midNegExt),
+            midPositive = 1.0 - sh(t.colPos, t.midPos),
+            midNegInterior = 1.0 - sh(t.colNegInt, t.midNegInt)
+        )
     }
 
-    // ══════════════════════════════════════════════════════════════
-    // COLUMN STRIP WIDTH
-    // ══════════════════════════════════════════════════════════════
-
+    /** Column strip = Lmin/4 each side of the column axis, width Lmin/2 (Fig 6-7, p.6-24). Pass the shorter span. */
     override fun getColumnStripWidth(
         l2: Double, columnSize: Double, panelType: PanelType
-    ): Double {
-        // ECP 203 §6-5 / ACI 8.4.1.5
-        // Column strip = l2/2 total width, centered on column line
-        val halfL2 = l2 / 2.0
-        return min(halfL2, l2 / 2.0)
-    }
+    ): Double = l2 / 2.0
 
     // ══════════════════════════════════════════════════════════════
-    // PUNCHING SHEAR — ECP 203 §4-3-2
+    // PUNCHING SHEAR: ECP 203-2025 4-2-2-3 (p.4-25 to 4-29)
     // ══════════════════════════════════════════════════════════════
 
+    /** Interface entry: interior column, vu already includes any moment-transfer factor. */
     override fun checkPunchingShear(
         vu: Double, fcu: Double, fy: Double,
         slabThickness: Double, dropThickness: Double,
         columnWidth: Double, columnDepth: Double,
         cover: Double
+    ): FlatSlabDesign.PunchingShearResult =
+        punchingCheck(vu, fcu, fy, slabThickness, dropThickness, columnWidth, columnDepth, cover, PanelType.INTERIOR)
+
+    fun punchingCheck(
+        vu: Double, fcu: Double, fy: Double,
+        slabThickness: Double, dropThickness: Double,
+        columnWidth: Double, columnDepth: Double,
+        cover: Double, panelType: PanelType
     ): FlatSlabDesign.PunchingShearResult {
-        // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("slabThickness", slabThickness)
         InputGuard.positive("columnWidth", columnWidth)
         InputGuard.positive("columnDepth", columnDepth)
 
-        // Effective depth at critical section
-        val d = if (dropThickness > 0) {
-            slabThickness + dropThickness - cover - 6.0
-        } else {
-            slabThickness - cover - 6.0
+        val h = slabThickness + max(dropThickness, 0.0)
+        val d = h - cover - ASSUMED_BAR_DIA / 2.0
+        val b1 = columnWidth + d
+        val b2 = columnDepth + d
+        // Critical section at d/2 (Fig 4-13). Edge/corner orientation is not an input: smaller perimeter (conservative).
+        val bo = when (panelType) {
+            PanelType.INTERIOR -> 2.0 * (b1 + b2)
+            PanelType.EDGE -> min(2.0 * b1 + b2, b1 + 2.0 * b2)
+            PanelType.CORNER -> b1 + b2
         }
-
-        // Critical section at d/2 from column face (ECP 203 §4-3-2)
-        val b1 = columnWidth + d     // mm
-        val b2 = columnDepth + d     // mm
-        val bo = 2.0 * (b1 + b2)     // critical perimeter mm
-
-        // Vc per ECP 203 §4-3-2: three expressions, take minimum
-        // 1) Vc = 0.24 × √(fcu) × bo × d / γc
-        // 2) Vc = 0.16 × (1 + 2/β) × √(fcu) × bo × d / γc
-        // 3) Vc = 0.08 × (2 + αs × d/bo) × √(fcu) × bo × d / γc
-        val beta = max(b1, b2) / min(b1, b2).coerceAtLeast(1.0)
-        val alphaS = when {
-            // αs depends on column location
-            columnWidth >= 2000 && columnDepth >= 2000 -> 40.0  // interior
-            else -> 30.0  // edge (conservative for all)
+        val alpha = when (panelType) { PanelType.INTERIOR -> 4.0; PanelType.EDGE -> 3.0; PanelType.CORNER -> 2.0 }
+        val lambdaS = min(1.0, (1000.0 / d).pow(0.25))
+        val rootF = sqrt(fcu / GAMMA_C)
+        val aSide = min(columnWidth, columnDepth)
+        val bSide = max(columnWidth, columnDepth)
+        val qa = 0.8 * lambdaS * (alpha * d / bo + 0.2) * rootF          // Eq 4-46-a
+        val qb = 0.316 * lambdaS * (0.5 + aSide / bSide) * rootF         // Eq 4-46-b
+        val qc = 0.316 * lambdaS * rootF                                  // Eq 4-46-c
+        val qcup = min(min(qa, min(qb, qc)), 1.70)                        // cap 1.70 N/mm2
+        val vc = qcup * bo * d / 1000.0
+        val qu = vu * 1000.0 / (bo * d)                                   // Eq 4-44 (vu includes beta)
+        val util = if (vc > 0) vu / vc else 2.0
+        if (qu <= qcup) {
+            return PunchingShearResult(vu, vc, bo, d, true, util, false, 0.0, 0.0, 0, 0.0)
         }
-
-        val sqrtFcu = sqrt(fcu)
-        val vc1 = 0.24 * sqrtFcu * bo * d / GAMMA_C                        // N
-        val vc2 = 0.16 * (1.0 + 2.0 / beta) * sqrtFcu * bo * d / GAMMA_C  // N
-        val vc3 = 0.08 * (2.0 + alphaS * d / bo) * sqrtFcu * bo * d / GAMMA_C // N
-        val Vc = minOf(vc1, vc2, vc3) / 1000.0  // kN
-
-        val isSafe = vu <= Vc
-        val utilizationRatio = if (Vc > 0) vu / Vc else 2.0
-
-        // If not safe, design shear reinforcement (studs or stirrups)
-        var needsReinf = false
-        var studDia = 0.0
-        var studSpacing = 0.0
-        var studRows = 0
-        var vsProvided = 0.0
-
-        if (!isSafe) {
-            needsReinf = true
-            // Maximum Vc with reinforcement: 1.5 × Vc (ECP 203 §4-3-2)
-            val vcMax = 1.5 * Vc
-            if (vu > vcMax) {
-                // Section too thin for shear reinforcement
-                // Return unsafe without reinforcement
-            } else {
-                // Design shear stud rails
-                val vsRequired = vu - Vc  // kN needed from studs
-                val fyDesign = fy / GAMMA_S  // design yield stress
-                val maxSpacing = min(0.75 * d, 300.0)
-
-                val availableStuds = listOf(10.0, 12.0, 14.0, 16.0)
-                for (sDia in availableStuds) {
-                    val asStud = PI * sDia * sDia / 4.0
-                    val studsPerRow = max(4, (bo / maxSpacing).toInt().coerceAtLeast(4))
-                    // Vs per row = n × As × (fy/γs) × d / s
-                    val vsPerRow = studsPerRow * asStud * fyDesign * d / (maxSpacing * 1000.0)  // kN
-                    val rows = ceil(vsRequired / vsPerRow).toInt().coerceAtLeast(1)
-                    val totalVs = rows * vsPerRow
-                    if (totalVs >= vsRequired) {
-                        studDia = sDia
-                        studSpacing = maxSpacing
-                        studRows = rows
-                        vsProvided = totalVs
-                        break
-                    }
-                }
-            }
+        // Reinforced section, Eq 4-47. Needs h >= 250 mm.
+        val qMax = 0.45 * rootF                                           // Eq 4-47-c
+        val qConc = 0.12 * lambdaS * rootF
+        if (h < 250.0 || qu > qMax) {
+            return PunchingShearResult(vu, vc, bo, d, false, util, true, 0.0, 0.0, 0, 0.0)
         }
-
-        return PunchingShearResult(
-            vu = vu, vc = Vc, bo = bo, d = d,
-            isSafe = isSafe || (needsReinf && studDia > 0),
-            utilizationRatio = utilizationRatio,
-            needsReinforcement = needsReinf,
-            studDia = studDia,
-            studSpacing = studSpacing,
-            studRows = studRows,
-            vsProvided = vsProvided
-        )
+        val s = floor(d / 2.0 / 5.0) * 5.0                                // s <= d/2 (Fig 4-14)
+        val fyS = min(fy, STUD_FY_CAP)
+        val qsupReq = max(qu - qConc, 0.0)
+        val nPerLine = ceil(bo / s).toInt()
+        var dia = 0.0
+        var qsupProv = 0.0
+        for (cand in listOf(8.0, 10.0, 12.0, 14.0, 16.0)) {
+            val ast = nPerLine * PI * cand * cand / 4.0
+            val qs = ast * fyS / (s * bo * GAMMA_S)                        // Eq 4-47-b
+            if (qs >= qsupReq) { dia = cand; qsupProv = qs; break }
+        }
+        if (dia == 0.0) return PunchingShearResult(vu, vc, bo, d, false, util, true, 0.0, 0.0, 0, 0.0)
+        // Reinforced zone must reach the perimeter where concrete alone resists: bo_out = vu/(qcup d)
+        val boOut = vu * 1000.0 / (qcup * d)
+        val growth = when (panelType) { PanelType.INTERIOR -> 8.0; PanelType.EDGE -> 4.0; PanelType.CORNER -> 2.0 }
+        val reach = max(0.0, (boOut - bo) / growth)
+        val lines = max(2, ceil(reach / s).toInt())
+        val cap = min(qConc + qsupProv, qMax) * bo * d / 1000.0
+        return PunchingShearResult(vu, vc, bo, d, true, util, true, dia, s, lines, cap)
     }
 
     // ══════════════════════════════════════════════════════════════
-    // REINFORCEMENT DESIGN — ECP 203 K-method §4-2-2-1
+    // FLEXURE: K-method, ECP 203-2025 Ch.4 (Table 4-1 via ECPBeam.kMax)
     // ══════════════════════════════════════════════════════════════
 
     override fun designReinforcement(
         moment: Double, fcu: Double, fy: Double,
         effectiveDepth: Double, stripWidth: Double,
         cover: Double
+    ): FlatSlabDesign.ReinforcementDesign =
+        designReinforcementH(moment, fcu, fy, effectiveDepth, stripWidth, effectiveDepth + cover + ASSUMED_BAR_DIA / 2.0)
+
+    /** Min. steel ratio on gross area b x h: 6-2-1-2-3 (p.6-6): max(0.6/fy, 0.25 % mild | 0.15-0.18 % high grade). */
+    fun minSteelRatio(fcu: Double, fy: Double): Double = max(0.6 / fy, ECPBeam.muMinFloor(fcu, fy))
+
+    fun designReinforcementH(
+        moment: Double, fcu: Double, fy: Double,
+        effectiveDepth: Double, stripWidth: Double, totalDepth: Double
     ): FlatSlabDesign.ReinforcementDesign {
-        // ── InputGuard (ADR-010) — ECP 203 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("effectiveDepth", effectiveDepth)
         InputGuard.positive("stripWidth", stripWidth)
-        if (moment <= 0.001 || effectiveDepth <= 0) {
-            val minAs = getMinReinforcementRatio(fy) * stripWidth * effectiveDepth
-            val barArea = PI * 12.0 * 12.0 / 4.0
-            val spacing = (barArea * stripWidth / minAs).coerceIn(50.0, getMaxBarSpacing())
-            return ReinforcementDesign(minAs, minAs, 12.0, spacing, 1, true)
-        }
-
-        val Mu = moment * 1e6  // N.mm (moment for full strip width)
-        val b = stripWidth     // mm
-        val d = effectiveDepth  // mm
+        val b = stripWidth
+        val minAs = minSteelRatio(fcu, fy) * b * totalDepth
         val fs = fy / GAMMA_S
+        val mu = max(moment, 0.0) * 1e6
 
-        // K = Mu / (fcu × b × d²)
-        val K = Mu / (fcu * b * d * d)
-
-        // K_bal — ECP 203 §4-2-2-1
-        val epsilonY = fy / (ES * GAMMA_S)
-        val aOverD = 0.9 * EPSILON_CU / (EPSILON_CU + epsilonY)
-        val K_bal = (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
-
-        // Lever arm: z = d × (0.5 + √(0.25 - K/0.893))
-        val leverArm = if (0.25 - K / 0.893 > 0) {
-            d * (0.5 + sqrt(0.25 - K / 0.893))
-        } else d * 0.7  // conservative for over-reinforced
-
-        // As = Mu / (fs × z)
-        var As = Mu / (fs * leverArm)
-
-        // Minimum reinforcement per ECP 203
-        // max(0.6/fy × b × d, 0.15% × b × h)
-        val minAs1 = 0.6 / fy * b * d
-        val minAs2 = 0.0015 * b * effectiveDepth
-        val minAs = max(minAs1, minAs2)
-        val isMinSteel = As < minAs
-        if (isMinSteel) As = minAs
-
-        // Select bar diameter and spacing
-        val availableBars = listOf(8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0)
-        var selectedDia = 12.0
-        var spacing = 200.0
-
-        for (dia in availableBars) {
-            val area = PI * dia * dia / 4.0
-            val s = (area * stripWidth / As).coerceIn(50.0, getMaxBarSpacing())
-            if (s >= 50) {
-                selectedDia = dia
-                spacing = s
-                break
-            }
+        fun asFor(d: Double): Double {
+            if (mu <= 0.0) return 0.0
+            val k = mu / (fcu * b * d * d)
+            val disc = 0.25 - k / 0.893
+            val z = min(if (disc > 0) d * (0.5 + sqrt(disc)) else 0.7 * d, 0.95 * d)
+            return mu / (fs * z)
         }
-
-        val asProvided = PI * selectedDia * selectedDia / 4.0 * stripWidth / spacing
-        val barsCount = (stripWidth / spacing).toInt().coerceAtLeast(1)
-
+        // Pick the smallest bar with spacing >= 100 mm (selection practice, not a code value); d reduced for the bar actually chosen.
+        var chosen = 8.0; var asReq = 0.0; var asDes = 0.0; var spacing = getMaxBarSpacing(); var isMin = false
+        for (dia in listOf(8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0)) {
+            val d = effectiveDepth + ASSUMED_BAR_DIA / 2.0 - dia / 2.0
+            val req = asFor(d)
+            val des = max(req, minAs)
+            val area = PI * dia * dia / 4.0
+            val s = min(area * b / des, getMaxBarSpacing())
+            chosen = dia; asReq = req; asDes = des; spacing = floor(s / 5.0) * 5.0; isMin = req < minAs
+            if (s >= 100.0) break
+        }
+        spacing = spacing.coerceAtLeast(50.0)
+        val area = PI * chosen * chosen / 4.0
+        val provided = area * b / spacing
         return ReinforcementDesign(
-            asRequired = As,
-            asProvided = asProvided,
-            barDia = selectedDia,
-            barSpacing = spacing,
-            barsCount = barsCount,
-            isMinSteel = isMinSteel
+            asRequired = asReq.coerceAtLeast(if (isMin) minAs else asReq),
+            asProvided = provided, barDia = chosen, barSpacing = spacing,
+            barsCount = max(1, floor(b / spacing).toInt()), isMinSteel = isMin
         )
     }
 
-    /**
-     * Helper: design reinforcement and convert to RebarResult
-     */
     private fun designRebarForResult(
         moment: Double, fcu: Double, fy: Double,
-        effectiveDepth: Double, stripWidth: Double,
+        effectiveDepth: Double, stripWidth: Double, totalDepth: Double,
         cover: Double,
         warnings: MutableList<String>,
         codeNotes: MutableList<String>,
+        overReinf: MutableList<String>,
         label: String
     ): RebarResult {
-        val design = designReinforcement(moment, fcu, fy, effectiveDepth, stripWidth, cover)
-
-        if (design.isMinSteel) {
-            codeNotes.add(String.format(
-                "%s: Min. steel governs, As=%.0f mm²", label, design.asProvided
-            ))
-        } else {
-            codeNotes.add(String.format(
-                "%s: As_req=%.0f, As_prov=%.0f mm², φ%d@%dmm",
-                label, design.asRequired, design.asProvided,
-                design.barDia.toInt(), design.barSpacing.toInt()
-            ))
+        val kMaxVal = ECPBeam.kMax(fy)
+        val k = moment * 1e6 / (fcu * stripWidth * effectiveDepth * effectiveDepth)
+        if (k > kMaxVal) {
+            overReinf.add(label)
+            warnings.add(String.format("%s: K=%.3f > Kmax=%.3f (Table 4-1, p.4-6): compression steel needed, increase thickness", label, k, kMaxVal))
         }
-
+        val design = designReinforcementH(moment, fcu, fy, effectiveDepth, stripWidth, totalDepth)
+        if (design.isMinSteel) {
+            codeNotes.add(String.format("%s: min. steel governs (As,min=%.0f mm2), phi%d@%dmm", label, design.asProvided, design.barDia.toInt(), design.barSpacing.toInt()))
+        } else {
+            codeNotes.add(String.format("%s: As_req=%.0f, As_prov=%.0f mm2, phi%d@%dmm", label, design.asRequired, design.asProvided, design.barDia.toInt(), design.barSpacing.toInt()))
+        }
+        val req = max(design.asRequired, 0.0)
         return RebarResult(
-            bars = design.barsCount,
-            diameter = design.barDia.toInt(),
-            spacing = design.barSpacing.toInt(),
-            providedArea = design.asProvided,
-            requiredArea = design.asRequired,
-            ratio = if (design.asRequired > 0) design.asProvided / design.asRequired else 1.0
+            bars = design.barsCount, diameter = design.barDia.toInt(), spacing = design.barSpacing.toInt(),
+            providedArea = design.asProvided, requiredArea = req,
+            ratio = if (req > 0) design.asProvided / req else 1.0
         )
     }
 
     // ══════════════════════════════════════════════════════════════
-    // DEFLECTION — ECP 203 §6-2
+    // DEFLECTION: NOT ASSESSED
     // ══════════════════════════════════════════════════════════════
 
+    /** NOT ASSESSED: ECP 203-2025 4-3-1 was not read. Returns isSafe=false with zero values so no false pass is shown. */
     override fun checkDeflection(
         span: Double, slabThickness: Double,
         fcu: Double, fy: Double,
         serviceMoment: Double, effectiveDepth: Double,
         providedAs: Double
-    ): FlatSlabDesign.DeflectionResult {
-        // ── InputGuard (ADR-010) — ECP 203 ──
-        InputGuard.positive("span", span)
-        InputGuard.positive("slabThickness", slabThickness)
-        InputGuard.positive("fcu", fcu)
-        InputGuard.positive("fy", fy)
-        InputGuard.positive("effectiveDepth", effectiveDepth)
-
-        // Ec = 4700 × √(fcu) MPa  (accepted by ECP 203)
-        val Ec = 4700.0 * sqrt(fcu)
-
-        // Gross moment of inertia (per unit width = 1000 mm)
-        val Ig = 1000.0 * slabThickness * slabThickness * slabThickness / 12.0  // mm4/m
-
-        // Modular ratio
-        val n = ES / Ec
-
-        // Cracked moment of inertia (simplified Branson)
-        val rho = if (effectiveDepth > 0) providedAs / (1000.0 * effectiveDepth) else 0.0
-        val fr = 0.62 * sqrt(fcu)  // modulus of rupture (MPa)
-        val yt = slabThickness / 2.0
-        val Mcr = fr * Ig / yt / 1e6  // cracking moment kN.m/m
-
-        // Cracked moment of inertia (simplified)
-        val Icr = n * providedAs * effectiveDepth * effectiveDepth * 0.5
-
-        // Effective moment of inertia (Branson equation)
-        // Ie = (Mcr/Ma)³ × Ig + [1 - (Mcr/Ma)³] × Icr
-        val Ma = serviceMoment
-        val Ie = if (Ma > Mcr && Mcr > 0) {
-            val ratio = min((Mcr / Ma).pow(3), 1.0)
-            ratio * Ig + (1.0 - ratio) * Icr.coerceAtLeast(Ig * 0.3)
-        } else Ig
-
-        // Immediate deflection: δ = 5 × M × L² / (48 × Ec × Ie)
-        val spanMm = span
-        val immediate = if (Ec > 0 && Ie > 0) {
-            5.0 * serviceMoment * 1e6 * spanMm * spanMm / (48.0 * Ec * Ie)
-        } else 0.0
-
-        // Long-term multiplier: λ = 2.0 for sustained loads (ECP 203 simplified)
-        // More precise: λ = 2.0 - 1.2 × (As'/As) ≥ 1.2
-        val longTermMult = 2.0
-        val longTerm = immediate * longTermMult
-
-        // Allowable deflection: span / 250 (ECP 203 for flat slabs)
-        val allowable = span / 250.0
-        val ratio = if (allowable > 0) longTerm / allowable else 0.0
-
-        return DeflectionResult(
-            immediate = immediate,
-            longTerm = longTerm,
-            allowable = allowable,
-            isSafe = longTerm <= allowable,
-            ratio = ratio
-        )
-    }
+    ): FlatSlabDesign.DeflectionResult = DeflectionResult(
+        immediate = 0.0, longTerm = 0.0, allowable = 0.0, isSafe = false, ratio = 0.0
+    )
 
     // ══════════════════════════════════════════════════════════════
-    // MINIMUM THICKNESS — ECP 203 §6-5-2
+    // MINIMUM THICKNESS: Table 6-3 (p.6-18)
     // ══════════════════════════════════════════════════════════════
 
     override fun getMinimumThickness(
         clearSpan: Double, transverseSpan: Double,
         hasDropPanel: Boolean, fcu: Double, fy: Double
-    ): Double {
-        val ln = clearSpan / 1000.0  // m
-        // ECP 203: h_min = ln / 33 (without drop), ln / 36 (with drop)
-        val factor = if (hasDropPanel) 36.0 else 33.0
-        val fromSpan = ln * 1000.0 / factor  // mm
-        return max(fromSpan, 150.0)
-    }
+    ): Double = getMinimumThickness(clearSpan, transverseSpan, hasDropPanel, fcu, fy, true)
+
+    /** Longer clear span governs; exterior panel uses the "no edge beam" column (conservative). */
+    fun getMinimumThickness(
+        clearSpan: Double, transverseSpan: Double,
+        hasDropPanel: Boolean, fcu: Double, fy: Double, exterior: Boolean
+    ): Double = max(clearSpan, transverseSpan) / table63Divisor(fy, exterior, hasDropPanel)
 
     // ══════════════════════════════════════════════════════════════
     // CODE LIMITS
@@ -835,12 +651,10 @@ class ECPFlatSlab : FlatSlabDesign {
 
     override fun getMinCover(): Double = 25.0
 
-    override fun getMaxBarSpacing(): Double = 250.0  // ECP 203: min(2h, 250mm)
+    /** ECP 203-2025 6-2-1-3-4-a (p.6-9): main bar spacing <= 200 mm in moment zones. */
+    override fun getMaxBarSpacing(): Double = 200.0
 
-    override fun getMinReinforcementRatio(fy: Double): Double {
-        // ECP 203: max(0.6/fy, 0.0015)
-        return max(0.6 / fy, 0.0015)
-    }
+    override fun getMinReinforcementRatio(fy: Double): Double = max(0.6 / fy, 0.0015)
 
     override fun getCodeName(): String = "ECP 203-2025"
 

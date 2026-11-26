@@ -11,5 +11,7 @@ data class GenericSafetyCheck(
     val unit: String,
     val passed: Boolean,
     val reference: String? = null,
-    val pointType: String? = null
+    val pointType: String? = null,
+    /** true = not assessed (not a computed failure); passed is false so it can never count as a pass. */
+    val notAssessed: Boolean = false
 ) : Parcelable

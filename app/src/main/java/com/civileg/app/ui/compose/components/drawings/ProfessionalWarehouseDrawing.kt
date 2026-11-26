@@ -31,14 +31,13 @@ fun ProfessionalWarehouseDrawing(
     // ── Responsive config ──────────────────────────────────────────
     val cfg = drawingDimensionsConfig()
     // ── Code-reference annotation ──────────────────────────────────
-    val codeLabel = "ECP 205"
 
     Canvas(modifier = modifier.fillMaxWidth().fillMaxSize()) {
         val w = size.width
         val h = size.height
 
         // ── Combined section indicator ──────────────────────────
-        drawCombinedSectionLabel(cfg.headerHeight, w, listOf("Front", "Plan", "Side", "3D"), cfg, DrawingColorDefaults.AccentCyan)
+//         drawCombinedSectionLabel(cfg.headerHeight, w, listOf("Front", "Plan", "Side", "3D"), cfg, DrawingColorDefaults.AccentCyan)
 
         // ── Section separator & zone labels per view mode ───────
         val zoneLabel = when (viewMode) {
@@ -59,19 +58,14 @@ fun ProfessionalWarehouseDrawing(
         }
 
         // ── Responsive title block ────────────────────────────────
+        // Result summary strip and north arrow (no title block below them any more).
         drawSheetAnnotations(
             w - cfg.titleBlockWidth - cfg.margin,
             h - cfg.titleBlockHeight - cfg.margin,
             cfg,
             resultSummary
         )
-        drawResponsiveTitleBlock(
-            w - cfg.titleBlockWidth - cfg.margin,
-            h - cfg.titleBlockHeight - cfg.margin,
-            cfg,
-            "CivilEG", "Warehouse Detail", "NTS", "WH-001", codeLabel,
-            DrawingColorDefaults.DimensionWhite, DrawingColorDefaults.ExtensionGray
-        )
+        // The drawing title block is omitted here: its text overprinted its own small box, and the PDF carries its own title block.
     }
 }
 
@@ -168,8 +162,7 @@ private fun DrawScope.drawWarehouseFront(inputs: SteelWarehouseInputs, result: S
     drawWarehouseText("Column: ${result.mainFrame.columnSection.sectionName}", x1 + 10f, yBase - 20f, Color.White.copy(alpha = 0.7f), 10f)
     drawWarehouseText("Rafter: ${result.mainFrame.rafterSection.sectionName}", xMid - 50f, yRidge + 30f, Color.White.copy(alpha = 0.7f), 10f)
     
-    // Labels
-    drawWarehouseText("FRONT ELEVATION", w/2, pad/2, Color.White, 16f, center = true, bold = true)
+    // The view title is drawn once, by the section separator above.
 }
 
 private fun DrawScope.drawWarehousePlan(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {

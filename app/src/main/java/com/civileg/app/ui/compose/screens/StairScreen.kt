@@ -3,6 +3,7 @@ package com.civileg.app.ui.compose.screens
 import com.civileg.app.ui.responsive.dimens
 
 import com.civileg.app.domain.entities.DesignCode
+import com.civileg.app.domain.calculations.base.StairSupportCondition
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -37,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.civileg.app.R
 import androidx.compose.ui.res.stringResource
+import com.civileg.app.domain.calculations.utils.StairFlightGeometry
 import com.civileg.app.domain.calculations.utils.BbsGenerator
 import com.civileg.app.domain.calculations.utils.CalculatorEngine
 import com.civileg.app.domain.calculations.utils.CalculatorEngine.StairType
@@ -59,6 +61,15 @@ import com.civileg.app.ui.defaultDesignCode
 import com.civileg.app.ui.components.AppButton
 import com.civileg.app.ui.components.AppButtonStyle
 import com.civileg.app.ui.components.AppText
+import com.civileg.app.ui.components.AppTextBlock
+import com.civileg.app.domain.validation.FieldKind
+import com.civileg.app.domain.validation.FieldSpec
+import com.civileg.app.domain.validation.FormValidator
+import com.civileg.app.ui.compose.validation.FormErrorSummary
+import com.civileg.app.ui.compose.validation.ValidatedNumberField
+import com.civileg.app.ui.compose.validation.rememberFormValidationState
+import com.civileg.app.ui.compose.validation.scrollItemToCenter
+import androidx.compose.foundation.lazy.rememberLazyListState
 import com.civileg.app.ui.components.AppTextRole
 import com.civileg.app.ui.theme.onColorFor
 
@@ -88,7 +99,8 @@ fun StairScreen(
     val density = LocalDensity.current
     val config = LocalConfiguration.current
     val screenWidthPx = (config.screenWidthDp * density.density).toInt()
-    val screenHeightPx = (config.screenHeightDp * density.density).toInt()
+    // Export a drawing sheet, not a screenshot-shaped phone canvas.
+    val drawingSheetHeightPx = (screenWidthPx * 1.05f).toInt()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var selectedProjectId by remember { mutableLongStateOf(-1L) }
@@ -104,18 +116,28 @@ fun StairScreen(
     var deadLoad by remember { mutableStateOf("5.0") }
     var fcu by remember { mutableStateOf("25") }
     var fy by remember { mutableStateOf("360") }
+    var supportCondition by remember { mutableStateOf(StairSupportCondition.UNSPECIFIED) }
+    var landingDeclared by remember { mutableStateOf(false) }
+    var landingLength by remember { mutableStateOf("") }
+    var landingWidth by remember { mutableStateOf("") }
+    var landingThickness by remember { mutableStateOf("") }
     var expandedType by remember { mutableStateOf(false) }
     var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
 
-    // Input validation
-    var spanError by remember { mutableStateOf("") }
-    var riserError by remember { mutableStateOf("") }
-    var treadError by remember { mutableStateOf("") }
-
-    // Validation messages (captured in composable scope for use in onClick)
-    val spanRangeMsg = stringResource(R.string.stair_span_range)
-    val riserRangeMsg = stringResource(R.string.stair_riser_range)
-    val treadRangeMsg = stringResource(R.string.stair_tread_range)
+    // Shared field-anchored validation (see ui/compose/validation). No silent defaults.
+    val form = rememberFormValidationState()
+    val listState = rememberLazyListState()
+    // LazyColumn item index that holds each field (fields share rows).
+    val fieldItemIndex = mapOf(
+        "span" to 2, "riser" to 2, "tread" to 3, "deadLoad" to 3,
+        "liveLoad" to 4, "fcu" to 4, "fy" to 5, "stairWidth" to 5,
+        "landingLength" to 6, "landingWidth" to 6, "landingThickness" to 6
+    )
+    // Any input change makes the shown result stale: drop it and that field's old error.
+    fun touch(id: String) {
+        form.clear(id)
+        viewModel.clearResult()
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -134,6 +156,7 @@ fun StairScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
@@ -162,6 +185,7 @@ fun StairScreen(
                             DropdownMenuItem(
                                 text = { AppText(type.displayName) },
                                 onClick = {
+                                    if (selectedType != type) viewModel.clearResult()
                                     selectedType = type
                                     expandedType = false
                                 }
@@ -173,83 +197,152 @@ fun StairScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(span, stringResource(R.string.stair_horizontal_length), { span = it }, Modifier.weight(1f), spanError)
-                    StairInputField(riser, stringResource(R.string.stair_riser), { riser = it }, Modifier.weight(1f), riserError)
+                    ValidatedNumberField(form, "span", span, stringResource(R.string.stair_horizontal_length), { span = it; touch("span") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "riser", riser, stringResource(R.string.stair_riser), { riser = it; touch("riser") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(tread, stringResource(R.string.stair_tread_mm), { tread = it }, Modifier.weight(1f), treadError)
-                    StairInputField(deadLoad, stringResource(R.string.stair_dead_load_kn_m2), { deadLoad = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "tread", tread, stringResource(R.string.stair_tread_mm), { tread = it; touch("tread") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "deadLoad", deadLoad, stringResource(R.string.stair_dead_load_kn_m2), { deadLoad = it; touch("deadLoad") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(liveLoad, stringResource(R.string.stair_live_load_kn_m2), { liveLoad = it }, Modifier.weight(1f))
-                    StairInputField(fcu, stringResource(R.string.stair_fcu_mpa), { fcu = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "liveLoad", liveLoad, stringResource(R.string.stair_live_load_kn_m2), { liveLoad = it; touch("liveLoad") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "fcu", fcu, stringResource(R.string.stair_fcu_mpa), { fcu = it; touch("fcu") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StairInputField(fy, stringResource(R.string.stair_fy_mpa), { fy = it }, Modifier.weight(1f))
-                    StairInputField(stairWidth, "Width (mm)", { stairWidth = it }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "fy", fy, stringResource(R.string.stair_fy_mpa), { fy = it; touch("fy") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "stairWidth", stairWidth, "Width (mm)", { stairWidth = it; touch("stairWidth") }, Modifier.weight(1f))
+                }
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AppText("Support condition / حالة الارتكاز")
+                    StairSupportCondition.values().forEach { condition ->
+                        FilterChip(
+                            selected = supportCondition == condition,
+                            onClick = { supportCondition = condition; viewModel.clearResult() },
+                            label = { AppText(when (condition) {
+                                StairSupportCondition.UNSPECIFIED -> "Not declared / غير محدد"
+                                StairSupportCondition.SIMPLY_SUPPORTED -> "Simply supported / بسيط الارتكاز"
+                                StairSupportCondition.CONTINUOUS_OVER_LANDING -> "Continuous over landing / مستمر فوق البسطة"
+                            }) }
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = landingDeclared, onCheckedChange = { landingDeclared = it; viewModel.clearResult() })
+                        AppText("Declare landing dimensions / تحديد أبعاد البسطة")
+                    }
+                    if (landingDeclared) {
+                        ValidatedNumberField(form, "landingLength", landingLength, "Landing length (mm)", { landingLength = it; touch("landingLength") })
+                        ValidatedNumberField(form, "landingWidth", landingWidth, "Landing width (mm)", { landingWidth = it; touch("landingWidth") })
+                        ValidatedNumberField(form, "landingThickness", landingThickness, "Landing thickness (mm)", { landingThickness = it; touch("landingThickness") })
+                    }
                 }
             }
 
             item {
                 DesignCodeSelectorRow(
                     selectedCode = selectedCode,
-                    onCodeSelected = { selectedCode = it }
+                    onCodeSelected = { if (selectedCode != it) viewModel.clearResult(); selectedCode = it }
                 )
             }
 
             item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormErrorSummary(form)
                 AppButton(
                     label = stringResource(R.string.stair_design_now),
                     onClick = {
-                        // Validate inputs
-                        spanError = ""; riserError = ""; treadError = ""
-                        val s = span.toDoubleOrNull()
-                        val r = riser.toDoubleOrNull()
-                        val t = tread.toDoubleOrNull()
-                        var valid = true
-                        if (s == null || s < 1.0 || s > 15.0) { spanError = spanRangeMsg; valid = false }
-                        if (r == null || r < 100.0 || r > 200.0) { riserError = riserRangeMsg; valid = false }
-                        if (t == null || t < 200.0 || t > 400.0) { treadError = treadRangeMsg; valid = false }
-                        if (!valid) return@AppButton
-
+                        viewModel.clearResult() // never leave a stale result on screen
+                        // Physical input checks only. Unverified legacy UI cutoffs are not code limits.
+                        val checked = FormValidator.validate(
+                            listOf(
+                                FieldSpec("span", span, FieldKind.POSITIVE),
+                                FieldSpec("riser", riser, FieldKind.POSITIVE),
+                                FieldSpec("tread", tread, FieldKind.POSITIVE),
+                                FieldSpec("deadLoad", deadLoad, FieldKind.NON_NEGATIVE),
+                                FieldSpec("liveLoad", liveLoad, FieldKind.NON_NEGATIVE),
+                                FieldSpec("fcu", fcu, FieldKind.POSITIVE),
+                                FieldSpec("fy", fy, FieldKind.POSITIVE),
+                                FieldSpec("stairWidth", stairWidth, FieldKind.POSITIVE)
+                            ) + if (landingDeclared) listOf(
+                                FieldSpec("landingLength", landingLength, FieldKind.POSITIVE),
+                                FieldSpec("landingWidth", landingWidth, FieldKind.POSITIVE),
+                                FieldSpec("landingThickness", landingThickness, FieldKind.POSITIVE)
+                            ) else emptyList()
+                        )
+                        form.apply(checked)
+                        if (!checked.isValid) {
+                            scope.launch {
+                                form.focusFirstInvalid(checked) { id ->
+                                    fieldItemIndex[id]?.let { listState.scrollItemToCenter(it) }
+                                }
+                            }
+                            return@AppButton
+                        }
                         viewModel.calculateStairPro(
                             type = selectedType,
-                            span = s!!,
-                            riser = r!!,
-                            tread = t!!,
-                            deadLoad = deadLoad.toDoubleOrNull() ?: 5.0,
-                            liveLoad = liveLoad.toDoubleOrNull() ?: 4.0,
-                            fcu = fcu.toDoubleOrNull() ?: 25.0,
-                            fy = fy.toDoubleOrNull() ?: 360.0,
+                            span = checked.value("span"),
+                            riser = checked.value("riser"),
+                            tread = checked.value("tread"),
+                            deadLoad = checked.value("deadLoad"),
+                            liveLoad = checked.value("liveLoad"),
+                            fcu = checked.value("fcu"),
+                            fy = checked.value("fy"),
                             preferredDiameter = 12,
                             code = selectedCode,
-                            stairWidthMm = stairWidth.toDoubleOrNull() ?: 1200.0
+                            stairWidthMm = checked.value("stairWidth"),
+                            supportCondition = supportCondition,
+                            landingLengthMm = if (landingDeclared) checked.value("landingLength") else null,
+                            landingWidthMm = if (landingDeclared) checked.value("landingWidth") else null,
+                            landingThicknessMm = if (landingDeclared) checked.value("landingThickness") else null
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isLoading,
                     icon = Icons.Default.Calculate
                 )
+                }
             }
 
             result?.let { res ->
+                val designUsable = com.civileg.app.utils.StairResultGate.isDesignUsable(res.analysisStatus)
                 item { SectionHeader(stringResource(R.string.stair_results), R.drawable.ic_calculator) }
+
+                if (!designUsable) {
+                    item {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFDECEA)),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                AppText(
+                                    "No analysis model for this stair case. This is NOT a design for this case and no results are shown. Results, drawing, quantities, saving and PDF are not offered. / لا يوجد نموذج تحليل لهذه الحالة. هذه ليست تصميمًا لهذه الحالة ولا تُعرض نتائج، والنتائج والرسم والكميات والحفظ وPDF غير متاحة.",
+                                    color = Color(0xFFC62828), fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
                 
+                if (designUsable) {
                 item {
-                    val ecoColor = when {
-                        res.utilizationRatio > 1.0 -> Color.Red
-                        res.utilizationRatio > 0.9 -> Color(0xFFFF9800)
-                        res.utilizationRatio > 0.4 -> Color(0xFF4CAF50)
-                        else -> Color(0xFF2196F3)
+                    // One measured flexure-row ratio (unclamped) or none. Never an approved/ideal reading while acceptance is incomplete.
+                    val cardState = com.civileg.app.domain.calculations.base.flexureCardState(res.flexureRatio, res.codeAcceptanceComplete)
+                    val ecoColor = when (cardState) {
+                        com.civileg.app.domain.calculations.base.FlexureCardState.EXCEEDS_LIMIT -> Color.Red
+                        com.civileg.app.domain.calculations.base.FlexureCardState.PRELIMINARY -> Color(0xFFEF6C00)
+                        com.civileg.app.domain.calculations.base.FlexureCardState.UNAVAILABLE -> Color.Gray
+                        else -> Color(0xFF4CAF50)
                     }
 
                     Card(
@@ -265,23 +358,29 @@ fun StairScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(
-                                            if (res.utilizationRatio <= 1.0) Icons.Default.Verified
-                                            else Icons.Default.Dangerous,
+                                            when (cardState) {
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.EXCEEDS_LIMIT -> Icons.Default.Dangerous
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.WITHIN_LIMIT -> Icons.Default.Verified
+                                                else -> Icons.Default.Warning
+                                            },
                                             contentDescription = null,
                                             tint = ecoColor
                                         )
                                         Spacer(Modifier.width(8.dp))
                                         AppText(
-                                            if (res.utilizationRatio > 1.0) stringResource(R.string.tank_design_unsafe)
-                                            else if (res.utilizationRatio > 0.9) stringResource(R.string.design_caution)
-                                            else if (res.utilizationRatio > 0.4) stringResource(R.string.beam_section_ideal)
-                                            else stringResource(R.string.tank_section_large),
+                                            when (cardState) {
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.EXCEEDS_LIMIT -> "Flexure check exceeds its limit"
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.PRELIMINARY -> stringResource(R.string.design_caution)
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.UNAVAILABLE -> "Flexure ratio unavailable"
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.WITHIN_LIMIT -> "Flexure check within its limit"
+                                            },
                                             fontWeight = FontWeight.Bold,
                                             color = ecoColor
                                         )
                                     }
                                     AppText(
-                                        stringResource(R.string.consultant_ratio),
+                                        if (res.flexureRatio == null) "No assessed flexure row: no ratio is shown"
+                                        else "One flexure check (${res.flexureRatioBasis}), not an overall utilization or acceptance",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -289,7 +388,7 @@ fun StairScreen(
 
                                 Box(contentAlignment = Alignment.Center) {
                                     val animatedRatio by animateFloatAsState(
-                                        targetValue = res.utilizationRatio.toFloat(),
+                                        targetValue = (res.flexureRatio ?: 0.0).coerceIn(0.0, 1.0).toFloat(),
                                         animationSpec = tween(1000), label = ""
                                     )
                                     CircularProgressIndicator(
@@ -300,7 +399,7 @@ fun StairScreen(
                                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                     )
                                     AppText(
-                                        "${(res.utilizationRatio * 100).toInt()}%",
+                                        res.flexureRatio?.let { "${(it * 100).toInt()}%" } ?: "n/a",
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp
                                     )
@@ -309,6 +408,7 @@ fun StairScreen(
                         }
                     }
                 }
+                }
 
                 item {
                     Card(
@@ -316,17 +416,27 @@ fun StairScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
+                            AppText("Code acceptance incomplete / قبول التصميم غير مكتمل", color = MaterialTheme.colorScheme.error)
+                            ResultRow("Analysis status", res.analysisStatus.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() })
+                            ResultRow("Support", res.supportCondition.name)
+                            AppText(res.documentaryBasisLabel)
+                            AppText(res.barMaterialClassification)
+                            AppText("Top and landing reinforcement are not designed / تسليح البسطة والحديد العلوي غير مصممين")
+                            if (designUsable) {
                             ResultRow(stringResource(R.string.stair_slab_thickness), "${res.thickness.toInt()} mm")
                             ResultRow(stringResource(R.string.stair_main_reinforcement), res.reinforcement.barString)
                             ResultRow(stringResource(R.string.stair_distribution_reinforcement), res.distributionReinforcement.barString)
                             ResultRow("Mu", "${"%.1f".format(res.mu)} kN.m")
                             ResultRow("Concrete Volume", "${"%.3f".format(res.concreteVolume)} m³")
-                            ResultRow("Steel Weight", "${"%.1f".format(res.steelWeight)} kg")
-                            ResultRow("Cost", "${"%.2f".format(res.cost)}")
+                            AppText("Final steel and fabrication BBS unavailable: anchorage, bends, laps, top and landing steel unresolved")
+                            ResultRow("Net flight steel only", "${"%.1f".format(res.steelWeight)} kg")
+                            ResultRow("Partial material cost, not procurement total", "${"%.2f".format(res.cost)}")
+                            }
                         }
                     }
                 }
 
+                if (designUsable) {
                 if (res.calculationSteps.isNotEmpty()) {
                     item { CalculationStepsCard(res.calculationSteps, title = "Stair Calculation Steps") }
 
@@ -334,22 +444,22 @@ fun StairScreen(
                         BbsGenerator.generateStairBbs(
                             mark = "ST1",
                             result = res,
-                            stairWidthMm = stairWidth.toDoubleOrNull() ?: 1200.0
+                            stairWidthMm = res.stairWidthMm
                         )
                     }.getOrDefault(emptyList())
-                    if (bbsEntries.isNotEmpty()) {
+                    if (bbsEntries.isNotEmpty() && res.analysisStatus != com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE) {
                         item { BbsTableCard(bbsEntries, title = "Stair Bar Bending Schedule") }
                     }
 
                     val boqRows = runCatching {
                         BoqEstimator.stairRows(
                             res,
-                            (stairWidth.toDoubleOrNull() ?: 1200.0) / 1000.0,
+                            (res.stairWidthMm) / 1000.0,
                             "ST1"
                         )
                     }.getOrDefault(emptyList())
                     if (boqRows.isNotEmpty()) {
-                        item { BoqTableCard(boqRows, title = "Stair Bill of Quantities") }
+                        if (res.analysisStatus != com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE) item { BoqTableCard(boqRows, title = "Stair Bill of Quantities") }
                     }
                 }
 
@@ -373,18 +483,18 @@ fun StairScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         AppText(
-                                            if (check.isSafe) "✓" else "✗",
-                                            color = if (check.isSafe) Color(0xFF2E7D32) else Color(0xFFC62828),
+                                            if (check.isSafe) "✓" else if (check.notAssessed) "?" else "✗",
+                                            color = if (check.isSafe) Color(0xFF2E7D32) else if (check.notAssessed) Color(0xFFEF6C00) else Color(0xFFC62828),
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 14.sp
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        AppText(check.name, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                        AppText(check.name, modifier = Modifier.weight(1f).padding(end = 12.dp), fontSize = 13.sp)
                                         AppText(
                                             "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (check.isSafe) Color(0xFF2E7D32) else Color.Red
+                                            color = if (check.isSafe) Color(0xFF2E7D32) else if (check.notAssessed) Color(0xFFEF6C00) else Color.Red
                                         )
                                     }
                                 }
@@ -407,7 +517,7 @@ fun StairScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            enabled = !isExporting,
+                            enabled = !isExporting && res.analysisStatus != com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE,
                             loading = isExporting,
                             icon = Icons.Default.PictureAsPdf
                         )
@@ -415,6 +525,7 @@ fun StairScreen(
                         AppButton(
                             label = stringResource(R.string.save),
                             onClick = { showSaveDialog = true },
+                            enabled = res.analysisStatus != com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE,
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.Save,
                             containerOverride = MaterialTheme.colorScheme.secondary,
@@ -425,7 +536,7 @@ fun StairScreen(
 
                 item {
                     AppText(stringResource(R.string.stair_equations_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    StairFormulasCard()
+                    StairFormulasCard(res)
                 }
 
                 item {
@@ -434,10 +545,10 @@ fun StairScreen(
                     val screenW = configuration.screenWidthDp.dp
                     val wRatio = screenW.value / 360f
                     val drawingHeight = when (selectedViewMode) {
-                        1 -> (550 * wRatio).toInt().coerceIn(350, 750)
-                        2 -> (450 * wRatio).toInt().coerceIn(300, 650)
+                        1 -> (310 * wRatio).toInt().coerceIn(250, 650)
+                        2 -> (350 * wRatio).toInt().coerceIn(280, 650)
                         3 -> (400 * wRatio).toInt().coerceIn(250, 550)
-                        else -> (780 * wRatio).toInt().coerceIn(500, 1100)
+                        else -> (380 * wRatio).toInt().coerceIn(340, 850)
                     }
                     InteractiveDrawingScreen(
                         onExportDxf = { viewModel.exportToDxf(context) },
@@ -448,24 +559,22 @@ fun StairScreen(
                         selectedViewMode = selectedViewMode,
                         onViewModeChanged = { selectedViewMode = it },
                         drawingContent = {
-                            val nRisers = ((res.span * 1000.0) / res.tread).toInt().coerceAtLeast(1)
-                            val codeAwareCover = when (selectedCode) {
+                            val geometry = StairFlightGeometry.from(res.span, res.riser, res.tread)
+                            val codeAwareCover = when (res.code) {
                                 DesignCode.ACI -> 38.0
                                 DesignCode.SBC -> 40.0
                                 else -> 25.0
                             }
-                            val hasLanding = selectedType == CalculatorEngine.StairType.DOUBLE_FLIGHT ||
-                                selectedType == CalculatorEngine.StairType.TRIPLE_FLIGHT
-                            val landingLen = if (hasLanding) res.tread * 2.0 else 0.0
+                            val landingLen = res.landingLengthMm ?: 0.0
                             ProfessionalStairDrawing(
-                                stairWidth = stairWidth.toDoubleOrNull() ?: 1200.0,
-                                totalHeight = nRisers.toDouble() * res.riser,
-                                totalLength = nRisers.toDouble() * res.tread,
+                                stairWidth = res.stairWidthMm,
+                                totalHeight = geometry.riseMm,
+                                totalLength = geometry.runMm,
                                 riserHeight = res.riser,
                                 treadWidth = res.tread,
                                 slabThickness = res.thickness,
                                 landingLength = landingLen,
-                                landingThickness = res.thickness,
+                                landingThickness = res.landingThicknessMm ?: 0.0,
                                 mainRebarDia = res.reinforcement.diameter.toDouble(),
                                 mainRebarSpacing = res.reinforcement.spacing,
                                 distributionDia = res.distributionReinforcement.diameter.toDouble(),
@@ -473,41 +582,43 @@ fun StairScreen(
                                 cover = codeAwareCover,
                                 stairType = res.type.displayName,
                                 viewMode = selectedViewMode,
+                                quantityReview = res.quantityReview,
+                                documentaryBasisLabel = res.documentaryBasisLabel,
                                 resultSummary = stairDrawingSummary(res),
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
                     )
                 }
+                }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
-        // PDF drawing capture area (invisible, renders at viewMode=0)
-        result?.let { res ->
-            val nRisers = ((res.span * 1000.0) / res.tread).toInt().coerceAtLeast(1)
-            val codeAwareCover = when (selectedCode) {
+        // PDF drawing capture area (invisible, renders at viewMode=0). Never composed for a case with no design:
+        // a cantilever result has slab thickness 0 and ProfessionalStairDrawing rejects it, which crashed the app.
+        result?.takeIf { com.civileg.app.utils.StairResultGate.isDesignUsable(it.analysisStatus) }?.let { res ->
+            val geometry = StairFlightGeometry.from(res.span, res.riser, res.tread)
+            val codeAwareCover = when (res.code) {
                 DesignCode.ACI -> 38.0
                 DesignCode.SBC -> 40.0
                 else -> 25.0
             }
-            val hasLanding = selectedType == CalculatorEngine.StairType.DOUBLE_FLIGHT ||
-                selectedType == CalculatorEngine.StairType.TRIPLE_FLIGHT
-            val landingLen = if (hasLanding) res.tread * 2.0 else 0.0
+            val landingLen = res.landingLengthMm ?: 0.0
             ComposeDrawingCaptureUtil.DrawingCaptureArea(
                 captureLayer = pdfCaptureLayer,
                 widthPx = screenWidthPx,
-                heightPx = screenHeightPx
+                heightPx = drawingSheetHeightPx
             ) {
                 Box(modifier = Modifier.background(Color(0xFF1A1A2E))) {
                     ProfessionalStairDrawing(
-                        stairWidth = stairWidth.toDoubleOrNull() ?: 1200.0,
-                        totalHeight = nRisers.toDouble() * res.riser,
-                        totalLength = nRisers.toDouble() * res.tread,
+                        stairWidth = res.stairWidthMm,
+                        totalHeight = geometry.riseMm,
+                        totalLength = geometry.runMm,
                         riserHeight = res.riser,
                         treadWidth = res.tread,
                         slabThickness = res.thickness,
                         landingLength = landingLen,
-                        landingThickness = res.thickness,
+                        landingThickness = res.landingThicknessMm ?: 0.0,
                         mainRebarDia = res.reinforcement.diameter.toDouble(),
                         mainRebarSpacing = res.reinforcement.spacing,
                         distributionDia = res.distributionReinforcement.diameter.toDouble(),
@@ -515,7 +626,9 @@ fun StairScreen(
                         cover = codeAwareCover,
                         stairType = res.type.displayName,
                         viewMode = 0,
-                        resultSummary = stairDrawingSummary(res),
+                        quantityReview = res.quantityReview,
+                                documentaryBasisLabel = res.documentaryBasisLabel,
+                                resultSummary = stairDrawingSummary(res),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -949,7 +1062,10 @@ private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifie
                 textAlign = android.graphics.Paint.Align.RIGHT
                 isFakeBoldText = true
             }
-            if (res.isSafe) {
+            if (!res.codeAcceptanceComplete) {
+                safePaint.color = android.graphics.Color.parseColor("#B26A00")
+                drawContext.canvas.nativeCanvas.drawText("UNVERIFIED", size.width - 10f, size.height - 3f, safePaint)
+            } else if (res.isSafe) {
                 safePaint.color = android.graphics.Color.parseColor("#2E7D32")
                 drawContext.canvas.nativeCanvas.drawText(
                     "SAFE", size.width - 10f, size.height - 3f, safePaint
@@ -965,37 +1081,34 @@ private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifie
 }
 
 @Composable
-private fun StairFormulasCard() {
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            FormulaItem("1. Wu = 1.4 * DL + 1.6 * LL")
-            FormulaItem("2. ts = L / 25 (Simple) or L / 20 (Cantilever)")
-            FormulaItem("3. Mu = Wu * L² / 8")
-            FormulaItem("4. As = Mu / (fy/gamma_s * j * d)")
+private fun StairFormulasCard(result:CalculatorEngine.StairResult) {
+    Card(modifier=Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f))) {
+        Column(modifier=Modifier.padding(12.dp)) {
+            AppText("Applied calculation trace only. Selected-reference coverage incomplete.")
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr) {
+                result.calculationSteps.forEach { step ->
+                    FormulaItem("${step.stepNumber}. ${step.formula}")
+                    AppTextBlock(step.formulaWithValues,style=MaterialTheme.typography.bodySmall)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun StairInputField(value: String, label: String, onValueChange: (String) -> Unit, modifier: Modifier, errorText: String = "") {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { AppText(label) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        isError = errorText.isNotEmpty(),
-        supportingText = if (errorText.isNotEmpty()) {{ AppText(errorText, color = MaterialTheme.colorScheme.error) }} else null
-    )
-}
-
-@Composable
 private fun ResultRow(label: String, value: String) {
+    com.civileg.app.ui.components.ContentDirection(label) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        AppText(label)
-        AppText(value, fontWeight = FontWeight.Bold)
+        AppText(label, modifier = Modifier.weight(1f).padding(end = 8.dp))
+        // LTR isolate keeps bar notation and numbers intact inside RTL rows; value wraps only at spaces.
+        AppText(
+            "\u2066$value\u2069",
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f, fill = false),
+            textAlign = androidx.compose.ui.text.style.TextAlign.End
+        )
     }
+}
 }
 
 @Composable

@@ -6,7 +6,7 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تصميم البلاطات المتقدم حسب الكود السعودي SBC 304-2024
+ * تصميم البلاطات المتقدم حسب الكود السعودي SBC 304
  * Advanced Slab Design per Saudi Building Code 304-2018
  *
  * SBC 304 is based on ACI 318 with Saudi-specific modifications:
@@ -17,12 +17,12 @@ import kotlin.math.*
  * - Hot climate crack width and deflection factors
  *
  * المراجع:
- * - SBC 304-2024 البند 8 (البلاطات)
- * - SBC 304-2024 البند 8.10 (طريقة التصميم المباشر)
- * - SBC 304-2024 البند 8.4 (البلاطات المقلوبة/البردورية)
- * - SBC 304-2024 البند 21 (متطلبات الزلازل)
- * - SBC 304-2024 البند 8.6 (الثقب)
- * - SBC 304-2024 الجدول 8.10.2.2 (توزيع العزوم)
+ * - SBC 304 البند 8 (البلاطات)
+ * - SBC 304 البند 8.10 (طريقة التصميم المباشر)
+ * - SBC 304 البند 8.4 (البلاطات المقلوبة/البردورية)
+ * - SBC 304 البند 21 (متطلبات الزلازل)
+ * - SBC 304 البند 8.6 (الثقب)
+ * - SBC 304 الجدول 8.10.2.2 (توزيع العزوم)
  */
 class SBCAdvancedSlab {
 
@@ -91,7 +91,7 @@ class SBCAdvancedSlab {
     }
 
     /**
-     * تصميم شامل للبلاطة حسب SBC 304-2024
+     * تصميم شامل للبلاطة حسب SBC 304
      */
     fun designSlab(
         slabType: SlabType,
@@ -155,7 +155,7 @@ class SBCAdvancedSlab {
         isSeismic: Boolean = false,
         fireRatingHours: Double = 0.0
     ): AdvancedSlabResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("slabThickness", slabThickness)
@@ -165,7 +165,7 @@ class SBCAdvancedSlab {
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
-        codeNotes.add("SBC 304-2024: Flat Plate Design (Direct Design Method)")
+        codeNotes.add("SBC 304: Flat Plate Design (Direct Design Method)")
         codeNotes.add("Reference: SBC 304 §8.10, Table 8.10.2.2")
 
         // SBC material conversion
@@ -362,7 +362,7 @@ class SBCAdvancedSlab {
         isSeismic: Boolean = false,
         fireRatingHours: Double = 0.0
     ): AdvancedSlabResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("slabThickness", slabThickness)
@@ -374,7 +374,7 @@ class SBCAdvancedSlab {
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
-        codeNotes.add("SBC 304-2024: Flat Slab with Drop Panels")
+        codeNotes.add("SBC 304: Flat Slab with Drop Panels")
         codeNotes.add("Reference: SBC 304 §8.10, §8.6")
 
         val fcPrime = FCU_TO_FC_PRIME_FACTOR * fcu
@@ -532,7 +532,7 @@ class SBCAdvancedSlab {
         exposure: ExposureClass = ExposureClass.NORMAL,
         isSeismic: Boolean = false
     ): AdvancedSlabResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("totalThickness", totalThickness)
@@ -543,7 +543,7 @@ class SBCAdvancedSlab {
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
-        codeNotes.add("SBC 304-2024: One-Way Hordi/Ribbed Slab")
+        codeNotes.add("SBC 304: One-Way Hordi/Ribbed Slab")
         codeNotes.add("Reference: SBC 304 §8.12")
 
         val fcPrime = FCU_TO_FC_PRIME_FACTOR * fcu
@@ -749,7 +749,7 @@ class SBCAdvancedSlab {
         exposure: ExposureClass = ExposureClass.NORMAL,
         isSeismic: Boolean = false
     ): AdvancedSlabResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("totalThickness", totalThickness)
@@ -762,7 +762,7 @@ class SBCAdvancedSlab {
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
-        codeNotes.add("SBC 304-2024: Two-Way Waffle Slab")
+        codeNotes.add("SBC 304: Two-Way Waffle Slab")
         codeNotes.add("Reference: SBC 304 §8.12 (two-way extension)")
 
         val fcPrime = FCU_TO_FC_PRIME_FACTOR * fcu
@@ -941,7 +941,7 @@ class SBCAdvancedSlab {
         isSeismic: Boolean = false,
         isBalcony: Boolean = false
     ): AdvancedSlabResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fcu", fcu)
         InputGuard.positive("fy", fy)
         InputGuard.positive("slabThickness", slabThickness)
@@ -950,7 +950,7 @@ class SBCAdvancedSlab {
 
         val warnings = mutableListOf<String>()
         val codeNotes = mutableListOf<String>()
-        codeNotes.add("SBC 304-2024: Cantilever Slab Design")
+        codeNotes.add("SBC 304: Cantilever Slab Design")
         codeNotes.add("Reference: SBC 304 §8, Table 8.3.1.1")
 
         val fcPrime = FCU_TO_FC_PRIME_FACTOR * fcu
@@ -1122,7 +1122,7 @@ class SBCAdvancedSlab {
         slabThickness: Double,
         span: Double
     ): SlabDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.notNull("designResult", designResult)
         InputGuard.positive("fy", fy)
         InputGuard.positive("slabThickness", slabThickness)
@@ -1211,7 +1211,7 @@ class SBCAdvancedSlab {
         seismicZone: String,
         exposure: ExposureClass = ExposureClass.NORMAL
     ): SlabDesignResult {
-        // ── InputGuard (ADR-010) — SBC 304-2024 ──
+        // ── InputGuard (ADR-010) — SBC 304 ──
         InputGuard.positive("fy", fy)
         InputGuard.positive("slabThickness", slabThickness)
         InputGuard.positive("span", span)

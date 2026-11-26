@@ -559,7 +559,7 @@ class AnalyzeRebarInventory @Inject constructor() {
             else -> ""
         }
         DesignCode.ACI -> when (key) {
-            "LAP_SPLICE" -> "ACI 318-25.5.2: Development length for tension"
+            "LAP_SPLICE" -> "ACI 318.5.2: Development length for tension"
             "WASTE_ALLOWANCE" -> "ACI 318: Typical waste allowance 5-10%"
             else -> ""
         }

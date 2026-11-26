@@ -165,10 +165,10 @@ private val quickTools = listOf(
     QuickTool(R.string.home_site_layout_title, R.string.home_site_layout_sub, Icons.Default.Map, ToolConvBg, ToolConvAccent, AppScreen.SiteLayout.route),
     QuickTool(R.string.nav_inventory, R.string.tool_execution_logs_sub, Icons.Default.History, ToolPdfBg, ToolPdfAccent, AppScreen.ExecutionLog.route),
     QuickTool(R.string.home_rebar_tool,   R.string.home_rebar_sub,        Icons.Default.LinearScale, StatCardGreen.copy(alpha=0.1f), StatCardGreen, AppScreen.RebarTool.route),
-    QuickTool(R.string.home_quick_tools,  R.string.home_quick_tools_sub,  Icons.Default.Build,       ToolCalcBg, ToolCalcAccent, AppScreen.QuickTools.route),
+    QuickTool(R.string.toolbox_title, R.string.toolbox_subtitle, Icons.Default.Build, ToolCalcBg, ToolCalcAccent, "tools_hub"),
     QuickTool(R.string.home_concrete_mix, R.string.home_concrete_mix_sub,  Icons.Default.Science, ToolCalcBg, ToolCalcAccent, AppScreen.ConcreteMix.route),
     QuickTool(R.string.home_wind_load,    R.string.home_wind_load_sub,     Icons.Default.Air, ToolConvBg, ToolConvAccent, AppScreen.WindLoad.route),
-    QuickTool(R.string.home_section_tools_title, R.string.home_site_layout_sub, Icons.Default.Architecture, ToolQtyBg, ToolQtyAccent, AppScreen.BuildingDesigner.route)
+    QuickTool(R.string.building_plan_title, R.string.home_site_layout_sub, Icons.Default.Architecture, ToolQtyBg, ToolQtyAccent, AppScreen.BuildingDesigner.route)
 )
 
 // Recent projects now loaded from DB via ViewModel in HomeScreen composable
@@ -334,7 +334,7 @@ fun HomeScreen(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 SectionHeader(
                     icon = Icons.Default.Build,
-                    title = stringResource(R.string.home_section_tools_title),
+                    title = stringResource(R.string.toolbox_title),
                     subtitle = stringResource(R.string.home_section_tools_sub)
                 )
             }

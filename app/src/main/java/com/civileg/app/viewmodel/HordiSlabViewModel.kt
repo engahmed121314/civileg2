@@ -38,11 +38,24 @@ class HordiSlabViewModel @Inject constructor(
     val error: LiveData<String?> = _error
 
     // Store last input for PDF export
-    private var lastInputParams: HordiSlabInputParams? = null
+    private val calculatedCase = com.civileg.app.domain.calculations.utils.CalculatedCaseState<HordiSlabInputParams, SlabDesignResult>()
+    val calculatedInput: HordiSlabInputParams? get() = calculatedCase.snapshot?.input
+    private var activeCalculation: kotlinx.coroutines.Job? = null
 
     /** Bitmap captured from Compose drawing for PDF export. Set by Screen before calling exportToPdf. */
     @Volatile
-    var pendingDrawingBitmap: Bitmap? = null
+    private var pendingDrawingBitmap: Pair<com.civileg.app.domain.calculations.utils.CalculatedCaseState.Snapshot<HordiSlabInputParams, SlabDesignResult>, Bitmap>? = null
+
+    fun currentSnapshot() = calculatedCase.snapshot
+
+    fun acceptDrawingCapture(
+        snapshot: com.civileg.app.domain.calculations.utils.CalculatedCaseState.Snapshot<HordiSlabInputParams, SlabDesignResult>?,
+        bitmap: Bitmap?
+    ): Boolean {
+        if (snapshot == null || snapshot !== calculatedCase.snapshot) return false
+        pendingDrawingBitmap = bitmap?.let { snapshot to it }
+        return true
+    }
 
     private val _validationReport = MutableLiveData<String?>()
     val validationReport: LiveData<String?> = _validationReport
@@ -61,30 +74,55 @@ class HordiSlabViewModel @Inject constructor(
         designMoment: Double,     // kN.m/rib
         designShear: Double,      // kN/rib
         loadCombination: LoadCombination,
-        designCode: String = "ECP"
+        designCode: String = "ECP",
+        coverMm: Double = 25.0,
+        barBondClass: com.civileg.app.domain.entities.BarBondClass = com.civileg.app.domain.entities.BarBondClass.UNKNOWN,
+        supportCondition: com.civileg.app.domain.calculations.base.SlabSupportCondition =
+            com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED,
+        loadingApplicability: com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability =
+            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED,
+        detailCase: com.civileg.app.domain.calculations.utils.JoistDetailCase = com.civileg.app.domain.calculations.utils.JoistDetailCase()
     ) {
-        InputGuard.positive("fcu", fcu)
-        InputGuard.positive("fy", fy)
-        InputGuard.positive("ribWidth", ribWidth)
-        InputGuard.positive("ribSpacing", ribSpacing)
-        InputGuard.positive("totalThickness", totalThickness)
-        InputGuard.positive("toppingThickness", toppingThickness)
-        InputGuard.positive("span", span)
-        InputGuard.nonNegative("designMoment", designMoment)
-        InputGuard.nonNegative("designShear", designShear)
-
-        viewModelScope.launch {
+        clearResult()
+        val ticket = calculatedCase.begin()
+        activeCalculation = viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
+                InputGuard.positive("fcu", fcu)
+                InputGuard.positive("fy", fy)
+                InputGuard.positive("ribWidth", ribWidth)
+                InputGuard.positive("ribSpacing", ribSpacing)
+                InputGuard.positive("totalThickness", totalThickness)
+                InputGuard.positive("toppingThickness", toppingThickness)
+                InputGuard.positive("span", span)
+                InputGuard.nonNegative("designMoment", designMoment)
+                InputGuard.nonNegative("designShear", designShear)
+                InputGuard.inRange("cover", coverMm, 10.0, 75.0)
+                val bindingConflicts = com.civileg.app.domain.calculations.utils.HordiCaseBinding.conflicts(
+                    detailCase, span, designMoment, designShear, coverMm)
+                require(bindingConflicts.isEmpty()) { bindingConflicts.joinToString("; ") }
                 val code = DesignCode.valueOf(designCode)
-                lastInputParams = HordiSlabInputParams(
+                val input = HordiSlabInputParams(
                     fcu = fcu, fy = fy, ribWidth = ribWidth, ribSpacing = ribSpacing,
                     totalThickness = totalThickness, toppingThickness = toppingThickness,
                     span = span, designMoment = designMoment, designShear = designShear,
-                    loadCombination = loadCombination, designCode = designCode
+                    loadCombination = loadCombination, designCode = designCode, coverMm = coverMm, barBondClass = barBondClass, supportCondition = supportCondition, loadingApplicability = loadingApplicability, detailCase = detailCase
                 )
 
+                if (input.referenceBasis == com.civileg.app.domain.calculations.utils.RcReferenceBasis.ECP_2020) {
+                    val geometry = com.civileg.app.domain.calculations.ecp.ECP2020JoistRules.geometry(
+                        ribWidth, ribSpacing, totalThickness, toppingThickness
+                    )
+                    require(geometry.all { it.passed }) {
+                        geometry.filterNot { it.passed }.joinToString("; ") { "${it.clause}: ${it.requirement}" }
+                    }
+                }
+                if (input.referenceBasis == com.civileg.app.domain.calculations.utils.RcReferenceBasis.ECP_2020) {
+                    com.civileg.app.domain.calculations.ecp.ECP2020JoistCaseReview.review(
+                        detailCase, fcu, fy, ribWidth, ribSpacing, totalThickness, toppingThickness
+                    )
+                }
                 val designer: HordiSlabDesign = CalculationFactory.getHordiSlabDesign(code)
                 val result = designer.designHordiSlab(
                     fcu = fcu,
@@ -96,13 +134,20 @@ class HordiSlabViewModel @Inject constructor(
                     span = span,
                     designMoment = designMoment,
                     designShear = designShear,
-                    loadCombination = loadCombination
+                    loadCombination = loadCombination,
+                    coverMm = coverMm,
+                    barBondClass = barBondClass,
+                    supportCondition = supportCondition,
+                    loadingApplicability = loadingApplicability
                 )
-                _result.value = result
+                val frozenResult = result.copy(warnings = result.warnings.toList(), codeNotes = result.codeNotes.toList())
+                if (calculatedCase.complete(ticket, input, frozenResult)) _result.value = frozenResult
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _error.value = "Error: ${e.message}"
+                if (calculatedCase.isCurrent(ticket)) _error.value = "Error: ${e.message}"
             } finally {
-                _isLoading.value = false
+                if (calculatedCase.isCurrent(ticket)) _isLoading.value = false
             }
         }
     }
@@ -111,16 +156,62 @@ class HordiSlabViewModel @Inject constructor(
      * Export results to PDF report.
      */
     /** Standalone DXF sheet for the current hordi slab design (null when no result). */
-    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
-        val res = _result.value ?: return null
-        val params = lastInputParams ?: return null
-        return com.civileg.app.utils.ElementDxfDrawings.slabSection(
-            title = "HORDI SLAB",
-            spanMm = params.span,
-            thicknessMm = params.totalThickness,
-            coverMm = 25.0,
-            mainBarDiaMm = res.barDiameter.toDouble(),
-            mainSpacingMm = res.barSpacing.toDouble()
+    fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? = null
+
+    /** Explicit main-bar-body review takeoff, not a complete adopted layout. */
+    private fun scheduleFor(snapshot: com.civileg.app.domain.calculations.utils.CalculatedCaseState.Snapshot<HordiSlabInputParams, SlabDesignResult>): com.civileg.app.domain.calculations.utils.AdoptedReinforcementSchedule? {
+        val p = snapshot.input
+        val caseReview = if (p.referenceBasis == com.civileg.app.domain.calculations.utils.RcReferenceBasis.ECP_2020)
+            com.civileg.app.domain.calculations.ecp.ECP2020JoistCaseReview.review(
+                p.detailCase, p.fcu, p.fy, p.ribWidth, p.ribSpacing, p.totalThickness, p.toppingThickness
+            ) else null
+        // Never issue adopted body quantities from a failed section/shear case.
+        if (p.referenceBasis == com.civileg.app.domain.calculations.utils.RcReferenceBasis.ECP_2020 &&
+            (caseReview == null || !com.civileg.app.domain.calculations.ecp.ECP2020JoistCaseReview.permitsPartialBodyTakeoff(caseReview))) return null
+        val specific = caseReview?.section
+        val source = specific?.let { check ->
+            snapshot.result.copy(requiredReinforcement = requireNotNull(check.requiredAreaWithMinimumMm2),
+                providedReinforcement = check.providedAreaMm2,
+                barDiameter = requireNotNull(p.detailCase.detailing).mainBarDiameterMm.toDouble(),
+                isSafe = check.sectionPasses && caseReview.shearDemandWithinConcreteThreshold == true)
+        } ?: snapshot.result
+        return com.civileg.app.domain.calculations.utils.HordiReviewTakeoff.schedule(
+            source, p.designCode, p.span, p.ribSpacing, p.coverMm
+        )
+    }
+
+    fun reviewSchedule() = calculatedCase.snapshot?.let { scheduleFor(it) }
+
+    fun codeSpecificReview(): com.civileg.app.domain.calculations.ecp.ECP2020JoistCaseReview.Result? {
+        val p = calculatedInput ?: return null
+        if (p.referenceBasis != com.civileg.app.domain.calculations.utils.RcReferenceBasis.ECP_2020) return null
+        return com.civileg.app.domain.calculations.ecp.ECP2020JoistCaseReview.review(
+            p.detailCase, p.fcu, p.fy, p.ribWidth, p.ribSpacing, p.totalThickness, p.toppingThickness
+        )
+    }
+
+    private fun panelBottomTakeoffFor(p: HordiSlabInputParams): com.civileg.app.domain.calculations.ecp.ECP2020JoistBottomTakeoff.Result? {
+        if (p.referenceBasis != com.civileg.app.domain.calculations.utils.RcReferenceBasis.ECP_2020) return null
+        return com.civileg.app.domain.calculations.ecp.ECP2020JoistBottomTakeoff.build(
+            p.detailCase, p.fcu, p.fy, p.ribWidth, p.ribSpacing, p.totalThickness, p.toppingThickness
+        )
+    }
+
+    fun panelBottomTakeoff() = calculatedInput?.let { panelBottomTakeoffFor(it) }
+    fun panelBottomEntries() = panelBottomTakeoff()?.schedule?.let {
+        com.civileg.app.domain.calculations.utils.BbsGenerator.fromAdoptedSchedule("HP", it)
+    }.orEmpty()
+
+    fun reviewBbsEntries() = reviewSchedule()?.let {
+        com.civileg.app.domain.calculations.utils.BbsGenerator.fromAdoptedSchedule("H1", it)
+    }.orEmpty()
+
+    fun reviewBoqRows(): List<com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.BoqRow> {
+        val snapshot = calculatedCase.snapshot ?: return emptyList()
+        val p = snapshot.input
+        return com.civileg.app.domain.calculations.utils.BoqEstimator.hordiReviewRows(
+            p.span, p.totalThickness, p.toppingThickness, p.ribWidth, p.ribSpacing,
+            reviewSchedule()?.totalWeightKg, panelBottomTakeoff()?.schedule?.totalWeightKg
         )
     }
 
@@ -139,8 +230,12 @@ class HordiSlabViewModel @Inject constructor(
         context: Context,
         onComplete: (File?) -> Unit
     ) {
-        val res = _result.value ?: return
-        val params = lastInputParams ?: return
+        val snapshot = calculatedCase.snapshot ?: return
+        val res = snapshot.result
+        val params = snapshot.input
+        val capturedDrawing = pendingDrawingBitmap?.takeIf { it.first === snapshot }?.second
+        pendingDrawingBitmap = null
+        val dxfDrawing = buildDxfDrawing()
         viewModelScope.launch(Dispatchers.IO) {
             kotlinx.coroutines.withContext(Dispatchers.Main) { _isExporting.value = true }
             try {
@@ -155,62 +250,118 @@ class HordiSlabViewModel @Inject constructor(
                     "Rib Spacing" to "${params.ribSpacing} mm",
                     "Total Thickness" to "${params.totalThickness} mm",
                     "Topping Thickness" to "${params.toppingThickness} mm",
-                    "Span" to "${params.span / 1000.0} m",
+                    "Clear Span Between Support Faces" to "${params.span / 1000.0} m",
                     "Design Moment" to "${"%.2f".format(params.designMoment)} kN.m/rib",
                     "Design Shear" to "${"%.2f".format(params.designShear)} kN/rib",
                     "f'cu" to "${params.fcu} MPa",
                     "fy" to "${params.fy} MPa",
                     "Load Combination" to params.loadCombination.description,
-                    "Design Code" to params.designCode
+                    "Selected Reference Basis" to params.referenceBasis.edition,
+                    "Method Status" to "Legacy calculation pending rebuild to selected supplied reference"
                 )
 
                 val resultsMap = mapOf(
-                    "Required As" to "${"%.2f".format(res.requiredReinforcement)} mm²",
-                    "Provided As" to "${"%.2f".format(res.providedReinforcement)} mm²",
+                    "Legacy Engine Required As (unverified)" to com.civileg.app.utils.DesignNumberFormat.areaMm2(res.requiredReinforcement, 2),
+                    "Legacy Engine Provided As (unverified)" to "${"%.2f".format(res.providedReinforcement)} mm²",
                     "Bar Diameter" to "${res.barDiameter} mm",
-                    "Bar Spacing" to "${res.barSpacing} mm",
+                    "Rib Pitch (not bar spacing)" to "${params.ribSpacing} mm",
                     "Min Thickness" to "${res.minThickness} mm",
-                    "Shear Capacity" to "${"%.1f".format(res.shearCapacity)} kN",
-                    "Utilization" to "${(res.utilizationRatio * 100).toInt()}%",
-                    "Is Safe" to if (res.isSafe) "YES" else "NO"
+                    "Legacy Engine Shear Capacity (unverified)" to "${"%.1f".format(res.shearCapacity)} kN",
+                    "Utilization" to com.civileg.app.utils.DesignNumberFormat.percent(res.utilizationRatio),
+                    "Engine Check Flag (unverified)" to if (res.isSafe) "PASS (unverified method)" else "FAIL",
+                    "Detailing Status" to com.civileg.app.domain.calculations.utils.HordiReviewTakeoff.LIMITATION,
+                    "Engineering Approval" to "NOT ISSUED - selected edition and adopted detailing not verified"
                 )
+
+                val specificReview = if (params.referenceBasis == com.civileg.app.domain.calculations.utils.RcReferenceBasis.ECP_2020)
+                    com.civileg.app.domain.calculations.ecp.ECP2020JoistCaseReview.review(params.detailCase,
+                        params.fcu, params.fy, params.ribWidth, params.ribSpacing, params.totalThickness, params.toppingThickness)
+                    else null
+                val partialPanelBottom = panelBottomTakeoffFor(params)
+                val mainBodySchedule = scheduleFor(snapshot)
+                val reviewInputRows = mapOf(
+                    "Actual Rib Count" to (params.detailCase.actualRibCount?.toString() ?: "Missing"),
+                    "Effective Flange Width" to (params.detailCase.effectiveFlangeWidthMm?.let { "$it mm, explicit input, code-width validation pending" } ?: "Missing"),
+                    "Left Support Input" to (params.detailCase.leftSupport?.toString() ?: "Missing"),
+                    "Right Support Input" to (params.detailCase.rightSupport?.toString() ?: "Missing"),
+                    "Load Decomposition Input" to (params.detailCase.loadBasis?.toString() ?: "Missing"),
+                    "Serviceability Input" to (params.detailCase.serviceability?.toString() ?: "Missing"),
+                    "Detailing Input" to (params.detailCase.detailing?.toString() ?: "Missing"),
+                    "Quantity Basis" to if (partialPanelBottom?.schedule != null)
+                        "PARTIAL PANEL bottom straight bars with full straight development; concrete separately per periodic 1 m width, NOT same basis"
+                        else "If issued: straight bodies over clear span for ONE RIB, no anchorage; concrete separately per periodic 1 m width",
+                    "Main-Body Bar Source" to when {
+                        specificReview != null && mainBodySchedule != null -> "Explicit case main-bar diameter/count, partial body review only"
+                        specificReview != null -> "WITHHELD: explicit ECP case is incomplete, unsupported or failed section/shear checks; no legacy-bar fallback"
+                        else -> "Legacy engine adopted diameter/count, unverified"
+                    }
+                )
+                fun reviewNumber(value: Double) = String.format(java.util.Locale.US, "%.2f", value)
+                val specificRows = specificReview?.let { review -> buildMap<String, String> {
+                    put("ECP 2020 Review Scope", "Partial case review only. No construction approval")
+                    put("Unverified Design Requirements", review.limitations)
+                    put("Missing Case Inputs", review.missingInputs.joinToString("; ").ifBlank { "None in input contract" })
+                    put("Unsupported Case Conditions", review.unsupported.joinToString("; ").ifBlank { "None in bounded strategy" })
+                    review.section?.let { check ->
+                        put("ECP2020 Section Required Area incl Minimum", check.requiredAreaWithMinimumMm2?.let { "${reviewNumber(it)} mm2" } ?: "No singly reinforced solution")
+                        put("ECP2020 Section Provided Area", "${reviewNumber(check.providedAreaMm2)} mm2")
+                        put("ECP2020 Section Check ONLY", if (check.sectionPasses) "PASS - not full design" else "FAIL")
+                        put("ECP2020 Effective Depth", "${reviewNumber(check.effectiveDepthMm)} mm")
+                    }
+                    review.concreteOnlyShearKn?.let { put("ECP2020 Concrete-only Threshold", "${reviewNumber(it)} kN") }
+                    review.shearDemandWithinConcreteThreshold?.let { put("ECP2020 Shear Threshold Check", it.toString()) }
+                    review.bottomStraightDevelopmentMm?.let { put("ECP2020 Straight Bottom Development", "${reviewNumber(it)} mm") }
+                    review.leftAnchorageFits?.let { put("Left Straight Anchorage Fits", it.toString()) }
+                    review.rightAnchorageFits?.let { put("Right Straight Anchorage Fits", it.toString()) }
+                    review.effectiveSpanMm?.let { put("ECP2020 Simple Rib Effective Span", "${reviewNumber(it)} mm, total slab thickness and support center cap; demand not reanalysed") }
+                    review.crossRibsRequired?.let { put("Cross Ribs Required - NOT DESIGNED", it.toString()) }
+                    review.crossRibMinimums?.let { minimum ->
+                        put("Cross-rib Minimum Section ONLY, 6-2-2-2", "Web >= ${reviewNumber(minimum.minimumWebWidthMm)} mm; total depth >= ${reviewNumber(minimum.minimumTotalDepthMm)} mm")
+                        put("Cross-rib Minimum Bottom Steel ONLY", "As >= ${reviewNumber(minimum.minimumBottomAreaMm2)} mm2, main-rib provided area; not a bar design")
+                        put("Cross-rib Top Steel Rule", "As top >= 0.5 x ACTUAL cross-rib bottom As. Demand, bars, positions and anchorage not designed or included in quantities")
+                    }
+                } }.orEmpty()
 
                 val safetyChecks = emptyList<GenericSafetyCheck>()
 
-                val drawingBitmap = pendingDrawingBitmap ?: runCatching {
-                    com.civileg.app.shared.reporting.PdfDrawingGenerator.generateSlabDrawingByType(
-                        slabType = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
-                        spanX = params.span, spanY = params.span, thickness = params.totalThickness,
-                        mainDia = res.barDiameter, mainSpacing = res.barSpacing,
-                        distDia = res.barDiameter, distSpacing = res.barSpacing,
-                        cover = 25.0, ribWidth = params.ribWidth, ribSpacing = params.ribSpacing
-                    )
-                }.getOrNull()
-                pendingDrawingBitmap = null  // consume after use
+                // No generated substitute for a missing real capture.
+                val drawingBitmap = capturedDrawing
 
-                val bbsEntries = runCatching {
-                    com.civileg.app.domain.calculations.utils.BbsGenerator.generateHordiSlabBbs(
-                        "H1", res, params.span, params.ribSpacing
-                    )
-                }.getOrDefault(emptyList())
-                val steelWeightKg = bbsEntries.sumOf { it.totalWeightKg }
+                val bbsEntries = mainBodySchedule?.let {
+                    com.civileg.app.domain.calculations.utils.BbsGenerator.fromAdoptedSchedule("H1", it)
+                }.orEmpty()
+                val partialPanelEntries = partialPanelBottom?.schedule?.let {
+                    com.civileg.app.domain.calculations.utils.BbsGenerator.fromAdoptedSchedule("HP", it)
+                }.orEmpty()
+                val mainBodiesWeightKg = bbsEntries.takeIf { it.isNotEmpty() }?.sumOf { it.totalWeightKg }
 
-                val codeName = params.designCode
+                val codeName = params.referenceBasis.edition
                 val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
-                    titleAr = "????? ????? ????? ?????",
-                    titleEn = "Hordi Slab Design Report",
-                    subtitle = "Code: $codeName    Span=${params.span/1000.0}m",
+                    titleAr = "",
+                    titleEn = "Hordi Slab Calculation Review - Incomplete Detailing",
+                    subtitle = "Code: $codeName | Span=${params.span/1000.0}m",
                     designType = "Hordi Slab",
-                    inputs = inputsMap,
-                    results = resultsMap,
+                    inputs = inputsMap + reviewInputRows,
+                    results = resultsMap + specificRows + mapOf(
+                        "Partial Panel Bottom Steel Status" to (partialPanelBottom?.reasons?.joinToString("; ")?.ifBlank {
+                            com.civileg.app.domain.calculations.ecp.ECP2020JoistBottomTakeoff.LIMITATION
+                        } ?: "Not available for selected reference"),
+                        "Schedule Basis" to when {
+                            partialPanelEntries.isNotEmpty() -> "PARTIAL PANEL BOTTOM BARS ONLY, includes straight development. All other steel omitted. Concrete remains periodic 1m."
+                            bbsEntries.isNotEmpty() -> "ONE RIB straight bodies only, no anchorage. Concrete remains periodic 1m."
+                            else -> "NO STEEL SCHEDULE ISSUED. Concrete-only review quantity remains periodic 1m."
+                        }
+                    ),
                     safetyChecks = safetyChecks,
-                    isSafe = res.isSafe,
-                    bbsEntries = bbsEntries,
-                    boqRows = com.civileg.app.domain.calculations.utils.BoqEstimator.hordiSlabRows(
-                        params.span / 1000.0, params.totalThickness / 1000.0, steelWeightKg, "H1"
+                    isSafe = false,
+                    incompleteReview = true,
+                    bbsEntries = partialPanelEntries.ifEmpty { bbsEntries },
+                    boqRows = com.civileg.app.domain.calculations.utils.BoqEstimator.hordiReviewRows(
+                        params.span, params.totalThickness, params.toppingThickness,
+                        params.ribWidth, params.ribSpacing, mainBodiesWeightKg, partialPanelBottom?.schedule?.totalWeightKg
                     ),
                     drawingBitmap = drawingBitmap,
-                    drawing = buildDxfDrawing(),
+                    drawing = dxfDrawing,
                     outputPath = file.absolutePath
                 ).pdfFile
 
@@ -231,43 +382,25 @@ class HordiSlabViewModel @Inject constructor(
     }
 
     fun clearResult() {
+        activeCalculation?.cancel()
+        activeCalculation = null
+        calculatedCase.invalidate()
+        pendingDrawingBitmap = null
         _result.value = null
+        _isLoading.value = false
         _error.value = null
     }
 
     fun saveDesign(projectId: Long, name: String) {
-        val res = _result.value ?: return
-        viewModelScope.launch {
-            val engineCode = when (lastInputParams?.designCode ?: "ECP") {
-                "ACI" -> DesignCode.ACI
-                "SBC" -> DesignCode.SBC
-                else -> DesignCode.ECP
-            }
-            // FIX: Estimate concrete volume and steel weight from available data
-            val inputParams = lastInputParams
-            val estimatedVolume = if (inputParams != null) {
-                // Approximate: (topping + rib_ratio × rib_height) × span² per m²
-                val ribRatio = inputParams.ribWidth / inputParams.ribSpacing
-                val thicknessEff = inputParams.toppingThickness + ribRatio * (inputParams.totalThickness - inputParams.toppingThickness)
-                (thicknessEff / 1000.0) * (inputParams.span / 1000.0) * (inputParams.span / 1000.0)
-            } else 0.0
-            val estimatedSteel = res.providedReinforcement * 7850.0 / 1e6  // As (mm²) × density / 1e6 → kg/m approx
-            repository.saveSlabDesign(projectId, name, com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabResult(
-                type = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.HOLLOW_BLOCK,
-                thickness = res.minThickness,
-                isSafe = res.isSafe,
-                concreteVolume = estimatedVolume,
-                steelWeight = estimatedSteel,
-                code = engineCode,
-                utilizationRatio = res.utilizationRatio
-            ))
-        }
+        // The current storage schema cannot preserve an explicit review-only
+        // quantity basis. Do not persist partial steel as a completed design.
+        _error.value = "Save is unavailable until the adopted detailing and quantity basis can be preserved"
     }
 
     /**
      * Helper data class to store input parameters for PDF export.
      */
-    private data class HordiSlabInputParams(
+    data class HordiSlabInputParams(
         val fcu: Double,
         val fy: Double,
         val ribWidth: Double,
@@ -278,6 +411,15 @@ class HordiSlabViewModel @Inject constructor(
         val designMoment: Double,
         val designShear: Double,
         val loadCombination: LoadCombination,
-        val designCode: String
+        val designCode: String,
+        val coverMm: Double = 25.0,
+        val barBondClass: com.civileg.app.domain.entities.BarBondClass = com.civileg.app.domain.entities.BarBondClass.UNKNOWN,
+        val supportCondition: com.civileg.app.domain.calculations.base.SlabSupportCondition =
+            com.civileg.app.domain.calculations.base.SlabSupportCondition.UNSPECIFIED,
+        val loadingApplicability: com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability =
+            com.civileg.app.domain.calculations.base.DeflectionLoadingApplicability.UNDECLARED,
+        val detailCase: com.civileg.app.domain.calculations.utils.JoistDetailCase = com.civileg.app.domain.calculations.utils.JoistDetailCase(),
+        val referenceBasis: com.civileg.app.domain.calculations.utils.RcReferenceBasis =
+            com.civileg.app.domain.calculations.utils.RcReferenceBasis.forCode(designCode)
     )
 }

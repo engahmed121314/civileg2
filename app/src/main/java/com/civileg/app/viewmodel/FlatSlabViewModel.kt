@@ -115,6 +115,7 @@ class FlatSlabViewModel @Inject constructor(
                 val result = designer.design(input)
                 _result.value = result
             } catch (e: Exception) {
+                _result.value = null  // a failed attempt must not leave the previous design on screen
                 _error.value = "Error: ${e.message}"
                 _errorMessage.value = "Flat slab calculation error / خطأ في حساب البلاطة المسطحة: ${e.message}"
             } finally {
@@ -205,13 +206,14 @@ class FlatSlabViewModel @Inject constructor(
                 val drawingBitmap = pendingDrawingBitmap ?: runCatching {
                     com.civileg.app.shared.reporting.PdfDrawingGenerator.generateSlabDrawingByType(
                         slabType = com.civileg.app.domain.calculations.utils.CalculatorEngine.SlabType.FLAT,
-                        spanX = input.lx, spanY = input.ly, thickness = input.slabThickness,
+                        spanX = input.lx, spanY = input.ly, spansInMm = true, thickness = input.slabThickness,
                         mainDia = res.columnStripBotRebar.diameter.toDouble(),
                         mainSpacing = res.columnStripBotRebar.spacing.toDouble(),
                         distDia = res.middleStripBotRebar.diameter.toDouble(),
                         distSpacing = res.middleStripBotRebar.spacing.toDouble(),
                         cover = input.clearCover,
                         dropPanelSize = maxOf(input.dropSizeX, input.dropSizeY),
+                        dropPanelThickness = input.dropThickness,
                         columnSize = input.columnWidth
                     )
                 }.getOrNull()
@@ -251,6 +253,12 @@ class FlatSlabViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /** Surface an input problem found by the screen; no result is shown and nothing is calculated. */
+    fun reportInputError(message: String) {
+        _result.value = null
+        _error.value = message
     }
 
     fun clearResult() {

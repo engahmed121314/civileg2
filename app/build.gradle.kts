@@ -168,7 +168,7 @@ android {
             isShrinkResources = false
             if (!project.hasProperty("noDebugSuffix")) {
                 applicationIdSuffix = ".debug"
-                versionNameSuffix = "-debug"
+                versionNameSuffix = "-debug-${System.getenv("GITHUB_SHA")?.take(7) ?: "local"}"
             }
         }
     }

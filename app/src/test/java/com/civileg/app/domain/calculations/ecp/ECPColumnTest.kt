@@ -19,13 +19,9 @@ class ECPColumnTest {
             loadCombination = LoadCombination.DEAD_LIVE
         )
         
-        // Manual calculation for verification (ECP 203-2020)
-        val Ag = 300.0 * 300.0 // 90000 mm²
-        val Ast = 1200.0
-        val concreteStress = 0.67 * 25.0 / 1.5 // 11.167 MPa
-        val steelStress = 420.0 / 1.15 // 365.22 MPa
-        val nominalCapacity = 0.8 * (concreteStress * (Ag - Ast) + steelStress * Ast)
-        val expected = nominalCapacity / 1000.0 // kN
+        // Hand case, ECP 203-2020 Eq. [4-12-a]:
+        // 0.35*25*(90000-1200) + 0.67*420*1200 = 777000 + 337680 = 1114680 N
+        val expected = 1114.68 // kN
         
         assertEquals(expected, capacity, 0.1)
     }
@@ -54,7 +50,7 @@ class ECPColumnTest {
         val maxRatio = column.getMaxReinforcementRatio()
         
         assertEquals(0.008, minRatio, 0.0001) // 0.8%
-        assertEquals(0.08, maxRatio, 0.0001)   // 8%
+        assertEquals(0.04, maxRatio, 0.0001)   // ECP 203-2025 p.6-55 (PDF 246): 4% middle column
         assertTrue("Min should be less than max", minRatio < maxRatio)
     }
     
@@ -69,5 +65,25 @@ class ECPColumnTest {
         
         assertTrue("Ties spacing >= min", result.tiesSpacing >= column.getMinSpacing())
         assertTrue("Ties spacing <= max", result.tiesSpacing <= column.getMaxSpacing())
+    }
+}
+
+class ECPColumnEq412DomainTest {
+    private val column = ECPColumn()
+
+    @org.junit.Test
+    fun `eccentricity above max 0_05t and 20 mm is outside Eq 4-12-a and never passes`() {
+        // 300x300: e_min = max(20, 15) = 20 mm. Pu 500 kN, M 50 kN.m -> e = 100 mm.
+        val r = column.calculateReinforcement(25.0, 420.0, 300.0, 300.0, 500.0, 50.0, 0.0,
+            com.civileg.app.domain.entities.LoadCombination.DEAD_LIVE)
+        org.junit.Assert.assertFalse(r.isSafe)
+        org.junit.Assert.assertTrue(r.warnings.any { it.contains("OUTSIDE FORMULA DOMAIN") })
+    }
+
+    @org.junit.Test
+    fun `small eccentricity inside domain has no domain warning`() {
+        val r = column.calculateReinforcement(25.0, 420.0, 300.0, 300.0, 300.0, 3.0, 0.0,
+            com.civileg.app.domain.entities.LoadCombination.DEAD_LIVE)
+        org.junit.Assert.assertTrue(r.warnings.none { it.contains("OUTSIDE FORMULA DOMAIN") })
     }
 }
