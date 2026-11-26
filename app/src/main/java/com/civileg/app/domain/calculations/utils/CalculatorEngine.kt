@@ -2579,9 +2579,9 @@ class CalculatorEngine @Inject constructor(
                 stepNumber = 6, title = "Safety Checks",
                 formula = "Flexure · shear · crack width",
                 formulaWithValues = "${res.safetyChecks.count { it.isSafe }}/${res.safetyChecks.size} checks passed",
-                result = if (res.isSafe) "SAFE" else "UNSAFE", unit = "",
+                result = if (res.safetyChecks.isEmpty()) "NOT ASSESSED" else if (res.isSafe) "SAFE" else "UNSAFE", unit = "",
                 codeReference = ref, isPass = res.isSafe,
-                status = if (res.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
+                status = if (res.safetyChecks.isEmpty()) StepStatus.INFO else if (res.isSafe) StepStatus.CHECK_PASS else StepStatus.CHECK_FAIL
             ),
             CalculationStep(
                 stepNumber = 7, title = "Base punching shear (surrogate)",

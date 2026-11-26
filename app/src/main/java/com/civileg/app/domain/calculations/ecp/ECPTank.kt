@@ -109,7 +109,6 @@ class ECPTank : TankDesign {
         val cost = concreteVolume * concreteCostPerM3 + (steelWeight / 1000.0) * steelCostPerTon
 
         // 7. فحص السلامة
-        val isSafe = safetyChecks.all { it.isSafe }
 
         // 8. التحقق من الرفع للخزانات تحت الأرض
         var upliftFS = 0.0
@@ -122,6 +121,10 @@ class ECPTank : TankDesign {
                 upliftFS >= 1.25, "Stability against buoyancy (ECP 203 Sec. 8-1)"
             ))
         }
+
+        // A verdict needs at least one check, and the uplift check above is part of it.
+        // An empty list (circular walls carry no code check) is never SAFE.
+        val isSafe = safetyChecks.isNotEmpty() && safetyChecks.all { it.isSafe }
 
         // 9. التوصيات
         recommendations.add("استخدام SBR أو Water-stop في المفاصل الإنشائية")

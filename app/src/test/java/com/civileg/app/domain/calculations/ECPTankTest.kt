@@ -81,4 +81,20 @@ class ECPTankTest {
         assertTrue(notes.contains(ECPTank.EDITION_SCOPE_NOTE))
         assertTrue(notes.any { it.contains("hoop tension") && it.contains("NOT ASSESSED") })
     }
+
+    @Test
+    fun circularTank_withoutAnyCodeCheck_isNeverSafe() {
+        val r = engine.calculateTank(6000.0, 6000.0, 4000.0, 3500.0, 35.0, 420.0, TankType.CIRCULAR_GROUND)
+        assertTrue(r.safetyChecks.isEmpty())
+        assertTrue(!r.isSafe)
+    }
+
+    @Test
+    fun undergroundTank_upliftFailureAlone_makesResultUnsafe() {
+        // Light shell in deep water table: uplift is the governing check; it must reach the verdict.
+        val r = engine.calculateTank(6000.0, 4000.0, 3000.0, 2900.0, 30.0, 400.0, TankType.RECTANGULAR_UNDERGROUND)
+        val uplift = r.safetyChecks.first { it.name.contains("Uplift") }
+        assertTrue(r.isSafe == r.safetyChecks.all { it.isSafe })
+        if (!uplift.isSafe) assertTrue(!r.isSafe)
+    }
 }

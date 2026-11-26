@@ -559,11 +559,16 @@ def tank_cases_block():
             log.append((tag + "_calc", calc)); time.sleep(4); dismiss_not_responding()
             sweep(tag + "-res", 10)
             pdf_ok = False
-            for _ in range(10):
-                if tap_text(["PDF", "تقرير"], tag + "-pdf-find"): pdf_ok = True; break
-                scroll_up(2)
+            scroll_top(8)
+            for _ in range(12):
+                if tap_text(["تقرير PDF", "PDF", "تقرير"], tag + "-pdf-find"): pdf_ok = True; break
+                scroll_up(1)
             log.append((tag + "_pdf_tap", pdf_ok)); time.sleep(6)
-            tap_text(["Got it", "حسنًا", "حسناً"], tag + "-gotit")
+            if not tap_text(["Got it", "حسنًا", "حسناً"], tag + "-gotit"):
+                wm = adb("shell", "wm", "size").stdout.decode(errors="ignore")
+                mm = re.search(r"(\d+)x(\d+)", wm)
+                if mm:
+                    adb("shell", "input", "tap", str(int(int(mm.group(1)) * 0.79)), str(int(int(mm.group(2)) * 0.27))); time.sleep(1.5)
             shot(tag + "-pdf"); dump(tag + "-pdf")
         except Exception as e:
             log.append((tag + "_exception", repr(e)))
