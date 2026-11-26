@@ -328,8 +328,8 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
             item { WarehouseResultSummary(res) }
             
             item {
-                AppText(stringResource(R.string.steel_cost_structure_feasibility), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                FeasibilityChart(res)
+                // The pie used fixed 60/25/15 shares and the cost used invented rates: both removed.
+                AppText("Cost: NOT ISSUED (no verified price source)", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             }
 
             // Calculation Trace (Detailed for English Report)

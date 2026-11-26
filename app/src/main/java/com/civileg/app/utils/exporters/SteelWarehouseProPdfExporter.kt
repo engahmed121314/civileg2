@@ -38,6 +38,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     private val ROW_ALT = DeviceRgb(248, 249, 250)
     private val WHITE = DeviceRgb(255, 255, 255)
     private val NOT_ASSESSED_GRAY = DeviceRgb(128, 128, 128)
+    private val MUTED = NOT_ASSESSED_GRAY
 
     private fun helvetica(bold: Boolean = false): PdfFont = PdfFontFactory.createFont(
         if (bold) StandardFonts.HELVETICA_BOLD else StandardFonts.HELVETICA
@@ -139,7 +140,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         data.addCell(dataCell("Total Steel Weight", true, LIGHT_BLUE)).addCell(dataCell("${result.totalWeight.fmt(1)} Tons"))
         data.addCell(dataCell("Weight per Area", true)).addCell(dataCell("${result.weightPerM2.fmt(1)} kg/m\u00B2"))
         data.addCell(dataCell("Total Cladding Area", true, LIGHT_BLUE)).addCell(dataCell("${result.totalCladdingArea.fmt(1)} m\u00B2"))
-        data.addCell(dataCell("Estimated Total Cost", true)).addCell(dataCell("${result.estimatedTotalCost.fmt(0)} EGP", true, null, PRIMARY))
+        data.addCell(dataCell("Estimated Total Cost", true)).addCell(dataCell("NOT ISSUED (no verified price source)", true, null, MUTED))
         document.add(data)
         
         document.add(Paragraph("\nCalculation Trace:").setBold().setUnderline())
@@ -179,8 +180,8 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
         document.add(Paragraph("Steel Member Schedule").setFontSize(14f).setBold().setFontColor(PRIMARY))
         document.add(LineSeparator(SolidLine(1f)).setMarginBottom(5f))
 
-        val table = Table(UnitValue.createPercentArray(floatArrayOf(8f, 22f, 30f, 25f, 15f))).useAllAvailableWidth()
-        table.addHeaderCell(headerCell("MARK")).addHeaderCell(headerCell("MEMBER")).addHeaderCell(headerCell("SECTION")).addHeaderCell(headerCell("QTY / COUNT")).addHeaderCell(headerCell("STATUS"))
+        val table = Table(UnitValue.createPercentArray(floatArrayOf(8f, 20f, 27f, 23f, 22f))).useAllAvailableWidth()
+        table.addHeaderCell(headerCell("MARK")).addHeaderCell(headerCell("MEMBER")).addHeaderCell(headerCell("SECTION")).addHeaderCell(headerCell("QTY / COUNT")).addHeaderCell(headerCell("TOTAL WEIGHT"))
 
         val numBays = (inputs.length / inputs.baySpacing).toInt().coerceAtLeast(1)
         val members = mutableListOf(Triple("C1", "Main Columns", result.mainFrame.columnSection), Triple("R1", "Main Rafters", result.mainFrame.rafterSection))
@@ -193,7 +194,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
             val bg = if (i % 2 != 0) ROW_ALT else null
             table.addCell(dataCell(m.first, true, bg))
             table.addCell(dataCell(m.second, false, bg))
-            table.addCell(dataCell(m.third.displayName, true, bg))
+            table.addCell(dataCell(m.third.sectionName, true, bg))
             
             val qtyText = when(m.first) {
                 "C1" -> "${(numBays + 1) * 2} Units"
@@ -228,31 +229,22 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
     }
 
     private fun addMaterialTakeoff(document: Document, result: SteelWarehouseAnalysisResult, inputs: SteelWarehouseInputs) {
-        document.add(Paragraph("\nProject Bill of Quantities (BOQ) & Estimated Costing").setFontSize(12f).setBold().setFontColor(PRIMARY))
+        document.add(Paragraph("\nQuantity Take-off (weights from section area x length x 7850 kg/m3)").setFontSize(12f).setBold().setFontColor(PRIMARY))
         document.add(LineSeparator(SolidLine(0.5f)).setMarginBottom(5f))
 
-        val table = Table(UnitValue.createPercentArray(floatArrayOf(5f, 40f, 15f, 15f, 25f))).useAllAvailableWidth()
-        table.addHeaderCell(headerCell("#")).addHeaderCell(headerCell("ITEM DESCRIPTION")).addHeaderCell(headerCell("QTY")).addHeaderCell(headerCell("UNIT")).addHeaderCell(headerCell("EST. COST (EGP)"))
-        
-        // materialTakeoff values are produced in TONS (CalculatorEngine): convert to kg here.
-        // Unit rates below are illustrative placeholders, not from a verified price source.
+        val table = Table(UnitValue.createPercentArray(floatArrayOf(6f, 54f, 20f, 20f))).useAllAvailableWidth()
+        table.addHeaderCell(headerCell("#")).addHeaderCell(headerCell("ITEM DESCRIPTION")).addHeaderCell(headerCell("QTY")).addHeaderCell(headerCell("UNIT"))
+        // materialTakeoff values are TONS (CalculatorEngine).
         var idx = 1
         result.materialTakeoff.forEach { (k, v) ->
             val bg = if (idx % 2 == 0) ROW_ALT else null
-            val kg = v * 1000.0
-            table.addCell(dataCell("${idx++}", false, bg)).addCell(dataCell("Structural Steel: $k", false, bg)).addCell(dataCell(kg.fmt(0), false, bg)).addCell(dataCell("kg", false, bg)).addCell(dataCell((kg * 45.0).fmt(0), false, bg))
+            table.addCell(dataCell("${idx++}", false, bg)).addCell(dataCell("Structural Steel: $k", false, bg)).addCell(dataCell((v * 1000.0).fmt(0), false, bg)).addCell(dataCell("kg", false, bg))
         }
-
-        val secWeight = result.totalWeight * 0.15 * 1000 // rough allowance, kg (totalWeight is tons)
-        table.addCell(dataCell("${idx++}", false, ROW_ALT)).addCell(dataCell("Accessories allowance (~15% of steel weight - rough allowance, not measured)", false, ROW_ALT)).addCell(dataCell(secWeight.fmt(0), false, ROW_ALT)).addCell(dataCell("kg", false, ROW_ALT)).addCell(dataCell((secWeight * 65.0).fmt(0), false, ROW_ALT))
-
-        table.addCell(dataCell("${idx++}")).addCell(dataCell("Roof & Wall Cladding (Sandwich Panels)")).addCell(dataCell(result.totalCladdingArea.fmt(0))).addCell(dataCell("m\u00B2")).addCell(dataCell((result.totalCladdingArea * 350.0).fmt(0)))
-
-        val totalRowBg = LIGHT_BLUE
-        table.addCell(Cell(1, 4).add(Paragraph("GRAND TOTAL ESTIMATED PROJECT COST").setBold().setTextAlignment(TextAlignment.RIGHT)).setBackgroundColor(totalRowBg))
-        table.addCell(dataCell("${result.estimatedTotalCost.fmt(0)} EGP", true, totalRowBg, PRIMARY))
+        table.addCell(dataCell("${idx++}")).addCell(dataCell("Roof & Wall Cladding area")).addCell(dataCell(result.totalCladdingArea.fmt(0))).addCell(dataCell("m\u00B2"))
+        table.addCell(Cell(1, 2).add(Paragraph("TOTAL STRUCTURAL STEEL (members above)").setBold().setTextAlignment(TextAlignment.RIGHT)).setBackgroundColor(LIGHT_BLUE))
+        table.addCell(dataCell((result.materialTakeoff.values.sum() * 1000.0).fmt(0), true, LIGHT_BLUE)).addCell(dataCell("kg", true, LIGHT_BLUE))
         document.add(table)
-        document.add(Paragraph("Costs use illustrative placeholder unit rates, not prices from a verified or dated source; do not use for procurement.").setFontSize(7f).setFontColor(ColorConstants.GRAY))
+        document.add(Paragraph("Cost: NOT ISSUED. No verified, dated unit-price source is available, so no rates or totals are printed. Plates, bolts and bracing are not designed and are not included in the weights.").setFontSize(8f).setFontColor(ColorConstants.GRAY))
     }
 
     private fun addTitleBlock(document: Document, client: String, project: String, inputs: SteelWarehouseInputs) {

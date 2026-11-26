@@ -10,6 +10,7 @@ import android.text.TextPaint
 import androidx.compose.ui.geometry.Offset
 import com.civileg.app.domain.entities.SteelWarehouseAnalysisResult
 import com.civileg.app.domain.entities.SteelWarehouseInputs
+import kotlin.math.roundToInt
 import kotlin.math.*
 
 /**
@@ -90,7 +91,8 @@ object PdfDrawingGenerator {
         val span = inputs.span
         val eh = inputs.eaveHeight
         val rh = inputs.ridgeHeight
-        val scale = (w * 0.8f) / span.toFloat()
+        // fit-to-content: limited by both width and height so a tall building cannot overflow
+        val scale = min((w * 0.8f) / span.toFloat(), (h - 130f) / rh.toFloat())
         
         val dw = span.toFloat() * scale
         val deh = eh.toFloat() * scale
@@ -111,6 +113,7 @@ object PdfDrawingGenerator {
         
         canvas.drawBilingualText("FRONT ELEVATION", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
         canvas.drawBilingualText("${span}m", cx, yBase + 30f, DIM_TEXT, 20f, true)
+        canvas.drawBilingualText("eave ${eh}m / ridge ${rh}m", cx, yBase + 56f, DIM_TEXT, 18f, false)
     }
 
     private fun drawWarehousePlanCanvas(canvas: Canvas, inputs: SteelWarehouseInputs, cx: Float, cy: Float, w: Float, h: Float, pMain: Paint, pDim: Paint, pText: Paint) {
@@ -142,32 +145,44 @@ object PdfDrawingGenerator {
         val l = inputs.length.toFloat()
         val eh = inputs.eaveHeight.toFloat()
         val rh = inputs.ridgeHeight.toFloat()
-        
-        val scale = min(w / s, h / eh) * 0.4f
-        val ds = s * scale
-        val dl = l * scale * 0.5f
-        val deh = eh * scale
-        val drh = rh * scale
-        
-        val ang = Math.toRadians(30.0)
-        val dx = (cos(ang) * ds).toFloat()
-        val dy = (sin(ang) * ds).toFloat()
-        val dzx = (cos(ang) * dl).toFloat()
-        val dzy = (sin(ang) * dl).toFloat()
-        
-        val b1 = Offset(cx, cy + 50f)
-        val e1 = Offset(b1.x, b1.y - deh)
-        val a1 = Offset(b1.x + dx/2, e1.y - (drh - deh))
-        
-        val b2 = Offset(b1.x + dx, b1.y - dy)
-        val e2 = Offset(b2.x, b2.y - deh)
-        
-        canvas.drawLine(b1.x, b1.y, e1.x, e1.y, pMain)
-        canvas.drawLine(b2.x, b2.y, e2.x, e2.y, pMain)
-        canvas.drawLine(e1.x, e1.y, a1.x, a1.y, pMain)
-        canvas.drawLine(e2.x, e2.y, a1.x, a1.y, pMain)
-        
-        canvas.drawBilingualText("3D WIREFRAME", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
+        val numBays = (l / inputs.baySpacing.toFloat()).roundToInt().coerceIn(1, 40)
+
+        // Isometric projection: x across span, y along length, z up.
+        val c30 = cos(Math.toRadians(30.0)).toFloat()
+        val s30 = 0.5f
+        fun px(x: Float, y: Float) = (x - y) * c30
+        fun py(x: Float, y: Float, z: Float) = (x + y) * s30 - z
+
+        // Fit-to-content: bounding box of all corner points scaled into the drawing area.
+        val pts = listOf(
+            0f to 0f, s to 0f, 0f to l, s to l
+        ).flatMap { (x, y) -> listOf(Pair(px(x, y), py(x, y, 0f)), Pair(px(x, y), py(x, y, rh))) }
+        val minX = pts.minOf { it.first }; val maxX = pts.maxOf { it.first }
+        val minY = pts.minOf { it.second }; val maxY = pts.maxOf { it.second }
+        val scale = min((w * 0.9f) / (maxX - minX), (h - 90f) / (maxY - minY))
+        val ox = cx - (minX + maxX) / 2f * scale
+        val oy = cy + 25f - (minY + maxY) / 2f * scale
+        fun sx(x: Float, y: Float) = ox + px(x, y) * scale
+        fun sy(x: Float, y: Float, z: Float) = oy + py(x, y, z) * scale
+        fun line(x1: Float, y1: Float, z1: Float, x2: Float, y2: Float, z2: Float, p: Paint) =
+            canvas.drawLine(sx(x1, y1), sy(x1, y1, z1), sx(x2, y2), sy(x2, y2, z2), p)
+
+        // Portal frames at each bay line
+        for (i in 0..numBays) {
+            val y = l * i / numBays
+            line(0f, y, 0f, 0f, y, eh, pMain)
+            line(s, y, 0f, s, y, eh, pMain)
+            line(0f, y, eh, s / 2f, y, rh, pMain)
+            line(s, y, eh, s / 2f, y, rh, pMain)
+        }
+        // Longitudinal lines: eaves, ridge and base
+        line(0f, 0f, eh, 0f, l, eh, pDim); line(s, 0f, eh, s, l, eh, pDim)
+        line(s / 2f, 0f, rh, s / 2f, l, rh, pDim)
+        line(0f, 0f, 0f, 0f, l, 0f, pDim); line(s, 0f, 0f, s, l, 0f, pDim)
+        line(0f, 0f, 0f, s, 0f, 0f, pDim); line(0f, l, 0f, s, l, 0f, pDim)
+
+        canvas.drawBilingualText("3D VIEW (isometric, schematic)", cx, cy - h/2 + 30f, DIM_TEXT, 22f, true)
+        canvas.drawBilingualText("span ${s}m x length ${l}m, eave ${eh}m, ridge ${rh}m, ${numBays} bays", cx, cy + h/2 - 10f, DIM_TEXT, 18f, false)
     }
 
     fun generateBasePlateDrawing(
