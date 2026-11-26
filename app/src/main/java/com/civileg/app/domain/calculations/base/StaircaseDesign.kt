@@ -99,7 +99,12 @@ data class StairFlexureRatio(val ratio: Double, val basis: String)
 fun flexureRatioOf(checks: List<StairSafetyCheck>): StairFlexureRatio? {
     val row = checks.firstOrNull { it.name.startsWith("Flexure") } ?: return null
     if (row.notAssessed || !row.value.isFinite() || !row.limit.isFinite() || row.limit <= 0.0 || row.value < 0.0) return null
-    return StairFlexureRatio(row.value / row.limit, if (row.name.contains("K_bal")) "K/K_bal" else "rho/rho_max")
+    val basis = when {
+        row.name.contains("Rmax") -> "K/(Rmax/γc)"
+        row.name.contains("K_bal") -> "K/K_bal"
+        else -> "rho/rho_max"
+    }
+    return StairFlexureRatio(row.value / row.limit, basis)
 }
 
 enum class FlexureCardState { UNAVAILABLE, EXCEEDS_LIMIT, PRELIMINARY, WITHIN_LIMIT }

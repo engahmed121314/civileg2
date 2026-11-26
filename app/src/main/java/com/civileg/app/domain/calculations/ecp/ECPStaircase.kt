@@ -6,15 +6,20 @@ import com.civileg.app.domain.entities.*
 import kotlin.math.*
 
 /**
- * تصميم السلالم حسب الكود المصري ECP 203
+ * تصميم السلالم حسب الكود المصري ECP 203-2025
  *
- * المراجع:
- * - ECP 203 البند 4-2 (تصميم الانحناء والقص)
- * - ECP 203 البند 6-3 (الانحراف)
- * - ECP 201-2012 (أحمال السلالم: حي 4 kN/m²، ميت 6 kN/m²)
+ * المراجع (تم التحقق منها على نسخة ممسوحة من ECP 203-2025):
+ * - الانحناء: ECP 203-2025 البند 4-2-1-2 وجدول (4-1) بدون إعادة توزيع (مطبوع 4-6/4-7)
+ * - القص: ECP 203-2025 معادلة 4-27 (مطبوع 4-18) ومعادلة 4-29 (مطبوع 4-19)
+ *   والبند 4-2-2-2-1 (مطبوع 4-25): البلاطات والقواعد تقاوم القص بالخرسانة فقط
+ * - الترخيم: ECP 203-2025 البند 4-3 وجدول 4-10 (مطبوع 4-65) ومعادلة 4-81
+ * - السمك الأدنى للبلاطات: معادلة 6-6a (مطبوع 6-7): tmin = a/35 بسيطة الارتكاز
+ * - تسليح البلاطات ذات الاتجاه الواحد: البند 6-2-1-3-2 (مطبوع 6-5..6-6)
+ * - الغطاء الخرساني: جدول 21-2 كربنة (مطبوع 2-32): 25 مم عناصر داخلية محمية
+ * - الأحمال: ECP 201-2012 (حمل حي للسلالم 4 kN/m²)
  *
- * السلم يُ Modellled كـ بلاطة باتجاه واحد (كمرة بعرض 1م)
- * مع دعم بسيط على كلا الطرفين
+ * السلم يُ Modellled كـ بلاطة باتجاه واحد (شريحة بعرض 1م)
+ * بدعم بسيط على كلا الطرفين، مع حديد علوي عند الركائز حسب معادلة 6-2
  */
 class ECPStaircase : StaircaseDesign {
 
@@ -23,9 +28,9 @@ class ECPStaircase : StaircaseDesign {
         private const val GAMMA_S = 1.15      // معامل أمان الحديد
         private const val GAMMA_G = 1.4       // معامل حمل الميت
         private const val GAMMA_Q = 1.6       // معامل حمل الحي
-        private const val COVER_INTERIOR = 25.0  // mm - غطاء داخلي
-        private const val COVER_EXTERIOR = 35.0  // mm - غطاء خارجي
-        const val MIN_WAIST = 120.0     // mm - أقل سماكة للبلاطة
+        private const val COVER_INTERIOR = 25.0  // mm - ECP 203-2025 جدول 21-2 (كربنة، عناصر داخلية محمية من الأمطار، مطبوع 2-32)
+        private const val COVER_EXTERIOR = 40.0  // mm - جدول 21-2 (دورات بلل وجفاف، مطبوع 2-32) — غير مستعمل: ليس مدخلاً
+        const val MIN_WAIST = 120.0     // mm - أقل سماكة عملية للبلاطة (افتراض عملي، ليس بند كود)
         private const val MAX_RISER = 180.0     // mm - أقصى ارتفاع درجة
         private const val MIN_GOING = 250.0     // mm - أقل عرض درجة
         private const val COMFORT_2R_PLUS_G_MIN = 550.0  // mm
@@ -45,7 +50,7 @@ class ECPStaircase : StaircaseDesign {
         val safetyChecks = mutableListOf<StairSafetyCheck>()
         val codeNotes = mutableListOf<String>()
 
-        // Landing/restraint qualification (lead review 2026-11-24): a landing
+        // Landing/restraint qualification: a landing
         // establishes restraint only when ALL its dimensions are supplied and
         // finite-positive; null, zero, negative or NaN length/width/thickness
         // never qualify, and dimensions alone do not establish restraint
@@ -55,10 +60,11 @@ class ECPStaircase : StaircaseDesign {
             finitePositive(input.landingWidthMm) && finitePositive(input.landingThicknessMm)
         val continuityDeclared = input.stairType == StairType.DOG_LEG &&
             input.supportCondition == StairSupportCondition.CONTINUOUS_OVER_LANDING && landingSupplied
-        // No landing restraint is credited: no located clause in the supplied ECP 203-2020 (scan contents pages
-        // 8-23 list no stair/landing heading) grounds the wL²/10 coefficient or an L/d of 26 for a flight over a
-        // landing, and declared continuity plus landing dimensions does not establish it. Kept as a named switch so
-        // a grounded clause can enable it with its own tests.
+        // No landing restraint is credited: no located clause in the ECP 203-2025 scan
+        // (contents pages list no stair/landing heading) grounds a reduced positive-moment
+        // coefficient or an L/d for a flight over a landing, and declared continuity plus
+        // landing dimensions does not establish it. Kept as a named switch so a grounded
+        // clause can enable it with its own tests.
         val continuousOverLanding = false
 
         // ========== 1. التصميم الهندسي ==========
@@ -74,11 +80,13 @@ class ECPStaircase : StaircaseDesign {
             riserMm = input.totalRise * 1000.0 / numRisers
             goingMm = input.going
         } else if (input.riserCount > 0) {
+            // Riser count given, going not given: the going follows the entered span so the
+            // adopted run equals the span. No silent clamp into a comfort range — the
+            // geometry checks below flag an out-of-range going instead.
             numRisers = input.riserCount
             numTreads = numRisers - 1
             riserMm = input.totalRise * 1000.0 / numRisers
-            val idealGoing = 620.0 - 2 * riserMm
-            goingMm = idealGoing.coerceIn(MIN_GOING, 300.0)
+            goingMm = input.span * 1000.0 / numTreads
         } else if (input.going > 0) {
             goingMm = input.going
             val treadsEstimate = (input.span * 1000.0 / goingMm).toInt().coerceIn(3, 40)
@@ -111,7 +119,9 @@ class ECPStaircase : StaircaseDesign {
             numRisers = round(input.totalRise * 1000.0 / bestRiser).toInt().coerceIn(5, 40)
             numTreads = numRisers - 1
             riserMm = input.totalRise * 1000.0 / numRisers
-            goingMm = (input.span * 1000.0 / numTreads).coerceIn(MIN_GOING, 300.0)
+            // Going follows the entered span (no silent clamp): out-of-range values are
+            // flagged by the "Going ≥ 250mm" and comfort checks below.
+            goingMm = input.span * 1000.0 / numTreads
         }
 
         val inclinedLength = sqrt(input.span * input.span + input.totalRise * input.totalRise)
@@ -123,36 +133,41 @@ class ECPStaircase : StaircaseDesign {
         codeNotes.add("2R+G = ${String.format("%.0f", 2 * riserMm + goingMm)} mm")
         codeNotes.add("Slope angle θ = ${String.format("%.1f", slopeAngle)}°")
 
-        // ── P4-4 (§9.38): بنود الكود الحاكمة للسلم (بلاطة مائلة أحادية الاتجاه) ──
+        // ── بنود الكود الحاكمة للسلم (بلاطة مائلة أحادية الاتجاه) ──
         codeNotes.add(CodeReference.ECP.STAIRCASE_FLEXURE)
         codeNotes.add(CodeReference.ECP.STAIRCASE_SHEAR)
         codeNotes.add(CodeReference.ECP.STAIRCASE_DEFLECTION)
 
+        // The discrete adopted run (treads × going) can differ from the entered span when the
+        // user supplies the going or the tread count. The analysis span is the LARGER of the
+        // two so the numbers never analyze less than the geometry the drawing shows.
+        val adoptedRunMm = numTreads * goingMm
+        val adoptedRunM = adoptedRunMm / 1000.0
+        val analysisSpan = max(input.span, adoptedRunM)
+        if (abs(adoptedRunM - input.span) > 0.005) {
+            codeNotes.add("Adopted discrete run ${"%.0f".format(adoptedRunMm)} mm (${numTreads} treads × ${"%.1f".format(goingMm)} mm) differs from the entered span ${"%.0f".format(input.span * 1000)} mm; analysis uses the larger, ${"%.3f".format(analysisSpan)} m")
+        }
+
         // ========== 2. سماكة البلاطة ==========
-        // ECP 203 §6-2: Minimum waist slab thickness for stair
         // No silent clamp: the supplied thickness is analysed as given; below the minimum the
         // "Waist Thickness" check fails. A non-positive thickness is rejected with a field-specific message.
         require(input.waistThickness.isFinite() && input.waistThickness > 0.0) {
             "waistThickness must be a positive thickness in mm (was ${input.waistThickness})"
         }
         val waistThickness = input.waistThickness
+        // Cover 25 mm: ECP 203-2025 Table 21-2 (carbonation, printed 2-32 / scan PDF 60) —
+        // elements inside buildings protected from rain, moderate humidity. Exterior
+        // wet/dry exposure needs 40 mm; exposure is not an app input.
         val cover = COVER_INTERIOR
-        val stirrupEstimate = 8.0
-        val effectiveDepth = waistThickness - cover - stirrupEstimate / 2 - 6.0
-        // Guard: effective depth must be positive for meaningful calculations
-        require(effectiveDepth > 0.0) {
-            "waistThickness ${"%.0f".format(waistThickness)} mm leaves no effective depth after cover and bar allowance"
-        }
-        val dEffective = effectiveDepth
 
         safetyChecks.add(StairSafetyCheck(
             name = "Waist Thickness",
             value = waistThickness, limit = MIN_WAIST, unit = "mm",
             isSafe = waistThickness >= MIN_WAIST,
-            description = "Minimum waist thickness per ECP 203 §6-2"
+            description = "Practical minimum waist 120 mm (app assumption, not a code clause); code thickness demand comes from the Table 4-10 span/thickness check and Eq. 6-6a below"
         ))
 
-        // Span/thickness is assessed once, in section 7, against ECP 203-2020 Table 4-10.
+        // Span/thickness is assessed once, in section 7, against ECP 203-2025 Table 4-10.
 
         // ========== 3. الأحمال ==========
         // w_horiz = 1.4×dead/cos(θ) + 1.6×live (مُسقط أفقياً)
@@ -167,8 +182,8 @@ class ECPStaircase : StaircaseDesign {
         // ========== 4. التحليل الإنشائي ==========
         // Explicit case analysis model — the coefficient and support contract
         // must travel with the result so a named UI case can never masquerade
-        // as a verified design (lead case ledger, 2026-11-24).
-        val span = input.span
+        // as a verified design.
+        val span = analysisSpan
         val caseSupported: Boolean
         val analysisStatus: StairAnalysisStatus
         when (input.stairType) {
@@ -190,14 +205,13 @@ class ECPStaircase : StaircaseDesign {
                 if (continuousOverLanding) {
                     analysisStatus = StairAnalysisStatus.CASE_MODEL_IMPLEMENTED
                     codeNotes.add("Case model: double flight — M = wL²/10 per flight, continuity over the supplied landing (${input.landingLengthMm?.toInt()} mm × ${input.landingThicknessMm?.toInt()} mm) restrains the flight (analysis-model adoption, not an ECP equation)")
-                    codeNotes.add("Negative-moment (top) steel over the landing is not separately computed (flightTopRebar empty) — explicit detailing gap")
                 } else {
                     // No assumed restraint: support/landing UNSPECIFIED, or
                     // continuity declared without usable landing dimensions →
                     // conservative simply-supported per-flight model.
                     analysisStatus = StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED
                     if (continuityDeclared) {
-                        codeNotes.add("Declared CONTINUOUS_OVER_LANDING with landing dimensions is NOT credited: no grounded restraint coefficient or L/d for this case; per-flight M = wL²/8 and L/d 20 used as an unverified preliminary model. Landing slab and top steel over the landing are not designed")
+                        codeNotes.add("Declared CONTINUOUS_OVER_LANDING with landing dimensions is NOT credited: no grounded restraint coefficient or L/d for this case; per-flight M = wL²/8 and L/d 20 used as an unverified preliminary model. The landing slab itself is not designed")
                     } else if (input.supportCondition == StairSupportCondition.CONTINUOUS_OVER_LANDING) {
                         codeNotes.add("WARNING: CONTINUOUS_OVER_LANDING declared but landing dimensions are missing or not finite-positive (L/W/t) — restraint NOT verified; per-flight M = wL²/8 used as an unverified preliminary model")
                     } else {
@@ -234,74 +248,149 @@ class ECPStaircase : StaircaseDesign {
 
         // ========== 5. تصميم الانحناء (K-method) ==========
         val b = 1000.0
-        val d = dEffective
         val Mu = adjustedMoment * 1e6
 
-        val K = if (input.fcu > 0 && d > 0) Mu / (input.fcu * b * d * d) else 0.0
-        InputGuard.finite("K", K)
-        val kBal = calculateKBal(input.fcu, input.fy)
+        // ECP 203-2025 §4-2-1-2, Table 4-1 (no redistribution, printed 4-6/4-7, scan
+        // PDF 86-87): the ductility cap is Rmax by steel grade with
+        // Mumax = Rmax·fcu·b·d²/γc (Eq. 4-4) — i.e. K = Mu/(fcu·b·d²) ≤ Rmax/γc.
+        // The previous "K_bal" (a/d = 0.9·εcu/(εcu+εy)) allowed K up to ~0.180 for
+        // fy=420 where Table 4-1 caps K at 0.186/1.5 = 0.124 — about 45% unconservative.
+        val rMax = rMaxNoRedistribution(input.fy)
+        val kMax = rMax / GAMMA_C
 
-        codeNotes.add("K = ${String.format("%.4f", K)}, K_bal = ${String.format("%.4f", kBal)}")
+        val fs = input.fy / GAMMA_S
 
-        val K_DIVISOR = 0.893  // γc/(2×0.67) per ECP 203 K-method
-        val leverArm = if (0.25 - K / K_DIVISOR > 0) {
-            d * (0.5 + sqrt(0.25 - K / K_DIVISOR))
+        // Effective depth: d = h − cover − main-bar radius. First pass assumes a 12 mm
+        // main bar; if a larger bar is selected the section is recomputed once with the
+        // actual radius so the depth matches the issued reinforcement.
+        var mainBarRadiusMm = 6.0
+        var d = waistThickness - cover - mainBarRadiusMm
+        require(d > 0.0) {
+            "waistThickness ${"%.0f".format(waistThickness)} mm leaves no effective depth after cover and bar allowance"
+        }
+
+        val K_DIVISOR = 2.0 * 0.67 / GAMMA_C   // z = d·(0.5 + √(0.25 − K/K_DIVISOR)) from Mu = (0.67·fcu/γc)·b·a·(d − a/2)
+        val minSteelRatio = minMainSteelRatioSlab(input.fcu, input.fy)
+
+        var K = 0.0
+        var leverArm = 0.0
+        var astRequired = 0.0
+        var minSteelArea = 0.0
+        var mainRebar = ""
+        var mainRebarArea = 0.0
+        var refined = false
+        while (true) {
+            K = Mu / (input.fcu * b * d * d)
+            InputGuard.finite("K", K)
+            leverArm = if (0.25 - K / K_DIVISOR > 0) {
+                d * (0.5 + sqrt(0.25 - K / K_DIVISOR))
+            } else {
+                // K beyond the singly-reinforced quadratic root: the flexure check below
+                // fails; a nominal lever arm keeps the reported As finite and honest.
+                d * 0.7
+            }
+            val astFlexure = if (fs > 0 && leverArm > 0) Mu / (fs * leverArm) else 0.0
+            minSteelArea = minSteelRatio * b * d
+            astRequired = max(astFlexure, minSteelArea)
+            mainRebar = selectBars(astRequired)
+            mainRebarArea = parseBarArea(mainRebar)
+            val selectedRadius = barDiameterOf(mainRebar) / 2.0
+            if (!refined && selectedRadius > mainBarRadiusMm) {
+                refined = true
+                mainBarRadiusMm = selectedRadius
+                d = waistThickness - cover - mainBarRadiusMm
+                require(d > 0.0) {
+                    "waistThickness ${"%.0f".format(waistThickness)} mm leaves no effective depth after cover and the selected main bar"
+                }
+            } else {
+                break
+            }
+        }
+        val dEffective = d
+        if (astRequired == minSteelArea) {
+            codeNotes.add("Minimum steel governs: ${String.format("%.0f", minSteelArea)} mm²/m (ECP 203-2025 §6-2-1-3-2 item 1, printed 6-6: ratio ≥ max(0.6/fy, class floor) of b×d)")
+        }
+
+        codeNotes.add("K = ${String.format("%.4f", K)}, K_max = Rmax/γc = ${String.format("%.4f", kMax)} (Rmax = ${String.format("%.3f", rMax)} for fy = ${"%.0f".format(input.fy)}, ECP 203-2025 Table 4-1, no redistribution)")
+        codeNotes.add("Effective depth d = ${"%.0f".format(dEffective)} mm (h − 25 mm cover − ${"%.0f".format(mainBarRadiusMm)} mm bar radius; cover per Table 21-2 interior, printed 2-32)")
+
+        safetyChecks.add(StairSafetyCheck(
+            name = "Flexure (K ≤ Rmax/γc, Table 4-1)",
+            value = K, limit = kMax, unit = "",
+            isSafe = K <= kMax,
+            description = if (K <= kMax) {
+                "ECP 203-2025 §4-2-1-2, Table 4-1 (no redistribution, printed 4-6/4-7): K = ${"%.4f".format(K)} ≤ Rmax/γc = ${"%.4f".format(kMax)} (Rmax = ${"%.3f".format(rMax)} for fy = ${"%.0f".format(input.fy)}; Eq. 4-4 Mumax = Rmax·fcu·b·d²/γc)"
+            } else {
+                "K = ${"%.4f".format(K)} exceeds Rmax/γc = ${"%.4f".format(kMax)} (ECP 203-2025 Table 4-1, no redistribution, printed 4-6/4-7): increase the waist thickness; compression steel per Eq. 4-5..4-7 is not implemented"
+            }
+        ))
+
+        // Minimum main steel — ECP 203-2025 §6-2-1-3-2 item 1 (printed 6-6, scan PDF 197):
+        // ratio ≥ 0.6/fy of the effective concrete area (b×d), and ≥ 0.25% for mild steel
+        // or 0.15% (fcu ≤ 30) / 0.18% (fcu ≥ 40) for high-strength steel, linear between.
+        // Steel class follows the grade implied by fy (≤ 280 mild, higher = high-strength).
+        safetyChecks.add(StairSafetyCheck(
+            name = "Minimum main steel (ECP §6-2-1-3-2)",
+            value = mainRebarArea, limit = minSteelArea, unit = "mm²/m",
+            isSafe = mainRebarArea >= minSteelArea,
+            description = "ECP 203-2025 §6-2-1-3-2 item 1 (printed 6-6): ratio ≥ max(0.6/fy = ${"%.3f".format(0.6 / input.fy * 100)}%, ${if (input.fy <= 280.0) "0.25% mild" else "0.15/0.18% high-strength by fcu"} floor) of b×d; required ${"%.0f".format(minSteelArea)} mm²/m, provided ${"%.0f".format(mainRebarArea)} mm²/m. Steel class taken from fy = ${"%.0f".format(input.fy)} MPa"
+        ))
+        val rho = mainRebarArea / (b * d)
+
+        // حديد التوزيع — ECP 203-2025 §6-2-1-3-2 item 7 (printed 6-6): distribution bars
+        // perpendicular to the main steel: area ≥ 1/5 of the main steel, and at least
+        // 4 bars per metre (spacing ≤ 250 mm). The bars run across the stair width and are
+        // spaced along the flight length; the issued spec is a per-metre spacing spec.
+        val distAreaRequired = 0.2 * mainRebarArea
+        val distributionRebar = selectDistBars(distAreaRequired)
+        val distributionRebarArea = parseDistBarArea(distributionRebar)
+
+        codeNotes.add("Main reinforcement: $mainRebar (${String.format("%.0f", mainRebarArea)} mm²/m)")
+        codeNotes.add("Distribution: $distributionRebar (${String.format("%.0f", distributionRebarArea)} mm²/m) — ≥ 20% of main and ≥ 4 bars/m (§6-2-1-3-2 item 7, printed 6-6)")
+        codeNotes.add("Detailing per §6-2-1-3-2 (printed 6-6): bottom bars extended into the supports ≥ 1/3 of the midspan bottom steel (item 5); max main-bar spacing in moment zones 200 mm (item 4) — extension lengths not computed")
+
+        // ========== 5ب. حديد علوي عند الركائز ==========
+        // Support top steel — two grounded code minimums:
+        //  (a) ECP 203-2025 §6-2-1-2 item 4 / Eq. 6-2 (printed 6-5, scan PDF 196): for
+        //      slabs cast into walls or beams that give partial end fixity, the negative
+        //      support moment taken into account is at least M = −w·L²/16. Stair flights
+        //      are cast monolithic with the landing and floor beams, so this minimum top
+        //      steel is required even with the simply supported positive-moment model.
+        //  (b) §6-2-1-3-2 item 9 (printed 6-6): slabs thicker than 160 mm need a top mesh
+        //      in each direction ≥ 20% of the main steel and not less than 5Ø8/m.
+        // Extension/anchorage lengths (§4-2-5) are not computed — noted, not invented.
+        val muNeg = horizontalLoad * span * span / 16.0 * 1e6
+        val kNeg = muNeg / (input.fcu * b * d * d)
+        val leverArmNeg = if (0.25 - kNeg / K_DIVISOR > 0) {
+            d * (0.5 + sqrt(0.25 - kNeg / K_DIVISOR))
         } else {
             d * 0.7
         }
-
-        val fs = input.fy / GAMMA_S
-        var astRequired = if (fs > 0 && leverArm > 0) Mu / (fs * leverArm) else 0.0
-
-        // Legacy app floor (beam-style 0.26*sqrt(fcu)/fy and 0.13% of b x d). It is NOT the ECP 203-2020 6-2-1-2 slab
-        // rule (0.6/fy, or 0.25% of Ac for mild steel / 0.15% for high-strength steel). Because the steel class is not an
-        // input and the OR relationship is not resolved, the clause check is reported NOT ASSESSED below.
-        val minSteelRatio = 0.0013
-        val minSteelArea = max(0.26 * sqrt(input.fcu) / input.fy * b * d, 0.0013 * b * d)
-
-        if (astRequired < minSteelArea) {
-            astRequired = minSteelArea
-            codeNotes.add("Minimum steel applied: ${String.format("%.0f", minSteelArea)} mm²/m (legacy app floor 0.13% of b×d, not the ECP 6-2-1-2 slab rule)")
+        val topFlexureArea = if (fs > 0 && leverArmNeg > 0) muNeg / (fs * leverArmNeg) else 0.0
+        val topMeshFloor = if (waistThickness > 160.0) {
+            max(0.2 * mainRebarArea, 5.0 * PI * 8.0 * 8.0 / 4.0)  // 5Ø8/m = 251 mm²/m
+        } else {
+            0.0
         }
+        val topRequired = max(topFlexureArea, topMeshFloor)
+        val topRebar = selectBars(topRequired)
+        val topRebarArea = parseBarArea(topRebar)
 
         safetyChecks.add(StairSafetyCheck(
-            name = "Flexure (K ≤ K_bal)",
-            value = K, limit = kBal, unit = "",
-            isSafe = K <= kBal,
-            description = "ECP 203 Section 4-2-2-1"
+            name = "Support top steel (Eq. 6-2 / §6-2-1-3-2-9)",
+            value = topRebarArea, limit = topRequired, unit = "mm²/m",
+            isSafe = topRebarArea >= topRequired,
+            description = "ECP 203-2025: negative support moment −w·L²/16 (Eq. 6-2, printed 6-5, partial fixity at monolithic supports)" +
+                (if (topMeshFloor > 0.0) "; waist > 160 mm → mandatory top mesh ≥ max(20% of main, 5Ø8/m) (§6-2-1-3-2 item 9, printed 6-6)" else "") +
+                ". Required ${"%.0f".format(topRequired)} mm²/m, provided ${"%.0f".format(topRebarArea)} mm²/m; anchorage/extension per §4-2-5 not computed"
         ))
-
-        // اختيار حديد رئيسي (مقاسات مترية)
-        val mainRebar = selectBars(astRequired)
-        val mainRebarArea = parseBarArea(mainRebar)
-        run {
-            val ac = b * waistThickness
-            val providedRatioAc = mainRebarArea / ac
-            safetyChecks.add(StairSafetyCheck(
-                name = "Minimum main steel NOT ASSESSED: ECP 203-2020 6-2-1-2 needs steel class (mild/high-strength), not an input",
-                value = providedRatioAc, limit = 0.0015, unit = "",
-                isSafe = false,
-                notAssessed = true,
-                description = "NOT ASSESSED. ECP 203-2020 6-2-1-2 (p.6-7) item 1: main steel ratio not less than 0.6/fy of the effective concrete area, or the equivalent 0.25% of the actual area Ac for mild steel / 0.15% for high-strength steel. The steel class is not an app input and the clause's alternatives are not resolved here. Provided ${"%.3f".format(providedRatioAc * 100)}% of b x h; 0.6/fy = ${"%.3f".format(0.6 / input.fy * 100)}%; candidate limits 0.25% (mild) and 0.15% (high-strength). Limit field shows the lower candidate only"
-            ))
-        }
-        val rho = mainRebarArea / (b * d)
-
-        // حديد التوزيع = 20% من الرئيسي (ECP 203)
-        val distAreaRequired = 0.2 * mainRebarArea
-        val distAreaMin = 0.0015 * b * waistThickness
-        val distAreaFinal = max(distAreaRequired, distAreaMin)
-        val distributionRebar = selectDistBars(distAreaFinal, input.stairWidth)
-        val distributionRebarArea = parseDistBarArea(distributionRebar, input.stairWidth)
-
-        codeNotes.add("Main reinforcement: $mainRebar (${String.format("%.0f", mainRebarArea)} mm²/m)")
-        codeNotes.add("Distribution: $distributionRebar (${String.format("%.0f", distributionRebarArea)} mm²/m)")
+        codeNotes.add("Top steel at supports: $topRebar (${"%.0f".format(topRebarArea)} mm²/m) per Eq. 6-2" + (if (topMeshFloor > 0.0) " and the t>160 mm top-mesh rule" else "") + "; extension into the span per §4-2-5 not computed")
 
         // ========== 6. تصميم القص ==========
         val Vu = adjustedShear * 1000.0
-        val qcu = 0.16 * sqrt(input.fcu / GAMMA_C)  // ECP 203-2020 §4-2-2-1-3, Eq. 4-29 (no web reinforcement)
+        val qcu = 0.16 * sqrt(input.fcu / GAMMA_C)  // ECP 203-2025 Eq. 4-29 (printed 4-19): uncracked slab concrete shear stress
         val concreteShearCapacity = qcu * b * d / 1000.0
-        val maxShearStress = 0.7 * sqrt(input.fcu / GAMMA_C)  // ECP 203
+        val maxShearStress = 0.7 * sqrt(input.fcu / GAMMA_C)  // ECP 203-2025 Eq. 4-27 (printed 4-18)
         val maxShearCapacity = maxShearStress * b * d / 1000.0
 
         val shearSafe = (Vu / 1000.0) <= maxShearCapacity
@@ -309,31 +398,29 @@ class ECPStaircase : StaircaseDesign {
             name = "Shear Capacity",
             value = adjustedShear, limit = maxShearCapacity, unit = "kN/m",
             isSafe = shearSafe,
-            description = "ECP 203-2020 §4-2-2-1, Eq. 4-27 (max shear stress)"
+            description = "ECP 203-2025 Eq. 4-27 (printed 4-18): q_umax = 0.70·√(fcu/γc)"
         ))
 
         val requiredStirrups: String
         val stirrupDiameter: Double
         val stirrupSpacing: Double
 
-        // §4-2-2-1-6-د-1 (scan doc 4-22): footings and slabs IN GENERAL — which
-        // covers the stair waist slab — are designed on a CONCRETE-ONLY shear
-        // basis per Eq. 4-29, and their thickness is set on that basis. Web
-        // reinforcement (links) is NOT a permitted shear path for the waist:
-        // when Vu exceeds the Eq. 4-29 capacity the compliant response is a
-        // thicker waist, not links. (The Eq. 4-30/4-33 linked regime applies to
-        // beams, not to slabs.)
+        // §4-2-2-1-6-د-1 (printed 4-23) and §4-2-2-2-1 "البلاطات والقواعد" (printed 4-25):
+        // slabs and footings resist shear by CONCRETE ONLY per Eq. 4-29, and their
+        // thickness is set on that basis. Web reinforcement (links) is NOT a permitted
+        // shear path for the waist: when Vu exceeds the Eq. 4-29 capacity the compliant
+        // response is a thicker waist, not links.
         if ((Vu / 1000.0) <= concreteShearCapacity) {
-            requiredStirrups = "None (links not permitted in slabs, §4-2-2-1-6-د-1)"
+            requiredStirrups = "None (links not permitted in slabs, §4-2-2-2-1)"
             stirrupDiameter = 0.0
             stirrupSpacing = 0.0
             codeNotes.add("Vc = ${String.format("%.2f", concreteShearCapacity)} kN/m ≥ Vu = ${String.format("%.2f", adjustedShear)} kN/m (Eq. 4-29, concrete-only basis)")
-            codeNotes.add("No shear reinforcement: §4-2-2-1-6-د-1 requires slabs to be designed on a concrete-only shear basis")
+            codeNotes.add("No shear reinforcement: §4-2-2-2-1 requires slabs to be designed on a concrete-only shear basis")
             safetyChecks.add(StairSafetyCheck(
                 name = "Shear (concrete-only, Eq. 4-29)",
                 value = adjustedShear, limit = concreteShearCapacity, unit = "kN/m",
                 isSafe = true,
-                description = "ECP 203-2020 §4-2-2-1-3/§4-2-2-1-6-د-1: slabs designed on concrete-only shear basis"
+                description = "ECP 203-2025 Eq. 4-29 (printed 4-19) + §4-2-2-1-6-د-1 (printed 4-23) + §4-2-2-2-1 (printed 4-25): slabs designed on concrete-only shear basis"
             ))
         } else {
             // Vu > Eq. 4-29 concrete capacity: links are NOT permitted — the waist
@@ -341,24 +428,26 @@ class ECPStaircase : StaircaseDesign {
             requiredStirrups = "None (waist inadequate — increase thickness)"
             stirrupDiameter = 0.0
             stirrupSpacing = 0.0
-            codeNotes.add("WARNING: Vu = ${String.format("%.2f", adjustedShear)} kN/m > Vc = ${String.format("%.2f", concreteShearCapacity)} kN/m (Eq. 4-29). Links are not permitted in slabs (§4-2-2-1-6-د-1) — increase waist thickness")
+            codeNotes.add("WARNING: Vu = ${String.format("%.2f", adjustedShear)} kN/m > Vc = ${String.format("%.2f", concreteShearCapacity)} kN/m (Eq. 4-29). Links are not permitted in slabs (§4-2-2-2-1) — increase waist thickness")
             safetyChecks.add(StairSafetyCheck(
                 name = "Shear (concrete-only, Eq. 4-29)",
                 value = adjustedShear, limit = concreteShearCapacity, unit = "kN/m",
                 isSafe = false,
-                description = "ECP 203-2020 §4-2-2-1-3/§4-2-2-1-6-د-1: Vu exceeds concrete-only capacity — increase waist thickness (links not permitted in slabs)"
+                description = "ECP 203-2025 Eq. 4-29 (printed 4-19) + §4-2-2-2-1 (printed 4-25): Vu exceeds concrete-only capacity — increase waist thickness (links not permitted in slabs)"
             ))
         }
 
         // ========== 7. فحص الانحراف ==========
-        // ECP 203-2020 §4-3-1-3-1 and Table 4-10 (p. 4-64): deflection computation may be skipped for one-way
-        // slabs of span <= 6 m when Ln/t does not exceed the tabulated value: solid slab 25 simply supported,
-        // 28 continuous one end, 31 continuous both ends, 10 cantilever; for fy other than 420 N/mm2 the value is
-        // multiplied by (0.40 + fy/700) (Eq. 4-81). Applied here by treating the inclined waist as a solid one-way
-        // slab (an analogy: the supplied contents list no stair-specific clause). No landing continuity is credited,
-        // so the simply supported value is used. If the limit is not met the code requires a computed deflection
-        // (Ie, Eq. 4-70 to 4-73, limit per §4-3-1-2); that computation is NOT implemented, so the check fails
-        // instead of being passed by an ungrounded modification factor.
+        // ECP 203-2025 §4-3-1-3 and Table 4-10 (printed 4-65, scan PDF 145): deflection
+        // computation may be skipped for one-way slabs of span <= 6 m when Ln/t does not
+        // exceed the tabulated value: solid slab 25 simply supported, 28 continuous one end,
+        // 31 continuous both ends, 10 cantilever; for fy other than 420 N/mm2 the value is
+        // multiplied by (0.40 + fy/700) (Eq. 4-81). Applied here by treating the inclined
+        // waist as a solid one-way slab (an analogy: the 2025 contents list no stair-specific
+        // clause). No landing continuity is credited, so the simply supported value is used.
+        // If the limit is not met the code requires a computed deflection; that computation
+        // is NOT implemented, so the check fails instead of being passed by an ungrounded
+        // modification factor.
         val table410SimplySupportedSolid = 25.0
         val fyFactor = 0.40 + input.fy / 700.0
         val allowableRatio = table410SimplySupportedSolid * fyFactor
@@ -375,23 +464,25 @@ class ECPStaircase : StaircaseDesign {
             isSafe = false,
             notAssessed = true,
             description = if (!spanWithinTable) {
-                "NOT ASSESSED: span over 6 m is outside Table 4-10 applicability; a computed deflection (ECP 4-3-1-1) is required and is not implemented. Not a demonstrated failure, not a pass"
+                "NOT ASSESSED: span over 6 m is outside Table 4-10 applicability; a computed deflection (ECP 4-3) is required and is not implemented. Not a demonstrated failure, not a pass"
             } else if (deflectionOk) {
-                "NOT ASSESSED: Table 4-10 conditions of use are not verified for this stair. ECP 203-2020 Table 4-10: Ln/t = ${"%.1f".format(actualRatio)} <= ${"%.1f".format(allowableRatio)} (solid slab, simply supported 25 x (0.40+fy/700)); the adopted waist meets the table value only, no computed deflection"
+                "NOT ASSESSED: Table 4-10 conditions of use are not verified for this stair. ECP 203-2025 Table 4-10: Ln/t = ${"%.1f".format(actualRatio)} <= ${"%.1f".format(allowableRatio)} (solid slab, simply supported 25 x (0.40+fy/700)); the adopted waist meets the table value only, no computed deflection"
             } else {
-                "NOT ASSESSED: Table 4-10 is deemed-to-satisfy only. Ln/t = ${"%.1f".format(actualRatio)} > ${"%.1f".format(allowableRatio)}, so deflection is NOT demonstrated (not a computed failure). Waist of at least ${"%.0f".format(minThicknessMm)} mm meets the table, or a computed deflection (ECP 4-3-1-1) is required and is not implemented in this version"
+                "NOT ASSESSED: Table 4-10 is deemed-to-satisfy only. Ln/t = ${"%.1f".format(actualRatio)} > ${"%.1f".format(allowableRatio)}, so deflection is NOT demonstrated (not a computed failure). Waist of at least ${"%.0f".format(minThicknessMm)} mm meets the table, or a computed deflection (ECP 4-3) is required and is not implemented in this version"
             }
         ))
-        // ECP 203-2020 Ch.6 p.6-5 (one-way solid slabs): in any case t >= L/30 simply supported (L/35, L/40 continuous).
-        // Slab analogy (preliminary); the span entered is used as L, not the code effective span (clear + t or 1.05 clear).
-        val tMinSlabMm = span * 1000.0 / 30.0
+        // ECP 203-2025 §6-2-1-6, Eq. 6-6a (printed 6-7, scan PDF 198): in any case the slab
+        // thickness is not less than a/35 simply supported (a/40 continuous one side,
+        // a/45 continuous both sides), a = effective span. Slab analogy; the analysis span
+        // is used as a (conservative vs the code's smaller effective span).
+        val tMinSlabMm = span * 1000.0 / 35.0
         safetyChecks.add(StairSafetyCheck(
-            name = "Waist >= L/30 (ECP Ch.6 one-way slab minimum, analogy)",
+            name = "Waist >= a/35 (ECP 203-2025 Eq. 6-6a one-way slab minimum, analogy)",
             value = waistThickness, limit = tMinSlabMm, unit = "mm",
             isSafe = waistThickness >= tMinSlabMm,
-            description = "ECP 203-2020 Ch.6 p.6-5: t >= L/30 for simply supported one-way slabs; stair waist treated as a slab (PRELIMINARY); entered span, not the code effective span"
+            description = "ECP 203-2025 §6-2-1-6, Eq. 6-6a (printed 6-7): t ≥ a/35 simply supported one-way slabs; stair waist treated as a slab (analogy); analysis span used as the effective span a (conservative)"
         ))
-        codeNotes.add("Deflection: ECP 203-2020 Table 4-10 (p. 4-64) deemed-to-satisfy only; no computed deflection is reported")
+        codeNotes.add("Deflection: ECP 203-2025 Table 4-10 (printed 4-65) deemed-to-satisfy only; no computed deflection is reported")
 
         // ========== 8. فحوصات هندسية ==========
         safetyChecks.add(StairSafetyCheck(
@@ -415,8 +506,8 @@ class ECPStaircase : StaircaseDesign {
 
         // ========== 9. ملاحظات الكود ==========
         codeNotes.add(CodeReference.ECP.SLAB_ONE_WAY)
-        codeNotes.add("ECP 203: Section 4-2 (Flexure design of waist slab)")
-        codeNotes.add("ECP 203: Section 6-2 (Slab reinforcement rules)")
+        codeNotes.add("ECP 203-2025: Section 4-2-1 + Table 4-1 (Flexure design of waist slab)")
+        codeNotes.add("ECP 203-2025: Section 6-2-1 (One-way slab analysis and reinforcement rules)")
         codeNotes.add("ECP 201-2012: Staircase live load = 4.0 kN/m²")
 
         return StaircaseResult(
@@ -438,7 +529,7 @@ class ECPStaircase : StaircaseDesign {
             mainRebarArea = mainRebarArea,
             distributionRebar = distributionRebar,
             distributionRebarArea = distributionRebarArea,
-            effectiveDepth = effectiveDepth,
+            effectiveDepth = dEffective,
             reinforcementRatio = rho,
             minSteelRatio = minSteelRatio,
             shearCapacity = concreteShearCapacity,
@@ -453,20 +544,54 @@ class ECPStaircase : StaircaseDesign {
             codeNotes = codeNotes,
             analysisStatus = analysisStatus,
             analysisSpanM = span,
-            adoptedRunMm = numTreads * goingMm,
+            adoptedRunMm = adoptedRunMm,
             flightBottomRebar = mainRebar,
-            flightTopRebar = "",
+            flightTopRebar = topRebar,
             landingRebar = ""
         )
     }
 
     // ========== دوال مساعدة ==========
 
-    private fun calculateKBal(fcu: Double, fy: Double): Double {
-        val epsilonCu = 0.003
-        val epsilonY = fy / (E_S * GAMMA_S)
-        val aOverD = 0.9 * epsilonCu / (epsilonCu + epsilonY)
-        return (0.67 / GAMMA_C) * aOverD * (1.0 - aOverD / 2.0)
+    /**
+     * ECP 203-2025 جدول (4-1) — بدون إعادة توزيع العزوم (printed 4-6/4-7, scan PDF 86-87):
+     * the ductility cap Rmax by steel grade, with Mumax = Rmax·fcu·b·d²/γc (Eq. 4-4).
+     * Linear interpolation between tabulated grades; clamped at the table ends.
+     */
+    private fun rMaxNoRedistribution(fy: Double): Double {
+        val table = listOf(
+            240.0 to 0.214, 350.0 to 0.196, 400.0 to 0.189, 420.0 to 0.186,
+            500.0 to 0.176, 600.0 to 0.165, 700.0 to 0.155
+        )
+        if (fy <= table.first().first) return table.first().second
+        if (fy >= table.last().first) return table.last().second
+        for (i in 1 until table.size) {
+            val (x1, y1) = table[i - 1]
+            val (x2, y2) = table[i]
+            if (fy <= x2) return y1 + (y2 - y1) * (fy - x1) / (x2 - x1)
+        }
+        return table.last().second
+    }
+
+    /**
+     * ECP 203-2025 §6-2-1-3-2 item 1 (printed 6-6, scan PDF 197): one-way slab main
+     * steel ratio not less than 0.6/fy of the effective concrete area, and not less
+     * than 0.25% for mild steel, or 0.15% (fcu ≤ 30 N/mm²) / 0.18% (fcu ≥ 40 N/mm²)
+     * for high-strength deformed steel, with linear interpolation between.
+     * Steel class follows the grade implied by fy: ≤ 280 MPa is mild (240/350, 280/450);
+     * higher grades (360/520, 400/600, 500/650) are high-strength.
+     */
+    private fun minMainSteelRatioSlab(fcu: Double, fy: Double): Double {
+        val classFloor = if (fy <= 280.0) {
+            0.0025
+        } else {
+            when {
+                fcu <= 30.0 -> 0.0015
+                fcu >= 40.0 -> 0.0018
+                else -> 0.0015 + (0.0018 - 0.0015) * (fcu - 30.0) / 10.0
+            }
+        }
+        return max(0.6 / fy, classFloor)
     }
 
     /**
@@ -478,6 +603,10 @@ class ECPStaircase : StaircaseDesign {
      * 1. Minimum gooseneck radius ≥ 50mm to prevent stress concentration cracking
      * 2. Additional reinforcement at the re-entrant corner (typically 50% extra)
      * 3. Development length check for bars terminating at gooseneck
+     *
+     * NOTE: the 50 mm radius, 0.3·riser recommendation, bar counts and the
+     * 0.6·√fcu bond strength are app detailing assumptions; the cited clauses
+     * have NOT been verified against the ECP 203-2025 scan.
      *
      * @param riserMm riser height (mm)
      * @param goingMm tread going (mm)
@@ -499,15 +628,12 @@ class ECPStaircase : StaircaseDesign {
         InputGuard.positive("fy", fy)
         InputGuard.positive("fcu", fcu)
 
-        // ECP 203 §4-2: Minimum radius at re-entrant corner
-        // The gooseneck radius should be at least 50mm to avoid cracking
+        // Minimum radius at re-entrant corner (app detailing assumption, clause not verified)
         val minGooseneckRadius = 50.0  // mm
         val recommendedRadius = max(minGooseneckRadius, riserMm * 0.3)
 
-        // ECP 203 §4-2: Additional reinforcement at gooseneck
-        // Diagonal tension at the re-entrant corner requires extra bars
-        // Minimum: 2Ø10 or equivalent at the corner, extending min Ld on each side
-        val fbd = 0.6 * sqrt(fcu)  // Bond strength per ECP 203 §5-2-2
+        // Additional reinforcement at gooseneck (app detailing assumption, clause not verified)
+        val fbd = 0.6 * sqrt(fcu)  // Bond strength, cited §5-2-2 — not verified against the 2025 scan
         val barDia = 10.0  // mm — typical gooseneck bar
         val barArea = PI * barDia * barDia / 4.0
         val fs = fy / GAMMA_S
@@ -534,12 +660,14 @@ class ECPStaircase : StaircaseDesign {
             developmentLength = LdRounded,
             extensionLength = extensionMin,
             gooseneckAngle = gooseneckAngle,
-            codeNote = "ECP 203 §4-2: ${numGooseneckBars}Ø${barDia.toInt()} at gooseneck, extend min ${extensionMin.toInt()}mm each side, r≥${minGooseneckRadius.toInt()}mm"
+            codeNote = "Gooseneck detail (app assumption, clauses not verified): ${numGooseneckBars}Ø${barDia.toInt()} at gooseneck, extend min ${extensionMin.toInt()}mm each side, r≥${minGooseneckRadius.toInt()}mm"
         )
     }
 
     /**
      * اختيار أسياخ رئيسية (مقاسات مترية - ECP)
+     * Spacing kept within 100–200 mm: the 200 mm cap is ECP 203-2025 §6-2-1-3-2 item 4
+     * (printed 6-6, max main-bar spacing in moment zones); 100 mm is a practical floor.
      * النتيجة بصيغة: "Ø12 @ 150 mm c/c"
      */
     private fun selectBars(requiredArea: Double): String {
@@ -558,20 +686,19 @@ class ECPStaircase : StaircaseDesign {
     }
 
     /**
-     * اختيار أسياخ التوزيع (عرضية على السلم)
+     * اختيار أسياخ التوزيع — ECP 203-2025 §6-2-1-3-2 item 7 (printed 6-6):
+     * area ≥ 1/5 of the main steel and at least 4 bars per metre (spacing ≤ 250 mm).
+     * The spec is per metre of flight length; bars run across the stair width.
      */
-    private fun selectDistBars(requiredAreaTotal: Double, stairWidthM: Double): String {
+    private fun selectDistBars(requiredAreaPerM: Double): String {
         val availableBars = listOf(8.0, 10.0, 12.0)
-        val barDia = availableBars.firstOrNull {
-            val area = PI * it * it / 4
-            val numBars = ceil(requiredAreaTotal / area).toInt()
-            numBars in 3..20
-        } ?: 8.0
-
-        val barArea = PI * barDia * barDia / 4
-        val numBars = ceil(requiredAreaTotal / barArea).toInt().coerceAtLeast(4)
-        val spacing = (stairWidthM * 1000.0 / numBars)
-        return "Ø${barDia.toInt()} @ ${spacing.toInt()} mm c/c"
+        for (d in availableBars) {
+            val area = PI * d * d / 4
+            val spacingRaw = floor(area * 1000.0 / requiredAreaPerM / 10.0) * 10.0
+            val spacing = spacingRaw.coerceAtMost(250.0)  // ≥ 4 bars per metre
+            if (spacing >= 100.0) return "Ø${d.toInt()} @ ${spacing.toInt()} mm c/c"
+        }
+        return "Ø12 @ 100 mm c/c"
     }
 
     /**
@@ -591,10 +718,19 @@ class ECPStaircase : StaircaseDesign {
         return 0.0
     }
 
+    /** قطر السيخ من نص الاختيار (mm) */
+    private fun barDiameterOf(barString: String): Double {
+        try {
+            val parts = barString.split("Ø", " @ ")
+            if (parts.size >= 2) return parts[1].trim().split(" ")[0].toDouble()
+        } catch (e: Exception) { /* fall through */ }
+        return 0.0
+    }
+
     /**
-     * حساب مساحة حديد التوزيع الإجمالي (mm²)
+     * مساحة حديد التوزيع من النص (mm² per metre of flight length)
      */
-    private fun parseDistBarArea(barString: String, stairWidthM: Double): Double {
+    private fun parseDistBarArea(barString: String): Double {
         if (barString.contains("None")) return 0.0
         try {
             val parts = barString.split("Ø", " @ ")
@@ -602,8 +738,7 @@ class ECPStaircase : StaircaseDesign {
                 val dia = parts[1].trim().split(" ")[0].toDouble()
                 val spacing = parts[2].trim().split(" ")[0].toDouble()
                 val barArea = PI * dia * dia / 4.0
-                val numBars = (stairWidthM * 1000.0 / spacing).toInt().coerceAtLeast(1)
-                return numBars * barArea
+                return barArea * 1000.0 / spacing
             }
         } catch (e: Exception) { /* fall through */ }
         return 0.0

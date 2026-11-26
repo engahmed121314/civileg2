@@ -78,9 +78,9 @@ object CodeReference {
         const val SLAB_MIN_STEEL = "ECP 203: Section 6-1-3 (Shrinkage Reinforcement ≥ 0.15%) (clause not verified)"
 
         // السلالم (بلاطة مائلة أحادية الاتجاه)
-        const val STAIRCASE_FLEXURE = "ECP 203: Section 6-2-1 (Staircase — Inclined One-Way Slab) (clause not verified)"
-        const val STAIRCASE_SHEAR = "ECP 203: Section 4-2-2 / qcu §4-3-1-2 (Staircase Shear) (clause not verified)"
-        const val STAIRCASE_DEFLECTION = "ECP 203: Section 6-3 (Staircase Deflection) (clause not verified)"
+        const val STAIRCASE_FLEXURE = "ECP 203-2025: §4-2-1-2 + Table 4-1 no redistribution (verified, printed 4-6/4-7); stair as inclined one-way slab §6-2-1-2 (verified, printed 6-4..6-7)"
+        const val STAIRCASE_SHEAR = "ECP 203-2025: Eq. 4-27/4-29 + §4-2-2-2-1 slabs concrete-only (verified, printed 4-18/4-19/4-25)"
+        const val STAIRCASE_DEFLECTION = "ECP 203-2025: §4-3 Table 4-10 + Eq. 4-81 (verified, printed 4-65)"
 
         // البلاطات اللاكمرية (Flat Slabs)
         const val FLAT_SLAB_METHOD = "ECP 203: Section 6-5 (Flat Slabs — Empirical Method) (clause not verified)"
