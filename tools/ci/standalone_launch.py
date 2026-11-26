@@ -352,8 +352,14 @@ def steel_block():
         if tap_text(["المنشآت المعدنية"], "st-find"): ok = True; break
         scroll_up(2)
     log.append(("steel_open", ok)); time.sleep(3); shot("steel-open"); dump("steel-open")
-    ac = tap_text(["American Code"], "st-code-aci"); time.sleep(1.0)   # chip is at the top of the first screen
-    log.append(("steel_code_american", ac)); shot("steel-code-american")
+    import os as _os
+    _marker = "tools/ci/steel_code.txt"
+    _steel_code = open(_marker).read().strip() if _os.path.exists(_marker) else "ACI"
+    log.append(("steel_code_selected", _steel_code))
+    if _steel_code == "ACI":
+        ac = tap_text(["American Code"], "st-code-aci"); time.sleep(1.0)   # chip is at the top of the first screen
+        log.append(("steel_code_american", ac)); shot("steel-code-american")
+    # ECP: the Egyptian Code is the default selection, no chip tap
     for k in range(3):
         steel_up(2); shot(f"steel-in-{k}"); dump(f"steel-in-{k}")
     # Required footing input: allowable soil bearing 150 kN/m2 typed by the evidence run (a stated test value, not an app default).
