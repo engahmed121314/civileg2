@@ -285,6 +285,7 @@ def pull_exported_pdfs():
         open(f"{out}/exported-" + os.path.basename(pth), "wb").write(d)
 def footing_block():
     """Footing only: open the isolated footing from the Design tab, design with defaults, sweep the result, export the PDF."""
+    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)  # leave the Beam screen opened by the common prologue
     tap_text(["التصميم"], "ft-design", exact=True); scroll_top(3)
     ok = False
     for _ in range(6):
