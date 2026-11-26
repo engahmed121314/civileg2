@@ -235,6 +235,24 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `tank quantities agree with the same engine result in metres`() {
+        val rect = engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, heightM = 3.0, fcu = 25.0, fy = 360.0)
+        val rows = com.civileg.app.domain.calculations.utils.BoqEstimator.tankRows(rect, "T")
+        assertEquals(2 * (rect.length + rect.width) * rect.height, rows[2].quantity, 1e-6)
+        assertEquals(rect.length * rect.width, rows[3].quantity, 1e-6)
+        assertTrue("plan side is metres, not millimetres", rect.length in 1.0..30.0)
+        val bbs = com.civileg.app.domain.calculations.utils.BbsGenerator.generateTankBbs("T", rect)
+        assertTrue(bbs.isNotEmpty() && bbs.all { it.totalWeightKg.isFinite() && it.totalWeightKg > 0.0 })
+        val circ = engine.designTank(CalculatorEngine.TankType.CIRCULAR_GROUND, capacity = 50.0, heightM = 3.0, fcu = 25.0, fy = 360.0)
+        val crows = com.civileg.app.domain.calculations.utils.BoqEstimator.tankRows(circ, "T")
+        assertEquals(Math.PI * circ.length * circ.height, crows[2].quantity, 1e-6)
+        assertEquals(Math.PI * circ.length * circ.length / 4.0, crows[3].quantity, 1e-6)
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            com.civileg.app.domain.calculations.utils.BbsGenerator.generateTankBbs("T", circ)
+        }
+    }
+
+    @Test
     fun `tank height not above freeboard is rejected`() {
         org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
             engine.designTank(CalculatorEngine.TankType.RECTANGULAR_GROUND, capacity = 50.0, heightM = 0.3, fcu = 25.0, fy = 360.0)

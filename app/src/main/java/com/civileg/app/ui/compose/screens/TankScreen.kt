@@ -388,6 +388,7 @@ fun TankScreen(
                         BoqEstimator.tankRows(
                             res.concreteVolume, res.steelWeight, res.length, res.width, res.height,
                             "T1", viewModel.excavationDepthM, viewModel.blindingThicknessM,
+                        isCircular = res.type.name.contains("CIRCULAR"),
                             waterproofingAreaM2 = if (res.type.name.contains("UNDERGROUND")) {
                                 BoqEstimator.tankWaterproofingArea(
                                     isCircular = res.type.name.contains("CIRCULAR"),

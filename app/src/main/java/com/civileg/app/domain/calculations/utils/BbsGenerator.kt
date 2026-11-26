@@ -311,6 +311,9 @@ object BbsGenerator {
         coverMm: Double = 40.0
     ): List<BbsEntry> {
         InputGuard.notBlank("memberMark", mark)
+        require(!result.type.name.contains("CIRCULAR")) {
+            "Bar schedule for circular tanks is not implemented (hoop and radial layouts are not modelled); no schedule is issued."
+        }
         InputGuard.positive("tankLength", result.length)
         InputGuard.positive("tankWidth", result.width)
         InputGuard.positive("tankHeight", result.height)

@@ -96,12 +96,9 @@ object BoqEstimator {
         )
     }
 
-    fun tankRows(result: TankResult, mark: String = "Tank"): List<BoqRow> = listOf(
-        item(1, "Concrete - $mark", "m3", result.concreteVolume),
-        item(2, "Reinforcement steel - $mark", "kg", result.steelWeight),
-        item(3, "Formwork - $mark (wall faces)", "m2", 2 * (result.length + result.width) * result.height),
-        item(4, "Formwork - $mark (base soffit)", "m2", result.length * result.width)
-    )
+    fun tankRows(result: TankResult, mark: String = "Tank"): List<BoqRow> =
+        tankRows(result.concreteVolume, result.steelWeight, result.length, result.width, result.height, mark,
+            isCircular = result.type.name.contains("CIRCULAR"))
 
     fun retainingWallRows(
         result: RetainingWallResult,
@@ -231,19 +228,24 @@ object BoqEstimator {
         mark: String = "Water tank",
         excavationDepthM: Double = 0.0,
         blindingThicknessM: Double = 0.0,
-        waterproofingAreaM2: Double = 0.0
+        waterproofingAreaM2: Double = 0.0,
+        isCircular: Boolean = false
     ): List<BoqRow> {
+        // Circular tank: lengthM is the diameter.
+        val wallFormArea = if (isCircular) Math.PI * lengthM * heightM else 2 * (lengthM + widthM) * heightM
+        val baseArea = if (isCircular) Math.PI * lengthM * lengthM / 4.0 else lengthM * widthM
+        val pitArea = if (isCircular) Math.PI * (lengthM + 0.5) * (lengthM + 0.5) / 4.0 else (lengthM + 0.5) * (widthM + 0.5)
         val rows = mutableListOf(
             item(1, "Concrete - $mark", "m3", concreteVolumeM3),
             item(2, "Reinforcement steel - $mark", "kg", steelWeightKg),
-            item(3, "Formwork - $mark (walls)", "m2", 2 * (lengthM + widthM) * heightM),
-            item(4, "Formwork - $mark (base)", "m2", lengthM * widthM)
+            item(3, "Formwork - $mark (walls)", "m2", wallFormArea),
+            item(4, "Formwork - $mark (base)", "m2", baseArea)
         )
         if (blindingThicknessM > 0.0) {
-            rows.add(item(rows.size + 1, "Blinding concrete - $mark", "m3", (lengthM + 0.5) * (widthM + 0.5) * blindingThicknessM))
+            rows.add(item(rows.size + 1, "Blinding concrete - $mark", "m3", pitArea * blindingThicknessM))
         }
         if (excavationDepthM > 0.0) {
-            rows.add(item(rows.size + 1, "Excavation - $mark (pit)", "m3", (lengthM + 0.5) * (widthM + 0.5) * excavationDepthM))
+            rows.add(item(rows.size + 1, "Excavation - $mark (pit)", "m3", pitArea * excavationDepthM))
         }
         if (waterproofingAreaM2 > 0.0) {
             rows.add(item(rows.size + 1, "Waterproofing - $mark (base + walls)", "m2", waterproofingAreaM2))
