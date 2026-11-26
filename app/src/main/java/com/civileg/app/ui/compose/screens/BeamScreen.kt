@@ -714,7 +714,7 @@ private fun ResultRow(label: String, value: String) {
 
 @Composable
 private fun FormulaItem(formula: String) {
-    AppText(
+    com.civileg.app.ui.components.AppTextBlock(
         text = formula,
         fontFamily = FontFamily.Monospace,
         fontSize = 12.sp,
