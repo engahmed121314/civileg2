@@ -26,4 +26,14 @@ class AdvancedDesignInputParsingTest {
         assertEquals(12, "12".intOrNull("studs"))
         try { "-3".intOrNull("studs"); fail("accepted negative") } catch (_: IllegalArgumentException) {}
     }
+
+    @Test fun beamAndColumnGeometryGuards() {
+        requireValidBeamGeometry(com.civileg.app.domain.entities.DesignCode.ECP, 250.0, 600.0)
+        for ((w, d) in listOf(0.0 to 600.0, 250.0 to 0.0, 250.0 to 50.0)) {
+            try { requireValidBeamGeometry(com.civileg.app.domain.entities.DesignCode.ECP, w, d); fail("accepted $w x $d") } catch (_: IllegalArgumentException) {}
+        }
+        requireValidBeamGeometry(com.civileg.app.domain.entities.DesignCode.ACI, 250.0, 50.0)
+        try { requireValidColumnGeometry(0.0, 300.0); fail() } catch (_: IllegalArgumentException) {}
+        requireValidColumnGeometry(300.0, 300.0)
+    }
 }

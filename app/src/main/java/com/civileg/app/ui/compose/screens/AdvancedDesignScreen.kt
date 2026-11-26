@@ -393,6 +393,7 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
             val live = form.bLive.num("live load")
             val width = form.bWidth.num("width")
             val depth = form.bDepth.num("depth")
+            requireValidBeamGeometry(form.beamCode, width, depth)
             when (form.beamCode) {
                 DesignCode.ECP -> ECPAdvancedBeam().designBeam(
                     beamType, BeamSectionType.RECTANGULAR, fcu, fy, dead, live, width, depth,
@@ -418,10 +419,10 @@ fun AdvancedDesignScreen(onNavigateBack: () -> Unit = {}) {
         columnResult = null
         columnResultSignature = null
         runCatching {
-            val section = ColumnType.Rectangular(
-                width = form.colWidth.num("column width"),
-                depth = form.colDepth.num("column depth")
-            )
+            val colWidth = form.colWidth.num("column width")
+            val colDepth = form.colDepth.num("column depth")
+            requireValidColumnGeometry(colWidth, colDepth)
+            val section = ColumnType.Rectangular(width = colWidth, depth = colDepth)
             val fcu = form.colFcu.num("fcu")
             val fy = form.colFy.num("fy")
             val axial = form.colAxial.num("axial load")
@@ -1762,6 +1763,21 @@ private fun fmt(value: Double, decimals: Int = 2): String =
     if (value.isFinite()) "%.${decimals}f".format(value) else "—"
 
 private fun yesNo(value: Boolean): String = if (value) "Yes / نعم" else "No / لا"
+
+/** The ECP advanced beam engine fixes the effective depth at (depth - 50 mm); a shallower section gives d <= 0. */
+internal fun requireValidBeamGeometry(code: DesignCode, widthMm: Double, depthMm: Double) {
+    require(widthMm > 0.0) { "width must be positive" }
+    require(depthMm > 0.0) { "depth must be positive" }
+    if (code == DesignCode.ECP) {
+        require(depthMm > 50.0) { "depth must exceed the 50 mm cover the ECP beam design assumes" }
+    }
+}
+
+/** A zero section gives zero area and radius of gyration, so slenderness divides by zero. */
+internal fun requireValidColumnGeometry(widthMm: Double, depthMm: Double) {
+    require(widthMm > 0.0) { "column width must be positive" }
+    require(depthMm > 0.0) { "column depth must be positive" }
+}
 
 /** Western digits and a dot decimal separator, from Arabic-Indic digits and Arabic/comma separators. */
 internal fun normalizeNumericText(raw: String): String {
