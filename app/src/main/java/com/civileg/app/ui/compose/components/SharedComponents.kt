@@ -283,8 +283,9 @@ fun DesignInputField(
 ) {
     OutlinedTextField(
         value = value,
-        onValueChange = onValueChange,
-        label = { AppText(label, fontSize = 13.sp) },
+        onValueChange = { onValueChange(normalizeNumericInput(it)) },
+        label = { AppText(label, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+        singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
