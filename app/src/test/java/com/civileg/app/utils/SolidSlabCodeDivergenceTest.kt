@@ -114,22 +114,23 @@ class SolidSlabCodeDivergenceTest {
     }
 
     @Test
-    fun `deflection limits are code specific - ECP span25 vs ACI-SBC span20`() {
-        assertEquals("ECP L/25", 160.0, twoWay(DesignCode.ECP).minThickness, 1e-9)
+    fun `deflection limits are code specific - ECP 2025 a-over-35 vs ACI-SBC span20`() {
+        // ECP 203-2025 Eq 6-6a (p.6-7): simple edges, t,min = a/35 (short span 4 m)
+        assertEquals("ECP a/35", 4000.0 / 35.0, twoWay(DesignCode.ECP).minThickness, 1e-9)
         assertEquals("ACI L/20", 200.0, twoWay(DesignCode.ACI).minThickness, 1e-9)
         assertEquals("SBC L/20", 200.0, twoWay(DesignCode.SBC).minThickness, 1e-9)
     }
 
     @Test
     fun `too-thin slab is never reported safe for any code`() {
-        // 4 m simply supported span: ECP needs ≥160 mm, ACI/SBC ≥200 mm
+        // 4 m simply supported span: ECP 203-2025 needs >=114.3 mm (a/35), ACI/SBC >=200 mm
         for (code in allCodes) {
-            val r = twoWay(code, ts = 150.0)
-            assertFalse("$code: 150 mm over a 4 m span is below the code minimum", r.isSafe)
+            val r = twoWay(code, ts = 100.0)
+            assertFalse("$code: 100 mm over a 4 m span is below the code minimum", r.isSafe)
             val thickness = r.safetyChecks.first { it.name.contains("Thickness", ignoreCase = true) }
             assertFalse("$code min-thickness row must be flagged", thickness.isSafe)
-            assertEquals("$code reported thickness", 150.0, thickness.value, 1e-9)
-            assertTrue("$code required thickness", thickness.limit >= 160.0)
+            assertEquals("$code reported thickness", 100.0, thickness.value, 1e-9)
+            assertTrue("$code required thickness", thickness.limit >= 114.0)
         }
     }
 
