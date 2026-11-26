@@ -292,7 +292,7 @@ item {
                 item {
                     val isAr = androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language == "ar"
                     val exposures = com.civileg.app.domain.calculations.ecp.ECP2025Cover.Exposure.entries
-                    AppText(stringResource(R.string.fs_cover_exposure_title), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    AppText(stringResource(R.string.fs_cover_exposure_title), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         exposures.forEach { ex ->
                             FilterChip(
@@ -301,7 +301,7 @@ item {
                                     coverExposure = ex
                                     clearCover = com.civileg.app.domain.calculations.ecp.ECP2025Cover.slabMinCover(ex, coverFireHours).toInt().toString()
                                 },
-                                label = { AppText(if (isAr) ex.labelAr else ex.labelEn, fontSize = 11.sp) }
+                                label = { AppText(if (isAr) ex.labelAr else ex.labelEn, style = MaterialTheme.typography.labelSmall) }
                             )
                         }
                     }
@@ -313,7 +313,7 @@ item {
                                     coverFireHours = h
                                     coverExposure?.let { clearCover = com.civileg.app.domain.calculations.ecp.ECP2025Cover.slabMinCover(it, h).toInt().toString() }
                                 },
-                                label = { AppText(if (h == null) stringResource(R.string.fs_cover_fire_none) else "${h} h", fontSize = 11.sp) }
+                                label = { AppText(if (h == null) stringResource(R.string.fs_cover_fire_none) else "${h} h", style = MaterialTheme.typography.labelSmall) }
                             )
                         }
                     }
@@ -323,10 +323,10 @@ item {
                         val entered = clearCover.toDoubleOrNull()
                         AppTextBlock(
                             stringResource(R.string.fs_cover_exposure_note, minC.toInt(), ex.source, ex.minFcu?.toInt() ?: 0, ex.maxWc?.toString() ?: "-"),
-                            fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         if (entered != null && entered < minC) {
-                            AppTextBlock(stringResource(R.string.fs_cover_below_min, minC.toInt()), fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
+                            AppTextBlock(stringResource(R.string.fs_cover_below_min, minC.toInt()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
