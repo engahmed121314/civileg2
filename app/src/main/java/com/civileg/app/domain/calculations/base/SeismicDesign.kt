@@ -70,7 +70,9 @@ data class SeismicBaseShearResult(
     val maxStoryDrift: Double = 0.0,      // mm (average per storey)
     val allowableDrift: Double = 0.0,     // mm
     val driftRatio: Double = 0.0,         // Δ/h
-    val driftIsSafe: Boolean = true
+    val driftIsSafe: Boolean = true,
+    /** False when a required input (building height) is missing: no period, base shear or drift was computed. */
+    val assessed: Boolean = true
 ) {
     /**
      * True only when the engine produced a drift estimate. [driftIsSafe] defaults to true, so on its own it
@@ -110,3 +112,19 @@ enum class SoilType(val displayName: String, val description: String) {
     D("Type D", "Medium Soil"),
     E("Type E", "Soft Soil")
 }
+
+
+/**
+ * Result for a run where the building height was not supplied. The period, base shear and drift are
+ * NOT ASSESSED: no height is guessed and no period is substituted. baseShear is 0.0 and must not be read as a value.
+ */
+fun seismicNotAssessedMissingHeight(
+    zoneFactor: Double, soilFactor: Double, importanceFactor: Double, responseModification: Double,
+    formula: String, codeReference: String
+) = SeismicBaseShearResult(
+    baseShear = 0.0, zoneFactor = zoneFactor, soilFactor = soilFactor,
+    importanceFactor = importanceFactor, responseModification = responseModification,
+    calculationFormula = formula, codeReference = codeReference,
+    warnings = listOf("NOT ASSESSED: building height was not supplied, so the fundamental period, base shear and drift were not computed."),
+    assessed = false, driftIsSafe = false
+)

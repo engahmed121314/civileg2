@@ -98,17 +98,17 @@ class SeismicViewModelTest {
     //     directly; the engine estimates height when h <= 0
     // ═══════════════════════════════════════════════════════════════════════
     @Test
-    fun `calculate with zero height estimates from weight`() {
+    fun `calculate with zero height is not assessed`() {
         val result = ecpSeismic.calculateBaseShear(
             totalWeight = 50000.0,
             seismicZone = SeismicZone.ZONE_3,
             soilType = SoilType.C,
             importanceFactor = 1.0,
             responseModificationFactor = 5.0,
-            buildingHeight = 0.0 // should auto-estimate
+            buildingHeight = 0.0 // no height: nothing is guessed
         )
-        // With estimated height, result should still be valid
-        assertTrue("Base shear should still be positive with estimated height", result.baseShear > 0)
+        assertFalse("No height supplied: not assessed", result.assessed)
+        assertEquals(0.0, result.baseShear, 0.0)
     }
 
     // ═══════════════════════════════════════════════════════════════════════

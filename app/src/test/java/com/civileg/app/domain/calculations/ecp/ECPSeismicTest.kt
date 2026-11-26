@@ -264,12 +264,15 @@ class ECPSeismicTest {
     }
 
     @Test
-    fun `calculateBaseShear_withoutBuildingHeight_estimatesHeight`() {
+    fun `calculateBaseShear_withoutBuildingHeight_isNotAssessed`() {
         val result = seismic.calculateBaseShear(
             10000.0, SeismicZone.ZONE_3, SoilType.C, 1.0, 5.0, 0.0
         )
-        assertTrue("Should estimate height and produce result", result.baseShear > 0)
-        assertTrue("Should have warning about estimated height", result.warnings.isNotEmpty())
+        assertFalse("No height: nothing was assessed", result.assessed)
+        assertEquals(0.0, result.baseShear, 0.0)
+        assertEquals(0.0, result.fundamentalPeriod, 0.0)
+        assertFalse(result.driftAssessed)
+        assertTrue(result.warnings.any { it.startsWith("NOT ASSESSED") })
     }
 
     @Test

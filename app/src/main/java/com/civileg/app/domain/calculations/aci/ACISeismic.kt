@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.aci
 
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.calculations.base.seismicNotAssessedMissingHeight
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.DesignCode
@@ -53,6 +54,12 @@ class ACISeismic : SeismicDesign {
         val sds = ZONE_FACTORS[seismicZone] ?: DEFAULT_SDS
         val sd1 = sds / 2.0 // تقريب للعلاقة
         
+        if (!(buildingHeight > 0.0)) {
+            return seismicNotAssessedMissingHeight(
+                sds, 1.0, importanceFactor, responseModificationFactor,
+                "ASCE 7: V = Cs × W", CodeReference.ACI.SEISMIC_BASE_SHEAR
+            )
+        }
         var cs = sds / (responseModificationFactor / importanceFactor)
         
         // الحدود (ASCE 7-16 Section 12.8.1.1)

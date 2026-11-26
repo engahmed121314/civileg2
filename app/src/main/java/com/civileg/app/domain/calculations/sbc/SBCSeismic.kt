@@ -1,6 +1,7 @@
 package com.civileg.app.domain.calculations.sbc
 
 import com.civileg.app.domain.calculations.InputGuard
+import com.civileg.app.domain.calculations.base.seismicNotAssessedMissingHeight
 import com.civileg.app.domain.calculations.base.*
 import com.civileg.app.domain.entities.CodeReference
 import com.civileg.app.domain.entities.DesignCode
@@ -102,7 +103,13 @@ class SBCSeismic : SeismicDesign {
 
         // ── SBC 301 §4.4.1: حدود Cs ──
         // Cs,max = SD1 / (T × (R / Ie)) لـ T ≤ TL
-        val T = if (buildingHeight > 0) estimatePeriod(buildingHeight) else 0.0
+        if (!(buildingHeight > 0.0)) {
+            return seismicNotAssessedMissingHeight(
+                SPS, Fa, importanceFactor, responseModificationFactor,
+                "SBC 301: V = Cs × W where Cs = SDS / (R/Ie)", CodeReference.SBC.SEISMIC_BASE_SHEAR
+            )
+        }
+        val T = estimatePeriod(buildingHeight)
         val csMax = if (T > 0) SD1 / (T * (responseModificationFactor / importanceFactor)) else cs * 2
 
         // Cs,min = max(0.044 × SDS × Ie, 0.01)
@@ -130,7 +137,7 @@ class SBCSeismic : SeismicDesign {
         // ── Story-drift estimate (equivalent SDOF, SBC 301 §4.5) ──
         val hDrift = buildingHeight
         val g = 9.81
-        val periodD = if (T > 0.0) T else 0.1
+        val periodD = T
         val omega = 2.0 * PI / periodD
         val deltaDesign = if (hDrift > 0.0) {
             val deltaElastic = finalCs * g / (omega * omega)

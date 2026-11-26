@@ -60,16 +60,15 @@ class ECPSeismic : SeismicDesign {
 
         val warnings = mutableListOf<String>()
         
-        // ارتفاع المنشأ - يُقدر من الوزن إذا لم يُحدد
-        // تقدير: W ≈ 12 kN/m² × A_floor × n_floors, H ≈ 3m × n_floors
-        val h = if (buildingHeight > 0) buildingHeight else {
-            val estimatedFloors = max(1.0, totalWeight / 500.0).coerceAtMost(30.0)
-            val h_est = 3.0 * estimatedFloors
-            warnings.add(String.format("Estimated building height: %.1fm (from weight %.0f kN). Pass buildingHeight for accuracy.", h_est, totalWeight))
-            h_est
-        }
-        
+        // Height is required. It is never estimated from the weight (that guess drove T, base shear and drift).
+        val h = buildingHeight
         val ag = ZONE_FACTORS[seismicZone] ?: 0.15
+        if (!(h > 0.0)) {
+            return seismicNotAssessedMissingHeight(
+                ag, (SOIL_PARAMS[soilType] ?: SOIL_PARAMS[SoilType.C]!!).s, importanceFactor,
+                responseModificationFactor, "V = Sd(T1) × W", CodeReference.ECP.SEISMIC_BASE_SHEAR
+            )
+        }
         val params = SOIL_PARAMS[soilType] ?: SOIL_PARAMS[SoilType.C]!!
         
         // حساب T1 = Ct * H^0.75 (حسب الكود المصري للمنشآت الإطارية)

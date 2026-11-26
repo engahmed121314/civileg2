@@ -228,7 +228,7 @@ class SeismicViewModel @Inject constructor(
                         baseShear = res.baseShear,
                         fundamentalPeriod = fundPeriod,
                         spectralAccel = spectralAccel,
-                        isSafe = res.warnings.isEmpty()
+                        isSafe = false  // never a safe drawing state while the assessment is preliminary
                     )
                 } catch (_: Exception) { null }
                 pendingDrawingBitmap = null  // consume after use

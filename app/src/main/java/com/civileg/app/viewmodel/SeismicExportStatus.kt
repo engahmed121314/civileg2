@@ -15,7 +15,7 @@ internal object SeismicExportStatus {
     fun driftFailed(r: SeismicBaseShearResult): Boolean = false
 
     @Suppress("UNUSED_PARAMETER")
-    fun isSafe(r: SeismicBaseShearResult): Boolean = true
+    fun isSafe(r: SeismicBaseShearResult): Boolean = false
 
     @Suppress("UNUSED_PARAMETER")
     fun assessmentPending(r: SeismicBaseShearResult): Boolean = true

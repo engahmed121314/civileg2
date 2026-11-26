@@ -163,8 +163,8 @@ fun SeismicScreen(
             )
 
             // Fundamental period (approximate) — guard against NaN/Infinity
-            val safeHeight = if (totalHeight > 0) totalHeight else 15.0
-            val T = (0.075 * safeHeight.pow(0.75)).coerceAtLeast(0.01)
+            // The engine's own period is used so the screen cannot disagree with the result. 0.0 = not assessed.
+            val T = baseShearResult.fundamentalPeriod
 
             // Spectrum values (generate curve)
             val spectrumValues = (1..50).map { i ->
@@ -184,17 +184,17 @@ fun SeismicScreen(
             )
 
             // Sa at T
-            val saAtT = designer.getResponseSpectrum(
+            val saAtT = if (T > 0.0) designer.getResponseSpectrum(
                 period = T, dampingRatio = 0.05,
                 soilType = selectedSoil, importanceFactor = I
-            )
+            ) else null
 
             result = SeismicUiResult(
                 baseShearResult = baseShearResult,
                 spectrumValues = spectrumValues,
                 floorForces = floorForces,
                 fundamentalPeriod = T,
-                spectralAccel = saAtT.spectralAcceleration,
+                spectralAccel = saAtT?.spectralAcceleration ?: 0.0,
                 code = selectedCode.designCode
             )
         } catch (e: Exception) {
