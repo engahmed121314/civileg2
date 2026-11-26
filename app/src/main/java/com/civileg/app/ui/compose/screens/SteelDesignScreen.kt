@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -218,6 +219,8 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
     var liveLoad by rememberSaveable { mutableStateOf("0.60") }
     var windSpeed by rememberSaveable { mutableStateOf("150") }
     var soilBearing by rememberSaveable { mutableStateOf("") }
+    var bracedBaysText by rememberSaveable { mutableStateOf("") }
+    var bracingLoad by rememberSaveable { mutableStateOf("") }
     var numberOfStories by rememberSaveable { mutableIntStateOf(1) }
     var selectedCode by rememberSaveable { mutableStateOf(defaultDesignCode()) }
 
@@ -278,6 +281,8 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                         SteelInputField(roofSlope, stringResource(R.string.steel_roof_slope_deg), { roofSlope = it }, Modifier.weight(1f))
                     }
                     SteelInputField(soilBearing, "Allowable soil bearing (kN/m2) - required for footing size", { soilBearing = it }, Modifier.fillMaxWidth())
+                    SteelInputField(bracedBaysText, "Braced bays, e.g. 1,10 (blank = end bays, default)", { bracedBaysText = it }, Modifier.fillMaxWidth())
+                    SteelInputField(bracingLoad, "Lateral load H per braced panel (kN), blank = brace force NOT ASSESSED", { bracingLoad = it }, Modifier.fillMaxWidth())
                 }
             }
         }
@@ -317,7 +322,10 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                             liveLoad = liveLoad.toDoubleOrNull() ?: return@AppButton,
                             windLoad = windSpeed.toDoubleOrNull() ?: return@AppButton,
                             numberOfStories = numberOfStories,
-                            allowableSoilBearingKnM2 = soilBearing.trim().toDoubleOrNull()
+                            allowableSoilBearingKnM2 = soilBearing.trim().toDoubleOrNull(),
+                            bracedBays = bracedBaysText.trim().takeIf { it.isNotEmpty() }
+                                ?.split(",", " ")?.filter { it.isNotBlank() }?.map { it.trim().toIntOrNull() ?: 0 },
+                            bracingLateralLoadKn = bracingLoad.trim().toDoubleOrNull()
                         )
                         viewModel.calculateWarehouse(inputs)
                     },
@@ -456,6 +464,17 @@ fun WarehouseResultSummary(res: SteelWarehouseAnalysisResult) {
                     ResultRow("Service load per column", "${String.format("%.1f", f.serviceLoadPerColumnKn)} kN")
                     AppText("Gravity only. Uplift, horizontal thrust, overturning, sliding, thickness and reinforcement: NOT ASSESSED.", fontSize = 11.sp)
                 } else ResultRow("Footing plan", f.reason ?: "NOT ISSUED")
+            }
+            res.bracing?.let { br ->
+                if (br.issued) {
+                    ResultRow("X-bracing B1 (bays ${br.bracedBays.joinToString(",")}${if (br.usedDefaultBays) ", default" else ""})", "${br.sectionName}, ${br.braceCount} diagonals")
+                    ResultRow("Brace length / angle", "${String.format("%.2f", br.lengthM)} m / ${String.format("%.1f", br.angleDeg)} deg")
+                    ResultRow("Bracing weight (geometry only)", "${String.format("%.0f", br.totalWeightKg)} kg")
+                    ResultRow("Brace force (tension-only)", br.braceForceKn?.let { "${String.format("%.1f", it)} kN" } ?: "NOT ASSESSED (enter H)")
+                    br.lines.forEach { AppText(it, fontSize = 11.sp) }
+                    val bmp = remember(br) { com.civileg.app.shared.reporting.PdfDrawingGenerator.generateBracingDrawing(br) }
+                    androidx.compose.foundation.Image(bmp.asImageBitmap(), contentDescription = "X-bracing elevation", modifier = Modifier.fillMaxWidth())
+                } else ResultRow("X-bracing", br.reason ?: "NOT ISSUED")
             }
             if (res.mainFrame.floorBeamSection != null) {
                 ResultRow(stringResource(R.string.steel_intermediate_floor_beam), res.mainFrame.floorBeamSection.sectionName)

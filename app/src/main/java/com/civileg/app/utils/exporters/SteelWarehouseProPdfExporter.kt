@@ -90,6 +90,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
 
         // 4. Schedules
         addMemberSchedule(document, inputs, result)
+        addBracingSection(document, result)
         addConnectionSchedule(document, result)
         
         // 5. BOQ & Cost
@@ -248,7 +249,7 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
                 "FB1" -> "${numBays + 1} Units"
                 "P1" -> "${result.secondaryMembers.purlinCount} Lines"
                 "G1" -> "${(inputs.length / inputs.baySpacing).toInt() * 4} Units"
-                else -> "Full Bay Sets"
+                else -> result.bracing?.takeIf { it.issued }?.let { "${it.braceCount} diagonals" } ?: "not issued"
             }
             table.addCell(dataCell(qtyText, false, bg))
             // Weights come from the design takeoff (section area x length x 7850, tons). A member without a computed weight
@@ -260,6 +261,22 @@ class SteelWarehouseProPdfExporter(private val context: Context) {
             else table.addCell(dataCell("NOT ASSESSED", true, bg, NOT_ASSESSED_GRAY))
         }
         document.add(table)
+    }
+
+    private fun addBracingSection(document: Document, result: SteelWarehouseAnalysisResult) {
+        val b = result.bracing ?: return
+        document.add(Paragraph("\nX-Bracing (B1)").setFontSize(12f).setBold().setFontColor(PRIMARY))
+        document.add(LineSeparator(SolidLine(0.5f)).setMarginBottom(5f))
+        if (!b.issued) { document.add(Paragraph(b.reason ?: "NOT ISSUED").setFontSize(9f)); return }
+        b.lines.forEach { document.add(Paragraph(it).setFontSize(8f)) }
+        try {
+            val bmp = PdfDrawingGenerator.generateBracingDrawing(b)
+            val st = ByteArrayOutputStream()
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, st)
+            document.add(Image(ImageDataFactory.create(st.toByteArray())).setAutoScale(true).setHorizontalAlignment(HorizontalAlignment.CENTER))
+        } catch (e: Exception) {
+            document.add(Paragraph("Bracing drawing error: ${e.message}").setFontColor(ERROR))
+        }
     }
 
     private fun addConnectionSchedule(document: Document, result: SteelWarehouseAnalysisResult) {

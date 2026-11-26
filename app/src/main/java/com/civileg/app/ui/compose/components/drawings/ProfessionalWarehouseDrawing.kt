@@ -59,9 +59,10 @@ fun ProfessionalWarehouseDrawing(
         }
 
         // ── Responsive title block ────────────────────────────────
+        // Annotations sit above the title block (they were drawn at the same position and overprinted it).
         drawSheetAnnotations(
             w - cfg.titleBlockWidth - cfg.margin,
-            h - cfg.titleBlockHeight - cfg.margin,
+            h - 2f * cfg.titleBlockHeight - 2f * cfg.margin,
             cfg,
             resultSummary
         )
@@ -168,8 +169,7 @@ private fun DrawScope.drawWarehouseFront(inputs: SteelWarehouseInputs, result: S
     drawWarehouseText("Column: ${result.mainFrame.columnSection.sectionName}", x1 + 10f, yBase - 20f, Color.White.copy(alpha = 0.7f), 10f)
     drawWarehouseText("Rafter: ${result.mainFrame.rafterSection.sectionName}", xMid - 50f, yRidge + 30f, Color.White.copy(alpha = 0.7f), 10f)
     
-    // Labels
-    drawWarehouseText("FRONT ELEVATION", w/2, pad/2, Color.White, 16f, center = true, bold = true)
+    // The view title is drawn once, by the section separator above.
 }
 
 private fun DrawScope.drawWarehousePlan(inputs: SteelWarehouseInputs, result: SteelWarehouseAnalysisResult) {
