@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.compose.components.localizedCheckName
 import com.civileg.app.domain.entities.DesignCode
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -322,7 +323,7 @@ fun RetainingWallScreen(
                 }
 
                 if (res.calculationSteps.isNotEmpty()) {
-                    item { CalculationStepsCard(res.calculationSteps, title = "Retaining Wall Calculation Steps") }
+                    item { CalculationStepsCard(res.calculationSteps, title = stringResource(R.string.rw_steps_title)) }
                 }
 
                 val bbsEntries = runCatching {
@@ -345,7 +346,7 @@ fun RetainingWallScreen(
                     )
                 }.getOrDefault(emptyList())
                 if (boqRows.isNotEmpty()) {
-                    item { BoqTableCard(boqRows, title = "Retaining Wall Bill of Quantities") }
+                    item { BoqTableCard(boqRows, title = stringResource(R.string.rw_boq_title)) }
                 }
 
                 if (res.safetyChecks.isNotEmpty()) {
@@ -378,7 +379,7 @@ fun RetainingWallScreen(
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        AppText(check.name, modifier = Modifier.weight(1f).padding(end = 12.dp), fontSize = 13.sp)
+                                        AppText(localizedCheckName(check.name), modifier = Modifier.weight(1f).padding(end = 12.dp), fontSize = 13.sp)
                                         AppText(
                                             "${"%.2f".format(check.value)} / ${"%.2f".format(check.limit)} ${check.unit}",
                                             fontSize = 12.sp,
