@@ -152,6 +152,9 @@ object ProfessionalEnglishPdfReporter {
             '\u066C' -> ','
             else -> ch
         } }.joinToString("")
+            // Bar callouts use phi/diameter signs that IBM Plex Sans Arabic lacks (drawn as an empty box); only before a digit,
+            // so the strength reduction factor phi in formulas is left alone. O-slash (U+00D8) is in the font.
+            .replace(Regex("[\u03C6\u03D5\u2300\u2205](?=\\d)"), "\u00D8")
         val t = Text(latinText).setFont(font).setFontSize(size)
         color?.let { t.setFontColor(it) }
         return t
