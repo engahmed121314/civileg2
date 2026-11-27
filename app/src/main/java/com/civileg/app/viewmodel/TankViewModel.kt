@@ -159,8 +159,8 @@ class TankViewModel @Inject constructor(
                 directory.mkdirs()
                 val file = File(directory, fileName)
 
-                // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
-                val drawingBitmap = pendingDrawingBitmap ?: try {
+                // Page-proportioned drawing from PdfDrawingGenerator (the screen capture is stretched on the page); the captured screen bitmap is only the fallback
+                val generated2 = try {
                     PdfDrawingGenerator.generateTankDrawing(
                         tankType = res.type.displayName,
                         length = res.length,
@@ -176,6 +176,7 @@ class TankViewModel @Inject constructor(
                         foundationDepth = if (res.type == CalculatorEngine.TankType.UNDERGROUND || res.type == CalculatorEngine.TankType.CIRCULAR_UNDERGROUND) res.height * 0.3 else 0.0
                     )
                 } catch (e: Exception) { null }
+                val drawingBitmap = generated2 ?: pendingDrawingBitmap
                 pendingDrawingBitmap = null  // consume after use
 
                 val codeName = when(res.code) {
