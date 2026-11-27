@@ -160,7 +160,8 @@ class TankViewModel @Inject constructor(
                 val file = File(directory, fileName)
 
                 // Use captured Compose drawing bitmap if available, otherwise fallback to PdfDrawingGenerator
-                val drawingBitmap = pendingDrawingBitmap ?: try {
+                // The PDF drawing is the DXF geometry rendered at page proportions (same drawing as the .dxf file); screen capture, then the old generator, are fallbacks.
+                val drawingBitmap = com.civileg.app.utils.DxfBitmapRenderer.render(buildDxfDrawing()) ?: pendingDrawingBitmap ?: try {
                     PdfDrawingGenerator.generateTankDrawing(
                         tankType = res.type.displayName,
                         length = res.length,
