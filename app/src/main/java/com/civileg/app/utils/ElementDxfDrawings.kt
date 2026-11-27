@@ -366,7 +366,10 @@ object ElementDxfDrawings {
         vertBarDiaMm: Double,
         vertBarSpacingMm: Double,
         horizBarDiaMm: Double,
-        horizBarSpacingMm: Double
+        horizBarSpacingMm: Double,
+        underground: Boolean = false,
+        upliftFs: Double = 0.0,
+        upliftLimit: Double = 0.0
     ): DxfDrawable = DxfDrawable { ex ->
         val t = wallThicknessMm
         val outerL = innerLengthMm + 2 * t
@@ -388,6 +391,15 @@ object ElementDxfDrawings {
             y += horizBarSpacingMm.coerceAtLeast(50.0)
         }
         ex.addText(outerL * 0.30, totalH + 60.0, "SECTION A-A", 70.0, "TEXT")
+        if (underground) {
+            // Soil on both sides and groundwater at the top of the tank: the same case the uplift check uses (buoyancy = L x B x H x gamma_w).
+            val soilW = outerL * 0.25
+            ex.rect(-soilW, 0.0, soilW, totalH, "SOIL")
+            ex.rect(outerL, 0.0, soilW, totalH, "SOIL")
+            ex.addLine2D(-soilW, totalH, outerL + soilW, totalH, "SOIL")
+            ex.addText(-soilW, totalH + 60.0, "GROUND / WATER TABLE AT TOP (uplift case)", 50.0, "TEXT")
+            ex.addText(-soilW + 40.0, totalH / 2.0, "SOIL", 50.0, "TEXT")
+        }
         ex.addDimensionH(0.0, outerL, -150.0, fmt(outerL), offset = 150.0)
         ex.addDimensionV(0.0, totalH, -150.0, fmt(totalH), offset = 150.0)
 
@@ -419,7 +431,14 @@ object ElementDxfDrawings {
             title, contentW, totalH,
             "WALL t=${fmt(t)} mm, BASE t=${fmt(baseThicknessMm)} mm",
             "WALL BARS " + (if (isCircular) "HOOP" else "HORIZ") + " dia ${fmt(horizBarDiaMm)} @ ${fmt(horizBarSpacingMm)}, VERT dia ${fmt(vertBarDiaMm)} @ ${fmt(vertBarSpacingMm)}",
-            listOf("BAR SCHEDULE: NOT ISSUED (bar sizes are indicative, not designed)")
+            buildList {
+                if (underground) {
+                    if (upliftFs > 0.0) add("UPLIFT: FS = ${String.format("%.2f", upliftFs)} vs ${String.format("%.2f", upliftLimit)} used by the app (source of the limit not verified): " + (if (upliftFs >= upliftLimit) "OK" else "FAILS"))
+                    else add("UPLIFT: NOT ASSESSED for this tank")
+                    add("SOIL PRESSURE ON WALLS: see calculation sheet, not drawn to scale")
+                }
+                add("BAR SCHEDULE: NOT ISSUED (bar sizes are indicative, not designed)")
+            }
         )
     }
 
