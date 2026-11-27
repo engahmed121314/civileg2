@@ -54,6 +54,9 @@ class DrawingSummaryFactoryTest {
         val summary = beamDrawingSummary(result)
         assertEquals("ACI318M-14", summary.designCodeLabel)
         assertFalse(summary.isSafe)
+        assertFalse(summary.listedChecksFailed)
+        assertFalse(summary.codeAcceptanceComplete)
+        assertEquals("UNVERIFIED", summary.safetyLabel)
         assertTrue(summary.codeNotes.contains("Anchorage not verified"))
     }
 

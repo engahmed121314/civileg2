@@ -23,6 +23,9 @@ private fun List<CalculatorEngine.DesignSafetyCheck>.asDrawingChecks(): List<Gen
 fun beamDrawingSummary(result: CalculatorEngine.BeamResult): DrawingResultSummary =
     DrawingResultSummary(
         isSafe = result.isSafe && result.codeAcceptanceComplete,
+        // A pass with an incomplete assessment reads UNVERIFIED; only a failed listed check reads UNSAFE.
+        codeAcceptanceComplete = result.codeAcceptanceComplete,
+        listedChecksFailed = result.safetyChecks.any { !it.isSafe && !it.notAssessed },
         utilizationRatio = result.utilizationRatio,
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
