@@ -45,6 +45,9 @@ fun ProfessionalStrapFootingDrawing(
     strapDia: Double,
     strapCount: Int,
     cover: Double,
+    /** Strap beam top bars. 0 bars keeps the old single-diameter drawing. */
+    strapTopDia: Double = 0.0,
+    strapTopCount: Int = 0,
     viewMode: Int = 0,
     designCode: DesignCode = DesignCode.ECP,
     resultSummary: DrawingResultSummary? = null,
@@ -378,6 +381,14 @@ fun ProfessionalStrapFootingDrawing(
             for (i in 0 until barCountStrap) {
                 drawRebarCircle(strapLeft + 4f + i * stepStrap, strapBottomY - 4f, strapDia.toFloat(), secScale / 2f, barStrapColor)
             }
+            if (strapTopCount > 0) {
+                val topCountDraw = strapTopCount.coerceIn(2, 8)
+                val stepTop = (distPx - 8f) / (topCountDraw - 1)
+                for (i in 0 until topCountDraw) {
+                    drawRebarCircle(strapLeft + 4f + i * stepTop, strapTopY + 4f, strapTopDia.toFloat(), secScale / 2f, barStrapColor)
+                }
+                drawTextAnnotated("\u2463", (strapLeft + strapRight) / 2f, strapTopY - 4f, barStrapColor, cfg.valueLabelTextSize, center = true, bold = true)
+            }
             drawTextAnnotated("\u2462", (strapLeft + strapRight) / 2f, strapBottomY + 10f, barStrapColor, cfg.valueLabelTextSize, center = true, bold = true)
 
             // Stirrup indicators in strap
@@ -438,8 +449,16 @@ fun ProfessionalStrapFootingDrawing(
                 drawTextAnnotated("\u2462", beamLeft + beamW + 14f, beamTopY + beamH - 5f, barStrapColor, cfg.dimTextSize, bold = true)
 
                 // Top bars (same diameter, 2 bars)
-                for (i in listOf(beamW * 0.33f, beamW * 0.67f)) {
-                    drawRebarCircle(beamLeft + i, beamTopY + 5f, strapDia.toFloat(), 0.8f, barStrapColor)
+                if (strapTopCount > 0) {
+                    val topStepX = beamW / (strapTopCount + 1).toFloat()
+                    for (i in 1..strapTopCount) {
+                        drawRebarCircle(beamLeft + i * topStepX, beamTopY + 5f, strapTopDia.toFloat(), 0.8f, barStrapColor)
+                    }
+                    drawTextAnnotated("\u2463", beamLeft + beamW + 14f, beamTopY + 5f, barStrapColor, cfg.dimTextSize, bold = true)
+                } else {
+                    for (i in listOf(beamW * 0.33f, beamW * 0.67f)) {
+                        drawRebarCircle(beamLeft + i, beamTopY + 5f, strapDia.toFloat(), 0.8f, barStrapColor)
+                    }
                 }
 
                 // Stirrups
@@ -480,8 +499,9 @@ fun ProfessionalStrapFootingDrawing(
             val rows = listOf(
                 listOf("\u2460", "Footing 1 bot", rebar1Dia.toInt().toString(), rebar1Count.toString(), f1LMm.toInt().toString(), "Long. direction"),
                 listOf("\u2461", "Footing 2 bot", rebar2Dia.toInt().toString(), rebar2Count.toString(), f2LMm.toInt().toString(), "Long. direction"),
-                listOf("\u2462", "Strap beam", strapDia.toInt().toString(), strapCount.toString(), distMm.toInt().toString(), "Bottom + 2 top")
-            )
+                if (strapTopCount > 0) listOf("\u2462", "Strap bot", strapDia.toInt().toString(), strapCount.toString(), distMm.toInt().toString(), "Bottom bars")
+                else listOf("\u2462", "Strap beam", strapDia.toInt().toString(), strapCount.toString(), distMm.toInt().toString(), "Bottom + 2 top")
+            ) + (if (strapTopCount > 0) listOf(listOf("\u2463", "Strap top", strapTopDia.toInt().toString(), strapTopCount.toString(), distMm.toInt().toString(), "Top bars")) else emptyList())
 
             drawReinforcementTable(
                 x = tblLeft, y = tblTop,
