@@ -55,7 +55,6 @@ object DxfBitmapRenderer {
                         if (a != null && b != null && h != null && s != null) out.add(Prim.Text(layer, a, b, h, s))
                     }
                     "LWPOLYLINE" -> {
-                        val pts = ArrayList<Pair<String, Double>>()
                         val xs = codes.filter { it.first == "10" }.mapNotNull { it.second.toDoubleOrNull() }
                         val ys = codes.filter { it.first == "20" }.mapNotNull { it.second.toDoubleOrNull() }
                         val closed = ((codes.firstOrNull { it.first == "70" }?.second?.toIntOrNull() ?: 0) and 1) == 1
