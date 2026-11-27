@@ -62,6 +62,12 @@ fun BoqTableCard(
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
+            // The table text is English (items, units, numbers): lay it out left to right, left aligned,
+            // whatever the screen language, so the columns read No., Item, Unit, Qty from the left.
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr
+            ) {
+            Column {
             HeaderRow()
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 4.dp),
@@ -77,6 +83,8 @@ fun BoqTableCard(
                     Cell(row.unit, 0.5f)
                     Cell(format(row.quantity), 0.8f)
                 }
+            }
+            }
             }
         }
     }
