@@ -329,7 +329,15 @@ class ECPFlatSlab : FlatSlabDesign {
                 warnings.add("No drop panel within the 6-2-5-2-d limits (t/4 to t projection, extent L/3 to Lmin/2) passes punching: increase slab thickness or column size")
             }
         }
-        if (dropOk) codeNotes.add("Column head slope <= 45 deg and D <= Lmin/4 (p.6-18) are not inputs: column head geometry is not assessed")
+        val headIssues = if (input.headEffectiveDiameter > 0.0)
+            ECP2025FlatSlabExtras.columnHeadIssues(input.headSlopeFromVerticalDeg, input.headEffectiveDiameter, minOf(input.lx, input.ly))
+        else emptyList()
+        if (input.headEffectiveDiameter > 0.0) {
+            safetyChecks.add(SafetyCheckItem("Column head geometry (p.6-18)", input.headEffectiveDiameter, minOf(input.lx, input.ly) / 4.0, "mm", headIssues.isEmpty()))
+            headIssues.forEach { warnings.add(it) }
+        } else {
+            codeNotes.add("Column head slope <= 45 deg and D <= Lmin/4 (p.6-18): no column head given, NOT ASSESSED")
+        }
         codeNotes.add("Column-head reinforcement (6-2-5-9) and openings (6-2-5-10) are NOT ASSESSED")
 
         // ── 9. Deflection: NOT ASSESSED ───────────────────────────
@@ -397,7 +405,7 @@ class ECPFlatSlab : FlatSlabDesign {
         if (!flexureOk) warnings.add("Flexure not satisfied in one or more strips (reinforcement insufficient or K > Kmax: increase thickness)")
 
         val maxUtil = maxOf(punchingResult.utilizationRatio, flexUtil, if (minThk > 0) minThk / input.slabThickness else 0.0)
-        val overallSafe = punchingResult.isSafe && dropEdgeOk && deflOk && minThkOk && flexureOk && applicable
+        val overallSafe = punchingResult.isSafe && headIssues.isEmpty() && dropEdgeOk && deflOk && minThkOk && flexureOk && applicable
 
         val punchingReinforcement = if (punchingResult.needsReinforcement && punchingResult.studDia > 0) {
             val studArea = PI * punchingResult.studDia * punchingResult.studDia / 4
