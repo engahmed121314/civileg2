@@ -139,7 +139,7 @@ private fun StepRow(step: CalculationStep) {
                 AppTextBlock(
                     text = step.formula,
                     fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -147,7 +147,7 @@ private fun StepRow(step: CalculationStep) {
                 AppTextBlock(
                     text = step.formulaWithValues,
                     fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }

@@ -183,7 +183,7 @@ fun EquationLine(
         AppText(
             text = text,
             fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily,
             color = if (highlight) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f)
@@ -193,7 +193,7 @@ fun EquationLine(
             AppText(
                 text = value,
                 fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
+                fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )

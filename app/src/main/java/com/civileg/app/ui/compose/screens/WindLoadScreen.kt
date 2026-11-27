@@ -185,17 +185,17 @@ fun WindLoadScreen(
                     OutlinedTextField(
                         value = buildingHeight, onValueChange = { buildingHeight = it; syncToVm() },
                         label = { AppText(stringResource(R.string.wind_height)) }, modifier = Modifier.weight(1f),
-                        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+                        textStyle = TextStyle(fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, fontSize = 14.sp)
                     )
                     OutlinedTextField(
                         value = buildingWidth, onValueChange = { buildingWidth = it; syncToVm() },
                         label = { AppText(stringResource(R.string.wind_width)) }, modifier = Modifier.weight(1f),
-                        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+                        textStyle = TextStyle(fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, fontSize = 14.sp)
                     )
                     OutlinedTextField(
                         value = buildingDepth, onValueChange = { buildingDepth = it; syncToVm() },
                         label = { AppText(stringResource(R.string.wind_depth)) }, modifier = Modifier.weight(1f),
-                        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+                        textStyle = TextStyle(fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, fontSize = 14.sp)
                     )
                 }
                 Spacer(Modifier.height(6.dp))
@@ -203,17 +203,17 @@ fun WindLoadScreen(
                     OutlinedTextField(
                         value = numberOfFloors, onValueChange = { numberOfFloors = it; syncToVm() },
                         label = { AppText(stringResource(R.string.wind_floors)) }, modifier = Modifier.weight(1f),
-                        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+                        textStyle = TextStyle(fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, fontSize = 14.sp)
                     )
                     OutlinedTextField(
                         value = importanceFactor, onValueChange = { importanceFactor = it; syncToVm() },
                         label = { AppText(stringResource(R.string.wind_importance)) }, modifier = Modifier.weight(1f),
-                        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+                        textStyle = TextStyle(fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, fontSize = 14.sp)
                     )
                     OutlinedTextField(
                         value = topographyFactor, onValueChange = { topographyFactor = it; syncToVm() },
                         label = { AppText(stringResource(R.string.wind_topo)) }, modifier = Modifier.weight(1f),
-                        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+                        textStyle = TextStyle(fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, fontSize = 14.sp)
                     )
                 }
             }
@@ -238,7 +238,7 @@ fun WindLoadScreen(
                 OutlinedTextField(
                     value = roofSlope, onValueChange = { roofSlope = it; syncToVm() },
                     label = { AppText(stringResource(R.string.wind_roof_slope)) }, modifier = Modifier.fillMaxWidth(0.5f),
-                    textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+                    textStyle = TextStyle(fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, fontSize = 14.sp)
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -263,12 +263,12 @@ fun WindLoadScreen(
                         OutlinedTextField(
                             value = naturalFrequency, onValueChange = { naturalFrequency = it; syncToVm() },
                             label = { AppText(stringResource(R.string.wind_freq)) }, modifier = Modifier.weight(1f),
-                            textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+                            textStyle = TextStyle(fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, fontSize = 14.sp)
                         )
                         OutlinedTextField(
                             value = dampingRatio, onValueChange = { dampingRatio = it; syncToVm() },
                             label = { AppText(stringResource(R.string.wind_damping)) }, modifier = Modifier.weight(1f),
-                            textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp)
+                            textStyle = TextStyle(fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, fontSize = 14.sp)
                         )
                     }
                 }
@@ -360,7 +360,7 @@ private fun LabeledTextField(label: String, value: String, onValueChange: (Strin
         onValueChange = onValueChange,
         label = { AppText(label) },
         modifier = Modifier.fillMaxWidth(),
-        textStyle = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 14.sp),
+        textStyle = TextStyle(fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, fontSize = 14.sp),
         singleLine = true
     )
 }
@@ -440,12 +440,12 @@ private fun PressureTable(pressures: List<WindPressureAtHeight>) {
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    AppText("${idx + 1}", style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace), modifier = Modifier.weight(1f))
-                    AppText("%.1f".format(p.height), style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace), modifier = Modifier.weight(1.2f))
-                    AppText("%.1f".format(p.velocity), style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace), modifier = Modifier.weight(1.2f))
-                    AppText("%.3f".format(p.dynamicPressure), style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace), modifier = Modifier.weight(1.3f))
+                    AppText("${idx + 1}", style = TextStyle(fontSize = 11.sp, fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily), modifier = Modifier.weight(1f))
+                    AppText("%.1f".format(p.height), style = TextStyle(fontSize = 11.sp, fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily), modifier = Modifier.weight(1.2f))
+                    AppText("%.1f".format(p.velocity), style = TextStyle(fontSize = 11.sp, fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily), modifier = Modifier.weight(1.2f))
+                    AppText("%.3f".format(p.dynamicPressure), style = TextStyle(fontSize = 11.sp, fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily), modifier = Modifier.weight(1.3f))
                     val netColor = if (p.netPressure >= 0) PressurePositive else PressureNegative
-                    AppText("%.3f".format(p.netPressure), style = TextStyle(fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = netColor, fontWeight = FontWeight.Medium), modifier = Modifier.weight(1.2f))
+                    AppText("%.3f".format(p.netPressure), style = TextStyle(fontSize = 11.sp, fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily, color = netColor, fontWeight = FontWeight.Medium), modifier = Modifier.weight(1.2f))
                 }
                 if (idx < pressures.lastIndex) HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray)
             }

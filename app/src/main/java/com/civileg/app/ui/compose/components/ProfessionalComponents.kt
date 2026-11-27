@@ -584,7 +584,7 @@ fun FormulaCard(
                 formulas.forEach { formula ->
                     AppText(
                         text = formula,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily,
                         fontSize = 11.5.sp,
                         modifier = Modifier.padding(vertical = 1.5.dp),
                         color = PremiumColorsLight.secondary.copy(alpha = 0.85f)

@@ -449,7 +449,7 @@ fun ShearWallScreen(
                             Column(modifier = Modifier.padding(12.dp)) {
                                 result.codeNotes.forEach { note ->
                                     AppTextBlock(note, fontSize = 11.sp,
-                                        fontFamily = FontFamily.Monospace,
+                                        fontFamily = com.civileg.app.ui.theme.ArabicUiFontFamily,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(vertical = 1.dp))
                                 }
