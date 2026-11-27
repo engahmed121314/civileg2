@@ -83,8 +83,8 @@ class ECP2025DeflectionTest {
         assertEquals(0.80 + 0.20 * (0.65 - 0.30) / 0.70, D.tBeamFactor(650.0, 1000.0), 1e-9)
     }
 
-    @Test fun spanToDepth_fyBelow420_notLoosened() {
-        assertEquals(12.0, D.spanToDepthRatio(D.Element.RIGID_BEAM, D.Support.SIMPLE, 360.0)!!, 1e-9)
+    @Test fun spanToDepth_otherSteelDividedByEq481() {
+        assertEquals(12.0 / (0.4 + 360.0 / 700.0), D.spanToDepthRatio(D.Element.RIGID_BEAM, D.Support.SIMPLE, 360.0)!!, 1e-9)
         assertEquals(12.0 / (0.4 + 450.0 / 700.0), D.spanToDepthRatio(D.Element.RIGID_BEAM, D.Support.SIMPLE, 450.0)!!, 1e-9)
     }
 }
