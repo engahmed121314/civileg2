@@ -2552,4 +2552,27 @@
     <string name="lbl_fos_overturning">عامل أمان الانقلاب</string>
     <string name="lbl_fos_sliding">عامل أمان الانزلاق</string>
     <string name="lbl_cost">التكلفة</string>
+    <string name="note_col_use_emin">ECP 203 §4-2-3: الانحراف الفعلي e=%1$s مم أقل من e_min=%2$s مم، يُستخدم e_min في التصميم</string>
+    <string name="note_col_section_exceeds">قدرة المقطع تزيد عن المطلوب، طُبق الحد الأدنى للتسليح</string>
+    <string name="note_col_pm_design">ECP 203: تصميم التفاعل P-M عند e=%1$s مم، معامل العزم %2$s</string>
+    <string name="note_cover_min">الغطاء الخرساني: %1$s مم كحد أدنى</string>
+    <string name="note_col_pm_within">فحص التوافق في الانفعالات P-M (فحص أولي، البند لم يُتحقق منه): داخل المنحنى عند e=%1$s مم</string>
+    <string name="note_col_pm_outside">فحص التوافق في الانفعالات P-M (فحص أولي، البند لم يُتحقق منه): خارج المنحنى عند e=%1$s مم</string>
+    <string name="note_col_pm_limitation">تنبيه: قدرة العزم فحص تقريبي بالتوافق في الانفعالات يضع نصف الحديد على كل وجه. لا يستخدم مواضع الأسياخ الفعلية، فقد يبالغ في القدرة عند وجود أسياخ وسطية كثيرة. اعتبر علامة آمن/غير آمن نتيجة أولية وليست فحص تفاعل نهائي.</string>
+    <string name="note_col_short">عمود قصير (λ=%1$s ≤ %2$s): لا حاجة لتكبير العزم</string>
+    <string name="note_col_long">عمود طويل (λ=%1$s > %2$s): يلزم تكبير العزم حسب ECP 203 §4-2-3</string>
+    <string name="note_col_shear_title">ECP 203 §4-2-5: تصميم القص في العمود</string>
+    <string name="note_col_vc">Vc = 0.24√fcu·b·d / γc = %1$s kN (قدرة التصميم، γc=%2$s)</string>
+    <string name="note_col_stirrups_required">Vu (%1$s kN) أكبر من Vc: الكانات مطلوبة</string>
+    <string name="note_col_asv_s">Asv/s = %1$s مم²/مم</string>
+    <string name="note_col_ties">كانات قطر %1$s مم كل %2$s مم</string>
+    <string name="note_col_concrete_alone">Vu (%1$s kN) أقل من أو يساوي Vc: الخرسانة وحدها كافية</string>
+    <string name="note_min_reinf_applied">طُبق الحد الأدنى للتسليح</string>
+    <string name="note_reinf_exceeds_max">تحذير: التسليح يتجاوز الحد الأقصى. فكّر في زيادة أبعاد المقطع.</string>
+    <string name="note_col_outside_domain">خارج نطاق المعادلة: e=%1$s مم تتجاوز max(0.05t, 20 مم)=%2$s مم. المعادلة 4-12-a من ECP 203-2020 لا تنطبق؛ لم تُحسب القدرة المحورية ولا الحديد المطلوب (يظهر الحد الأدنى فقط). صمم بفحص P-M كامل.</string>
+    <string name="note_col_axial_ref">ECP 203-2020 المعادلة 4-12-a (روجعت مع الإصدار المتاح؛ صالحة عندما e &lt;= max(0.05t, 20 مم))</string>
+    <string name="note_col_rho_min_ref" formatted="false">ECP 203: البند 4-2-5-1 (ρmin = 0.8%) (لم يُتحقق من البند)</string>
+    <string name="note_col_rho_max_ref" formatted="false">ECP 203: البند 4-2-5-2 (ρmax = 8%) (لم يُتحقق من البند)</string>
+    <string name="note_col_ties_ref">ECP 203: البند 4-2-6 (لم يُتحقق من البند)</string>
+    <string name="note_col_cover_ref">ECP 203: البند 4-1-4 (الغطاء ≥ 40 مم) (لم يُتحقق من البند)</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.compose.components.localizedEngineNote
 import com.civileg.app.ui.responsive.dimens
 import com.civileg.app.ui.compose.validation.FormErrorSummary
 import com.civileg.app.ui.compose.validation.ValidatedNumberField
@@ -168,7 +169,7 @@ fun ColumnScreen(
                         )
                         
                         AppText(
-                            text = uiState.loadCombination.description,
+                            text = loadComboLabel(uiState.loadCombination),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.padding(top = 8.dp)
@@ -686,7 +687,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
                 AppText(stringResource(R.string.column_warnings_label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
                 result.warnings.forEach { warning ->
-                    AppTextBlock("• $warning", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                    AppTextBlock("• ${localizedEngineNote(warning)}", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
                 }
             }
 
@@ -694,7 +695,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
                 AppText(stringResource(R.string.column_code_notes_label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 result.codeNotes.forEach { note ->
-                    AppTextBlock("• $note", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    AppTextBlock("• ${localizedEngineNote(note)}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -830,6 +831,20 @@ private fun DesignCodeSelector(selectedCode: DesignCode, onCodeSelected: (Design
 }
 
 @Composable
+private fun loadComboLabel(combo: LoadCombination): String {
+    val name = when (combo) {
+        LoadCombination.DEAD_ONLY -> stringResource(R.string.column_load_combo_dead_only)
+        LoadCombination.DEAD_LIVE -> stringResource(R.string.column_load_combo_dead_live)
+        LoadCombination.DEAD_LIVE_WIND -> stringResource(R.string.column_load_combo_dead_live_wind)
+        LoadCombination.DEAD_LIVE_EARTHQUAKE -> stringResource(R.string.column_load_combo_dead_live_eq)
+        LoadCombination.DEAD_EARTHQUAKE -> stringResource(R.string.column_load_combo_dead_eq)
+    }
+    // the factor text in brackets is a formula and stays Latin
+    val formula = combo.description.substringAfter("(", "").substringBeforeLast(")", "")
+    return if (formula.isEmpty()) name else "$name ($formula)"
+}
+
+@Composable
 private fun LoadCombinationSelector(selected: LoadCombination, code: com.civileg.app.domain.entities.DesignCode, onSelected: (LoadCombination) -> Unit) {
     AppText(stringResource(R.string.column_load_combo), style = MaterialTheme.typography.labelMedium)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -838,16 +853,7 @@ private fun LoadCombinationSelector(selected: LoadCombination, code: com.civileg
                 selected = combo == selected,
                 onClick = { onSelected(combo) },
                 label = {
-                    val name = when (combo) {
-                        LoadCombination.DEAD_ONLY -> stringResource(R.string.column_load_combo_dead_only)
-                        LoadCombination.DEAD_LIVE -> stringResource(R.string.column_load_combo_dead_live)
-                        LoadCombination.DEAD_LIVE_WIND -> stringResource(R.string.column_load_combo_dead_live_wind)
-                        LoadCombination.DEAD_LIVE_EARTHQUAKE -> stringResource(R.string.column_load_combo_dead_live_eq)
-                        LoadCombination.DEAD_EARTHQUAKE -> stringResource(R.string.column_load_combo_dead_eq)
-                    }
-                    // the factor text in brackets is a formula and stays Latin
-                    val formula = combo.description.substringAfter("(", "").substringBeforeLast(")", "")
-                    AppText(if (formula.isEmpty()) name else "$name ($formula)", fontSize = 11.sp)
+                    AppText(loadComboLabel(combo), fontSize = 11.sp)
                 }
             )
         }
