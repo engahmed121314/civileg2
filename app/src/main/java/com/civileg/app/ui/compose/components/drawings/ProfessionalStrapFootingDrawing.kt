@@ -469,7 +469,8 @@ fun ProfessionalStrapFootingDrawing(
         // ══════════════════════════════════════════════════════════
         if (viewMode == 0 || viewMode == 3) {
             val tblLeft = margin
-            val tblWidth = w - 2 * margin
+            // The measured result block sits bottom right, so keep the table left of it.
+            val tblWidth = (w - 2 * margin) * 0.58f
 
             val headers = listOf("Mark", "Location", "Dia (mm)", "Count", "Length (mm)", "Notes")
             val colWidths = listOf(
