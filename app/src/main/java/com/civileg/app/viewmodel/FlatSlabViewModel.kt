@@ -236,7 +236,9 @@ class FlatSlabViewModel @Inject constructor(
                     ),
                     drawingBitmap = drawingBitmap,
                     drawing = buildDxfDrawing(),
-                    outputPath = file.absolutePath
+                    outputPath = file.absolutePath,
+                    // the overall result is not confirmed while any clause is listed as NOT ASSESSED
+                    assessmentPending = !res.deflectionAssessed || res.codeNotes.any { it.contains("NOT ASSESSED", ignoreCase = true) }
                 ).pdfFile
                 pendingDrawingBitmap = null  // consume after use
 
