@@ -2481,4 +2481,11 @@
     <string name="seismic_sbc_system">نظام مقاومة القوى الزلزالية (جدول 12-1)</string>
     <string name="seismic_sbc_inputs_note">قيم Ss وS1 وTL تؤخذ من الأشكال 22-1 و22-2 و22-4 في SBC 301-CR-2018 لموقع المشروع. تُستخدم فئة الموقع D عند عدم توفر بيانات التربة (11.4.2.2). تُفترض أوزان الأدوار متساوية.</string>
     <string name="seismic_sbc_not_assessed">غير مقيَّم</string>
+    <string name="column_seismic_confinement_title">التقييد الزلزالي للكانات</string>
+    <string name="column_seismic_confinement_sub">تفعيل تفاصيل تسليح خاصة لمناطق الزلازل</string>
+    <string name="column_biaxial_interaction_title">منحنى التفاعل ثنائي المحور (P-M)</string>
+    <string name="column_warnings_label">تحذيرات</string>
+    <string name="column_code_notes_label">ملاحظات الكود</string>
+    <string name="column_boq_title">حصر كميات العمود</string>
+    <string name="column_rebar_edits_not_applied">تعديلات التسليح لم تُطبَّق. التصميم المعروض هو آخر حل. اضغط تحديث قبل التصدير أو الحفظ.</string>
 </resources>
