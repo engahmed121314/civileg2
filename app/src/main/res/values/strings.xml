@@ -2499,4 +2499,24 @@
     <string name="column_load_combo_dead_live_wind">Dead + Live + Wind</string>
     <string name="column_load_combo_dead_live_eq">Dead + Live + Earthquake</string>
     <string name="column_load_combo_dead_eq">Dead + Earthquake</string>
+    <string name="check_ot_fs">Overturning FS</string>
+    <string name="check_sliding_fs">Sliding FS</string>
+    <string name="check_bearing">Bearing</string>
+    <string name="check_stem_flexure">Stem Flexure</string>
+    <string name="check_shear">Shear</string>
+    <string name="check_one_way_shear">One-Way Shear</string>
+    <string name="check_punching_shear">Punching Shear</string>
+    <string name="check_flexure_steel">Flexure Steel</string>
+    <string name="check_strap_beam_shear">Strap Beam Shear</string>
+    <string name="check_hoop_tension">Hoop Tension Stress</string>
+    <string name="check_uplift">Uplift Safety Factor</string>
+    <string name="check_wall_reinf_ratio">Wall Reinforcement Ratio</string>
+    <string name="check_wall_shear">Wall Shear</string>
+    <string name="check_crack_width">Crack Width</string>
+    <string name="check_crack_control">Crack Control (fs)</string>
+    <string name="design_code_ecp">Egyptian Code</string>
+    <string name="design_code_aci">American Code</string>
+    <string name="design_code_sbc">Saudi Code</string>
+    <string name="rw_boq_title">Retaining Wall Bill of Quantities</string>
+    <string name="rw_steps_title">Retaining Wall Calculation Steps</string>
 </resources>

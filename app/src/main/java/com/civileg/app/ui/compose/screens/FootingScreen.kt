@@ -1,5 +1,6 @@
 package com.civileg.app.ui.compose.screens
 
+import com.civileg.app.ui.compose.components.localizedCheckName
 import com.civileg.app.ui.responsive.dimens
 
 import com.civileg.app.domain.entities.DesignCode
@@ -535,7 +536,7 @@ fun FootingScreen(
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                                            AppText(check.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                            AppText(localizedCheckName(check.name), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                                             AppText(
                                                 "${String.format("%.2f", check.value)} / ${String.format("%.2f", check.limit)} ${check.unit}",
                                                 fontSize = 11.sp,

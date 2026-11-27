@@ -92,7 +92,13 @@ fun DesignCodeSelectorRow(
                     onClick = { onCodeSelected(code) },
                     label = {
                         AppText(
-                            code.displayName,
+                            stringResource(
+                                when (code) {
+                                    DesignCode.ECP -> R.string.design_code_ecp
+                                    DesignCode.ACI -> R.string.design_code_aci
+                                    DesignCode.SBC -> R.string.design_code_sbc
+                                }
+                            ),
                             fontSize = 13.sp,
                             fontWeight = if (code == selectedCode) FontWeight.Bold else FontWeight.Normal
                         )

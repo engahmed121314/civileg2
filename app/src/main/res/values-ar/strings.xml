@@ -2502,4 +2502,24 @@
     <string name="column_load_combo_dead_live_wind">ميت + حي + رياح</string>
     <string name="column_load_combo_dead_live_eq">ميت + حي + زلزال</string>
     <string name="column_load_combo_dead_eq">ميت + زلزال</string>
+    <string name="check_ot_fs">عامل أمان الانقلاب</string>
+    <string name="check_sliding_fs">عامل أمان الانزلاق</string>
+    <string name="check_bearing">ضغط التربة</string>
+    <string name="check_stem_flexure">انحناء الجذع</string>
+    <string name="check_shear">القص</string>
+    <string name="check_one_way_shear">القص باتجاه واحد</string>
+    <string name="check_punching_shear">القص الثاقب</string>
+    <string name="check_flexure_steel">حديد الانحناء</string>
+    <string name="check_strap_beam_shear">قص كمرة الشد</string>
+    <string name="check_hoop_tension">إجهاد الشد الحلقي</string>
+    <string name="check_uplift">عامل أمان الطفو</string>
+    <string name="check_wall_reinf_ratio">نسبة تسليح الجدار</string>
+    <string name="check_wall_shear">قص الجدار</string>
+    <string name="check_crack_width">عرض الشرخ</string>
+    <string name="check_crack_control">التحكم في الشروخ (fs)</string>
+    <string name="design_code_ecp">الكود المصري</string>
+    <string name="design_code_aci">الكود الأمريكي</string>
+    <string name="design_code_sbc">الكود السعودي</string>
+    <string name="rw_boq_title">حصر كميات الحائط الساند</string>
+    <string name="rw_steps_title">خطوات حساب الحائط الساند</string>
 </resources>
