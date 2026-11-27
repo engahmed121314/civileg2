@@ -159,15 +159,13 @@ fun ProfessionalTankDrawing(
                 drawElevatedSupports(tankLeft, tankRight, baseBottom, ch)
             }
 
-            if (isCircular) {
-                drawCircularElevation(tankLeft, tankTop, drawL, drawH, drawWT, drawBT, drawWL)
-            } else {
-                drawRectangularElevation(tankLeft, tankTop, drawL, drawH, drawWT, drawBT, drawWL)
-            }
+            // A cylindrical tank cut through its diameter shows the same wall-base-wall section as a
+            // rectangular one; the circular shape is shown in the plan view below.
+            drawRectangularElevation(tankLeft, tankTop, drawL, drawH, drawWT, drawBT, drawWL)
 
             // Water fill
             if (drawWL > 0) {
-                drawWaterFill(tankLeft, tankTop, drawL, drawH, drawWT, drawWL, isCircular)
+                drawWaterFill(tankLeft, tankTop, drawL, drawH, drawWT, drawWL, false)
             }
 
             // Ground level line
@@ -328,38 +326,6 @@ private fun DrawScope.drawRectangularElevation(
 // ============================================================================
 // 2. CIRCULAR TANK ELEVATION (section through diameter)
 // ============================================================================
-
-private fun DrawScope.drawCircularElevation(
-    left: Float, top: Float, l: Float, h: Float,
-    wt: Float, bt: Float, wl: Float
-) {
-    val cx = left + l / 2f
-    val r = l / 2f
-    val outerRect = androidx.compose.ui.geometry.Rect(cx - r - wt, top, cx + r + wt, top + 2 * r)
-    val innerRect = androidx.compose.ui.geometry.Rect(cx - r, top, cx + r, top + 2 * r)
-
-    // Left curved wall
-    val lw = Path().apply {
-        moveTo(cx - r, top); arcTo(outerRect, 180f, 90f, false)
-        lineTo(cx - r + wt, top + r); arcTo(innerRect, 90f, -90f, false); close()
-    }
-    drawPath(lw, color = ConcreteGray)
-    drawPath(lw, color = DimensionWhite.copy(alpha = 0.5f), style = Stroke(1.5f))
-
-    // Right curved wall
-    val rw = Path().apply {
-        moveTo(cx + r, top); arcTo(outerRect, 0f, -90f, false)
-        lineTo(cx + r - wt, top + r); arcTo(innerRect, 90f, 90f, false); close()
-    }
-    drawPath(rw, color = ConcreteGray)
-    drawPath(rw, color = DimensionWhite.copy(alpha = 0.5f), style = Stroke(1.5f))
-
-    // Base slab
-    drawRect(color = ConcreteGray, topLeft = Offset(left, top + h), size = Size(l, bt))
-    drawRect(color = DimensionWhite.copy(alpha = 0.5f),
-        topLeft = Offset(left, top + h), size = Size(l, bt), style = Stroke(1.5f))
-    drawConcreteHatchingOnRect(left, top + h, l, bt)
-}
 
 // ============================================================================
 // 3. WATER FILL
@@ -556,7 +522,7 @@ private fun DrawScope.drawPlanView(
             val dy = cy + (r - 5f) * Math.sin(angle).toFloat()
             drawCircle(color = HoopGreen, radius = 2.5f, center = Offset(dx, dy))
         }
-        drawTextAnnotated("Ø${length.toInt()}", cx - 16f, cy + r + 16f, DimensionWhite, 14f)
+        drawTextAnnotated("Ø${(length * 1000).toInt()}", cx - 22f, cy + r + 16f, DimensionWhite, 14f)
     } else {
         // Rectangle
         val rw = insetSize - 16f

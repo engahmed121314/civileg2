@@ -418,7 +418,7 @@ object ElementDxfDrawings {
         ex.notes(
             title, contentW, totalH,
             "WALL t=${fmt(t)} mm, BASE t=${fmt(baseThicknessMm)} mm",
-            "WALL BARS " + (if (isCircular) "HOOP" else "HORIZ") + " Ø${fmt(horizBarDiaMm)} @ ${fmt(horizBarSpacingMm)}, VERT Ø${fmt(vertBarDiaMm)} @ ${fmt(vertBarSpacingMm)}",
+            "WALL BARS " + (if (isCircular) "HOOP" else "HORIZ") + " dia ${fmt(horizBarDiaMm)} @ ${fmt(horizBarSpacingMm)}, VERT dia ${fmt(vertBarDiaMm)} @ ${fmt(vertBarSpacingMm)}",
             listOf("BAR SCHEDULE: NOT ISSUED (bar sizes are indicative, not designed)")
         )
     }
