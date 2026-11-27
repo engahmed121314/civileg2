@@ -463,8 +463,8 @@ def flatslab_drop_block():
     log.append(("cover_picker_visible", found)); shot("cover-picker-0")
     if found:
         scroll_up(1) if False else None
-        log.append(("cover_chip_chloride", tap_text(["كلوريدات: دورات بلل وجفاف"], "cv-chip1"))); time.sleep(1); shot("cover-picker-1"); dump("cover-picker-1")
-        log.append(("cover_chip_dry", tap_text(["جافة أو مبتلة باستمرار"], "cv-chip2"))); time.sleep(1); shot("cover-picker-2"); dump("cover-picker-2")
+        log.append(("cover_chip_wet", tap_text(["مبتلة شبه مستمرة"], "cv-chip1"))); time.sleep(1); shot("cover-picker-1"); dump("cover-picker-1")
+        scroll_up(1); time.sleep(1); shot("cover-picker-2-scrolled"); dump("cover-picker-2-scrolled")
     calc = False
     for _ in range(5):
         if tap_text(["تصميم بلاطة مسطحة"], "fd-calc"): calc = True; break
