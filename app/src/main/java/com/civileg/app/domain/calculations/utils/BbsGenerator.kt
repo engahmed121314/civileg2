@@ -675,14 +675,15 @@ object BbsGenerator {
             )
         }
         val top = result.strapTopReinforcement
+        val topLength = distanceMm + 2 * 40 * top.diameter
         if (top.numBars > 0) {
             entries.add(
                 BbsEntry(
                     memberMark = mark, barMark = "02",
                     diameter = top.diameter, shapeCode = 0, count = top.numBars,
                     lengthA = distanceMm,
-                    totalLengthPerBar = strapLength,
-                    totalWeightKg = top.numBars * strapLength / 1000.0 *
+                    totalLengthPerBar = topLength,
+                    totalWeightKg = top.numBars * topLength / 1000.0 *
                         (top.diameter.toDouble().pow(2) / 162.0)
                 )
             )
