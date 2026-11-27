@@ -45,6 +45,13 @@ for _ in range(4):
     time.sleep(2)
 shot("home"); dump("home")
 log = []
+for _try in range(3):
+    if tap_text(["التصميم"], "d-design-probe", exact=True): break
+    adb("shell", "am", "force-stop", pkg); time.sleep(2)
+    adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"); time.sleep(10)
+    for _ in range(3):
+        if not tap_text(["Wait"], "anr-wait-retry", exact=True): break
+        time.sleep(2)
 log.append(("design_tab", tap_text(["التصميم"], "d-design", exact=True))); shot("design")
 log.append(("beam_card", tap_text(["كمر"], "d-beam"))); shot("beam-open"); dump("beam-open")
 def scroll_up(n=3):
@@ -278,11 +285,11 @@ def pile_block():
         log.append(("pile_exception", repr(e)))
 def pull_exported_pdfs():
     ls = adb("shell", "run-as", pkg, "find", ".", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
-    ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf").stdout.decode("utf8", "ignore")
+    ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
     open(f"{out}/pdf-files.txt", "w").write(ls)
-    for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("/sdcard/")][:4]:
+    for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("/sdcard/")][:8]:
         subprocess.run(["adb", "pull", pth, f"{out}/exported-" + os.path.basename(pth)], capture_output=True)
-    for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:4]:
+    for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:8]:
         d = adb("shell", "run-as", pkg, "cat", pth).stdout
         open(f"{out}/exported-" + os.path.basename(pth), "wb").write(d)
 def footing_block():
@@ -529,6 +536,61 @@ def font_extra_block():
             sweep("fx-" + tag + "-res", 6)
         except Exception as e:
             log.append(("fx_" + tag + "_exception", repr(e)))
+def dismiss_fullscreen_notice():
+    """The viewer's 'Viewing full screen' notice is a system overlay missing from the dump and it swallows BACK: tap where its Got it sits."""
+    wm = adb("shell", "wm", "size").stdout.decode(errors="ignore")
+    mm = re.search(r"(\d+)x(\d+)", wm)
+    if mm:
+        adb("shell", "input", "tap", str(int(int(mm.group(1)) * 0.79)), str(int(int(mm.group(2)) * 0.27))); time.sleep(1.2)
+def tank_cases_block():
+    """Tank, three cases: rectangular ground, circular ground, rectangular underground. Each: calculate, sweep (steps card, drawing), PDF export."""
+    cases = [("tk1", None, None), ("tk2", None, "دائري"), ("tk3", "خزان تحت الأرض", "مستطيل")]
+    for tag, loc, shape in cases:
+        try:
+            dismiss_not_responding()
+            for _b in range(5):
+                adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); dismiss_not_responding()
+                if tap_text(["التصميم"], tag + "-tab", exact=True): break
+                dismiss_fullscreen_notice()
+            scroll_top(3)
+            ok = False
+            for _ in range(6):
+                if tap_text(["الخزانات"], tag + "-find"): ok = True; break
+                scroll_up(2)
+            log.append((tag + "_open", ok)); time.sleep(2); scroll_top(12)
+            if loc: log.append((tag + "_loc", tap_text([loc], tag + "-loc", exact=True)))
+            if shape: log.append((tag + "_shape", tap_text([shape], tag + "-shape", exact=True)))
+            time.sleep(1); shot(tag + "-form"); dump(tag + "-form")
+            calc = False
+            for _ in range(6):
+                if tap_text(["تصميم الخزان الآن"], tag + "-calc"): calc = True; break
+                scroll_up(2)
+            log.append((tag + "_calc", calc)); time.sleep(4); dismiss_not_responding()
+            sweep(tag + "-res", 10)
+            dxf_ok = False
+            scroll_top(10)
+            for _ in range(16):
+                if tap_text(["DXF"], tag + "-dxf-find", exact=True): dxf_ok = True; break
+                scroll_up(1)
+            log.append((tag + "_dxf_tap", dxf_ok)); time.sleep(4); shot(tag + "-dxf"); dump(tag + "-dxf")
+            pdf_ok = False
+            scroll_top(10)
+            for _ in range(16):
+                if tap_text(["تقرير PDF", "PDF", "تقرير"], tag + "-pdf-find"): pdf_ok = True; break
+                scroll_up(1)
+            log.append((tag + "_pdf_tap", pdf_ok)); time.sleep(6)
+            if not tap_text(["Got it", "حسنًا", "حسناً"], tag + "-gotit"):
+                wm = adb("shell", "wm", "size").stdout.decode(errors="ignore")
+                mm = re.search(r"(\d+)x(\d+)", wm)
+                if mm:
+                    adb("shell", "input", "tap", str(int(int(mm.group(1)) * 0.79)), str(int(int(mm.group(2)) * 0.27))); time.sleep(1.5)
+            shot(tag + "-pdf"); dump(tag + "-pdf")
+        except Exception as e:
+            log.append((tag + "_exception", repr(e)))
+if os.path.exists("tools/ci/TANK_ONLY"):
+    tank_cases_block()
+    pull_exported_pdfs()
+    open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
 if os.path.exists("tools/ci/CALCPAGES_ONLY"):
     # Default-input calculation of the calculation pages whose standalone result lines were changed (alignment evidence).
     pages = [
@@ -679,7 +741,7 @@ pile_block()
 ls = adb("shell", "run-as", pkg, "find", ".", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
 ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf").stdout.decode("utf8", "ignore")
 open(f"{out}/pdf-files.txt", "w").write(ls)
-for p in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:4]:
+for p in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:8]:
     d = adb("shell", "run-as", pkg, "cat", p).stdout
     open(f"{out}/exported-" + os.path.basename(p), "wb").write(d)
 open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log))
