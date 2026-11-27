@@ -397,7 +397,7 @@ object ElementDxfDrawings {
             ex.rect(-soilW, 0.0, soilW, totalH, "SOIL")
             ex.rect(outerL, 0.0, soilW, totalH, "SOIL")
             ex.addLine2D(-soilW, totalH, outerL + soilW, totalH, "SOIL")
-            ex.addText(-soilW, totalH + 60.0, "GROUND / WATER TABLE AT TOP (uplift case)", 50.0, "TEXT")
+            ex.addText(-soilW, totalH + 260.0, "GROUND / WATER TABLE AT TOP (uplift case)", 50.0, "TEXT")
             ex.addText(-soilW + 40.0, totalH / 2.0, "SOIL", 50.0, "TEXT")
         }
         ex.addDimensionH(0.0, outerL, -150.0, fmt(outerL), offset = 150.0)
@@ -438,7 +438,8 @@ object ElementDxfDrawings {
                     add("SOIL PRESSURE ON WALLS: see calculation sheet, not drawn to scale")
                 }
                 add("BAR SCHEDULE: NOT ISSUED (bar sizes are indicative, not designed)")
-            }
+            },
+            topOffsetMm = 450.0
         )
     }
 
@@ -569,7 +570,8 @@ object ElementDxfDrawings {
         heightMm: Double,
         line1: String,
         line2: String,
-        summaryLines: List<String> = emptyList()
+        summaryLines: List<String> = emptyList(),
+        topOffsetMm: Double = 0.0
     ) {
         addSheetFrame(
             contentWidth = widthMm,
@@ -579,7 +581,7 @@ object ElementDxfDrawings {
             scaleText = "AS SHOWN"
         )
         val th = (minOf(widthMm, heightMm) / 12.0).coerceIn(15.0, 60.0)
-        var y = -th * 2.0
+        var y = -th * 2.0 - topOffsetMm
         if (line2.isNotBlank()) addText(widthMm * 0.55, y, line2, th * 0.8, "TEXT")
         y -= th * 1.8
         summaryLines.take(5).forEach { line ->
