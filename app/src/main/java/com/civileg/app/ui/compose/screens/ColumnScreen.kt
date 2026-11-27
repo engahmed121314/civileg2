@@ -204,8 +204,8 @@ fun ColumnScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ValidatedNumberField(form, "mx", uiState.mx, "Moment Mx (kN.m)", { form.clear("mx"); viewModel.updateInputs(mx = it) }, Modifier.weight(1f))
-                    ValidatedNumberField(form, "my", uiState.my, "Moment My (kN.m)", { form.clear("my"); viewModel.updateInputs(my = it) }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "mx", uiState.mx, stringResource(R.string.column_moment_mx), { form.clear("mx"); viewModel.updateInputs(mx = it) }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "my", uiState.my, stringResource(R.string.column_moment_my), { form.clear("my"); viewModel.updateInputs(my = it) }, Modifier.weight(1f))
                 }
             }
 
@@ -646,15 +646,15 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
             
-            ResultDataRow("Applied Pu", "${String.format("%.1f", result.appliedAxial)} kN")
-            ResultDataRow("Axial Capacity", result.axialCapacityLabel)
+            ResultDataRow(stringResource(R.string.column_applied_pu), "${String.format("%.1f", result.appliedAxial)} kN")
+            ResultDataRow(stringResource(R.string.column_axial_capacity), result.axialCapacityLabel)
             if (result.isSlender) {
-                ResultDataRow("Slenderness", "${String.format("%.1f", result.slenderness)} (Slender)")
+                ResultDataRow(stringResource(R.string.column_slenderness), "${String.format("%.1f", result.slenderness)} (${stringResource(R.string.column_slender_tag)})")
             } else {
-                ResultDataRow("Slenderness", "${String.format("%.1f", result.slenderness)} (Short)")
+                ResultDataRow(stringResource(R.string.column_slenderness), "${String.format("%.1f", result.slenderness)} (${stringResource(R.string.column_short_tag)})")
             }
             if (result.mx != 0.0 || result.my != 0.0) {
-                ResultDataRow("Applied Mx / My", "${result.mx} / ${result.my} kN.m")
+                ResultDataRow(stringResource(R.string.column_applied_mxmy), "${result.mx} / ${result.my} kN.m")
             }
             ResultDataRow(stringResource(R.string.column_provided_reinforcement), result.reinforcement.barString)
             
@@ -673,7 +673,7 @@ private fun ColumnResultCard(result: CalculatorEngine.ColumnResult) {
             AppText(stringResource(R.string.column_quantities), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             ResultDataRow(stringResource(R.string.column_concrete_vol), String.format("%.3f m³", result.concreteVolume))
             ResultDataRow(stringResource(R.string.column_steel_weight), String.format("%.2f kg", result.steelWeight))
-            ResultDataRow(stringResource(R.string.column_estimated_cost), "Unavailable (no price basis)")
+            ResultDataRow(stringResource(R.string.column_estimated_cost), stringResource(R.string.column_cost_unavailable))
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
             
@@ -717,7 +717,16 @@ private fun ResultCheckRow(check: CalculatorEngine.DesignSafetyCheck) {
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-            AppText(check.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            AppText(
+                when (check.name) {
+                    "Axial Capacity" -> stringResource(R.string.column_axial_capacity)
+                    "Biaxial Moment" -> stringResource(R.string.column_check_biaxial)
+                    "Reinforcement Ratio" -> stringResource(R.string.column_check_reinf_ratio)
+                    "Slenderness" -> stringResource(R.string.column_slenderness)
+                    else -> check.name
+                },
+                fontSize = 14.sp, fontWeight = FontWeight.Medium
+            )
             AppText(
                 "${String.format("%.2f", check.value)} / ${String.format("%.2f", check.limit)} ${check.unit}",
                 fontSize = 11.sp,
@@ -828,7 +837,18 @@ private fun LoadCombinationSelector(selected: LoadCombination, code: com.civileg
             FilterChip(
                 selected = combo == selected,
                 onClick = { onSelected(combo) },
-                label = { AppText(combo.description, fontSize = 11.sp) }
+                label = {
+                    val name = when (combo) {
+                        LoadCombination.DEAD_ONLY -> stringResource(R.string.column_load_combo_dead_only)
+                        LoadCombination.DEAD_LIVE -> stringResource(R.string.column_load_combo_dead_live)
+                        LoadCombination.DEAD_LIVE_WIND -> stringResource(R.string.column_load_combo_dead_live_wind)
+                        LoadCombination.DEAD_LIVE_EARTHQUAKE -> stringResource(R.string.column_load_combo_dead_live_eq)
+                        LoadCombination.DEAD_EARTHQUAKE -> stringResource(R.string.column_load_combo_dead_eq)
+                    }
+                    // the factor text in brackets is a formula and stays Latin
+                    val formula = combo.description.substringAfter("(", "").substringBeforeLast(")", "")
+                    AppText(if (formula.isEmpty()) name else "$name ($formula)", fontSize = 11.sp)
+                }
             )
         }
     }
