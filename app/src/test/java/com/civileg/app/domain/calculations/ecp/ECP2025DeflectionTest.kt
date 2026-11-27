@@ -75,4 +75,16 @@ class ECP2025DeflectionTest {
         assertNull(D.twoWaySlabOnBeamsMinThickness(5500.0, 6500.0, 420.0, 0.5, 3.0, 6500.0, false))
         assertNull(D.twoWaySlabOnBeamsMinThickness(4000.0, 5000.0, 420.0, 0.5, 6.0, 5000.0, false))
     }
+
+    @Test fun tBeamFactor_Fig4_32() {
+        assertEquals(0.80, D.tBeamFactor(100.0, 500.0), 1e-9)   // b/B = 0.20
+        assertEquals(0.80, D.tBeamFactor(150.0, 500.0), 1e-9)   // b/B = 0.30
+        assertEquals(1.00, D.tBeamFactor(500.0, 500.0), 1e-9)
+        assertEquals(0.80 + 0.20 * (0.65 - 0.30) / 0.70, D.tBeamFactor(650.0, 1000.0), 1e-9)
+    }
+
+    @Test fun spanToDepth_otherSteelDividedByEq481() {
+        assertEquals(12.0 / (0.4 + 360.0 / 700.0), D.spanToDepthRatio(D.Element.RIGID_BEAM, D.Support.SIMPLE, 360.0)!!, 1e-9)
+        assertEquals(12.0 / (0.4 + 450.0 / 700.0), D.spanToDepthRatio(D.Element.RIGID_BEAM, D.Support.SIMPLE, 450.0)!!, 1e-9)
+    }
 }
