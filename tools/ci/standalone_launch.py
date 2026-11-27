@@ -542,8 +542,10 @@ def tank_cases_block():
     for tag, loc, shape in cases:
         try:
             dismiss_not_responding()
-            adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); dismiss_not_responding()
-            tap_text(["التصميم"], tag + "-tab", exact=True); scroll_top(3)
+            for _b in range(4):
+                adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); dismiss_not_responding()
+                if tap_text(["التصميم"], tag + "-tab", exact=True): break
+            scroll_top(3)
             ok = False
             for _ in range(6):
                 if tap_text(["الخزانات"], tag + "-find"): ok = True; break
