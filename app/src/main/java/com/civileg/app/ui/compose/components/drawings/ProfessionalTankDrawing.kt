@@ -95,8 +95,8 @@ fun ProfessionalTankDrawing(
         val cw = size.width
         val ch = size.height
 
-        val isCircular = tankType.contains("Circular")
-        val isElevated = tankType.contains("Elevated")
+        val isCircular = tankType.contains("Circular") || tankType.contains("دائري")
+        val isElevated = tankType.contains("Elevated") || tankType.contains("علوي")
         val isUnderground = foundationDepth > 0
 
         // ── Layout zones (adjusted per viewMode) ──
@@ -159,15 +159,13 @@ fun ProfessionalTankDrawing(
                 drawElevatedSupports(tankLeft, tankRight, baseBottom, ch)
             }
 
-            if (isCircular) {
-                drawCircularElevation(tankLeft, tankTop, drawL, drawH, drawWT, drawBT, drawWL)
-            } else {
-                drawRectangularElevation(tankLeft, tankTop, drawL, drawH, drawWT, drawBT, drawWL)
-            }
+            // A cylindrical tank cut through its diameter shows the same wall-base-wall section as a
+            // rectangular one; the circular shape is shown in the plan view below.
+            drawRectangularElevation(tankLeft, tankTop, drawL, drawH, drawWT, drawBT, drawWL)
 
             // Water fill
             if (drawWL > 0) {
-                drawWaterFill(tankLeft, tankTop, drawL, drawH, drawWT, drawWL, isCircular)
+                drawWaterFill(tankLeft, tankTop, drawL, drawH, drawWT, drawWL, false)
             }
 
             // Ground level line
@@ -221,7 +219,8 @@ fun ProfessionalTankDrawing(
 
         // Zone 3: Reinforcement details + table (viewMode 0 or 3)
         if (viewMode == 0 || viewMode == 3) {
-            drawZoneLabel(mainLeft, ch * 0.65f + cfg.margin * 0.3f, "REINFORCEMENT", cfg)
+            // In the full sheet the separator above already carries this label; a second one sat on the schedule title.
+            if (viewMode != 0) drawZoneLabel(mainLeft, ch * 0.65f + cfg.margin * 0.3f, "REINFORCEMENT", cfg)
             // Reinforcement on elevation
             drawElevationReinforcement(
                 tankLeft, tankTop, tankRight, tankBottom, baseBottom,
@@ -327,38 +326,6 @@ private fun DrawScope.drawRectangularElevation(
 // ============================================================================
 // 2. CIRCULAR TANK ELEVATION (section through diameter)
 // ============================================================================
-
-private fun DrawScope.drawCircularElevation(
-    left: Float, top: Float, l: Float, h: Float,
-    wt: Float, bt: Float, wl: Float
-) {
-    val cx = left + l / 2f
-    val r = l / 2f
-    val outerRect = androidx.compose.ui.geometry.Rect(cx - r - wt, top, cx + r + wt, top + 2 * r)
-    val innerRect = androidx.compose.ui.geometry.Rect(cx - r, top, cx + r, top + 2 * r)
-
-    // Left curved wall
-    val lw = Path().apply {
-        moveTo(cx - r, top); arcTo(outerRect, 180f, 90f, false)
-        lineTo(cx - r + wt, top + r); arcTo(innerRect, 90f, -90f, false); close()
-    }
-    drawPath(lw, color = ConcreteGray)
-    drawPath(lw, color = DimensionWhite.copy(alpha = 0.5f), style = Stroke(1.5f))
-
-    // Right curved wall
-    val rw = Path().apply {
-        moveTo(cx + r, top); arcTo(outerRect, 0f, -90f, false)
-        lineTo(cx + r - wt, top + r); arcTo(innerRect, 90f, 90f, false); close()
-    }
-    drawPath(rw, color = ConcreteGray)
-    drawPath(rw, color = DimensionWhite.copy(alpha = 0.5f), style = Stroke(1.5f))
-
-    // Base slab
-    drawRect(color = ConcreteGray, topLeft = Offset(left, top + h), size = Size(l, bt))
-    drawRect(color = DimensionWhite.copy(alpha = 0.5f),
-        topLeft = Offset(left, top + h), size = Size(l, bt), style = Stroke(1.5f))
-    drawConcreteHatchingOnRect(left, top + h, l, bt)
-}
 
 // ============================================================================
 // 3. WATER FILL
@@ -555,7 +522,7 @@ private fun DrawScope.drawPlanView(
             val dy = cy + (r - 5f) * Math.sin(angle).toFloat()
             drawCircle(color = HoopGreen, radius = 2.5f, center = Offset(dx, dy))
         }
-        drawTextAnnotated("Ø${length.toInt()}", cx - 16f, cy + r + 16f, DimensionWhite, 14f)
+        drawTextAnnotated("Ø${(length * 1000).toInt()}", cx - 22f, cy + r + 16f, DimensionWhite, 14f)
     } else {
         // Rectangle
         val rw = insetSize - 16f
@@ -585,7 +552,7 @@ private fun DrawScope.drawWallDetailInset(
 ) {
     // Position wall detail below plan view, dynamically calculated
     val planViewBottom = 12f + 20f + min(100f, cw * 0.18f) + 16f
-    val tableTop = ch * 0.64f
+    val tableTop = ch * 0.68f
     val insetW = min(150f, cw * 0.20f)
     val maxInsetH = (tableTop - planViewBottom - 20f).coerceAtLeast(80f)
     val insetH = min(200f, maxInsetH).coerceAtLeast(100f)
@@ -722,7 +689,7 @@ private fun DrawScope.drawReinforcementTable(
 ) {
     val tableLeft = 16f
     // Table starts below main zone with generous gap (moved from 0.62f to 0.64f)
-    val tableTop = ch * 0.64f
+    val tableTop = ch * 0.68f
     val tableW = cw - 32f
     val rowH = if (ch < 400f) 22f else 24f
     val headerH = 28f

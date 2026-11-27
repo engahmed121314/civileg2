@@ -26,6 +26,11 @@ class ECPTank : TankDesign {
         private const val MIN_BASE_THICKNESS = 250.0 // سمك أدنى للقاعدة mm
         private const val CRACK_WIDTH_LIMIT = 0.2 // أقصى عرض شق mm
         private const val MIN_RHO_WATER = 0.0025 // نسبة تسليح أدنى للمنشآت المائية
+
+        /** The only ECP 203-2025 clause this engine follows is Table 4-1 (K max). */
+        const val EDITION_SCOPE_NOTE =
+            "ECP 203-2025 followed only for the single-reinforcement limit (Table 4-1, p.4-6). " +
+            "NOT ASSESSED against ECP 203-2025: wall shear, crack width, minimum steel for liquid-retaining members, hoop tension, uplift, base punching."
     }
 
     override fun calculateTank(
@@ -104,7 +109,6 @@ class ECPTank : TankDesign {
         val cost = concreteVolume * concreteCostPerM3 + (steelWeight / 1000.0) * steelCostPerTon
 
         // 7. فحص السلامة
-        val isSafe = safetyChecks.all { it.isSafe }
 
         // 8. التحقق من الرفع للخزانات تحت الأرض
         var upliftFS = 0.0
@@ -117,6 +121,10 @@ class ECPTank : TankDesign {
                 upliftFS >= 1.25, "Stability against buoyancy (ECP 203 Sec. 8-1)"
             ))
         }
+
+        // A verdict needs at least one check, and the uplift check above is part of it.
+        // An empty list (circular walls carry no code check) is never SAFE.
+        val isSafe = safetyChecks.isNotEmpty() && safetyChecks.all { it.isSafe }
 
         // 9. التوصيات
         recommendations.add("استخدام SBR أو Water-stop في المفاصل الإنشائية")
@@ -250,7 +258,7 @@ class ECPTank : TankDesign {
         ))
 
         codeNotes.add(CodeReference.ECP.TANK_HYDROSTATIC)
-        codeNotes.add("ECP 203: Section 8-1 (Water-Retaining Structures)")
+        codeNotes.add(EDITION_SCOPE_NOTE)
         codeNotes.add("Wall: Cantilever method, M = γw×h³/6")
         codeNotes.add("Vertical: ${barsPerMeter}Ø${barDiameter.toInt()} @ ${spacing.toInt()}mm")
         codeNotes.add("Horizontal: ${hBarsPerMeter}Ø${hBarDia.toInt()} @ ${hSpacing.toInt()}mm")
@@ -331,7 +339,8 @@ class ECPTank : TankDesign {
         val isCrackSafe = steelStress <= fct * 1000.0
 
         codeNotes.add(CodeReference.ECP.TANK_HYDROSTATIC)
-        codeNotes.add("ECP 203: Section 8-1 (Circular Tank - Hoop Tension)")
+        codeNotes.add(EDITION_SCOPE_NOTE)
+        codeNotes.add("Circular wall: hoop tension and vertical bending are not compared with ECP 203-2025 (NOT ASSESSED)")
         codeNotes.add("Max Hoop Tension T = γw×H×R = ${String.format("%.1f", maxHoopTension)} kN/m")
         codeNotes.add("Hoop: ${hoopBarsPerMeter}Ø${hoopBarDia.toInt()} @ ${hoopSpacing.toInt()}mm")
         codeNotes.add("Vertical: ${vertBarsPerMeter}Ø${vertBarDia.toInt()} @ ${vertSpacing.toInt()}mm")

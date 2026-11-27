@@ -117,14 +117,19 @@ class TankViewModel @Inject constructor(
     /** Standalone DXF sheet for the current tank design (null when no result). */
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val res = _result.value ?: return null
-        return com.civileg.app.utils.ElementDxfDrawings.tankSection(
-            title = "TANK ${res.type.displayName}",
-            widthMm = res.width * 1000.0,
+        return com.civileg.app.utils.ElementDxfDrawings.tankSheet(
+            title = "TANK ${res.type.displayNameEn}",
+            isCircular = res.type.name.contains("CIRCULAR"),
+            innerLengthMm = res.length * 1000.0,
+            innerWidthMm = res.width * 1000.0,
             heightMm = res.height * 1000.0,
             wallThicknessMm = res.wallThickness,
+            baseThicknessMm = res.baseThickness,
             coverMm = 40.0,
-            barDiaMm = res.wallReinforcement.diameter.toDouble(),
-            barSpacingMm = res.wallReinforcement.spacing.toDouble()
+            vertBarDiaMm = res.wallReinforcement.diameter.toDouble(),
+            vertBarSpacingMm = res.wallReinforcement.spacing.toDouble(),
+            horizBarDiaMm = res.baseReinforcement.diameter.toDouble(),
+            horizBarSpacingMm = res.baseReinforcement.spacing.toDouble()
         )
     }
 
@@ -176,10 +181,10 @@ class TankViewModel @Inject constructor(
                     else -> "ECP 203"
                 }
                 val inputsMap = mapOf(
-                    "Tank Type" to res.type.displayName,
-                    "Length" to "${res.length} m",
-                    "Width" to "${res.width} m",
-                    "Height" to "${res.height} m",
+                    "Tank Type" to res.type.displayNameEn,
+                    (if (res.type.name.contains("CIRCULAR")) "Inside Diameter" else "Length") to "${String.format("%.2f", res.length)} m",
+                    "Width" to (if (res.type.name.contains("CIRCULAR")) "same as diameter" else "${String.format("%.2f", res.width)} m"),
+                    "Height" to "${String.format("%.2f", res.height)} m",
                     "Wall Thickness" to "${res.wallThickness} mm",
                     "Base Thickness" to "${res.baseThickness} mm",
                     "Design Code" to codeName,
@@ -192,10 +197,10 @@ class TankViewModel @Inject constructor(
                     "Capacity" to "${String.format("%.2f", res.capacity)} m³",
                     "Water Pressure" to "${String.format("%.2f", res.waterPressure)} kN/m²",
                     "Soil Pressure" to "${String.format("%.1f", res.soilPressure)} kPa",
-                    "Design Moment" to "${String.format("%.1f", res.mu)} kN.m/m",
+                    "Design Moment" to (if (res.mu > 0.0) "${String.format("%.1f", res.mu)} kN.m/m" else "NOT ASSESSED"),
                     "Wall Reinforcement" to res.wallReinforcement.barString,
                     "Base Reinforcement" to res.baseReinforcement.barString,
-                    "Utilization" to String.format("%.2f", res.utilizationRatio),
+                    "Utilization" to (if (res.utilizationRatio > 0.0) String.format("%.2f", res.utilizationRatio) else "NOT ASSESSED"),
                     "Concrete Volume" to "${String.format("%.3f", res.concreteVolume)} m³",
                     "Steel (indicative ratio, not designed bars)" to "${String.format("%.1f", res.steelWeight)} kg"
                 )
@@ -209,9 +214,9 @@ class TankViewModel @Inject constructor(
                 // Professional English PDF Report — English only, no Arabic encoding issues
                 val generated = com.civileg.app.utils.ExportManager(context).exportReportAndDxf(
                     titleAr = "تقرير تصميم خزان - ${res.type.displayName}",
-                    titleEn = "Tank Design Report — ${res.type.displayName}",
-                    subtitle = "Code: $codeName  •  ${res.length}×${res.width}×${res.height}m",
-                    designType = "Tank (${res.type.displayName})",
+                    titleEn = "Tank Design Report — ${res.type.displayNameEn}",
+                    subtitle = "Code: $codeName  •  " + (if (res.type.name.contains("CIRCULAR")) "Ø${String.format("%.2f", res.length)} × H ${String.format("%.2f", res.height)} m" else "${String.format("%.2f", res.length)}×${String.format("%.2f", res.width)}×${String.format("%.2f", res.height)} m"),
+                    designType = "Tank (${res.type.displayNameEn})",
                     inputs = inputsMap,
                     results = resultsMap,
                     safetyChecks = safetyChecks,

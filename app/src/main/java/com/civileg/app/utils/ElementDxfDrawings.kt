@@ -348,6 +348,81 @@ object ElementDxfDrawings {
         ex.notes(title, widthMm, heightMm, "WALL t=${fmt(wallThicknessMm)} mm", "MAIN Ø${fmt(barDiaMm)} @ ${fmt(barSpacingMm)}")
     }
 
+    /**
+     * Tank sheet: cross-section (base, walls, wall bars) on the left and plan view on the right.
+     * Circular tanks get a circular plan (wall ring, hoop circles) and a section through the diameter.
+     * The bar schedule is not issued; the sheet says so instead of listing invented bars.
+     * [innerLengthMm] is the inside length (or the inside diameter for circular tanks).
+     */
+    fun tankSheet(
+        title: String,
+        isCircular: Boolean,
+        innerLengthMm: Double,
+        innerWidthMm: Double,
+        heightMm: Double,
+        wallThicknessMm: Double,
+        baseThicknessMm: Double,
+        coverMm: Double,
+        vertBarDiaMm: Double,
+        vertBarSpacingMm: Double,
+        horizBarDiaMm: Double,
+        horizBarSpacingMm: Double
+    ): DxfDrawable = DxfDrawable { ex ->
+        val t = wallThicknessMm
+        val outerL = innerLengthMm + 2 * t
+        val totalH = heightMm + baseThicknessMm
+        // Section: base, two walls, water line, wall bars
+        ex.rect(0.0, 0.0, outerL, baseThicknessMm, "FOOTINGS")
+        ex.rect(0.0, baseThicknessMm, t, heightMm, "WALLS")
+        ex.rect(outerL - t, baseThicknessMm, t, heightMm, "WALLS")
+        val vx1 = coverMm + vertBarDiaMm / 2.0
+        val vx2 = t - coverMm - vertBarDiaMm / 2.0
+        ex.addLine2D(vx1, baseThicknessMm + coverMm, vx1, totalH - coverMm, "REBAR")
+        ex.addLine2D(vx2, baseThicknessMm + coverMm, vx2, totalH - coverMm, "REBAR")
+        ex.addLine2D(outerL - vx1, baseThicknessMm + coverMm, outerL - vx1, totalH - coverMm, "REBAR")
+        ex.addLine2D(outerL - vx2, baseThicknessMm + coverMm, outerL - vx2, totalH - coverMm, "REBAR")
+        var y = baseThicknessMm + coverMm
+        while (y <= totalH - coverMm) {
+            ex.rebar(t / 2.0, y, horizBarDiaMm)
+            ex.rebar(outerL - t / 2.0, y, horizBarDiaMm)
+            y += horizBarSpacingMm.coerceAtLeast(50.0)
+        }
+        ex.addText(outerL * 0.30, totalH + 60.0, "SECTION A-A", 70.0, "TEXT")
+        ex.addDimensionH(0.0, outerL, -150.0, fmt(outerL), offset = 150.0)
+        ex.addDimensionV(0.0, totalH, -150.0, fmt(totalH), offset = 150.0)
+
+        // Plan, to the right of the section
+        val gap = outerL * 0.4
+        val px = outerL + gap
+        if (isCircular) {
+            val rOut = outerL / 2.0
+            val cx = px + rOut
+            val cy = baseThicknessMm + rOut
+            ex.addCircle(cx, cy, rOut, "WALLS")
+            ex.addCircle(cx, cy, rOut - t, "WALLS")
+            ex.addCircle(cx, cy, rOut - coverMm - horizBarDiaMm / 2.0, "REBAR")
+            ex.addCircle(cx, cy, rOut - t + coverMm + horizBarDiaMm / 2.0, "REBAR")
+            ex.addText(cx - rOut * 0.5, cy + rOut + 60.0, "PLAN (CIRCULAR)", 70.0, "TEXT")
+            ex.addDimensionH(px, px + outerL, baseThicknessMm - 150.0, "D=" + fmt(innerLengthMm), offset = 150.0)
+        } else {
+            val outerW = innerWidthMm + 2 * t
+            ex.rect(px, baseThicknessMm, outerL, outerW, "WALLS")
+            ex.rect(px + t, baseThicknessMm + t, innerLengthMm, innerWidthMm, "WALLS")
+            ex.rect(px + coverMm, baseThicknessMm + coverMm, outerL - 2 * coverMm, outerW - 2 * coverMm, "REBAR")
+            ex.rect(px + t - coverMm, baseThicknessMm + t - coverMm, innerLengthMm + 2 * coverMm, innerWidthMm + 2 * coverMm, "REBAR")
+            ex.addText(px + outerL * 0.3, baseThicknessMm + outerW + 60.0, "PLAN", 70.0, "TEXT")
+            ex.addDimensionH(px, px + outerL, baseThicknessMm - 150.0, fmt(outerL), offset = 150.0)
+            ex.addDimensionV(baseThicknessMm, baseThicknessMm + outerW, px - 150.0, fmt(outerW), offset = 150.0)
+        }
+        val contentW = outerL + gap + outerL
+        ex.notes(
+            title, contentW, totalH,
+            "WALL t=${fmt(t)} mm, BASE t=${fmt(baseThicknessMm)} mm",
+            "WALL BARS " + (if (isCircular) "HOOP" else "HORIZ") + " dia ${fmt(horizBarDiaMm)} @ ${fmt(horizBarSpacingMm)}, VERT dia ${fmt(vertBarDiaMm)} @ ${fmt(vertBarSpacingMm)}",
+            listOf("BAR SCHEDULE: NOT ISSUED (bar sizes are indicative, not designed)")
+        )
+    }
+
     // ───────────────────────────────────────────────────────────────────────────
     // STEEL ELEMENTS
     // ───────────────────────────────────────────────────────────────────────────
