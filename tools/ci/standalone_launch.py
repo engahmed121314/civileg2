@@ -496,6 +496,9 @@ def flatslab_drop_block():
     for k in range(1, 5):
         adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
         shot("fsdrop-pdf-" + str(k))
+    for _ in range(3):  # the viewer's full-screen tip stays on top and swallows BACK
+        dismiss_fullscreen_notice(); time.sleep(1)
+    shot("fsdrop-pdf-after-dismiss")
 def flatslab_vary_block():
     """Same flat slab screen, different inputs: the check cards must change values and PASS/FAIL with the inputs."""
     cases = [
@@ -506,6 +509,7 @@ def flatslab_vary_block():
     for tag, edits in cases:
         try:
             dismiss_not_responding()
+            dismiss_fullscreen_notice()
             adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); dismiss_not_responding()
             tap_text(["التصميم"], tag + "-tab", exact=True); scroll_top(3)
             ok = False
