@@ -64,7 +64,8 @@ object DxfBitmapRenderer {
                 k = j
             } else k++
         }
-        return out
+        // The sheet frame and DXF title block are CAD furniture: the PDF page has its own title and caption.
+        return out.filter { it.layer != "SHEET" && it.layer != "TITLE" }
     }
 
     private fun bounds(p: List<Prim>): DoubleArray? {
@@ -98,7 +99,7 @@ object DxfBitmapRenderer {
         cv.drawColor(Color.WHITE)
         fun sx(x: Double) = ((x - b[0]) * scale + margin).toFloat()
         fun sy(y: Double) = (heightPx - ((y - b[1]) * scale + margin)).toFloat()
-        val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 2f; color = Color.BLACK }
+        val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 3f; color = Color.BLACK }
         val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK; typeface = Typeface.SANS_SERIF }
         fun colorFor(layer: String) = when {
             layer.contains("REBAR") -> Color.rgb(0, 70, 190)
@@ -117,7 +118,7 @@ object DxfBitmapRenderer {
                 }
                 is Prim.Text -> {
                     text.color = colorFor(it.layer)
-                    text.textSize = (it.h * scale).toFloat().coerceAtLeast(16f)
+                    text.textSize = (it.h * scale).toFloat().coerceAtLeast(30f)
                     cv.drawText(it.s, sx(it.x), sy(it.y), text)
                 }
             }
