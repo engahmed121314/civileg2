@@ -557,7 +557,7 @@ def tank_cases_block():
             for _ in range(6):
                 if tap_text(["الخزانات"], tag + "-find"): ok = True; break
                 scroll_up(2)
-            log.append((tag + "_open", ok)); time.sleep(2); scroll_top(2)
+            log.append((tag + "_open", ok)); time.sleep(2); scroll_top(12)
             if loc: log.append((tag + "_loc", tap_text([loc], tag + "-loc", exact=True)))
             if shape: log.append((tag + "_shape", tap_text([shape], tag + "-shape", exact=True)))
             time.sleep(1); shot(tag + "-form"); dump(tag + "-form")
