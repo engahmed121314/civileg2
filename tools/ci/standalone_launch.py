@@ -536,13 +536,20 @@ def font_extra_block():
             sweep("fx-" + tag + "-res", 6)
         except Exception as e:
             log.append(("fx_" + tag + "_exception", repr(e)))
+def dismiss_fullscreen_notice():
+    """The viewer's 'Viewing full screen' notice is a system overlay missing from the dump and it swallows BACK: tap where its Got it sits."""
+    wm = adb("shell", "wm", "size").stdout.decode(errors="ignore")
+    mm = re.search(r"(\d+)x(\d+)", wm)
+    if mm:
+        adb("shell", "input", "tap", str(int(int(mm.group(1)) * 0.79)), str(int(int(mm.group(2)) * 0.27))); time.sleep(1.2)
 def tank_cases_block():
     """Tank, three cases: rectangular ground, circular ground, rectangular underground. Each: calculate, sweep (steps card, drawing), PDF export."""
     cases = [("tk1", None, None), ("tk2", None, "دائري"), ("tk3", "خزان تحت الأرض", "مستطيل")]
     for tag, loc, shape in cases:
         try:
             dismiss_not_responding()
-            for _b in range(4):
+            for _b in range(5):
+                dismiss_fullscreen_notice()
                 adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); dismiss_not_responding()
                 if tap_text(["التصميم"], tag + "-tab", exact=True): break
             scroll_top(3)
