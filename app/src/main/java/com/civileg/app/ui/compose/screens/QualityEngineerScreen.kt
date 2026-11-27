@@ -406,6 +406,51 @@ private fun ConcreteQCTab(
             }
         }
 
+        val seriesFc = uiState.fcu.toDoubleOrNull()
+        val seriesTests = com.civileg.app.domain.quality.ConcreteAcceptance.parseSeries(uiState.strengthSeries)
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                AppText(stringResource(R.string.qc_series_header), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                AppText(stringResource(R.string.qc_series_source), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = uiState.strengthSeries,
+                    onValueChange = { viewModel.updateConcreteField("strengthSeries", it) },
+                    label = { AppText(stringResource(R.string.qc_series_input)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                if (seriesFc != null && seriesFc > 0.0 && seriesTests.isNotEmpty()) {
+                    val r = com.civileg.app.domain.quality.ConcreteAcceptance.evaluate(seriesFc, seriesTests)
+                    QualityCheckRow(
+                        label = stringResource(R.string.qc_series_individual),
+                        passed = r.individualOk,
+                        detail = stringResource(R.string.qc_series_individual_detail, r.individualFloor, r.lowestTest ?: 0.0)
+                    )
+                    if (r.movingAverageOk != null) {
+                        QualityCheckRow(
+                            label = stringResource(R.string.qc_series_average),
+                            passed = r.movingAverageOk,
+                            detail = stringResource(R.string.qc_series_average_detail, seriesFc, r.worstMovingAverage ?: 0.0)
+                        )
+                    }
+                    AppText(
+                        stringResource(
+                            when (r.accepted) {
+                                true -> R.string.qc_series_accepted
+                                false -> R.string.qc_series_rejected
+                                null -> R.string.qc_series_not_assessed
+                            }
+                        ),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                } else {
+                    AppText(stringResource(R.string.qc_series_not_assessed), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+
         AppButton(
             label = stringResource(R.string.qc_concrete_save),
             onClick = {

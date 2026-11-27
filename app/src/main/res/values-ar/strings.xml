@@ -2481,4 +2481,14 @@
     <string name="seismic_sbc_system">نظام مقاومة القوى الزلزالية (جدول 12-1)</string>
     <string name="seismic_sbc_inputs_note">قيم Ss وS1 وTL تؤخذ من الأشكال 22-1 و22-2 و22-4 في SBC 301-CR-2018 لموقع المشروع. تُستخدم فئة الموقع D عند عدم توفر بيانات التربة (11.4.2.2). تُفترض أوزان الأدوار متساوية.</string>
     <string name="seismic_sbc_not_assessed">غير مقيَّم</string>
+    <string name="qc_series_header">قبول المقاومة (سلسلة اختبارات)</string>
+    <string name="qc_series_source">SBC 304-CR-18 (2018) البند 26.12.3.1(b) صفحة 225. بند ECP 203-2025 غير مُقيَّم. تُستخدم المقاومة المحددة أعلاه دون تحويل بين المكعب والأسطوانة.</string>
+    <string name="qc_series_input">نتائج المقاومة بالميجاباسكال (مفصولة بفواصل بترتيب الصب)</string>
+    <string name="qc_series_individual">لا يوجد اختبار منفرد أقل من الحد</string>
+    <string name="qc_series_individual_detail">الحد %1$.1f MPa، أقل اختبار %2$.1f MPa</string>
+    <string name="qc_series_average">متوسط كل 3 اختبارات متتالية ≥ المقاومة المحددة</string>
+    <string name="qc_series_average_detail">المطلوب ≥ %1$.1f MPa، أقل متوسط %2$.1f MPa</string>
+    <string name="qc_series_accepted">مستوى المقاومة مقبول للاختبارات المدخلة</string>
+    <string name="qc_series_rejected">مستوى المقاومة غير مقبول: اتخذ إجراءات لرفع متوسط الاختبارات اللاحقة</string>
+    <string name="qc_series_not_assessed">غير مُقيَّم: أدخل ثلاثة اختبارات على الأقل والمقاومة المحددة</string>
 </resources>
