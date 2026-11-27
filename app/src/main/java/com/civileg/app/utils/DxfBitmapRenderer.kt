@@ -118,7 +118,7 @@ object DxfBitmapRenderer {
                 }
                 is Prim.Text -> {
                     text.color = colorFor(it.layer)
-                    text.textSize = (it.h * scale).toFloat().coerceAtLeast(30f)
+                    text.textSize = (it.h * scale).toFloat().coerceAtLeast(20f)
                     cv.drawText(it.s, sx(it.x), sy(it.y), text)
                 }
             }
