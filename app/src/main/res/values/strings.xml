@@ -2485,4 +2485,18 @@
     <string name="column_code_notes_label">Code Notes</string>
     <string name="column_boq_title">Column Bill of Quantities</string>
     <string name="column_rebar_edits_not_applied">Rebar edits not applied. The design shown is the last solved one. Press Update before export or save.</string>
+    <string name="column_moment_mx">Moment Mx (kN.m)</string>
+    <string name="column_moment_my">Moment My (kN.m)</string>
+    <string name="column_applied_pu">Applied Pu</string>
+    <string name="column_axial_capacity">Axial capacity</string>
+    <string name="column_slenderness">Slenderness</string>
+    <string name="column_slender_tag">Slender</string>
+    <string name="column_short_tag">Short</string>
+    <string name="column_applied_mxmy">Applied Mx / My</string>
+    <string name="column_cost_unavailable">Unavailable (no price basis)</string>
+    <string name="column_check_biaxial">Biaxial moment</string>
+    <string name="column_check_reinf_ratio">Reinforcement ratio</string>
+    <string name="column_load_combo_dead_live_wind">Dead + Live + Wind</string>
+    <string name="column_load_combo_dead_live_eq">Dead + Live + Earthquake</string>
+    <string name="column_load_combo_dead_eq">Dead + Earthquake</string>
 </resources>

@@ -2488,4 +2488,18 @@
     <string name="column_code_notes_label">ملاحظات الكود</string>
     <string name="column_boq_title">حصر كميات العمود</string>
     <string name="column_rebar_edits_not_applied">تعديلات التسليح لم تُطبَّق. التصميم المعروض هو آخر حل. اضغط تحديث قبل التصدير أو الحفظ.</string>
+    <string name="column_moment_mx">العزم Mx (kN.m)</string>
+    <string name="column_moment_my">العزم My (kN.m)</string>
+    <string name="column_applied_pu">الحمل المحوري المطبق Pu</string>
+    <string name="column_axial_capacity">قدرة التحمل المحورية</string>
+    <string name="column_slenderness">النحافة</string>
+    <string name="column_slender_tag">نحيف</string>
+    <string name="column_short_tag">قصير</string>
+    <string name="column_applied_mxmy">العزمان المطبقان Mx / My</string>
+    <string name="column_cost_unavailable">غير متاح (لا يوجد أساس سعر)</string>
+    <string name="column_check_biaxial">العزم ثنائي الاتجاه</string>
+    <string name="column_check_reinf_ratio">نسبة التسليح</string>
+    <string name="column_load_combo_dead_live_wind">ميت + حي + رياح</string>
+    <string name="column_load_combo_dead_live_eq">ميت + حي + زلزال</string>
+    <string name="column_load_combo_dead_eq">ميت + زلزال</string>
 </resources>
