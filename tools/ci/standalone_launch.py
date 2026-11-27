@@ -549,9 +549,9 @@ def tank_cases_block():
         try:
             dismiss_not_responding()
             for _b in range(5):
-                dismiss_fullscreen_notice()
                 adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5); dismiss_not_responding()
                 if tap_text(["التصميم"], tag + "-tab", exact=True): break
+                dismiss_fullscreen_notice()
             scroll_top(3)
             ok = False
             for _ in range(6):

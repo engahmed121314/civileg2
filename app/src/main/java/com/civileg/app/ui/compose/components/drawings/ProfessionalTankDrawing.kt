@@ -586,7 +586,7 @@ private fun DrawScope.drawWallDetailInset(
 ) {
     // Position wall detail below plan view, dynamically calculated
     val planViewBottom = 12f + 20f + min(100f, cw * 0.18f) + 16f
-    val tableTop = ch * 0.64f
+    val tableTop = ch * 0.68f
     val insetW = min(150f, cw * 0.20f)
     val maxInsetH = (tableTop - planViewBottom - 20f).coerceAtLeast(80f)
     val insetH = min(200f, maxInsetH).coerceAtLeast(100f)
@@ -723,7 +723,7 @@ private fun DrawScope.drawReinforcementTable(
 ) {
     val tableLeft = 16f
     // Table starts below main zone with generous gap (moved from 0.62f to 0.64f)
-    val tableTop = ch * 0.64f
+    val tableTop = ch * 0.68f
     val tableW = cw - 32f
     val rowH = if (ch < 400f) 22f else 24f
     val headerH = 28f
