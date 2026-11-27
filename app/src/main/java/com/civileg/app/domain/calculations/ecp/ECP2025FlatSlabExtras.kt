@@ -177,7 +177,7 @@ object ECP2025FlatSlabExtras {
             return Section(name, bo, d, q, vc, vuKn, qu, qu <= q, note)
         }
         val list = mutableListOf(section("At column / head (d/2)", dIn, colX, colY, "Eq 4-44, 4-46, p.4-26 item 3-a"))
-        if (hasDrop) list.add(section("At drop panel edge (d/2 outside drop)", dOut, dropX, dropY, "p.4-26 item 3-a, thickness-change perimeter; full Vu used (no reduction found in code text)"))
+        if (hasDrop) list.add(section("At drop panel edge (d/2 outside drop)", dOut, dropX, dropY, "p.4-26 item 3-a, thickness-change perimeter; Vu with the Eq 6-25 beta applied by analogy (not printed for the drop edge); full Vu, no reduction found in code text"))
         return list
     }
 }

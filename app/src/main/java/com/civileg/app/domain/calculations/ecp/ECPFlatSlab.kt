@@ -302,7 +302,7 @@ class ECPFlatSlab : FlatSlabDesign {
             dropEdgeOk = outer.ok
             safetyChecks.add(SafetyCheckItem("Punching at drop edge", outer.vuKn, outer.vcKn, "kN", outer.ok))
             codeNotes.add(String.format(
-                "Punching at drop panel edge (ECP 203-2025 p.4-26 item 3-a): bo=%.0f mm, d=%.0f mm (slab only), Vu=%.1f kN (full Vu, no reduction found in code text), Vc=%.1f kN, U=%.0f%% -> %s",
+                "Punching at drop panel edge (ECP 203-2025 p.4-26 item 3-a): bo=%.0f mm, d=%.0f mm (slab only), Vu=%.1f kN (Eq 6-25 beta applied by analogy, not printed for the drop edge; no reduction found in code text), Vc=%.1f kN, U=%.0f%% -> %s",
                 outer.bo, outer.d, outer.vuKn, outer.vcKn, outer.utilization * 100, if (outer.ok) "OK" else "FAIL"))
             if (!outer.ok) warnings.add("Punching FAILED at the drop panel edge (ECP 203-2025 p.4-26 item 3-a): enlarge the drop panel or increase the slab thickness")
         }
