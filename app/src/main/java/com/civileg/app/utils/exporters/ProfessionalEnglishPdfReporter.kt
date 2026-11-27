@@ -118,8 +118,7 @@ object ProfessionalEnglishPdfReporter {
     /** Get a FRESH Helvetica regular font. Never cache across PdfDocuments. */
     private fun getFont(bold: Boolean = false): PdfFont {
         return try {
-            if (bold) PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD)
-            else PdfFontFactory.createFont(StandardFonts.HELVETICA)
+            PlexPdfFont.create(bold)
         } catch (e: Exception) {
             Log.e(TAG, "Font creation failed: ${e.message}")
             try { PdfFontFactory.createFont(StandardFonts.HELVETICA) }
@@ -153,6 +152,9 @@ object ProfessionalEnglishPdfReporter {
             '\u066C' -> ','
             else -> ch
         } }.joinToString("")
+            // Bar callouts use phi/diameter signs that IBM Plex Sans Arabic lacks (drawn as an empty box); only before a digit,
+            // so the strength reduction factor phi in formulas is left alone. O-slash (U+00D8) is in the font.
+            .replace(Regex("[\u03C6\u03D5\u2300\u2205](?=\\d)"), "\u00D8")
         val t = Text(latinText).setFont(font).setFontSize(size)
         color?.let { t.setFontColor(it) }
         return t
@@ -1039,7 +1041,7 @@ object ProfessionalEnglishPdfReporter {
 
     private fun addPageNumbers(pdfDoc: PdfDocument) {
         val font = try {
-            PdfFontFactory.createFont(StandardFonts.HELVETICA)
+            PlexPdfFont.create()
         } catch (_: Exception) {
             return
         }
