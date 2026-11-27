@@ -285,7 +285,7 @@ def pile_block():
         log.append(("pile_exception", repr(e)))
 def pull_exported_pdfs():
     ls = adb("shell", "run-as", pkg, "find", ".", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
-    ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf").stdout.decode("utf8", "ignore")
+    ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
     open(f"{out}/pdf-files.txt", "w").write(ls)
     for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("/sdcard/")][:8]:
         subprocess.run(["adb", "pull", pth, f"{out}/exported-" + os.path.basename(pth)], capture_output=True)
@@ -567,9 +567,15 @@ def tank_cases_block():
                 scroll_up(2)
             log.append((tag + "_calc", calc)); time.sleep(4); dismiss_not_responding()
             sweep(tag + "-res", 10)
+            dxf_ok = False
+            scroll_top(10)
+            for _ in range(16):
+                if tap_text(["DXF"], tag + "-dxf-find", exact=True): dxf_ok = True; break
+                scroll_up(1)
+            log.append((tag + "_dxf_tap", dxf_ok)); time.sleep(4); shot(tag + "-dxf"); dump(tag + "-dxf")
             pdf_ok = False
-            scroll_top(8)
-            for _ in range(12):
+            scroll_top(10)
+            for _ in range(16):
                 if tap_text(["تقرير PDF", "PDF", "تقرير"], tag + "-pdf-find"): pdf_ok = True; break
                 scroll_up(1)
             log.append((tag + "_pdf_tap", pdf_ok)); time.sleep(6)
