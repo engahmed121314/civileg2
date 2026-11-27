@@ -131,35 +131,35 @@ fun StrapFootingScreen(
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StrapInputField(col1Load, "P1 (Edge) kN", { col1Load = it }, Modifier.weight(1f))
-                    StrapInputField(col2Load, "P2 (Int) kN", { col2Load = it }, Modifier.weight(1f))
+                    StrapInputField(col1Load, stringResource(R.string.lbl_p1_edge), { col1Load = it }, Modifier.weight(1f))
+                    StrapInputField(col2Load, stringResource(R.string.lbl_p2_int), { col2Load = it }, Modifier.weight(1f))
                 }
             }
 
             item {
-                StrapInputField(distance, "Distance C/C (m)", { distance = it }, Modifier.fillMaxWidth())
+                StrapInputField(distance, stringResource(R.string.lbl_distance_cc), { distance = it }, Modifier.fillMaxWidth())
             }
 
             item {
-                AppText("Column 1 (Edge) Dimensions (mm)", style = MaterialTheme.typography.labelMedium)
+                AppText(stringResource(R.string.lbl_col1_dims), style = MaterialTheme.typography.labelMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StrapInputField(col1W, "Width (b1)", { col1W = it }, Modifier.weight(1f))
-                    StrapInputField(col1D, "Depth (a1)", { col1D = it }, Modifier.weight(1f))
+                    StrapInputField(col1W, stringResource(R.string.lbl_width_b1), { col1W = it }, Modifier.weight(1f))
+                    StrapInputField(col1D, stringResource(R.string.lbl_depth_a1), { col1D = it }, Modifier.weight(1f))
                 }
             }
 
             item {
-                AppText("Column 2 (Internal) Dimensions (mm)", style = MaterialTheme.typography.labelMedium)
+                AppText(stringResource(R.string.lbl_col2_dims), style = MaterialTheme.typography.labelMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StrapInputField(col2W, "Width (b2)", { col2W = it }, Modifier.weight(1f))
-                    StrapInputField(col2D, "Depth (a2)", { col2D = it }, Modifier.weight(1f))
+                    StrapInputField(col2W, stringResource(R.string.lbl_width_b2), { col2W = it }, Modifier.weight(1f))
+                    StrapInputField(col2D, stringResource(R.string.lbl_depth_a2), { col2D = it }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StrapInputField(soil, "Soil Capacity (kPa)", { soil = it }, Modifier.weight(1f))
-                    StrapInputField(strapWidth, "Strap Beam Width (mm)", { strapWidth = it }, Modifier.weight(1f))
+                    StrapInputField(soil, stringResource(R.string.lbl_soil_capacity), { soil = it }, Modifier.weight(1f))
+                    StrapInputField(strapWidth, stringResource(R.string.lbl_strap_width), { strapWidth = it }, Modifier.weight(1f))
                 }
             }
 
@@ -171,11 +171,11 @@ fun StrapFootingScreen(
             }
 
             item {
-                StrapInputField(barDia, "Main Bar Diameter (mm)", { barDia = it }, Modifier.fillMaxWidth())
+                StrapInputField(barDia, stringResource(R.string.lbl_main_bar_dia), { barDia = it }, Modifier.fillMaxWidth())
             }
 
             item {
-                StrapInputField(cover, "Cover (mm)", { cover = it }, Modifier.fillMaxWidth())
+                StrapInputField(cover, stringResource(R.string.lbl_cover_mm), { cover = it }, Modifier.fillMaxWidth())
             }
 
             item {
@@ -311,7 +311,7 @@ fun StrapFootingScreen(
                 }
 
                 if (res.calculationSteps.isNotEmpty()) {
-                    item { CalculationStepsCard(res.calculationSteps, title = "Strap Footing Calculation Steps") }
+                    item { CalculationStepsCard(res.calculationSteps, title = stringResource(R.string.strap_steps_title)) }
 
                     val bbsEntries = runCatching {
                         BbsGenerator.generateStrapFootingBbs(
@@ -319,7 +319,7 @@ fun StrapFootingScreen(
                         )
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty()) {
-                        item { BbsTableCard(bbsEntries, title = "Strap Footing Bar Bending Schedule") }
+                        item { BbsTableCard(bbsEntries, title = stringResource(R.string.strap_bbs_title)) }
                     }
 
                     val boqRows = runCatching {
@@ -328,7 +328,7 @@ fun StrapFootingScreen(
                         )
                     }.getOrDefault(emptyList())
                     if (boqRows.isNotEmpty()) {
-                        item { BoqTableCard(boqRows, title = "Strap Footing Bill of Quantities") }
+                        item { BoqTableCard(boqRows, title = stringResource(R.string.strap_boq_title)) }
                     }
                 }
                 
@@ -435,23 +435,23 @@ fun StrapFootingResultCard(res: CalculatorEngine.StrapFootingResult) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            AppText("Design Results", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            AppText(stringResource(R.string.lbl_design_results), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             
             HorizontalDivider()
             
-            ResultRow("Footing 1 (Edge)", "${res.footing1.width.toInt()} x ${res.footing1.length.toInt()} x ${res.footing1.thickness.toInt()} mm")
-            ResultRow("Reinforcement 1", res.footing1.reinforcementBottom.barString)
+            ResultRow(stringResource(R.string.lbl_footing1_edge), "${res.footing1.width.toInt()} x ${res.footing1.length.toInt()} x ${res.footing1.thickness.toInt()} mm")
+            ResultRow(stringResource(R.string.lbl_reinf1), res.footing1.reinforcementBottom.barString)
             
             Spacer(Modifier.height(8.dp))
             
-            ResultRow("Footing 2 (Internal)", "${res.footing2.width.toInt()} x ${res.footing2.length.toInt()} x ${res.footing2.thickness.toInt()} mm")
-            ResultRow("Reinforcement 2", res.footing2.reinforcementBottom.barString)
+            ResultRow(stringResource(R.string.lbl_footing2_int), "${res.footing2.width.toInt()} x ${res.footing2.length.toInt()} x ${res.footing2.thickness.toInt()} mm")
+            ResultRow(stringResource(R.string.lbl_reinf2), res.footing2.reinforcementBottom.barString)
             
             Spacer(Modifier.height(8.dp))
             
-            ResultRow("Strap Beam", "${res.strapBeamWidth.toInt()} x ${res.strapBeamDepth.toInt()} mm")
-            ResultRow("Top Rebar", res.strapTopReinforcement.barString)
-            ResultRow("Bottom Rebar", res.strapBottomReinforcement.barString)
+            ResultRow(stringResource(R.string.lbl_strap_beam), "${res.strapBeamWidth.toInt()} x ${res.strapBeamDepth.toInt()} mm")
+            ResultRow(stringResource(R.string.lbl_top_rebar), res.strapTopReinforcement.barString)
+            ResultRow(stringResource(R.string.lbl_bottom_rebar), res.strapBottomReinforcement.barString)
             
             Spacer(Modifier.height(8.dp))
             
@@ -459,9 +459,9 @@ fun StrapFootingResultCard(res: CalculatorEngine.StrapFootingResult) {
             
             Spacer(Modifier.height(8.dp))
             
-            ResultRow("Utilization Ratio", "${"%.1f".format(res.utilizationRatio * 100)}%")
-            ResultRow("Concrete Volume", "${"%.3f".format(res.concreteVolume)} m³")
-            ResultRow("Steel Weight", "${"%.1f".format(res.steelWeight)} kg")
+            ResultRow(stringResource(R.string.lbl_utilization), "${"%.1f".format(res.utilizationRatio * 100)}%")
+            ResultRow(stringResource(R.string.lbl_concrete_volume), "${"%.3f".format(res.concreteVolume)} m³")
+            ResultRow(stringResource(R.string.lbl_steel_weight), "${"%.1f".format(res.steelWeight)} kg")
             
             if (!res.isSafe) {
                 AppText("⚠ Design Unsafe - Check dimensions", color = Color.Red, fontWeight = FontWeight.Bold)
