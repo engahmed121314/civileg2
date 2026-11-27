@@ -36,7 +36,9 @@ data class FlatSlabInput(
     val floorFinish: Double = 2.0,     // kN/m2
     val numberOfFloors: Int = 10,
     val clearCover: Double = 25.0,     // mm
-    val storyHeight: Double = 3.0      // m
+    val storyHeight: Double = 3.0,     // m
+    val headEffectiveDiameter: Double = 0.0, // mm, effective column head diameter D (0 = no column head given)
+    val headSlopeFromVerticalDeg: Double = 0.0 // degrees from vertical (only read when headEffectiveDiameter > 0)
 )
 
 // ══════════════════════════════════════════════════════════════════
