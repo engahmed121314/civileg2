@@ -56,6 +56,7 @@ data class ConcreteQCState(
     val strength28Days: String = "",
     val airContent: String = "4.0",
     val concreteTemp: String = "25",
+    val strengthSeries: String = "",
     val outcome: QualityControlEngine.QcOutcome? = null
 )
 
@@ -342,6 +343,7 @@ class QualityEngineerViewModel @Inject constructor(
             "strength28Days" -> current.copy(strength28Days = value)
             "airContent" -> current.copy(airContent = value)
             "concreteTemp" -> current.copy(concreteTemp = value)
+            "strengthSeries" -> current.copy(strengthSeries = value)
             else -> current
         }
         _concreteState.value = if (updated == current) current else updated.copy(outcome = null)

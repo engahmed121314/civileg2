@@ -2478,4 +2478,14 @@
     <string name="seismic_sbc_system">Seismic force-resisting system (Table 12-1)</string>
     <string name="seismic_sbc_inputs_note">Ss, S1 and TL are read from SBC 301-CR-2018 Figures 22-1, 22-2 and 22-4 for the site; Site Class D applies where soil data are not known (11.4.2.2). Equal story weights are assumed.</string>
     <string name="seismic_sbc_not_assessed">Not assessed</string>
+    <string name="qc_series_header">Strength acceptance (series of tests)</string>
+    <string name="qc_series_source">SBC 304-CR-18 (2018) 26.12.3.1(b), p.225. ECP 203-2025 clause not assessed. Uses the specified strength entered above; no cube/cylinder conversion.</string>
+    <string name="qc_series_input">Strength tests in MPa (comma separated, in casting order)</string>
+    <string name="qc_series_individual">No single test below the limit</string>
+    <string name="qc_series_individual_detail">Limit %1$.1f MPa, lowest test %2$.1f MPa</string>
+    <string name="qc_series_average">Every average of 3 consecutive tests ≥ specified strength</string>
+    <string name="qc_series_average_detail">Required ≥ %1$.1f MPa, lowest average %2$.1f MPa</string>
+    <string name="qc_series_accepted">Strength level ACCEPTABLE for the tests entered</string>
+    <string name="qc_series_rejected">Strength level NOT acceptable: take steps to raise the average of later tests</string>
+    <string name="qc_series_not_assessed">NOT ASSESSED: enter at least three strength tests and the specified strength</string>
 </resources>
