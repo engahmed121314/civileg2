@@ -539,18 +539,18 @@ fun ProfessionalPileDrawing(
         }
 
         // ── Responsive title block ─────────────────────────────
-        drawSheetAnnotations(
-            x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
-            y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,
-            cfg = cfg,
-            summary = resultSummary
-        )
-        drawResponsiveTitleBlock(
-            x = w - cfg.titleBlockWidth - cfg.margin * 0.3f,
-            y = h - cfg.titleBlockHeight - cfg.margin * 0.3f,
-            cfg = cfg,
+        val blockTopLeft = drawMeasuredSheetBlock(
+            summary = resultSummary,
             drawingTitle = "Pile Detail",
-            designCode = codeLabel
+            designCode = codeLabel,
+            right = w - cfg.margin * 0.3f,
+            bottom = h - cfg.margin * 0.3f,
+            cfg = cfg
+        )
+        drawNorthArrow(
+            x = blockTopLeft.x - cfg.annotationTextSmall * 2.6f,
+            y = blockTopLeft.y + cfg.annotationTextSmall * 2.2f,
+            size = cfg.annotationTextSmall * 1.4f
         )
     }
 }

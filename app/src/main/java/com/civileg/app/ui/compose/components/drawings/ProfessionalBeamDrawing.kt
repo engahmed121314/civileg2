@@ -296,18 +296,18 @@ fun ProfessionalBeamDrawing(
             cfg = cfg
         )
         // Responsive title block (bottom-right)
-        drawSheetAnnotations(
-            x = cw - cfg.titleBlockWidth - cfg.margin * 0.3f,
-            y = ch - cfg.titleBlockHeight - cfg.margin * 0.3f,
-            cfg = cfg,
-            summary = resultSummary
-        )
-        drawResponsiveTitleBlock(
-            x = cw - cfg.titleBlockWidth - cfg.margin * 0.3f,
-            y = ch - cfg.titleBlockHeight - cfg.margin * 0.3f,
-            cfg = cfg,
+        val blockTopLeft = drawMeasuredSheetBlock(
+            summary = resultSummary,
             drawingTitle = "Beam Detail",
-            designCode = codeLabel
+            designCode = codeLabel,
+            right = cw - cfg.margin * 0.3f,
+            bottom = ch - cfg.margin * 0.3f,
+            cfg = cfg
+        )
+        drawNorthArrow(
+            x = blockTopLeft.x - cfg.annotationTextSmall * 2.6f,
+            y = blockTopLeft.y + cfg.annotationTextSmall * 2.2f,
+            size = cfg.annotationTextSmall * 1.4f
         )
     }
 }

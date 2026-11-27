@@ -240,21 +240,18 @@ fun ProfessionalTankDrawing(
         }
 
         // ── Responsive title block ──
-        drawSheetAnnotations(
-            x = cw - cfg.titleBlockWidth - cfg.margin,
-            y = ch - cfg.titleBlockHeight - cfg.margin,
-            cfg = cfg,
-            summary = resultSummary
-        )
-        drawResponsiveTitleBlock(
-            x = cw - cfg.titleBlockWidth - cfg.margin,
-            y = ch - cfg.titleBlockHeight - cfg.margin,
-            cfg = cfg,
-            projectName = "CivilEG",
+        val blockTopLeft = drawMeasuredSheetBlock(
+            summary = resultSummary,
             drawingTitle = "Tank Detail",
-            scale = "NTS",
-            drawingNo = "1",
-            designCode = codeLabel
+            designCode = codeLabel,
+            right = cw - cfg.margin,
+            bottom = ch - cfg.margin,
+            cfg = cfg
+        )
+        drawNorthArrow(
+            x = blockTopLeft.x - cfg.annotationTextSmall * 2.6f,
+            y = blockTopLeft.y + cfg.annotationTextSmall * 2.2f,
+            size = cfg.annotationTextSmall * 1.4f
         )
     }
 }
