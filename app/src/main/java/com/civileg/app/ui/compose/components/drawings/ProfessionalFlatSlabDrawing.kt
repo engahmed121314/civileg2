@@ -218,18 +218,18 @@ fun ProfessionalFlatSlabDrawing(
         }
 
         // ── Responsive Title Block & Annotations ───────────────────────────
-        drawSheetAnnotations(
-            x = W - cfg.titleBlockWidth - margin * 0.3f,
-            y = H - cfg.titleBlockHeight - margin * 0.3f,
-            cfg = cfg,
-            summary = resultSummary
-        )
-        drawResponsiveTitleBlock(
-            x = W - cfg.titleBlockWidth - margin * 0.3f,
-            y = H - cfg.titleBlockHeight - margin * 0.3f,
-            cfg = cfg,
+        val blockTopLeft = drawMeasuredSheetBlock(
+            summary = resultSummary,
             drawingTitle = "Flat Slab Detailing",
-            designCode = codeLabel
+            designCode = codeLabel,
+            right = W - margin * 0.3f,
+            bottom = H - margin * 0.3f,
+            cfg = cfg
+        )
+        drawNorthArrow(
+            x = blockTopLeft.x - cfg.annotationTextSmall * 2.6f,
+            y = blockTopLeft.y + cfg.annotationTextSmall * 2.2f,
+            size = cfg.annotationTextSmall * 1.4f
         )
         drawScaleBar(
             x = margin, y = H - cfg.margin * 0.8f,

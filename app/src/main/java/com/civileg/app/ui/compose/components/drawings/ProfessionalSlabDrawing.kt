@@ -727,18 +727,18 @@ fun ProfessionalSlabDrawing(
         }
 
         // ── Responsive Title Block ───────────────────────────────
-        drawSheetAnnotations(
-            x = w - cfg.titleBlockWidth - margin * 0.3f,
-            y = h - cfg.titleBlockHeight - margin * 0.3f,
-            cfg = cfg,
-            summary = resultSummary
-        )
-        drawResponsiveTitleBlock(
-            x = w - cfg.titleBlockWidth - margin * 0.3f,
-            y = h - cfg.titleBlockHeight - margin * 0.3f,
-            cfg = cfg,
+        val blockTopLeft = drawMeasuredSheetBlock(
+            summary = resultSummary,
             drawingTitle = "Slab Detail",
-            designCode = codeLabel
+            designCode = codeLabel,
+            right = w - margin * 0.3f,
+            bottom = h - margin * 0.3f,
+            cfg = cfg
+        )
+        drawNorthArrow(
+            x = blockTopLeft.x - cfg.annotationTextSmall * 2.6f,
+            y = blockTopLeft.y + cfg.annotationTextSmall * 2.2f,
+            size = cfg.annotationTextSmall * 1.4f
         )
     }
 }
