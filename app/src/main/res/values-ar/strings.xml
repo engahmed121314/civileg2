@@ -2482,4 +2482,8 @@
     <string name="seismic_sbc_system">نظام مقاومة القوى الزلزالية (جدول 12-1)</string>
     <string name="seismic_sbc_inputs_note">قيم Ss وS1 وTL تؤخذ من الأشكال 22-1 و22-2 و22-4 في SBC 301-CR-2018 لموقع المشروع. تُستخدم فئة الموقع D عند عدم توفر بيانات التربة (11.4.2.2). تُفترض أوزان الأدوار متساوية.</string>
     <string name="seismic_sbc_not_assessed">غير مقيَّم</string>
+    <string name="fs_cover_exposure_title">الغطاء الأدنى حسب الظروف البيئية (الكود المصري 2025)</string>
+    <string name="fs_cover_fire_none">بدون اشتراط حريق</string>
+    <string name="fs_cover_exposure_note">الغطاء الأدنى %1$d مم (%2$s). يلزم أيضا fcu لا تقل عن %3$d ن/مم² ونسبة ماء/أسمنت لا تزيد عن %4$s. غطاء الحريق للبلاطات فقط (جدول 2-25 ص 2-39).</string>
+    <string name="fs_cover_below_min">الغطاء المدخل أقل من الحد الأدنى %1$d مم لهذه الظروف.</string>
 </resources>

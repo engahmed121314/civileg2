@@ -455,6 +455,16 @@ def flatslab_drop_block():
     scroll_up(1)
     got = [edit_field("0", "100", "fd-thk"), edit_field("0", "2500", "fd-x"), edit_field("0", "2500", "fd-y")]
     log.append(("fsdrop_fields", got)); time.sleep(1); shot("fsdrop-typed"); dump("fsdrop-typed")
+    # exposure cover picker: find its title, tap two chips, capture the note each time
+    found = False
+    for _ in range(10):
+        if any("الغطاء الأدنى حسب الظروف" in t for t, b in nodes(dump("cv-find"))): found = True; break
+        scroll_up(1)
+    log.append(("cover_picker_visible", found)); shot("cover-picker-0")
+    if found:
+        scroll_up(1) if False else None
+        log.append(("cover_chip_wet", tap_text(["مبتلة شبه مستمرة"], "cv-chip1"))); time.sleep(1); shot("cover-picker-1"); dump("cover-picker-1")
+        scroll_up(1); time.sleep(1); shot("cover-picker-2-scrolled"); dump("cover-picker-2-scrolled")
     calc = False
     for _ in range(5):
         if tap_text(["تصميم بلاطة مسطحة"], "fd-calc"): calc = True; break
