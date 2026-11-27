@@ -4,8 +4,19 @@ import subprocess, sys, time, re, os
 import xml.etree.ElementTree as ET
 pkg, out = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)
+T_START = time.time()
+DEADLINE_S = 38 * 60  # stop before the job timeout so logcat and the artifacts are still collected
 def adb(*a, **k):
-    return subprocess.run(["adb", *a], capture_output=True, **k)
+    if time.time() - T_START > DEADLINE_S:
+        print("DEADLINE reached, stopping launch script", flush=True)
+        try: open(f"{out}/steps.txt", "w").write("DEADLINE reached\n" + "\n".join(f"{x}: {y}" for x, y in log))
+        except Exception: pass
+        os._exit(0)
+    try:
+        return subprocess.run(["adb", *a], capture_output=True, timeout=90, **k)
+    except subprocess.TimeoutExpired:
+        print("adb call timed out:", a[:3], flush=True)
+        return subprocess.CompletedProcess(a, 124, b"", b"")
 def shot(name):
     open(f"{out}/{name}.png", "wb").write(adb("exec-out", "screencap", "-p").stdout)
 def dump(name):
@@ -44,7 +55,10 @@ for _ in range(4):
     if not tap_text(["Wait"], "anr-wait0", exact=True): break
     time.sleep(2)
 shot("home"); dump("home")
-log = []
+class _Log(list):
+    def append(self, item):
+        print(f"[{time.time()-T_START:6.0f}s] {item}", flush=True); super().append(item)
+log = _Log()
 for _try in range(3):
     if tap_text(["التصميم"], "d-design-probe", exact=True): break
     adb("shell", "am", "force-stop", pkg); time.sleep(2)
