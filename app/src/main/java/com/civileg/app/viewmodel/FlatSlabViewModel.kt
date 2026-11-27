@@ -227,6 +227,8 @@ class FlatSlabViewModel @Inject constructor(
                     designType = input.panelType.displayName,
                     inputs = inputsMap, results = resultsMap,
                     safetyChecks = safetyChecks, isSafe = res.isSafe,
+                    // Passing checks are not a complete assessment (deflection is an estimate, column head and other items are not assessed); a failure still shows UNSAFE
+                    assessmentPending = res.isSafe,
                     calculationSteps = res.calculationSteps,
                     bbsEntries = runCatching {
                         com.civileg.app.domain.calculations.utils.BbsGenerator.generateFlatSlabBbs("FS1", res, input.lx, input.ly)
