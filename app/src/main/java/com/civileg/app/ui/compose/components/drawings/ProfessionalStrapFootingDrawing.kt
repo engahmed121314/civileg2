@@ -469,9 +469,10 @@ fun ProfessionalStrapFootingDrawing(
         // ══════════════════════════════════════════════════════════
         if (viewMode == 0 || viewMode == 3) {
             val tblLeft = margin
-            val tblWidth = w - 2 * margin
+            // The measured result block sits bottom right, so keep the table left of it.
+            val tblWidth = (w - 2 * margin) * 0.58f
 
-            val headers = listOf("Mark", "Location", "Dia (mm)", "Count", "Length (mm)", "Notes")
+            val headers = listOf("Mark", "Location", "Dia", "No.", "Len. mm", "Notes")
             val colWidths = listOf(
                 tblWidth * 0.08f, tblWidth * 0.20f, tblWidth * 0.12f,
                 tblWidth * 0.12f, tblWidth * 0.20f, tblWidth * cfg.sectionHeightFraction
@@ -492,7 +493,7 @@ fun ProfessionalStrapFootingDrawing(
                 headerBg = tableHeaderBg,
                 altRowBg = Color(0x1AFFFFFF),
                 textColor = textColor,
-                textSize = cfg.dimTextSize
+                textSize = cfg.dimTextSize * 0.7f
             )
         } // end reinforcement table
 
