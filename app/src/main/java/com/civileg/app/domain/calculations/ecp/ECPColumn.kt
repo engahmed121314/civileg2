@@ -148,7 +148,7 @@ class ECPColumn : ColumnDesign {
         
         // P-M interaction safety check: generate diagram and verify (Pu, Mu) is inside
         val interactionDiagram = generateInteractionDiagram(fcu, fy, width, depth, astProvided, numPoints = 30)
-        val pmSafe = checkPMInteraction(axialLoad, momentX, momentY, interactionDiagram)
+        val pmSafe = checkPMInteraction(axialLoad, momentX, momentY, interactionDiagram, axialLoad * minEccentricity / 1000.0)
         
         // Axial capacity as fallback
         val capacity = calculateAxialCapacity(fcu, fy, width, depth, astProvided, loadCombination)
@@ -165,7 +165,7 @@ class ECPColumn : ColumnDesign {
         codeNotes.add(CodeReference.ECP.COLUMN_REINFORCEMENT_MAX)
         codeNotes.add(CodeReference.ECP.COLUMN_COVER)
         codeNotes.add("Cover: ${getMinCover()}mm minimum")
-        codeNotes.add("P-M interaction: ${if (pmSafe) "SAFE" else "UNSAFE"} (e=${"%.1f".format(designEccentricity)}mm)")
+        codeNotes.add("Strain-compatibility P-M check (screening, clause not verified): ${if (pmSafe) "within" else "outside"} the diagram at e=${"%.1f".format(maxOf(designEccentricity, minEccentricity))}mm")
         
         return ReinforcementResult(
             astRequired = requiredSteelArea,
@@ -471,35 +471,20 @@ class ECPColumn : ColumnDesign {
         Pu: Double,  // kN
         Mx: Double,  // kN.m
         My: Double,  // kN.m
-        diagram: List<Pair<Double, Double>>  // (Mu_kNm, Pu_kN) points
+        diagram: List<Pair<Double, Double>>,  // (Mu_kNm, Pu_kN) points
+        minMomentKNm: Double = 0.0  // Pu x minimum eccentricity (ECP 203-2025 Eq 4-11)
     ): Boolean {
         if (diagram.isEmpty()) return true
-        
-        // Resultant moment
-        val Mu = sqrt(Mx * Mx + My * My)
-        
-        // Find the maximum Pu capacity at this Mu level from the diagram
-        // Diagram is (Mu, Pu) pairs — find Pu_capacity where Mu_diagram ≈ Mu
-        var maxPuAtMu = 0.0
-        for (i in 0 until diagram.size - 1) {
-            val (mu1, pu1) = diagram[i]
-            val (mu2, pu2) = diagram[i + 1]
-            // Linear interpolation if Mu falls between mu1 and mu2
-            if ((Mu >= mu1 && Mu <= mu2) || (Mu >= mu2 && Mu <= mu1)) {
-                val t = if (abs(mu2 - mu1) > 1e-9) (Mu - mu1) / (mu2 - mu1) else 0.5
-                maxPuAtMu = pu1 + t * (pu2 - pu1)
-                break
-            }
-            // Track max Pu at or below this Mu
-            if (mu1 <= Mu && pu1 > maxPuAtMu) maxPuAtMu = pu1
-            if (mu2 <= Mu && pu2 > maxPuAtMu) maxPuAtMu = pu2
-        }
-        
-        // Also check the last point
-        val (lastMu, lastPu) = diagram.last()
-        if (lastMu <= Mu && lastPu > maxPuAtMu) maxPuAtMu = lastPu
-        
-        // Safety: Pu must be ≤ maxPuAtMu at this Mu level
+
+        // Resultant moment, never below the minimum-eccentricity moment
+        val Mu = max(sqrt(Mx * Mx + My * My), minMomentKNm)
+
+        // Capacity at this moment = highest axial load among diagram points whose moment is at least Mu.
+        // On the compression branch axial capacity falls as moment rises, so the next point past Mu is
+        // the conservative value; at very small Mu every point qualifies and the pure-compression
+        // end of the diagram governs. (The earlier scan only counted points with moment BELOW Mu, so a
+        // purely axial column at M = 0 got a capacity of 0 and was reported UNSAFE.)
+        val maxPuAtMu = diagram.filter { it.first >= Mu }.maxOfOrNull { it.second } ?: 0.0
         return Pu <= maxPuAtMu * 1.001  // Small tolerance for numerical errors
     }
 }
