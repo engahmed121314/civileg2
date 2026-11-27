@@ -129,7 +129,10 @@ class TankViewModel @Inject constructor(
             vertBarDiaMm = res.wallReinforcement.diameter.toDouble(),
             vertBarSpacingMm = res.wallReinforcement.spacing.toDouble(),
             horizBarDiaMm = res.baseReinforcement.diameter.toDouble(),
-            horizBarSpacingMm = res.baseReinforcement.spacing.toDouble()
+            horizBarSpacingMm = res.baseReinforcement.spacing.toDouble(),
+            underground = res.type.name.contains("UNDERGROUND"),
+            upliftFs = res.factorOfSafetyUplift,
+            upliftLimit = 1.25
         )
     }
 

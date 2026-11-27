@@ -68,6 +68,7 @@ class DxfExporter {
             "SLABS" to 3,
             "FOOTINGS" to 3,
             "WALLS" to 5,
+            "SOIL" to 8,
             "REBAR" to 1,
             "STIRRUPS" to 6,
             "DIMENSIONS" to 2,

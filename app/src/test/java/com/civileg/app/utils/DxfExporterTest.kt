@@ -197,4 +197,25 @@ class DxfExporterTest {
         assertTrue(text.contains("SECTION A-A"))
         assertTrue(text.contains("PLAN"))
     }
+
+    @Test
+    fun tankSheet_undergroundShowsSoilWaterAndUpliftResult() {
+        val drawing = ElementDxfDrawings.tankSheet(
+            "TANK", false, 7000.0, 7000.0, 3500.0, 300.0, 400.0, 40.0, 14.0, 100.0, 12.0, 150.0,
+            underground = true, upliftFs = 1.06, upliftLimit = 1.25
+        )
+        val text = DxfExporter().renderToString(drawing)
+        assertTrue(text.contains("WATER TABLE"))
+        assertTrue(text.contains("UPLIFT: FS = 1.06 vs 1.25"))
+        assertTrue(text.contains("FAILS"))
+    }
+
+    @Test
+    fun tankSheet_undergroundWithoutUpliftSaysNotAssessed() {
+        val drawing = ElementDxfDrawings.tankSheet(
+            "TANK", true, 4460.0, 4460.0, 3500.0, 300.0, 400.0, 40.0, 14.0, 100.0, 12.0, 150.0,
+            underground = true
+        )
+        assertTrue(DxfExporter().renderToString(drawing).contains("UPLIFT: NOT ASSESSED"))
+    }
 }
