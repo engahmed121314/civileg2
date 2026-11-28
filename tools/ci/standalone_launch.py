@@ -111,6 +111,21 @@ def stair_block():
     scroll_up(1); shot("stair-reinf-1")
     for t in ("واجهة", "قطاع"):
         log.append(("stair_tab_" + t, tap_text([t], "stair-tab-" + t, exact=True))); time.sleep(2); shot("stair-tab-" + t)
+    # export: DXF chip on the drawing card, then the PDF report button (files are pulled at the end)
+    try:
+        log.append(("stair_reinf_tab2", tap_text(["تسليح"], "stair-reinf-tab2", exact=True))); time.sleep(2)
+        log.append(("stair_dxf_tap", tap_text(["DXF"], "stair-dxf", exact=True))); time.sleep(5)
+        shot("stair-dxf-after")
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(2)
+        scroll_top(4)
+        pdf_ok = False
+        for _ in range(8):
+            if tap_text(["تقرير PDF", "PDF Report", "PDF"], "stair-pdf-find"): pdf_ok = True; break
+            scroll_up(2)
+        log.append(("stair_pdf_tap", pdf_ok)); time.sleep(8); shot("stair-pdf-after")
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(2)
+    except Exception as e:
+        log.append(("stair_export_exception", repr(e)))
 def stair_unsupported():
     """Re-open Stair, pick the cantilever type (not implemented) and design; capture what is offered."""
     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
@@ -298,9 +313,10 @@ def pile_block():
         log.append(("pile_exception", repr(e)))
 def pull_exported_pdfs():
     ls = adb("shell", "run-as", pkg, "find", ".", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
-    ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf").stdout.decode("utf8", "ignore")
+    ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
+    ls += adb("shell", "find", "/sdcard/Download", "/sdcard/Documents", "-name", "*.dxf", "-o", "-name", "*.pdf").stdout.decode("utf8", "ignore")
     open(f"{out}/pdf-files.txt", "w").write(ls)
-    for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("/sdcard/")][:4]:
+    for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("/sdcard/")][:14]:
         subprocess.run(["adb", "pull", pth, f"{out}/exported-" + os.path.basename(pth)], capture_output=True)
     for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:4]:
         d = adb("shell", "run-as", pkg, "cat", pth).stdout
