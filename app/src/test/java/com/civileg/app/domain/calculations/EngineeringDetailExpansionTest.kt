@@ -290,6 +290,17 @@ class EngineeringDetailExpansionTest {
     }
 
     @Test
+    fun `strap footing steel weight equals the bar schedule total`() {
+        val r = engine.calculateStrapFooting(
+            col1Load = 1500.0, col2Load = 2000.0, distance = 5000.0,
+            col1W = 300.0, col1D = 600.0, col2W = 300.0, col2D = 700.0,
+            soil = 150.0, fcu = 25.0, fy = 360.0, code = DesignCode.ECP, preferredDiameter = 18
+        )
+        val bbs = com.civileg.app.domain.calculations.utils.BbsGenerator.generateStrapFootingBbs("SF", r, 5000.0)
+        assertEquals(bbs.sumOf { it.totalWeightKg }, r.steelWeight, 1e-6)
+    }
+
+    @Test
     fun `ECP tank selected spacing provides at least the required steel unless the bar cap is reached`() {
         // Rounding spacing up used to deliver less steel than required while the bar count looked adequate.
         // A shortfall is only acceptable when the 20 bars/m cap (50 mm spacing) was hit: a genuine failure.
