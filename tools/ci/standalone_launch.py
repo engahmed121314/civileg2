@@ -476,7 +476,7 @@ if os.path.exists("tools/ci/EXPORT_ONLY"):
                 if tap_text(calc, prefix + "-calc"): got = True; break
                 scroll_up(2)
             log.append((prefix + "_calc", got)); time.sleep(3)
-            for kind, words in (("pdf", ["تقرير PDF"]), ("dxf", ["DXF (AutoCAD)", "DXF"])):
+            for kind, words in (("pdf", ["تقرير PDF", "PDF Report", "تصدير تقرير التصميم", "تصدير تقرير"]), ("dxf", ["DXF (AutoCAD)", "DXF"])):
                 hit = False
                 if kind == "pdf": scroll_top(6)
                 for _ in range(14):
@@ -489,6 +489,8 @@ if os.path.exists("tools/ci/EXPORT_ONLY"):
                     for k in range(1, 4):
                         adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
                         shot(prefix + "-pdf-" + str(k))
+                    for k in range(1, 4):
+                        adb("shell", "input", "swipe", "540", "500", "540", "1900", "400"); time.sleep(1)
                 if kind == "dxf" or "com.civileg.app.debug" not in dump(prefix + "-pdf-state"):
                     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(2); dismiss_not_responding()
                 if kind == "dxf":
