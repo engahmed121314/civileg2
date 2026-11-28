@@ -220,32 +220,32 @@ fun StairScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     ValidatedNumberField(form, "fy", fy, stringResource(R.string.stair_fy_mpa), { fy = it; touch("fy") }, Modifier.weight(1f))
-                    ValidatedNumberField(form, "stairWidth", stairWidth, "Width (mm)", { stairWidth = it; touch("stairWidth") }, Modifier.weight(1f))
+                    ValidatedNumberField(form, "stairWidth", stairWidth, stringResource(R.string.st_width), { stairWidth = it; touch("stairWidth") }, Modifier.weight(1f))
                 }
             }
 
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AppText("Support condition / حالة الارتكاز")
+                    AppText(stringResource(R.string.st_support_cond))
                     StairSupportCondition.values().forEach { condition ->
                         FilterChip(
                             selected = supportCondition == condition,
                             onClick = { supportCondition = condition; viewModel.clearResult() },
                             label = { AppText(when (condition) {
-                                StairSupportCondition.UNSPECIFIED -> "Not declared / غير محدد"
-                                StairSupportCondition.SIMPLY_SUPPORTED -> "Simply supported / بسيط الارتكاز"
-                                StairSupportCondition.CONTINUOUS_OVER_LANDING -> "Continuous over landing / مستمر فوق البسطة"
+                                StairSupportCondition.UNSPECIFIED -> stringResource(R.string.st_sup_unspec)
+                                StairSupportCondition.SIMPLY_SUPPORTED -> stringResource(R.string.st_sup_simple)
+                                StairSupportCondition.CONTINUOUS_OVER_LANDING -> stringResource(R.string.st_sup_cont)
                             }) }
                         )
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = landingDeclared, onCheckedChange = { landingDeclared = it; viewModel.clearResult() })
-                        AppText("Declare landing dimensions / تحديد أبعاد البسطة")
+                        AppText(stringResource(R.string.st_declare_landing))
                     }
                     if (landingDeclared) {
-                        ValidatedNumberField(form, "landingLength", landingLength, "Landing length (mm)", { landingLength = it; touch("landingLength") })
-                        ValidatedNumberField(form, "landingWidth", landingWidth, "Landing width (mm)", { landingWidth = it; touch("landingWidth") })
-                        ValidatedNumberField(form, "landingThickness", landingThickness, "Landing thickness (mm)", { landingThickness = it; touch("landingThickness") })
+                        ValidatedNumberField(form, "landingLength", landingLength, stringResource(R.string.st_landing_len), { landingLength = it; touch("landingLength") })
+                        ValidatedNumberField(form, "landingWidth", landingWidth, stringResource(R.string.st_landing_w), { landingWidth = it; touch("landingWidth") })
+                        ValidatedNumberField(form, "landingThickness", landingThickness, stringResource(R.string.st_landing_t), { landingThickness = it; touch("landingThickness") })
                     }
                 }
             }
@@ -327,7 +327,7 @@ fun StairScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 AppText(
-                                    "No analysis model for this stair case. This is NOT a design for this case and no results are shown. Results, drawing, quantities, saving and PDF are not offered. / لا يوجد نموذج تحليل لهذه الحالة. هذه ليست تصميمًا لهذه الحالة ولا تُعرض نتائج، والنتائج والرسم والكميات والحفظ وPDF غير متاحة.",
+                                    stringResource(R.string.st_no_model),
                                     color = Color(0xFFC62828), fontWeight = FontWeight.Bold
                                 )
                             }
@@ -370,17 +370,17 @@ fun StairScreen(
                                         Spacer(Modifier.width(8.dp))
                                         AppText(
                                             when (cardState) {
-                                                com.civileg.app.domain.calculations.base.FlexureCardState.EXCEEDS_LIMIT -> "Flexure check exceeds its limit"
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.EXCEEDS_LIMIT -> stringResource(R.string.st_flex_exceeds)
                                                 com.civileg.app.domain.calculations.base.FlexureCardState.PRELIMINARY -> stringResource(R.string.design_caution)
-                                                com.civileg.app.domain.calculations.base.FlexureCardState.UNAVAILABLE -> "Flexure ratio unavailable"
-                                                com.civileg.app.domain.calculations.base.FlexureCardState.WITHIN_LIMIT -> "Flexure check within its limit"
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.UNAVAILABLE -> stringResource(R.string.st_flex_unavail)
+                                                com.civileg.app.domain.calculations.base.FlexureCardState.WITHIN_LIMIT -> stringResource(R.string.st_flex_within)
                                             },
                                             fontWeight = FontWeight.Bold,
                                             color = ecoColor
                                         )
                                     }
                                     AppText(
-                                        if (res.flexureRatio == null) "No assessed flexure row: no ratio is shown"
+                                        if (res.flexureRatio == null) stringResource(R.string.st_flex_none)
                                         else "One flexure check (${res.flexureRatioBasis}), not an overall utilization or acceptance",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -417,21 +417,21 @@ fun StairScreen(
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            AppText("Code acceptance incomplete / قبول التصميم غير مكتمل", color = MaterialTheme.colorScheme.error)
-                            ResultRow("Analysis status", res.analysisStatus.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() })
+                            AppText(stringResource(R.string.st_code_incomplete), color = MaterialTheme.colorScheme.error)
+                            ResultRow(stringResource(R.string.st_analysis_status), res.analysisStatus.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() })
                             ResultRow("Support", res.supportCondition.name)
                             AppText(res.documentaryBasisLabel)
                             AppText(res.barMaterialClassification)
-                            AppText("Top and landing reinforcement are not designed / تسليح البسطة والحديد العلوي غير مصممين")
+                            AppText(stringResource(R.string.st_top_not_designed))
                             if (designUsable) {
                             ResultRow(stringResource(R.string.stair_slab_thickness), "${res.thickness.toInt()} mm")
                             ResultRow(stringResource(R.string.stair_main_reinforcement), res.reinforcement.barString)
                             ResultRow(stringResource(R.string.stair_distribution_reinforcement), res.distributionReinforcement.barString)
                             ResultRow("Mu", "${"%.1f".format(res.mu)} kN.m")
-                            ResultRow("Concrete Volume", "${"%.3f".format(res.concreteVolume)} m³")
-                            AppText("Final steel and fabrication BBS unavailable: anchorage, bends, laps, top and landing steel unresolved")
-                            ResultRow("Net flight steel only", "${"%.1f".format(res.steelWeight)} kg")
-                            ResultRow("Partial material cost, not procurement total", "${"%.2f".format(res.cost)}")
+                            ResultRow(stringResource(R.string.st_conc_vol), "${"%.3f".format(res.concreteVolume)} m³")
+                            AppText(stringResource(R.string.st_bbs_unavail))
+                            ResultRow(stringResource(R.string.st_net_steel), "${"%.1f".format(res.steelWeight)} kg")
+                            ResultRow(stringResource(R.string.st_partial_cost), "${"%.2f".format(res.cost)}")
                             }
                         }
                     }
@@ -439,7 +439,7 @@ fun StairScreen(
 
                 if (designUsable) {
                 if (res.calculationSteps.isNotEmpty()) {
-                    item { CalculationStepsCard(res.calculationSteps, title = "Stair Calculation Steps") }
+                    item { CalculationStepsCard(res.calculationSteps, title = stringResource(R.string.st_calc_steps)) }
 
                     val bbsEntries = runCatching {
                         BbsGenerator.generateStairBbs(
@@ -449,7 +449,7 @@ fun StairScreen(
                         )
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty() && res.analysisStatus != com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE) {
-                        item { BbsTableCard(bbsEntries, title = "Stair Bar Bending Schedule") }
+                        item { BbsTableCard(bbsEntries, title = stringResource(R.string.st_bbs_title)) }
                     }
 
                     val boqRows = runCatching {
@@ -460,7 +460,7 @@ fun StairScreen(
                         )
                     }.getOrDefault(emptyList())
                     if (boqRows.isNotEmpty()) {
-                        if (res.analysisStatus != com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE) item { BoqTableCard(boqRows, title = "Stair Bill of Quantities") }
+                        if (res.analysisStatus != com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE) item { BoqTableCard(boqRows, title = stringResource(R.string.st_boq_title)) }
                     }
                 }
 
@@ -1085,7 +1085,7 @@ private fun StairReinforcementDrawing(res: CalculatorEngine.StairResult, modifie
 private fun StairFormulasCard(result:CalculatorEngine.StairResult) {
     Card(modifier=Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f))) {
         Column(modifier=Modifier.padding(12.dp)) {
-            AppText("Applied calculation trace only. Selected-reference coverage incomplete.")
+            AppText(stringResource(R.string.st_trace_only))
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr) {
                 result.calculationSteps.forEach { step ->
                     FormulaItem("${step.stepNumber}. ${step.formula}")

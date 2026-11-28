@@ -2597,4 +2597,29 @@
     <string name="bx_h_shape" formatted="false">Shape</string>
     <string name="bx_h_len" formatted="false">Length</string>
     <string name="bx_h_wt" formatted="false">Weight</string>
+    <string name="st_width" formatted="false">Width (mm)</string>
+    <string name="st_support_cond" formatted="false">Support condition</string>
+    <string name="st_sup_unspec" formatted="false">Not declared</string>
+    <string name="st_sup_simple" formatted="false">Simply supported</string>
+    <string name="st_sup_cont" formatted="false">Continuous over landing</string>
+    <string name="st_declare_landing" formatted="false">Declare landing dimensions</string>
+    <string name="st_landing_len" formatted="false">Landing length (mm)</string>
+    <string name="st_landing_w" formatted="false">Landing width (mm)</string>
+    <string name="st_landing_t" formatted="false">Landing thickness (mm)</string>
+    <string name="st_no_model" formatted="false">No analysis model for this stair case. This is NOT a design for this case and no results are shown. Results, drawing, quantities, saving and PDF are not offered.</string>
+    <string name="st_flex_exceeds" formatted="false">Flexure check exceeds its limit</string>
+    <string name="st_flex_unavail" formatted="false">Flexure ratio unavailable</string>
+    <string name="st_flex_within" formatted="false">Flexure check within its limit</string>
+    <string name="st_flex_none" formatted="false">No assessed flexure row: no ratio is shown</string>
+    <string name="st_code_incomplete" formatted="false">Code acceptance incomplete</string>
+    <string name="st_top_not_designed" formatted="false">Top and landing reinforcement are not designed</string>
+    <string name="st_bbs_unavail" formatted="false">Final steel and fabrication BBS unavailable: anchorage, bends, laps, top and landing steel unresolved</string>
+    <string name="st_analysis_status" formatted="false">Analysis status</string>
+    <string name="st_conc_vol" formatted="false">Concrete volume</string>
+    <string name="st_net_steel" formatted="false">Net flight steel only</string>
+    <string name="st_partial_cost" formatted="false">Partial material cost, not procurement total</string>
+    <string name="st_calc_steps" formatted="false">Stair calculation steps</string>
+    <string name="st_bbs_title" formatted="false">Stair bar bending schedule</string>
+    <string name="st_boq_title" formatted="false">Stair bill of quantities</string>
+    <string name="st_trace_only" formatted="false">Applied calculation trace only. Selected-reference coverage incomplete.</string>
 </resources>
