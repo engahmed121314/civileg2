@@ -212,7 +212,7 @@ fun ProfessionalTankDrawing(
 
         if (viewMode == 0) {
             drawSectionSeparator(
-                y = ch * 0.65f,
+                y = ch * 0.64f - cfg.annotationTextSmall * 1.6f, // the label's text height sits above the table top (0.64 ch)
                 width = cw,
                 label = "REINFORCEMENT",
                 cfg = cfg
