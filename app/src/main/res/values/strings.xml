@@ -2669,4 +2669,12 @@
     <string name="stp_unsafe" formatted="false">UNSAFE</string>
     <string name="stp_safe" formatted="false">SAFE</string>
     <string name="stp_mm2_at" formatted="false">mm²/m at </string>
+    <string name="stp_stem_moment" formatted="false">Stem Moment</string>
+    <string name="stp_stem_steel" formatted="false">Stem Steel</string>
+    <string name="stp_overturning" formatted="false">Overturning Stability</string>
+    <string name="stp_sliding" formatted="false">Sliding Stability</string>
+    <string name="stp_bearing" formatted="false">Bearing Pressure</string>
+    <string name="stp_shear_key" formatted="false">Add shear key</string>
+    <string name="stp_with_min" formatted="false">with minimum</string>
+    <string name="strap_reactions_label">Reactions (R1, R2)</string>
 </resources>

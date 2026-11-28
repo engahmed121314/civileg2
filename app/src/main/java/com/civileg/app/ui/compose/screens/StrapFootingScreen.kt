@@ -459,7 +459,7 @@ fun StrapFootingResultCard(res: CalculatorEngine.StrapFootingResult) {
             
             Spacer(Modifier.height(8.dp))
             
-            ResultRow("Reactions (R1, R2)", "${res.reactions.first.toInt()}, ${res.reactions.second.toInt()} kN")
+            ResultRow(stringResource(R.string.strap_reactions_label), "${res.reactions.first.toInt()}, ${res.reactions.second.toInt()} kN")
             
             Spacer(Modifier.height(8.dp))
             

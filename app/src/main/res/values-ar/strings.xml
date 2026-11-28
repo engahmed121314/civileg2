@@ -2672,4 +2672,12 @@
     <string name="stp_unsafe" formatted="false">غير آمن</string>
     <string name="stp_safe" formatted="false">آمن</string>
     <string name="stp_mm2_at" formatted="false">مم²/م عند </string>
+    <string name="stp_stem_moment" formatted="false">عزم الجذع</string>
+    <string name="stp_stem_steel" formatted="false">حديد الجذع</string>
+    <string name="stp_overturning" formatted="false">الثبات ضد الانقلاب</string>
+    <string name="stp_sliding" formatted="false">الثبات ضد الانزلاق</string>
+    <string name="stp_bearing" formatted="false">ضغط التربة</string>
+    <string name="stp_shear_key" formatted="false">أضف مفتاح قص</string>
+    <string name="stp_with_min" formatted="false">مع الحد الأدنى</string>
+    <string name="strap_reactions_label">ردود الأفعال (R1، R2)</string>
 </resources>

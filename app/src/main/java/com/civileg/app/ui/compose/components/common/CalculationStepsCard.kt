@@ -93,6 +93,13 @@ fun CalculationStepsCard(
 private fun rememberStepLocalizer(): (String) -> String {
     if (!isArabicUi()) return { it }
     val pairs = listOf(
+        "Stem Moment" to stringResource(R.string.stp_stem_moment),
+        "Stem Steel" to stringResource(R.string.stp_stem_steel),
+        "Overturning Stability" to stringResource(R.string.stp_overturning),
+        "Sliding Stability" to stringResource(R.string.stp_sliding),
+        "Bearing Pressure" to stringResource(R.string.stp_bearing),
+        "Add shear key" to stringResource(R.string.stp_shear_key),
+        "with minimum" to stringResource(R.string.stp_with_min),
         "Base punching shear (surrogate)" to stringResource(R.string.stp_punching),
         "Tank Geometry" to stringResource(R.string.stp_geometry),
         "Water Pressure" to stringResource(R.string.stp_pressure),
