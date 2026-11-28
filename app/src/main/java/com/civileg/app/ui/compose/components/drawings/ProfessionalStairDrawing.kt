@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.toArgb
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.DesignCode
 import androidx.compose.ui.unit.dp
+import com.civileg.app.ui.compose.components.drawings.drawTextAnnotated as drawTextShared
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.max
@@ -257,7 +258,7 @@ fun ProfessionalStairDrawing(
             var y = tableTop + textSize
             fun line(value: String) {
                 // Arabic lines go through the shared bidi-aware drawing (right-aligned); bold = false selects it.
-                com.civileg.app.ui.compose.components.drawings.drawTextAnnotated(value, left, y, DimensionWhite, textSize, center = false, bold = false)
+                drawTextShared(value, left, y, DimensionWhite, textSize, center = false, bold = false)
                 y += textSize * 1.6f
             }
             val lri = "\u2066"
@@ -286,10 +287,10 @@ fun ProfessionalStairDrawing(
         // overprinted each other and were clipped on a phone-width canvas.
         val footerY = ch - cfg.margin * 2.2f
         val sheetBasis = if (documentaryBasisLabel != null) documentaryBasisLabel.substringAfter("Reference supplied: ").substringBefore(';') + " | REVIEW ONLY" else codeLabel
-        com.civileg.app.ui.compose.components.drawings.drawTextAnnotated(dwgFooterFmt.format("\u2066" + sheetBasis + "\u2069"), cfg.margin, footerY,
+        drawTextShared(dwgFooterFmt.format("\u2066" + sheetBasis + "\u2069"), cfg.margin, footerY,
             DimensionWhite, cfg.annotationTextSmall, center = false, bold = false)
         resultSummary?.let { summary ->
-            com.civileg.app.ui.compose.components.drawings.drawTextAnnotated(dwgChecksFmt.format("\u2066" + summary.safetyLabel + "\u2069"),
+            drawTextShared(dwgChecksFmt.format("\u2066" + summary.safetyLabel + "\u2069"),
                 cfg.margin, footerY + cfg.annotationTextSmall * 1.3f,
                 DimensionWhite, cfg.annotationTextSmall, center = false, bold = false)
         }

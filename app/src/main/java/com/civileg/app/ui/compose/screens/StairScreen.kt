@@ -616,8 +616,6 @@ fun StairScreen(
                                 mainRebarSpacing = res.reinforcement.spacing,
                                 topRebarDia = stairBarOf(res.flightTopRebar).first,
                                 topRebarSpacing = stairBarOf(res.flightTopRebar).second,
-                                topRebarDia = stairBarOf(res.flightTopRebar).first,
-                        topRebarSpacing = stairBarOf(res.flightTopRebar).second,
                         distributionDia = res.distributionReinforcement.diameter.toDouble(),
                                 distributionSpacing = res.distributionReinforcement.spacing,
                                 cover = codeAwareCover,
@@ -1199,7 +1197,7 @@ private fun StairStepsArabic(res: CalculatorEngine.StairResult) {
                     AppText("${i + 1}. $title", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Start)
                     AppText(body, fontSize = 13.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Start)
                 }
-                AppText(stringResource(R.string.st_reference_label), fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+                AppText(stringResource(R.string.st_reference_label), modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Start)
             }
         }
     }
