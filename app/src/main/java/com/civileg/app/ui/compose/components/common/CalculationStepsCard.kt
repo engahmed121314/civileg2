@@ -190,7 +190,7 @@ private fun StepRow(step: CalculationStep) {
             }
             if (step.formulaWithValues.isNotBlank()) {
                 AppTextBlock(
-                    text = loc(step.formulaWithValues),
+                    text = loc(step.formulaWithValues).let { if (isArabicUi() && it.any { c -> c in '\u0600'..'\u06FF' }) "\u2066" + it + "\u2069" else it },
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurface
