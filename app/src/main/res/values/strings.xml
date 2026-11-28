@@ -2644,4 +2644,29 @@
     <string name="tk_boq_title" formatted="false">Tank bill of quantities</string>
     <string name="bx_indicative" formatted="false">indicative ratio, not designed bars</string>
     <string name="chk_st_geo_prefix" formatted="false">Geometry limit:</string>
+    <string name="beam_eq_1" formatted="false">1. Mu = (w_ult * L²) / Factor (Structural Analysis)</string>
+    <string name="beam_eq_2" formatted="false">2. d = h - Concrete Cover</string>
+    <string name="beam_eq_3" formatted="false">3. R = Mu / (fcu/gamma_c * b * d²)</string>
+    <string name="beam_eq_4" formatted="false">4. As = Mu / (fy/gamma_s * j * d)</string>
+    <string name="beam_eq_5" formatted="false">5. Check Shear: q_u = Vu / (b * d) &lt; q_cu_limit</string>
+    <string name="stp_punching" formatted="false">Base punching shear (surrogate)</string>
+    <string name="stp_geometry" formatted="false">Tank Geometry</string>
+    <string name="stp_pressure" formatted="false">Water Pressure</string>
+    <string name="stp_wall_t" formatted="false">Wall Thickness</string>
+    <string name="stp_wall_r" formatted="false">Wall Reinforcement</string>
+    <string name="stp_base_r" formatted="false">Base Reinforcement</string>
+    <string name="stp_safety" formatted="false">Safety Checks</string>
+    <string name="stp_flex_shear_crack" formatted="false">Flexure · shear · crack width</string>
+    <string name="stp_punch_note" formatted="false">Applicability, load model and critical perimeter unverified; no verdict</string>
+    <string name="stp_not_assessed_lc" formatted="false">Not assessed</string>
+    <string name="stp_not_assessed" formatted="false">NOT ASSESSED</string>
+    <string name="stp_t_min" formatted="false">t ≥ tmin (code crack/serviceability)</string>
+    <string name="stp_at_depth" formatted="false">at water depth</string>
+    <string name="stp_checks_passed" formatted="false">checks passed</string>
+    <string name="stp_provided" formatted="false">mm²/m; provided</string>
+    <string name="stp_spacing" formatted="false">mm spacing</string>
+    <string name="stp_edition" formatted="false">(edition not verified)</string>
+    <string name="stp_unsafe" formatted="false">UNSAFE</string>
+    <string name="stp_safe" formatted="false">SAFE</string>
+    <string name="stp_mm2_at" formatted="false">mm²/m at </string>
 </resources>

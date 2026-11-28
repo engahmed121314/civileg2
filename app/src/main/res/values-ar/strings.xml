@@ -2647,4 +2647,29 @@
     <string name="tk_boq_title" formatted="false">حصر كميات الخزان</string>
     <string name="bx_indicative" formatted="false">نسبة تقديرية وليست أسياخًا مصممة</string>
     <string name="chk_st_geo_prefix" formatted="false">حد هندسي:</string>
+    <string name="beam_eq_1" formatted="false">1. العزم ⁦Mu = (w_ult × L²)⁩ ÷ المعامل (التحليل الإنشائي)</string>
+    <string name="beam_eq_2" formatted="false">2. العمق الفعال ⁦d = h⁩ - الغطاء الخرساني</string>
+    <string name="beam_eq_3" formatted="false">3. ⁦R = Mu / (fcu/γc × b × d²)⁩</string>
+    <string name="beam_eq_4" formatted="false">4. ⁦As = Mu / (fy/γs × j × d)⁩</string>
+    <string name="beam_eq_5" formatted="false">5. فحص القص: ⁦q_u = Vu / (b × d) &lt; q_cu_limit⁩</string>
+    <string name="stp_punching" formatted="false">قص الثقب للقاعدة (تقريبي)</string>
+    <string name="stp_geometry" formatted="false">هندسة الخزان</string>
+    <string name="stp_pressure" formatted="false">ضغط الماء</string>
+    <string name="stp_wall_t" formatted="false">سمك الحائط</string>
+    <string name="stp_wall_r" formatted="false">تسليح الحائط</string>
+    <string name="stp_base_r" formatted="false">تسليح القاعدة</string>
+    <string name="stp_safety" formatted="false">فحوصات الأمان</string>
+    <string name="stp_flex_shear_crack" formatted="false">الانحناء · القص · عرض الشرخ</string>
+    <string name="stp_punch_note" formatted="false">نطاق التطبيق ونموذج الحمل والمحيط الحرج غير متحقق منها؛ لا يوجد حكم</string>
+    <string name="stp_not_assessed_lc" formatted="false">لم يُقيَّم</string>
+    <string name="stp_not_assessed" formatted="false">لم يُقيَّم</string>
+    <string name="stp_t_min" formatted="false">t ≥ tmin (حد الكود للشروخ/التشغيل)</string>
+    <string name="stp_at_depth" formatted="false">عند عمق ماء</string>
+    <string name="stp_checks_passed" formatted="false">فحوصات ناجحة</string>
+    <string name="stp_provided" formatted="false">مم²/م؛ المتوفر</string>
+    <string name="stp_spacing" formatted="false">مم تباعد</string>
+    <string name="stp_edition" formatted="false">(الإصدار لم يُتحقق منه)</string>
+    <string name="stp_unsafe" formatted="false">غير آمن</string>
+    <string name="stp_safe" formatted="false">آمن</string>
+    <string name="stp_mm2_at" formatted="false">مم²/م عند </string>
 </resources>

@@ -33,6 +33,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.civileg.app.R
 import com.civileg.app.domain.entities.CalculationStep
 import com.civileg.app.domain.entities.StepStatus
 
@@ -85,8 +87,44 @@ fun CalculationStepsCard(
     }
 }
 
+
+/** Display-only Arabic rendering of engine step text; engine strings stay English keys. */
+@Composable
+private fun rememberStepLocalizer(): (String) -> String {
+    if (!isArabicUi()) return { it }
+    val pairs = listOf(
+        "Base punching shear (surrogate)" to stringResource(R.string.stp_punching),
+        "Tank Geometry" to stringResource(R.string.stp_geometry),
+        "Water Pressure" to stringResource(R.string.stp_pressure),
+        "Wall Thickness" to stringResource(R.string.stp_wall_t),
+        "Wall Reinforcement" to stringResource(R.string.stp_wall_r),
+        "Base Reinforcement" to stringResource(R.string.stp_base_r),
+        "Safety Checks" to stringResource(R.string.stp_safety),
+        "Flexure · shear · crack width" to stringResource(R.string.stp_flex_shear_crack),
+        "Applicability, load model and critical perimeter unverified; no verdict" to stringResource(R.string.stp_punch_note),
+        "Not assessed" to stringResource(R.string.stp_not_assessed_lc),
+        "NOT ASSESSED" to stringResource(R.string.stp_not_assessed),
+        "t ≥ tmin (code crack/serviceability)" to stringResource(R.string.stp_t_min),
+        "at water depth" to stringResource(R.string.stp_at_depth),
+        "checks passed" to stringResource(R.string.stp_checks_passed),
+        "mm²/m; provided" to stringResource(R.string.stp_provided),
+        "mm²/m at " to stringResource(R.string.stp_mm2_at),
+        "mm spacing" to stringResource(R.string.stp_spacing),
+        "(edition not verified)" to stringResource(R.string.stp_edition)
+    )
+    val unsafe = stringResource(R.string.stp_unsafe)
+    val safe = stringResource(R.string.stp_safe)
+    return { text ->
+        var out = text
+        pairs.forEach { (en, ar) -> out = out.replace(en, ar) }
+        out = Regex("\\bUNSAFE\\b").replace(out, unsafe)
+        Regex("\\bSAFE\\b").replace(out, safe)
+    }
+}
+
 @Composable
 private fun StepRow(step: CalculationStep) {
+    val loc = rememberStepLocalizer()
     val statusColor = when (step.status) {
         StepStatus.CHECK_PASS -> Color(0xFF2E7D32)
         StepStatus.CHECK_FAIL -> MaterialTheme.colorScheme.error
@@ -115,7 +153,7 @@ private fun StepRow(step: CalculationStep) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AppText(
-                    text = step.title,
+                    text = loc(step.title),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -137,7 +175,7 @@ private fun StepRow(step: CalculationStep) {
             }
             if (step.formula.isNotBlank()) {
                 AppTextBlock(
-                    text = step.formula,
+                    text = loc(step.formula),
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -145,7 +183,7 @@ private fun StepRow(step: CalculationStep) {
             }
             if (step.formulaWithValues.isNotBlank()) {
                 AppTextBlock(
-                    text = step.formulaWithValues,
+                    text = loc(step.formulaWithValues),
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurface
@@ -153,7 +191,7 @@ private fun StepRow(step: CalculationStep) {
             }
             AppTextBlock(
                 text = buildString {
-                    append(step.result)
+                    append(loc(step.result))
                     if (step.unit.isNotBlank()) append("  [${step.unit}]")
                 },
                 fontSize = 12.sp,
@@ -162,7 +200,7 @@ private fun StepRow(step: CalculationStep) {
             )
             if (step.codeReference.isNotBlank()) {
                 AppTextBlock(
-                    text = step.codeReference,
+                    text = loc(step.codeReference),
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
