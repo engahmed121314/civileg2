@@ -79,8 +79,8 @@ fun BbsTableCard(
                     Cell(entry.barMark, 0.5f, TextAlign.Start)
                     Cell("Ø${entry.diameter}", 0.6f)
                     Cell("${entry.shapeCode}", 0.5f)
-                    Cell("${entry.count}", 0.5f)
-                    Cell("${format(entry.totalLengthPerBar / 1000.0)} m", 0.9f)
+                    Cell("${entry.count}", 0.5f, TextAlign.Center)
+                    Cell("${format(entry.totalLengthPerBar / 1000.0)} m", 0.9f, TextAlign.Center)
                     Cell("${format(entry.totalWeightKg)} kg", 1.0f)
                 }
             }
@@ -92,7 +92,7 @@ fun BbsTableCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                AppText("Total", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                AppText(if (isArabicUi()) stringResource(R.string.bx_total) else "Total", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 AppText(
                     "${format(totalWeight)} kg",
                     fontSize = 12.sp,
@@ -111,8 +111,8 @@ private fun HeaderRow() {
         Cell(if (ar) stringResource(R.string.bx_h_bar) else "Bar", 0.5f, TextAlign.Start, bold = true)
         Cell("Ø", 0.6f, bold = true)
         Cell(if (ar) stringResource(R.string.bx_h_shape) else "Shape", 0.5f, bold = true)
-        Cell(if (ar) stringResource(R.string.bx_h_qty) else "Qty", 0.5f, bold = true)
-        Cell(if (ar) stringResource(R.string.bx_h_len) else "Length", 0.9f, bold = true)
+        Cell(if (ar) stringResource(R.string.bx_h_qty) else "Qty", 0.5f, TextAlign.Center, bold = true)
+        Cell(if (ar) stringResource(R.string.bx_h_len) else "Length", 0.9f, TextAlign.Center, bold = true)
         Cell(if (ar) stringResource(R.string.bx_h_wt) else "Weight", 1.0f, bold = true)
     }
 }

@@ -2622,4 +2622,5 @@
     <string name="st_bbs_title" formatted="false">Stair bar bending schedule</string>
     <string name="st_boq_title" formatted="false">Stair bill of quantities</string>
     <string name="st_trace_only" formatted="false">Applied calculation trace only. Selected-reference coverage incomplete.</string>
+    <string name="bx_total" formatted="false">Total</string>
 </resources>

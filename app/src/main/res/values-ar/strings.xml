@@ -2625,4 +2625,5 @@
     <string name="st_bbs_title" formatted="false">جدول قص وثني حديد السلم</string>
     <string name="st_boq_title" formatted="false">حصر كميات السلم</string>
     <string name="st_trace_only" formatted="false">أثر الحساب المُطبَّق فقط. تغطية المرجع المختار غير مكتملة.</string>
+    <string name="bx_total" formatted="false">الإجمالي</string>
 </resources>
