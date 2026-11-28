@@ -28,8 +28,10 @@ def tap_text(words, name, exact=False):
         ns = nodes(x)
         if exact: ns = sorted(ns, key=lambda nb: -nb[1][1])  # bottom-most first (tab bar)
         for t, b in ns:
+            if b[2] - b[0] <= 0 or b[3] - b[1] <= 0: continue  # zero-area accessibility nodes would tap (0,0)
             lab = t.split("|")[0].strip()
-            if (lab in words) if exact else any(w in t for w in words):
+            lab2 = t.split("|")[1].strip() if "|" in t else ""
+            if (lab in words or lab2 in words) if exact else any(w in t for w in words):
                 adb("shell", "input", "tap", str((b[0]+b[2])//2), str((b[1]+b[3])//2))
                 time.sleep(2); return True
         time.sleep(1)
