@@ -472,7 +472,10 @@ fun StairScreen(
 
                 if (designUsable) {
                 if (res.calculationSteps.isNotEmpty()) {
-                    item { CalculationStepsCard(res.calculationSteps, title = stringResource(R.string.st_calc_steps)) }
+                    item {
+                        if (com.civileg.app.ui.compose.components.common.isArabicUi()) StairStepsArabic(res)
+                        else CalculationStepsCard(res.calculationSteps, title = stringResource(R.string.st_calc_steps))
+                    }
 
                     val bbsEntries = runCatching {
                         BbsGenerator.generateStairBbs(
@@ -1162,5 +1165,36 @@ private fun SectionHeader(title: String, iconRes: Int) {
         Icon(painterResource(id = iconRes), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
         Spacer(modifier = Modifier.width(8.dp))
         AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+    }
+}
+
+
+/** Arabic, right-aligned steps card built from the result values (engine keeps its English keys). */
+@Composable
+private fun StairStepsArabic(res: CalculatorEngine.StairResult) {
+    val failed = res.safetyChecks.count { !it.isSafe && !it.notAssessed }
+    val notAssessed = res.safetyChecks.count { it.notAssessed }
+    val passed = res.safetyChecks.count { it.isSafe }
+    val lines = listOf(
+        stringResource(R.string.sta_s1_title) to stringResource(R.string.sta_s1_body, res.riser.toInt(), res.tread.toInt(), res.thickness.toInt()),
+        stringResource(R.string.sta_s2_title) to stringResource(R.string.sta_s2_body, "%.2f".format(java.util.Locale.US, res.wu)),
+        stringResource(R.string.sta_s3_title) to stringResource(R.string.sta_s3_body, "%.1f".format(java.util.Locale.US, res.mu)),
+        stringResource(R.string.sta_s4_title) to stringResource(R.string.sta_s4_body, res.reinforcement.barString),
+        stringResource(R.string.sta_s5_title) to stringResource(R.string.sta_s5_body, res.flightTopRebar.ifBlank { "-" }),
+        stringResource(R.string.sta_s6_title) to stringResource(R.string.sta_s6_body, res.distributionReinforcement.barString),
+        stringResource(R.string.sta_s7_title) to stringResource(R.string.sta_s7_body, res.landingRebar.ifBlank { "-" }),
+        stringResource(R.string.sta_s8_title) to stringResource(R.string.sta_s8_body, passed, failed, notAssessed)
+    )
+    CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppText(stringResource(R.string.st_calc_steps), fontWeight = FontWeight.Bold)
+                lines.forEachIndexed { i, (title, body) ->
+                    AppText("${i + 1}. $title", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+                    AppText(body, fontSize = 13.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+                }
+                AppText(stringResource(R.string.st_reference_label), fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+            }
+        }
     }
 }

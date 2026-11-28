@@ -2734,4 +2734,27 @@
     <string name="st_bot_sp" formatted="false">تباعد الحديد السفلي (مم)</string>
     <string name="st_top_dia" formatted="false">قطر الحديد العلوي (مم)</string>
     <string name="st_top_sp" formatted="false">تباعد الحديد العلوي (مم)</string>
+    <string name="sta_s1_title">الأبعاد</string>
+    <string name="sta_s1_body">ارتفاع القائمة %1$d مم، عرض النائمة %2$d مم، سمك البلاطة المائلة %3$d مم (اختاره البرنامج)</string>
+    <string name="sta_s2_title">الحمل المصعّد</string>
+    <string name="sta_s2_body">wu = ‏⁦%1$s⁩ كن/م²</string>
+    <string name="sta_s3_title">عزم التصميم</string>
+    <string name="sta_s3_body">Mu = ‏⁦%1$s⁩ كن.م/م</string>
+    <string name="sta_s4_title">الحديد السفلي الرئيسي</string>
+    <string name="sta_s4_body">‏⁦%1$s⁩</string>
+    <string name="sta_s5_title">الحديد العلوي عند الركائز</string>
+    <string name="sta_s5_body">‏⁦%1$s⁩</string>
+    <string name="sta_s6_title">حديد التوزيع</string>
+    <string name="sta_s6_body">‏⁦%1$s⁩</string>
+    <string name="sta_s7_title">حديد البسطة (أولي)</string>
+    <string name="sta_s7_body">‏⁦%1$s⁩</string>
+    <string name="sta_s8_title">الفحوصات المنفّذة (ليست قبولاً كودياً)</string>
+    <string name="sta_s8_body">نجح %1$d، فشل %2$d، لم يُقيَّم %3$d. القبول الكودي غير مكتمل.</string>
+    <string name="st_dwg_net_title" formatted="false">صافي طول السيخ داخل القلبة للمراجعة فقط، وليس أطوال القص</string>
+    <string name="st_dwg_main" formatted="false">الرئيسي: %1$d سيخ بقطر %2$s، الطول الصافي %3$d مم</string>
+    <string name="st_dwg_dist" formatted="false">التوزيع: %1$d سيخ بقطر %2$s، الطول الصافي %3$d مم</string>
+    <string name="st_dwg_not_bars" formatted="false">لا تشمل الثنيات والكانات والوصلات ولا نهايات الركائز</string>
+    <string name="st_dwg_final" formatted="false">جدول الحديد النهائي للتنفيذ غير متاح</string>
+    <string name="st_dwg_footer" formatted="false">سلم | %1$s | للمراجعة فقط | بدون مقياس</string>
+    <string name="st_dwg_checks" formatted="false">الفحوصات المنفّذة: %1$s، والمراجعة مطلوبة</string>
 </resources>

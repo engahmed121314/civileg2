@@ -2731,4 +2731,27 @@
     <string name="st_bot_sp" formatted="false">Bottom bar spacing (mm)</string>
     <string name="st_top_dia" formatted="false">Top bar diameter (mm)</string>
     <string name="st_top_sp" formatted="false">Top bar spacing (mm)</string>
+    <string name="sta_s1_title">Geometry</string>
+    <string name="sta_s1_body">Riser %1$d mm, tread %2$d mm, waist %3$d mm (chosen by the app)</string>
+    <string name="sta_s2_title">Factored load</string>
+    <string name="sta_s2_body">wu = %1$s kN/m2</string>
+    <string name="sta_s3_title">Design moment</string>
+    <string name="sta_s3_body">Mu = %1$s kN.m/m</string>
+    <string name="sta_s4_title">Bottom main steel</string>
+    <string name="sta_s4_body">%1$s</string>
+    <string name="sta_s5_title">Top steel at supports</string>
+    <string name="sta_s5_body">%1$s</string>
+    <string name="sta_s6_title">Distribution steel</string>
+    <string name="sta_s6_body">%1$s</string>
+    <string name="sta_s7_title">Landing steel (preliminary)</string>
+    <string name="sta_s7_body">%1$s</string>
+    <string name="sta_s8_title">Implemented checks (not code acceptance)</string>
+    <string name="sta_s8_body">Passed %1$d, failed %2$d, not assessed %3$d. Code acceptance is incomplete.</string>
+    <string name="st_dwg_net_title" formatted="false">Net bar length inside the flight, for review only, not cutting lengths</string>
+    <string name="st_dwg_main" formatted="false">Main: %1$d bars, dia %2$s, net length %3$d mm</string>
+    <string name="st_dwg_dist" formatted="false">Distribution: %1$d bars, dia %2$s, net length %3$d mm</string>
+    <string name="st_dwg_not_bars" formatted="false">Excludes bends, links, laps and support ends</string>
+    <string name="st_dwg_final" formatted="false">Final fabrication schedule not available</string>
+    <string name="st_dwg_footer" formatted="false">Stair | %1$s | review only | NTS</string>
+    <string name="st_dwg_checks" formatted="false">Implemented checks: %1$s, review required</string>
 </resources>
