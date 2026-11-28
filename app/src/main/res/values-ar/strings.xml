@@ -2626,4 +2626,20 @@
     <string name="st_boq_title" formatted="false">حصر كميات السلم</string>
     <string name="st_trace_only" formatted="false">أثر الحساب المُطبَّق فقط. تغطية المرجع المختار غير مكتملة.</string>
     <string name="bx_total" formatted="false">الإجمالي</string>
+    <string name="chk_st_waist" formatted="false">سمك البلاطة المائلة</string>
+    <string name="chk_st_case_support" formatted="false">دعم نموذج الحالة</string>
+    <string name="chk_st_flexure" formatted="false">الانحناء (K ≤ Rmax/γc، جدول 4-1)</string>
+    <string name="chk_st_min_main" formatted="false">الحد الأدنى للحديد الرئيسي (ECP §6-2-1-3-2)</string>
+    <string name="chk_st_top_steel" formatted="false">الحديد العلوي عند الركيزة (معادلة 6-2 / §6-2-1-3-2-9)</string>
+    <string name="chk_st_shear_cap" formatted="false">مقاومة القص</string>
+    <string name="chk_st_shear_conc" formatted="false">القص (خرسانة فقط، معادلة 4-29)</string>
+    <string name="chk_st_defl_na" formatted="false">الترخيم غير مُقيَّم: لم يُتحقق من انطباق جدول ECP 4-10 (L/t) ولا يوجد ترخيم محسوب</string>
+    <string name="chk_st_waist_a35" formatted="false">سمك البلاطة المائلة ≥ a/35 (ECP 203-2025 معادلة 6-6a، حد أدنى للبلاطة في اتجاه واحد، بالقياس)</string>
+    <string name="chk_st_comfort" formatted="false">2R + G (الراحة)</string>
+    <string name="chk_st_riser" formatted="false">ارتفاع القائمة ≤ 180 مم</string>
+    <string name="chk_st_going" formatted="false">عرض النائمة ≥ 250 مم</string>
+    <string name="chk_st_flag_prefix" formatted="false">فرضية/نموذج:</string>
+    <string name="st_safety_checks" formatted="false">فحوصات الأمان</string>
+    <string name="bx_net_flight" formatted="false">حديد الدرجة الصافي فقط</string>
+    <string name="bx_excludes" formatted="false">لا يشمل التثبيت والثنيات والوصلات والحديد العلوي وحديد البسطة</string>
 </resources>

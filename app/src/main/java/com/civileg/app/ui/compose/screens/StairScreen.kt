@@ -472,7 +472,7 @@ fun StairScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 AppText(
-                                    "Safety Checks",
+                                    stringResource(R.string.st_safety_checks),
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant

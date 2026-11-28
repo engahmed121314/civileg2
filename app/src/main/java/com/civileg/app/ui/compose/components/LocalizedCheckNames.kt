@@ -29,11 +29,26 @@ private val checkNameResources: Map<String, Int> = mapOf(
     "Wall Shear" to R.string.check_wall_shear,
     "Wall Shear Capacity" to R.string.check_wall_shear,
     "Crack Width" to R.string.check_crack_width,
-    "Crack Control (fs)" to R.string.check_crack_control
+    "Crack Control (fs)" to R.string.check_crack_control,
+    "Waist Thickness" to R.string.chk_st_waist,
+    "Case model support" to R.string.chk_st_case_support,
+    "Flexure (K ≤ Rmax/γc, Table 4-1)" to R.string.chk_st_flexure,
+    "Minimum main steel (ECP §6-2-1-3-2)" to R.string.chk_st_min_main,
+    "Support top steel (Eq. 6-2 / §6-2-1-3-2-9)" to R.string.chk_st_top_steel,
+    "Shear Capacity" to R.string.chk_st_shear_cap,
+    "Shear (concrete-only, Eq. 4-29)" to R.string.chk_st_shear_conc,
+    "Deflection NOT ASSESSED: ECP Table 4-10 L/t deemed-to-satisfy applicability unverified (no computed deflection)" to R.string.chk_st_defl_na,
+    "Waist >= a/35 (ECP 203-2025 Eq. 6-6a one-way slab minimum, analogy)" to R.string.chk_st_waist_a35,
+    "2R + G (Comfort)" to R.string.chk_st_comfort,
+    "Riser ≤ 180mm" to R.string.chk_st_riser,
+    "Going ≥ 250mm" to R.string.chk_st_going
 )
 
 @Composable
 fun localizedCheckName(name: String): String {
+    val flagPrefix = "Assumption/model flag: "
+    if (name.startsWith(flagPrefix)) return stringResource(R.string.chk_st_flag_prefix) + " " + localizedCheckName(name.removePrefix(flagPrefix))
+    checkNameResources[name]?.let { return stringResource(it) }
     val parts = name.split(" - ", limit = 2)
     val base = checkNameResources[parts[0]] ?: return name
     val head = stringResource(base)

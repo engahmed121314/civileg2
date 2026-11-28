@@ -22,6 +22,8 @@ fun localizedBoqText(text: String): String {
     if (!isArabicUi()) return text
     val pairs = listOf(
         "Reinforcement steel (rough estimate, not for procurement: no hooks, anchorage, laps or bends; uniform stirrups; full-span top steel)" to stringResource(R.string.bx_steel_rough),
+        "Net flight steel only" to stringResource(R.string.bx_net_flight),
+        "excludes anchorage, bends, laps, top and landing steel" to stringResource(R.string.bx_excludes),
         "Reinforcement steel" to stringResource(R.string.bx_steel),
         "Blinding concrete" to stringResource(R.string.bx_blinding),
         "Concrete" to stringResource(R.string.bx_concrete),
