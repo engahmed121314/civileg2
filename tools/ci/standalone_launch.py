@@ -48,7 +48,7 @@ def ensure_home():
         adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
         dismiss_tip()
         x = dump("home-check")
-        if "content-desc=\"Back\"" not in x: break
+        if not re.search(r'package="' + re.escape(pkg) + r'"[^>]*content-desc="Back"', x): break
     return True
 adb("shell", "pm", "clear", pkg)
 adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1")
