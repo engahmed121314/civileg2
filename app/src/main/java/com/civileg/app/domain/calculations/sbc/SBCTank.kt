@@ -212,7 +212,7 @@ class SBCTank : TankDesign {
 
         val rhoActual = asProvided / (b * d)
         safetyChecks.add(TankSafetyCheck(
-            "Wall Reinforcement Ratio", rhoActual, MIN_RHO_ENV, "-",
+            "Wall Reinforcement Ratio", rhoActual * 100.0, MIN_RHO_ENV * 100.0, "%",
             rhoActual >= MIN_RHO_ENV, "SBC 304: Min ρ = 0.20% for environmental"
         ))
 

@@ -229,7 +229,7 @@ class ACITank : TankDesign {
         // فحص نسبة التسليح
         val rhoActual = asProvided / (b * d)
         safetyChecks.add(TankSafetyCheck(
-            "Wall Reinforcement Ratio", rhoActual, MIN_RHO_ENV, "-",
+            "Wall Reinforcement Ratio", rhoActual * 100.0, MIN_RHO_ENV * 100.0, "%",
             rhoActual >= MIN_RHO_ENV, "ACI 350-06: Min ρ = 0.20% for environmental structures"
         ))
 
