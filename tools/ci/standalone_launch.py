@@ -475,6 +475,17 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
                 scroll_up(2)
             log.append((prefix + "_calc", got)); time.sleep(3)
             sweep(prefix + "-res", 12)
+            if prefix in ("cp-col", "cp-tank", "cp-beam"):
+                for kind in ("PDF", "DXF"):
+                    scroll_top(6)
+                    hit = False
+                    for _ in range(8):
+                        if tap_text([kind], prefix + "-" + kind.lower() + "-find"): hit = True; break
+                        scroll_up(2)
+                    log.append((prefix + "_" + kind.lower() + "_tap", hit)); time.sleep(6)
+                    shot(prefix + "-" + kind.lower() + "-after"); dump(prefix + "-" + kind.lower() + "-after")
+                    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+                    dismiss_not_responding()
         except Exception as e:
             log.append((prefix + "_exception", repr(e)))
     for blk in (footing_block, stair_block, pile_block):
