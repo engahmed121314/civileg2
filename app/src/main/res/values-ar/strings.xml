@@ -1674,9 +1674,9 @@
     <string name="steel_moment_mu_knm">عزم Mu (kN.m)</string>
     <string name="steel_shear_vu_kn">قص Vu (kN)</string>
     <string name="steel_length_m_label">الطول (م)</string>
-    <string name="steel_dl_knm2">حمل ميت D.L (kN/m²)</string>
-    <string name="steel_ll_knm2">حمل حي L.L (kN/m²)</string>
-    <string name="steel_wind_kmh">رياح (km/h)</string>
+    <string name="steel_dl_knm2">حمل ميت D.L</string>
+    <string name="steel_ll_knm2">حمل حي L.L</string>
+    <string name="steel_wind_kmh">الرياح (km/h)</string>
     <string name="steel_max_deflection">أقصى انحراف</string>
     <string name="steel_status_safe">اجتاز الفحص (أولي)</string>
     <string name="steel_status_unsafe">لم يجتز الفحص ✗</string>
@@ -2717,4 +2717,10 @@
     <string name="slab_bbs_title">جدول ثني حديد البلاطة</string>
     <string name="slab_boq_title">حصر كميات البلاطة</string>
     <string name="stp_slab_title">خطوات حساب البلاطة</string>
+    <string name="steel_soil_bearing" formatted="false">تحمل التربة المسموح (kN/m²) - مطلوب لحجم القاعدة</string>
+    <string name="steel_braced_bays" formatted="false">البحور المدعمة، مثال 1,10 (فارغ = البحور الطرفية)</string>
+    <string name="steel_brace_lateral_load" formatted="false">الحمل الجانبي H لكل بحر مدعم (kN)، فارغ = قوة الشد NOT ASSESSED</string>
+    <string name="steel_brace_fy" formatted="false">Fy للشداد (MPa) - فحص الشد</string>
+    <string name="steel_brace_fu" formatted="false">Fu للشداد (MPa) - فحص الشد</string>
+    <string name="steel_brace_ae" formatted="false">المساحة الصافية Ae للشداد (mm²، بعد الفتحات وتأخر القص)</string>
 </resources>

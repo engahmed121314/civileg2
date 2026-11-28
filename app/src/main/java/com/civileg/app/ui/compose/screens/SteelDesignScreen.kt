@@ -285,13 +285,13 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                         SteelInputField(windSpeed, stringResource(R.string.steel_wind_kmh), { windSpeed = it }, Modifier.weight(1f))
                         SteelInputField(roofSlope, stringResource(R.string.steel_roof_slope_deg), { roofSlope = it }, Modifier.weight(1f))
                     }
-                    SteelInputField(soilBearing, "Allowable soil bearing (kN/m2) - required for footing size", { soilBearing = it }, Modifier.fillMaxWidth())
-                    SteelInputField(bracedBaysText, "Braced bays, e.g. 1,10 (blank = end bays, default)", { bracedBaysText = it }, Modifier.fillMaxWidth())
-                    SteelInputField(bracingLoad, "Lateral load H per braced panel (kN), blank = brace force NOT ASSESSED", { bracingLoad = it }, Modifier.fillMaxWidth())
+                    SteelInputField(soilBearing, stringResource(R.string.steel_soil_bearing), { soilBearing = it }, Modifier.fillMaxWidth())
+                    SteelInputField(bracedBaysText, stringResource(R.string.steel_braced_bays), { bracedBaysText = it }, Modifier.fillMaxWidth())
+                    SteelInputField(bracingLoad, stringResource(R.string.steel_brace_lateral_load), { bracingLoad = it }, Modifier.fillMaxWidth())
                     if (selectedCode == DesignCode.ACI || selectedCode == DesignCode.ECP) {
-                        SteelInputField(braceFy, "Brace Fy (MPa) - tension check", { braceFy = it }, Modifier.fillMaxWidth())
-                        SteelInputField(braceFu, "Brace Fu (MPa) - tension check", { braceFu = it }, Modifier.fillMaxWidth())
-                        SteelInputField(braceAe, "Brace net area Ae (mm2, after bolt holes and shear lag)", { braceAe = it }, Modifier.fillMaxWidth())
+                        SteelInputField(braceFy, stringResource(R.string.steel_brace_fy), { braceFy = it }, Modifier.fillMaxWidth())
+                        SteelInputField(braceFu, stringResource(R.string.steel_brace_fu), { braceFu = it }, Modifier.fillMaxWidth())
+                        SteelInputField(braceAe, stringResource(R.string.steel_brace_ae), { braceAe = it }, Modifier.fillMaxWidth())
                     }
                 }
             }

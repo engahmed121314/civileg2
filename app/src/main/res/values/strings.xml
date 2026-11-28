@@ -2714,4 +2714,10 @@
     <string name="slab_bbs_title">Slab Bar Bending Schedule</string>
     <string name="slab_boq_title">Slab Bill of Quantities</string>
     <string name="stp_slab_title">Slab Calculation Steps</string>
+    <string name="steel_soil_bearing" formatted="false">Allowable soil bearing (kN/m²), required for the footing size</string>
+    <string name="steel_braced_bays" formatted="false">Braced bays, e.g. 1,10 (blank = end bays)</string>
+    <string name="steel_brace_lateral_load" formatted="false">Lateral load H per braced panel (kN); blank = brace force NOT ASSESSED</string>
+    <string name="steel_brace_fy" formatted="false">Brace Fy (MPa), tension check</string>
+    <string name="steel_brace_fu" formatted="false">Brace Fu (MPa), tension check</string>
+    <string name="steel_brace_ae" formatted="false">Brace net area Ae (mm², after bolt holes and shear lag)</string>
 </resources>
