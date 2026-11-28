@@ -221,7 +221,7 @@ fun ProfessionalTankDrawing(
 
         // Zone 3: Reinforcement details + table (viewMode 0 or 3)
         if (viewMode == 0 || viewMode == 3) {
-            drawZoneLabel(mainLeft, ch * 0.65f + cfg.margin * 0.3f, "REINFORCEMENT", cfg)
+            // The "REINFORCEMENT" separator above already names this zone; a second label printed over the table.
             // Reinforcement on elevation
             drawElevationReinforcement(
                 tankLeft, tankTop, tankRight, tankBottom, baseBottom,
