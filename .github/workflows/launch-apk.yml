@@ -32,10 +32,13 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
-          target: google_apis
+          target: default
           arch: x86_64
           profile: pixel_6
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          cores: 4
+          ram-size: 4096M
+          heap-size: 576M
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none -camera-front none
           disable-animations: true
           script: bash tools/ci/standalone_launch.sh
       - uses: actions/upload-artifact@v4
