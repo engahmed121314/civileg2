@@ -418,10 +418,18 @@ fun StairScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             AppText(stringResource(R.string.st_code_incomplete), color = MaterialTheme.colorScheme.error)
-                            ResultRow(stringResource(R.string.st_analysis_status), res.analysisStatus.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() })
-                            ResultRow("Support", res.supportCondition.name)
-                            AppText(res.documentaryBasisLabel)
-                            AppText(res.barMaterialClassification)
+                            ResultRow(stringResource(R.string.st_analysis_status), stringResource(when (res.analysisStatus) {
+                                com.civileg.app.domain.calculations.base.StairAnalysisStatus.CASE_MODEL_IMPLEMENTED -> R.string.st_status_model
+                                com.civileg.app.domain.calculations.base.StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED -> R.string.st_status_fallback
+                                com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE -> R.string.st_status_unsupported
+                            }))
+                            ResultRow(stringResource(R.string.st_support_cond), stringResource(when (res.supportCondition) {
+                                StairSupportCondition.UNSPECIFIED -> R.string.st_sup_unspec
+                                StairSupportCondition.SIMPLY_SUPPORTED -> R.string.st_sup_simple
+                                StairSupportCondition.CONTINUOUS_OVER_LANDING -> R.string.st_sup_cont
+                            }))
+                            AppText(stringResource(R.string.st_reference_label))
+                            AppText(stringResource(R.string.st_bar_class_undeclared))
                             AppText(stringResource(R.string.st_top_not_designed))
                             if (designUsable) {
                             ResultRow(stringResource(R.string.stair_slab_thickness), "${res.thickness.toInt()} mm")

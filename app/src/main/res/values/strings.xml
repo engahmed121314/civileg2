@@ -2720,4 +2720,9 @@
     <string name="steel_brace_fy" formatted="false">Brace Fy (MPa), tension check</string>
     <string name="steel_brace_fu" formatted="false">Brace Fu (MPa), tension check</string>
     <string name="steel_brace_ae" formatted="false">Brace net area Ae (mm², after bolt holes and shear lag)</string>
+    <string name="st_status_model" formatted="false">Analysis model implemented for this case</string>
+    <string name="st_status_fallback" formatted="false">Conservative simply-supported fallback, restraint not verified</string>
+    <string name="st_status_unsupported" formatted="false">Unsupported case: choose Single Flight or Double Flight</string>
+    <string name="st_reference_label" formatted="false">Reference supplied: ECP 203-2025 (scanned); stair equation coverage is incomplete</string>
+    <string name="st_bar_class_undeclared" formatted="false">Not declared: fy alone does not identify the bar surface or grade</string>
 </resources>

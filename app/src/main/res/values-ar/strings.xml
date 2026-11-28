@@ -2723,4 +2723,9 @@
     <string name="steel_brace_fy" formatted="false">Fy للشداد (MPa) - فحص الشد</string>
     <string name="steel_brace_fu" formatted="false">Fu للشداد (MPa) - فحص الشد</string>
     <string name="steel_brace_ae" formatted="false">المساحة الصافية Ae للشداد (mm²، بعد الفتحات وتأخر القص)</string>
+    <string name="st_status_model" formatted="false">نموذج التحليل مُنفَّذ لهذه الحالة</string>
+    <string name="st_status_fallback" formatted="false">نموذج محافظ ببساطة الارتكاز، ولم يُتحقق من التقييد</string>
+    <string name="st_status_unsupported" formatted="false">حالة غير مدعومة: اختر قلبة واحدة أو قلبتين</string>
+    <string name="st_reference_label" formatted="false">المرجع المقدم: ‏⁦ECP 203-2025⁩ (نسخة ممسوحة)؛ تغطية معادلات السلالم غير مكتملة</string>
+    <string name="st_bar_class_undeclared" formatted="false">غير مُعلن: ‏⁦fy⁩ وحده لا يحدد سطح الحديد أو رتبته</string>
 </resources>
