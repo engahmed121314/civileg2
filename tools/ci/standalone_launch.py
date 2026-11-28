@@ -465,9 +465,9 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
             ensure_home()
             tap_text(["التصميم"], prefix + "-tab", exact=True); scroll_top(3)
             ok = False
-            for _ in range(5):
+            for n in range(1, 8):
                 if tap_text([label], prefix + "-find"): ok = True; break
-                scroll_up(2)
+                scroll_top(3); scroll_up(n)  # restart from the top so a long fling cannot overshoot the item
             log.append((prefix + "_open", ok)); time.sleep(2)
             got = False
             for _ in range(5):
