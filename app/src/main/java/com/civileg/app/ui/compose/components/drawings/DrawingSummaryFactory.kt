@@ -72,7 +72,10 @@ fun slabDrawingSummary(result: CalculatorEngine.SlabResult): DrawingResultSummar
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
-        designCodeLabel = result.code.version
+        designCodeLabel = result.code.version,
+        // A pass with checks that the notes mark unverified or not assessed reads UNVERIFIED, as on the footing drawing.
+        codeAcceptanceComplete = result.codeNotes.none { it.contains("NOT ASSESSED", ignoreCase = true) || it.contains("unverified", ignoreCase = true) },
+        listedChecksFailed = !result.isSafe
     )
 
 fun flatSlabDrawingSummary(result: com.civileg.app.domain.FlatSlabResult): DrawingResultSummary =
