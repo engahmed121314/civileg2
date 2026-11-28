@@ -614,7 +614,11 @@ fun StairScreen(
                                 landingThickness = res.landingThicknessMm ?: 0.0,
                                 mainRebarDia = res.reinforcement.diameter.toDouble(),
                                 mainRebarSpacing = res.reinforcement.spacing,
-                                distributionDia = res.distributionReinforcement.diameter.toDouble(),
+                                topRebarDia = stairBarOf(res.flightTopRebar).first,
+                                topRebarSpacing = stairBarOf(res.flightTopRebar).second,
+                                topRebarDia = stairBarOf(res.flightTopRebar).first,
+                        topRebarSpacing = stairBarOf(res.flightTopRebar).second,
+                        distributionDia = res.distributionReinforcement.diameter.toDouble(),
                                 distributionSpacing = res.distributionReinforcement.spacing,
                                 cover = codeAwareCover,
                                 stairType = res.type.displayName,
@@ -658,6 +662,8 @@ fun StairScreen(
                         landingThickness = res.landingThicknessMm ?: 0.0,
                         mainRebarDia = res.reinforcement.diameter.toDouble(),
                         mainRebarSpacing = res.reinforcement.spacing,
+                        topRebarDia = stairBarOf(res.flightTopRebar).first,
+                        topRebarSpacing = stairBarOf(res.flightTopRebar).second,
                         distributionDia = res.distributionReinforcement.diameter.toDouble(),
                         distributionSpacing = res.distributionReinforcement.spacing,
                         cover = codeAwareCover,
@@ -1197,4 +1203,10 @@ private fun StairStepsArabic(res: CalculatorEngine.StairResult) {
             }
         }
     }
+}
+
+/** Parses "Ø12 @ 150 mm c/c" into (diameter, spacing); (0, 0) when the text holds no bar. */
+private fun stairBarOf(text: String): Pair<Double, Double> {
+    val m = Regex("Ø\\s*(\\d+(?:\\.\\d+)?)\\s*@\\s*(\\d+(?:\\.\\d+)?)").find(text) ?: return 0.0 to 0.0
+    return m.groupValues[1].toDouble() to m.groupValues[2].toDouble()
 }
