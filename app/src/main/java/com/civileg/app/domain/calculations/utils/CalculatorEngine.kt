@@ -2264,6 +2264,36 @@ class CalculatorEngine @Inject constructor(
 
     private fun barAreaMm2(diameter: Double): Double = Math.PI / 4.0 * diameter * diameter
 
+    /**
+     * Preliminary landing (بسطة) bottom steel: one-way strip simply supported over the declared landing length,
+     * wu = 1.4*DL + 1.6*LL (the DL input already includes self weight and finishes; this is conservative against
+     * El-Leithy 2013 p.21 wsh = 1.4(ts*gc + FC) + 1.6 LL), M = wu*L^2/8, K-method flexure as in the flight (ECP 203-2025),
+     * minimum ratio max(0.6/fy, 0.15%). Returns "" when the landing is not declared or the code is not ECP.
+     */
+    private fun designLanding(code: DesignCode, lenMm: Double?, thkMm: Double?, dl: Double, ll: Double, fcu: Double, fy: Double): String {
+        if (code != DesignCode.ECP || lenMm == null || thkMm == null || lenMm <= 0.0 || thkMm <= 0.0) return ""
+        val wu = 1.4 * dl + 1.6 * ll
+        val spanM = lenMm / 1000.0
+        val mu = wu * spanM * spanM / 8.0 * 1e6
+        val b = 1000.0
+        val d = thkMm - 25.0 - 6.0
+        if (d <= 0.0) return ""
+        val k = mu / (fcu * b * d * d)
+        val kDiv = 2.0 * 0.67 / 1.5
+        val root = 0.25 - k / kDiv
+        if (root <= 0.0) return ""
+        val z = d * (0.5 + kotlin.math.sqrt(root))
+        val asFlex = mu / ((fy / 1.15) * z)
+        val asMin = max(0.6 / fy, 0.0015) * b * d
+        val asReq = max(asFlex, asMin)
+        for (dia in listOf(10.0, 12.0, 14.0, 16.0)) {
+            val area = Math.PI * dia * dia / 4.0
+            val sp = kotlin.math.floor(area * 1000.0 / asReq / 10.0) * 10.0
+            if (sp >= 100.0) return "Ø${dia.toInt()} @ ${sp.coerceAtMost(200.0).toInt()} mm c/c"
+        }
+        return ""
+    }
+
     fun designStaircase(type: StairType, span: Double, riser: Double, tread: Double, deadLoad: Double, liveLoad: Double, fcu: Double, fy: Double, preferredDiameter: Int, code: DesignCode, stairWidthMm: Double = 1200.0,
         supportCondition: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
         landingLengthMm: Double? = null, landingWidthMm: Double? = null, landingThicknessMm: Double? = null,
@@ -2445,7 +2475,9 @@ class CalculatorEngine @Inject constructor(
                 analysisSpanM = result.analysisSpanM,
                 adoptedRunMm = result.adoptedRunMm,
                 flightTopRebar = result.flightTopRebar,
-                landingRebar = result.landingRebar,
+                landingRebar = result.landingRebar.ifBlank {
+                    designLanding(code, landingLengthMm, landingThicknessMm, deadLoad, liveLoad, fcu, fy)
+                },
                 codeAcceptanceComplete = false,
                 quantityReview = quantityReview,
                 documentaryBasisLabel = ref,

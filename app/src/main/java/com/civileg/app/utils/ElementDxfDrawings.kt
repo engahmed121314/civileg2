@@ -299,7 +299,11 @@ object ElementDxfDrawings {
         distBarDiaMm: Double = 0.0,
         distBarSpacingMm: Double = 0.0,
         landingLengthMm: Double = 0.0,
-        landingThicknessMm: Double = 0.0
+        landingThicknessMm: Double = 0.0,
+        topBarDiaMm: Double = 0.0,
+        topBarSpacingMm: Double = 0.0,
+        landingBarDiaMm: Double = 0.0,
+        landingBarSpacingMm: Double = 0.0
     ): DxfDrawable = DxfDrawable { ex ->
         require(steps > 0 && treadCount > 0 && (steps == treadCount || steps == treadCount + 1))
         val totalRise = riseMm * steps
@@ -338,6 +342,36 @@ object ElementDxfDrawings {
         val x1 = runMm + off * nx
         val y1 = totalRise + off * ny
         ex.addPolyline(listOf(x0 to (y0 + hook), x0 to y0, x1 to y1, x1 to (y1 + hook)), "0_REBAR_BOTTOM", closed = false)
+        // Top bars at both supports (El-Leithy 2013 p.30 Sec 1-1: hooked top bar at the support and into the landing).
+        // Size from the calc (ECP 203-2025 Eq. 6-2); extension = L/4 of the flight length is DERIVED, code page 4-2-5 pending.
+        if (topBarDiaMm > 0.0) {
+            val ot = waistThicknessMm * ux - off
+            val ext = (barLen / 4.0).coerceAtMost(barLen / 2.0)
+            val tx0 = ot * nx
+            val ty0 = ot * ny
+            ex.addPolyline(listOf(tx0 to (ty0 - hook), tx0 to ty0, ext * ux + tx0 to ext * uy + ty0), "0_REBAR_TOP", closed = false)
+            val sx = (barLen - ext) * ux + tx0
+            val sy = (barLen - ext) * uy + ty0
+            ex.addPolyline(listOf(sx to sy, runMm + tx0 to totalRise + ty0, runMm + tx0 to (totalRise + ty0 - hook)), "0_REBAR_TOP", closed = false)
+        }
+        // Step bar at every step: up the riser and along the tread nose (El-Leithy 2013 p.20, p.30: one bar per step with links).
+        if (distBarDiaMm > 0.0) {
+            for (i in 0 until steps) {
+                val xs = i * stepRun + coverMm
+                val yTop = waistThicknessMm + (i + 1) * riseMm - coverMm
+                val yBase = waistThicknessMm + i * riseMm - coverMm
+                ex.addPolyline(listOf(xs to (yBase.coerceAtLeast(0.0)), xs to yTop, (i + 1) * stepRun - coverMm to yTop), "0_REBAR_DISTRIBUTION", closed = false)
+            }
+        }
+        // Landing bottom bar (preliminary design) with hooks.
+        if (landLen > 0.0 && landingThicknessMm > 0.0 && landingBarDiaMm > 0.0) {
+            val top = totalRise + waistThicknessMm
+            val yl = top - landingThicknessMm + coverMm + landingBarDiaMm / 2.0
+            ex.addPolyline(
+                listOf(runMm to (yl + hook.coerceAtMost(landingThicknessMm - 2 * coverMm)), runMm to yl, runMm + landLen - coverMm to yl, runMm + landLen - coverMm to (yl + hook.coerceAtMost(landingThicknessMm - 2 * coverMm))),
+                "0_REBAR_BOTTOM", closed = false
+            )
+        }
         // Distribution bars: sections (dots) just above the main bar, at the adopted spacing.
         if (distBarDiaMm > 0.0 && distBarSpacingMm > 0.0) {
             var d = coverMm
