@@ -471,13 +471,13 @@ if os.path.exists("tools/ci/EXPORT_ONLY"):
                 if tap_text(calc, prefix + "-calc"): got = True; break
                 scroll_up(2)
             log.append((prefix + "_calc", got)); time.sleep(3)
-            for kind, words in (("dxf", ["DXF"]), ("pdf", ["تقرير PDF"])):
+            for kind, words in (("pdf", ["تقرير PDF"]), ("dxf", ["DXF"])):
                 hit = False
                 scroll_top(6)
                 for _ in range(14):
                     if tap_text(words, prefix + "-" + kind + "-find"): hit = True; break
                     scroll_up(2)
-                log.append((prefix + "_" + kind + "_tap", hit)); time.sleep(6)
+                log.append((prefix + "_" + kind + "_tap", hit)); time.sleep(6 if kind == "pdf" else 3)
                 shot(prefix + "-" + kind + "-after"); dump(prefix + "-" + kind + "-after")
                 if kind == "pdf":
                     tap_text(["Got it", "حسنًا", "حسناً"], prefix + "-gotit")
@@ -485,6 +485,8 @@ if os.path.exists("tools/ci/EXPORT_ONLY"):
                         adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
                         shot(prefix + "-pdf-" + str(k))
                 adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(2); dismiss_not_responding()
+                if kind == "dxf":
+                    open(f"{out}/{prefix}-dxf-logcat.txt", "wb").write(adb("logcat", "-d", "-t", "300").stdout)
         except Exception as e:
             log.append((prefix + "_exception", repr(e)))
     pull_exported_pdfs()
