@@ -2643,4 +2643,5 @@
     <string name="tk_bbs_title" formatted="false">Tank bar bending schedule</string>
     <string name="tk_boq_title" formatted="false">Tank bill of quantities</string>
     <string name="bx_indicative" formatted="false">indicative ratio, not designed bars</string>
+    <string name="chk_st_geo_prefix" formatted="false">Geometry limit:</string>
 </resources>

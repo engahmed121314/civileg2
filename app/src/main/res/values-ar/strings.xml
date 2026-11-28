@@ -2646,4 +2646,5 @@
     <string name="tk_bbs_title" formatted="false">جدول قص وثني حديد الخزان</string>
     <string name="tk_boq_title" formatted="false">حصر كميات الخزان</string>
     <string name="bx_indicative" formatted="false">نسبة تقديرية وليست أسياخًا مصممة</string>
+    <string name="chk_st_geo_prefix" formatted="false">حد هندسي:</string>
 </resources>
