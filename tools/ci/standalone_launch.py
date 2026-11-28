@@ -42,10 +42,13 @@ def dismiss_tip():
             adb("shell", "input", "tap", str((b[0]+b[2])//2), str((b[1]+b[3])//2)); time.sleep(1); return True
     return False
 def ensure_home():
-    """Dismiss the PDF viewer tip if shown, then press BACK once (the tab bar is always visible, so it cannot signal 'home')."""
+    """Dismiss the PDF viewer tip, then press BACK until no in-page 'Back' button remains (the tab bar is always visible)."""
     dismiss_tip()
-    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
-    dismiss_tip()
+    for _ in range(5):
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+        dismiss_tip()
+        x = dump("home-check")
+        if "content-desc=\"Back\"" not in x: break
     return True
 adb("shell", "pm", "clear", pkg)
 adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1")
