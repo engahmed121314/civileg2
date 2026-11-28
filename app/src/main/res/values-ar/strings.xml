@@ -2714,4 +2714,7 @@
     <string name="stp_horiz_r" formatted="false">التسليح الأفقي</string>
     <string name="stp_fs_title" formatted="false">خطوات حساب البلاطة المسطحة</string>
     <string name="lbl_steel_indicative">الحديد (نسبة تقريبية، ليست أسياخًا مصممة)</string>
+    <string name="slab_bbs_title">جدول ثني حديد البلاطة</string>
+    <string name="slab_boq_title">حصر كميات البلاطة</string>
+    <string name="stp_slab_title">خطوات حساب البلاطة</string>
 </resources>

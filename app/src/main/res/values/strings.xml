@@ -2711,4 +2711,7 @@
     <string name="stp_horiz_r" formatted="false">Horizontal Reinforcement</string>
     <string name="stp_fs_title" formatted="false">Flat Slab Calculation Steps</string>
     <string name="lbl_steel_indicative">Steel (indicative ratio, not designed bars)</string>
+    <string name="slab_bbs_title">Slab Bar Bending Schedule</string>
+    <string name="slab_boq_title">Slab Bill of Quantities</string>
+    <string name="stp_slab_title">Slab Calculation Steps</string>
 </resources>

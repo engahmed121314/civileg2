@@ -120,6 +120,7 @@ private fun rememberStepLocalizer(): (String) -> String {
         "(edition not verified)" to stringResource(R.string.stp_edition)
     )
     val pairs2 = listOf(
+        "Slab Calculation Steps" to stringResource(R.string.stp_slab_title),
         "Column Strip Moment" to stringResource(R.string.stp_col_strip_m),
         "Column Strip Steel" to stringResource(R.string.stp_col_strip_s),
         "Middle Strip Moment" to stringResource(R.string.stp_mid_strip_m),
