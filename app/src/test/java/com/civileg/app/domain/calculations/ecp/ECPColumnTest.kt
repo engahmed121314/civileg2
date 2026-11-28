@@ -86,4 +86,25 @@ class ECPColumnEq412DomainTest {
             com.civileg.app.domain.entities.LoadCombination.DEAD_LIVE)
         org.junit.Assert.assertTrue(r.warnings.none { it.contains("OUTSIDE FORMULA DOMAIN") })
     }
+
+    @Test
+    fun `purely axial column is not reported unsafe by the interaction screen`() {
+        // Regression: with Mx = My = 0 the old scan found no diagram point at M = 0 and returned capacity 0.
+        val result = column.calculateReinforcement(
+            fcu = 25.0, fy = 400.0, width = 300.0, depth = 300.0,
+            axialLoad = 1000.0, momentX = 0.0, momentY = 0.0,
+            loadCombination = LoadCombination.DEAD_LIVE
+        )
+        assertTrue("axial only, inside Eq 4-12-a domain: ${result.codeNotes}", result.isSafe)
+    }
+
+    @Test
+    fun `interaction screen still fails an overloaded column`() {
+        val result = column.calculateReinforcement(
+            fcu = 25.0, fy = 400.0, width = 300.0, depth = 300.0,
+            axialLoad = 1000.0, momentX = 150.0, momentY = 0.0,
+            loadCombination = LoadCombination.DEAD_LIVE
+        )
+        assertFalse(result.isSafe)
+    }
 }

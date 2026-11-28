@@ -34,6 +34,22 @@ def tap_text(words, name, exact=False):
                 time.sleep(2); return True
         time.sleep(1)
     return False
+
+def dismiss_tip():
+    """The PDF viewer's 'Viewing full screen' tip stays on top and swallows BACK; tap 'Got it'."""
+    for t, b in nodes(dump("tip-check")):
+        if t.split("|")[0].strip() in ("Got it", "GOT IT"):
+            adb("shell", "input", "tap", str((b[0]+b[2])//2), str((b[1]+b[3])//2)); time.sleep(1); return True
+    return False
+def ensure_home():
+    """Dismiss the PDF viewer tip, then press BACK until no in-page 'Back' button remains (the tab bar is always visible)."""
+    dismiss_tip()
+    for _ in range(5):
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+        dismiss_tip()
+        x = dump("home-check")
+        if "content-desc=\"Back\"" not in x: break
+    return True
 adb("shell", "pm", "clear", pkg)
 adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1")
 t0 = time.time(); i = 0
@@ -73,7 +89,7 @@ def press_calc(name):
 
 # Stair: open from the Design tab, design with the defaults, open the drawing's reinforcement tab
 def stair_block():
-    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+    ensure_home()
     ok = False
     log.append(("stair_design_tab", tap_text(["التصميم"], "stair-d-design", exact=True)))
     scroll_top(3)
@@ -424,8 +440,13 @@ if os.path.exists("tools/ci/STEEL_ONLY"):
     pull_exported_pdfs()
     open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
 def sweep(prefix, n=5):
+    """Capture, scroll, repeat; stop when two screens in a row are identical (bottom reached). n is the cap."""
+    prev = None
     for k in range(n):
         shot(f"{prefix}-{k}"); dump(f"{prefix}-{k}")
+        cur = open(f"{out}/{prefix}-{k}.png", "rb").read()
+        if cur == prev: break
+        prev = cur
         scroll_up(2)
 if os.path.exists("tools/ci/CALCPAGES_ONLY"):
     # Default-input calculation of the calculation pages whose standalone result lines were changed (alignment evidence).
@@ -441,7 +462,7 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
     ]
     for label, prefix, calc in pages:
         try:
-            adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
+            ensure_home()
             tap_text(["التصميم"], prefix + "-tab", exact=True); scroll_top(3)
             ok = False
             for _ in range(5):
@@ -453,7 +474,7 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
                 if tap_text(calc, prefix + "-calc"): got = True; break
                 scroll_up(2)
             log.append((prefix + "_calc", got)); time.sleep(3)
-            sweep(prefix + "-res", 4)
+            sweep(prefix + "-res", 12)
         except Exception as e:
             log.append((prefix + "_exception", repr(e)))
     for blk in (footing_block, stair_block, pile_block):
@@ -505,8 +526,13 @@ scroll_up(6); shot("beam-after-edit-bottom"); dump("beam-after-edit-bottom")
 
 # 4) steel and seismic screens: capture the first screens and a scrolled sweep
 def sweep(prefix, n=5):
+    """Capture, scroll, repeat; stop when two screens in a row are identical (bottom reached). n is the cap."""
+    prev = None
     for k in range(n):
         shot(f"{prefix}-{k}"); dump(f"{prefix}-{k}")
+        cur = open(f"{out}/{prefix}-{k}.png", "rb").read()
+        if cur == prev: break
+        prev = cur
         scroll_up(2)
 def open_from_design(label, prefix):
     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)

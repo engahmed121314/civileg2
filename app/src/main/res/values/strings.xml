@@ -2549,4 +2549,27 @@
     <string name="lbl_fos_overturning">FOS Overturning</string>
     <string name="lbl_fos_sliding">FOS Sliding</string>
     <string name="lbl_cost">Cost</string>
+    <string name="note_col_use_emin">ECP 203 §4-2-3: Actual e=%1$smm &lt; e_min=%2$smm → using e_min for design</string>
+    <string name="note_col_section_exceeds">Section capacity exceeds demand — minimum reinforcement applied</string>
+    <string name="note_col_pm_design">ECP 203: P-M interaction design with e=%1$smm, moment factor %2$s</string>
+    <string name="note_cover_min">Cover: %1$smm minimum</string>
+    <string name="note_col_pm_within">Strain-compatibility P-M check (screening, clause not verified): within the diagram at e=%1$smm</string>
+    <string name="note_col_pm_outside">Strain-compatibility P-M check (screening, clause not verified): outside the diagram at e=%1$smm</string>
+    <string name="note_col_pm_limitation">Limitation: the moment capacity is a simplified strain-compatibility check that places half of the steel on each face. It does not use the real bar positions, so it can overestimate capacity for layouts with many intermediate bars. Treat the safe/unsafe label as a screening result, not a final interaction check.</string>
+    <string name="note_col_short">Short column (λ=%1$s ≤ %2$s) — no moment magnification needed</string>
+    <string name="note_col_long">Long column (λ=%1$s > %2$s) — moment magnification required per ECP 203 §4-2-3</string>
+    <string name="note_col_shear_title">ECP 203 §4-2-5: Column Shear Design</string>
+    <string name="note_col_vc">Vc = 0.24√fcu·b·d / γc = %1$s kN  (design capacity, γc=%2$s)</string>
+    <string name="note_col_stirrups_required">Vu (%1$s kN) > Vc → Stirrups required</string>
+    <string name="note_col_asv_s">Asv/s = %1$s mm²/mm</string>
+    <string name="note_col_ties">%1$smm ties @ %2$smm c/c</string>
+    <string name="note_col_concrete_alone">Vu (%1$s kN) ≤ Vc → Concrete alone sufficient</string>
+    <string name="note_min_reinf_applied">Minimum reinforcement applied</string>
+    <string name="note_reinf_exceeds_max">WARNING: Reinforcement exceeds maximum limit! Consider increasing section size.</string>
+    <string name="note_col_outside_domain">OUTSIDE FORMULA DOMAIN: e=%1$s mm exceeds max(0.05t, 20 mm)=%2$s mm. ECP 203-2020 Eq. 4-12-a does not apply; axial capacity and required steel not computed (minimum steel shown only). Design by full P-M check.</string>
+    <string name="note_col_axial_ref">ECP 203-2020 Eq. 4-12-a (checked against the supplied edition; valid for e &lt;= max(0.05t, 20 mm))</string>
+    <string name="note_col_rho_min_ref" formatted="false">ECP 203: Section 4-2-5-1 (ρmin = 0.8%) (clause not verified)</string>
+    <string name="note_col_rho_max_ref" formatted="false">ECP 203: Section 4-2-5-2 (ρmax = 8%) (clause not verified)</string>
+    <string name="note_col_ties_ref">ECP 203: Section 4-2-6 (clause not verified)</string>
+    <string name="note_col_cover_ref">ECP 203: Section 4-1-4 (Cover ≥ 40mm) (clause not verified)</string>
 </resources>
