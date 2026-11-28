@@ -2600,4 +2600,46 @@
     <string name="bx_h_shape" formatted="false">الشكل</string>
     <string name="bx_h_len" formatted="false">الطول</string>
     <string name="bx_h_wt" formatted="false">الوزن</string>
+    <string name="st_width" formatted="false">العرض (مم)</string>
+    <string name="st_support_cond" formatted="false">حالة الارتكاز</string>
+    <string name="st_sup_unspec" formatted="false">غير محدد</string>
+    <string name="st_sup_simple" formatted="false">بسيط الارتكاز</string>
+    <string name="st_sup_cont" formatted="false">مستمر فوق البسطة</string>
+    <string name="st_declare_landing" formatted="false">تحديد أبعاد البسطة</string>
+    <string name="st_landing_len" formatted="false">طول البسطة (مم)</string>
+    <string name="st_landing_w" formatted="false">عرض البسطة (مم)</string>
+    <string name="st_landing_t" formatted="false">سمك البسطة (مم)</string>
+    <string name="st_no_model" formatted="false">لا يوجد نموذج تحليل لهذه الحالة. هذه ليست تصميمًا لهذه الحالة ولا تُعرض نتائج، والنتائج والرسم والكميات والحفظ وPDF غير متاحة.</string>
+    <string name="st_flex_exceeds" formatted="false">فحص الانحناء يتجاوز حده</string>
+    <string name="st_flex_unavail" formatted="false">نسبة الانحناء غير متاحة</string>
+    <string name="st_flex_within" formatted="false">فحص الانحناء ضمن حده</string>
+    <string name="st_flex_none" formatted="false">لا يوجد صف انحناء مُقيَّم، لذلك لا تُعرض نسبة</string>
+    <string name="st_code_incomplete" formatted="false">قبول التصميم وفق الكود غير مكتمل</string>
+    <string name="st_top_not_designed" formatted="false">تسليح البسطة والحديد العلوي غير مُصمَّمين</string>
+    <string name="st_bbs_unavail" formatted="false">الحديد النهائي وجدول القص والثني غير متاحين: التثبيت والثنيات والوصلات والحديد العلوي وحديد البسطة غير محسومة</string>
+    <string name="st_analysis_status" formatted="false">حالة التحليل</string>
+    <string name="st_conc_vol" formatted="false">حجم الخرسانة</string>
+    <string name="st_net_steel" formatted="false">حديد الدرجة الصافي فقط</string>
+    <string name="st_partial_cost" formatted="false">تكلفة مواد جزئية وليست إجمالي الشراء</string>
+    <string name="st_calc_steps" formatted="false">خطوات حساب السلم</string>
+    <string name="st_bbs_title" formatted="false">جدول قص وثني حديد السلم</string>
+    <string name="st_boq_title" formatted="false">حصر كميات السلم</string>
+    <string name="st_trace_only" formatted="false">أثر الحساب المُطبَّق فقط. تغطية المرجع المختار غير مكتملة.</string>
+    <string name="bx_total" formatted="false">الإجمالي</string>
+    <string name="chk_st_waist" formatted="false">سمك البلاطة المائلة</string>
+    <string name="chk_st_case_support" formatted="false">دعم نموذج الحالة</string>
+    <string name="chk_st_flexure" formatted="false">الانحناء (K ≤ Rmax/γc، جدول 4-1)</string>
+    <string name="chk_st_min_main" formatted="false">الحد الأدنى للحديد الرئيسي (ECP §6-2-1-3-2)</string>
+    <string name="chk_st_top_steel" formatted="false">الحديد العلوي عند الركيزة (معادلة 6-2 / §6-2-1-3-2-9)</string>
+    <string name="chk_st_shear_cap" formatted="false">مقاومة القص</string>
+    <string name="chk_st_shear_conc" formatted="false">القص (خرسانة فقط، معادلة 4-29)</string>
+    <string name="chk_st_defl_na" formatted="false">الترخيم غير مُقيَّم: لم يُتحقق من انطباق جدول ECP 4-10 (L/t) ولا يوجد ترخيم محسوب</string>
+    <string name="chk_st_waist_a35" formatted="false">سمك البلاطة المائلة ≥ a/35 (ECP 203-2025 معادلة 6-6a، حد أدنى للبلاطة في اتجاه واحد، بالقياس)</string>
+    <string name="chk_st_comfort" formatted="false">2R + G (الراحة)</string>
+    <string name="chk_st_riser" formatted="false">ارتفاع القائمة ≤ 180 مم</string>
+    <string name="chk_st_going" formatted="false">عرض النائمة ≥ 250 مم</string>
+    <string name="chk_st_flag_prefix" formatted="false">فرضية/نموذج:</string>
+    <string name="st_safety_checks" formatted="false">فحوصات الأمان</string>
+    <string name="bx_net_flight" formatted="false">حديد الدرجة الصافي فقط</string>
+    <string name="bx_excludes" formatted="false">لا يشمل التثبيت والثنيات والوصلات والحديد العلوي وحديد البسطة</string>
 </resources>
