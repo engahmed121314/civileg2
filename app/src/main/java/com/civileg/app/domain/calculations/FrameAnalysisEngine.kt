@@ -449,8 +449,10 @@ object FrameAnalysisEngine {
                 }
                 FrameMaterialType.Steel -> {
                     val name = m.steelSectionName
-                    if (name.isNullOrBlank() || SteelTables.getSectionByName(name) == null) {
-                        return "مقطع حديدي غير معروف للعضو #${m.id}: \"$name\" / Unknown steel section on member #${m.id}"
+                    // A blank or "Auto" section is a valid choice in the modeler: the analysis then uses IPE 300
+                    // stiffness and the steel design step picks the section. Only a named section that is not in the table is an error.
+                    if (!SteelFrameDesign.isAutoSection(name) && SteelTables.getSectionByName(name!!) == null) {
+                        return "مقطع حديدي غير معروف للعضو #${m.id}: \"$name\" / Unknown steel section on member #${m.id}: \"$name\""
                     }
                 }
             }
