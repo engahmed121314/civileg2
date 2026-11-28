@@ -562,7 +562,7 @@ fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWare
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             FilterChip(selected = selectedView == 0, onClick = { selectedView = 0 }, label = { AppText("BMD", role = AppTextRole.Caption) })
             FilterChip(selected = selectedView == 1, onClick = { selectedView = 1 }, label = { AppText("SFD", role = AppTextRole.Caption) })
-            FilterChip(selected = selectedView == 2, onClick = { selectedView == 2 }, label = { AppText(stringResource(R.string.steel_deflection_label), role = AppTextRole.Caption) })
+            FilterChip(selected = selectedView == 2, onClick = { selectedView = 2 }, label = { AppText(stringResource(R.string.steel_deflection_label), role = AppTextRole.Caption) })
         }
         
         Card(
@@ -791,13 +791,14 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Stacked full-width: side by side the code chips were squeezed to one letter per line in Arabic.
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         DesignCodeSelectorRow(
                             selectedCode = selectedCode,
                             onCodeSelected = { selectedCode = it },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth()
                         )
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
                             AppText(stringResource(R.string.steel_grade_label), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             ExposedDropdownMenuBox(
                                 expanded = expandedGrade,
