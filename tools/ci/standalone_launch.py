@@ -489,7 +489,8 @@ if os.path.exists("tools/ci/EXPORT_ONLY"):
                     for k in range(1, 4):
                         adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
                         shot(prefix + "-pdf-" + str(k))
-                adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(2); dismiss_not_responding()
+                if kind == "dxf" or "com.civileg.app.debug" not in dump(prefix + "-pdf-state"):
+                    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(2); dismiss_not_responding()
                 if kind == "dxf":
                     open(f"{out}/{prefix}-dxf-logcat.txt", "wb").write(adb("logcat", "-d", "-t", "300").stdout)
         except Exception as e:
