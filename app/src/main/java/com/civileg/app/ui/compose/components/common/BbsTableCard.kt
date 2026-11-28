@@ -27,6 +27,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.domain.calculations.utils.BbsEntry
+import androidx.compose.ui.res.stringResource
+import com.civileg.app.R
 import java.util.Locale
 
 /**
@@ -105,12 +107,13 @@ fun BbsTableCard(
 @Composable
 private fun HeaderRow() {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Cell("Bar", 0.5f, TextAlign.Start, bold = true)
+        val ar = isArabicUi()
+        Cell(if (ar) stringResource(R.string.bx_h_bar) else "Bar", 0.5f, TextAlign.Start, bold = true)
         Cell("Ø", 0.6f, bold = true)
-        Cell("Shape", 0.5f, bold = true)
-        Cell("Qty", 0.5f, bold = true)
-        Cell("Length", 0.9f, bold = true)
-        Cell("Weight", 1.0f, bold = true)
+        Cell(if (ar) stringResource(R.string.bx_h_shape) else "Shape", 0.5f, bold = true)
+        Cell(if (ar) stringResource(R.string.bx_h_qty) else "Qty", 0.5f, bold = true)
+        Cell(if (ar) stringResource(R.string.bx_h_len) else "Length", 0.9f, bold = true)
+        Cell(if (ar) stringResource(R.string.bx_h_wt) else "Weight", 1.0f, bold = true)
     }
 }
 

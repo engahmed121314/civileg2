@@ -2575,4 +2575,29 @@
     <string name="note_col_rho_max_ref" formatted="false">ECP 203: البند 4-2-5-2 (ρmax = 8%) (لم يُتحقق من البند)</string>
     <string name="note_col_ties_ref">ECP 203: البند 4-2-6 (لم يُتحقق من البند)</string>
     <string name="note_col_cover_ref">ECP 203: البند 4-1-4 (الغطاء ≥ 40 مم) (لم يُتحقق من البند)</string>
+    <string name="bx_steel_rough" formatted="false">حديد التسليح (تقدير تقريبي وليس للشراء: بدون خطاطيف أو تثبيت أو وصلات أو ثنيات، كانات منتظمة، حديد علوي بطول البحر)</string>
+    <string name="bx_steel" formatted="false">حديد التسليح</string>
+    <string name="bx_blinding" formatted="false">خرسانة النظافة</string>
+    <string name="bx_concrete" formatted="false">خرسانة</string>
+    <string name="bx_excavation" formatted="false">حفر</string>
+    <string name="bx_formwork" formatted="false">شدات</string>
+    <string name="bx_pads_strap_sides" formatted="false">القواعد وجوانب الشداد</string>
+    <string name="bx_sides_soffit" formatted="false">الجوانب والقاع</string>
+    <string name="bx_four_faces" formatted="false">أربعة أوجه</string>
+    <string name="bx_both_faces" formatted="false">الوجهان</string>
+    <string name="bx_base_soffit" formatted="false">قاع القاعدة</string>
+    <string name="bx_inclined_soffit" formatted="false">القاع المائل</string>
+    <string name="bx_pile_shafts" formatted="false">أعمدة الخوازيق</string>
+    <string name="bx_cap_sides" formatted="false">جوانب غطاء الخوازيق</string>
+    <string name="bx_piles_cap" formatted="false">الخوازيق والغطاء</string>
+    <string name="bx_perimeter" formatted="false">المحيط</string>
+    <string name="bx_soffit" formatted="false">القاع</string>
+    <string name="bx_h_no" formatted="false">م</string>
+    <string name="bx_h_item" formatted="false">البند</string>
+    <string name="bx_h_unit" formatted="false">الوحدة</string>
+    <string name="bx_h_qty" formatted="false">الكمية</string>
+    <string name="bx_h_bar" formatted="false">السيخ</string>
+    <string name="bx_h_shape" formatted="false">الشكل</string>
+    <string name="bx_h_len" formatted="false">الطول</string>
+    <string name="bx_h_wt" formatted="false">الوزن</string>
 </resources>
