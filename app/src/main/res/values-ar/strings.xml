@@ -2649,9 +2649,9 @@
     <string name="chk_st_geo_prefix" formatted="false">حد هندسي:</string>
     <string name="beam_eq_1" formatted="false">1. العزم ⁦Mu = (w_ult × L²)⁩ ÷ المعامل (التحليل الإنشائي)</string>
     <string name="beam_eq_2" formatted="false">2. العمق الفعال ⁦d = h⁩ - الغطاء الخرساني</string>
-    <string name="beam_eq_3" formatted="false">3. ⁦R = Mu / (fcu/γc × b × d²)⁩</string>
-    <string name="beam_eq_4" formatted="false">4. ⁦As = Mu / (fy/γs × j × d)⁩</string>
-    <string name="beam_eq_5" formatted="false">5. فحص القص: ⁦q_u = Vu / (b × d) &lt; q_cu_limit⁩</string>
+    <string name="beam_eq_3" formatted="false">‏3. ⁦R = Mu / (fcu/γc × b × d²)⁩</string>
+    <string name="beam_eq_4" formatted="false">‏4. ⁦As = Mu / (fy/γs × j × d)⁩</string>
+    <string name="beam_eq_5" formatted="false">‏5. فحص القص: ⁦q_u = Vu / (b × d) &lt; q_cu_limit⁩</string>
     <string name="stp_punching" formatted="false">قص الثقب للقاعدة (تقريبي)</string>
     <string name="stp_geometry" formatted="false">هندسة الخزان</string>
     <string name="stp_pressure" formatted="false">ضغط الماء</string>
