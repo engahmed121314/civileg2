@@ -295,11 +295,16 @@ object ElementDxfDrawings {
         barDiaMm: Double,
         barSpacingMm: Double,
         treadCount: Int = steps,
-        reviewNotes: List<String> = emptyList()
+        reviewNotes: List<String> = emptyList(),
+        distBarDiaMm: Double = 0.0,
+        distBarSpacingMm: Double = 0.0,
+        landingLengthMm: Double = 0.0,
+        landingThicknessMm: Double = 0.0
     ): DxfDrawable = DxfDrawable { ex ->
         require(steps > 0 && treadCount > 0 && (steps == treadCount || steps == treadCount + 1))
         val totalRise = riseMm * steps
-        ex.sheetFrame(runMm, totalRise + waistThicknessMm)
+        val landLen = landingLengthMm.coerceAtLeast(0.0)
+        ex.sheetFrame(runMm + landLen, totalRise + waistThicknessMm)
         val stepRun = runMm / treadCount
         val profile = ArrayList<Pair<Double, Double>>(steps * 2 + 2)
         profile += 0.0 to waistThicknessMm
@@ -310,15 +315,41 @@ object ElementDxfDrawings {
         }
         profile += runMm to (waistThicknessMm + totalRise)
         ex.addPolyline(profile, "SLABS", closed = false)
-        val barLen = kotlin.math.hypot(runMm, totalRise)
-        var d = coverMm
-        while (d <= barLen - coverMm) {
-            val t = if (barLen > 0.0) d / barLen else 0.0
-            ex.rebar(coverMm + t * runMm, waistThicknessMm / 2.0 + t * totalRise, barDiaMm)
-            d += barSpacingMm.coerceAtLeast(50.0)
+        // Soffit of the flight and the landing (El-Leithy 2013 p.15, p.30: section with main bars at the soffit, hooked at the supports).
+        ex.addPolyline(listOf(0.0 to 0.0, runMm to totalRise), "SLABS", closed = false)
+        ex.addPolyline(listOf(0.0 to 0.0, 0.0 to waistThicknessMm), "SLABS", closed = false)
+        if (landLen > 0.0 && landingThicknessMm > 0.0) {
+            val top = totalRise + waistThicknessMm
+            ex.addPolyline(
+                listOf(runMm to top, runMm + landLen to top, runMm + landLen to top - landingThicknessMm, runMm to top - landingThicknessMm),
+                "SLABS", closed = false
+            )
         }
-        dimensionOutline(ex, runMm, totalRise + waistThicknessMm)
-        ex.notes(title, runMm, totalRise + waistThicknessMm, "$steps risers / $treadCount treads", "MAIN Ø${fmt(barDiaMm)} @ ${fmt(barSpacingMm)}", reviewNotes)
+        // Main bar: one polyline along the soffit at cover, with a vertical hook at each end.
+        val barLen = kotlin.math.hypot(runMm, totalRise)
+        val ux = runMm / barLen
+        val uy = totalRise / barLen
+        val nx = -uy
+        val ny = ux
+        val off = coverMm + barDiaMm / 2.0
+        val hook = (waistThicknessMm - 2.0 * coverMm).coerceAtLeast(0.0)
+        val x0 = off * nx
+        val y0 = off * ny
+        val x1 = runMm + off * nx
+        val y1 = totalRise + off * ny
+        ex.addPolyline(listOf(x0 to (y0 + hook), x0 to y0, x1 to y1, x1 to (y1 + hook)), "0_REBAR_BOTTOM", closed = false)
+        // Distribution bars: sections (dots) just above the main bar, at the adopted spacing.
+        if (distBarDiaMm > 0.0 && distBarSpacingMm > 0.0) {
+            var d = coverMm
+            val step = distBarSpacingMm.coerceAtLeast(50.0)
+            val o2 = off + barDiaMm / 2.0 + distBarDiaMm / 2.0
+            while (d <= barLen - coverMm) {
+                ex.rebar(d * ux + o2 * nx, d * uy + o2 * ny, distBarDiaMm)
+                d += step
+            }
+        }
+        dimensionOutline(ex, runMm + landLen, totalRise + waistThicknessMm)
+        ex.notes(title, runMm + landLen, totalRise + waistThicknessMm, "$steps risers / $treadCount treads", "MAIN Ø${fmt(barDiaMm)} @ ${fmt(barSpacingMm)}", reviewNotes)
     }
 
     /** Rectangular tank section: base slab, walls and reinforcement. */

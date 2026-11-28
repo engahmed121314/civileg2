@@ -151,9 +151,15 @@ class StairViewModel @Inject constructor(
             coverMm = pdfCover,
             barDiaMm = currentResult.reinforcement.diameter.toDouble(),
             barSpacingMm = currentResult.reinforcement.spacing,
+            distBarDiaMm = currentResult.distributionReinforcement.diameter.toDouble(),
+            distBarSpacingMm = currentResult.distributionReinforcement.spacing,
+            landingLengthMm = currentResult.landingLengthMm ?: 0.0,
+            landingThicknessMm = currentResult.landingThicknessMm ?: 0.0,
             reviewNotes = listOf(
                 "REVIEW ONLY - NOT A FABRICATION DETAIL",
                 currentResult.documentaryBasisLabel,
+                "Detailing layout after El-Leithy 2013 p.15, p.30 (practice, not a code requirement)",
+                "Top bars at supports and landing steel: NOT DESIGNED, not drawn. Hook length not sourced.",
                 "Final steel / cutting lengths / support anchorage unavailable",
                 currentResult.barMaterialClassification
             )
