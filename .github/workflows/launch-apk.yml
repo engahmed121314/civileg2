@@ -41,8 +41,8 @@ jobs:
           arch: x86_64
           profile: pixel_6
           cores: 4
-          ram-size: 8192M
-          heap-size: 768M
+          ram-size: 11264M
+          heap-size: 1024M
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none -camera-front none
           disable-animations: true
           script: bash tools/ci/standalone_launch.sh
