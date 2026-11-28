@@ -448,6 +448,45 @@ def sweep(prefix, n=5):
         if cur == prev: break
         prev = cur
         scroll_up(2)
+if os.path.exists("tools/ci/EXPORT_ONLY"):
+    # PDF and DXF export proof for the priority pages: open, calculate, tap the export, capture, restart between pages.
+    pages = [
+        ("الأعمدة", "ex-col", ["تصميم العمود الآن", "تصميم العمود"]),
+        ("الخزانات", "ex-tank", ["تصميم الخزان الآن"]),
+        ("الكمرات", "ex-beam", ["تصميم الكمرة الآن", "تحليل وحساب", "احسب"]),
+    ]
+    for label, prefix, calc in pages:
+        try:
+            restart_app(); dismiss_not_responding()
+            tap_text(["التصميم"], prefix + "-tab", exact=True); scroll_top(3)
+            ok = False
+            for n in range(1, 8):
+                if tap_text([label], prefix + "-find"): ok = True; break
+                scroll_top(3); scroll_up(n)
+            log.append((prefix + "_open", ok)); time.sleep(2)
+            got = False
+            for _ in range(5):
+                if tap_text(calc, prefix + "-calc"): got = True; break
+                scroll_up(2)
+            log.append((prefix + "_calc", got)); time.sleep(3)
+            for kind, words in (("dxf", ["DXF"]), ("pdf", ["تقرير PDF"])):
+                hit = False
+                scroll_top(6)
+                for _ in range(14):
+                    if tap_text(words, prefix + "-" + kind + "-find"): hit = True; break
+                    scroll_up(2)
+                log.append((prefix + "_" + kind + "_tap", hit)); time.sleep(6)
+                shot(prefix + "-" + kind + "-after"); dump(prefix + "-" + kind + "-after")
+                if kind == "pdf":
+                    tap_text(["Got it", "حسنًا", "حسناً"], prefix + "-gotit")
+                    for k in range(1, 4):
+                        adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
+                        shot(prefix + "-pdf-" + str(k))
+                adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(2); dismiss_not_responding()
+        except Exception as e:
+            log.append((prefix + "_exception", repr(e)))
+    pull_exported_pdfs()
+    open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
 if os.path.exists("tools/ci/CALCPAGES_ONLY"):
     # Default-input calculation of the calculation pages whose standalone result lines were changed (alignment evidence).
     pages = [
