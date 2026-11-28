@@ -68,7 +68,7 @@ fun CalculationStepsCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 AppText(
-                    text = title,
+                    text = rememberStepLocalizer()(title),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -119,11 +119,47 @@ private fun rememberStepLocalizer(): (String) -> String {
         "mm spacing" to stringResource(R.string.stp_spacing),
         "(edition not verified)" to stringResource(R.string.stp_edition)
     )
+    val pairs2 = listOf(
+        "Column Strip Moment" to stringResource(R.string.stp_col_strip_m),
+        "Column Strip Steel" to stringResource(R.string.stp_col_strip_s),
+        "Middle Strip Moment" to stringResource(R.string.stp_mid_strip_m),
+        "Middle Strip Steel" to stringResource(R.string.stp_mid_strip_s),
+        "Static Moment" to stringResource(R.string.stp_static_m),
+        "Factored Load" to stringResource(R.string.stp_factored),
+        "Ultimate Loads" to stringResource(R.string.stp_ult_loads),
+        "Ultimate Load" to stringResource(R.string.stp_ult_load),
+        "Punching Shear" to stringResource(R.string.stp_punching_shear),
+        "Shear Check" to stringResource(R.string.stp_shear_check),
+        "Deflection" to stringResource(R.string.stp_deflection),
+        "Main Flexural Steel" to stringResource(R.string.stp_main_flex),
+        "Main Steel" to stringResource(R.string.stp_main_steel),
+        "Secondary Steel" to stringResource(R.string.stp_second_steel),
+        "Distribution Steel" to stringResource(R.string.stp_dist_steel),
+        "Minimum Thickness" to stringResource(R.string.stp_min_t),
+        "Design Moment" to stringResource(R.string.stp_design_m),
+        "Design Shear" to stringResource(R.string.stp_design_v),
+        "Flexural Steel" to stringResource(R.string.stp_flex_steel),
+        "Overall Safety" to stringResource(R.string.stp_overall),
+        "Active Earth Pressure" to stringResource(R.string.stp_active_ep),
+        "Axial Capacity" to stringResource(R.string.stp_axial_cap),
+        "Slenderness" to stringResource(R.string.stp_slender),
+        "Eccentricity" to stringResource(R.string.stp_eccent),
+        "Settlement" to stringResource(R.string.stp_settle),
+        "Soil Bearing Check" to stringResource(R.string.stp_soil_bearing),
+        "Footing Dimensions" to stringResource(R.string.stp_ft_dims),
+        "Flexural Demand" to stringResource(R.string.stp_flex_demand),
+        "Shear Demand" to stringResource(R.string.stp_shear_demand),
+        "Shear Reinforcement" to stringResource(R.string.stp_shear_r),
+        "Vertical Reinforcement" to stringResource(R.string.stp_vert_r),
+        "Horizontal Reinforcement" to stringResource(R.string.stp_horiz_r),
+        "Flat Slab Calculation Steps" to stringResource(R.string.stp_fs_title)
+    )
     val unsafe = stringResource(R.string.stp_unsafe)
     val safe = stringResource(R.string.stp_safe)
     return { text ->
         var out = text
         pairs.forEach { (en, ar) -> out = out.replace(en, ar) }
+        pairs2.forEach { (en, ar) -> out = out.replace(en, ar) }
         out = Regex("\\bUNSAFE\\b").replace(out, unsafe)
         Regex("\\bSAFE\\b").replace(out, safe)
     }

@@ -626,7 +626,7 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
             ResultRow("Shear Capacity", "${"%.1f".format(result.shearCapacity)} kN")
             ResultRow("Deflection", "${"%.2f".format(result.deflection)} mm")
             ResultRow("Allowable Deflection", "${"%.2f".format(result.allowableDeflection)} mm")
-            ResultRow("Concrete Volume", "${"%.3f".format(result.concreteVolume)} m³")
+            ResultRow(stringResource(R.string.lbl_concrete_volume), "${"%.3f".format(result.concreteVolume)} m³")
             ResultRow("Steel Weight", "${"%.1f".format(result.steelWeight)} kg")
             ResultRow("Cost", "${"%.2f".format(result.cost)}")
             

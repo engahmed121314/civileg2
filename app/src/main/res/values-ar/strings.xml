@@ -2680,4 +2680,38 @@
     <string name="stp_shear_key" formatted="false">أضف مفتاح قص</string>
     <string name="stp_with_min" formatted="false">مع الحد الأدنى</string>
     <string name="strap_reactions_label">ردود الأفعال (R1، R2)</string>
+    <string name="stp_col_strip_m" formatted="false">عزم شريط العمود</string>
+    <string name="stp_col_strip_s" formatted="false">حديد شريط العمود</string>
+    <string name="stp_mid_strip_m" formatted="false">عزم الشريط الأوسط</string>
+    <string name="stp_mid_strip_s" formatted="false">حديد الشريط الأوسط</string>
+    <string name="stp_static_m" formatted="false">العزم الإستاتيكي</string>
+    <string name="stp_factored" formatted="false">الحمل المصعّد</string>
+    <string name="stp_ult_loads" formatted="false">الأحمال القصوى</string>
+    <string name="stp_ult_load" formatted="false">الحمل الأقصى</string>
+    <string name="stp_punching_shear" formatted="false">قص الثقب</string>
+    <string name="stp_shear_check" formatted="false">فحص القص</string>
+    <string name="stp_deflection" formatted="false">الترخيم</string>
+    <string name="stp_main_flex" formatted="false">حديد الانحناء الرئيسي</string>
+    <string name="stp_main_steel" formatted="false">الحديد الرئيسي</string>
+    <string name="stp_second_steel" formatted="false">الحديد الثانوي</string>
+    <string name="stp_dist_steel" formatted="false">حديد التوزيع</string>
+    <string name="stp_min_t" formatted="false">أقل سمك</string>
+    <string name="stp_design_m" formatted="false">عزم التصميم</string>
+    <string name="stp_design_v" formatted="false">قص التصميم</string>
+    <string name="stp_flex_steel" formatted="false">حديد الانحناء</string>
+    <string name="stp_overall" formatted="false">الأمان العام</string>
+    <string name="stp_active_ep" formatted="false">ضغط التربة الفعال</string>
+    <string name="stp_axial_cap" formatted="false">القدرة المحورية</string>
+    <string name="stp_slender" formatted="false">النحافة</string>
+    <string name="stp_eccent" formatted="false">اللامركزية</string>
+    <string name="stp_settle" formatted="false">الهبوط</string>
+    <string name="stp_soil_bearing" formatted="false">فحص تحمل التربة</string>
+    <string name="stp_ft_dims" formatted="false">أبعاد القاعدة</string>
+    <string name="stp_flex_demand" formatted="false">الطلب على الانحناء</string>
+    <string name="stp_shear_demand" formatted="false">الطلب على القص</string>
+    <string name="stp_shear_r" formatted="false">تسليح القص</string>
+    <string name="stp_vert_r" formatted="false">التسليح الرأسي</string>
+    <string name="stp_horiz_r" formatted="false">التسليح الأفقي</string>
+    <string name="stp_fs_title" formatted="false">خطوات حساب البلاطة المسطحة</string>
+    <string name="lbl_steel_indicative">الحديد (نسبة تقريبية، ليست أسياخًا مصممة)</string>
 </resources>

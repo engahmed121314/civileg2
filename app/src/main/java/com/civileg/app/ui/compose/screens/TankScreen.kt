@@ -368,8 +368,8 @@ fun TankScreen(
                             ResultRow(stringResource(R.string.tank_base_thickness), "${res.baseThickness.toInt()} mm")
                             ResultRow(stringResource(R.string.tank_max_water_pressure), "${"%.1f".format(res.waterPressure)} kN/m²")
                             ResultRow(stringResource(R.string.tank_wall_reinforcement), res.wallReinforcement.barString)
-                            ResultRow("Concrete Volume", "${"%.3f".format(res.concreteVolume)} m³")
-                            ResultRow("Steel (indicative ratio, not designed bars)", "${"%.1f".format(res.steelWeight)} kg")
+                            ResultRow(stringResource(R.string.lbl_concrete_volume), "${"%.3f".format(res.concreteVolume)} m³")
+                            ResultRow(stringResource(R.string.lbl_steel_indicative), "${"%.1f".format(res.steelWeight)} kg")
                             ResultRow("Cost", "Unavailable (no price basis)")
                         }
                     }

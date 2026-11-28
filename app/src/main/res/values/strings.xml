@@ -2677,4 +2677,38 @@
     <string name="stp_shear_key" formatted="false">Add shear key</string>
     <string name="stp_with_min" formatted="false">with minimum</string>
     <string name="strap_reactions_label">Reactions (R1, R2)</string>
+    <string name="stp_col_strip_m" formatted="false">Column Strip Moment</string>
+    <string name="stp_col_strip_s" formatted="false">Column Strip Steel</string>
+    <string name="stp_mid_strip_m" formatted="false">Middle Strip Moment</string>
+    <string name="stp_mid_strip_s" formatted="false">Middle Strip Steel</string>
+    <string name="stp_static_m" formatted="false">Static Moment</string>
+    <string name="stp_factored" formatted="false">Factored Load</string>
+    <string name="stp_ult_loads" formatted="false">Ultimate Loads</string>
+    <string name="stp_ult_load" formatted="false">Ultimate Load</string>
+    <string name="stp_punching_shear" formatted="false">Punching Shear</string>
+    <string name="stp_shear_check" formatted="false">Shear Check</string>
+    <string name="stp_deflection" formatted="false">Deflection</string>
+    <string name="stp_main_flex" formatted="false">Main Flexural Steel</string>
+    <string name="stp_main_steel" formatted="false">Main Steel</string>
+    <string name="stp_second_steel" formatted="false">Secondary Steel</string>
+    <string name="stp_dist_steel" formatted="false">Distribution Steel</string>
+    <string name="stp_min_t" formatted="false">Minimum Thickness</string>
+    <string name="stp_design_m" formatted="false">Design Moment</string>
+    <string name="stp_design_v" formatted="false">Design Shear</string>
+    <string name="stp_flex_steel" formatted="false">Flexural Steel</string>
+    <string name="stp_overall" formatted="false">Overall Safety</string>
+    <string name="stp_active_ep" formatted="false">Active Earth Pressure</string>
+    <string name="stp_axial_cap" formatted="false">Axial Capacity</string>
+    <string name="stp_slender" formatted="false">Slenderness</string>
+    <string name="stp_eccent" formatted="false">Eccentricity</string>
+    <string name="stp_settle" formatted="false">Settlement</string>
+    <string name="stp_soil_bearing" formatted="false">Soil Bearing Check</string>
+    <string name="stp_ft_dims" formatted="false">Footing Dimensions</string>
+    <string name="stp_flex_demand" formatted="false">Flexural Demand</string>
+    <string name="stp_shear_demand" formatted="false">Shear Demand</string>
+    <string name="stp_shear_r" formatted="false">Shear Reinforcement</string>
+    <string name="stp_vert_r" formatted="false">Vertical Reinforcement</string>
+    <string name="stp_horiz_r" formatted="false">Horizontal Reinforcement</string>
+    <string name="stp_fs_title" formatted="false">Flat Slab Calculation Steps</string>
+    <string name="lbl_steel_indicative">Steel (indicative ratio, not designed bars)</string>
 </resources>
