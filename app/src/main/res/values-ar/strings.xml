@@ -2728,4 +2728,10 @@
     <string name="st_status_unsupported" formatted="false">حالة غير مدعومة: اختر قلبة واحدة أو قلبتين</string>
     <string name="st_reference_label" formatted="false">المرجع المقدم: ‏⁦ECP 203-2025⁩ (نسخة ممسوحة)؛ تغطية معادلات السلالم غير مكتملة</string>
     <string name="st_bar_class_undeclared" formatted="false">غير مُعلن: ‏⁦fy⁩ وحده لا يحدد سطح الحديد أو رتبته</string>
+    <string name="st_steel_auto" formatted="false">الحديد: تلقائي من الحساب (علّم لإدخال الأسياخ بنفسك)</string>
+    <string name="st_steel_manual" formatted="false">الحديد: يدوي، والفحص يتم على الأسياخ المُدخلة</string>
+    <string name="st_bot_dia" formatted="false">قطر الحديد السفلي (مم)</string>
+    <string name="st_bot_sp" formatted="false">تباعد الحديد السفلي (مم)</string>
+    <string name="st_top_dia" formatted="false">قطر الحديد العلوي (مم)</string>
+    <string name="st_top_sp" formatted="false">تباعد الحديد العلوي (مم)</string>
 </resources>

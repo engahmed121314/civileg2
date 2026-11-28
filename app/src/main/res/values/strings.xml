@@ -2725,4 +2725,10 @@
     <string name="st_status_unsupported" formatted="false">Unsupported case: choose Single Flight or Double Flight</string>
     <string name="st_reference_label" formatted="false">Reference supplied: ECP 203-2025 (scanned); stair equation coverage is incomplete</string>
     <string name="st_bar_class_undeclared" formatted="false">Not declared: fy alone does not identify the bar surface or grade</string>
+    <string name="st_steel_auto" formatted="false">Steel: automatic from the calculation (tick to enter bars)</string>
+    <string name="st_steel_manual" formatted="false">Steel: entered by the user, checks run on these bars</string>
+    <string name="st_bot_dia" formatted="false">Bottom bar diameter (mm)</string>
+    <string name="st_bot_sp" formatted="false">Bottom bar spacing (mm)</string>
+    <string name="st_top_dia" formatted="false">Top bar diameter (mm)</string>
+    <string name="st_top_sp" formatted="false">Top bar spacing (mm)</string>
 </resources>

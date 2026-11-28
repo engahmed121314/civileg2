@@ -67,7 +67,13 @@ data class StaircaseInput(
     // Landing geometry — required to claim CONTINUOUS_OVER_LANDING for DOG_LEG.
     val landingLengthMm: Double? = null,
     val landingWidthMm: Double? = null,
-    val landingThicknessMm: Double? = null
+    val landingThicknessMm: Double? = null,
+    // Optional user-entered bars (mm, mm c/c). Null = the engine selects the bars (auto mode).
+    // The checks then run on the entered bars.
+    val manualMainDia: Int? = null,
+    val manualMainSpacing: Double? = null,
+    val manualTopDia: Int? = null,
+    val manualTopSpacing: Double? = null
 )
 
 /**

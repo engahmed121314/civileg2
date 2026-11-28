@@ -2266,7 +2266,8 @@ class CalculatorEngine @Inject constructor(
 
     fun designStaircase(type: StairType, span: Double, riser: Double, tread: Double, deadLoad: Double, liveLoad: Double, fcu: Double, fy: Double, preferredDiameter: Int, code: DesignCode, stairWidthMm: Double = 1200.0,
         supportCondition: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
-        landingLengthMm: Double? = null, landingWidthMm: Double? = null, landingThicknessMm: Double? = null
+        landingLengthMm: Double? = null, landingWidthMm: Double? = null, landingThicknessMm: Double? = null,
+        manualMainDia: Int? = null, manualMainSpacing: Double? = null, manualTopDia: Int? = null, manualTopSpacing: Double? = null
     ): StairResult {
         InputGuard.positive("stairWidthMm", stairWidthMm)
         InputGuard.positive("span", span)
@@ -2318,7 +2319,11 @@ class CalculatorEngine @Inject constructor(
                 supportCondition = supportCondition,
                 landingLengthMm = landingLengthMm,
                 landingWidthMm = landingWidthMm,
-                landingThicknessMm = landingThicknessMm
+                landingThicknessMm = landingThicknessMm,
+                manualMainDia = manualMainDia,
+                manualMainSpacing = manualMainSpacing,
+                manualTopDia = manualTopDia,
+                manualTopSpacing = manualTopSpacing
             )
 
             val result = CalculationFactory.getStaircaseDesign(code).designStaircase(input)
@@ -2448,6 +2453,7 @@ class CalculatorEngine @Inject constructor(
                     result.codeNotes.filterNot { Regex("(?:ECP|ACI|SBC)[^;]*20(?:19|21|24|25)").containsMatchIn(it) } +
                     "Legacy edition-specific citations omitted, not verified against supplied reference" +
                     "Complete stair detailing acceptance is not implemented" +
+                    (if (manualMainDia != null && code != DesignCode.ECP) "Entered bars were NOT applied: manual steel is implemented for ECP only, auto bars shown" else "") +
                     ("Waist thickness ${"%.0f".format(defaultThickness)} mm is a calculated design choice by the app, not a user input: " +
                         "smallest 10 mm multiple meeting the deemed-to-satisfy span/thickness table (${if (code == DesignCode.ECP) "ECP 203-2020 Table 4-10, solid slab, simply supported" else "ACI 318M-14 / SBC 304-CR-18 Table 7.3.1.1, simply supported"}; slab analogy, preliminary), " +
                         "not below the lane minimum ${"%.0f".format(laneMinWaistMm)} mm, which is a practical assumption and not a code check") +

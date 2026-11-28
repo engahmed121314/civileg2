@@ -122,6 +122,11 @@ fun StairScreen(
     var landingLength by remember { mutableStateOf("") }
     var landingWidth by remember { mutableStateOf("") }
     var landingThickness by remember { mutableStateOf("") }
+    var manualSteel by remember { mutableStateOf(false) }
+    var botDia by remember { mutableStateOf("") }
+    var botSp by remember { mutableStateOf("") }
+    var topDia by remember { mutableStateOf("") }
+    var topSp by remember { mutableStateOf("") }
     var expandedType by remember { mutableStateOf(false) }
     var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
 
@@ -132,7 +137,8 @@ fun StairScreen(
     val fieldItemIndex = mapOf(
         "span" to 2, "riser" to 2, "tread" to 3, "deadLoad" to 3,
         "liveLoad" to 4, "fcu" to 4, "fy" to 5, "stairWidth" to 5,
-        "landingLength" to 6, "landingWidth" to 6, "landingThickness" to 6
+        "landingLength" to 6, "landingWidth" to 6, "landingThickness" to 6,
+        "botDia" to 7, "botSp" to 7, "topDia" to 8, "topSp" to 8
     )
     // Any input change makes the shown result stale: drop it and that field's old error.
     fun touch(id: String) {
@@ -247,6 +253,16 @@ fun StairScreen(
                         ValidatedNumberField(form, "landingWidth", landingWidth, stringResource(R.string.st_landing_w), { landingWidth = it; touch("landingWidth") })
                         ValidatedNumberField(form, "landingThickness", landingThickness, stringResource(R.string.st_landing_t), { landingThickness = it; touch("landingThickness") })
                     }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = manualSteel, onCheckedChange = { manualSteel = it; viewModel.clearResult() })
+                        AppText(stringResource(if (manualSteel) R.string.st_steel_manual else R.string.st_steel_auto))
+                    }
+                    if (manualSteel) {
+                        ValidatedNumberField(form, "botDia", botDia, stringResource(R.string.st_bot_dia), { botDia = it; touch("botDia") })
+                        ValidatedNumberField(form, "botSp", botSp, stringResource(R.string.st_bot_sp), { botSp = it; touch("botSp") })
+                        ValidatedNumberField(form, "topDia", topDia, stringResource(R.string.st_top_dia), { topDia = it; touch("topDia") })
+                        ValidatedNumberField(form, "topSp", topSp, stringResource(R.string.st_top_sp), { topSp = it; touch("topSp") })
+                    }
                 }
             }
 
@@ -275,11 +291,16 @@ fun StairScreen(
                                 FieldSpec("fcu", fcu, FieldKind.POSITIVE),
                                 FieldSpec("fy", fy, FieldKind.POSITIVE),
                                 FieldSpec("stairWidth", stairWidth, FieldKind.POSITIVE)
-                            ) + if (landingDeclared) listOf(
+                            ) + (if (landingDeclared) listOf(
                                 FieldSpec("landingLength", landingLength, FieldKind.POSITIVE),
                                 FieldSpec("landingWidth", landingWidth, FieldKind.POSITIVE),
                                 FieldSpec("landingThickness", landingThickness, FieldKind.POSITIVE)
-                            ) else emptyList()
+                            ) else emptyList()) + (if (manualSteel) listOf(
+                                FieldSpec("botDia", botDia, FieldKind.POSITIVE),
+                                FieldSpec("botSp", botSp, FieldKind.POSITIVE),
+                                FieldSpec("topDia", topDia, FieldKind.POSITIVE),
+                                FieldSpec("topSp", topSp, FieldKind.POSITIVE)
+                            ) else emptyList())
                         )
                         form.apply(checked)
                         if (!checked.isValid) {
@@ -305,7 +326,11 @@ fun StairScreen(
                             supportCondition = supportCondition,
                             landingLengthMm = if (landingDeclared) checked.value("landingLength") else null,
                             landingWidthMm = if (landingDeclared) checked.value("landingWidth") else null,
-                            landingThicknessMm = if (landingDeclared) checked.value("landingThickness") else null
+                            landingThicknessMm = if (landingDeclared) checked.value("landingThickness") else null,
+                            manualMainDia = if (manualSteel) checked.value("botDia").toInt() else null,
+                            manualMainSpacing = if (manualSteel) checked.value("botSp") else null,
+                            manualTopDia = if (manualSteel) checked.value("topDia").toInt() else null,
+                            manualTopSpacing = if (manualSteel) checked.value("topSp") else null
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),

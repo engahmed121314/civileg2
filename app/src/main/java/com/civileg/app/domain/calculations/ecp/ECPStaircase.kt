@@ -306,6 +306,15 @@ class ECPStaircase : StaircaseDesign {
                 break
             }
         }
+        val manualMain = input.manualMainDia != null && input.manualMainSpacing != null &&
+            input.manualMainDia > 0 && input.manualMainSpacing > 0.0
+        if (manualMain) {
+            val md = input.manualMainDia!!
+            val ms = input.manualMainSpacing!!
+            mainRebar = "Ø$md @ ${ms.toInt()} mm c/c"
+            mainRebarArea = PI * md * md / 4.0 * 1000.0 / ms
+            codeNotes.add("Manual bottom steel entered by the user: $mainRebar (${"%.0f".format(mainRebarArea)} mm²/m); the checks below run on the entered bars. Effective depth is kept from the auto pass.")
+        }
         val dEffective = d
         if (astRequired == minSteelArea) {
             codeNotes.add("Minimum steel governs: ${String.format("%.0f", minSteelArea)} mm²/m (ECP 203-2025 §6-2-1-3-2 item 1, printed 6-6: ratio ≥ max(0.6/fy, class floor) of b×d)")
@@ -373,8 +382,18 @@ class ECPStaircase : StaircaseDesign {
             0.0
         }
         val topRequired = max(topFlexureArea, topMeshFloor)
-        val topRebar = selectBars(topRequired)
-        val topRebarArea = parseBarArea(topRebar)
+        val manualTop = input.manualTopDia != null && input.manualTopSpacing != null &&
+            input.manualTopDia > 0 && input.manualTopSpacing > 0.0
+        val topRebar = if (manualTop) "Ø${input.manualTopDia} @ ${input.manualTopSpacing!!.toInt()} mm c/c" else selectBars(topRequired)
+        val topRebarArea = if (manualTop) PI * input.manualTopDia!! * input.manualTopDia / 4.0 * 1000.0 / input.manualTopSpacing!! else parseBarArea(topRebar)
+        if (manualMain) {
+            safetyChecks.add(StairSafetyCheck(
+                name = "Entered bottom steel vs required flexure steel",
+                value = mainRebarArea, limit = astRequired, unit = "mm²/m",
+                isSafe = mainRebarArea >= astRequired,
+                description = "Entered As = ${"%.0f".format(mainRebarArea)} mm²/m against the required ${"%.0f".format(astRequired)} mm²/m (ECP 203-2025 flexure, K-method as above)"
+            ))
+        }
 
         safetyChecks.add(StairSafetyCheck(
             name = "Support top steel (Eq. 6-2 / §6-2-1-3-2-9)",

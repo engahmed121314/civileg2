@@ -63,7 +63,8 @@ class StairViewModel @Inject constructor(
         code: DesignCode,
         stairWidthMm: Double = 1200.0,
         supportCondition: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
-        landingLengthMm: Double? = null, landingWidthMm: Double? = null, landingThicknessMm: Double? = null
+        landingLengthMm: Double? = null, landingWidthMm: Double? = null, landingThicknessMm: Double? = null,
+        manualMainDia: Int? = null, manualMainSpacing: Double? = null, manualTopDia: Int? = null, manualTopSpacing: Double? = null
     ) {
         InputGuard.positive("span", span)
         InputGuard.positive("riser", riser)
@@ -92,7 +93,9 @@ class StairViewModel @Inject constructor(
                     code = code,
                     stairWidthMm = stairWidthMm,
                     supportCondition = supportCondition, landingLengthMm = landingLengthMm,
-                    landingWidthMm = landingWidthMm, landingThicknessMm = landingThicknessMm
+                    landingWidthMm = landingWidthMm, landingThicknessMm = landingThicknessMm,
+                    manualMainDia = manualMainDia, manualMainSpacing = manualMainSpacing,
+                    manualTopDia = manualTopDia, manualTopSpacing = manualTopSpacing
                 )
                 
                 // Validate result for engineering consistency
