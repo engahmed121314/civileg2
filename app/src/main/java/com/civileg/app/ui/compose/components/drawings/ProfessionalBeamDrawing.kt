@@ -1351,10 +1351,10 @@ private fun DrawScope.drawReinforcementSchedule(
 
     // Cutting length pending a qualified anchorage/shape contract.
     val row1Data = arrayOf(
-        "T1",
+        "T1 bot",
         "Ø${mainRebarDia.toInt()}",
         "${mainRebarCount}",
-        "Pending",
+        "NOT ISSUED",
         "—"
     )
     cx = tableLeft
@@ -1389,7 +1389,7 @@ private fun DrawScope.drawReinforcementSchedule(
         "S1",
         "Ø${stirrupDia.toInt()}",
         "${stirrupCount}",
-        "Pending",
+        "NOT ISSUED",
         "@ ${stirrupSpacing.toInt()} mm"
     )
     cx = tableLeft
@@ -1419,10 +1419,10 @@ private fun DrawScope.drawReinforcementSchedule(
         )
         // No arbitrary fraction-of-span cutting length.
         val row3Data = arrayOf(
-            "T2",
+            "T2 top",
             "Ø${topRebarDia.toInt()}",
             "${topRebarCount}",
-            "Pending",
+            "NOT ISSUED",
             "—"
         )
         cx = tableLeft

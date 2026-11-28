@@ -72,7 +72,10 @@ fun slabDrawingSummary(result: CalculatorEngine.SlabResult): DrawingResultSummar
         concreteVolume = result.concreteVolume,
         steelWeight = result.steelWeight,
         safetyChecks = result.safetyChecks.asDrawingChecks(),
-        designCodeLabel = result.code.version
+        designCodeLabel = result.code.version,
+        // A pass with checks that the notes mark unverified or not assessed reads UNVERIFIED, as on the footing drawing.
+        codeAcceptanceComplete = result.codeNotes.none { it.contains("NOT ASSESSED", ignoreCase = true) || it.contains("unverified", ignoreCase = true) },
+        listedChecksFailed = !result.isSafe
     )
 
 fun flatSlabDrawingSummary(result: com.civileg.app.domain.FlatSlabResult): DrawingResultSummary =
@@ -91,6 +94,8 @@ fun flatSlabDrawingSummary(result: com.civileg.app.domain.FlatSlabResult): Drawi
             )
         },
         codeNotes = result.codeNotes,
+        // The engine lists the clauses it did not assess; with any of them open the sheet must not read SAFE.
+        codeAcceptanceComplete = result.codeNotes.none { it.contains("NOT ASSESSED", ignoreCase = true) },
         punchingShearRatio = if (result.punchingShearVc > 0.0) result.punchingShearVu / result.punchingShearVc else 0.0,
         deflectionRatio = if (result.allowableDeflection > 0.0) result.deflection / result.allowableDeflection else 0.0
     )

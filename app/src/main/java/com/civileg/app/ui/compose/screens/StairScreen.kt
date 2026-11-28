@@ -122,6 +122,11 @@ fun StairScreen(
     var landingLength by remember { mutableStateOf("") }
     var landingWidth by remember { mutableStateOf("") }
     var landingThickness by remember { mutableStateOf("") }
+    var manualSteel by remember { mutableStateOf(false) }
+    var botDia by remember { mutableStateOf("") }
+    var botSp by remember { mutableStateOf("") }
+    var topDia by remember { mutableStateOf("") }
+    var topSp by remember { mutableStateOf("") }
     var expandedType by remember { mutableStateOf(false) }
     var selectedCode by remember { mutableStateOf(defaultDesignCode()) }
 
@@ -132,7 +137,8 @@ fun StairScreen(
     val fieldItemIndex = mapOf(
         "span" to 2, "riser" to 2, "tread" to 3, "deadLoad" to 3,
         "liveLoad" to 4, "fcu" to 4, "fy" to 5, "stairWidth" to 5,
-        "landingLength" to 6, "landingWidth" to 6, "landingThickness" to 6
+        "landingLength" to 6, "landingWidth" to 6, "landingThickness" to 6,
+        "botDia" to 7, "botSp" to 7, "topDia" to 8, "topSp" to 8
     )
     // Any input change makes the shown result stale: drop it and that field's old error.
     fun touch(id: String) {
@@ -247,6 +253,16 @@ fun StairScreen(
                         ValidatedNumberField(form, "landingWidth", landingWidth, stringResource(R.string.st_landing_w), { landingWidth = it; touch("landingWidth") })
                         ValidatedNumberField(form, "landingThickness", landingThickness, stringResource(R.string.st_landing_t), { landingThickness = it; touch("landingThickness") })
                     }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = manualSteel, onCheckedChange = { manualSteel = it; viewModel.clearResult() })
+                        AppText(stringResource(if (manualSteel) R.string.st_steel_manual else R.string.st_steel_auto))
+                    }
+                    if (manualSteel) {
+                        ValidatedNumberField(form, "botDia", botDia, stringResource(R.string.st_bot_dia), { botDia = it; touch("botDia") })
+                        ValidatedNumberField(form, "botSp", botSp, stringResource(R.string.st_bot_sp), { botSp = it; touch("botSp") })
+                        ValidatedNumberField(form, "topDia", topDia, stringResource(R.string.st_top_dia), { topDia = it; touch("topDia") })
+                        ValidatedNumberField(form, "topSp", topSp, stringResource(R.string.st_top_sp), { topSp = it; touch("topSp") })
+                    }
                 }
             }
 
@@ -275,11 +291,16 @@ fun StairScreen(
                                 FieldSpec("fcu", fcu, FieldKind.POSITIVE),
                                 FieldSpec("fy", fy, FieldKind.POSITIVE),
                                 FieldSpec("stairWidth", stairWidth, FieldKind.POSITIVE)
-                            ) + if (landingDeclared) listOf(
+                            ) + (if (landingDeclared) listOf(
                                 FieldSpec("landingLength", landingLength, FieldKind.POSITIVE),
                                 FieldSpec("landingWidth", landingWidth, FieldKind.POSITIVE),
                                 FieldSpec("landingThickness", landingThickness, FieldKind.POSITIVE)
-                            ) else emptyList()
+                            ) else emptyList()) + (if (manualSteel) listOf(
+                                FieldSpec("botDia", botDia, FieldKind.POSITIVE),
+                                FieldSpec("botSp", botSp, FieldKind.POSITIVE),
+                                FieldSpec("topDia", topDia, FieldKind.POSITIVE),
+                                FieldSpec("topSp", topSp, FieldKind.POSITIVE)
+                            ) else emptyList())
                         )
                         form.apply(checked)
                         if (!checked.isValid) {
@@ -305,7 +326,11 @@ fun StairScreen(
                             supportCondition = supportCondition,
                             landingLengthMm = if (landingDeclared) checked.value("landingLength") else null,
                             landingWidthMm = if (landingDeclared) checked.value("landingWidth") else null,
-                            landingThicknessMm = if (landingDeclared) checked.value("landingThickness") else null
+                            landingThicknessMm = if (landingDeclared) checked.value("landingThickness") else null,
+                            manualMainDia = if (manualSteel) checked.value("botDia").toInt() else null,
+                            manualMainSpacing = if (manualSteel) checked.value("botSp") else null,
+                            manualTopDia = if (manualSteel) checked.value("topDia").toInt() else null,
+                            manualTopSpacing = if (manualSteel) checked.value("topSp") else null
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -418,10 +443,18 @@ fun StairScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             AppText(stringResource(R.string.st_code_incomplete), color = MaterialTheme.colorScheme.error)
-                            ResultRow(stringResource(R.string.st_analysis_status), res.analysisStatus.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() })
-                            ResultRow("Support", res.supportCondition.name)
-                            AppText(res.documentaryBasisLabel)
-                            AppText(res.barMaterialClassification)
+                            ResultRow(stringResource(R.string.st_analysis_status), stringResource(when (res.analysisStatus) {
+                                com.civileg.app.domain.calculations.base.StairAnalysisStatus.CASE_MODEL_IMPLEMENTED -> R.string.st_status_model
+                                com.civileg.app.domain.calculations.base.StairAnalysisStatus.CONSERVATIVE_FALLBACK_RESTRAINT_UNVERIFIED -> R.string.st_status_fallback
+                                com.civileg.app.domain.calculations.base.StairAnalysisStatus.UNSUPPORTED_CASE -> R.string.st_status_unsupported
+                            }))
+                            ResultRow(stringResource(R.string.st_support_cond), stringResource(when (res.supportCondition) {
+                                StairSupportCondition.UNSPECIFIED -> R.string.st_sup_unspec
+                                StairSupportCondition.SIMPLY_SUPPORTED -> R.string.st_sup_simple
+                                StairSupportCondition.CONTINUOUS_OVER_LANDING -> R.string.st_sup_cont
+                            }))
+                            AppText(stringResource(R.string.st_reference_label))
+                            AppText(stringResource(R.string.st_bar_class_undeclared))
                             AppText(stringResource(R.string.st_top_not_designed))
                             if (designUsable) {
                             ResultRow(stringResource(R.string.stair_slab_thickness), "${res.thickness.toInt()} mm")
@@ -439,7 +472,10 @@ fun StairScreen(
 
                 if (designUsable) {
                 if (res.calculationSteps.isNotEmpty()) {
-                    item { CalculationStepsCard(res.calculationSteps, title = stringResource(R.string.st_calc_steps)) }
+                    item {
+                        if (com.civileg.app.ui.compose.components.common.isArabicUi()) StairStepsArabic(res)
+                        else CalculationStepsCard(res.calculationSteps, title = stringResource(R.string.st_calc_steps))
+                    }
 
                     val bbsEntries = runCatching {
                         BbsGenerator.generateStairBbs(
@@ -578,7 +614,9 @@ fun StairScreen(
                                 landingThickness = res.landingThicknessMm ?: 0.0,
                                 mainRebarDia = res.reinforcement.diameter.toDouble(),
                                 mainRebarSpacing = res.reinforcement.spacing,
-                                distributionDia = res.distributionReinforcement.diameter.toDouble(),
+                                topRebarDia = stairBarOf(res.flightTopRebar).first,
+                                topRebarSpacing = stairBarOf(res.flightTopRebar).second,
+                        distributionDia = res.distributionReinforcement.diameter.toDouble(),
                                 distributionSpacing = res.distributionReinforcement.spacing,
                                 cover = codeAwareCover,
                                 stairType = res.type.displayName,
@@ -622,6 +660,8 @@ fun StairScreen(
                         landingThickness = res.landingThicknessMm ?: 0.0,
                         mainRebarDia = res.reinforcement.diameter.toDouble(),
                         mainRebarSpacing = res.reinforcement.spacing,
+                        topRebarDia = stairBarOf(res.flightTopRebar).first,
+                        topRebarSpacing = stairBarOf(res.flightTopRebar).second,
                         distributionDia = res.distributionReinforcement.diameter.toDouble(),
                         distributionSpacing = res.distributionReinforcement.spacing,
                         cover = codeAwareCover,
@@ -1130,4 +1170,41 @@ private fun SectionHeader(title: String, iconRes: Int) {
         Spacer(modifier = Modifier.width(8.dp))
         AppText(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
     }
+}
+
+
+/** Arabic, right-aligned steps card built from the result values (engine keeps its English keys). */
+@Composable
+private fun StairStepsArabic(res: CalculatorEngine.StairResult) {
+    val failed = res.safetyChecks.count { !it.isSafe && !it.notAssessed }
+    val notAssessed = res.safetyChecks.count { it.notAssessed }
+    val passed = res.safetyChecks.count { it.isSafe }
+    val lines = listOf(
+        stringResource(R.string.sta_s1_title) to stringResource(R.string.sta_s1_body, res.riser.toInt(), res.tread.toInt(), res.thickness.toInt()),
+        stringResource(R.string.sta_s2_title) to stringResource(R.string.sta_s2_body, "%.2f".format(java.util.Locale.US, res.wu)),
+        stringResource(R.string.sta_s3_title) to stringResource(R.string.sta_s3_body, "%.1f".format(java.util.Locale.US, res.mu)),
+        stringResource(R.string.sta_s4_title) to stringResource(R.string.sta_s4_body, res.reinforcement.barString),
+        stringResource(R.string.sta_s5_title) to stringResource(R.string.sta_s5_body, res.flightTopRebar.ifBlank { "-" }),
+        stringResource(R.string.sta_s6_title) to stringResource(R.string.sta_s6_body, res.distributionReinforcement.barString),
+        stringResource(R.string.sta_s7_title) to stringResource(R.string.sta_s7_body, res.landingRebar.ifBlank { "-" }),
+        stringResource(R.string.sta_s8_title) to stringResource(R.string.sta_s8_body, passed, failed, notAssessed)
+    )
+    CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppText(stringResource(R.string.st_calc_steps), fontWeight = FontWeight.Bold)
+                lines.forEachIndexed { i, (title, body) ->
+                    AppText("${i + 1}. $title", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+                    AppText(body, fontSize = 13.sp, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+                }
+                AppText(stringResource(R.string.st_reference_label), modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+            }
+        }
+    }
+}
+
+/** Parses "Ø12 @ 150 mm c/c" into (diameter, spacing); (0, 0) when the text holds no bar. */
+private fun stairBarOf(text: String): Pair<Double, Double> {
+    val m = Regex("Ø\\s*(\\d+(?:\\.\\d+)?)\\s*@\\s*(\\d+(?:\\.\\d+)?)").find(text) ?: return 0.0 to 0.0
+    return m.groupValues[1].toDouble() to m.groupValues[2].toDouble()
 }

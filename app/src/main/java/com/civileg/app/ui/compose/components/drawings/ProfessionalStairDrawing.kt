@@ -4,6 +4,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.civileg.app.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -22,6 +24,7 @@ import androidx.compose.ui.graphics.toArgb
 import com.civileg.app.domain.calculations.InputGuard
 import com.civileg.app.domain.entities.DesignCode
 import androidx.compose.ui.unit.dp
+import com.civileg.app.ui.compose.components.drawings.drawTextBidi
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.max
@@ -135,6 +138,13 @@ fun ProfessionalStairDrawing(
     // ── Responsive config ──────────────────────────────────────────────────
     val cfg = drawingDimensionsConfig()
 
+    val dwgNetTitle = stringResource(R.string.st_dwg_net_title)
+    val dwgMainFmt = stringResource(R.string.st_dwg_main)
+    val dwgDistFmt = stringResource(R.string.st_dwg_dist)
+    val dwgNotBars = stringResource(R.string.st_dwg_not_bars)
+    val dwgFinal = stringResource(R.string.st_dwg_final)
+    val dwgFooterFmt = stringResource(R.string.st_dwg_footer)
+    val dwgChecksFmt = stringResource(R.string.st_dwg_checks)
     Canvas(
         modifier = modifier
             .fillMaxWidth()
@@ -247,14 +257,17 @@ fun ProfessionalStairDrawing(
             val textSize = cfg.annotationTextSmall
             var y = tableTop + textSize
             fun line(value: String) {
-                drawTextAnnotated(value, left, y, DimensionWhite, textSize)
+                // Arabic lines go through the shared bidi-aware drawing (right-aligned); bold = false selects it.
+                drawTextBidi(value, left, y, DimensionWhite, textSize, center = false, bold = false)
                 y += textSize * 1.6f
             }
-            line("NET FLIGHT REVIEW ONLY, NOT CUTTING LENGTHS")
-            line("Main: ${quantityReview.main.count} x dia ${quantityReview.main.diameterMm}, net ${quantityReview.main.netFlightLengthMm.toInt()} mm")
-            line("Dist: ${quantityReview.distribution.count} x dia ${quantityReview.distribution.diameterMm}, net ${quantityReview.distribution.netFlightLengthMm.toInt()} mm")
-            line("No support ends / bends / laps / top / landing bars")
-            line("FINAL STEEL / FABRICATION BBS NOT AVAILABLE")
+            val lri = "\u2066"
+            val pdi = "\u2069"
+            line(dwgNetTitle)
+            line(dwgMainFmt.format(quantityReview.main.count, lri + quantityReview.main.diameterMm + pdi, quantityReview.main.netFlightLengthMm.toInt()))
+            line(dwgDistFmt.format(quantityReview.distribution.count, lri + quantityReview.distribution.diameterMm + pdi, quantityReview.distribution.netFlightLengthMm.toInt()))
+            line(dwgNotBars)
+            line(dwgFinal)
         } else drawReinforcementScheduleTable(
             cw = cw, ch = ch, tableTop = tableTop,
             nRisers = nRisers, nTreads = nTreads,
@@ -274,12 +287,12 @@ fun ProfessionalStairDrawing(
         // overprinted each other and were clipped on a phone-width canvas.
         val footerY = ch - cfg.margin * 2.2f
         val sheetBasis = if (documentaryBasisLabel != null) documentaryBasisLabel.substringAfter("Reference supplied: ").substringBefore(';') + " | REVIEW ONLY" else codeLabel
-        drawTextAnnotated("Stair | $sheetBasis | NTS", cfg.margin, footerY,
-            DimensionWhite, cfg.annotationTextSmall)
+        drawTextBidi(dwgFooterFmt.format("\u2066" + sheetBasis + "\u2069"), cfg.margin, footerY,
+            DimensionWhite, cfg.annotationTextSmall, center = false, bold = false)
         resultSummary?.let { summary ->
-            drawTextAnnotated("Implemented checks: ${summary.safetyLabel}; review required",
+            drawTextBidi(dwgChecksFmt.format("\u2066" + summary.safetyLabel + "\u2069"),
                 cfg.margin, footerY + cfg.annotationTextSmall * 1.3f,
-                DimensionWhite, cfg.annotationTextSmall)
+                DimensionWhite, cfg.annotationTextSmall, center = false, bold = false)
         }
 
     }

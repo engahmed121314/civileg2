@@ -28,8 +28,10 @@ def tap_text(words, name, exact=False):
         ns = nodes(x)
         if exact: ns = sorted(ns, key=lambda nb: -nb[1][1])  # bottom-most first (tab bar)
         for t, b in ns:
+            if b[2] - b[0] <= 0 or b[3] - b[1] <= 0: continue  # zero-area accessibility nodes would tap (0,0)
             lab = t.split("|")[0].strip()
-            if (lab in words) if exact else any(w in t for w in words):
+            lab2 = t.split("|")[1].strip() if "|" in t else ""
+            if (lab in words or lab2 in words) if exact else any(w in t for w in words):
                 adb("shell", "input", "tap", str((b[0]+b[2])//2), str((b[1]+b[3])//2))
                 time.sleep(2); return True
         time.sleep(1)
@@ -48,7 +50,7 @@ def ensure_home():
         adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
         dismiss_tip()
         x = dump("home-check")
-        if "content-desc=\"Back\"" not in x: break
+        if not re.search(r'package="' + re.escape(pkg) + r'"[^>]*content-desc="Back"', x): break
     return True
 adb("shell", "pm", "clear", pkg)
 adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1")
@@ -109,6 +111,21 @@ def stair_block():
     scroll_up(1); shot("stair-reinf-1")
     for t in ("واجهة", "قطاع"):
         log.append(("stair_tab_" + t, tap_text([t], "stair-tab-" + t, exact=True))); time.sleep(2); shot("stair-tab-" + t)
+    # export: DXF chip on the drawing card, then the PDF report button (files are pulled at the end)
+    try:
+        log.append(("stair_reinf_tab2", tap_text(["تسليح"], "stair-reinf-tab2", exact=True))); time.sleep(2)
+        log.append(("stair_dxf_tap", tap_text(["DXF"], "stair-dxf", exact=True))); time.sleep(5)
+        shot("stair-dxf-after")
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(2)
+        scroll_top(4)
+        pdf_ok = False
+        for _ in range(8):
+            if tap_text(["تقرير PDF", "PDF Report", "PDF"], "stair-pdf-find"): pdf_ok = True; break
+            scroll_up(2)
+        log.append(("stair_pdf_tap", pdf_ok)); time.sleep(8); shot("stair-pdf-after")
+        adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(2)
+    except Exception as e:
+        log.append(("stair_export_exception", repr(e)))
 def stair_unsupported():
     """Re-open Stair, pick the cantilever type (not implemented) and design; capture what is offered."""
     adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(1.5)
@@ -296,9 +313,10 @@ def pile_block():
         log.append(("pile_exception", repr(e)))
 def pull_exported_pdfs():
     ls = adb("shell", "run-as", pkg, "find", ".", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
-    ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf").stdout.decode("utf8", "ignore")
+    ls += adb("shell", "find", f"/sdcard/Android/data/{pkg}", "-name", "*.pdf", "-o", "-name", "*.dxf").stdout.decode("utf8", "ignore")
+    ls += adb("shell", "find", "/sdcard/Download", "/sdcard/Documents", "-name", "*.dxf", "-o", "-name", "*.pdf").stdout.decode("utf8", "ignore")
     open(f"{out}/pdf-files.txt", "w").write(ls)
-    for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("/sdcard/")][:4]:
+    for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("/sdcard/")][:14]:
         subprocess.run(["adb", "pull", pth, f"{out}/exported-" + os.path.basename(pth)], capture_output=True)
     for pth in [l.strip() for l in ls.splitlines() if l.strip().startswith("./")][:4]:
         d = adb("shell", "run-as", pkg, "cat", pth).stdout
@@ -448,6 +466,55 @@ def sweep(prefix, n=5):
         if cur == prev: break
         prev = cur
         scroll_up(2)
+if os.path.exists("tools/ci/EXPORT_ONLY"):
+    # PDF and DXF export proof for the priority pages: open, calculate, tap the export, capture, restart between pages.
+    pages = [
+        ("الأعمدة", "ex-col", ["تصميم العمود الآن", "تصميم العمود"]),
+        ("الخزانات", "ex-tank", ["تصميم الخزان الآن"]),
+        ("الكمرات", "ex-beam", ["تصميم الكمرة الآن", "تحليل وحساب", "احسب"]),
+        ("البلاطات المسطحة", "ex-fs", ["تصميم بلاطة مسطحة"]),
+        ("حوائط السند", "ex-rw", ["تحليل"]),
+        ("القواعد الشداد", "ex-strap", ["تحليل وحساب"]),
+        ("الزلازل", "ex-seis", ["تحليل القص عند القاعدة"]),
+        ("المصمتة", "ex-slab", ["تصميم البلاطة", "تصميم البلاطات", "تحليل وحساب", "احسب"]),
+    ]
+    for label, prefix, calc in pages:
+        try:
+            restart_app(); dismiss_not_responding()
+            tap_text(["التصميم"], prefix + "-tab", exact=True); scroll_top(3)
+            ok = False
+            for n in range(1, 8):
+                if tap_text([label], prefix + "-find"): ok = True; break
+                scroll_top(3); scroll_up(n)
+            log.append((prefix + "_open", ok)); time.sleep(2)
+            got = False
+            for _ in range(5):
+                if tap_text(calc, prefix + "-calc"): got = True; break
+                scroll_up(2)
+            log.append((prefix + "_calc", got)); time.sleep(3)
+            for kind, words in (("pdf", ["تقرير PDF", "PDF Report", "تصدير تقرير التصميم", "تصدير تقرير"]), ("dxf", ["DXF (AutoCAD)", "DXF"])):
+                hit = False
+                if kind == "pdf": scroll_top(6)
+                for _ in range(14):
+                    if tap_text(words, prefix + "-" + kind + "-find"): hit = True; break
+                    scroll_up(2)
+                log.append((prefix + "_" + kind + "_tap", hit)); time.sleep(6 if kind == "pdf" else 3)
+                shot(prefix + "-" + kind + "-after"); dump(prefix + "-" + kind + "-after")
+                if kind == "pdf":
+                    tap_text(["Got it", "حسنًا", "حسناً"], prefix + "-gotit")
+                    for k in range(1, 4):
+                        adb("shell", "input", "swipe", "540", "1900", "540", "500", "400"); time.sleep(1)
+                        shot(prefix + "-pdf-" + str(k))
+                    for k in range(1, 4):
+                        adb("shell", "input", "swipe", "540", "500", "540", "1900", "400"); time.sleep(1)
+                if kind == "dxf" or "com.civileg.app.debug" not in dump(prefix + "-pdf-state"):
+                    adb("shell", "input", "keyevent", "KEYCODE_BACK"); time.sleep(2); dismiss_not_responding()
+                if kind == "dxf":
+                    open(f"{out}/{prefix}-dxf-logcat.txt", "wb").write(adb("logcat", "-d", "-t", "300").stdout)
+        except Exception as e:
+            log.append((prefix + "_exception", repr(e)))
+    pull_exported_pdfs()
+    open(f"{out}/steps.txt", "w").write("\n".join(f"{a}: {b}" for a, b in log)); sys.exit(0)
 if os.path.exists("tools/ci/CALCPAGES_ONLY"):
     # Default-input calculation of the calculation pages whose standalone result lines were changed (alignment evidence).
     pages = [
@@ -459,6 +526,8 @@ if os.path.exists("tools/ci/CALCPAGES_ONLY"):
         ("القواعد الشداد", "cp-strap", ["تحليل وحساب"]),
         ("الزلازل", "cp-seis", ["تحليل القص عند القاعدة"]),
         ("المصمتة", "cp-slab", ["تصميم البلاطة", "تصميم البلاطات", "تحليل وحساب", "احسب"]),
+        ("المنشآت المعدنية", "cp-steel", ['تحليل الهنجر']),
+        ("فتحات الحوائط", "cp-wo", ["تصميم", "احسب"]),
     ]
     for label, prefix, calc in pages:
         try:

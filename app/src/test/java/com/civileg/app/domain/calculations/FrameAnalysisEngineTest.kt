@@ -570,6 +570,17 @@ class FrameAnalysisEngineTest {
     }
 
     @Test
+    fun solveFrame_steelMemberWithAutoOrMissingSection_isNotRejectedAsUnknown() {
+        val (nodes, members, settings) = createSimplePortalFrame()
+        for (name in listOf(null, "", "Auto")) {
+            val steel = FrameMember(82, 2, 3, FrameMaterialType.Steel, FrameMemberType.Beam, steelSectionName = name)
+            val result = FrameAnalysisEngine.solveFrame(nodes, members + steel, emptyList(), emptyList(), settings)
+            assertFalse("Section '$name' must not be reported as unknown",
+                result.errorMessage?.contains("Unknown steel section") == true)
+        }
+    }
+
+    @Test
     fun solveFrame_nanNodeCoordinate_returnsError() {
         val (nodes, members, settings) = createSimplePortalFrame()
         val badNode = FrameNode(60, Double.NaN, 5.0, SupportType.Free)

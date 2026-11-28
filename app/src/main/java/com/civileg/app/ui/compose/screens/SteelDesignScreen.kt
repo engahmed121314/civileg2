@@ -285,13 +285,13 @@ fun SteelWarehouseTab(viewModel: SteelViewModel, result: SteelWarehouseAnalysisR
                         SteelInputField(windSpeed, stringResource(R.string.steel_wind_kmh), { windSpeed = it }, Modifier.weight(1f))
                         SteelInputField(roofSlope, stringResource(R.string.steel_roof_slope_deg), { roofSlope = it }, Modifier.weight(1f))
                     }
-                    SteelInputField(soilBearing, "Allowable soil bearing (kN/m2) - required for footing size", { soilBearing = it }, Modifier.fillMaxWidth())
-                    SteelInputField(bracedBaysText, "Braced bays, e.g. 1,10 (blank = end bays, default)", { bracedBaysText = it }, Modifier.fillMaxWidth())
-                    SteelInputField(bracingLoad, "Lateral load H per braced panel (kN), blank = brace force NOT ASSESSED", { bracingLoad = it }, Modifier.fillMaxWidth())
+                    SteelInputField(soilBearing, stringResource(R.string.steel_soil_bearing), { soilBearing = it }, Modifier.fillMaxWidth())
+                    SteelInputField(bracedBaysText, stringResource(R.string.steel_braced_bays), { bracedBaysText = it }, Modifier.fillMaxWidth())
+                    SteelInputField(bracingLoad, stringResource(R.string.steel_brace_lateral_load), { bracingLoad = it }, Modifier.fillMaxWidth())
                     if (selectedCode == DesignCode.ACI || selectedCode == DesignCode.ECP) {
-                        SteelInputField(braceFy, "Brace Fy (MPa) - tension check", { braceFy = it }, Modifier.fillMaxWidth())
-                        SteelInputField(braceFu, "Brace Fu (MPa) - tension check", { braceFu = it }, Modifier.fillMaxWidth())
-                        SteelInputField(braceAe, "Brace net area Ae (mm2, after bolt holes and shear lag)", { braceAe = it }, Modifier.fillMaxWidth())
+                        SteelInputField(braceFy, stringResource(R.string.steel_brace_fy), { braceFy = it }, Modifier.fillMaxWidth())
+                        SteelInputField(braceFu, stringResource(R.string.steel_brace_fu), { braceFu = it }, Modifier.fillMaxWidth())
+                        SteelInputField(braceAe, stringResource(R.string.steel_brace_ae), { braceAe = it }, Modifier.fillMaxWidth())
                     }
                 }
             }
@@ -562,7 +562,7 @@ fun StructuralAnalysisVisualizer(inputs: SteelWarehouseInputs, result: SteelWare
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             FilterChip(selected = selectedView == 0, onClick = { selectedView = 0 }, label = { AppText("BMD", role = AppTextRole.Caption) })
             FilterChip(selected = selectedView == 1, onClick = { selectedView = 1 }, label = { AppText("SFD", role = AppTextRole.Caption) })
-            FilterChip(selected = selectedView == 2, onClick = { selectedView == 2 }, label = { AppText(stringResource(R.string.steel_deflection_label), role = AppTextRole.Caption) })
+            FilterChip(selected = selectedView == 2, onClick = { selectedView = 2 }, label = { AppText(stringResource(R.string.steel_deflection_label), role = AppTextRole.Caption) })
         }
         
         Card(
@@ -791,13 +791,14 @@ fun SteelSectionTab(viewModel: SteelViewModel, result: SteelMemberResult?, isLoa
         item {
             Card(elevation = CardDefaults.cardElevation(2.dp)) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Stacked full-width: side by side the code chips were squeezed to one letter per line in Arabic.
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         DesignCodeSelectorRow(
                             selectedCode = selectedCode,
                             onCodeSelected = { selectedCode = it },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth()
                         )
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
                             AppText(stringResource(R.string.steel_grade_label), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             ExposedDropdownMenuBox(
                                 expanded = expandedGrade,

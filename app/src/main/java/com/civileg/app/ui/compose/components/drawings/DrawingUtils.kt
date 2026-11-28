@@ -1638,3 +1638,15 @@ fun DrawScope.drawMeasuredSheetBlock(
     }
     return Offset(x, y)
 }
+
+/** Bidi-aware shared text drawing, reachable from files that declare their own private drawTextAnnotated. */
+fun DrawScope.drawTextBidi(
+    text: String,
+    x: Float,
+    y: Float,
+    color: Color = DrawingColorDefaults.DimensionWhite,
+    size: Float = 22f,
+    center: Boolean = false,
+    bold: Boolean = false,
+    rotation: Float = 0f
+) = drawTextAnnotated(text, x, y, color, size, center, bold, rotation)

@@ -626,7 +626,7 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
             ResultRow("Shear Capacity", "${"%.1f".format(result.shearCapacity)} kN")
             ResultRow("Deflection", "${"%.2f".format(result.deflection)} mm")
             ResultRow("Allowable Deflection", "${"%.2f".format(result.allowableDeflection)} mm")
-            ResultRow("Concrete Volume", "${"%.3f".format(result.concreteVolume)} m³")
+            ResultRow(stringResource(R.string.lbl_concrete_volume), "${"%.3f".format(result.concreteVolume)} m³")
             ResultRow("Steel Weight", "${"%.1f".format(result.steelWeight)} kg")
             ResultRow("Cost", "${"%.2f".format(result.cost)}")
             
@@ -672,11 +672,11 @@ private fun BeamResultCard(result: CalculatorEngine.BeamResult) {
 private fun BeamFormulasCard() {
     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))) {
         Column(modifier = Modifier.padding(12.dp)) {
-            FormulaItem("1. Mu = (w_ult * L²) / Factor (Structural Analysis)")
-            FormulaItem("2. d = h - Concrete Cover")
-            FormulaItem("3. R = Mu / (fcu/gamma_c * b * d²)")
-            FormulaItem("4. As = Mu / (fy/gamma_s * j * d)")
-            FormulaItem("5. Check Shear: q_u = Vu / (b * d) < q_cu_limit")
+            FormulaItem(stringResource(R.string.beam_eq_1))
+            FormulaItem(stringResource(R.string.beam_eq_2))
+            FormulaItem(stringResource(R.string.beam_eq_3))
+            FormulaItem(stringResource(R.string.beam_eq_4))
+            FormulaItem(stringResource(R.string.beam_eq_5))
         }
     }
 }

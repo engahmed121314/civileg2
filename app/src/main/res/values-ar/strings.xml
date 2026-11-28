@@ -1674,9 +1674,9 @@
     <string name="steel_moment_mu_knm">عزم Mu (kN.m)</string>
     <string name="steel_shear_vu_kn">قص Vu (kN)</string>
     <string name="steel_length_m_label">الطول (م)</string>
-    <string name="steel_dl_knm2">حمل ميت D.L (kN/m²)</string>
-    <string name="steel_ll_knm2">حمل حي L.L (kN/m²)</string>
-    <string name="steel_wind_kmh">رياح (km/h)</string>
+    <string name="steel_dl_knm2">حمل ميت D.L</string>
+    <string name="steel_ll_knm2">حمل حي L.L</string>
+    <string name="steel_wind_kmh">الرياح (km/h)</string>
     <string name="steel_max_deflection">أقصى انحراف</string>
     <string name="steel_status_safe">اجتاز الفحص (أولي)</string>
     <string name="steel_status_unsafe">لم يجتز الفحص ✗</string>
@@ -2552,29 +2552,29 @@
     <string name="lbl_fos_overturning">عامل أمان الانقلاب</string>
     <string name="lbl_fos_sliding">عامل أمان الانزلاق</string>
     <string name="lbl_cost">التكلفة</string>
-    <string name="note_col_use_emin">ECP 203 §4-2-3: الانحراف الفعلي e=%1$s مم أقل من e_min=%2$s مم، يُستخدم e_min في التصميم</string>
-    <string name="note_col_section_exceeds">قدرة المقطع تزيد عن المطلوب، طُبق الحد الأدنى للتسليح</string>
-    <string name="note_col_pm_design">ECP 203: تصميم التفاعل P-M عند e=%1$s مم، معامل العزم %2$s</string>
+    <string name="note_col_use_emin">‏⁦ECP 203⁩ §4-2-3: الانحراف الفعلي e=%1$s مم أقل من e_min=%2$s مم، يُستخدم e_min في التصميم</string>
+    <string name="note_col_section_exceeds">‏قدرة المقطع تزيد عن المطلوب، طُبق الحد الأدنى للتسليح</string>
+    <string name="note_col_pm_design">‏⁦ECP 203⁩: تصميم التفاعل ⁦P-M⁩ عند e=%1$s مم، معامل العزم %2$s</string>
     <string name="note_cover_min">الغطاء الخرساني: %1$s مم كحد أدنى</string>
-    <string name="note_col_pm_within">فحص التوافق في الانفعالات P-M (فحص أولي، البند لم يُتحقق منه): داخل المنحنى عند e=%1$s مم</string>
-    <string name="note_col_pm_outside">فحص التوافق في الانفعالات P-M (فحص أولي، البند لم يُتحقق منه): خارج المنحنى عند e=%1$s مم</string>
-    <string name="note_col_pm_limitation">تنبيه: قدرة العزم فحص تقريبي بالتوافق في الانفعالات يضع نصف الحديد على كل وجه. لا يستخدم مواضع الأسياخ الفعلية، فقد يبالغ في القدرة عند وجود أسياخ وسطية كثيرة. اعتبر علامة آمن/غير آمن نتيجة أولية وليست فحص تفاعل نهائي.</string>
-    <string name="note_col_short">عمود قصير (λ=%1$s ≤ %2$s): لا حاجة لتكبير العزم</string>
-    <string name="note_col_long">عمود طويل (λ=%1$s > %2$s): يلزم تكبير العزم حسب ECP 203 §4-2-3</string>
-    <string name="note_col_shear_title">ECP 203 §4-2-5: تصميم القص في العمود</string>
-    <string name="note_col_vc">Vc = 0.24√fcu·b·d / γc = %1$s kN (قدرة التصميم، γc=%2$s)</string>
-    <string name="note_col_stirrups_required">Vu (%1$s kN) أكبر من Vc: الكانات مطلوبة</string>
-    <string name="note_col_asv_s">Asv/s = %1$s مم²/مم</string>
-    <string name="note_col_ties">كانات قطر %1$s مم كل %2$s مم</string>
-    <string name="note_col_concrete_alone">Vu (%1$s kN) أقل من أو يساوي Vc: الخرسانة وحدها كافية</string>
+    <string name="note_col_pm_within">‏فحص التوافق في الانفعالات ⁦P-M⁩ (فحص أولي، البند لم يُتحقق منه): داخل المنحنى عند e=%1$s مم</string>
+    <string name="note_col_pm_outside">‏فحص التوافق في الانفعالات ⁦P-M⁩ (فحص أولي، البند لم يُتحقق منه): خارج المنحنى عند e=%1$s مم</string>
+    <string name="note_col_pm_limitation">‏تنبيه: قدرة العزم فحص تقريبي بالتوافق في الانفعالات يضع نصف الحديد على كل وجه. لا يستخدم مواضع الأسياخ الفعلية، فقد يبالغ في القدرة عند وجود أسياخ وسطية كثيرة. اعتبر علامة آمن/غير آمن نتيجة أولية وليست فحص تفاعل نهائي.</string>
+    <string name="note_col_short">‏عمود قصير (λ=%1$s ≤ %2$s): لا حاجة لتكبير العزم</string>
+    <string name="note_col_long">‏عمود طويل (λ=%1$s > %2$s): يلزم تكبير العزم حسب ⁦ECP 203⁩ §4-2-3</string>
+    <string name="note_col_shear_title">‏⁦ECP 203⁩ §4-2-5: تصميم القص في العمود</string>
+    <string name="note_col_vc">‏⁦Vc = 0.24√fcu·b·d / γc = %1$s kN⁩ (قدرة التصميم، γc=%2$s)</string>
+    <string name="note_col_stirrups_required">‏⁦Vu (%1$s kN)⁩ أكبر من Vc: الكانات مطلوبة</string>
+    <string name="note_col_asv_s">‏⁦Asv/s⁩ = %1$s مم²/مم</string>
+    <string name="note_col_ties">‏كانات قطر %1$s مم كل %2$s مم</string>
+    <string name="note_col_concrete_alone">‏⁦Vu (%1$s kN)⁩ أقل من أو يساوي Vc: الخرسانة وحدها كافية</string>
     <string name="note_min_reinf_applied">طُبق الحد الأدنى للتسليح</string>
     <string name="note_reinf_exceeds_max">تحذير: التسليح يتجاوز الحد الأقصى. فكّر في زيادة أبعاد المقطع.</string>
-    <string name="note_col_outside_domain">خارج نطاق المعادلة: e=%1$s مم تتجاوز max(0.05t, 20 مم)=%2$s مم. المعادلة 4-12-a من ECP 203-2020 لا تنطبق؛ لم تُحسب القدرة المحورية ولا الحديد المطلوب (يظهر الحد الأدنى فقط). صمم بفحص P-M كامل.</string>
-    <string name="note_col_axial_ref">ECP 203-2020 المعادلة 4-12-a (روجعت مع الإصدار المتاح؛ صالحة عندما e &lt;= max(0.05t, 20 مم))</string>
-    <string name="note_col_rho_min_ref" formatted="false">ECP 203: البند 4-2-5-1 (ρmin = 0.8%) (لم يُتحقق من البند)</string>
-    <string name="note_col_rho_max_ref" formatted="false">ECP 203: البند 4-2-5-2 (ρmax = 8%) (لم يُتحقق من البند)</string>
-    <string name="note_col_ties_ref">ECP 203: البند 4-2-6 (لم يُتحقق من البند)</string>
-    <string name="note_col_cover_ref">ECP 203: البند 4-1-4 (الغطاء ≥ 40 مم) (لم يُتحقق من البند)</string>
+    <string name="note_col_outside_domain">‏خارج نطاق المعادلة: e=%1$s مم تتجاوز ⁦max(0.05t, 20 mm)⁩=%2$s مم. المعادلة ⁦4-12-a⁩ من ⁦ECP 203-2020⁩ لا تنطبق؛ لم تُحسب القدرة المحورية ولا الحديد المطلوب (يظهر الحد الأدنى فقط). صمم بفحص ⁦P-M⁩ كامل.</string>
+    <string name="note_col_axial_ref">‏⁦ECP 203-2020⁩ المعادلة ⁦4-12-a⁩ (روجعت مع الإصدار المتاح؛ صالحة عندما ⁦e &lt;= max(0.05t, 20 mm)⁩)</string>
+    <string name="note_col_rho_min_ref" formatted="false">‏⁦ECP 203-2025⁩ البند ⁦6-4-7⁩ (أ)، ص ⁦6-55⁩: ⁦ρmin⁩ = ⁦0.80%⁩ من المساحة المطلوبة وليس أقل من ⁦0.60%⁩ من المساحة الفعلية (تُطبَّق على المساحة الكلية)</string>
+    <string name="note_col_rho_max_ref" formatted="false">‏⁦ECP 203-2025⁩ البند ⁦6-4-7⁩ (ب)، ص ⁦6-55⁩: ⁦ρmax⁩ = ⁦4%⁩ للأعمدة الوسطية و⁦5%⁩ للطرفية و⁦6%⁩ للركنية (⁦8%⁩ عند الوصلات فقط)</string>
+    <string name="note_col_ties_ref" formatted="false">‏⁦ECP 203-2025⁩ البند ⁦6-4-7⁩ (ز، ح)، ص ⁦6-55⁩: تباعد الكانات ≤ أقل من (15 × أصغر قطر سيخ، 200 مم)، وقطر الكانة ≥ أكبر من (8 مم، ربع أكبر قطر سيخ)</string>
+    <string name="note_col_cover_ref">‏⁦ECP 203⁩: البند ⁦4-1-4⁩ (الغطاء ≥ 40 مم) (لم يُتحقق من البند)</string>
     <string name="bx_steel_rough" formatted="false">حديد التسليح (تقدير تقريبي وليس للشراء: بدون خطاطيف أو تثبيت أو وصلات أو ثنيات، كانات منتظمة، حديد علوي بطول البحر)</string>
     <string name="bx_steel" formatted="false">حديد التسليح</string>
     <string name="bx_blinding" formatted="false">خرسانة النظافة</string>
@@ -2647,4 +2647,114 @@
     <string name="tk_boq_title" formatted="false">حصر كميات الخزان</string>
     <string name="bx_indicative" formatted="false">نسبة تقديرية وليست أسياخًا مصممة</string>
     <string name="chk_st_geo_prefix" formatted="false">حد هندسي:</string>
+    <string name="beam_eq_1" formatted="false">1. العزم ⁦Mu = (w_ult × L²)⁩ ÷ المعامل (التحليل الإنشائي)</string>
+    <string name="beam_eq_2" formatted="false">2. العمق الفعال ⁦d = h⁩ - الغطاء الخرساني</string>
+    <string name="beam_eq_3" formatted="false">‏3. ⁦R = Mu / (fcu/γc × b × d²)⁩</string>
+    <string name="beam_eq_4" formatted="false">‏4. ⁦As = Mu / (fy/γs × j × d)⁩</string>
+    <string name="beam_eq_5" formatted="false">‏5. فحص القص: ⁦q_u = Vu / (b × d) &lt; q_cu_limit⁩</string>
+    <string name="stp_punching" formatted="false">قص الثقب للقاعدة (تقريبي)</string>
+    <string name="stp_geometry" formatted="false">هندسة الخزان</string>
+    <string name="stp_pressure" formatted="false">ضغط الماء</string>
+    <string name="stp_wall_t" formatted="false">سمك الحائط</string>
+    <string name="stp_wall_r" formatted="false">تسليح الحائط</string>
+    <string name="stp_base_r" formatted="false">تسليح القاعدة</string>
+    <string name="stp_safety" formatted="false">فحوصات الأمان</string>
+    <string name="stp_flex_shear_crack" formatted="false">الانحناء · القص · عرض الشرخ</string>
+    <string name="stp_punch_note" formatted="false">نطاق التطبيق ونموذج الحمل والمحيط الحرج غير متحقق منها؛ لا يوجد حكم</string>
+    <string name="stp_not_assessed_lc" formatted="false">لم يُقيَّم</string>
+    <string name="stp_not_assessed" formatted="false">لم يُقيَّم</string>
+    <string name="stp_t_min" formatted="false">t ≥ tmin (حد الكود للشروخ/التشغيل)</string>
+    <string name="stp_at_depth" formatted="false">عند عمق ماء</string>
+    <string name="stp_checks_passed" formatted="false">فحوصات ناجحة</string>
+    <string name="stp_provided" formatted="false">مم²/م؛ المتوفر</string>
+    <string name="stp_spacing" formatted="false">مم تباعد</string>
+    <string name="stp_edition" formatted="false">(الإصدار لم يُتحقق منه)</string>
+    <string name="stp_unsafe" formatted="false">غير آمن</string>
+    <string name="stp_safe" formatted="false">آمن</string>
+    <string name="stp_mm2_at" formatted="false">مم²/م عند </string>
+    <string name="stp_stem_moment" formatted="false">عزم الجذع</string>
+    <string name="stp_stem_steel" formatted="false">حديد الجذع</string>
+    <string name="stp_overturning" formatted="false">الثبات ضد الانقلاب</string>
+    <string name="stp_sliding" formatted="false">الثبات ضد الانزلاق</string>
+    <string name="stp_bearing" formatted="false">ضغط التربة</string>
+    <string name="stp_shear_key" formatted="false">أضف مفتاح قص</string>
+    <string name="stp_with_min" formatted="false">مع الحد الأدنى</string>
+    <string name="strap_reactions_label">ردود الأفعال (R1، R2)</string>
+    <string name="stp_col_strip_m" formatted="false">عزم شريط العمود</string>
+    <string name="stp_col_strip_s" formatted="false">حديد شريط العمود</string>
+    <string name="stp_mid_strip_m" formatted="false">عزم الشريط الأوسط</string>
+    <string name="stp_mid_strip_s" formatted="false">حديد الشريط الأوسط</string>
+    <string name="stp_static_m" formatted="false">العزم الإستاتيكي</string>
+    <string name="stp_factored" formatted="false">الحمل المصعّد</string>
+    <string name="stp_ult_loads" formatted="false">الأحمال القصوى</string>
+    <string name="stp_ult_load" formatted="false">الحمل الأقصى</string>
+    <string name="stp_punching_shear" formatted="false">قص الثقب</string>
+    <string name="stp_shear_check" formatted="false">فحص القص</string>
+    <string name="stp_deflection" formatted="false">الترخيم</string>
+    <string name="stp_main_flex" formatted="false">حديد الانحناء الرئيسي</string>
+    <string name="stp_main_steel" formatted="false">الحديد الرئيسي</string>
+    <string name="stp_second_steel" formatted="false">الحديد الثانوي</string>
+    <string name="stp_dist_steel" formatted="false">حديد التوزيع</string>
+    <string name="stp_min_t" formatted="false">أقل سمك</string>
+    <string name="stp_design_m" formatted="false">عزم التصميم</string>
+    <string name="stp_design_v" formatted="false">قص التصميم</string>
+    <string name="stp_flex_steel" formatted="false">حديد الانحناء</string>
+    <string name="stp_overall" formatted="false">الأمان العام</string>
+    <string name="stp_active_ep" formatted="false">ضغط التربة الفعال</string>
+    <string name="stp_axial_cap" formatted="false">القدرة المحورية</string>
+    <string name="stp_slender" formatted="false">النحافة</string>
+    <string name="stp_eccent" formatted="false">اللامركزية</string>
+    <string name="stp_settle" formatted="false">الهبوط</string>
+    <string name="stp_soil_bearing" formatted="false">فحص تحمل التربة</string>
+    <string name="stp_ft_dims" formatted="false">أبعاد القاعدة</string>
+    <string name="stp_flex_demand" formatted="false">الطلب على الانحناء</string>
+    <string name="stp_shear_demand" formatted="false">الطلب على القص</string>
+    <string name="stp_shear_r" formatted="false">تسليح القص</string>
+    <string name="stp_vert_r" formatted="false">التسليح الرأسي</string>
+    <string name="stp_horiz_r" formatted="false">التسليح الأفقي</string>
+    <string name="stp_fs_title" formatted="false">خطوات حساب البلاطة المسطحة</string>
+    <string name="lbl_steel_indicative">الحديد (نسبة تقريبية، ليست أسياخًا مصممة)</string>
+    <string name="slab_bbs_title">جدول ثني حديد البلاطة</string>
+    <string name="slab_boq_title">حصر كميات البلاطة</string>
+    <string name="stp_slab_title">خطوات حساب البلاطة</string>
+    <string name="steel_soil_bearing" formatted="false">تحمل التربة المسموح (kN/m²) - مطلوب لحجم القاعدة</string>
+    <string name="steel_braced_bays" formatted="false">البحور المدعمة، مثال 1,10 (فارغ = البحور الطرفية)</string>
+    <string name="steel_brace_lateral_load" formatted="false">الحمل الجانبي H لكل بحر مدعم (kN)، فارغ = قوة الشد NOT ASSESSED</string>
+    <string name="steel_brace_fy" formatted="false">Fy للشداد (MPa) - فحص الشد</string>
+    <string name="steel_brace_fu" formatted="false">Fu للشداد (MPa) - فحص الشد</string>
+    <string name="steel_brace_ae" formatted="false">المساحة الصافية Ae للشداد (mm²، بعد الفتحات وتأخر القص)</string>
+    <string name="st_status_model" formatted="false">نموذج التحليل مُنفَّذ لهذه الحالة</string>
+    <string name="st_status_fallback" formatted="false">نموذج محافظ ببساطة الارتكاز، ولم يُتحقق من التقييد</string>
+    <string name="st_status_unsupported" formatted="false">حالة غير مدعومة: اختر قلبة واحدة أو قلبتين</string>
+    <string name="st_reference_label" formatted="false">المرجع المقدم: ‏⁦ECP 203-2025⁩ (نسخة ممسوحة)؛ تغطية معادلات السلالم غير مكتملة</string>
+    <string name="st_bar_class_undeclared" formatted="false">غير مُعلن: ‏⁦fy⁩ وحده لا يحدد سطح الحديد أو رتبته</string>
+    <string name="st_steel_auto" formatted="false">الحديد: تلقائي من الحساب (علّم لإدخال الأسياخ بنفسك)</string>
+    <string name="st_steel_manual" formatted="false">الحديد: يدوي، والفحص يتم على الأسياخ المُدخلة</string>
+    <string name="st_bot_dia" formatted="false">قطر الحديد السفلي (مم)</string>
+    <string name="st_bot_sp" formatted="false">تباعد الحديد السفلي (مم)</string>
+    <string name="st_top_dia" formatted="false">قطر الحديد العلوي (مم)</string>
+    <string name="st_top_sp" formatted="false">تباعد الحديد العلوي (مم)</string>
+    <string name="sta_s1_title">الأبعاد</string>
+    <string name="sta_s1_body">ارتفاع القائمة %1$d مم، عرض النائمة %2$d مم، سمك البلاطة المائلة %3$d مم (اختاره البرنامج)</string>
+    <string name="sta_s2_title">الحمل المصعّد</string>
+    <string name="sta_s2_body">wu = ‏⁦%1$s⁩ كن/م²</string>
+    <string name="sta_s3_title">عزم التصميم</string>
+    <string name="sta_s3_body">Mu = ‏⁦%1$s⁩ كن.م/م</string>
+    <string name="sta_s4_title">الحديد السفلي الرئيسي</string>
+    <string name="sta_s4_body">‏⁦%1$s⁩</string>
+    <string name="sta_s5_title">الحديد العلوي عند الركائز</string>
+    <string name="sta_s5_body">‏⁦%1$s⁩</string>
+    <string name="sta_s6_title">حديد التوزيع</string>
+    <string name="sta_s6_body">‏⁦%1$s⁩</string>
+    <string name="sta_s7_title">حديد البسطة (أولي)</string>
+    <string name="sta_s7_body">‏⁦%1$s⁩</string>
+    <string name="sta_s8_title">الفحوصات المنفّذة (ليست قبولاً كودياً)</string>
+    <string name="sta_s8_body">نجح %1$d، فشل %2$d، لم يُقيَّم %3$d. القبول الكودي غير مكتمل.</string>
+    <string name="st_dwg_net_title" formatted="false">صافي طول السيخ داخل القلبة للمراجعة فقط، وليس أطوال القص</string>
+    <string name="st_dwg_main" formatted="false">الرئيسي: %1$d سيخ بقطر %2$s، الطول الصافي %3$d مم</string>
+    <string name="st_dwg_dist" formatted="false">التوزيع: %1$d سيخ بقطر %2$s، الطول الصافي %3$d مم</string>
+    <string name="st_dwg_not_bars" formatted="false">لا تشمل الثنيات والكانات والوصلات ولا نهايات الركائز</string>
+    <string name="st_dwg_final" formatted="false">جدول الحديد النهائي للتنفيذ غير متاح</string>
+    <string name="st_dwg_footer" formatted="false">سلم | %1$s | للمراجعة فقط | بدون مقياس</string>
+    <string name="st_dwg_checks" formatted="false">الفحوصات المنفّذة: %1$s، والمراجعة مطلوبة</string>
 </resources>

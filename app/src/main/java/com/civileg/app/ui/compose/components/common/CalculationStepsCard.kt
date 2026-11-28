@@ -33,6 +33,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.civileg.app.R
 import com.civileg.app.domain.entities.CalculationStep
 import com.civileg.app.domain.entities.StepStatus
 
@@ -66,7 +68,7 @@ fun CalculationStepsCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 AppText(
-                    text = title,
+                    text = rememberStepLocalizer()(title),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -85,8 +87,88 @@ fun CalculationStepsCard(
     }
 }
 
+
+/** Display-only Arabic rendering of engine step text; engine strings stay English keys. */
+@Composable
+private fun rememberStepLocalizer(): (String) -> String {
+    if (!isArabicUi()) return { it }
+    val pairs = listOf(
+        "Stem Moment" to stringResource(R.string.stp_stem_moment),
+        "Stem Steel" to stringResource(R.string.stp_stem_steel),
+        "Overturning Stability" to stringResource(R.string.stp_overturning),
+        "Sliding Stability" to stringResource(R.string.stp_sliding),
+        "Bearing Pressure" to stringResource(R.string.stp_bearing),
+        "Add shear key" to stringResource(R.string.stp_shear_key),
+        "with minimum" to stringResource(R.string.stp_with_min),
+        "Base punching shear (surrogate)" to stringResource(R.string.stp_punching),
+        "Tank Geometry" to stringResource(R.string.stp_geometry),
+        "Water Pressure" to stringResource(R.string.stp_pressure),
+        "Wall Thickness" to stringResource(R.string.stp_wall_t),
+        "Wall Reinforcement" to stringResource(R.string.stp_wall_r),
+        "Base Reinforcement" to stringResource(R.string.stp_base_r),
+        "Safety Checks" to stringResource(R.string.stp_safety),
+        "Flexure · shear · crack width" to stringResource(R.string.stp_flex_shear_crack),
+        "Applicability, load model and critical perimeter unverified; no verdict" to stringResource(R.string.stp_punch_note),
+        "Not assessed" to stringResource(R.string.stp_not_assessed_lc),
+        "NOT ASSESSED" to stringResource(R.string.stp_not_assessed),
+        "t ≥ tmin (code crack/serviceability)" to stringResource(R.string.stp_t_min),
+        "at water depth" to stringResource(R.string.stp_at_depth),
+        "checks passed" to stringResource(R.string.stp_checks_passed),
+        "mm²/m; provided" to stringResource(R.string.stp_provided),
+        "mm²/m at " to stringResource(R.string.stp_mm2_at),
+        "mm spacing" to stringResource(R.string.stp_spacing),
+        "(edition not verified)" to stringResource(R.string.stp_edition)
+    )
+    val pairs2 = listOf(
+        "Slab Calculation Steps" to stringResource(R.string.stp_slab_title),
+        "Column Strip Moment" to stringResource(R.string.stp_col_strip_m),
+        "Column Strip Steel" to stringResource(R.string.stp_col_strip_s),
+        "Middle Strip Moment" to stringResource(R.string.stp_mid_strip_m),
+        "Middle Strip Steel" to stringResource(R.string.stp_mid_strip_s),
+        "Static Moment" to stringResource(R.string.stp_static_m),
+        "Factored Load" to stringResource(R.string.stp_factored),
+        "Ultimate Loads" to stringResource(R.string.stp_ult_loads),
+        "Ultimate Load" to stringResource(R.string.stp_ult_load),
+        "Punching Shear" to stringResource(R.string.stp_punching_shear),
+        "Shear Check" to stringResource(R.string.stp_shear_check),
+        "Deflection" to stringResource(R.string.stp_deflection),
+        "Main Flexural Steel" to stringResource(R.string.stp_main_flex),
+        "Main Steel" to stringResource(R.string.stp_main_steel),
+        "Secondary Steel" to stringResource(R.string.stp_second_steel),
+        "Distribution Steel" to stringResource(R.string.stp_dist_steel),
+        "Minimum Thickness" to stringResource(R.string.stp_min_t),
+        "Design Moment" to stringResource(R.string.stp_design_m),
+        "Design Shear" to stringResource(R.string.stp_design_v),
+        "Flexural Steel" to stringResource(R.string.stp_flex_steel),
+        "Overall Safety" to stringResource(R.string.stp_overall),
+        "Active Earth Pressure" to stringResource(R.string.stp_active_ep),
+        "Axial Capacity" to stringResource(R.string.stp_axial_cap),
+        "Slenderness" to stringResource(R.string.stp_slender),
+        "Eccentricity" to stringResource(R.string.stp_eccent),
+        "Settlement" to stringResource(R.string.stp_settle),
+        "Soil Bearing Check" to stringResource(R.string.stp_soil_bearing),
+        "Footing Dimensions" to stringResource(R.string.stp_ft_dims),
+        "Flexural Demand" to stringResource(R.string.stp_flex_demand),
+        "Shear Demand" to stringResource(R.string.stp_shear_demand),
+        "Shear Reinforcement" to stringResource(R.string.stp_shear_r),
+        "Vertical Reinforcement" to stringResource(R.string.stp_vert_r),
+        "Horizontal Reinforcement" to stringResource(R.string.stp_horiz_r),
+        "Flat Slab Calculation Steps" to stringResource(R.string.stp_fs_title)
+    )
+    val unsafe = stringResource(R.string.stp_unsafe)
+    val safe = stringResource(R.string.stp_safe)
+    return { text ->
+        var out = text
+        pairs.forEach { (en, ar) -> out = out.replace(en, ar) }
+        pairs2.forEach { (en, ar) -> out = out.replace(en, ar) }
+        out = Regex("\\bUNSAFE\\b").replace(out, unsafe)
+        Regex("\\bSAFE\\b").replace(out, safe)
+    }
+}
+
 @Composable
 private fun StepRow(step: CalculationStep) {
+    val loc = rememberStepLocalizer()
     val statusColor = when (step.status) {
         StepStatus.CHECK_PASS -> Color(0xFF2E7D32)
         StepStatus.CHECK_FAIL -> MaterialTheme.colorScheme.error
@@ -115,7 +197,7 @@ private fun StepRow(step: CalculationStep) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AppText(
-                    text = step.title,
+                    text = loc(step.title),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -137,7 +219,7 @@ private fun StepRow(step: CalculationStep) {
             }
             if (step.formula.isNotBlank()) {
                 AppTextBlock(
-                    text = step.formula,
+                    text = loc(step.formula),
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -145,7 +227,7 @@ private fun StepRow(step: CalculationStep) {
             }
             if (step.formulaWithValues.isNotBlank()) {
                 AppTextBlock(
-                    text = step.formulaWithValues,
+                    text = loc(step.formulaWithValues).let { if (isArabicUi() && it.any { c -> c in '\u0600'..'\u06FF' }) "\u2066" + it + "\u2069" else it },
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.onSurface
@@ -153,7 +235,7 @@ private fun StepRow(step: CalculationStep) {
             }
             AppTextBlock(
                 text = buildString {
-                    append(step.result)
+                    append(loc(step.result))
                     if (step.unit.isNotBlank()) append("  [${step.unit}]")
                 },
                 fontSize = 12.sp,
@@ -162,7 +244,7 @@ private fun StepRow(step: CalculationStep) {
             )
             if (step.codeReference.isNotBlank()) {
                 AppTextBlock(
-                    text = step.codeReference,
+                    text = loc(step.codeReference),
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

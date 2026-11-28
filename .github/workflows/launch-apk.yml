@@ -23,6 +23,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build free debug APK
         run: ./gradlew assembleFreeDebug --no-daemon
+      - name: Free memory before the emulator
+        run: |
+          ./gradlew --stop || true
+          pkill -f KotlinCompileDaemon || true
+          free -m
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -32,10 +37,13 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
-          target: google_apis
+          target: default
           arch: x86_64
           profile: pixel_6
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          cores: 4
+          ram-size: 11264M
+          heap-size: 1024M
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none -camera-front none
           disable-animations: true
           script: bash tools/ci/standalone_launch.sh
       - uses: actions/upload-artifact@v4

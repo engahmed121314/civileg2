@@ -63,7 +63,8 @@ class StairViewModel @Inject constructor(
         code: DesignCode,
         stairWidthMm: Double = 1200.0,
         supportCondition: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
-        landingLengthMm: Double? = null, landingWidthMm: Double? = null, landingThicknessMm: Double? = null
+        landingLengthMm: Double? = null, landingWidthMm: Double? = null, landingThicknessMm: Double? = null,
+        manualMainDia: Int? = null, manualMainSpacing: Double? = null, manualTopDia: Int? = null, manualTopSpacing: Double? = null
     ) {
         InputGuard.positive("span", span)
         InputGuard.positive("riser", riser)
@@ -92,7 +93,9 @@ class StairViewModel @Inject constructor(
                     code = code,
                     stairWidthMm = stairWidthMm,
                     supportCondition = supportCondition, landingLengthMm = landingLengthMm,
-                    landingWidthMm = landingWidthMm, landingThicknessMm = landingThicknessMm
+                    landingWidthMm = landingWidthMm, landingThicknessMm = landingThicknessMm,
+                    manualMainDia = manualMainDia, manualMainSpacing = manualMainSpacing,
+                    manualTopDia = manualTopDia, manualTopSpacing = manualTopSpacing
                 )
                 
                 // Validate result for engineering consistency
@@ -130,6 +133,12 @@ class StairViewModel @Inject constructor(
         }
     }
 
+    /** Parses "Ø12 @ 150 mm c/c" into (diameter, spacing); (0, 0) when the text has no bar. */
+    private fun barOf(text: String): Pair<Double, Double> {
+        val m = Regex("Ø\\s*(\\d+(?:\\.\\d+)?)\\s*@\\s*(\\d+(?:\\.\\d+)?)").find(text) ?: return 0.0 to 0.0
+        return m.groupValues[1].toDouble() to m.groupValues[2].toDouble()
+    }
+
     /** Standalone DXF sheet for the current stair design (null when no result). */
     fun buildDxfDrawing(): com.civileg.app.utils.DxfDrawable? {
         val currentResult = _result.value ?: return null
@@ -151,9 +160,20 @@ class StairViewModel @Inject constructor(
             coverMm = pdfCover,
             barDiaMm = currentResult.reinforcement.diameter.toDouble(),
             barSpacingMm = currentResult.reinforcement.spacing,
+            distBarDiaMm = currentResult.distributionReinforcement.diameter.toDouble(),
+            distBarSpacingMm = currentResult.distributionReinforcement.spacing,
+            topBarDiaMm = barOf(currentResult.flightTopRebar).first,
+            topBarSpacingMm = barOf(currentResult.flightTopRebar).second,
+            landingBarDiaMm = barOf(currentResult.landingRebar).first,
+            landingBarSpacingMm = barOf(currentResult.landingRebar).second,
+            landingLengthMm = currentResult.landingLengthMm ?: 0.0,
+            landingThicknessMm = currentResult.landingThicknessMm ?: 0.0,
             reviewNotes = listOf(
                 "REVIEW ONLY - NOT A FABRICATION DETAIL",
                 currentResult.documentaryBasisLabel,
+                "Detailing layout after El-Leithy 2013 p.15, p.30 (practice, not a code requirement)",
+                "Top bars: size from ECP 203-2025 Eq. 6-2, extension L/4 derived (code page 4-2-5 pending), hook length derived (code page pending)",
+                "Landing bars: preliminary one-way strip, minimum steel ratio per ECP 6-2-1-3-2 item 1. Step bars per El-Leithy p.30, diameter not calculated",
                 "Final steel / cutting lengths / support anchorage unavailable",
                 currentResult.barMaterialClassification
             )

@@ -410,7 +410,7 @@ fun ProfessionalStrapFootingDrawing(
 
         // ── Section separator: section → detail ───────────────
         if (viewMode == 0) {
-            drawSectionSeparator(detTop - h * 0.01f, w, "STRAP BEAM DETAIL", cfg)
+            drawSectionSeparator(detTop - h * 0.01f - cfg.sectionLabelTextSize * 0.6f, w, "STRAP BEAM DETAIL", cfg)
         }
 
         // ══════════════════════════════════════════════════════════
@@ -480,7 +480,7 @@ fun ProfessionalStrapFootingDrawing(
 
         // ── Section separator: detail → table ─────────────────
         if (viewMode == 0) {
-            drawSectionSeparator(tblTop - h * 0.01f, w, "REINFORCEMENT TABLE", cfg)
+            drawSectionSeparator(tblTop - h * 0.01f - cfg.sectionLabelTextSize * 0.6f, w, "REINFORCEMENT TABLE", cfg)
         }
 
         // ══════════════════════════════════════════════════════════

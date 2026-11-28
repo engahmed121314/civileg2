@@ -2568,9 +2568,9 @@
     <string name="note_reinf_exceeds_max">WARNING: Reinforcement exceeds maximum limit! Consider increasing section size.</string>
     <string name="note_col_outside_domain">OUTSIDE FORMULA DOMAIN: e=%1$s mm exceeds max(0.05t, 20 mm)=%2$s mm. ECP 203-2020 Eq. 4-12-a does not apply; axial capacity and required steel not computed (minimum steel shown only). Design by full P-M check.</string>
     <string name="note_col_axial_ref">ECP 203-2020 Eq. 4-12-a (checked against the supplied edition; valid for e &lt;= max(0.05t, 20 mm))</string>
-    <string name="note_col_rho_min_ref" formatted="false">ECP 203: Section 4-2-5-1 (ρmin = 0.8%) (clause not verified)</string>
-    <string name="note_col_rho_max_ref" formatted="false">ECP 203: Section 4-2-5-2 (ρmax = 8%) (clause not verified)</string>
-    <string name="note_col_ties_ref">ECP 203: Section 4-2-6 (clause not verified)</string>
+    <string name="note_col_rho_min_ref" formatted="false">ECP 203-2025 Sec. 6-4-7 (a), p.6-55: ρmin = 0.80% of the required area, not below 0.60% of the actual area (applied to the gross area)</string>
+    <string name="note_col_rho_max_ref" formatted="false">ECP 203-2025 Sec. 6-4-7 (b), p.6-55: ρmax = 4% middle, 5% edge, 6% corner columns (8% only at laps)</string>
+    <string name="note_col_ties_ref" formatted="false">ECP 203-2025 Sec. 6-4-7 (g, h), p.6-55: tie spacing ≤ min(15 x smallest bar dia, 200 mm); tie dia ≥ max(8 mm, 1/4 largest bar dia)</string>
     <string name="note_col_cover_ref">ECP 203: Section 4-1-4 (Cover ≥ 40mm) (clause not verified)</string>
     <string name="bx_steel_rough" formatted="false">Reinforcement steel (rough estimate, not for procurement: no hooks, anchorage, laps or bends; uniform stirrups; full-span top steel)</string>
     <string name="bx_steel" formatted="false">Reinforcement steel</string>
@@ -2644,4 +2644,114 @@
     <string name="tk_boq_title" formatted="false">Tank bill of quantities</string>
     <string name="bx_indicative" formatted="false">indicative ratio, not designed bars</string>
     <string name="chk_st_geo_prefix" formatted="false">Geometry limit:</string>
+    <string name="beam_eq_1" formatted="false">1. Mu = (w_ult * L²) / Factor (Structural Analysis)</string>
+    <string name="beam_eq_2" formatted="false">2. d = h - Concrete Cover</string>
+    <string name="beam_eq_3" formatted="false">3. R = Mu / (fcu/gamma_c * b * d²)</string>
+    <string name="beam_eq_4" formatted="false">4. As = Mu / (fy/gamma_s * j * d)</string>
+    <string name="beam_eq_5" formatted="false">5. Check Shear: q_u = Vu / (b * d) &lt; q_cu_limit</string>
+    <string name="stp_punching" formatted="false">Base punching shear (surrogate)</string>
+    <string name="stp_geometry" formatted="false">Tank Geometry</string>
+    <string name="stp_pressure" formatted="false">Water Pressure</string>
+    <string name="stp_wall_t" formatted="false">Wall Thickness</string>
+    <string name="stp_wall_r" formatted="false">Wall Reinforcement</string>
+    <string name="stp_base_r" formatted="false">Base Reinforcement</string>
+    <string name="stp_safety" formatted="false">Safety Checks</string>
+    <string name="stp_flex_shear_crack" formatted="false">Flexure · shear · crack width</string>
+    <string name="stp_punch_note" formatted="false">Applicability, load model and critical perimeter unverified; no verdict</string>
+    <string name="stp_not_assessed_lc" formatted="false">Not assessed</string>
+    <string name="stp_not_assessed" formatted="false">NOT ASSESSED</string>
+    <string name="stp_t_min" formatted="false">t ≥ tmin (code crack/serviceability)</string>
+    <string name="stp_at_depth" formatted="false">at water depth</string>
+    <string name="stp_checks_passed" formatted="false">checks passed</string>
+    <string name="stp_provided" formatted="false">mm²/m; provided</string>
+    <string name="stp_spacing" formatted="false">mm spacing</string>
+    <string name="stp_edition" formatted="false">(edition not verified)</string>
+    <string name="stp_unsafe" formatted="false">UNSAFE</string>
+    <string name="stp_safe" formatted="false">SAFE</string>
+    <string name="stp_mm2_at" formatted="false">mm²/m at </string>
+    <string name="stp_stem_moment" formatted="false">Stem Moment</string>
+    <string name="stp_stem_steel" formatted="false">Stem Steel</string>
+    <string name="stp_overturning" formatted="false">Overturning Stability</string>
+    <string name="stp_sliding" formatted="false">Sliding Stability</string>
+    <string name="stp_bearing" formatted="false">Bearing Pressure</string>
+    <string name="stp_shear_key" formatted="false">Add shear key</string>
+    <string name="stp_with_min" formatted="false">with minimum</string>
+    <string name="strap_reactions_label">Reactions (R1, R2)</string>
+    <string name="stp_col_strip_m" formatted="false">Column Strip Moment</string>
+    <string name="stp_col_strip_s" formatted="false">Column Strip Steel</string>
+    <string name="stp_mid_strip_m" formatted="false">Middle Strip Moment</string>
+    <string name="stp_mid_strip_s" formatted="false">Middle Strip Steel</string>
+    <string name="stp_static_m" formatted="false">Static Moment</string>
+    <string name="stp_factored" formatted="false">Factored Load</string>
+    <string name="stp_ult_loads" formatted="false">Ultimate Loads</string>
+    <string name="stp_ult_load" formatted="false">Ultimate Load</string>
+    <string name="stp_punching_shear" formatted="false">Punching Shear</string>
+    <string name="stp_shear_check" formatted="false">Shear Check</string>
+    <string name="stp_deflection" formatted="false">Deflection</string>
+    <string name="stp_main_flex" formatted="false">Main Flexural Steel</string>
+    <string name="stp_main_steel" formatted="false">Main Steel</string>
+    <string name="stp_second_steel" formatted="false">Secondary Steel</string>
+    <string name="stp_dist_steel" formatted="false">Distribution Steel</string>
+    <string name="stp_min_t" formatted="false">Minimum Thickness</string>
+    <string name="stp_design_m" formatted="false">Design Moment</string>
+    <string name="stp_design_v" formatted="false">Design Shear</string>
+    <string name="stp_flex_steel" formatted="false">Flexural Steel</string>
+    <string name="stp_overall" formatted="false">Overall Safety</string>
+    <string name="stp_active_ep" formatted="false">Active Earth Pressure</string>
+    <string name="stp_axial_cap" formatted="false">Axial Capacity</string>
+    <string name="stp_slender" formatted="false">Slenderness</string>
+    <string name="stp_eccent" formatted="false">Eccentricity</string>
+    <string name="stp_settle" formatted="false">Settlement</string>
+    <string name="stp_soil_bearing" formatted="false">Soil Bearing Check</string>
+    <string name="stp_ft_dims" formatted="false">Footing Dimensions</string>
+    <string name="stp_flex_demand" formatted="false">Flexural Demand</string>
+    <string name="stp_shear_demand" formatted="false">Shear Demand</string>
+    <string name="stp_shear_r" formatted="false">Shear Reinforcement</string>
+    <string name="stp_vert_r" formatted="false">Vertical Reinforcement</string>
+    <string name="stp_horiz_r" formatted="false">Horizontal Reinforcement</string>
+    <string name="stp_fs_title" formatted="false">Flat Slab Calculation Steps</string>
+    <string name="lbl_steel_indicative">Steel (indicative ratio, not designed bars)</string>
+    <string name="slab_bbs_title">Slab Bar Bending Schedule</string>
+    <string name="slab_boq_title">Slab Bill of Quantities</string>
+    <string name="stp_slab_title">Slab Calculation Steps</string>
+    <string name="steel_soil_bearing" formatted="false">Allowable soil bearing (kN/m²), required for the footing size</string>
+    <string name="steel_braced_bays" formatted="false">Braced bays, e.g. 1,10 (blank = end bays)</string>
+    <string name="steel_brace_lateral_load" formatted="false">Lateral load H per braced panel (kN); blank = brace force NOT ASSESSED</string>
+    <string name="steel_brace_fy" formatted="false">Brace Fy (MPa), tension check</string>
+    <string name="steel_brace_fu" formatted="false">Brace Fu (MPa), tension check</string>
+    <string name="steel_brace_ae" formatted="false">Brace net area Ae (mm², after bolt holes and shear lag)</string>
+    <string name="st_status_model" formatted="false">Analysis model implemented for this case</string>
+    <string name="st_status_fallback" formatted="false">Conservative simply-supported fallback, restraint not verified</string>
+    <string name="st_status_unsupported" formatted="false">Unsupported case: choose Single Flight or Double Flight</string>
+    <string name="st_reference_label" formatted="false">Reference supplied: ECP 203-2025 (scanned); stair equation coverage is incomplete</string>
+    <string name="st_bar_class_undeclared" formatted="false">Not declared: fy alone does not identify the bar surface or grade</string>
+    <string name="st_steel_auto" formatted="false">Steel: automatic from the calculation (tick to enter bars)</string>
+    <string name="st_steel_manual" formatted="false">Steel: entered by the user, checks run on these bars</string>
+    <string name="st_bot_dia" formatted="false">Bottom bar diameter (mm)</string>
+    <string name="st_bot_sp" formatted="false">Bottom bar spacing (mm)</string>
+    <string name="st_top_dia" formatted="false">Top bar diameter (mm)</string>
+    <string name="st_top_sp" formatted="false">Top bar spacing (mm)</string>
+    <string name="sta_s1_title">Geometry</string>
+    <string name="sta_s1_body">Riser %1$d mm, tread %2$d mm, waist %3$d mm (chosen by the app)</string>
+    <string name="sta_s2_title">Factored load</string>
+    <string name="sta_s2_body">wu = %1$s kN/m2</string>
+    <string name="sta_s3_title">Design moment</string>
+    <string name="sta_s3_body">Mu = %1$s kN.m/m</string>
+    <string name="sta_s4_title">Bottom main steel</string>
+    <string name="sta_s4_body">%1$s</string>
+    <string name="sta_s5_title">Top steel at supports</string>
+    <string name="sta_s5_body">%1$s</string>
+    <string name="sta_s6_title">Distribution steel</string>
+    <string name="sta_s6_body">%1$s</string>
+    <string name="sta_s7_title">Landing steel (preliminary)</string>
+    <string name="sta_s7_body">%1$s</string>
+    <string name="sta_s8_title">Implemented checks (not code acceptance)</string>
+    <string name="sta_s8_body">Passed %1$d, failed %2$d, not assessed %3$d. Code acceptance is incomplete.</string>
+    <string name="st_dwg_net_title" formatted="false">Net bar length inside the flight, for review only, not cutting lengths</string>
+    <string name="st_dwg_main" formatted="false">Main: %1$d bars, dia %2$s, net length %3$d mm</string>
+    <string name="st_dwg_dist" formatted="false">Distribution: %1$d bars, dia %2$s, net length %3$d mm</string>
+    <string name="st_dwg_not_bars" formatted="false">Excludes bends, links, laps and support ends</string>
+    <string name="st_dwg_final" formatted="false">Final fabrication schedule not available</string>
+    <string name="st_dwg_footer" formatted="false">Stair | %1$s | review only | NTS</string>
+    <string name="st_dwg_checks" formatted="false">Implemented checks: %1$s, review required</string>
 </resources>

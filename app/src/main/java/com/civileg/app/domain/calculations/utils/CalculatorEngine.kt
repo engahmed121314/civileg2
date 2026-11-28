@@ -865,7 +865,24 @@ class CalculatorEngine @Inject constructor(
         val length = inputs.length
 
         val colSection = inputs.overrideColumnSection ?: SteelSectionType.ISection(h = 300.0, bf = 300.0, tf = 14.0, tw = 8.5, grade = SteelGrade.ST37, customName = "HEA 300")
-        val rafSection = inputs.overrideRafterSection ?: SteelSectionType.ISection(h = 330.0, bf = 160.0, tf = 11.5, tw = 7.5, grade = SteelGrade.ST37, customName = "IPE 330")
+        // Default rafter: the lightest IPE that passes deflection (L/250, service live load) and the flexure and
+        // shear checks of the same member model used below, so the default case is not a built-in FAIL. When none of
+        // the listed IPE passes, the largest is used and the result fails honestly. A user override is never replaced.
+        val rafSection = inputs.overrideRafterSection ?: run {
+            fun ipe(sp: com.civileg.app.utils.SteelTables.SectionProperties) = SteelSectionType.ISection(
+                h = sp.depth, bf = sp.width, tf = sp.tf, tw = sp.tw, grade = SteelGrade.ST37, customName = sp.name)
+            val wuSel = (1.2 * inputs.deadLoad + 1.6 * inputs.liveLoad) * inputs.baySpacing
+            val mSel = wuSel * inputs.span.pow(2) / 8.0
+            val vSel = wuSel * inputs.span / 2.0
+            val allowSel = inputs.span * 1000.0 / 250.0
+            val all = com.civileg.app.utils.SteelTables.ipeSections.map { ipe(it) }
+            all.firstOrNull { sec ->
+                val defl = 5.0 * (inputs.liveLoad * inputs.baySpacing) * inputs.span.pow(4) * 1e12 / (384.0 * 200000.0 * sec.ix)
+                val (_, flex, shear) = steelMemberUtilizations(
+                    sec, sec.grade, 0.0, mSel, vSel, inputs.span * 1000.0, inputs.baySpacing * 1000.0, inputs.code)
+                defl <= allowSel && flex <= 1.0 && shear <= 1.0
+            } ?: all.last()
+        }
         val purlinSection = inputs.overridePurlinSection ?: SteelSectionType.CSection(h = 160.0, bf = 65.0, tf = 7.5, tw = 5.5, grade = SteelGrade.ST37, customName = "C 160")
 
         val wu = (1.2 * inputs.deadLoad + 1.6 * inputs.liveLoad) * bay
@@ -2247,9 +2264,40 @@ class CalculatorEngine @Inject constructor(
 
     private fun barAreaMm2(diameter: Double): Double = Math.PI / 4.0 * diameter * diameter
 
+    /**
+     * Preliminary landing (بسطة) bottom steel: one-way strip simply supported over the declared landing length,
+     * wu = 1.4*DL + 1.6*LL (the DL input already includes self weight and finishes; this is conservative against
+     * El-Leithy 2013 p.21 wsh = 1.4(ts*gc + FC) + 1.6 LL), M = wu*L^2/8, K-method flexure as in the flight (ECP 203-2025),
+     * minimum ratio max(0.6/fy, 0.15%). Returns "" when the landing is not declared or the code is not ECP.
+     */
+    private fun designLanding(code: DesignCode, lenMm: Double?, thkMm: Double?, dl: Double, ll: Double, fcu: Double, fy: Double): String {
+        if (code != DesignCode.ECP || lenMm == null || thkMm == null || lenMm <= 0.0 || thkMm <= 0.0) return ""
+        val wu = 1.4 * dl + 1.6 * ll
+        val spanM = lenMm / 1000.0
+        val mu = wu * spanM * spanM / 8.0 * 1e6
+        val b = 1000.0
+        val d = thkMm - 25.0 - 6.0
+        if (d <= 0.0) return ""
+        val k = mu / (fcu * b * d * d)
+        val kDiv = 2.0 * 0.67 / 1.5
+        val root = 0.25 - k / kDiv
+        if (root <= 0.0) return ""
+        val z = d * (0.5 + kotlin.math.sqrt(root))
+        val asFlex = mu / ((fy / 1.15) * z)
+        val asMin = max(0.6 / fy, 0.0015) * b * d
+        val asReq = max(asFlex, asMin)
+        for (dia in listOf(10.0, 12.0, 14.0, 16.0)) {
+            val area = Math.PI * dia * dia / 4.0
+            val sp = kotlin.math.floor(area * 1000.0 / asReq / 10.0) * 10.0
+            if (sp >= 100.0) return "Ø${dia.toInt()} @ ${sp.coerceAtMost(200.0).toInt()} mm c/c"
+        }
+        return ""
+    }
+
     fun designStaircase(type: StairType, span: Double, riser: Double, tread: Double, deadLoad: Double, liveLoad: Double, fcu: Double, fy: Double, preferredDiameter: Int, code: DesignCode, stairWidthMm: Double = 1200.0,
         supportCondition: StairSupportCondition = StairSupportCondition.UNSPECIFIED,
-        landingLengthMm: Double? = null, landingWidthMm: Double? = null, landingThicknessMm: Double? = null
+        landingLengthMm: Double? = null, landingWidthMm: Double? = null, landingThicknessMm: Double? = null,
+        manualMainDia: Int? = null, manualMainSpacing: Double? = null, manualTopDia: Int? = null, manualTopSpacing: Double? = null
     ): StairResult {
         InputGuard.positive("stairWidthMm", stairWidthMm)
         InputGuard.positive("span", span)
@@ -2301,7 +2349,11 @@ class CalculatorEngine @Inject constructor(
                 supportCondition = supportCondition,
                 landingLengthMm = landingLengthMm,
                 landingWidthMm = landingWidthMm,
-                landingThicknessMm = landingThicknessMm
+                landingThicknessMm = landingThicknessMm,
+                manualMainDia = manualMainDia,
+                manualMainSpacing = manualMainSpacing,
+                manualTopDia = manualTopDia,
+                manualTopSpacing = manualTopSpacing
             )
 
             val result = CalculationFactory.getStaircaseDesign(code).designStaircase(input)
@@ -2423,7 +2475,9 @@ class CalculatorEngine @Inject constructor(
                 analysisSpanM = result.analysisSpanM,
                 adoptedRunMm = result.adoptedRunMm,
                 flightTopRebar = result.flightTopRebar,
-                landingRebar = result.landingRebar,
+                landingRebar = result.landingRebar.ifBlank {
+                    designLanding(code, landingLengthMm, landingThicknessMm, deadLoad, liveLoad, fcu, fy)
+                },
                 codeAcceptanceComplete = false,
                 quantityReview = quantityReview,
                 documentaryBasisLabel = ref,
@@ -2431,6 +2485,7 @@ class CalculatorEngine @Inject constructor(
                     result.codeNotes.filterNot { Regex("(?:ECP|ACI|SBC)[^;]*20(?:19|21|24|25)").containsMatchIn(it) } +
                     "Legacy edition-specific citations omitted, not verified against supplied reference" +
                     "Complete stair detailing acceptance is not implemented" +
+                    (if (manualMainDia != null && code != DesignCode.ECP) listOf("Entered bars were NOT applied: manual steel is implemented for ECP only, auto bars shown") else emptyList()) +
                     ("Waist thickness ${"%.0f".format(defaultThickness)} mm is a calculated design choice by the app, not a user input: " +
                         "smallest 10 mm multiple meeting the deemed-to-satisfy span/thickness table (${if (code == DesignCode.ECP) "ECP 203-2020 Table 4-10, solid slab, simply supported" else "ACI 318M-14 / SBC 304-CR-18 Table 7.3.1.1, simply supported"}; slab analogy, preliminary), " +
                         "not below the lane minimum ${"%.0f".format(laneMinWaistMm)} mm, which is a practical assumption and not a code check") +

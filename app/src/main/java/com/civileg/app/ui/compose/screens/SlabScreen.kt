@@ -442,7 +442,7 @@ fun SlabScreen(
                         )
                     }.getOrDefault(emptyList())
                     if (bbsEntries.isNotEmpty()) {
-                        item { BbsTableCard(bbsEntries, title = "Slab Bar Bending Schedule") }
+                        item { BbsTableCard(bbsEntries, title = stringResource(R.string.slab_bbs_title)) }
                     }
 
                     val boqRows = runCatching {
@@ -454,7 +454,7 @@ fun SlabScreen(
                         )
                     }.getOrDefault(emptyList())
                     if (boqRows.isNotEmpty()) {
-                        item { BoqTableCard(boqRows, title = "Slab Bill of Quantities") }
+                        item { BoqTableCard(boqRows, title = stringResource(R.string.slab_boq_title)) }
                     }
                 }
 

@@ -159,7 +159,8 @@ class DxfExporter {
             when {
                 ch == '\n' || ch == '\r' || ch == '\t' -> append(' ')
                 ch.code in 32..126 -> append(ch)
-                else -> append('?')
+                ch.code == 0x200E || ch.code == 0x200F || ch.code in 0x2066..0x2069 -> Unit
+                else -> append("\\U+%04X".format(ch.code))
             }
         }
     }
@@ -437,8 +438,9 @@ class DxfExporter {
         addText(bx + blockWidth * 0.57, by + blockHeight * 0.52, "DATE: $date", titleHeight * 0.56, "TITLE")
 
         // Drawing notes area (left of the title block)
-        addText(bx - blockWidth * 0.02, bottom + blockHeight * 0.55, "ALL DIMENSIONS IN MILLIMETRES", titleHeight * 0.56, "TITLE")
-        addText(bx - blockWidth * 0.02, bottom + blockHeight * 0.25, "DO NOT SCALE FROM DRAWING", titleHeight * 0.56, "TITLE")
+        // Notes sit above the title block (they used to start left of it and run into its text).
+        addText(bx + blockWidth * 0.02, by + blockHeight * 1.25, "ALL DIMENSIONS IN MILLIMETRES", titleHeight * 0.56, "TITLE")
+        addText(bx + blockWidth * 0.02, by + blockHeight * 1.08, "DO NOT SCALE FROM DRAWING", titleHeight * 0.56, "TITLE")
     }
 
     // ───────────────────────────────────────────────────────────────────────────
