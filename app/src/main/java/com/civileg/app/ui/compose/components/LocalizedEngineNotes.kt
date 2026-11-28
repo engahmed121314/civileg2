@@ -26,9 +26,9 @@ private val noteRules: List<NoteRule> = listOf(
     NoteRule(Regex("""^WARNING: Reinforcement exceeds maximum limit! Consider increasing section size\.$"""), R.string.note_reinf_exceeds_max),
     NoteRule(Regex("""^OUTSIDE FORMULA DOMAIN: e=([\d.]+) mm exceeds max\(0\.05t, 20 mm\)=([\d.]+) mm\..*$""", RegexOption.DOT_MATCHES_ALL), R.string.note_col_outside_domain),
     NoteRule(Regex("""^ECP 203-2020 Eq\. 4-12-a \(checked against the supplied edition; valid for e <= max\(0\.05t, 20 mm\)\)$"""), R.string.note_col_axial_ref),
-    NoteRule(Regex("""^ECP 203: Section 4-2-5-1 \(ρmin = 0\.8%\) \(clause not verified\)$"""), R.string.note_col_rho_min_ref),
-    NoteRule(Regex("""^ECP 203: Section 4-2-5-2 \(ρmax = 8%\) \(clause not verified\)$"""), R.string.note_col_rho_max_ref),
-    NoteRule(Regex("""^ECP 203: Section 4-2-6 \(clause not verified\)$"""), R.string.note_col_ties_ref),
+    NoteRule(Regex("""^ECP 203-2025 Sec\. 6-4-7 \(a\), p\.6-55: .*$"""), R.string.note_col_rho_min_ref),
+    NoteRule(Regex("""^ECP 203-2025 Sec\. 6-4-7 \(b\), p\.6-55: .*$"""), R.string.note_col_rho_max_ref),
+    NoteRule(Regex("""^ECP 203-2025 Sec\. 6-4-7 \(g, h\), p\.6-55: .*$"""), R.string.note_col_ties_ref),
     NoteRule(Regex("""^ECP 203: Section 4-1-4 \(Cover ≥ 40mm\) \(clause not verified\)$"""), R.string.note_col_cover_ref)
 )
 

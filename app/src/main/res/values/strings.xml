@@ -2568,9 +2568,9 @@
     <string name="note_reinf_exceeds_max">WARNING: Reinforcement exceeds maximum limit! Consider increasing section size.</string>
     <string name="note_col_outside_domain">OUTSIDE FORMULA DOMAIN: e=%1$s mm exceeds max(0.05t, 20 mm)=%2$s mm. ECP 203-2020 Eq. 4-12-a does not apply; axial capacity and required steel not computed (minimum steel shown only). Design by full P-M check.</string>
     <string name="note_col_axial_ref">ECP 203-2020 Eq. 4-12-a (checked against the supplied edition; valid for e &lt;= max(0.05t, 20 mm))</string>
-    <string name="note_col_rho_min_ref" formatted="false">ECP 203: Section 4-2-5-1 (ρmin = 0.8%) (clause not verified)</string>
-    <string name="note_col_rho_max_ref" formatted="false">ECP 203: Section 4-2-5-2 (ρmax = 8%) (clause not verified)</string>
-    <string name="note_col_ties_ref">ECP 203: Section 4-2-6 (clause not verified)</string>
+    <string name="note_col_rho_min_ref" formatted="false">ECP 203-2025 Sec. 6-4-7 (a), p.6-55: ρmin = 0.80% of the required area, not below 0.60% of the actual area (applied to the gross area)</string>
+    <string name="note_col_rho_max_ref" formatted="false">ECP 203-2025 Sec. 6-4-7 (b), p.6-55: ρmax = 4% middle, 5% edge, 6% corner columns (8% only at laps)</string>
+    <string name="note_col_ties_ref" formatted="false">ECP 203-2025 Sec. 6-4-7 (g, h), p.6-55: tie spacing ≤ min(15 x smallest bar dia, 200 mm); tie dia ≥ max(8 mm, 1/4 largest bar dia)</string>
     <string name="note_col_cover_ref">ECP 203: Section 4-1-4 (Cover ≥ 40mm) (clause not verified)</string>
     <string name="bx_steel_rough" formatted="false">Reinforcement steel (rough estimate, not for procurement: no hooks, anchorage, laps or bends; uniform stirrups; full-span top steel)</string>
     <string name="bx_steel" formatted="false">Reinforcement steel</string>

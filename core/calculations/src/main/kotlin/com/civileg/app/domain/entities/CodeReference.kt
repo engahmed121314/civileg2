@@ -10,9 +10,9 @@ object CodeReference {
     object ECP {
         // الأعمدة
         const val COLUMN_AXIAL = "ECP 203-2020 Eq. 4-12-a (checked against the supplied edition; valid for e <= max(0.05t, 20 mm))"
-        const val COLUMN_REINFORCEMENT_MIN = "ECP 203: Section 4-2-5-1 (ρmin = 0.8%) (clause not verified)"
-        const val COLUMN_REINFORCEMENT_MAX = "ECP 203: Section 4-2-5-2 (ρmax = 8%) (clause not verified)"
-        const val COLUMN_TIES = "ECP 203: Section 4-2-6 (clause not verified)"
+        const val COLUMN_REINFORCEMENT_MIN = "ECP 203-2025 Sec. 6-4-7 (a), p.6-55: ρmin = 0.80% of the required area, not below 0.60% of the actual area (applied to the gross area)"
+        const val COLUMN_REINFORCEMENT_MAX = "ECP 203-2025 Sec. 6-4-7 (b), p.6-55: ρmax = 4% middle, 5% edge, 6% corner columns (8% only at laps)"
+        const val COLUMN_TIES = "ECP 203-2025 Sec. 6-4-7 (g, h), p.6-55: tie spacing ≤ min(15 x smallest bar dia, 200 mm); tie dia ≥ max(8 mm, 1/4 largest bar dia)"
         const val COLUMN_COVER = "ECP 203: Section 4-1-4 (Cover ≥ 40mm) (clause not verified)"
         
         // الكمرات
