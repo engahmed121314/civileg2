@@ -704,7 +704,8 @@ fun ProfessionalFootingDrawing(
             drawingTitle = "Footing Detail",
             designCode = codeLabel,
             right = w - cfg.margin * 0.3f,
-            bottom = h - cfg.margin * 0.3f,
+            // The reinforcement table fills the bottom band, so the result box sits right above it.
+            bottom = tblTop - cfg.margin * 0.3f,
             cfg = cfg
         )
         drawNorthArrow(

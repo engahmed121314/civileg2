@@ -230,7 +230,8 @@ fun ProfessionalWallOpeningDrawing(
             drawingTitle = "Wall Opening Detail",
             designCode = codeLabel,
             right = W - margin * 0.3f,
-            bottom = H - margin * 0.3f,
+            // The BBS table fills the bottom band, so the result box sits right above it.
+            bottom = (if (viewMode == 0) tblTop else H) - margin * 0.3f,
             cfg = cfg
         )
         drawNorthArrow(

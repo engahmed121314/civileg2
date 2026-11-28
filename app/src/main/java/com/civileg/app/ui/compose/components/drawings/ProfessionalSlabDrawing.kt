@@ -732,7 +732,8 @@ fun ProfessionalSlabDrawing(
             drawingTitle = "Slab Detail",
             designCode = codeLabel,
             right = w - margin * 0.3f,
-            bottom = h - margin * 0.3f,
+            // The reinforcement schedule fills the bottom band, so the result box sits right above it.
+            bottom = (if (viewMode == 0) h * 0.78f else h) - margin * 0.3f,
             cfg = cfg
         )
         drawNorthArrow(
