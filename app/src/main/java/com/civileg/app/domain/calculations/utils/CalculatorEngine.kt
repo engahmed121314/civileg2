@@ -865,7 +865,24 @@ class CalculatorEngine @Inject constructor(
         val length = inputs.length
 
         val colSection = inputs.overrideColumnSection ?: SteelSectionType.ISection(h = 300.0, bf = 300.0, tf = 14.0, tw = 8.5, grade = SteelGrade.ST37, customName = "HEA 300")
-        val rafSection = inputs.overrideRafterSection ?: SteelSectionType.ISection(h = 330.0, bf = 160.0, tf = 11.5, tw = 7.5, grade = SteelGrade.ST37, customName = "IPE 330")
+        // Default rafter: the lightest IPE that passes deflection (L/250, service live load) and the flexure and
+        // shear checks of the same member model used below, so the default case is not a built-in FAIL. When none of
+        // the listed IPE passes, the largest is used and the result fails honestly. A user override is never replaced.
+        val rafSection = inputs.overrideRafterSection ?: run {
+            fun ipe(sp: com.civileg.app.utils.SteelTables.SectionProperties) = SteelSectionType.ISection(
+                h = sp.depth, bf = sp.width, tf = sp.tf, tw = sp.tw, grade = SteelGrade.ST37, customName = sp.name)
+            val wuSel = (1.2 * inputs.deadLoad + 1.6 * inputs.liveLoad) * inputs.baySpacing
+            val mSel = wuSel * inputs.span.pow(2) / 8.0
+            val vSel = wuSel * inputs.span / 2.0
+            val allowSel = inputs.span * 1000.0 / 250.0
+            val all = com.civileg.app.utils.SteelTables.ipeSections.map { ipe(it) }
+            all.firstOrNull { sec ->
+                val defl = 5.0 * (inputs.liveLoad * inputs.baySpacing) * inputs.span.pow(4) * 1e12 / (384.0 * 200000.0 * sec.ix)
+                val (_, flex, shear) = steelMemberUtilizations(
+                    sec, sec.grade, 0.0, mSel, vSel, inputs.span * 1000.0, inputs.baySpacing * 1000.0, inputs.code)
+                defl <= allowSel && flex <= 1.0 && shear <= 1.0
+            } ?: all.last()
+        }
         val purlinSection = inputs.overridePurlinSection ?: SteelSectionType.CSection(h = 160.0, bf = 65.0, tf = 7.5, tw = 5.5, grade = SteelGrade.ST37, customName = "C 160")
 
         val wu = (1.2 * inputs.deadLoad + 1.6 * inputs.liveLoad) * bay
