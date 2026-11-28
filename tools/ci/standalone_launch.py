@@ -471,9 +471,9 @@ if os.path.exists("tools/ci/EXPORT_ONLY"):
                 if tap_text(calc, prefix + "-calc"): got = True; break
                 scroll_up(2)
             log.append((prefix + "_calc", got)); time.sleep(3)
-            for kind, words in (("pdf", ["تقرير PDF"]), ("dxf", ["DXF"])):
+            for kind, words in (("pdf", ["تقرير PDF"]), ("dxf", ["DXF (AutoCAD)", "DXF"])):
                 hit = False
-                scroll_top(6)
+                if kind == "pdf": scroll_top(6)
                 for _ in range(14):
                     if tap_text(words, prefix + "-" + kind + "-find"): hit = True; break
                     scroll_up(2)
