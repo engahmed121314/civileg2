@@ -376,12 +376,12 @@ fun TankScreen(
                 }
 
                 if (res.calculationSteps.isNotEmpty()) {
-                    item { CalculationStepsCard(res.calculationSteps, title = "Tank Calculation Steps") }
+                    item { CalculationStepsCard(res.calculationSteps, title = stringResource(R.string.tk_calc_steps)) }
 
                     // Not issued: generator omits horizontal wall bars and the top base layer (unverified, incomplete).
                     val bbsEntries = emptyList<com.civileg.app.domain.calculations.utils.BbsEntry>()
                     if (bbsEntries.isNotEmpty()) {
-                        item { BbsTableCard(bbsEntries, title = "Tank Bar Bending Schedule") }
+                        item { BbsTableCard(bbsEntries, title = stringResource(R.string.tk_bbs_title)) }
                     }
 
                     val boqRows = runCatching {
@@ -398,7 +398,7 @@ fun TankScreen(
                         )
                     }.getOrDefault(emptyList())
                     if (boqRows.isNotEmpty()) {
-                        item { BoqTableCard(boqRows, title = "Tank Bill of Quantities") }
+                        item { BoqTableCard(boqRows, title = stringResource(R.string.tk_boq_title)) }
                     }
                 }
 

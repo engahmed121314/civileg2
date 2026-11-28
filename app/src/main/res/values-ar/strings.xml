@@ -2642,4 +2642,9 @@
     <string name="st_safety_checks" formatted="false">فحوصات الأمان</string>
     <string name="bx_net_flight" formatted="false">حديد الدرجة الصافي فقط</string>
     <string name="bx_excludes" formatted="false">لا يشمل التثبيت والثنيات والوصلات والحديد العلوي وحديد البسطة</string>
+    <string name="tk_calc_steps" formatted="false">خطوات حساب الخزان</string>
+    <string name="tk_bbs_title" formatted="false">جدول قص وثني حديد الخزان</string>
+    <string name="tk_boq_title" formatted="false">حصر كميات الخزان</string>
+    <string name="bx_indicative" formatted="false">نسبة تقديرية وليست أسياخًا مصممة</string>
+    <string name="chk_st_geo_prefix" formatted="false">حد هندسي:</string>
 </resources>

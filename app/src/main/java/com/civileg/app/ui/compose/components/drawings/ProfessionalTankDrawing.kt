@@ -212,7 +212,7 @@ fun ProfessionalTankDrawing(
 
         if (viewMode == 0) {
             drawSectionSeparator(
-                y = ch * 0.65f,
+                y = ch * 0.64f - cfg.annotationTextSmall * 1.6f, // the label's text height sits above the table top (0.64 ch)
                 width = cw,
                 label = "REINFORCEMENT",
                 cfg = cfg
@@ -221,7 +221,7 @@ fun ProfessionalTankDrawing(
 
         // Zone 3: Reinforcement details + table (viewMode 0 or 3)
         if (viewMode == 0 || viewMode == 3) {
-            drawZoneLabel(mainLeft, ch * 0.65f + cfg.margin * 0.3f, "REINFORCEMENT", cfg)
+            // The "REINFORCEMENT" separator above already names this zone; a second label printed over the table.
             // Reinforcement on elevation
             drawElevationReinforcement(
                 tankLeft, tankTop, tankRight, tankBottom, baseBottom,

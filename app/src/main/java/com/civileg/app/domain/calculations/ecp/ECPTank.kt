@@ -245,7 +245,7 @@ class ECPTank : TankDesign {
         // فحص نسبة التسليح
         val rho = asProvided / (b * d)
         safetyChecks.add(TankSafetyCheck(
-            "Wall Reinforcement Ratio", rho, MIN_RHO_WATER, "-",
+            "Wall Reinforcement Ratio", rho * 100.0, MIN_RHO_WATER * 100.0, "%",
             rho >= MIN_RHO_WATER, "Minimum reinforcement for water-retaining structures: 0.25%"
         ))
 

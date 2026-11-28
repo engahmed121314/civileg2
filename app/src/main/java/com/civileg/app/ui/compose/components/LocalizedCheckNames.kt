@@ -48,6 +48,8 @@ private val checkNameResources: Map<String, Int> = mapOf(
 fun localizedCheckName(name: String): String {
     val flagPrefix = "Assumption/model flag: "
     if (name.startsWith(flagPrefix)) return stringResource(R.string.chk_st_flag_prefix) + " " + localizedCheckName(name.removePrefix(flagPrefix))
+    val geoPrefix = "Geometry limit: "
+    if (name.startsWith(geoPrefix)) return stringResource(R.string.chk_st_geo_prefix) + " " + localizedCheckName(name.removePrefix(geoPrefix))
     checkNameResources[name]?.let { return stringResource(it) }
     val parts = name.split(" - ", limit = 2)
     val base = checkNameResources[parts[0]] ?: return name
