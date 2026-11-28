@@ -2129,19 +2129,26 @@ class CalculatorEngine @Inject constructor(
 
         val vol1 = (res.footing1.width * res.footing1.length * res.footing1.thickness) / 1e9
         val vol2 = (res.footing2.width * res.footing2.length * res.footing2.thickness) / 1e9
-        val strapLenM = distance / 1000.0 + 0.8 // main bars incl. anchorage into both footings
         // width/depth are mm and distance is mm → mm³/1e9 = m³.
         val volStrap = (res.strapBeam.width * res.strapBeam.depth * distance) / 1e9
         val totalConcreteVol = vol1 + vol2 + volStrap
 
-        val steel1 = res.footing1.reinforcement.numberOfBars *
-            barAreaMm2(res.footing1.reinforcement.barDiameter) * (res.footing1.length / 1000.0) * 7850.0 / 1e6
-        val steel2 = res.footing2.reinforcement.numberOfBars *
-            barAreaMm2(res.footing2.reinforcement.barDiameter) * (res.footing2.length / 1000.0) * 7850.0 / 1e6
-        val steelStrap = (res.strapBeam.topReinforcement.numberOfBars *
-            barAreaMm2(res.strapBeam.topReinforcement.barDiameter) +
-            res.strapBeam.bottomReinforcement.numberOfBars *
-            barAreaMm2(res.strapBeam.bottomReinforcement.barDiameter)) * strapLenM * 7850.0 / 1e6
+        // Same quantities as the strap footing bar schedule (BbsGenerator): both pad directions with
+        // 75 mm cover and bend-ups, plus strap bars with 40d anchorage into each pad. Kept in step so
+        // the BOQ steel total and the schedule total agree.
+        fun padSteelKg(n: Int, d: Double, length: Double, width: Double, thickness: Double): Double {
+            val bend = (thickness - 75.0).coerceAtLeast(0.0)
+            val lenX = (length - 150.0) + 2 * bend
+            val lenY = (width - 150.0) + 2 * bend
+            return n * (lenX + lenY) / 1000.0 * (d * d / 162.0)
+        }
+        fun strapBarsKg(n: Int, d: Double): Double = n * (distance + 2 * 40 * d) / 1000.0 * (d * d / 162.0)
+        val r1 = res.footing1.reinforcement
+        val r2 = res.footing2.reinforcement
+        val steel1 = padSteelKg(r1.numberOfBars, r1.barDiameter.toInt().toDouble(), res.footing1.length, res.footing1.width, res.footing1.thickness)
+        val steel2 = padSteelKg(r2.numberOfBars, r2.barDiameter.toInt().toDouble(), res.footing2.length, res.footing2.width, res.footing2.thickness)
+        val steelStrap = strapBarsKg(res.strapBeam.topReinforcement.numberOfBars, res.strapBeam.topReinforcement.barDiameter.toInt().toDouble()) +
+            strapBarsKg(res.strapBeam.bottomReinforcement.numberOfBars, res.strapBeam.bottomReinforcement.barDiameter.toInt().toDouble())
         val totalSteelW = steel1 + steel2 + steelStrap
 
         val q1 = res.soilPressure1

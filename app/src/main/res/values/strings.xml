@@ -2572,4 +2572,29 @@
     <string name="note_col_rho_max_ref" formatted="false">ECP 203: Section 4-2-5-2 (ρmax = 8%) (clause not verified)</string>
     <string name="note_col_ties_ref">ECP 203: Section 4-2-6 (clause not verified)</string>
     <string name="note_col_cover_ref">ECP 203: Section 4-1-4 (Cover ≥ 40mm) (clause not verified)</string>
+    <string name="bx_steel_rough" formatted="false">Reinforcement steel (rough estimate, not for procurement: no hooks, anchorage, laps or bends; uniform stirrups; full-span top steel)</string>
+    <string name="bx_steel" formatted="false">Reinforcement steel</string>
+    <string name="bx_blinding" formatted="false">Blinding concrete</string>
+    <string name="bx_concrete" formatted="false">Concrete</string>
+    <string name="bx_excavation" formatted="false">Excavation</string>
+    <string name="bx_formwork" formatted="false">Formwork</string>
+    <string name="bx_pads_strap_sides" formatted="false">pads + strap sides</string>
+    <string name="bx_sides_soffit" formatted="false">sides + soffit</string>
+    <string name="bx_four_faces" formatted="false">four faces</string>
+    <string name="bx_both_faces" formatted="false">both faces</string>
+    <string name="bx_base_soffit" formatted="false">base soffit</string>
+    <string name="bx_inclined_soffit" formatted="false">inclined soffit</string>
+    <string name="bx_pile_shafts" formatted="false">pile shafts</string>
+    <string name="bx_cap_sides" formatted="false">cap sides</string>
+    <string name="bx_piles_cap" formatted="false">piles + cap</string>
+    <string name="bx_perimeter" formatted="false">perimeter</string>
+    <string name="bx_soffit" formatted="false">soffit</string>
+    <string name="bx_h_no" formatted="false">No.</string>
+    <string name="bx_h_item" formatted="false">Item</string>
+    <string name="bx_h_unit" formatted="false">Unit</string>
+    <string name="bx_h_qty" formatted="false">Qty</string>
+    <string name="bx_h_bar" formatted="false">Bar</string>
+    <string name="bx_h_shape" formatted="false">Shape</string>
+    <string name="bx_h_len" formatted="false">Length</string>
+    <string name="bx_h_wt" formatted="false">Weight</string>
 </resources>

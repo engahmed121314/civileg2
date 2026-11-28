@@ -26,6 +26,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.civileg.app.utils.exporters.ProfessionalEnglishPdfReporter.BoqRow
+import androidx.compose.ui.res.stringResource
+import com.civileg.app.R
 import java.util.Locale
 
 /**
@@ -64,8 +66,9 @@ fun BoqTableCard(
             Spacer(modifier = Modifier.height(8.dp))
             // The table text is English (items, units, numbers): lay it out left to right, left aligned,
             // whatever the screen language, so the columns read No., Item, Unit, Qty from the left.
+            val arabic = isArabicUi()
             androidx.compose.runtime.CompositionLocalProvider(
-                androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Ltr
+                androidx.compose.ui.platform.LocalLayoutDirection provides (if (arabic) androidx.compose.ui.unit.LayoutDirection.Rtl else androidx.compose.ui.unit.LayoutDirection.Ltr)
             ) {
             Column {
             HeaderRow()
@@ -79,7 +82,7 @@ fun BoqTableCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Cell(row.item, 0.4f, TextAlign.Start)
-                    Cell(row.description, 2.2f, TextAlign.Start)
+                    Cell(localizedBoqText(row.description), 2.2f, TextAlign.Start)
                     Cell(row.unit, 0.5f)
                     Cell(format(row.quantity), 0.8f)
                 }
@@ -93,10 +96,11 @@ fun BoqTableCard(
 @Composable
 private fun HeaderRow() {
     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Cell("No.", 0.4f, TextAlign.Start, bold = true)
-        Cell("Item", 2.2f, TextAlign.Start, bold = true)
-        Cell("Unit", 0.5f, bold = true)
-        Cell("Qty", 0.8f, bold = true)
+        val ar = isArabicUi()
+        Cell(if (ar) stringResource(R.string.bx_h_no) else "No.", 0.4f, TextAlign.Start, bold = true)
+        Cell(if (ar) stringResource(R.string.bx_h_item) else "Item", 2.2f, TextAlign.Start, bold = true)
+        Cell(if (ar) stringResource(R.string.bx_h_unit) else "Unit", 0.5f, bold = true)
+        Cell(if (ar) stringResource(R.string.bx_h_qty) else "Qty", 0.8f, bold = true)
     }
 }
 

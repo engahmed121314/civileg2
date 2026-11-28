@@ -146,9 +146,11 @@ fun ProfessionalColumnDrawing(
             else -> H * 0.05f
         }
 
-        val tableBottom = H - 8f
+        // Keep the reinforcement table clear of the bottom-right sheet block (8 rows at most).
+        val blockReserve = if (viewMode == 0 || viewMode == 3) cfg.annotationTextSmall * 1.35f * 8f + cfg.margin * 0.3f + 6f else 8f
+        val tableBottom = H - blockReserve
         val tableTop = tableBottom - tableH
-        val tieBottom = if (viewMode == 0) midY + (H - midY - tableH) * 0.6f else tableTop - 4f
+        val tieBottom = if (viewMode == 0) minOf(midY + (H - midY - tableH) * 0.6f, tableTop - 4f) else tableTop - 4f
         val tieTop = tieBottom - tieH
         val elevBottom = if (viewMode == 0) midY - 10f else if (viewMode == 1) H * 0.92f else tieTop - 4f
         val elevTop = elevBottom - elevH
